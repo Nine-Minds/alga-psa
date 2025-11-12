@@ -1019,6 +1019,12 @@
       "step": "Stap",
       "of": "van"
     },
+    "steps": {
+      "service": "Service",
+      "date": "Datum",
+      "time": "Tijd",
+      "confirm": "Bevestigen"
+    },
     "step1": {
       "title": "Selecteer service",
       "description": "Kies de service waarmee u hulp nodig heeft",

@@ -65,7 +65,6 @@ interface Technician {
 }
 
 const TOTAL_STEPS = 4;
-const STEP_LABELS = ['Service', 'Date', 'Time', 'Confirm'];
 
 export function RequestAppointmentModal({
   open,
@@ -75,6 +74,16 @@ export function RequestAppointmentModal({
 }: RequestAppointmentModalProps) {
   const { t } = useTranslation('clientPortal');
   const isEditMode = !!editingAppointment;
+
+  const STEP_LABELS = useMemo(
+    () => [
+      t('appointments.steps.service'),
+      t('appointments.steps.date'),
+      t('appointments.steps.time'),
+      t('appointments.steps.confirm')
+    ],
+    [t]
+  );
 
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
@@ -185,8 +194,12 @@ export function RequestAppointmentModal({
       const result = await getAvailableDatesForService(selectedServiceId);
 
       if (result.success && result.data) {
-        // Convert date strings to Date objects
-        const dates = result.data.map(dateStr => new Date(dateStr));
+        // Convert date strings to Date objects in local time (not UTC)
+        // to avoid timezone shifts
+        const dates = result.data.map(dateStr => {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day);
+        });
         setAvailableDates(dates);
       } else {
         setError(result.error || t('appointments.errors.loadDatesFailed'));
@@ -280,17 +293,10 @@ export function RequestAppointmentModal({
       }
 
       if (result.success) {
-        setSuccessMessage(
-          isEditMode
-            ? t('appointments.messages.updateSuccess')
-            : t('appointments.messages.requestSuccess')
-        );
+        // Close immediately and trigger refresh
         onAppointmentRequested?.();
-
-        setTimeout(() => {
-          onOpenChange(false);
-          resetForm();
-        }, 2000);
+        onOpenChange(false);
+        resetForm();
       } else {
         setError(result.error || (isEditMode ? t('appointments.errors.updateFailed') : t('appointments.errors.createFailed')));
       }

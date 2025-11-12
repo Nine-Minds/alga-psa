@@ -6,10 +6,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
-  Bell,
   ChevronRight,
   Home,
-  Menu,
   PlusCircle,
   Settings,
   User,
@@ -24,6 +22,7 @@ import {
 import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
+import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -133,39 +132,7 @@ const QuickCreateMenu: React.FC<{ onNavigate: (href: string) => void }> = ({ onN
   );
 };
 
-const NotificationMenu: React.FC = () => {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          id="notification-center-trigger"
-          variant="ghost"
-          size="icon"
-          aria-label="Open notification center"
-          className="relative h-9 w-9"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="sr-only">Notifications</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        <div className="px-3 py-2">
-          <p className="text-sm font-semibold text-gray-900">Notifications</p>
-          <p className="text-xs text-gray-500">Notification center coming soon.</p>
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          id="notification-preferences-menu-item"
-          onSelect={() => {
-            window.location.href = '/msp/settings/notifications';
-          }}
-        >
-          Manage notification preferences
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
+// NotificationMenu component removed - replaced with NotificationBell
 
 const JobActivityIndicator: React.FC = () => {
   const router = useRouter();
@@ -322,16 +289,6 @@ export default function Header({
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
       <div className="flex items-center gap-3">
-        <Button
-          id="sidebar-toggle-button"
-          variant="ghost"
-          size="icon"
-          aria-label={sidebarOpen ? 'Collapse navigation' : 'Expand navigation'}
-          onClick={() => setSidebarOpen((prev) => !prev)}
-          className="h-9 w-9"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
         <nav aria-label="Breadcrumb">
           <ol className="flex items-center space-x-2">
             {breadcrumbItems.map((item, index) => (
@@ -370,7 +327,7 @@ export default function Header({
       <div className="flex items-center gap-3">
         <TenantBadge tenant={userData?.tenant} />
         <QuickCreateMenu onNavigate={(href) => router.push(href)} />
-        <NotificationMenu />
+        <NotificationBell />
         <JobActivityIndicator />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -374,7 +374,7 @@ export class SystemEmailService extends BaseEmailService {
    */
   public async sendAppointmentRequestApproved(
     data: AppointmentRequestApprovedData,
-    options?: { locale?: SupportedLocale; tenantId?: string }
+    options?: { locale?: SupportedLocale; tenantId?: string; icsAttachment?: { filename: string; content: Buffer } }
   ): Promise<EmailSendResult> {
     const locale = await this.determineLocale(data.requesterEmail, options);
 
@@ -396,13 +396,21 @@ export class SystemEmailService extends BaseEmailService {
       template = this.getAppointmentRequestApprovedFallback(data);
     }
 
+    // Prepare attachments array
+    const attachments = options?.icsAttachment ? [{
+      filename: options.icsAttachment.filename,
+      content: options.icsAttachment.content,
+      contentType: 'text/calendar; charset=utf-8; method=REQUEST'
+    }] : undefined;
+
     return this.sendEmail({
       to: data.requesterEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
       locale,
-      tenantId: options?.tenantId
+      tenantId: options?.tenantId,
+      attachments
     });
   }
 

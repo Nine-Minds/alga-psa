@@ -112,6 +112,13 @@ exports.up = async function(knex) {
         message: 'Your appointment request for {{serviceName}} could not be accommodated. {{declineReason}}'
       },
       {
+        name: 'appointment-request-cancelled-client',
+        language_code: 'en',
+        subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
+        title: 'Appointment Request Cancelled',
+        message: 'Your appointment request for {{serviceName}} on {{requestedDate}} has been cancelled successfully.'
+      },
+      {
         name: 'appointment-request-cancelled-staff',
         language_code: 'en',
         subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
@@ -147,6 +154,13 @@ exports.up = async function(knex) {
         subtype_id: requestDeclinedSubtype.internal_notification_subtype_id,
         title: 'Terminanfrage Aktualisierung',
         message: 'Ihre Terminanfrage für {{serviceName}} konnte nicht berücksichtigt werden. {{declineReason}}'
+      },
+      {
+        name: 'appointment-request-cancelled-client',
+        language_code: 'de',
+        subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
+        title: 'Terminanfrage storniert',
+        message: 'Ihre Terminanfrage für {{serviceName}} am {{requestedDate}} wurde erfolgreich storniert.'
       },
       {
         name: 'appointment-request-cancelled-staff',
@@ -186,6 +200,13 @@ exports.up = async function(knex) {
         message: 'No se pudo acomodar su solicitud de cita para {{serviceName}}. {{declineReason}}'
       },
       {
+        name: 'appointment-request-cancelled-client',
+        language_code: 'es',
+        subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
+        title: 'Solicitud de cita cancelada',
+        message: 'Su solicitud de cita para {{serviceName}} el {{requestedDate}} ha sido cancelada exitosamente.'
+      },
+      {
         name: 'appointment-request-cancelled-staff',
         language_code: 'es',
         subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
@@ -221,6 +242,13 @@ exports.up = async function(knex) {
         subtype_id: requestDeclinedSubtype.internal_notification_subtype_id,
         title: 'Mise à jour de la demande de rendez-vous',
         message: 'Votre demande de rendez-vous pour {{serviceName}} n\'a pas pu être acceptée. {{declineReason}}'
+      },
+      {
+        name: 'appointment-request-cancelled-client',
+        language_code: 'fr',
+        subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
+        title: 'Demande de rendez-vous annulée',
+        message: 'Votre demande de rendez-vous pour {{serviceName}} le {{requestedDate}} a été annulée avec succès.'
       },
       {
         name: 'appointment-request-cancelled-staff',
@@ -260,6 +288,13 @@ exports.up = async function(knex) {
         message: 'La tua richiesta di appuntamento per {{serviceName}} non ha potuto essere accolta. {{declineReason}}'
       },
       {
+        name: 'appointment-request-cancelled-client',
+        language_code: 'it',
+        subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
+        title: 'Richiesta di appuntamento cancellata',
+        message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata cancellata con successo.'
+      },
+      {
         name: 'appointment-request-cancelled-staff',
         language_code: 'it',
         subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
@@ -295,6 +330,13 @@ exports.up = async function(knex) {
         subtype_id: requestDeclinedSubtype.internal_notification_subtype_id,
         title: 'Update afspraakverzoek',
         message: 'Uw afspraakverzoek voor {{serviceName}} kon niet worden geaccepteerd. {{declineReason}}'
+      },
+      {
+        name: 'appointment-request-cancelled-client',
+        language_code: 'nl',
+        subtype_id: requestCancelledSubtype.internal_notification_subtype_id,
+        title: 'Afspraakverzoek geannuleerd',
+        message: 'Uw afspraakverzoek voor {{serviceName}} op {{requestedDate}} is succesvol geannuleerd.'
       },
       {
         name: 'appointment-request-cancelled-staff',

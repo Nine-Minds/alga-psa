@@ -555,8 +555,13 @@ export async function getAvailableDates(
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Parse dates in UTC to avoid timezone issues
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const start = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+
     const results: IAvailableDate[] = [];
 
     // Get service settings for default duration
@@ -566,6 +571,7 @@ export async function getAvailableDates(
     // Iterate through each date in the range
     let currentDate = new Date(start);
     while (currentDate <= end) {
+      // Format date in UTC to ensure consistency
       const dateStr = currentDate.toISOString().split('T')[0];
 
       // Get available slots for this date
@@ -578,14 +584,15 @@ export async function getAvailableDates(
       );
 
       const hasAvailability = slots.length > 0;
+
       results.push({
         date: dateStr,
         has_availability: hasAvailability,
         slot_count: slots.length
       });
 
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
+      // Move to next day (increment UTC date)
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
 
     return results;

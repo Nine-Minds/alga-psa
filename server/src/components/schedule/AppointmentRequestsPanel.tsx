@@ -11,8 +11,8 @@ import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelec
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import toast from 'react-hot-toast';
-import { Check, X, Calendar, Clock, User, FileText, Briefcase } from 'lucide-react';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
+import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import {
   getAppointmentRequests,
@@ -20,6 +20,9 @@ import {
   declineAppointmentRequest as declineRequest,
   IAppointmentRequest
 } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import { getTicketById } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
+import { ITicket } from 'server/src/interfaces';
 
 interface AppointmentRequestsPanelProps {
   isOpen: boolean;
@@ -47,6 +50,10 @@ export default function AppointmentRequestsPanel({
   // Decline form state
   const [declineReason, setDeclineReason] = useState('');
   const [showDeclineForm, setShowDeclineForm] = useState(false);
+
+  // Ticket drawer state
+  const [selectedTicket, setSelectedTicket] = useState<(ITicket & { tenant: string | undefined }) | null>(null);
+  const [isTicketDrawerOpen, setIsTicketDrawerOpen] = useState(false);
 
   // Users for technician assignment
   const [technicians, setTechnicians] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]);
@@ -140,6 +147,28 @@ export default function AppointmentRequestsPanel({
     setInternalNotes('');
     setLinkedTicketId(request.ticket_id || '');
     setDeclineReason('');
+  };
+
+  const handleOpenTicket = async (ticketId: string) => {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('User not authenticated');
+        return;
+      }
+
+      const ticketData = await getTicketById(ticketId, currentUser);
+      if (ticketData) {
+        setSelectedTicket(ticketData);
+        setIsTicketDrawerOpen(true);
+      } else {
+        toast.error('Ticket not found');
+      }
+    } catch (error) {
+      console.error('Error loading ticket:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load ticket';
+      toast.error(errorMessage);
+    }
   };
 
   const handleApprove = async () => {
@@ -264,7 +293,8 @@ export default function AppointmentRequestsPanel({
   };
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} id="appointment-requests-panel">
+    <>
+      <Drawer isOpen={isOpen} onClose={onClose} id="appointment-requests-panel">
       <div className="h-full flex flex-col max-w-2xl">
         {!selectedRequest ? (
           <>
@@ -328,6 +358,20 @@ export default function AppointmentRequestsPanel({
                           <Clock className="h-4 w-4 mr-2" />
                           {request.requested_duration} minutes
                         </div>
+                        {request.ticket_id && (
+                          <div className="flex items-center text-blue-600">
+                            <Ticket className="h-4 w-4 mr-2" />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenTicket(request.ticket_id!);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            >
+                              {(request as any).ticket_title || `Ticket #${(request as any).ticket_number || request.ticket_id.slice(0, 8)}`}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -404,6 +448,20 @@ export default function AppointmentRequestsPanel({
                     {selectedRequest.status}
                   </Badge>
                 </div>
+                {selectedRequest.ticket_id && (
+                  <div className="col-span-2">
+                    <div className="font-semibold text-gray-700 mb-1">Linked Ticket</div>
+                    <div className="flex items-center">
+                      <Ticket className="h-4 w-4 mr-2 text-blue-600" />
+                      <button
+                        onClick={() => handleOpenTicket(selectedRequest.ticket_id!)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                      >
+                        {(selectedRequest as any).ticket_title || `Ticket #${(selectedRequest as any).ticket_number || selectedRequest.ticket_id.slice(0, 8)}`}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {selectedRequest.description && (
@@ -525,6 +583,28 @@ export default function AppointmentRequestsPanel({
           </>
         )}
       </div>
-    </Drawer>
+      </Drawer>
+
+      {/* Ticket Drawer */}
+      {selectedTicket && (
+        <Drawer
+          isOpen={isTicketDrawerOpen}
+          onClose={() => {
+            setIsTicketDrawerOpen(false);
+            setSelectedTicket(null);
+          }}
+          id="appointment-ticket-drawer"
+        >
+          <TicketDetails
+            initialTicket={selectedTicket}
+            isInDrawer={true}
+            onClose={() => {
+              setIsTicketDrawerOpen(false);
+              setSelectedTicket(null);
+            }}
+          />
+        </Drawer>
+      )}
+    </>
   );
 }

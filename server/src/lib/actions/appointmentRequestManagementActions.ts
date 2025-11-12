@@ -30,6 +30,7 @@ import {
   formatTime
 } from './appointmentHelpers';
 import { createNotificationFromTemplateInternal } from './internal-notification-actions/internalNotificationActions';
+import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -182,6 +183,10 @@ export async function getAppointmentRequests(
           this.on('ar.approved_by_user_id', 'approver.user_id')
             .andOn('ar.tenant', 'approver.tenant');
         })
+        .leftJoin('tickets as t', function() {
+          this.on('ar.ticket_id', 't.ticket_id')
+            .andOn('ar.tenant', 't.tenant');
+        })
         .where({ 'ar.tenant': tenant })
         .select(
           'ar.*',
@@ -192,7 +197,9 @@ export async function getAppointmentRequests(
           'u.first_name as preferred_technician_first_name',
           'u.last_name as preferred_technician_last_name',
           'approver.first_name as approver_first_name',
-          'approver.last_name as approver_last_name'
+          'approver.last_name as approver_last_name',
+          't.ticket_number',
+          't.title as ticket_title'
         )
         .orderBy('ar.created_at', 'desc');
 
@@ -242,6 +249,78 @@ export async function getAppointmentRequests(
     return { success: true, data: requests as IAppointmentRequest[] };
   } catch (error) {
     console.error('Error fetching appointment requests:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Get appointment requests linked to a specific ticket
+ */
+export async function getAppointmentRequestsByTicketId(
+  ticketId: string
+): Promise<AppointmentRequestResult<IAppointmentRequest[]>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const { knex: db, tenant } = await createTenantKnex();
+
+    // Check permissions - use same permission as schedule actions
+    const userPermissions = await getCurrentUserPermissions();
+    const canRead = userPermissions.includes('user_schedule:read') || userPermissions.includes('user_schedule:update');
+    if (!canRead) {
+      return { success: false, error: 'Insufficient permissions to view appointment requests' };
+    }
+
+    const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('appointment_requests as ar')
+        .leftJoin('service_catalog as sc', function() {
+          this.on('ar.service_id', 'sc.service_id')
+            .andOn('ar.tenant', 'sc.tenant');
+        })
+        .leftJoin('clients as c', function() {
+          this.on('ar.client_id', 'c.client_id')
+            .andOn('ar.tenant', 'c.tenant');
+        })
+        .leftJoin('contacts as con', function() {
+          this.on('ar.contact_id', 'con.contact_name_id')
+            .andOn('ar.tenant', 'con.tenant');
+        })
+        .leftJoin('users as u', function() {
+          this.on('ar.preferred_assigned_user_id', 'u.user_id')
+            .andOn('ar.tenant', 'u.tenant');
+        })
+        .leftJoin('users as approver', function() {
+          this.on('ar.approved_by_user_id', 'approver.user_id')
+            .andOn('ar.tenant', 'approver.tenant');
+        })
+        .leftJoin('tickets as t', function() {
+          this.on('ar.ticket_id', 't.ticket_id')
+            .andOn('ar.tenant', 't.tenant');
+        })
+        .where('ar.tenant', tenant)
+        .where('ar.ticket_id', ticketId)
+        .select(
+          'ar.*',
+          'sc.service_name',
+          'c.client_name as client_company_name',
+          'con.full_name as contact_name',
+          'con.email as contact_email',
+          'u.first_name as preferred_technician_first_name',
+          'u.last_name as preferred_technician_last_name',
+          'approver.first_name as approver_first_name',
+          'approver.last_name as approver_last_name',
+          't.ticket_number'
+        )
+        .orderBy('ar.created_at', 'desc');
+    });
+
+    return { success: true, data: requests as IAppointmentRequest[] };
+  } catch (error) {
+    console.error('Error fetching appointment requests by ticket ID:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
     return { success: false, error: message };
   }
@@ -341,13 +420,20 @@ export async function approveAppointmentRequest(
 
       if (request.schedule_entry_id) {
         // Update existing schedule entry (created when request was submitted)
+        const newTitle = `Appointment: ${service.service_name}`;
+        console.log('[approveAppointmentRequest] Updating schedule entry title:', {
+          entry_id: request.schedule_entry_id,
+          old_title_pattern: '[Pending Request] ...',
+          new_title: newTitle
+        });
+
         await trx('schedule_entries')
           .where({
             entry_id: request.schedule_entry_id,
             tenant
           })
           .update({
-            title: `Appointment: ${service.service_name}`, // Remove [Pending Request] prefix
+            title: newTitle, // Remove [Pending Request] prefix
             scheduled_start: scheduledStart.toISOString(),
             scheduled_end: scheduledEnd.toISOString(),
             notes: request.description || '',
@@ -383,6 +469,32 @@ export async function approveAppointmentRequest(
         scheduleEntry = {
           entry_id: request.schedule_entry_id
         };
+
+        // Get the updated schedule entry for the event
+        const updatedEntry = await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .first();
+
+        // Publish SCHEDULE_ENTRY_UPDATED event for calendar sync
+        try {
+          await publishEvent({
+            eventType: 'SCHEDULE_ENTRY_UPDATED',
+            payload: {
+              tenantId: tenant,
+              userId: currentUser.user_id,
+              entryId: request.schedule_entry_id,
+              changes: {
+                after: updatedEntry,
+                assignedUserIds: [validatedData.assigned_user_id]
+              }
+            }
+          });
+        } catch (eventError) {
+          console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
+        }
       } else {
         // Create new schedule entry (fallback for old requests)
         const scheduleEntryData = {
@@ -401,6 +513,24 @@ export async function approveAppointmentRequest(
         scheduleEntry = await ScheduleEntry.create(trx, scheduleEntryData, {
           assignedUserIds: [validatedData.assigned_user_id]
         });
+
+        // Publish SCHEDULE_ENTRY_CREATED event for calendar sync
+        try {
+          await publishEvent({
+            eventType: 'SCHEDULE_ENTRY_CREATED',
+            payload: {
+              tenantId: tenant,
+              userId: currentUser.user_id,
+              entryId: scheduleEntry.entry_id,
+              changes: {
+                after: scheduleEntry,
+                assignedUserIds: [validatedData.assigned_user_id]
+              }
+            }
+          });
+        } catch (eventError) {
+          console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
+        }
       }
 
       const now = new Date();
@@ -502,6 +632,24 @@ export async function approveAppointmentRequest(
 
           const calendarLink = await generateICSLink(scheduleEntryWithDetails);
 
+          // Generate ICS file for email attachment
+          const icsEventData: ICSEventData = {
+            uid: scheduleEntry.entry_id,
+            title: `Appointment: ${service.service_name}`,
+            description: request.description || `Appointment for ${service.service_name}`,
+            location: `${tenantSettings.tenantName}`,
+            startDate: new Date(scheduleEntryWithDetails.scheduled_start),
+            endDate: new Date(scheduleEntryWithDetails.scheduled_end),
+            organizerName: `${assignedUser.first_name} ${assignedUser.last_name}`,
+            organizerEmail: assignedUser.email || tenantSettings.contactEmail,
+            attendeeName: recipientName,
+            attendeeEmail: recipientEmail,
+            url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client-portal/appointments/${request.appointment_request_id}`
+          };
+
+          const icsBuffer = generateICSBuffer(icsEventData);
+          const icsFilename = generateICSFilename(`Appointment-${service.service_name}`);
+
           await emailService.sendAppointmentRequestApproved({
             requesterName: recipientName,
             requesterEmail: recipientEmail,
@@ -520,7 +668,11 @@ export async function approveAppointmentRequest(
             tenantName: tenantSettings.tenantName,
             currentYear: new Date().getFullYear()
           }, {
-            tenantId: tenant
+            tenantId: tenant,
+            icsAttachment: {
+              filename: icsFilename,
+              content: icsBuffer
+            }
           });
 
           console.log(`[AppointmentRequest] Approval email sent to ${recipientEmail}`);

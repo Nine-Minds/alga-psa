@@ -360,9 +360,47 @@ export async function createAppointmentRequest(
         tenantId: tenant
       });
 
-      // Send email notification to MSP staff
-      const staffUsers = await getScheduleApprovers(tenant);
+      // Get default approver for notifications
+      const defaultApproverId = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const generalSetting = await trx('availability_settings')
+          .where({
+            tenant,
+            setting_type: 'general_settings'
+          })
+          .whereNotNull('config_json')
+          .first();
+
+        return generalSetting?.config_json?.default_approver_id || null;
+      });
+
+      // Determine which staff users should receive notifications
+      // Only notify: assigned user and default approver (if different)
+      const notifyUserIds = new Set<string>();
+      if (assignedUserId) {
+        notifyUserIds.add(assignedUserId);
+      }
+      if (defaultApproverId) {
+        notifyUserIds.add(defaultApproverId);
+      }
+
+      // Get user details for notifications
+      const staffUsers = notifyUserIds.size > 0
+        ? await withTransaction(db, async (trx: Knex.Transaction) => {
+            return await trx('users')
+              .where({ tenant })
+              .whereIn('user_id', Array.from(notifyUserIds))
+              .select('user_id', 'email', 'first_name', 'last_name');
+          })
+        : [];
+
       const clientCompanyName = await getClientCompanyName(clientId, tenant);
+
+      console.log('[createAppointmentRequest] Staff users for notifications:', {
+        count: staffUsers.length,
+        userIds: staffUsers.map(u => u.user_id),
+        assignedUserId,
+        defaultApproverId
+      });
 
       for (const staffUser of staffUsers) {
         await emailService.sendNewAppointmentRequest(staffUser.email, {
@@ -409,7 +447,8 @@ export async function createAppointmentRequest(
 
       // Send internal notifications to MSP staff
       for (const staffUser of staffUsers) {
-        await createNotificationFromTemplateInternal(db, {
+        console.log('[createAppointmentRequest] Creating internal notification for staff user:', staffUser.user_id);
+        const notification = await createNotificationFromTemplateInternal(db, {
           tenant: tenant,
           user_id: staffUser.user_id,
           template_name: 'appointment-request-created-staff',
@@ -428,6 +467,15 @@ export async function createAppointmentRequest(
             requires_action: true
           }
         });
+
+        if (notification) {
+          console.log('[createAppointmentRequest] Internal notification created for staff user:', {
+            userId: staffUser.user_id,
+            notificationId: notification.internal_notification_id
+          });
+        } else {
+          console.log('[createAppointmentRequest] Internal notification was NOT created for staff user (likely disabled):', staffUser.user_id);
+        }
       }
     } catch (emailError) {
       console.error('Error sending appointment request emails and notifications:', emailError);
@@ -925,17 +973,20 @@ export async function cancelAppointmentRequest(
           updated_at: now
         });
 
-      // Send notification emails
+      // Send notification emails and internal notifications
       try {
         const emailService = SystemEmailService.getInstance();
 
-        // Get service details for email
+        // Get service details for notifications
         const service = await trx('service_catalog')
           .where({
             service_id: request.service_id,
             tenant
           })
           .first();
+
+        // Get client user_id for internal notification
+        const clientUserId = await getClientUserIdFromContact(contact.contact_name_id, tenant);
 
         // Email to client confirming cancellation
         await emailService.sendEmail({
@@ -957,10 +1008,47 @@ export async function cancelAppointmentRequest(
           tenantId: tenant
         });
 
+        // Send internal notification to CLIENT
+        if (clientUserId) {
+          await createNotificationFromTemplateInternal(trx, {
+            tenant: tenant,
+            user_id: clientUserId,
+            template_name: 'appointment-request-cancelled-client',
+            type: 'info',
+            category: 'appointments',
+            link: `/client-portal/appointments/${request.appointment_request_id}`,
+            data: {
+              serviceName: service?.service_name || 'service',
+              requestedDate: await formatDate(request.requested_date, 'en')
+            }
+          });
+        }
+
+        // Send internal notifications to MSP STAFF
+        const staffUsers = await getScheduleApprovers(tenant);
+        for (const staffUser of staffUsers) {
+          await createNotificationFromTemplateInternal(trx, {
+            tenant: tenant,
+            user_id: staffUser.user_id,
+            template_name: 'appointment-request-cancelled-staff',
+            type: 'info',
+            category: 'appointments',
+            link: `/msp/schedule`,
+            data: {
+              requesterName: contact.full_name || 'Unknown',
+              serviceName: service?.service_name || 'service',
+              requestedDate: await formatDate(request.requested_date, 'en')
+            },
+            metadata: {
+              appointment_request_id: request.appointment_request_id
+            }
+          });
+        }
+
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} cancelled by client`);
       } catch (emailError) {
-        console.error('Error sending cancellation emails:', emailError);
-        // Don't fail the cancellation if email fails
+        console.error('Error sending cancellation notifications:', emailError);
+        // Don't fail the cancellation if notifications fail
       }
     });
 
@@ -1134,6 +1222,105 @@ export async function getAvailableDatesForService(
   } catch (error) {
     console.error('Error fetching available dates:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch available dates';
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Get appointment requests linked to a specific ticket (client portal version)
+ */
+export async function getAppointmentRequestsByTicketId(
+  ticketId: string
+): Promise<AppointmentRequestResult<IAppointmentRequest[]>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    if ((currentUser as any).user_type !== 'client') {
+      return { success: false, error: 'Only client users can access this endpoint' };
+    }
+
+    if (!(currentUser as any).contact_id) {
+      return { success: false, error: 'Contact information not found' };
+    }
+
+    const { knex: db, tenant } = await createTenantKnex();
+
+    if (!tenant) {
+      return { success: false, error: 'Tenant not found' };
+    }
+
+    // Get client_id from contact
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({
+          contact_name_id: (currentUser as any).contact_id,
+          tenant
+        })
+        .select('client_id')
+        .first();
+    });
+
+    if (!contact || !contact.client_id) {
+      return { success: false, error: 'Client information not found' };
+    }
+
+    const clientId = contact.client_id;
+
+    // Verify the ticket belongs to this client
+    const ticket = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('tickets')
+        .where({
+          ticket_id: ticketId,
+          tenant,
+          client_id: clientId
+        })
+        .first();
+    });
+
+    if (!ticket) {
+      return { success: false, error: 'Ticket not found or does not belong to your organization' };
+    }
+
+    const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('appointment_requests as ar')
+        .leftJoin('service_catalog as sc', function() {
+          this.on('ar.service_id', 'sc.service_id')
+            .andOn('ar.tenant', 'sc.tenant');
+        })
+        .leftJoin('users as u', function() {
+          this.on('ar.preferred_assigned_user_id', 'u.user_id')
+            .andOn('ar.tenant', 'u.tenant');
+        })
+        .leftJoin('users as approver', function() {
+          this.on('ar.approved_by_user_id', 'approver.user_id')
+            .andOn('ar.tenant', 'approver.tenant');
+        })
+        .leftJoin('tickets as t', function() {
+          this.on('ar.ticket_id', 't.ticket_id')
+            .andOn('ar.tenant', 't.tenant');
+        })
+        .where('ar.tenant', tenant)
+        .where('ar.ticket_id', ticketId)
+        .where('ar.client_id', clientId) // Ensure client can only see their own requests
+        .select(
+          'ar.*',
+          'sc.service_name',
+          'u.first_name as preferred_technician_first_name',
+          'u.last_name as preferred_technician_last_name',
+          'approver.first_name as approver_first_name',
+          'approver.last_name as approver_last_name',
+          't.ticket_number'
+        )
+        .orderBy('ar.created_at', 'desc');
+    });
+
+    return { success: true, data: requests as IAppointmentRequest[] };
+  } catch (error) {
+    console.error('Error fetching appointment requests by ticket ID:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
     return { success: false, error: message };
   }
 }

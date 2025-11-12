@@ -713,6 +713,22 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           </TabsContent>
 
           <TabsContent value="user-hours" className="space-y-4 mt-4">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-gray-700">
+                {isManager ? (
+                  <>
+                    <strong>Team Manager:</strong> You can configure availability settings for members of your team(s).
+                    The "Configured Users" table below shows all users with availability settings across the system.
+                  </>
+                ) : (
+                  <>
+                    <strong>Administrator:</strong> You can configure availability settings for any user in the system.
+                    The "Configured Users" table below shows all users with availability settings.
+                  </>
+                )}
+              </p>
+            </div>
+
             {isManager && managedTeams.length > 1 && (
               <div>
                 <Label>Select Team</Label>

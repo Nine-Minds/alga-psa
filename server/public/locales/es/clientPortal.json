@@ -1019,6 +1019,12 @@
       "step": "Paso",
       "of": "de"
     },
+    "steps": {
+      "service": "Servicio",
+      "date": "Fecha",
+      "time": "Hora",
+      "confirm": "Confirmar"
+    },
     "step1": {
       "title": "Seleccionar servicio",
       "description": "Elija el servicio con el que necesita asistencia",

@@ -1020,6 +1020,12 @@
       "step": "Passaggio",
       "of": "di"
     },
+    "steps": {
+      "service": "Servizio",
+      "date": "Data",
+      "time": "Orario",
+      "confirm": "Conferma"
+    },
     "step1": {
       "title": "Seleziona servizio",
       "description": "Scegli il servizio per cui hai bisogno di assistenza",

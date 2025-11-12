@@ -25,7 +25,7 @@ export interface ScheduleApprover {
 
 /**
  * Get list of MSP users who can approve appointment requests
- * Users with 'schedule' 'update' permission
+ * Users with 'user_schedule' 'update' permission
  */
 export async function getScheduleApprovers(
   tenant: string
@@ -55,7 +55,7 @@ export async function getScheduleApprovers(
       .where({
         'u.tenant': tenant,
         'u.user_type': 'internal',
-        'p.resource': 'schedule',
+        'p.resource': 'user_schedule',
         'p.action': 'update'
       })
       .where(function() {

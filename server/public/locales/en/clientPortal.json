@@ -1024,6 +1024,12 @@
       "step": "Step",
       "of": "of"
     },
+    "steps": {
+      "service": "Service",
+      "date": "Date",
+      "time": "Time",
+      "confirm": "Confirm"
+    },
     "step1": {
       "title": "Select Service",
       "description": "Choose the service you need assistance with",
