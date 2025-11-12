@@ -32,6 +32,7 @@ import type { JobMetrics } from 'server/src/lib/actions/job-actions';
 import { getQueueMetricsAction } from 'server/src/lib/actions/job-actions';
 import { analytics } from 'server/src/lib/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
+import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -118,6 +119,14 @@ const TenantBadge: React.FC<{ tenant?: string | null }> = ({ tenant }) => {
     </span>
   );
 };
+
+const QuickCreateMenu: React.FC = () => {
+  const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
+
+  const handleQuickCreateSelect = (type: QuickCreateType) => {
+    analytics.capture('ui.quick_create.select', { target: type });
+    setActiveQuickCreate(type);
+  };
 
 const QuickCreateMenu: React.FC = () => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);

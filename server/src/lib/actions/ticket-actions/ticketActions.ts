@@ -55,7 +55,6 @@ async function safePublishEvent(eventType: string, payload: any) {
     console.error(`Failed to publish ${eventType} event:`, error);
   }
 }
-
 interface CreateTicketFromAssetData {
     title: string;
     description: string;

@@ -1,5 +1,6 @@
 import { registerTicketEmailSubscriber, unregisterTicketEmailSubscriber } from './ticketEmailSubscriber';
 import { registerProjectEmailSubscriber, unregisterProjectEmailSubscriber } from './projectEmailSubscriber';
+import { registerSurveySubscriber, unregisterSurveySubscriber } from './surveySubscriber';
 import { registerCalendarSyncSubscriber, unregisterCalendarSyncSubscriber } from './calendarSyncSubscriber';
 import { registerSurveySubscriber, unregisterSurveySubscriber } from './surveySubscriber';
 
@@ -7,6 +8,7 @@ export async function registerAllSubscribers(): Promise<void> {
   try {
     await registerTicketEmailSubscriber();
     await registerProjectEmailSubscriber();
+    await registerSurveySubscriber();
     await registerCalendarSyncSubscriber();
     await registerSurveySubscriber();
   } catch (error) {
@@ -18,6 +20,7 @@ export async function unregisterAllSubscribers(): Promise<void> {
   try {
     await unregisterTicketEmailSubscriber();
     await unregisterProjectEmailSubscriber();
+    await unregisterSurveySubscriber();
     await unregisterCalendarSyncSubscriber();
     await unregisterSurveySubscriber();
   } catch (error) {

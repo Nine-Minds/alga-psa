@@ -41,6 +41,8 @@
     "openMenu": "Apri menu",
     "confirmDeletion": "Conferma eliminazione",
     "saving": "Salvataggio..."
+    "confirmDeletion": "Conferma eliminazione",
+    "saving": "Salvataggio..."
   },
   "status": {
     "loading": "Caricamento...",
@@ -470,6 +472,171 @@
       "Projects": "Progetti",
       "Tickets": "Ticket",
       "Time Entries": "Inserimenti orari"
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "Caricamento..."
+    },
+    "settings": {
+      "tabLabel": "Sondaggi",
+      "title": "Sondaggi di soddisfazione del cliente",
+      "subtitle": "Configura modelli, trigger e invii per raccogliere feedback dopo la chiusura dei ticket.",
+      "tabs": {
+        "templates": "Modelli",
+        "triggers": "Trigger"
+      },
+      "templateList": {
+        "title": "Modelli di sondaggio",
+        "description": "Gestisci i messaggi e le scale di valutazione inviate ai clienti.",
+        "createButton": "Nuovo modello",
+        "emptyTitle": "Nessun modello di sondaggio",
+        "emptyDescription": "Crea il primo modello per definire testo e scala del sondaggio.",
+        "table": {
+          "name": "Modello",
+          "rating": "Scala",
+          "status": "Stato",
+          "updated": "Aggiornato",
+          "actions": "Azioni"
+        },
+        "defaultBadge": "Predefinito",
+        "status": {
+          "enabled": "Attivo",
+          "disabled": "Inattivo"
+        },
+        "toasts": {
+          "created": "Modello creato",
+          "updated": "Modello aggiornato",
+          "deleted": "Modello eliminato",
+          "setDefault": "Modello predefinito aggiornato",
+          "error": "Impossibile salvare il modello",
+          "deleteError": "Impossibile eliminare il modello"
+        },
+        "deleteConfirm": "Eliminare questo modello? Le inviti già inviati non verranno modificati.",
+        "errors": {
+          "load": "Impossibile caricare i modelli di sondaggio."
+        }
+      },
+      "templateForm": {
+        "titleCreate": "Crea modello di sondaggio",
+        "titleEdit": "Modifica modello di sondaggio",
+        "labels": {
+          "name": "Nome del modello",
+          "ratingType": "Tipo di valutazione",
+          "ratingScale": "Scala di valutazione",
+          "ratingLabels": "Etichette",
+          "promptText": "Domanda del sondaggio",
+          "commentPrompt": "Richiesta commenti",
+          "thankYouText": "Messaggio di ringraziamento",
+          "isDefault": "Imposta come modello predefinito",
+          "enabled": "Modello attivo"
+        },
+        "placeholders": {
+          "ratingLabels": "Esempio:\n1 = Molto insoddisfatto\n2 = Insoddisfatto\n3 = Neutro\n4 = Soddisfatto\n5 = Molto soddisfatto"
+        },
+        "help": {
+          "ratingLabels": "Inserisci “valore = etichetta” su righe separate."
+        },
+        "ratingTypes": {
+          "stars": "Stelle",
+          "numbers": "Numeri",
+          "emojis": "Emoji"
+        },
+        "actions": {
+          "create": "Crea modello",
+          "save": "Salva modifiche",
+          "delete": "Elimina modello"
+        }
+      },
+      "triggerList": {
+        "title": "Trigger del sondaggio",
+        "description": "Invia automaticamente inviti quando ticket o progetti vengono completati.",
+        "createButton": "Nuovo trigger",
+        "emptyTitle": "Nessun trigger configurato",
+        "emptyDescription": "Crea un trigger per inviare sondaggi alla chiusura di ticket o progetti.",
+        "table": {
+          "template": "Modello",
+          "type": "Trigger",
+          "conditions": "Condizioni",
+          "status": "Stato",
+          "updated": "Aggiornato",
+          "actions": "Azioni"
+        },
+        "conditions": {
+          "boards": "Bacheche",
+          "statuses": "Stati",
+          "priorities": "Priorità",
+          "any": "Qualsiasi"
+        },
+        "status": {
+          "enabled": "Attivo",
+          "disabled": "Inattivo"
+        },
+        "toasts": {
+          "created": "Trigger creato",
+          "updated": "Trigger aggiornato",
+          "deleted": "Trigger eliminato",
+          "error": "Impossibile salvare il trigger",
+          "deleteError": "Impossibile eliminare il trigger"
+        },
+        "deleteConfirm": "Eliminare questo trigger? Le inviti già pianificati verranno comunque inviati.",
+        "errors": {
+          "load": "Impossibile caricare i trigger di sondaggio."
+        }
+      },
+      "triggerForm": {
+        "titleCreate": "Crea trigger di sondaggio",
+        "titleEdit": "Modifica trigger di sondaggio",
+        "labels": {
+          "template": "Modello di sondaggio",
+          "triggerType": "Tipo di trigger",
+          "boardIds": "ID bacheche",
+          "statusIds": "ID stati",
+          "priorities": "Priorità",
+          "enabled": "Trigger attivo"
+        },
+        "placeholders": {
+          "boardIds": "Seleziona bacheca",
+          "statusIds": "Aggiungi stato",
+          "priorities": "Aggiungi priorità"
+        },
+        "help": {
+          "conditions": "Lascia un campo vuoto per accettare qualsiasi valore."
+        },
+        "actions": {
+          "create": "Crea trigger",
+          "save": "Salva modifiche",
+          "delete": "Elimina trigger"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ticket chiuso",
+          "project_completed": "Progetto completato"
+        },
+        "errors": {
+          "reference": "Impossibile caricare le opzioni del trigger. Riprova."
+        },
+        "noTemplates": "Crea un modello di sondaggio prima di aggiungere i trigger.",
+        "prioritiesMixed": "Le board selezionate utilizzano tipi di priorità diversi. Vengono mostrate tutte le priorità."
+      },
+      "response": {
+        "invalidTitle": "Sondaggio non disponibile",
+        "invalidMessage": "Questo link per il feedback non è più valido o è già stato utilizzato.",
+        "ratingPrompt": "Com'è stata la tua esperienza?",
+        "ratingAssistive": "Seleziona un punteggio da 1 a {{scale}}",
+        "commentLabel": "Commenti aggiuntivi (facoltativo)",
+        "submitButton": "Invia feedback",
+        "submitting": "Invio del feedback…",
+        "submittedTitle": "Grazie per la tua risposta!",
+        "submittedMessage": "{{thankYouText}}",
+        "retryButton": "Riprova",
+        "ratingSubmitted": "Feedback inviato",
+        "errorMessage": "Impossibile registrare il feedback. Riprova.",
+        "selectRatingError": "Seleziona un punteggio prima di inviare.",
+        "supportMessage": "Per qualsiasi domanda, contatta il tuo tecnico."
+      }
+    },
+    "response": {
+      "pageTitle": "Sondaggio sulla soddisfazione del cliente"
     }
   },
   "availability": {
