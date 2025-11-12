@@ -248,44 +248,6 @@ export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
   declineReason: z.string().optional(),
 });
 
-export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
-  invitationId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  companyId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
-  surveyTokenHash: z.string(),
-});
-
-export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({
-  responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  companyId: z.string().uuid().optional(),
-  rating: z.number(),
-  hasComment: z.boolean(),
-});
-
-export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
-  responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  ticketNumber: z.string(),
-  companyId: z.string().uuid().optional(),
-  companyName: z.string().optional(),
-  contactName: z.string().optional(),
-  rating: z.number(),
-  comment: z.string().optional(),
-  assignedTo: z.string().uuid().optional(),
-});
-
-// Message event payload schema
-export const MessageEventPayloadSchema = BasePayloadSchema.extend({
-  messageId: z.string().uuid(),
-  senderId: z.string().uuid(),
-  recipientId: z.string().uuid(),
-  conversationId: z.string().uuid().optional(),
-  messagePreview: z.string(),
-  senderName: z.string(),
-});
-
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -323,11 +285,6 @@ export const EventPayloadSchemas = {
   APPOINTMENT_REQUEST_APPROVED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_DECLINED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_CANCELLED: AppointmentRequestEventPayloadSchema,
-  SURVEY_INVITATION_SENT: SurveyInvitationSentPayloadSchema,
-  SURVEY_RESPONSE_SUBMITTED: SurveyResponseSubmittedPayloadSchema,
-  SURVEY_NEGATIVE_RESPONSE: SurveyNegativeResponsePayloadSchema,
-  MESSAGE_SENT: MessageEventPayloadSchema,
-  USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -364,9 +321,6 @@ export type SurveyInvitationSentEvent = z.infer<typeof EventSchemas.SURVEY_INVIT
 export type SurveyResponseSubmittedEvent = z.infer<typeof EventSchemas.SURVEY_RESPONSE_SUBMITTED>;
 export type SurveyNegativeResponseEvent = z.infer<typeof EventSchemas.SURVEY_NEGATIVE_RESPONSE>;
 export type ProjectTaskAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED>;
-export type SurveyInvitationSentEvent = z.infer<typeof EventSchemas.SURVEY_INVITATION_SENT>;
-export type SurveyResponseSubmittedEvent = z.infer<typeof EventSchemas.SURVEY_RESPONSE_SUBMITTED>;
-export type SurveyNegativeResponseEvent = z.infer<typeof EventSchemas.SURVEY_NEGATIVE_RESPONSE>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;
 export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_FAILED>;
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;

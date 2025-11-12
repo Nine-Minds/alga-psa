@@ -35,7 +35,7 @@ export async function GET(
       }
 
       // Get appointment request details if this is an appointment
-      let appointmentRequest = null;
+      let appointmentRequest: any = null;
       if (entry.work_item_type === 'appointment_request' && entry.work_item_id) {
         appointmentRequest = await trx('appointment_requests')
           .where({ appointment_request_id: entry.work_item_id })
@@ -43,7 +43,7 @@ export async function GET(
       }
 
       // Get service details
-      let service = null;
+      let service: any = null;
       if (appointmentRequest?.service_id) {
         service = await trx('service_catalog')
           .where({ service_id: appointmentRequest.service_id })
@@ -61,7 +61,7 @@ export async function GET(
         .first();
 
       // Get client/contact info
-      let contact = null;
+      let contact: any = null;
       if (appointmentRequest?.contact_id) {
         contact = await trx('contacts')
           .where({ contact_name_id: appointmentRequest.contact_id })

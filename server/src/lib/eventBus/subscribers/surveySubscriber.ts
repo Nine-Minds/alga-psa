@@ -123,7 +123,7 @@ async function handleProjectClosedEvent(event: unknown): Promise<void> {
       try {
         await sendSurveyInvitation({
           tenantId,
-          projectId,
+          ticketId: projectId,
           templateId,
           clientId: project.client_id,
           contactId: project.contact_name_id,
@@ -199,10 +199,12 @@ function matchesConditions(
 async function loadTicketSnapshot(tenantId: string, ticketId: string): Promise<TicketSnapshot | null> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    return knex<TicketSnapshot>('tickets')
+    const result = await knex<TicketSnapshot>('tickets')
       .select('ticket_id', 'board_id', 'status_id', 'priority_id', 'client_id', 'contact_name_id')
-      .where({ tenant: tenantId, ticket_id: ticketId })
+      .where('tenant', tenantId)
+      .andWhere('ticket_id', ticketId)
       .first();
+    return result || null;
   });
 }
 
@@ -224,9 +226,11 @@ function collectMatchingTemplatesForProject(triggers: SurveyTrigger[], project: 
 async function loadProjectSnapshot(tenantId: string, projectId: string): Promise<ProjectSnapshot | null> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    return knex<ProjectSnapshot>('projects')
+    const result = await knex<ProjectSnapshot>('projects')
       .select('project_id', 'client_id', 'contact_name_id')
-      .where({ tenant: tenantId, project_id: projectId })
+      .where('tenant', tenantId)
+      .andWhere('project_id', projectId)
       .first();
+    return result || null;
   });
 }

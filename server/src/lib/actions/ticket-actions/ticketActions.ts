@@ -23,6 +23,8 @@ import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
 import { AssetAssociationModel } from 'server/src/models/asset';
 import { publishEvent } from '../../../lib/eventBus/publishers';
+import { getEventBus } from '../../../lib/eventBus';
+import { getEmailEventChannel } from '../../../lib/notifications/emailChannel';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
