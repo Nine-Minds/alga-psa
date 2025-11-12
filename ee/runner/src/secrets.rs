@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+// use std::path::Path; // Not currently used
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -144,7 +144,7 @@ fn ciphertext_digest(envelope: &SecretEnvelope) -> String {
     hex::encode(hasher.finalize())
 }
 
-fn compute_ttl(envelope: &SecretEnvelope, now: Instant) -> Duration {
+fn compute_ttl(envelope: &SecretEnvelope, _now: Instant) -> Duration {
     const DEFAULT_TTL: Duration = Duration::from_secs(30);
     if let Some(expires_at) = envelope.expires_at.as_deref() {
         if let Ok(expiration_time) = humantime::parse_rfc3339(expires_at) {

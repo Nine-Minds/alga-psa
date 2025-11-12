@@ -3,17 +3,17 @@
 This guide specifies the v2-only extension API gateway pattern used to route tenant requests to out-of-process extension handlers executed by the Runner service.
 
 Key points:
-- Route pattern: `/api/ext/[extensionId]/[...path]`
-- Resolve tenant install → version → content_hash → manifest endpoint mapping
+- Route pattern: `/api/ext/[extensionId]/[[...path]]`
+- Resolve tenant install → `{version_id, content_hash, config, provider grants, sealed secret envelope}` (manifest endpoint matching is advisory today)
 - Proxy to Runner `POST /v1/execute` with strict header and size/time policies
-- Reference gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Reference gateway scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 ## Route Structure
 
 Next.js app route:
 
 ```
-server/src/app/api/ext/[extensionId]/[...path]/route.ts
+server/src/app/api/ext/[extensionId]/[[...path]]/route.ts
 ```
 
 Supports methods: GET, POST, PUT, PATCH, DELETE.
@@ -39,15 +39,14 @@ Example requests:
 - Look up the tenant’s install for `extensionId`
 - Determine the active `version_id` and `content_hash`
 
-3) Resolve endpoint from manifest
+3) Resolve endpoint from manifest (advisory)
 - Load manifest for the resolved version (cacheable)
-- Match `{method, pathname}` to a manifest endpoint (`api.endpoints`)
-- If not found, return 404
+- Match `{method, pathname}` to a manifest endpoint (`api.endpoints`). Today this is used for docs/UX; hard enforcement is tracked in [Plan A4](../plans/2025-11-12-extension-system-alignment-plan.md#workstream-a-%E2%80%94-gateway--registry).
 
 4) Build Runner Execute request
 - Normalize HTTP input (method, path, query, allowed headers, body_b64)
-- Add context `{request_id, tenant_id, extension_id, version_id, content_hash}`
-- Set limits `{timeout_ms}` from `EXT_GATEWAY_TIMEOUT_MS`
+- Add context `{request_id, tenant_id, extension_id, version_id, content_hash}` (install_id propagation pending A1)
+- Attach install metadata `{config, providers, secret_envelope}` and set limits `{timeout_ms}` from `EXT_GATEWAY_TIMEOUT_MS`
 
 5) Call Runner `/v1/execute`
 - `POST ${RUNNER_BASE_URL}/v1/execute`
@@ -61,35 +60,44 @@ Example requests:
 
 ```ts
 import { NextRequest, NextResponse } from 'next/server';
+import { loadInstallConfigCached } from '@ee/lib/extensions/lib/install-config-cache';
 
-export async function handler(req: NextRequest, ctx: { params: { extensionId: string; path: string[] } }) {
+export async function handle(
+  req: NextRequest,
+  { params }: { params: { extensionId: string; path: string[] } },
+) {
+  const method = req.method.toUpperCase();
   const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
-  const method = req.method;
-  const { extensionId, path } = ctx.params;
-  const pathname = '/' + (path || []).join('/');
+  const pathname = '/' + (params.path || []).join('/');
   const url = new URL(req.url);
 
   const tenantId = await getTenantFromAuth(req);
-  await assertAccess(tenantId, extensionId, method, pathname);
+  await assertAccess(tenantId, method);
 
-  const install = await getTenantInstall(tenantId, extensionId);
-  if (!install) return NextResponse.json({ error: 'Not installed' }, { status: 404 });
-  const { version_id, content_hash } = await resolveVersion(install);
-
-  const endpoint = await resolveEndpoint(version_id, method, pathname);
-  if (!endpoint) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const install = await loadInstallConfigCached(tenantId, params.extensionId);
+  if (!install?.contentHash) return NextResponse.json({ error: 'extension_not_installed' }, { status: 404 });
 
   const bodyBuf = method === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
   const execReq = {
-    context: { request_id: requestId, tenant_id: tenantId, extension_id: extensionId, content_hash, version_id },
+    context: {
+      request_id: requestId,
+      tenant_id: tenantId,
+      extension_id: params.extensionId,
+      version_id: install.versionId,
+      content_hash: install.contentHash,
+      // install_id TODO(A1)
+      config: install.config,
+    },
     http: {
       method,
       path: pathname,
       query: Object.fromEntries(url.searchParams.entries()),
-      headers: filterRequestHeaders(req.headers),
-      body_b64: bodyBuf ? bodyBuf.toString('base64') : undefined
+      headers: filterRequestHeaders(req.headers, tenantId, params.extensionId, requestId, method),
+      body_b64: bodyBuf ? bodyBuf.toString('base64') : undefined,
     },
-    limits: { timeout_ms: Number(process.env.EXT_GATEWAY_TIMEOUT_MS) || 5000 }
+    limits: { timeout_ms: Number(process.env.EXT_GATEWAY_TIMEOUT_MS ?? '5000') },
+    providers: install.providers,
+    ...(install.secretEnvelope ? { secret_envelope: install.secretEnvelope } : {}),
   };
 
   const runnerResp = await fetch(`${process.env.RUNNER_BASE_URL}/v1/execute`, {
@@ -97,22 +105,23 @@ export async function handler(req: NextRequest, ctx: { params: { extensionId: st
     headers: {
       'content-type': 'application/json',
       'x-request-id': requestId,
-      'authorization': await getRunnerServiceToken()
+      'x-alga-tenant': tenantId,
+      'x-alga-extension': params.extensionId,
+      ...(install.configVersion ? { 'x-ext-config-version': install.configVersion } : {}),
+      ...(install.secretsVersion ? { 'x-ext-secrets-version': install.secretsVersion } : {}),
     },
     body: JSON.stringify(execReq),
-    signal: AbortSignal.timeout(Number(process.env.EXT_GATEWAY_TIMEOUT_MS) || 5000)
+    signal: AbortSignal.timeout(Number(process.env.EXT_GATEWAY_TIMEOUT_MS ?? '5000')),
   });
 
-  if (!runnerResp.ok) {
-    return NextResponse.json({ error: 'Runner error' }, { status: 502 });
-  }
-  const { status, headers, body_b64 } = await runnerResp.json();
-  const resHeaders = filterResponseHeaders(headers);
-  const body = body_b64 ? Buffer.from(body_b64, 'base64') : undefined;
-  return new NextResponse(body, { status, headers: resHeaders });
+  const payload = await runnerResp.json();
+  return new NextResponse(payload.body_b64 ? Buffer.from(payload.body_b64, 'base64') : undefined, {
+    status: payload.status ?? runnerResp.status,
+    headers: filterResponseHeaders(runnerResp.headers),
+  });
 }
 
-export { handler as GET, handler as POST, handler as PUT, handler as PATCH, handler as DELETE };
+export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE };
 ```
 
 ## Header Policy
@@ -143,6 +152,7 @@ Response allowlist:
 
 ## Related References
 
-- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Gateway route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- Install config helpers: [@ee/lib/extensions/installConfig](../../server/src/lib/extensions/installConfig.ts)
 - Runner execution API: `POST /v1/execute` (see Runner responsibilities in [runner.md](runner.md))
-- Registry v2 integration for resolution: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
+- Registry v2 integration for resolution: [ExtensionRegistryServiceV2](../../server/src/lib/extensions/registry-v2.ts:48)
