@@ -23,7 +23,12 @@ import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { CalendarSyncStatusDisplay } from '../calendar/CalendarSyncStatusDisplay';
-import { approveAppointmentRequest as approveRequest, declineAppointmentRequest as declineRequest } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import {
+  approveAppointmentRequest as approveRequest,
+  declineAppointmentRequest as declineRequest,
+  getAppointmentRequestById,
+  IAppointmentRequest
+} from 'server/src/lib/actions/appointmentRequestManagementActions';
 import toast from 'react-hot-toast';
 import { Label } from 'server/src/components/ui/Label';
 
@@ -123,6 +128,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   // Appointment request specific state
   const [isAppointmentRequest, setIsAppointmentRequest] = useState(false);
+  const [appointmentRequestData, setAppointmentRequestData] = useState<IAppointmentRequest | null>(null);
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [assignedTechnicianId, setAssignedTechnicianId] = useState<string>('');
@@ -149,17 +155,32 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     const privateEventMessage = isPrivateEvent && !isCurrentUserSoleAssignee ?
       "This is a private entry. Only the creator can view or edit details." : null;
 
-    // Detect if this is an appointment request
+    // Detect if this is an appointment request and fetch its data
     useEffect(() => {
-      if (event && event.work_item_type === 'appointment_request' && event.work_item_id) {
-        setIsAppointmentRequest(true);
-        // Pre-fill assigned technician if one exists
-        if (event.assigned_user_ids && event.assigned_user_ids.length > 0) {
-          setAssignedTechnicianId(event.assigned_user_ids[0]);
+      const fetchAppointmentRequest = async () => {
+        if (event && event.work_item_type === 'appointment_request' && event.work_item_id) {
+          setIsAppointmentRequest(true);
+
+          // Fetch the appointment request data to check its status
+          const result = await getAppointmentRequestById(event.work_item_id);
+          if (result.success && result.data) {
+            setAppointmentRequestData(result.data);
+
+            // Pre-fill assigned technician if one exists
+            if (event.assigned_user_ids && event.assigned_user_ids.length > 0) {
+              setAssignedTechnicianId(event.assigned_user_ids[0]);
+            }
+          } else {
+            console.error('Failed to fetch appointment request:', result.error);
+            setAppointmentRequestData(null);
+          }
+        } else {
+          setIsAppointmentRequest(false);
+          setAppointmentRequestData(null);
         }
-      } else {
-        setIsAppointmentRequest(false);
-      }
+      };
+
+      fetchAppointmentRequest();
     }, [event]);
 
     // Fetch available work items when dialog opens
@@ -560,7 +581,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       <div className="shrink-0 pb-4 border-b flex justify-between items-center">
         {isInDrawer && (
           <h2 className="text-xl font-bold">
-            {isAppointmentRequest ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
+            {(isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending') ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
           </h2>
         )}
         <div className={`flex gap-2 ${!isInDrawer ? 'ml-auto' : ''}`}>
@@ -613,111 +634,158 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           </div>
         )}
 
-        {/* Appointment Request Approval UI */}
-        {isAppointmentRequest && event && (
+        {/* Info badge for approved appointment requests */}
+        {isAppointmentRequest && event && appointmentRequestData && appointmentRequestData.status === 'approved' && (
+          <Alert className="border-green-200 bg-green-50 mb-4">
+            <AlertDescription>
+              <p className="font-medium text-green-900">Approved Appointment</p>
+              <p className="text-sm text-green-700 mt-1">
+                This appointment originated from a client request{appointmentRequestData.approved_at ? ` and was approved on ${format(new Date(appointmentRequestData.approved_at), 'PPP')}` : ''}.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Status display for declined/cancelled appointment requests */}
+        {isAppointmentRequest && event && appointmentRequestData && (appointmentRequestData.status === 'declined' || appointmentRequestData.status === 'cancelled') && (
           <div className="space-y-4">
-            <Alert className="border-rose-200 bg-rose-50">
+            <Alert className={appointmentRequestData.status === 'declined' ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}>
               <AlertDescription>
-                <p className="font-medium text-rose-900">Pending Appointment Request</p>
-                <p className="text-sm text-rose-700 mt-1">This is an appointment request from a client. You can approve or decline it below.</p>
+                <p className={`font-medium ${appointmentRequestData.status === 'declined' ? 'text-red-900' : 'text-gray-900'}`}>
+                  {appointmentRequestData.status === 'declined' ? 'Declined Appointment Request' : 'Cancelled Appointment Request'}
+                </p>
+                <p className={`text-sm mt-1 ${appointmentRequestData.status === 'declined' ? 'text-red-700' : 'text-gray-700'}`}>
+                  {appointmentRequestData.status === 'declined' &&
+                    `This appointment request was declined${appointmentRequestData.declined_reason ? `: ${appointmentRequestData.declined_reason}` : '.'}`}
+                  {appointmentRequestData.status === 'cancelled' &&
+                    'This appointment request was cancelled by the client.'}
+                </p>
               </AlertDescription>
             </Alert>
 
             <div>
-              <Label>Assign Technician *</Label>
-              <CustomSelect
-                id="assign-technician-request"
-                options={users.map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))}
-                value={assignedTechnicianId}
-                onValueChange={setAssignedTechnicianId}
-                placeholder="Select technician"
-              />
-            </div>
-
-            <div>
-              <Label>Scheduled Date & Time</Label>
+              <Label>Requested Date & Time</Label>
               <div className="text-sm bg-gray-50 p-3 rounded border">
                 {format(new Date(event.scheduled_start), 'PPP p')} - {format(new Date(event.scheduled_end), 'p')}
               </div>
             </div>
 
-            <div>
-              <Label>Notes</Label>
-              <div className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
-                {event.notes || 'No notes provided'}
-              </div>
-            </div>
-
-            {!showDeclineForm ? (
-              <div className="flex gap-2 pt-4">
-                <Button
-                  id="approve-appointment-request"
-                  onClick={handleApproveRequest}
-                  disabled={isProcessing || !assignedTechnicianId}
-                  className="flex-1"
-                  type="button"
-                >
-                  <Check className="h-4 w-4 mr-2" />
-                  Approve
-                </Button>
-                <Button
-                  id="decline-appointment-request-show"
-                  variant="outline"
-                  onClick={() => setShowDeclineForm(true)}
-                  disabled={isProcessing}
-                  className="flex-1"
-                  type="button"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Decline
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4 pt-4 border-t">
-                <div>
-                  <Label htmlFor="decline-reason">Reason for Declining *</Label>
-                  <TextArea
-                    id="decline-reason"
-                    value={declineReason}
-                    onChange={(e) => setDeclineReason(e.target.value)}
-                    placeholder="Please provide a reason for declining this request..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    id="confirm-decline-request"
-                    variant="destructive"
-                    onClick={handleDeclineRequest}
-                    disabled={isProcessing || !declineReason.trim()}
-                    className="flex-1"
-                    type="button"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Confirm Decline
-                  </Button>
-                  <Button
-                    id="cancel-decline-request"
-                    variant="outline"
-                    onClick={() => {
-                      setShowDeclineForm(false);
-                      setDeclineReason('');
-                    }}
-                    disabled={isProcessing}
-                    className="flex-1"
-                    type="button"
-                  >
-                    Cancel
-                  </Button>
+            {event.notes && (
+              <div>
+                <Label>Notes</Label>
+                <div className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
+                  {event.notes}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Regular Edit Form - only show if NOT an appointment request */}
-        {!isAppointmentRequest && (
+        {/* Appointment Request Approval UI - Only for PENDING requests */}
+        {isAppointmentRequest && event && appointmentRequestData && appointmentRequestData.status === 'pending' && (
+          <div className="space-y-4">
+                <Alert className="border-rose-200 bg-rose-50">
+                  <AlertDescription>
+                    <p className="font-medium text-rose-900">Pending Appointment Request</p>
+                    <p className="text-sm text-rose-700 mt-1">This is an appointment request from a client. You can approve or decline it below.</p>
+                  </AlertDescription>
+                </Alert>
+
+                <div>
+                  <Label>Assign Technician *</Label>
+                  <CustomSelect
+                    id="assign-technician-request"
+                    options={users.map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))}
+                    value={assignedTechnicianId}
+                    onValueChange={setAssignedTechnicianId}
+                    placeholder="Select technician"
+                  />
+                </div>
+
+                <div>
+                  <Label>Scheduled Date & Time</Label>
+                  <div className="text-sm bg-gray-50 p-3 rounded border">
+                    {format(new Date(event.scheduled_start), 'PPP p')} - {format(new Date(event.scheduled_end), 'p')}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Notes</Label>
+                  <div className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
+                    {event.notes || 'No notes provided'}
+                  </div>
+                </div>
+
+                {!showDeclineForm ? (
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      id="approve-appointment-request"
+                      onClick={handleApproveRequest}
+                      disabled={isProcessing || !assignedTechnicianId}
+                      className="flex-1"
+                      type="button"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button
+                      id="decline-appointment-request-show"
+                      variant="outline"
+                      onClick={() => setShowDeclineForm(true)}
+                      disabled={isProcessing}
+                      className="flex-1"
+                      type="button"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Decline
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <Label htmlFor="decline-reason">Reason for Declining *</Label>
+                      <TextArea
+                        id="decline-reason"
+                        value={declineReason}
+                        onChange={(e) => setDeclineReason(e.target.value)}
+                        placeholder="Please provide a reason for declining this request..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        id="confirm-decline-request"
+                        variant="destructive"
+                        onClick={handleDeclineRequest}
+                        disabled={isProcessing || !declineReason.trim()}
+                        className="flex-1"
+                        type="button"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Confirm Decline
+                      </Button>
+                      <Button
+                        id="cancel-decline-request"
+                        variant="outline"
+                        onClick={() => {
+                          setShowDeclineForm(false);
+                          setDeclineReason('');
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1"
+                        type="button"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+          </div>
+        )}
+
+        {/* Regular Edit Form - show if NOT an appointment request OR if it's an approved appointment request */}
+        {(!isAppointmentRequest || (appointmentRequestData && appointmentRequestData.status === 'approved')) && (
         <div className="min-w-0">
           <div className="relative">
             {viewOnly ? (
@@ -987,7 +1055,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         )}
 
         {/* Buttons section - different for appointment requests vs regular entries */}
-        {viewOnly || isAppointmentRequest ? (
+        {viewOnly || (isAppointmentRequest && appointmentRequestData && appointmentRequestData.status !== 'approved') ? (
           <Button
             id="close-entry-btn"
             onClick={onClose}
@@ -1050,7 +1118,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       isOpen={true}
       onClose={onClose}
       hideCloseButton={false}
-      title={isAppointmentRequest ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
+      title={(isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending') ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
     >
       <EntryPopupContext.Provider value={contextValue}>
         {content}

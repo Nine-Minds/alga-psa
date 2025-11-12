@@ -64,6 +64,79 @@ export interface AppointmentRequestResult<T> {
 }
 
 /**
+ * Get a single appointment request by ID
+ */
+export async function getAppointmentRequestById(
+  appointmentRequestId: string
+): Promise<AppointmentRequestResult<IAppointmentRequest>> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const { knex: db, tenant } = await createTenantKnex();
+
+    // Check permissions - use same permission as schedule actions
+    const userPermissions = await getCurrentUserPermissions();
+    const canRead = userPermissions.includes('user_schedule:read') || userPermissions.includes('user_schedule:update');
+    if (!canRead) {
+      return { success: false, error: 'Insufficient permissions to view appointment requests' };
+    }
+
+    const request = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('appointment_requests as ar')
+        .leftJoin('service_catalog as sc', function() {
+          this.on('ar.service_id', 'sc.service_id')
+            .andOn('ar.tenant', 'sc.tenant');
+        })
+        .leftJoin('clients as c', function() {
+          this.on('ar.client_id', 'c.client_id')
+            .andOn('ar.tenant', 'c.tenant');
+        })
+        .leftJoin('contacts as con', function() {
+          this.on('ar.contact_id', 'con.contact_name_id')
+            .andOn('ar.tenant', 'con.tenant');
+        })
+        .leftJoin('users as u', function() {
+          this.on('ar.preferred_assigned_user_id', 'u.user_id')
+            .andOn('ar.tenant', 'u.tenant');
+        })
+        .leftJoin('users as approver', function() {
+          this.on('ar.approved_by_user_id', 'approver.user_id')
+            .andOn('ar.tenant', 'approver.tenant');
+        })
+        .where({
+          'ar.appointment_request_id': appointmentRequestId,
+          'ar.tenant': tenant
+        })
+        .select(
+          'ar.*',
+          'sc.service_name',
+          'c.client_name as client_company_name',
+          'con.full_name as contact_name',
+          'con.email as contact_email',
+          'u.first_name as preferred_technician_first_name',
+          'u.last_name as preferred_technician_last_name',
+          'approver.first_name as approver_first_name',
+          'approver.last_name as approver_last_name'
+        )
+        .first();
+    });
+
+    if (!request) {
+      return { success: false, error: 'Appointment request not found' };
+    }
+
+    return { success: true, data: request as IAppointmentRequest };
+  } catch (error) {
+    console.error('Error fetching appointment request:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch appointment request';
+    return { success: false, error: message };
+  }
+}
+
+/**
  * Get all appointment requests for MSP with filtering
  */
 export async function getAppointmentRequests(
@@ -217,7 +290,9 @@ export async function approveAppointmentRequest(
 
       // Use final date/time if provided, otherwise use requested
       const finalDate = validatedData.final_date || request.requested_date;
-      const finalTime = validatedData.final_time || request.requested_time;
+      // Ensure time is in HH:MM format (database might store HH:MM:SS)
+      const requestedTime = request.requested_time.slice(0, 5);
+      const finalTime = validatedData.final_time || requestedTime;
 
       // Verify assigned user exists
       const assignedUser = await trx('users')

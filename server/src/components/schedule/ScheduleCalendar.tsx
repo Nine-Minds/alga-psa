@@ -114,7 +114,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     non_billable_category: 'rgb(var(--color-accent-200))',
     ad_hoc: 'rgb(var(--color-border-300))',
     interaction: 'rgb(187 247 208)', // Tailwind green-200
-    appointment_request: 'rgb(251 113 133)' // Tailwind rose-400
+    appointment_request: 'rgb(253 164 175)' // Tailwind rose-300 (paler)
   };
 
   const Legend = () => (

@@ -101,25 +101,31 @@ export default function AppointmentRequestsPanel({
     setShowDeclineForm(false);
     setAssignedTechnicianId(request.preferred_assigned_user_id || '');
 
-    // Handle date/time parsing safely
+    // Handle date/time parsing safely - prefill with requested date/time
     try {
       if (request.requested_date && request.requested_time) {
-        // Database stores time as HH:MM:SS, need to handle that format
+        // Database stores time in HH:MM or HH:MM:SS format
         const timeStr = request.requested_time.slice(0, 5); // Get HH:MM only
-        const dateTimeString = `${request.requested_date}T${timeStr}:00`;
 
-        console.log('Parsing date/time:', {
-          date: request.requested_date,
-          time: request.requested_time,
-          combined: dateTimeString
-        });
+        // Parse time components
+        const [hours, minutes] = timeStr.split(':').map(Number);
 
-        const parsedDate = new Date(dateTimeString);
-        if (!isNaN(parsedDate.getTime())) {
-          console.log('Successfully parsed date:', parsedDate);
+        // Create date object from the requested date
+        const parsedDate = new Date(request.requested_date);
+
+        // Set the time components
+        if (!isNaN(parsedDate.getTime()) && !isNaN(hours) && !isNaN(minutes)) {
+          parsedDate.setHours(hours, minutes, 0, 0);
+
+          console.log('Prefilling date/time:', {
+            date: request.requested_date,
+            time: request.requested_time,
+            parsed: parsedDate.toISOString()
+          });
+
           setFinalDateTime(parsedDate);
         } else {
-          console.error('Invalid date/time:', dateTimeString);
+          console.error('Invalid date/time components:', { date: request.requested_date, time: timeStr });
           setFinalDateTime(null);
         }
       } else {
@@ -146,17 +152,17 @@ export default function AppointmentRequestsPanel({
 
     try {
       // Use finalDateTime if set, otherwise fall back to original requested date/time
-      let approvalDate: string;
-      let approvalTime: string;
+      let approvalDate: string | undefined;
+      let approvalTime: string | undefined;
 
       if (finalDateTime && !isNaN(finalDateTime.getTime())) {
-        approvalDate = finalDateTime.toISOString().split('T')[0];
-        approvalTime = finalDateTime.toTimeString().slice(0, 5);
-      } else {
-        // Fall back to original requested date/time
-        approvalDate = selectedRequest.requested_date;
-        approvalTime = selectedRequest.requested_time;
+        // Convert Date object to proper string formats
+        approvalDate = finalDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
+        const hours = finalDateTime.getHours().toString().padStart(2, '0');
+        const minutes = finalDateTime.getMinutes().toString().padStart(2, '0');
+        approvalTime = `${hours}:${minutes}`; // HH:MM
       }
+      // If finalDateTime is not set, send undefined to use the requested date/time from server
 
       const result = await approveRequest({
         appointment_request_id: selectedRequest.appointment_request_id,
@@ -259,7 +265,7 @@ export default function AppointmentRequestsPanel({
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} id="appointment-requests-panel">
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col max-w-2xl">
         {!selectedRequest ? (
           <>
             {/* List View */}
