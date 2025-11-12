@@ -3,7 +3,6 @@
  */
 
 import i18next, { TFunction } from 'i18next';
-import { initReactI18next } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
 import { cache } from 'react';
 import { cookies, headers } from 'next/headers';
@@ -24,7 +23,6 @@ async function initI18next(locale: SupportedLocale) {
 
   await instance
     .use(HttpBackend)
-    .use(initReactI18next)
     .init({
       ...I18N_CONFIG,
       lng: locale,
