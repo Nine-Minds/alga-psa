@@ -245,6 +245,16 @@ export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
   assignedTo: z.string().uuid().optional(),
 });
 
+// Message event payload schema
+export const MessageEventPayloadSchema = BasePayloadSchema.extend({
+  messageId: z.string().uuid(),
+  senderId: z.string().uuid(),
+  recipientId: z.string().uuid(),
+  conversationId: z.string().uuid().optional(),
+  messagePreview: z.string(),
+  senderName: z.string(),
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -282,6 +292,8 @@ export const EventPayloadSchemas = {
   SURVEY_INVITATION_SENT: SurveyInvitationSentPayloadSchema,
   SURVEY_RESPONSE_SUBMITTED: SurveyResponseSubmittedPayloadSchema,
   SURVEY_NEGATIVE_RESPONSE: SurveyNegativeResponsePayloadSchema,
+  MESSAGE_SENT: MessageEventPayloadSchema,
+  USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
