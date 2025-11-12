@@ -1547,7 +1547,7 @@ export interface StatsFilters {
 
 1. **Database Setup** ✅ COMPLETE
    - [x] Create migration files for all tables with proper tenant isolation
-   - [x] Add RLS policies (note: currently disabled via migration `20251201093000_disable_rls_on_survey_tables.cjs`)
+   - [x] Add RLS policies (note: currently disabled via migration `20251111120000_disable_rls_on_survey_tables.cjs`)
    - [x] Create indexes for efficient querying
    - [x] Add foreign keys with Citus multi-tenancy rules
 
