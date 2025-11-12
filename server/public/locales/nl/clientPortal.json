@@ -10,7 +10,8 @@
     "account": "Account",
     "signOut": "Afmelden",
     "clientPortal": "Klantenportaal",
-    "portal": "Portal"
+    "portal": "Portal",
+    "notifications": "Meldingen"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -36,6 +37,7 @@
   "tickets": {
     "title": "Supporttickets",
     "subtitle": "Bekijk en beheer je supporttickets",
+    "backToTickets": "Terug naar tickets",
     "createNew": "Nieuw ticket aanmaken",
     "createButton": "Supportticket aanmaken",
     "viewAll": "Alle tickets bekijken",
@@ -92,7 +94,9 @@
       "category": "Categorie",
       "subcategory": "Subcategorie",
       "attachments": "Bijlagen",
+      "created": "Aangemaakt",
       "createdAt": "Aangemaakt",
+      "lastUpdated": "Laatst bijgewerkt",
       "updatedAt": "Laatst bijgewerkt",
       "assignedTo": "Toegewezen aan",
       "requester": "Aanvrager",
@@ -348,6 +352,8 @@
     "clientInfo": "Bedrijfsgegevens",
     "preferences": "Voorkeuren",
     "security": "Beveiliging",
+    "activity": "Activiteit",
+    "notificationSettings": "Notificatie-instellingen",
     "fields": {
       "firstName": "Voornaam",
       "lastName": "Achternaam",
@@ -394,7 +400,9 @@
       "ticketUpdates": "Ticketupdates",
       "projectUpdates": "Projectupdates",
       "invoices": "Factuurmeldingen",
-      "announcements": "Systeemmeldingen"
+      "announcements": "Systeemmeldingen",
+      "emailPreferences": "E-mail",
+      "internalPreferences": "Intern"
     },
     "actions": {
       "save": "Wijzigingen opslaan",
@@ -833,6 +841,7 @@
     "no": "Nee",
     "search": "Zoeken",
     "filter": "Filteren",
+    "resetFilters": "Filters resetten",
     "sort": "Sorteren",
     "refresh": "Vernieuwen",
     "export": "Exporteren",
@@ -952,7 +961,29 @@
     "markAllAsRead": "Alles als gelezen markeren",
     "noNotifications": "Geen nieuwe notificaties",
     "settings": "Notificatie-instellingen",
-    "viewAll": "Alle notificaties bekijken"
+    "viewAll": "Alle notificaties bekijken",
+    "tabs": {
+      "unread": "Ongelezen",
+      "all": "Alle",
+      "read": "Gelezen"
+    },
+    "preferences": {
+      "title": "Notificatievoorkeuren",
+      "description": "Beheer welke interne meldingen je ontvangt",
+      "loading": "Voorkeuren worden geladen...",
+      "loadError": "Voorkeuren konden niet worden geladen",
+      "saveError": "Voorkeur kon niet worden opgeslagen",
+      "noCategories": "Geen notificatiecategorieën beschikbaar",
+      "emailPreferences": "E-mail",
+      "internalPreferences": "Intern"
+    },
+    "categories": {
+      "tickets": "Tickets",
+      "invoices": "Facturen",
+      "messages": "Berichten",
+      "projects": "Projecten",
+      "system": "Systeem"
+    }
   },
   "pagination": {
     "showing": "Resultaten {{from}} tot {{to}} van {{total}}",

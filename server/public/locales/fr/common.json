@@ -302,6 +302,10 @@
       "bulkDeleteSuccess_one": "{{count}} document a été supprimé avec succès",
       "bulkDeleteSuccess_other": "{{count}} documents ont été supprimés avec succès"
     },
+    "empty": {
+      "default": "Aucun document trouvé",
+      "folder": "Aucun document trouvé dans ce dossier"
+    },
     "validation": {
       "nameRequired": "Le nom du document est obligatoire"
     },
@@ -443,6 +447,16 @@
       "nameLabel": "Nom du dossier",
       "namePlaceholder": "Saisissez le nom du dossier",
       "willCreateIn": "Sera créé dans : {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Voir toutes les notifications",
+      "categories": {
+        "Authentication": "Authentification",
+        "Invoices": "Factures",
+        "Projects": "Projets",
+        "Tickets": "Tickets",
+        "Time Entries": "Entrées de temps"
+      }
     }
   },
   "fields": {
@@ -611,6 +625,16 @@
     },
     "response": {
       "pageTitle": "Sondage de satisfaction client"
+    }
+  },
+  "notifications": {
+    "viewAll": "Voir toutes les notifications",
+    "categories": {
+      "Authentication": "Authentification",
+      "Invoices": "Factures",
+      "Projects": "Projets",
+      "Tickets": "Tickets",
+      "Time Entries": "Saisies de temps"
     }
   }
 }

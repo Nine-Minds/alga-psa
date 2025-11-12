@@ -1,0 +1,14 @@
+{
+  "name": "alga-runner-dynamic-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run clean && npm run component",
+    "clean": "rm -rf dist",
+    "component": "mkdir -p dist && jco componentize ./index.js --wit ../../../wit/extension-runner.wit --world-name runner --disable all --out ./dist/component.wasm"
+  },
+  "devDependencies": {
+    "@bytecodealliance/componentize-js": "^0.19.3"
+  }
+}

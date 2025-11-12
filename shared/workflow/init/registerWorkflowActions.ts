@@ -7,9 +7,113 @@
 import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
 import { logger, getSecretProviderInstance } from '@alga-psa/shared/core';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
+import axios from 'axios'; // For QBO API calls
+import type { Knex } from 'knex';
+import { ManagedDomainService as ManagedDomainServiceExport } from '@product/email-domains/entry';
 
 // --- Mock Secret Retrieval ---
 
+
+// --- QBO Helper Types and Constants ---
+const QBO_BASE_URL = process.env.QBO_API_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com';
+
+interface QboCredentials {
+  accessToken: string;
+  refreshToken?: string; // Optional, as not all flows might expose it directly here
+  realmId: string; // Already a param in actions, but good to have in a credentials object
+  accessTokenExpiresAt: string; // ISO string
+  // refreshTokenExpiresAt?: string; // ISO string, optional
+}
+
+// --- QBO Customer Specific Types ---
+interface QuickBooksClientInfo {
+  Id: string;
+  SyncToken: string;
+  DisplayName?: string;
+  PrimaryNameValue?: string; // For individual customers
+  GivenName?: string;
+  MiddleName?: string;
+  FamilyName?: string;
+  Suffix?: string;
+  FullyQualifiedName?: string;
+  ClientName?: string;
+  PrimaryEmailAddr?: {
+    Address?: string;
+  };
+  PrimaryPhone?: {
+    FreeFormNumber?: string;
+  };
+  BillAddr?: {
+    Id?: string;
+    Line1?: string;
+    Line2?: string;
+    Line3?: string;
+    Line4?: string;
+    Line5?: string;
+    City?: string;
+    Country?: string;
+    CountrySubDivisionCode?: string; // State
+    PostalCode?: string;
+    Lat?: string;
+    Long?: string;
+  };
+  // Add other fields as necessary based on typical QBO Customer structure
+}
+
+interface QboCustomerByIdResult {
+  success: boolean;
+  customer?: QuickBooksClientInfo;
+  message?: string;
+  errorDetails?: any;
+  qboRawResponse?: any;
+}
+
+type ManagedDomainServiceLike = {
+  createDomain: (options: { domain: string; region?: string }) => Promise<{
+    providerDomainId: string;
+    status: string;
+    dnsRecords: any[];
+  }>;
+  checkDomainStatus: (identifier: { domain?: string; providerDomainId?: string }) => Promise<{
+    provider: any;
+    dnsLookup: any;
+    providerDomainId: string;
+  }>;
+  activateDomain: (domain: string) => Promise<void>;
+  deleteDomain: (domain: string) => Promise<void>;
+};
+
+type ManagedDomainServiceCtor = {
+  forTenant: (options: { tenantId: string; knex: Knex }) => ManagedDomainServiceLike;
+};
+
+const ManagedDomainServiceCtor = ManagedDomainServiceExport as ManagedDomainServiceCtor | undefined;
+
+async function getKnexForTenant(tenantId: string, context: ActionExecutionContext): Promise<Knex> {
+  if (context.knex) {
+    return context.knex as Knex;
+  }
+
+  const module = await import('server/src/lib/db/db');
+  return module.getConnection(tenantId);
+}
+
+async function resolveManagedDomainService(
+  tenantId: string,
+  context: ActionExecutionContext
+): Promise<ManagedDomainServiceLike | null> {
+  if (!tenantId) {
+    throw new Error('Tenant ID is required for managed domain operations');
+  }
+
+  if (!ManagedDomainServiceCtor) {
+    logger.warn('[WorkflowInit] ManagedDomainService unavailable in current edition');
+    return null;
+  }
+
+  const knex = await getKnexForTenant(tenantId, context);
+  return ManagedDomainServiceCtor.forTenant({ tenantId, knex });
+}
 
 /**
  * Register all workflow actions with the action registry
@@ -1074,37 +1178,61 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       { name: 'region', type: 'string', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] createResendDomain called for domain: ${params.domain}, tenant: ${params.tenantId}`);
+      const tenantId = (params.tenantId as string) || context.tenant;
+      logger.info(`[ACTION] createResendDomain called for domain: ${params.domain}, tenant: ${tenantId}`);
 
       try {
-        // For now, return a mock response until we implement the actual Resend provider
-        // This will be replaced when we implement the ResendEmailProvider
-        const mockResult = {
-          resendDomainId: `rd_${Date.now()}`,
-          domain: params.domain,
-          status: 'pending',
-          region: params.region || 'us-east-1',
-          dnsRecords: [
-            {
-              type: 'TXT',
-              name: `resend._domainkey.${params.domain}`,
-              value: 'mock-dkim-key-value'
-            },
-            {
-              type: 'TXT',
-              name: `send.${params.domain}`,
-              value: 'v=spf1 include:resend.net ~all'
-            },
-            {
-              type: 'MX',
-              name: `send.${params.domain}`,
-              value: '10 feedback-smtp.us-east-1.amazonses.com'
-            }
-          ]
-        };
+        const service = await resolveManagedDomainService(tenantId, context);
 
-        logger.info(`[ACTION] createResendDomain: Mock domain created with ID: ${mockResult.resendDomainId}`);
-        return { success: true, ...mockResult };
+        if (!service) {
+          const fallback = {
+            resendDomainId: `rd_${Date.now()}`,
+            domain: params.domain,
+            status: 'pending',
+            region: params.region || 'us-east-1',
+            dnsRecords: [
+              {
+                type: 'TXT',
+                name: `resend._domainkey.${params.domain}`,
+                value: 'mock-dkim-key-value'
+              },
+              {
+                type: 'TXT',
+                name: `send.${params.domain}`,
+                value: 'v=spf1 include:resend.net ~all'
+              },
+              {
+                type: 'MX',
+                name: `send.${params.domain}`,
+                value: '10 feedback-smtp.us-east-1.amazonses.com'
+              }
+            ]
+          };
+
+          logger.info(`[ACTION] createResendDomain: Managed service unavailable, returning fallback payload`);
+          return { success: true, ...fallback };
+        }
+
+        const result = await service.createDomain({
+          domain: params.domain,
+          region: params.region,
+        });
+
+        logger.info(`[ACTION] createResendDomain: Managed domain created`, {
+          tenantId,
+          domain: params.domain,
+          providerDomainId: result.providerDomainId,
+          status: result.status,
+        });
+
+        return {
+          success: true,
+          resendDomainId: result.providerDomainId,
+          domain: params.domain,
+          status: result.status,
+          region: params.region || 'us-east-1',
+          dnsRecords: result.dnsRecords,
+        };
       } catch (error: any) {
         logger.error(`[ACTION] createResendDomain: Error creating domain ${params.domain}`, error);
         return { success: false, message: error.message, error };
@@ -1148,26 +1276,55 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     'Trigger domain verification check in Resend',
     [
       { name: 'tenantId', type: 'string', required: true },
-      { name: 'resendDomainId', type: 'string', required: true }
+      { name: 'resendDomainId', type: 'string', required: true },
+      { name: 'domain', type: 'string', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] triggerDomainVerification called for resendDomainId: ${params.resendDomainId}, tenant: ${params.tenantId}`);
+      const tenantId = (params.tenantId as string) || context.tenant;
+      logger.info(`[ACTION] triggerDomainVerification called for providerDomainId: ${params.resendDomainId}, tenant: ${tenantId}`);
 
       try {
-        // For now, return a mock response
-        // In a real implementation, this would call the Resend API to verify the domain
-        const mockStatuses = ['pending', 'verified', 'failed'];
-        const randomStatus = mockStatuses[Math.floor(Math.random() * mockStatuses.length)];
+        const service = await resolveManagedDomainService(tenantId, context);
 
-        const result = {
-          status: randomStatus,
-          resendDomainId: params.resendDomainId,
-          verifiedAt: randomStatus === 'verified' ? new Date().toISOString() : null,
-          failureReason: randomStatus === 'failed' ? 'DNS records not found' : null
+        if (!service) {
+          const mockStatuses = ['pending', 'verified', 'failed'];
+          const randomStatus = mockStatuses[Math.floor(Math.random() * mockStatuses.length)];
+
+          const fallback = {
+            status: randomStatus,
+            resendDomainId: params.resendDomainId,
+            verifiedAt: randomStatus === 'verified' ? new Date().toISOString() : null,
+            failureReason: randomStatus === 'failed' ? 'DNS records not found' : null
+          };
+
+          logger.info(`[ACTION] triggerDomainVerification: Managed service unavailable, returning fallback payload`);
+          return { success: true, ...fallback };
+        }
+
+        const verification = await service.checkDomainStatus({
+          domain: params.domain,
+          providerDomainId: params.resendDomainId,
+        });
+
+        const provider = verification.provider;
+        const verifiedAt = provider.verifiedAt instanceof Date ? provider.verifiedAt.toISOString() : provider.verifiedAt ?? null;
+
+        logger.info(`[ACTION] triggerDomainVerification: Domain verification status`, {
+          tenantId,
+          domain: provider.domain,
+          status: provider.status,
+          failureReason: provider.failureReason,
+        });
+
+        return {
+          success: true,
+          status: provider.status,
+          resendDomainId: verification.providerDomainId,
+          verifiedAt,
+          failureReason: provider.failureReason ?? null,
+          provider,
+          dnsLookup: verification.dnsLookup,
         };
-
-        logger.info(`[ACTION] triggerDomainVerification: Domain verification status: ${result.status}`);
-        return { success: true, ...result };
       } catch (error: any) {
         logger.error(`[ACTION] triggerDomainVerification: Error verifying domain ${params.resendDomainId}`, error);
         return { success: false, message: error.message, error };
@@ -1185,12 +1342,25 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       { name: 'resendDomainId', type: 'string', required: true }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] activateCustomDomain called for domain: ${params.domain}, tenant: ${params.tenantId}`);
+      const tenantId = (params.tenantId as string) || context.tenant;
+      logger.info(`[ACTION] activateCustomDomain called for domain: ${params.domain}, tenant: ${tenantId}`);
 
       try {
-        // For now, just log the activation
-        // In a real implementation, this would update tenant email settings in the database
-        logger.info(`[ACTION] activateCustomDomain: Activating domain ${params.domain} for tenant ${params.tenantId}`);
+        const service = await resolveManagedDomainService(tenantId, context);
+
+        if (!service) {
+          logger.info(`[ACTION] activateCustomDomain: Managed service unavailable, returning fallback success`);
+          return {
+            success: true,
+            domainActivated: true,
+            domain: params.domain,
+            resendDomainId: params.resendDomainId
+          };
+        }
+
+        await service.activateDomain(params.domain);
+
+        logger.info(`[ACTION] activateCustomDomain: Activated domain ${params.domain} for tenant ${tenantId}`);
 
         return {
           success: true,

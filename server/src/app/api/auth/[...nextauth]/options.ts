@@ -1,6 +1,8 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextAuthConfig } from "next-auth";
 import "server/src/types/next-auth";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
@@ -14,6 +16,21 @@ import {
 } from "server/src/lib/auth/sessionCookies";
 import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "server/src/lib/utils/tenantSlug";
+import { isEnterprise } from "server/src/lib/features";
+import {
+    applyOAuthAccountHints,
+    decodeOAuthJwtPayload,
+    mapOAuthProfileToExtendedUser,
+} from "@ee/lib/auth/ssoProviders";
+import type { OAuthProfileMappingResult } from "@ee/lib/auth/ssoProviders";
+import {
+    OAuthAccountLinkConflictError,
+    upsertOAuthAccountLink,
+    findOAuthAccountLink,
+} from "@ee/lib/auth/oauthAccountLinks";
+import { isAutoLinkEnabledForTenant } from "@ee/lib/auth/ssoAutoLink";
+import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
+import { cookies } from "next/headers";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -197,18 +214,503 @@ interface ExtendedUser {
     contactId?: string;
 }
 
+function toOAuthProfileMappingResult(user: ExtendedUser): OAuthProfileMappingResult {
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        image: user.image,
+        proToken: user.proToken,
+        tenant: user.tenant,
+        tenantSlug: user.tenantSlug,
+        user_type: user.user_type === 'client' ? 'client' : 'internal',
+        clientId: user.clientId,
+        contactId: user.contactId,
+    };
+}
+
+const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
+    google: 'google',
+    'azure-ad': 'microsoft',
+    microsoft: 'microsoft',
+};
+
+function normalizeOAuthProvider(providerId?: string | null): OAuthLinkProvider | null {
+    if (!providerId) {
+        return null;
+    }
+    return OAUTH_PROVIDER_ALIASES[providerId] ?? null;
+}
+
+function toOptionalString(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function pickFirstString(values: unknown[]): string | undefined {
+    for (const value of values) {
+        const candidate = toOptionalString(value);
+        if (candidate) {
+            return candidate;
+        }
+    }
+    return undefined;
+}
+
+function getSafeRecord(value: unknown): Record<string, unknown> | undefined {
+    if (value && typeof value === 'object') {
+        return value as Record<string, unknown>;
+    }
+    return undefined;
+}
+
+function decodeBase64Url(value: string): string | null {
+    if (!/^[A-Za-z0-9_-]+={0,2}$/.test(value)) {
+        return null;
+    }
+
+    try {
+        const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+        const padding = (4 - (normalized.length % 4 || 4)) % 4;
+        const padded = normalized + '='.repeat(padding);
+        return Buffer.from(padded, 'base64').toString('utf8');
+    } catch {
+        return null;
+    }
+}
+
+function parseStateValue(rawState: unknown, key: string): string | undefined {
+    const asString = toOptionalString(rawState);
+    if (!asString) {
+        return undefined;
+    }
+
+    const candidates = [asString];
+    const decoded = decodeBase64Url(asString);
+    if (decoded) {
+        // OAuth providers can transform or strip the state query; hang on to a decoded copy as a fallback.
+        candidates.unshift(decoded);
+    }
+
+    for (const candidate of candidates) {
+        try {
+            const parsed = JSON.parse(candidate);
+            const value = (parsed as Record<string, unknown>)[key];
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return String(value);
+            }
+            const stringValue = toOptionalString(value);
+            if (stringValue !== undefined) {
+                return stringValue;
+            }
+        } catch {
+            // ignore
+        }
+
+        try {
+            const params = new URLSearchParams(candidate);
+            const value = params.get(key);
+            if (value !== null) {
+                return value;
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    return undefined;
+}
+
+const LINK_SIGNATURE_TTL_MS = 5 * 60 * 1000;
+const LINK_STATE_COOKIE = 'sso-link-state';
+
+// Recompute the client-issued signature so we can validate the callback payload without reaching for shared code.
+function computeLinkSignature(secret: string, userId: string, nonce: string, issuedAt: number): string {
+    return createHmac('sha256', secret)
+        .update(`${userId}:${nonce}:${issuedAt}`)
+        .digest('hex');
+}
+
+function validateLinkSignature(
+    userId: string,
+    linkNonce: string | undefined,
+    linkIssuedAt: string | number | undefined,
+    linkSignature: string | undefined,
+): boolean {
+    if (!linkNonce || !linkSignature || linkIssuedAt === undefined || linkIssuedAt === null) {
+        console.warn('[oauth] link signature missing fields', {
+            hasNonce: Boolean(linkNonce),
+            hasSignature: Boolean(linkSignature),
+            linkIssuedAt,
+        });
+        return false;
+    }
+
+    const issuedAt = typeof linkIssuedAt === 'number' ? linkIssuedAt : Number(linkIssuedAt);
+    if (!Number.isFinite(issuedAt)) {
+        console.warn('[oauth] link signature issuedAt invalid', { linkIssuedAt });
+        return false;
+    }
+
+    if (Date.now() - issuedAt > LINK_SIGNATURE_TTL_MS) {
+        console.warn('[oauth] link signature expired', { userId, issuedAt });
+        return false;
+    }
+
+    const secret = getNextAuthSecretSync();
+    if (!secret) {
+        console.warn('[oauth] missing NEXTAUTH_SECRET when validating link signature');
+        return false;
+    }
+
+    const expected = computeLinkSignature(secret, userId, linkNonce, issuedAt);
+
+    try {
+        const expectedBuf = Buffer.from(expected, 'hex');
+        const providedBuf = Buffer.from(linkSignature, 'hex');
+        const matches =
+            expectedBuf.length === providedBuf.length &&
+            timingSafeEqual(expectedBuf, providedBuf);
+
+        if (!matches) {
+            console.warn('[oauth] link signature mismatch', {
+                userId,
+                linkNonce,
+                issuedAt,
+            });
+        } else {
+            console.log('[oauth] link signature validated', { userId, nonce: linkNonce });
+        }
+
+        return matches;
+    } catch (error) {
+        console.warn('[oauth] link signature comparison failed', { error });
+        return false;
+    }
+}
+
+interface OAuthAccountMetadata {
+    scope?: string;
+    linkMode?: string;
+    linkNonce?: string;
+    linkNonceIssuedAt?: string | number;
+    linkNonceSignature?: string;
+    tenantHint?: string;
+    vanityHostHint?: string;
+    sessionState?: string;
+    idTokenClaims?: Record<string, unknown>;
+}
+
+function extractOAuthAccountMetadata(
+    account: Record<string, unknown> | null | undefined,
+): OAuthAccountMetadata {
+    if (!account) {
+        return {};
+    }
+
+    console.log('[oauth] account payload received', {
+        keys: Object.keys(account),
+        hasParams: typeof account.params === 'object',
+        rawParams: account.params,
+    });
+
+    const metadata: OAuthAccountMetadata = {};
+    const params = getSafeRecord(account.params);
+    const rawState = account.state ?? params?.state;
+    console.log('[oauth] raw state candidates', {
+        accountState: account.state,
+        paramsState: params?.state,
+        hasParams: Boolean(params),
+    });
+
+    const scope = toOptionalString(account.scope);
+    if (scope) {
+        metadata.scope = scope;
+    }
+
+    const linkMode = parseStateValue(rawState, 'mode');
+    if (linkMode) {
+        metadata.linkMode = linkMode;
+    }
+
+    const linkNonce = parseStateValue(rawState, 'nonce');
+    if (linkNonce) {
+        metadata.linkNonce = linkNonce;
+    }
+
+    const linkNonceIssuedAt = parseStateValue(rawState, 'nonceIssuedAt');
+    if (linkNonceIssuedAt) {
+        metadata.linkNonceIssuedAt = linkNonceIssuedAt;
+    }
+
+    const linkNonceSignature = parseStateValue(rawState, 'nonceSignature');
+    if (linkNonceSignature) {
+        metadata.linkNonceSignature = linkNonceSignature;
+    }
+
+    const tenantHint = pickFirstString([
+        account.tenant,
+        account.tenant_hint,
+        account.tenantId,
+        account.tenant_id,
+        params?.tenant,
+        params?.tenant_hint,
+    ]);
+    if (tenantHint) {
+        metadata.tenantHint = tenantHint;
+    }
+
+    const vanityHostHint = pickFirstString([
+        account.vanity_host,
+        params?.vanity_host,
+    ]);
+    if (vanityHostHint) {
+        metadata.vanityHostHint = vanityHostHint;
+    }
+
+    const sessionState = toOptionalString(account.session_state);
+    if (sessionState) {
+        metadata.sessionState = sessionState;
+    }
+
+    const idToken = toOptionalString(account.id_token);
+    const claims = decodeOAuthJwtPayload(idToken);
+    if (claims) {
+        const allowedClaims = ['sub', 'tid', 'oid', 'email', 'upn', 'preferred_username'];
+        const filteredClaims: Record<string, unknown> = {};
+        for (const key of allowedClaims) {
+            const claimValue = claims[key];
+            if (typeof claimValue === 'string' && claimValue.length > 0) {
+                filteredClaims[key] = claimValue;
+            }
+        }
+        if (Object.keys(filteredClaims).length > 0) {
+            metadata.idTokenClaims = filteredClaims;
+        }
+    }
+
+    return metadata;
+}
+
+interface LinkStateCookiePayload {
+    userId: string;
+    nonce: string;
+    issuedAt: number;
+    signature: string;
+}
+
+// Pull the signed link state out of the HTTP-only cookie in case the provider drops the `state` parameter.
+async function consumeLinkStateCookie(
+    expectedUserId: string | undefined,
+): Promise<LinkStateCookiePayload | undefined> {
+    try {
+        const store = await cookies();
+        const stored = store.get(LINK_STATE_COOKIE);
+        if (!stored) {
+            return undefined;
+        }
+
+        store.delete(LINK_STATE_COOKIE);
+
+        try {
+            const normalized = stored.value.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+            const decoded = Buffer.from(padded, 'base64').toString('utf8');
+            const payload = JSON.parse(decoded) as Partial<LinkStateCookiePayload>;
+            if (
+                !payload ||
+                typeof payload.userId !== 'string' ||
+                typeof payload.nonce !== 'string' ||
+                typeof payload.signature !== 'string' ||
+                typeof payload.issuedAt !== 'number'
+            ) {
+                console.warn('[oauth] link state cookie malformed', { payload });
+                return undefined;
+            }
+
+            if (expectedUserId && payload.userId !== expectedUserId) {
+                console.warn('[oauth] link state cookie user mismatch', {
+                    expected: expectedUserId,
+                    actual: payload.userId,
+                });
+            }
+
+            return payload as LinkStateCookiePayload;
+        } catch (error) {
+            console.warn('[oauth] failed to parse link state cookie', { error });
+            return undefined;
+        }
+    } catch (error) {
+        console.warn('[oauth] unable to access cookies when consuming link state', { error });
+        return undefined;
+    }
+}
+
+function extractProviderAccountId(
+    account: Record<string, unknown> | null | undefined,
+    metadata: OAuthAccountMetadata,
+): string | undefined {
+    const direct = toOptionalString(account?.providerAccountId);
+    if (direct) {
+        return direct;
+    }
+
+    const legacyId = toOptionalString(account?.id);
+    if (legacyId) {
+        return legacyId;
+    }
+
+    const claims = metadata.idTokenClaims as Record<string, unknown> | undefined;
+    if (claims && typeof claims.sub === 'string' && claims.sub.length > 0) {
+        return claims.sub;
+    }
+
+    return undefined;
+}
+
+async function ensureOAuthAccountLink(
+    user: ExtendedUser | undefined,
+    account: Record<string, unknown> | null | undefined,
+    providerId?: string | null,
+): Promise<void> {
+    if (!user || !providerId) {
+        return;
+    }
+
+    const normalizedProvider = normalizeOAuthProvider(providerId);
+    if (!normalizedProvider || !user.tenant) {
+        return;
+    }
+
+    const metadata = extractOAuthAccountMetadata(account);
+    const providerAccountId = extractProviderAccountId(account, metadata);
+    if (!providerAccountId) {
+        console.warn('[oauth] Missing provider account identifier', {
+            providerId,
+            userId: user.id,
+            accountKeys: account ? Object.keys(account) : null,
+            accountSnapshot: account,
+        });
+        return;
+    }
+
+    // Some providers echo only an access token back; fall back to the cookie if the signed link fields are missing.
+    const cookieState =
+        !metadata.linkNonce || !metadata.linkNonceSignature
+            ? await consumeLinkStateCookie(undefined)
+            : undefined;
+
+    if (cookieState) {
+        metadata.linkMode = metadata.linkMode ?? 'link';
+        metadata.linkNonce = metadata.linkNonce ?? cookieState.nonce;
+        metadata.linkNonceIssuedAt = metadata.linkNonceIssuedAt ?? cookieState.issuedAt;
+        metadata.linkNonceSignature = metadata.linkNonceSignature ?? cookieState.signature;
+    }
+
+    const linkNonce = toOptionalString(metadata.linkNonce);
+    const linkMode = toOptionalString(metadata.linkMode);
+    const linkUserId = cookieState?.userId ?? user.id;
+    const linkingAuthorized = validateLinkSignature(
+        linkUserId,
+        toOptionalString(metadata.linkNonce),
+        metadata.linkNonceIssuedAt,
+        toOptionalString(metadata.linkNonceSignature),
+    );
+    console.log('[oauth] account metadata for link', {
+        providerId,
+        userId: user.id,
+        linkUserId,
+        linkMode,
+        hasNonce: Boolean(linkNonce),
+        nonceIssuedAt: metadata.linkNonceIssuedAt,
+        hasSignature: Boolean(metadata.linkNonceSignature),
+        linkingAuthorized,
+    });
+
+    const existingLink = await findOAuthAccountLink(normalizedProvider, providerAccountId);
+    let autoLinkAuthorized = false;
+    if (!linkingAuthorized && (!existingLink || existingLink.user_id !== user.id)) {
+        autoLinkAuthorized = await isAutoLinkEnabledForTenant(
+            typeof user.tenant === "string" ? user.tenant : undefined,
+            (user.user_type as "internal" | "client") || "internal",
+        );
+    }
+    if (!linkingAuthorized && !autoLinkAuthorized) {
+        // Skip linking when not authorized and auto-linking is disabled.
+        return;
+    }
+
+    const { linkNonceIssuedAt, linkNonceSignature, ...metadataForStorage } = metadata;
+
+    const finalMetadata = {
+        ...metadataForStorage,
+        linkMode: linkingAuthorized
+            ? linkMode ?? 'link'
+            : autoLinkAuthorized
+            ? 'auto-link'
+            : linkMode ?? 'login',
+        linkNonce: linkingAuthorized ? linkNonce : undefined,
+    };
+
+    try {
+        await upsertOAuthAccountLink({
+            tenant: user.tenant,
+            userId: linkUserId,
+            provider: normalizedProvider,
+            providerAccountId,
+            providerEmail: user.email,
+            metadata: finalMetadata,
+        });
+    } catch (error) {
+        if (error instanceof OAuthAccountLinkConflictError) {
+            console.warn('[oauth] account already linked to another user', {
+                providerId,
+                providerAccountId,
+                userId: user.id,
+            });
+            return;
+        }
+
+        console.warn('[oauth] failed to persist account link', {
+            providerId,
+            providerAccountId,
+            userId: user.id,
+            error,
+        });
+    }
+}
+
 // Helper function to get OAuth secrets from secret provider with env fallback
 async function getOAuthSecrets() {
     const { getSecretProviderInstance } = await import('@alga-psa/shared/core/secretProvider');
     const secretProvider = await getSecretProviderInstance();
 
-    const [googleClientId, googleClientSecret, keycloakClientId, keycloakClientSecret, keycloakUrl, keycloakRealm] = await Promise.all([
+    const [
+        googleClientId,
+        googleClientSecret,
+        keycloakClientId,
+        keycloakClientSecret,
+        keycloakUrl,
+        keycloakRealm,
+        microsoftClientId,
+        microsoftClientSecret,
+        microsoftTenantId,
+        microsoftAuthority,
+    ] = await Promise.all([
         secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_ID'),
         secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_SECRET'),
         secretProvider.getAppSecret('KEYCLOAK_CLIENT_ID'),
         secretProvider.getAppSecret('KEYCLOAK_CLIENT_SECRET'),
         secretProvider.getAppSecret('KEYCLOAK_URL'),
-        secretProvider.getAppSecret('KEYCLOAK_REALM')
+        secretProvider.getAppSecret('KEYCLOAK_REALM'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_CLIENT_ID'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_CLIENT_SECRET'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_TENANT_ID'),
+        secretProvider.getAppSecret('MICROSOFT_OAUTH_AUTHORITY'),
     ]);
 
     return {
@@ -217,7 +719,11 @@ async function getOAuthSecrets() {
         keycloakClientId: keycloakClientId || process.env.KEYCLOAK_CLIENT_ID || '',
         keycloakClientSecret: keycloakClientSecret || process.env.KEYCLOAK_CLIENT_SECRET || '',
         keycloakUrl: keycloakUrl || process.env.KEYCLOAK_URL || '',
-        keycloakRealm: keycloakRealm || process.env.KEYCLOAK_REALM || ''
+        keycloakRealm: keycloakRealm || process.env.KEYCLOAK_REALM || '',
+        microsoftClientId: microsoftClientId || process.env.MICROSOFT_OAUTH_CLIENT_ID || '',
+        microsoftClientSecret: microsoftClientSecret || process.env.MICROSOFT_OAUTH_CLIENT_SECRET || '',
+        microsoftTenantId: microsoftTenantId || process.env.MICROSOFT_OAUTH_TENANT_ID || '',
+        microsoftAuthority: microsoftAuthority || process.env.MICROSOFT_OAUTH_AUTHORITY || '',
     };
 }
 
@@ -230,44 +736,76 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     trustHost: true,
     secret: nextAuthSecret,
     providers: [
-        GoogleProvider({
-            clientId: secrets.googleClientId,
-            clientSecret: secrets.googleClientSecret,
-            profile: async (profile): Promise<ExtendedUser> => {
-                const logger = (await import('@alga-psa/shared/core/logger')).default;
-                const User = (await import('server/src/lib/models/user')).default;
-                logger.info("Starting Google OAuth")
-                const user = await User.findUserByEmail(profile.email);
-                if (!user || !user.user_id) {
-                    logger.warn("User not found with email", profile.email);
-                    throw new Error("User not found");
-                }
-
-                // Check if user is inactive
-                if (user.is_inactive) {
-                    logger.warn(`Inactive user attempted to login via Google: ${profile.email}`);
-                    // Track failed Google login due to inactive account
-                    // const { analytics } = await import('server/src/lib/analytics/posthog');
-                    // analytics.capture('login_failed', {
-                    //     reason: 'inactive_account',
-                    //     provider: 'google',
-                    // });
-                    throw new Error("User not found");
-                }
-
-                logger.info("User sign in successful with email", profile.email);
-                return {
-                    id: user.user_id.toString(),
-                    email: user.email,
-                    name: `${user.first_name} ${user.last_name}`,
-                    username: user.username,
-                    image: profile.picture,
-                    proToken: '',
-                    tenant: user.tenant,
-                    user_type: user.user_type
-                };
-            },
-        }),
+        ...(isEnterprise && secrets.googleClientId && secrets.googleClientSecret
+            ? [
+                GoogleProvider({
+                    clientId: secrets.googleClientId,
+                    clientSecret: secrets.googleClientSecret,
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        const googleProfile = profile as Record<string, unknown>;
+                        const tenantHint =
+                            typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
+                        const userTypeHint =
+                            typeof googleProfile.user_type === 'string'
+                                ? googleProfile.user_type
+                                : undefined;
+                        const vanityHostHint =
+                            typeof googleProfile.vanity_host === 'string'
+                                ? googleProfile.vanity_host
+                                : undefined;
+                        return mapOAuthProfileToExtendedUser({
+                            provider: 'google',
+                            email: profile.email,
+                            image: profile.picture,
+                            profile,
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
+                    },
+                }),
+            ]
+            : []),
+        ...(isEnterprise && secrets.microsoftClientId && secrets.microsoftClientSecret
+            ? [
+                AzureADProvider({
+                    clientId: secrets.microsoftClientId,
+                    clientSecret: secrets.microsoftClientSecret,
+                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
+                    checks: ['pkce', 'state'],
+                    profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
+                        const emailCandidate =
+                            profile.email ??
+                            profile.mail ??
+                            profile.preferred_username ??
+                            profile.userPrincipalName;
+                        const tenantHint =
+                            typeof profile.tenant === 'string'
+                                ? profile.tenant
+                                : typeof profile.tenantId === 'string'
+                                ? profile.tenantId
+                                : typeof profile.tid === 'string'
+                                ? profile.tid
+                                : typeof profile.domain === 'string'
+                                ? profile.domain
+                                : undefined;
+                        const vanityHostHint =
+                            typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
+                        const userTypeHint =
+                            typeof profile.user_type === 'string' ? profile.user_type : undefined;
+                        return mapOAuthProfileToExtendedUser({
+                            provider: 'microsoft',
+                            email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
+                            image: profile.picture ?? profile.photo ?? undefined,
+                            profile,
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
+                    },
+                }),
+            ]
+            : []),
         CredentialsProvider({
             name: "Credentials",
             credentials: {
@@ -422,26 +960,33 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 }
             }
         }),
-        KeycloakProvider({
-            clientId: secrets.keycloakClientId,
-            clientSecret: secrets.keycloakClientSecret,
-            issuer: `${secrets.keycloakUrl}/realms/${secrets.keycloakRealm}`,
-            profile: async (profile): Promise<ExtendedUser> => {
-                const logger = (await import('@alga-psa/shared/core/logger')).default;
-                logger.info("Starting Keycloak OAuth")
-                return {
-                    id: profile.sub,
-                    name: profile.name ?? profile.preferred_username,
-                    email: profile.email,
-                    image: profile.picture,
-                    username: profile.preferred_username,
-                    proToken: '',
-                    tenant: profile.tenant,
-                    user_type: profile.user_type,
-                    clientId: profile.clientId
-                }
-            },
-        }),
+        ...(secrets.keycloakClientId &&
+        secrets.keycloakClientSecret &&
+        secrets.keycloakUrl &&
+        secrets.keycloakRealm
+            ? [
+                KeycloakProvider({
+                    clientId: secrets.keycloakClientId,
+                    clientSecret: secrets.keycloakClientSecret,
+                    issuer: `${secrets.keycloakUrl}/realms/${secrets.keycloakRealm}`,
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        const logger = (await import('@alga-psa/shared/core/logger')).default;
+                        logger.info("Starting Keycloak OAuth");
+                        return {
+                            id: profile.sub,
+                            name: profile.name ?? profile.preferred_username,
+                            email: profile.email,
+                            image: profile.picture,
+                            username: profile.preferred_username,
+                            proToken: '',
+                            tenant: profile.tenant,
+                            user_type: profile.user_type,
+                            clientId: profile.clientId,
+                        };
+                    },
+                }),
+            ]
+            : []),
         // CredentialsProvider({
         //     id: "keycloak-credentials",
         //     name: "Keycloak-credentials",
@@ -524,6 +1069,24 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
         async signIn({ user, account, credentials }) {
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
+
+            if (extendedUser && providerId && providerId !== 'credentials') {
+                const accountRecord = account as unknown as Record<string, unknown> | null;
+                try {
+                    const enrichedUser = await applyOAuthAccountHints(
+                        toOAuthProfileMappingResult(extendedUser),
+                        accountRecord,
+                    );
+                    Object.assign(extendedUser, enrichedUser);
+                } catch (error) {
+                    console.warn('[signIn] failed to apply OAuth tenant hints', {
+                        providerId,
+                        error,
+                    });
+                }
+
+                await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
+            }
 
             // Track last login
             if (extendedUser?.id && extendedUser?.tenant && providerId) {
@@ -610,6 +1173,9 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     tenant: extendedUser.tenant,
                     clientId: extendedUser.clientId
                 });
+                if (!extendedUser.tenantSlug && extendedUser.tenant) {
+                    extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
+                }
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
                 token.name = extendedUser.name;
@@ -760,22 +1326,79 @@ export const options: NextAuthConfig = {
     trustHost: true,
     secret: getNextAuthSecretSync(),
     providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,
-            clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
-            profile: async (profile): Promise<ExtendedUser> => {
-                return {
-                    id: (profile as any).sub || profile.email,
-                    email: profile.email,
-                    name: (profile as any).name || '',
-                    username: (profile as any).given_name || profile.email?.split('@')[0] || '',
-                    image: (profile as any).picture,
-                    proToken: '',
-                    tenant: '',
-                    user_type: 'internal'
-                };
-            },
-        }),
+        ...(isEnterprise &&
+        process.env.GOOGLE_OAUTH_CLIENT_ID &&
+        process.env.GOOGLE_OAUTH_CLIENT_SECRET
+            ? [
+                GoogleProvider({
+                    clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,
+                    clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        const googleProfile = profile as Record<string, unknown>;
+                        const tenantHint =
+                            typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
+                        const userTypeHint =
+                            typeof googleProfile.user_type === 'string'
+                                ? googleProfile.user_type
+                                : undefined;
+                        const vanityHostHint =
+                            typeof googleProfile.vanity_host === 'string'
+                                ? googleProfile.vanity_host
+                                : undefined;
+                        return mapOAuthProfileToExtendedUser({
+                            provider: 'google',
+                            email: profile.email,
+                            image: (profile as any).picture,
+                            profile,
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
+                    },
+                }),
+            ]
+            : []),
+        ...(isEnterprise &&
+        process.env.MICROSOFT_OAUTH_CLIENT_ID &&
+        process.env.MICROSOFT_OAUTH_CLIENT_SECRET
+            ? [
+                AzureADProvider({
+                    clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
+                    clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
+                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
+                        const emailCandidate =
+                            profile.email ??
+                            profile.mail ??
+                            profile.preferred_username ??
+                            profile.userPrincipalName;
+                        const tenantHint =
+                            typeof profile.tenant === 'string'
+                                ? profile.tenant
+                                : typeof profile.tenantId === 'string'
+                                ? profile.tenantId
+                                : typeof profile.tid === 'string'
+                                ? profile.tid
+                                : typeof profile.domain === 'string'
+                                ? profile.domain
+                                : undefined;
+                        const vanityHostHint =
+                            typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
+                        const userTypeHint =
+                            typeof profile.user_type === 'string' ? profile.user_type : undefined;
+                        return mapOAuthProfileToExtendedUser({
+                            provider: 'microsoft',
+                            email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
+                            image: profile.picture ?? profile.photo ?? undefined,
+                            profile,
+                            tenantHint,
+                            vanityHostHint,
+                            userTypeHint,
+                        }) as Promise<ExtendedUser>;
+                    },
+                }),
+            ]
+            : []),
         CredentialsProvider({
             name: "Credentials",
             credentials: {
@@ -928,24 +1551,31 @@ export const options: NextAuthConfig = {
                 }
             }
         }),
-        KeycloakProvider({
-            clientId: process.env.KEYCLOAK_CLIENT_ID as string,
-            clientSecret: process.env.KEYCLOAK_CLIENT_SECRET as string,
-            issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
-            profile: async (profile): Promise<ExtendedUser> => {
-                return {
-                    id: (profile as any).sub || (profile as any).email,
-                    name: (profile as any).name || (profile as any).preferred_username,
-                    email: (profile as any).email,
-                    image: (profile as any).picture,
-                    username: (profile as any).preferred_username || '',
-                    proToken: '',
-                    tenant: '',
-                    user_type: 'internal',
-                    clientId: (profile as any).clientId
-                };
-            },
-        }),
+        ...(process.env.KEYCLOAK_CLIENT_ID &&
+        process.env.KEYCLOAK_CLIENT_SECRET &&
+        process.env.KEYCLOAK_URL &&
+        process.env.KEYCLOAK_REALM
+            ? [
+                KeycloakProvider({
+                    clientId: process.env.KEYCLOAK_CLIENT_ID as string,
+                    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET as string,
+                    issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
+                    profile: async (profile): Promise<ExtendedUser> => {
+                        return {
+                            id: (profile as any).sub || (profile as any).email,
+                            name: (profile as any).name || (profile as any).preferred_username,
+                            email: (profile as any).email,
+                            image: (profile as any).picture,
+                            username: (profile as any).preferred_username || '',
+                            proToken: '',
+                            tenant: (profile as any).tenant,
+                            user_type: (profile as any).user_type ?? 'internal',
+                            clientId: (profile as any).clientId,
+                        };
+                    },
+                }),
+            ]
+            : []),
         // CredentialsProvider({
         //     id: "keycloak-credentials",
         //     name: "Keycloak-credentials",
@@ -1035,9 +1665,23 @@ export const options: NextAuthConfig = {
             //     has_two_factor: false, // We'd need to check this from the user object
             //     login_method: account?.provider || 'email',
             // }, extendedUser.id);
-
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
+
+            if (extendedUser && providerId && providerId !== 'credentials') {
+                try {
+                    const enrichedUser = await applyOAuthAccountHints(
+                        toOAuthProfileMappingResult(extendedUser),
+                        account as unknown as Record<string, unknown>,
+                    );
+                    Object.assign(extendedUser, enrichedUser);
+                } catch (error) {
+                    console.warn('[signIn] failed to apply OAuth tenant hints', {
+                        providerId,
+                        error,
+                    });
+                }
+            }
 
             // Track last login
             if (extendedUser?.id && extendedUser?.tenant && providerId) {
@@ -1051,6 +1695,24 @@ export const options: NextAuthConfig = {
                 } catch (error) {
                     console.warn('[signIn] failed to update last login', error);
                 }
+            }
+
+            if (extendedUser && providerId && providerId !== 'credentials') {
+                const accountRecord = account as unknown as Record<string, unknown> | null;
+                try {
+                    const enrichedUser = await applyOAuthAccountHints(
+                        toOAuthProfileMappingResult(extendedUser),
+                        accountRecord,
+                    );
+                    Object.assign(extendedUser, enrichedUser);
+                } catch (error) {
+                    console.warn('[signIn] failed to apply OAuth tenant hints', {
+                        providerId,
+                        error,
+                    });
+                }
+
+                await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
             }
 
             if (providerId === 'credentials') {
@@ -1107,6 +1769,9 @@ export const options: NextAuthConfig = {
                     tenant: extendedUser.tenant,
                     clientId: extendedUser.clientId
                 });
+                if (!extendedUser.tenantSlug && extendedUser.tenant) {
+                    extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
+                }
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
                 token.name = extendedUser.name;

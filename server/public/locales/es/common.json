@@ -305,6 +305,10 @@
       "bulkDeleteSuccess_one": "Se eliminó correctamente {{count}} documento",
       "bulkDeleteSuccess_other": "Se eliminaron correctamente {{count}} documentos"
     },
+    "empty": {
+      "default": "No se encontraron documentos",
+      "folder": "No se encontraron documentos en esta carpeta"
+    },
     "validation": {
       "nameRequired": "El nombre del documento es obligatorio"
     },
@@ -446,6 +450,26 @@
       "nameLabel": "Nombre de la carpeta",
       "namePlaceholder": "Ingresa el nombre de la carpeta",
       "willCreateIn": "Se creará en: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Ver todas las notificaciones",
+      "categories": {
+        "Authentication": "Autenticación",
+        "Invoices": "Facturas",
+        "Projects": "Proyectos",
+        "Tickets": "Tickets",
+        "Time Entries": "Registros de tiempo"
+      }
+    }
+  },
+  "notifications": {
+    "viewAll": "Ver todas las notificaciones",
+    "categories": {
+      "Authentication": "Autenticación",
+      "Invoices": "Facturas",
+      "Projects": "Proyectos",
+      "Tickets": "Tickets",
+      "Time Entries": "Entradas de tiempo"
     }
   },
   "surveys": {

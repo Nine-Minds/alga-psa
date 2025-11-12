@@ -10,6 +10,8 @@ pub struct ExecuteContext {
     pub install_id: Option<String>,
     pub content_hash: String,
     pub version_id: Option<String>,
+    #[serde(default)]
+    pub config: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -37,6 +39,10 @@ pub struct ExecuteRequest {
     pub http: HttpPayload,
     #[serde(default)]
     pub limits: Limits,
+    #[serde(default, rename = "secret_envelope")]
+    pub secret_envelope: Option<SecretEnvelope>,
+    #[serde(default)]
+    pub providers: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -48,4 +54,19 @@ pub struct ExecuteResponse {
     pub body_b64: Option<String>,
     #[serde(default)]
     pub error: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SecretEnvelope {
+    pub ciphertext_b64: String,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub algorithm: Option<String>,
+    #[serde(default)]
+    pub expires_at: Option<String>,
+    #[serde(default)]
+    pub key_path: Option<String>,
+    #[serde(default)]
+    pub mount: Option<String>,
 }

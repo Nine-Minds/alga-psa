@@ -305,6 +305,10 @@
       "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
       "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
     },
+    "empty": {
+      "default": "No documents found",
+      "folder": "No documents found in this folder"
+    },
     "validation": {
       "nameRequired": "Document name is required"
     },
@@ -446,6 +450,16 @@
       "nameLabel": "Folder Name",
       "namePlaceholder": "Enter folder name",
       "willCreateIn": "Will be created in: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "View all notifications",
+      "categories": {
+        "Authentication": "Authentication",
+        "Invoices": "Invoices",
+        "Projects": "Projects",
+        "Tickets": "Tickets",
+        "Time Entries": "Time Entries"
+      }
     }
   },
   "surveys": {

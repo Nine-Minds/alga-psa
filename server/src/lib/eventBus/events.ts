@@ -6,6 +6,7 @@ export const EventTypeEnum = z.enum([
   'TICKET_UPDATED',
   'TICKET_CLOSED',
   'TICKET_ASSIGNED',
+  'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
   'TICKET_DELETED',
   'PROJECT_CREATED',
@@ -13,6 +14,7 @@ export const EventTypeEnum = z.enum([
   'PROJECT_CLOSED',
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',
+  'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
   'TIME_ENTRY_SUBMITTED',
   'TIME_ENTRY_APPROVED',
   'INVOICE_GENERATED',
@@ -29,6 +31,8 @@ export const EventTypeEnum = z.enum([
   'SURVEY_INVITATION_SENT',
   'SURVEY_RESPONSE_SUBMITTED',
   'SURVEY_NEGATIVE_RESPONSE',
+  'MESSAGE_SENT',
+  'USER_MENTIONED_IN_DOCUMENT',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -49,7 +53,8 @@ export const BaseEventSchema = z.object({
 // Ticket event payload schema
 export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
-  userId: z.string().uuid(),
+  userId: z.string().uuid(), // The user being assigned to the ticket
+  assignedByUserId: z.string().uuid().optional(), // The user who performed the assignment
   changes: z.record(z.unknown()).optional(),
   comment: z.object({
     id: z.string().uuid(),
@@ -81,7 +86,34 @@ export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   taskId: z.string().uuid(),
   userId: z.string().uuid(),
   assignedTo: z.string().uuid(),
+  assignedByUserId: z.string().uuid().optional(), // The user who performed the assignment
   additionalUsers: z.array(z.string().uuid()).optional(),
+});
+
+// Ticket additional agent event payload schema
+export const TicketAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  primaryAgentId: z.string().uuid(),      // Existing primary agent
+  additionalAgentId: z.string().uuid(),   // New additional agent
+  assignedByUserId: z.string().uuid(),    // Who performed the action
+});
+
+// Project task additional agent event payload schema
+export const ProjectTaskAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  taskId: z.string().uuid(),
+  primaryAgentId: z.string().uuid(),      // Existing primary agent
+  additionalAgentId: z.string().uuid(),   // New additional agent
+  assignedByUserId: z.string().uuid(),    // Who performed the action
+});
+
+// Document mention event payload schema
+export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
+  documentId: z.string().uuid(),
+  documentName: z.string(),
+  userId: z.string().uuid(), // User who updated the document
+  content: z.string(), // Document content with mentions
+  changes: z.record(z.unknown()).optional(),
 });
 
 // Time entry event payload schema
@@ -144,6 +176,7 @@ export const CalendarConflictEventPayloadSchema = BasePayloadSchema.extend({
   externalLastModified: z.string().datetime(),
 });
 
+<<<<<<< HEAD
 export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
   invitationId: z.string().uuid(),
   ticketId: z.string().uuid(),
@@ -170,6 +203,16 @@ export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
   rating: z.number(),
   comment: z.string().optional(),
   assignedTo: z.string().uuid().optional(),
+=======
+// Message event payload schema
+export const MessageEventPayloadSchema = BasePayloadSchema.extend({
+  messageId: z.string().uuid(),
+  senderId: z.string().uuid(),
+  recipientId: z.string().uuid(),
+  conversationId: z.string().uuid().optional(),
+  messagePreview: z.string(),
+  senderName: z.string(),
+>>>>>>> origin/main
 });
 
 // Map event types to their payload schemas
@@ -179,12 +222,14 @@ export const EventPayloadSchemas = {
   TICKET_CLOSED: TicketEventPayloadSchema,
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketEventPayloadSchema,
+  TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
   TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
   PROJECT_CREATED: ProjectEventPayloadSchema,
   PROJECT_UPDATED: ProjectEventPayloadSchema,
   PROJECT_CLOSED: ProjectClosedPayloadSchema,
   PROJECT_ASSIGNED: ProjectEventPayloadSchema,
   PROJECT_TASK_ASSIGNED: ProjectTaskEventPayloadSchema,
+  PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED: ProjectTaskAdditionalAgentPayloadSchema,
   TIME_ENTRY_SUBMITTED: TimeEntryEventPayloadSchema,
   TIME_ENTRY_APPROVED: TimeEntryEventPayloadSchema,
   INVOICE_GENERATED: InvoiceEventPayloadSchema,
@@ -198,9 +243,14 @@ export const EventPayloadSchemas = {
   CALENDAR_SYNC_COMPLETED: CalendarSyncEventPayloadSchema,
   CALENDAR_SYNC_FAILED: CalendarSyncEventPayloadSchema,
   CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
+<<<<<<< HEAD
   SURVEY_INVITATION_SENT: SurveyInvitationSentPayloadSchema,
   SURVEY_RESPONSE_SUBMITTED: SurveyResponseSubmittedPayloadSchema,
   SURVEY_NEGATIVE_RESPONSE: SurveyNegativeResponsePayloadSchema,
+=======
+  MESSAGE_SENT: MessageEventPayloadSchema,
+  USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
+>>>>>>> origin/main
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -229,12 +279,17 @@ export type TimeEntryApprovedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_APPR
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
+export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
 export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>;
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
+<<<<<<< HEAD
 export type SurveyInvitationSentEvent = z.infer<typeof EventSchemas.SURVEY_INVITATION_SENT>;
 export type SurveyResponseSubmittedEvent = z.infer<typeof EventSchemas.SURVEY_RESPONSE_SUBMITTED>;
 export type SurveyNegativeResponseEvent = z.infer<typeof EventSchemas.SURVEY_NEGATIVE_RESPONSE>;
+=======
+export type ProjectTaskAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED>;
+>>>>>>> origin/main
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;
 export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_FAILED>;
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
@@ -244,18 +299,22 @@ export type CalendarSyncStartedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC
 export type CalendarSyncCompletedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_COMPLETED>;
 export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_FAILED>;
 export type CalendarConflictDetectedEvent = z.infer<typeof EventSchemas.CALENDAR_CONFLICT_DETECTED>;
+export type MessageSentEvent = z.infer<typeof EventSchemas.MESSAGE_SENT>;
+export type UserMentionedInDocumentEvent = z.infer<typeof EventSchemas.USER_MENTIONED_IN_DOCUMENT>;
 
 export type Event =
   | TicketCreatedEvent
   | TicketUpdatedEvent
   | TicketClosedEvent
   | TicketAssignedEvent
+  | TicketAdditionalAgentAssignedEvent
   | TicketCommentAddedEvent
   | ProjectCreatedEvent
   | ProjectUpdatedEvent
   | ProjectClosedEvent
   | ProjectAssignedEvent
   | ProjectTaskAssignedEvent
+  | ProjectTaskAdditionalAgentAssignedEvent
   | TimeEntrySubmittedEvent
   | TimeEntryApprovedEvent
   | InvoiceGeneratedEvent
@@ -269,7 +328,13 @@ export type Event =
   | CalendarSyncStartedEvent
   | CalendarSyncCompletedEvent
   | CalendarSyncFailedEvent
+<<<<<<< HEAD
   | CalendarConflictDetectedEvent
   | SurveyInvitationSentEvent
   | SurveyResponseSubmittedEvent
   | SurveyNegativeResponseEvent;
+=======
+  | UserMentionedInDocumentEvent
+  | CalendarConflictDetectedEvent
+  | MessageSentEvent;
+>>>>>>> origin/main

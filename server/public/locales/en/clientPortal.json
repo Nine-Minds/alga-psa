@@ -36,6 +36,7 @@
   "tickets": {
     "title": "Support Tickets",
     "subtitle": "View and manage your support tickets",
+    "backToTickets": "Back to Tickets",
     "createNew": "Create New Ticket",
     "createButton": "Create Support Ticket",
     "viewAll": "View All Tickets",
@@ -92,7 +93,9 @@
       "category": "Category",
       "subcategory": "Subcategory",
       "attachments": "Attachments",
+      "created": "Created",
       "createdAt": "Created",
+      "lastUpdated": "Last Updated",
       "updatedAt": "Last Updated",
       "assignedTo": "Assigned To",
       "requester": "Requester",
@@ -347,6 +350,8 @@
     "clientInfo": "Client Information",
     "preferences": "Preferences",
     "security": "Security",
+    "activity": "Activity",
+    "notificationSettings": "Notification Settings",
     "fields": {
       "firstName": "First Name",
       "lastName": "Last Name",
@@ -393,7 +398,9 @@
       "ticketUpdates": "Ticket Updates",
       "projectUpdates": "Project Updates",
       "invoices": "Invoice Notifications",
-      "announcements": "System Announcements"
+      "announcements": "System Announcements",
+      "emailPreferences": "Email",
+      "internalPreferences": "Internal"
     },
     "actions": {
       "save": "Save Changes",
@@ -832,6 +839,7 @@
     "no": "No",
     "search": "Search",
     "filter": "Filter",
+    "resetFilters": "Reset Filters",
     "sort": "Sort",
     "refresh": "Refresh",
     "export": "Export",
@@ -951,7 +959,27 @@
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No new notifications",
     "settings": "Notification Settings",
-    "viewAll": "View all notifications"
+    "viewAll": "View all notifications",
+    "tabs": {
+      "unread": "Unread",
+      "all": "All",
+      "read": "Read"
+    },
+    "preferences": {
+      "title": "Notification Preferences",
+      "description": "Manage which internal notifications you receive",
+      "loading": "Loading preferences...",
+      "loadError": "Failed to load preferences",
+      "saveError": "Failed to save preference",
+      "noCategories": "No notification categories available"
+    },
+    "categories": {
+      "tickets": "Tickets",
+      "invoices": "Invoices",
+      "messages": "Messages",
+      "projects": "Projects",
+      "system": "System"
+    }
   },
   "pagination": {
     "showing": "Showing {{from}} to {{to}} of {{total}} results",

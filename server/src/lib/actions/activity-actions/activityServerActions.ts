@@ -9,7 +9,8 @@ import {
   ProjectTaskActivity,
   TicketActivity,
   TimeEntryActivity,
-  WorkflowTaskActivity
+  WorkflowTaskActivity,
+  NotificationActivity
 } from "../../../interfaces/activity.interfaces";
 import { 
   fetchUserActivities,
@@ -17,7 +18,8 @@ import {
   fetchProjectActivities as fetchProjectActivitiesInternal,
   fetchTicketActivities as fetchTicketActivitiesInternal,
   fetchTimeEntryActivities as fetchTimeEntryActivitiesInternal,
-  fetchWorkflowTaskActivities as fetchWorkflowTaskActivitiesInternal
+  fetchWorkflowTaskActivities as fetchWorkflowTaskActivitiesInternal,
+  fetchNotificationActivities as fetchNotificationActivitiesInternal
 } from "./activityAggregationActions";
 import { getCurrentUser } from "../user-actions/userActions";
 import { revalidatePath } from "next/cache";
@@ -139,7 +141,7 @@ export async function fetchTimeEntryActivities(
 
 /**
  * Server action to fetch workflow task activities for the current user
- * 
+ *
  * @param filters Optional filters to apply to the workflow task activities
  * @returns Promise resolving to an array of WorkflowTaskActivity objects
  */
@@ -157,6 +159,29 @@ export async function fetchWorkflowTaskActivities(
   } catch (error) {
     console.error("Error fetching workflow task activities:", error);
     throw new Error("Failed to fetch workflow task activities. Please try again later.");
+  }
+}
+
+/**
+ * Server action to fetch notification activities for the current user
+ *
+ * @param filters Optional filters to apply to the notification activities
+ * @returns Promise resolving to an array of NotificationActivity objects
+ */
+export async function fetchNotificationActivities(
+  filters: ActivityFilters = {}
+): Promise<NotificationActivity[]> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    // This function already handles tenant isolation internally
+    return await fetchNotificationActivitiesInternal(user.user_id, filters) as NotificationActivity[];
+  } catch (error) {
+    console.error("Error fetching notification activities:", error);
+    throw new Error("Failed to fetch notification activities. Please try again later.");
   }
 }
 
@@ -195,6 +220,9 @@ export async function fetchActivityById(
         break;
       case ActivityType.WORKFLOW_TASK:
         activities = await fetchWorkflowTaskActivitiesInternal(user.user_id, {});
+        break;
+      case ActivityType.NOTIFICATION:
+        activities = await fetchNotificationActivitiesInternal(user.user_id, {});
         break;
       default:
         throw new Error(`Unsupported activity type: ${type}`);

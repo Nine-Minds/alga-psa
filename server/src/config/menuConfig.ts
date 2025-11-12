@@ -2,7 +2,6 @@
 
 import type { ElementType } from 'react';
 import {
-  Activity,
   AlertTriangle,
   BarChart3,
   Bell,
@@ -19,13 +18,14 @@ import {
   Layout,
   LayoutDashboard,
   MapPin,
+  MessageSquare,
   Monitor,
-  PlusCircle,
   Rocket,
   Settings,
   Shield,
   SlidersHorizontal,
   UploadCloud,
+  User,
   Users,
   Workflow,
   Star
@@ -75,7 +75,7 @@ export const navigationSections: NavigationSection[] = [
     items: [
       {
         name: 'Tickets',
-        icon: Activity,
+        icon: MessageSquare,
         href: '/msp/tickets'
       },
       {
@@ -87,32 +87,6 @@ export const navigationSections: NavigationSection[] = [
         name: 'Projects',
         icon: Layers,
         href: '/msp/projects'
-      },
-      {
-        name: 'Schedule',
-        icon: Calendar,
-        href: '/msp/schedule'
-      },
-      {
-        name: 'Technician Dispatch',
-        icon: MapPin,
-        href: '/msp/technician-dispatch'
-      }
-    ]
-  },
-  {
-    title: 'Asset Platform',
-    items: [
-      {
-        name: 'Assets',
-        icon: Monitor,
-        href: '/msp/assets',
-        subItems: [
-          { name: 'Workspace', icon: Layout, href: '/msp/assets' },
-          { name: 'Maintenance Plans', icon: Clock, href: '/msp/assets/maintenance' },
-          { name: 'Lifecycle Policies', icon: Shield, href: '/msp/assets/policies' },
-          { name: 'Automation Rules', icon: Workflow, href: '/msp/assets/automation' },
-        ]
       },
       {
         name: 'Clients',
@@ -128,6 +102,17 @@ export const navigationSections: NavigationSection[] = [
         name: 'Documents',
         icon: FileText,
         href: '/msp/documents'
+      },
+      {
+        name: 'Assets',
+        icon: Monitor,
+        href: '/msp/assets',
+        subItems: [
+          { name: 'Workspace', icon: Layout, href: '/msp/assets' },
+          { name: 'Maintenance Plans', icon: Clock, href: '/msp/assets/maintenance' },
+          { name: 'Lifecycle Policies', icon: Shield, href: '/msp/assets/policies' },
+          { name: 'Automation Rules', icon: Workflow, href: '/msp/assets/automation' },
+        ]
       }
     ]
   },
@@ -150,6 +135,16 @@ export const navigationSections: NavigationSection[] = [
           icon,
           href
         }))
+      },
+      {
+        name: 'Schedule',
+        icon: Calendar,
+        href: '/msp/schedule'
+      },
+      {
+        name: 'Technician Dispatch',
+        icon: MapPin,
+        href: '/msp/technician-dispatch'
       },
       {
         name: 'Automation Hub',
@@ -230,7 +225,7 @@ export const bottomMenuItems: MenuItem[] = [
     icon: Settings,
     subItems: [
       { name: 'General', icon: SlidersHorizontal, href: '/msp/settings' },
-      { name: 'Profile', icon: PlusCircle, href: '/msp/profile' },
+      { name: 'Profile', icon: User, href: '/msp/profile' },
       {
         name: 'Security',
         href: '/msp/security-settings',

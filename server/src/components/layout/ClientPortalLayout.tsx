@@ -15,6 +15,9 @@ import { checkClientPortalPermissions } from 'server/src/lib/actions/client-port
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
 import { getTenantSlugForTenant } from 'server/src/lib/actions/tenant-actions/tenantSlugActions';
+import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
+import { ActivityDrawerProvider } from 'server/src/components/user-activities/ActivityDrawerProvider';
+import { DrawerProvider } from 'server/src/context/DrawerContext';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -92,9 +95,11 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   }, [userData?.contact_id, userData?.tenant]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navigation Bar */}
-      <nav className="bg-transparent shadow-[0_5px_10px_rgba(0,0,0,0.1)]">
+    <DrawerProvider>
+      <ActivityDrawerProvider>
+        <div className="min-h-screen bg-gray-100">
+        {/* Navigation Bar */}
+        <nav className="bg-transparent shadow-[0_5px_10px_rgba(0,0,0,0.1)]">
         <div className="w-full px-6">
           <div className="flex h-16 items-center justify-between">
             {/* Left side - Logo and Navigation */}
@@ -174,8 +179,9 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
               </div>
             </div>
 
-            {/* Right side - Profile */}
-            <div className="flex items-center">
+            {/* Right side - Notifications and Profile */}
+            <div className="flex items-center gap-2">
+              <NotificationBell />
               <div className="flex items-center">
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
@@ -228,10 +234,12 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="w-full px-6 py-8">
-        {children}
-      </main>
-    </div>
+          {/* Main Content */}
+          <main className="w-full px-6 py-8">
+            {children}
+          </main>
+        </div>
+      </ActivityDrawerProvider>
+    </DrawerProvider>
   );
 }

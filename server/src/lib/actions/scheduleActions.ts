@@ -152,7 +152,8 @@ export async function addScheduleEntry(
     const { knex: db } = await createTenantKnex();
     const createdEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await ScheduleEntry.create(trx, entry, {
-        assignedUserIds
+        assignedUserIds,
+        assignedByUserId: currentUser.user_id
       });
     });
 

@@ -5,6 +5,8 @@ import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '../extensions/runtime/provision';
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { upsertInstallConfigRecord } from '../extensions/installConfig';
+import { isKnownCapability, normalizeCapability } from '../extensions/providers';
 
 export type V2ExtensionListItem = {
   id: string; // registry_id
@@ -106,15 +108,36 @@ export async function uninstallExtensionV2(registryId: string): Promise<{ succes
   return { success: true, message: 'Uninstalled' };
 }
 
-export async function installExtensionForCurrentTenantV2(params: { registryId: string; version: string }): Promise<{ success: boolean }>{
+export async function installExtensionForCurrentTenantV2(params: { registryId: string; version: string }): Promise<{ success: boolean; installId?: string }>{
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
 
   // Upsert install row
   const ev = await knex('extension_version')
     .where({ registry_id: params.registryId, version: params.version })
-    .first(['id']);
+    .first(['id', 'capabilities']);
   if (!ev) throw new Error('Version not found');
+
+  let capabilities: string[] = [];
+  try {
+    if (Array.isArray((ev as any).capabilities)) {
+      capabilities = ((ev as any).capabilities as string[]).filter((cap) => typeof cap === 'string');
+    } else if (typeof (ev as any).capabilities === 'string') {
+      const parsed = JSON.parse((ev as any).capabilities as string);
+      if (Array.isArray(parsed)) {
+        capabilities = parsed.filter((cap: unknown): cap is string => typeof cap === 'string');
+      }
+    }
+  } catch (err) {
+    console.warn('[installExtensionForCurrentTenantV2] failed to parse capabilities', {
+      registryId: params.registryId,
+      version: params.version,
+      error: (err as any)?.message,
+    });
+  }
+  const normalizedCaps = capabilities
+    .map((cap) => normalizeCapability(cap))
+    .filter((cap) => isKnownCapability(cap));
 
   const runnerDomain = computeDomain(tenant, params.registryId);
   const payload = {
@@ -122,7 +145,7 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
     registry_id: params.registryId,
     version_id: ev.id,
     status: 'enabled',
-    granted_caps: JSON.stringify([]),
+    granted_caps: JSON.stringify(normalizedCaps),
     config: JSON.stringify({}),
     is_enabled: true,
     runner_domain: runnerDomain,
@@ -137,10 +160,29 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
     .returning(['id']);
 
   const installId: string | undefined = Array.isArray(upserted) && upserted.length > 0 ? (upserted[0] as any).id : undefined;
+
+  if (installId) {
+    try {
+      await upsertInstallConfigRecord({
+        installId,
+        tenantId: tenant,
+        config: {},
+        providers: normalizedCaps,
+        connection: knex,
+      });
+    } catch (error: any) {
+      console.error('[installExtensionForCurrentTenantV2] failed to upsert install config record', {
+        installId,
+        tenant,
+        error: error?.message,
+      });
+    }
+  }
+
   // Best-effort Temporal provisioning kickoff
   await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId }).catch(() => {});
 
-  return { success: true };
+  return { success: true, installId };
 }
 
 /**

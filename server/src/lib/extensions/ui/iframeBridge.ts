@@ -35,8 +35,13 @@ export interface IframeBootstrapOptions {
 /**
  * Build ext UI iframe src. Delegate to shared single-source-of-truth.
  */
-export function buildExtUiSrc(extensionId: string, contentHash: string, clientPath: string): string {
-  return buildExtUiSrcShared(extensionId, contentHash, clientPath || '/');
+export function buildExtUiSrc(
+  extensionId: string,
+  contentHash: string,
+  clientPath: string,
+  opts?: { tenantId?: string; publicBaseOverride?: string }
+): string {
+  return buildExtUiSrcShared(extensionId, contentHash, clientPath || '/', opts);
 }
 
 /**

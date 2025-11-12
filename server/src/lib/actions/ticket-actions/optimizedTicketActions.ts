@@ -16,8 +16,7 @@ import { revalidatePath } from 'next/cache';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
-import { getEventBus } from '../../../lib/eventBus';
-import { getEmailEventChannel } from '../../notifications/emailChannel';
+import { publishEvent } from '../../../lib/eventBus/publishers';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
@@ -867,7 +866,7 @@ export async function getTicketFormOptions(user: IUser) {
       const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
       return {
         ...clientData,
-        properties: clientData.properties || {}, 
+        properties: clientData.properties || {},
         logoUrl,
       };
     });
@@ -1070,30 +1069,63 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
         .first() :
       oldStatus;
 
+    // Build structured changes object with old/new values
+    const structuredChanges: Record<string, any> = {};
+
+    if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
+      structuredChanges.status_id = {
+        old: currentTicket.status_id,
+        new: updateData.status_id
+      };
+    }
+
+    if (updateData.priority_id !== undefined && updateData.priority_id !== currentTicket.priority_id) {
+      structuredChanges.priority_id = {
+        old: currentTicket.priority_id,
+        new: updateData.priority_id
+      };
+    }
+
+    if (updateData.assigned_to !== undefined && updateData.assigned_to !== currentTicket.assigned_to) {
+      structuredChanges.assigned_to = {
+        old: currentTicket.assigned_to,
+        new: updateData.assigned_to
+      };
+    }
+
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed
-      await safePublishEvent('TICKET_CLOSED', {
-        tenantId: tenant,
-        ticketId: id,
-        userId: user.user_id,
-        changes: updateData
+      await publishEvent({
+        eventType: 'TICKET_CLOSED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: user.user_id,
+          changes: structuredChanges
+        }
       });
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-      // Ticket was assigned
-      await safePublishEvent('TICKET_ASSIGNED', {
-        tenantId: tenant,
-        ticketId: id,
-        userId: user.user_id,
-        changes: updateData
+      // Ticket was assigned - userId should be the user being assigned, not the one making the update
+      await publishEvent({
+        eventType: 'TICKET_ASSIGNED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: updateData.assigned_to,  // The user being assigned to the ticket
+          changes: structuredChanges
+        }
       });
     } else {
       // Regular update
-      await safePublishEvent('TICKET_UPDATED', {
-        tenantId: tenant,
-        ticketId: id,
-        userId: user.user_id,
-        changes: updateData
+      await publishEvent({
+        eventType: 'TICKET_UPDATED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: user.user_id,
+          changes: structuredChanges
+        }
       });
     }
 
@@ -1168,15 +1200,18 @@ export async function addTicketCommentWithCache(
     }).returning('*');
 
     // Publish comment added event
-    await safePublishEvent('TICKET_COMMENT_ADDED', {
-      tenantId: tenant,
-      ticketId: ticketId,
-      userId: user.user_id,
-      comment: {
-        id: newComment.comment_id,
-        content: content,
-        author: `${user.first_name} ${user.last_name}`,
-        isInternal
+    await publishEvent({
+      eventType: 'TICKET_COMMENT_ADDED',
+      payload: {
+        tenantId: tenant,
+        ticketId: ticketId,
+        userId: user.user_id,
+        comment: {
+          id: newComment.comment_id,
+          content: content,
+          author: `${user.first_name} ${user.last_name}`,
+          isInternal
+        }
       }
     });
     

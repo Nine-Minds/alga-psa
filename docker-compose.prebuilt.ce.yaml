@@ -17,7 +17,7 @@ services:
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV:-production}
-      NODE_ENV: ${APP_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
       REDIS_HOST: ${REDIS_HOST:-redis}
@@ -44,6 +44,21 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: ./server/migrations
+        target: /app/server/migrations
+        read_only: true
+      - type: bind
+        source: ./server/seeds
+        target: /app/server/seeds
+        read_only: true
+      - type: bind
+        source: ./scripts
+        target: /app/scripts
+        read_only: true
+      - type: bind
+        source: ./shared/workflow/workflows
+        target: /app/shared/workflow/workflows
     entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
@@ -120,6 +135,21 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: ./server/migrations
+        target: /app/server/migrations
+        read_only: true
+      - type: bind
+        source: ./server/seeds
+        target: /app/server/seeds
+        read_only: true
+      - type: bind
+        source: ./scripts
+        target: /app/scripts
+        read_only: true
+      - type: bind
+        source: ./shared/workflow/workflows
+        target: /app/shared/workflow/workflows
     secrets:
       - postgres_password
       - db_password_server
@@ -143,7 +173,7 @@ services:
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV:-production}
-      NODE_ENV: ${APP_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
       HOST: ${HOST}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}

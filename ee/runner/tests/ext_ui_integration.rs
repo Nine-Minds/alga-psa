@@ -8,7 +8,6 @@ use axum::{
     Json, Router,
 };
 use bytes::Bytes;
-use zstd::stream::encode_all as zstd_encode_all;
 use serde_json::json;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -19,6 +18,7 @@ use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower::util::ServiceExt;
 use url::Url;
+use zstd::stream::encode_all as zstd_encode_all;
 
 use alga_ext_runner::http::ext_ui::{handle_get, warmup, AppState as ExtState, WarmupReq};
 use alga_ext_runner::registry::client::RegistryClient;
@@ -68,7 +68,8 @@ fn make_bundle_tarzst() -> (Vec<u8>, String) {
         hdr.set_size(content.len() as u64);
         hdr.set_mode(0o644);
         hdr.set_cksum();
-        tar.append_data(&mut hdr, "ui/index.html", &content[..]).unwrap();
+        tar.append_data(&mut hdr, "ui/index.html", &content[..])
+            .unwrap();
 
         // assets/app.js
         let mut hdr2 = tar::Header::new_gnu();
@@ -76,7 +77,8 @@ fn make_bundle_tarzst() -> (Vec<u8>, String) {
         hdr2.set_size(js.len() as u64);
         hdr2.set_mode(0o644);
         hdr2.set_cksum();
-        tar.append_data(&mut hdr2, "ui/assets/app.js", &js[..]).unwrap();
+        tar.append_data(&mut hdr2, "ui/assets/app.js", &js[..])
+            .unwrap();
 
         tar.finish().unwrap();
     }
@@ -102,7 +104,10 @@ async fn start_bundle_http_server(bytes: Vec<u8>) -> (Url, JoinHandle<()>) {
                 let b = blob.clone();
                 async move {
                     let mut h = axum::http::HeaderMap::new();
-                    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"));
+                    h.insert(
+                        header::CONTENT_TYPE,
+                        HeaderValue::from_static("application/octet-stream"),
+                    );
                     (StatusCode::OK, h, b).into_response()
                 }
             }
@@ -118,9 +123,17 @@ async fn start_bundle_http_server(bytes: Vec<u8>) -> (Url, JoinHandle<()>) {
     (base, handle)
 }
 
-fn make_test_state(cache_root: PathBuf, bundle_base: Url, strict: bool, registry: Arc<dyn RegistryClient + Send + Sync>) -> ExtState {
+fn make_test_state(
+    cache_root: PathBuf,
+    bundle_base: Url,
+    strict: bool,
+    registry: Arc<dyn RegistryClient + Send + Sync>,
+) -> ExtState {
     // Control strict validation via env the handler reads
-    std::env::set_var("EXT_STATIC_STRICT_VALIDATION", if strict { "true" } else { "false" });
+    std::env::set_var(
+        "EXT_STATIC_STRICT_VALIDATION",
+        if strict { "true" } else { "false" },
+    );
 
     ExtState {
         registry,
@@ -163,10 +176,12 @@ async fn cold_fetch_then_304() {
         .method(Method::POST)
         .uri("/warmup")
         .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(serde_json::to_vec(&WarmupReq {
-            content_hash: format!("sha256:{}", hex),
-        })
-        .unwrap()))
+        .body(Body::from(
+            serde_json::to_vec(&WarmupReq {
+                content_hash: format!("sha256:{}", hex),
+            })
+            .unwrap(),
+        ))
         .unwrap();
     let warm_resp = request::<Json<serde_json::Value>>(&app, warm).await;
     assert_eq!(warm_resp.status(), StatusCode::OK);
@@ -181,8 +196,20 @@ async fn cold_fetch_then_304() {
 
     let resp1 = app.clone().oneshot(get1).await.unwrap();
     assert_eq!(resp1.status(), StatusCode::OK);
-    let etag = resp1.headers().get(header::ETAG).unwrap().to_str().unwrap().to_string();
-    let ct = resp1.headers().get(header::CONTENT_TYPE).unwrap().to_str().unwrap().to_string();
+    let etag = resp1
+        .headers()
+        .get(header::ETAG)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let ct = resp1
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
     assert!(ct.starts_with("text/html"));
     let cache_control = resp1
         .headers()
@@ -268,14 +295,16 @@ async fn oversize_asset_returns_413() {
         hdr.set_size(content.len() as u64);
         hdr.set_mode(0o644);
         hdr.set_cksum();
-        tar.append_data(&mut hdr, "ui/index.html", &content[..]).unwrap();
+        tar.append_data(&mut hdr, "ui/index.html", &content[..])
+            .unwrap();
         // big file (use allowed extension so we don't fail sanitizer)
         let big = vec![0u8; 128 * 1024]; // 128KiB
         let mut hdr2 = tar::Header::new_gnu();
         hdr2.set_size(big.len() as u64);
         hdr2.set_mode(0o644);
         hdr2.set_cksum();
-        tar.append_data(&mut hdr2, "ui/assets/big.png", &big[..]).unwrap();
+        tar.append_data(&mut hdr2, "ui/assets/big.png", &big[..])
+            .unwrap();
         tar.finish().unwrap();
     }
     let tarzst = zstd_encode_all(&raw_tar[..], 0).unwrap();
@@ -355,9 +384,14 @@ async fn archive_hash_mismatch_returns_502() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
     // Parse JSON error code
-    let body_bytes = axum::body::to_bytes(resp.into_body(), 1024*1024).await.unwrap();
+    let body_bytes = axum::body::to_bytes(resp.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
     let v: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-    assert_eq!(v.get("code").and_then(|x| x.as_str()), Some("archive_hash_mismatch"));
+    assert_eq!(
+        v.get("code").and_then(|x| x.as_str()),
+        Some("archive_hash_mismatch")
+    );
 }
 
 #[tokio::test]
@@ -388,13 +422,21 @@ async fn partial_extract_cleanup_on_failure() {
 
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    let body_bytes = axum::body::to_bytes(resp.into_body(), 1024*1024).await.unwrap();
+    let body_bytes = axum::body::to_bytes(resp.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
     if let Ok(v) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-        assert_eq!(v.get("code").and_then(|x| x.as_str()), Some("extract_failed"));
+        assert_eq!(
+            v.get("code").and_then(|x| x.as_str()),
+            Some("extract_failed")
+        );
     }
     // Ensure no residual cache subtree exists
     let ui_root = cache_fs::ui_cache_dir(&cache_root, &hex);
-    assert!(!std::fs::metadata(&ui_root).is_ok(), "ui cache dir should not remain on failure");
+    assert!(
+        !std::fs::metadata(&ui_root).is_ok(),
+        "ui cache dir should not remain on failure"
+    );
 }
 
 #[tokio::test]
@@ -408,20 +450,33 @@ async fn loader_verify_archive_sha256_unit() {
     let hex = hex::encode(hasher.finalize());
 
     let (base, _handle) = start_bundle_http_server(bytes.clone()).await;
-    let url = base.join(&format!("sha256/{}/bundle.tar.zst", hex)).unwrap();
+    let url = base
+        .join(&format!("sha256/{}/bundle.tar.zst", hex))
+        .unwrap();
 
     // Success case
-    let tmp = verify_archive_sha256(&url, &hex).await.expect("verify should pass");
+    let tmp = verify_archive_sha256(&url, &hex)
+        .await
+        .expect("verify should pass");
     assert!(std::fs::metadata(&tmp).is_ok());
     // Cleanup
     let _ = std::fs::remove_file(&tmp);
 
     // Mismatch case: use different expected hex
-    let bad_url = base.join(&format!("sha256/{}/bundle.tar.zst", "deadbeef")).unwrap();
-    let err = verify_archive_sha256(&bad_url, "deadbeef").await.unwrap_err();
-    let ie = err.downcast_ref::<IntegrityError>().expect("should be IntegrityError");
+    let bad_url = base
+        .join(&format!("sha256/{}/bundle.tar.zst", "deadbeef"))
+        .unwrap();
+    let err = verify_archive_sha256(&bad_url, "deadbeef")
+        .await
+        .unwrap_err();
+    let ie = err
+        .downcast_ref::<IntegrityError>()
+        .expect("should be IntegrityError");
     match ie {
-        IntegrityError::ArchiveHashMismatch { expected_hex, computed_hex } => {
+        IntegrityError::ArchiveHashMismatch {
+            expected_hex,
+            computed_hex,
+        } => {
             assert_eq!(expected_hex, "deadbeef");
             assert_ne!(computed_hex, expected_hex);
         }

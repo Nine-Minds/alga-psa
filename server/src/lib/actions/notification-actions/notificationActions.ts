@@ -155,18 +155,33 @@ export async function updateCategoryAction(
   id: number,
   category: Partial<NotificationCategory>
 ): Promise<NotificationCategory> {
+  // Check permissions - requires 'settings' 'update' permission
+  const { getCurrentUser } = await import('../user-actions/userActions');
+  const { hasPermission } = await import('server/src/lib/auth/rbac');
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
   const { knex } = await (await import("../../db")).createTenantKnex();
-  
+
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Check permission within transaction context
+    const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
+    if (!hasUpdatePermission) {
+      throw new Error('Permission denied: Cannot update settings');
+    }
+
     const [updated] = await trx("notification_categories")
       .where({ id })
       .update(category)
       .returning("*");
-      
+
     if (!updated) {
       throw new Error("Category not found");
     }
-    
+
     revalidatePath("/msp/settings/notifications");
     return updated;
   });
@@ -176,18 +191,33 @@ export async function updateSubtypeAction(
   id: number,
   subtype: Partial<NotificationSubtype>
 ): Promise<NotificationSubtype> {
+  // Check permissions - requires 'settings' 'update' permission
+  const { getCurrentUser } = await import('../user-actions/userActions');
+  const { hasPermission } = await import('server/src/lib/auth/rbac');
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+
   const { knex } = await (await import("../../db")).createTenantKnex();
-  
+
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Check permission within transaction context
+    const hasUpdatePermission = await hasPermission(currentUser, 'settings', 'update', trx);
+    if (!hasUpdatePermission) {
+      throw new Error('Permission denied: Cannot update settings');
+    }
+
     const [updated] = await trx("notification_subtypes")
       .where({ id })
       .update(subtype)
       .returning("*");
-      
+
     if (!updated) {
       throw new Error("Subtype not found");
     }
-    
+
     revalidatePath("/msp/settings/notifications");
     return updated;
   });

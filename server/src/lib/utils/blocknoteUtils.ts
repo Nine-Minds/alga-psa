@@ -222,15 +222,23 @@ function simpleTextExtraction(blocks: Block[] | PartialBlock[]): string {
  */
 function extractStyledTextFromContent(content: any[]): string {
   if (!Array.isArray(content)) return '';
-  
+
   if (content.length === 0) {
     // Return a non-breaking space for empty content to preserve the paragraph
     return '';
   }
-  
+
   return content
-    .filter((item: any) => item && item.type === 'text')
+    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention'))
     .map((item: any) => {
+      // Handle mention inline content
+      if (item.type === 'mention') {
+        const { userId, username, displayName } = item.props || {};
+        const displayText = username ? `@${username}` : `@[${displayName || 'Unknown'}]`;
+        return displayText;
+      }
+
+      // Handle text inline content
       if (!item.text && item.text !== '') return '';
 
       // Ensure item.text is a string
@@ -240,35 +248,35 @@ function extractStyledTextFromContent(content: any[]): string {
       }
 
       let result = item.text;
-      
+
       // Apply styling if present
       if (item.styles) {
         // Bold
         if (item.styles.bold) {
           result = `**${result}**`;
         }
-        
+
         // Italic
         if (item.styles.italic) {
           result = `*${result}*`;
         }
-        
+
         // Underline - using HTML since markdown doesn't have underline
         if (item.styles.underline) {
           result = `<u>${result}</u>`;
         }
-        
+
         // Text color
         if (item.styles.textColor && item.styles.textColor !== 'default') {
           result = `<span style="color:${item.styles.textColor}">${result}</span>`;
         }
-        
+
         // Background color
         if (item.styles.backgroundColor && item.styles.backgroundColor !== 'default') {
           result = `<span style="background-color:${item.styles.backgroundColor}">${result}</span>`;
         }
       }
-      
+
       return result;
     })
     .join('');
@@ -465,8 +473,17 @@ function extractStyledTextToHTML(content: any[]): string {
   if (content.length === 0) return '<br>';
 
   return content
-    .filter((item: any) => item && item.type === 'text')
+    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention'))
     .map((item: any) => {
+      // Handle mention inline content
+      if (item.type === 'mention') {
+        const { userId, username, displayName } = item.props || {};
+        const displayText = username ? `@${username}` : `@[${displayName || 'Unknown'}]`;
+        const escapedText = displayText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `<span style="display:inline-flex;align-items:center;padding:1px 4px;border-radius:3px;background-color:#dbeafe;color:#1e40af;font-weight:500;">${escapedText}</span>`;
+      }
+
+      // Handle text inline content
       if (!item.text && item.text !== '') return '';
 
       // Ensure item.text is a string
@@ -475,10 +492,10 @@ function extractStyledTextToHTML(content: any[]): string {
         return '';
       }
 
-      let result = item.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); 
+      let result = item.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       if (item.styles) {
-        if (item.styles.code) result = `<code>${result}</code>`; 
+        if (item.styles.code) result = `<code>${result}</code>`;
         if (item.styles.strike) result = `<s>${result}</s>`;
         if (item.styles.underline) result = `<u>${result}</u>`;
         if (item.styles.italic) result = `<em>${result}</em>`;

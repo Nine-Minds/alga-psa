@@ -117,6 +117,7 @@ typescript-errors-*.md
 debug-*.sql
 check-*.sql
 update-*.sql
+server/.alga-ext-cache/
 
 *draft*.md
 *draft*.txt

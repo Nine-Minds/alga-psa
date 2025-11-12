@@ -18,7 +18,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from 'server/src/lib/actions/project-actions/projectActions';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -43,17 +43,19 @@ interface ProjectDetailProps {
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles;
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
+  initialTaskId?: string | null;
 }
 
-export default function ProjectDetail({ 
-  project, 
-  phases, 
-  statuses: initialStatuses, 
+export default function ProjectDetail({
+  project,
+  phases,
+  statuses: initialStatuses,
   users,
   clients,
   contact,
   assignedUser,
-  onTagsUpdate
+  onTagsUpdate,
+  initialTaskId
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
   
@@ -113,6 +115,7 @@ export default function ProjectDetail({
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
+  const hasOpenedInitialTask = useRef(false);
   
   // Fetch tags when component mounts
   useEffect(() => {
@@ -330,7 +333,7 @@ export default function ProjectDetail({
       setIsLoadingTasks(true);
       try {
         const { tasks, ticketLinks, taskResources } = await getTasksForPhase(selectedPhase.phase_id);
-        
+
         // Add checklist items to tasks
         const tasksWithChecklists = await Promise.all(
           tasks.map(async (task) => {
@@ -338,7 +341,7 @@ export default function ProjectDetail({
             return { ...task, checklist_items: checklistItems };
           })
         );
-        
+
         setProjectTasks(tasksWithChecklists);
         setPhaseTicketLinks(ticketLinks);
         setPhaseTaskResources(taskResources);
@@ -352,6 +355,59 @@ export default function ProjectDetail({
 
     fetchPhaseTasks();
   }, [selectedPhase]);
+
+  // Handle opening task from URL parameter (e.g., from notifications)
+  // First effect: Fetch task and select its phase
+  useEffect(() => {
+    if (!initialTaskId || projectPhases.length === 0) return;
+
+    // Reset the flag when initialTaskId changes
+    hasOpenedInitialTask.current = false;
+
+    const loadTaskAndSelectPhase = async () => {
+      try {
+        const task = await getTaskById(initialTaskId);
+        if (!task) {
+          toast.error('Task not found');
+          return;
+        }
+
+        // Find the phase for this task
+        const taskPhase = projectPhases.find(phase => phase.phase_id === task.phase_id);
+        if (!taskPhase) {
+          toast.error('Task phase not found');
+          return;
+        }
+
+        // Select the phase (this will trigger loading tasks for that phase)
+        if (selectedPhase?.phase_id !== taskPhase.phase_id) {
+          setSelectedPhase(taskPhase);
+          setCurrentPhase(taskPhase);
+        }
+      } catch (error) {
+        console.error('Error loading task from notification:', error);
+        toast.error('Failed to load task');
+      }
+    };
+
+    loadTaskAndSelectPhase();
+  }, [initialTaskId, projectPhases]);
+
+  // Second effect: Once tasks are loaded, open the specific task
+  useEffect(() => {
+    if (!initialTaskId || projectTasks.length === 0 || showQuickAdd || hasOpenedInitialTask.current) return;
+
+    // Find the task in the loaded tasks
+    const taskToOpen = projectTasks.find(task => task.task_id === initialTaskId);
+
+    if (taskToOpen) {
+      // Open the task dialog
+      setSelectedTask(taskToOpen);
+      setCurrentPhase(selectedPhase);
+      setShowQuickAdd(true);
+      hasOpenedInitialTask.current = true; // Mark that we've opened the task
+    }
+  }, [initialTaskId, projectTasks, showQuickAdd]);
 
   // Fetch document counts for tasks in the selected phase
   useEffect(() => {

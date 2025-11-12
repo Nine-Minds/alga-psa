@@ -6,6 +6,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export async function findCommentsByTicketId(ticketId: string) {
   const { knex: db, tenant } = await createTenantKnex();
@@ -107,17 +108,50 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const commentId = await Comment.insert(trx, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);
-      
+
       // Verify the comment was inserted correctly
       const insertedComment = await Comment.get(trx, commentId);
       if (insertedComment) {
-      console.log(`[createComment] Verification - inserted comment:`, {
-        comment_id: insertedComment.comment_id,
-        has_markdown: !!insertedComment.markdown_content,
-        markdown_length: insertedComment.markdown_content ? insertedComment.markdown_content.length : 0
-      });
+        console.log(`[createComment] Verification - inserted comment:`, {
+          comment_id: insertedComment.comment_id,
+          has_markdown: !!insertedComment.markdown_content,
+          markdown_length: insertedComment.markdown_content ? insertedComment.markdown_content.length : 0
+        });
       }
-      
+
+      // Get user details for event
+      if (comment.user_id && commentTenant) {
+        const user = await trx('users')
+          .select('first_name', 'last_name')
+          .where({ user_id: comment.user_id, tenant: commentTenant })
+          .first();
+
+        const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+
+        // Publish TICKET_COMMENT_ADDED event for mention notifications
+        // Note: Using try-catch to avoid blocking comment creation if event publishing fails
+        try {
+          await publishEvent({
+            eventType: 'TICKET_COMMENT_ADDED',
+            payload: {
+              tenantId: commentTenant,
+              ticketId: comment.ticket_id!,
+              userId: comment.user_id,
+              comment: {
+                id: commentId,
+                content: comment.note!,
+                author: authorName,
+                isInternal: comment.is_internal || false
+              }
+            }
+          });
+          console.log(`[createComment] Published TICKET_COMMENT_ADDED event for comment:`, commentId);
+        } catch (eventError) {
+          console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
+          // Don't throw - allow comment creation to succeed even if event publishing fails
+        }
+      }
+
       return commentId;
     });
   } catch (error) {

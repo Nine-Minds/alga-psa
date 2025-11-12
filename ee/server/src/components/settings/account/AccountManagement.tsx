@@ -20,6 +20,7 @@ import {
   sendCancellationFeedbackAction,
 } from '@ee/lib/actions/license-actions';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
@@ -290,6 +291,18 @@ export default function AccountManagement() {
           </div>
         </Card>
       </div>
+
+      <Card className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Single Sign-On</h2>
+          <p className="text-sm text-muted-foreground">
+            Link Google Workspace or Microsoft 365 so your team can authenticate with their existing organization accounts.
+          </p>
+        </div>
+        <Button asChild id="account-management-sso-manage-button">
+          <Link href="/msp/account/sso">Manage SSO Connections</Link>
+        </Button>
+      </Card>
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (

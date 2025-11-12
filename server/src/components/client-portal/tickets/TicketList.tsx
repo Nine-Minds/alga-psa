@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
@@ -12,8 +12,6 @@ import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { IStatus } from 'server/src/interfaces/status.interface';
-import { TicketDetails } from './TicketDetails';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -40,11 +38,11 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 export function TicketList() {
   const { t } = useTranslation('clientPortal');
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>('entered_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
@@ -109,7 +107,7 @@ export function TicketList() {
     setLoading(true);
     try {
       const result = await getClientTickets(selectedStatus);
-      
+
       let filteredTickets = [...result];
 
       if (selectedCategories.length > 0) {
@@ -117,7 +115,7 @@ export function TicketList() {
           if (selectedCategories.includes('no-category')) {
             return !ticket.category_id && !ticket.subcategory_id;
           }
-          return selectedCategories.includes(ticket.category_id || '') || 
+          return selectedCategories.includes(ticket.category_id || '') ||
                  selectedCategories.includes(ticket.subcategory_id || '');
         });
       }
@@ -127,13 +125,13 @@ export function TicketList() {
           if (excludedCategories.includes('no-category')) {
             return ticket.category_id || ticket.subcategory_id;
           }
-          return !excludedCategories.includes(ticket.category_id || '') && 
+          return !excludedCategories.includes(ticket.category_id || '') &&
                  !excludedCategories.includes(ticket.subcategory_id || '');
         });
       }
 
       if (selectedPriority !== 'all') {
-        filteredTickets = filteredTickets.filter(ticket => 
+        filteredTickets = filteredTickets.filter(ticket =>
           ticket.priority_id === selectedPriority
         );
       }
@@ -157,7 +155,7 @@ export function TicketList() {
         if (!bValue) return -1;
 
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortDirection === 'asc' 
+          return sortDirection === 'asc'
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         }
@@ -165,7 +163,7 @@ export function TicketList() {
         if (sortField === 'entered_at' || sortField === 'updated_at') {
           const aDate = new Date(aValue as string);
           const bDate = new Date(bValue as string);
-          return sortDirection === 'asc' 
+          return sortDirection === 'asc'
             ? aDate.getTime() - bDate.getTime()
             : bDate.getTime() - aDate.getTime();
         }
@@ -179,35 +177,25 @@ export function TicketList() {
       setError(t('tickets.messages.loadingError', 'Failed to load tickets. Please try again.'));
     }
     setLoading(false);
-  }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection, t]);
+  }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection]);
 
   // Load tickets on initial mount and when filters/sorting change
   useEffect(() => {
     loadTickets();
   }, [loadTickets]);
 
-  // Handle deep link - open ticket from URL parameter
+  // Handle deep link - navigate to ticket page from URL parameter
   useEffect(() => {
     const ticketParam = searchParams.get('ticket');
-    if (ticketParam && tickets.length > 0 && !selectedTicketId) {
-      // Find ticket by ticket_number (e.g., TIC001025) or ticket_id
-      const ticket = tickets.find(
-        t => t.ticket_number === ticketParam || t.ticket_id === ticketParam
-      );
+    if (ticketParam && tickets.length > 0) {
+      // Find ticket by ticket_id (UUID)
+      const ticket = tickets.find(t => t.ticket_id === ticketParam);
       if (ticket && ticket.ticket_id) {
-        setSelectedTicketId(ticket.ticket_id);
+        // Navigate to the dedicated ticket page
+        router.push(`/client-portal/tickets/${ticket.ticket_id}`);
       }
     }
-  }, [searchParams, tickets, selectedTicketId]);
-
-  const handleSort = useCallback((field: string) => {
-    setSortDirection(current => 
-      sortField === field 
-        ? current === 'asc' ? 'desc' : 'asc'
-        : 'asc'
-    );
-    setSortField(field);
-  }, [sortField]);
+  }, [searchParams, tickets, router]);
 
   const handleStatusChange = useCallback(async () => {
     if (!ticketToUpdateStatus) return;
@@ -260,7 +248,7 @@ export function TicketList() {
           onClick={(e) => {
             e.stopPropagation();
             if (record.ticket_id) {
-              setSelectedTicketId(record.ticket_id);
+              router.push(`/client-portal/tickets/${record.ticket_id}`);
             }
           }}
         >
@@ -273,12 +261,12 @@ export function TicketList() {
       dataIndex: 'title',
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
-        <div 
+        <div
           className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
           onClick={(e) => {
             e.stopPropagation();
             if (record.ticket_id) {
-              setSelectedTicketId(record.ticket_id);
+              router.push(`/client-portal/tickets/${record.ticket_id}`);
             }
           }}
         >
@@ -470,14 +458,6 @@ export function TicketList() {
           />
         </div>
       </div>
-
-      {selectedTicketId && (
-        <TicketDetails
-          ticketId={selectedTicketId}
-          isOpen={!!selectedTicketId}
-          onClose={() => setSelectedTicketId(null)}
-        />
-      )}
 
       <ClientAddTicket 
         open={isAddTicketOpen} 

@@ -161,11 +161,27 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
         .where({ client_id: clientId, tenant })
         .update(updateObject);
 
-      // If the client is being set to inactive, update all associated contacts
+      // If the client is being set to inactive, update all associated contacts and users
       if (updateData.is_inactive === true) {
+        // Get all contact IDs for this client
+        const contacts = await trx('contacts')
+          .select('contact_name_id')
+          .where({ client_id: clientId, tenant });
+
+        const contactIds = contacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+        // Deactivate all contacts
         await trx('contacts')
           .where({ client_id: clientId, tenant })
           .update({ is_inactive: true });
+
+        // Deactivate all users associated with these contacts
+        if (contactIds.length > 0) {
+          await trx('users')
+            .whereIn('contact_id', contactIds)
+            .andWhere({ tenant, user_type: 'client' })
+            .update({ is_inactive: true });
+        }
       }
     });
 
@@ -1351,5 +1367,64 @@ export async function deleteClientLogo(
     console.error('Error deleting client logo:', error);
     const message = error instanceof Error ? error.message : 'Failed to delete client logo';
     return { success: false, message };
+  }
+}
+
+/**
+ * Reactivate all inactive contacts for a client
+ */
+export async function reactivateClientContacts(
+  clientId: string
+): Promise<{ success: boolean; contactsReactivated: number; message?: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
+  }
+
+  // Check permission for contact updating
+  if (!await hasPermission(currentUser, 'contact', 'update')) {
+    return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts' };
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get all inactive contact IDs for this client
+      const inactiveContacts = await trx('contacts')
+        .select('contact_name_id')
+        .where({ client_id: clientId, tenant, is_inactive: true });
+
+      const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+      if (contactIds.length === 0) {
+        return { contactsReactivated: 0 };
+      }
+
+      // Reactivate all contacts
+      await trx('contacts')
+        .where({ client_id: clientId, tenant, is_inactive: true })
+        .update({ is_inactive: false });
+
+      // Reactivate all users associated with these contacts
+      await trx('users')
+        .whereIn('contact_id', contactIds)
+        .andWhere({ tenant, user_type: 'client' })
+        .update({ is_inactive: false });
+
+      return { contactsReactivated: contactIds.length };
+    });
+
+    revalidatePath(`/msp/clients/${clientId}`);
+    revalidatePath(`/msp/contacts`);
+
+    return { success: true, contactsReactivated: result.contactsReactivated };
+  } catch (error) {
+    console.error('Error reactivating client contacts:', error);
+    const message = error instanceof Error ? error.message : 'Failed to reactivate client contacts';
+    return { success: false, contactsReactivated: 0, message };
   }
 }

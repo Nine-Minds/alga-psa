@@ -78,13 +78,25 @@
       ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
       "@ee": [
-        "src/empty"
+        "../ee/server/src"
       ],
       "@ee/*": [
-        "src/empty/*"
+        "../ee/server/src/*"
       ],
       "@product/chat/entry": [
-        "src/services/chatStreamService"
+        "../packages/product-chat/oss/entry"
+      ],
+      "@product/chat/ee/entry": [
+        "../packages/product-chat/ee/entry"
+      ],
+      "@product/chat/ee/*": [
+        "../packages/product-chat/ee/*"
+      ],
+      "@product/ext-proxy/handler": [
+        "../packages/product-ext-proxy/oss/handler"
+      ],
+      "@product/ext-proxy/*": [
+        "../packages/product-ext-proxy/*"
       ],
       "@product/workflows/entry": [
         "src/empty/components/flow/DnDFlow"
@@ -107,6 +119,18 @@
       "@product/email-providers/*": [
         "../packages/product-email-providers/*"
       ],
+      "@product/email-domains/entry": [
+        "../packages/product-email-domains/oss/entry"
+      ],
+      "@product/email-domains/*": [
+        "../packages/product-email-domains/*"
+      ],
+      "@product/email-settings/entry": [
+        "../packages/product-email-settings/oss/entry"
+      ],
+      "@product/email-settings/*": [
+        "../packages/product-email-settings/*"
+      ],
       "@product/client-portal-domain/entry": [
         "../packages/product-client-portal-domain/oss/entry"
       ],
@@ -118,6 +142,9 @@
       ],
       "@product/billing/*": [
         "../packages/product-billing/*"
+      ],
+      "@alga-psa/product-extension-actions": [
+        "../packages/product-extension-actions/src/index.ts"
       ]
     }
   },

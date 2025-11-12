@@ -1,0 +1,49 @@
+# Docker Compose configuration for shared MinIO instance for local development
+# This provides S3-compatible storage for extension bundles across multiple Alga environments
+#
+# Usage: docker compose -f docker-compose.minio-dev.yaml up -d
+# Console: http://localhost:9001 (minioadmin / minioadmin)
+# API: http://localhost:9000
+
+services:
+  # MinIO - S3-compatible object storage for development
+  minio:
+    image: minio/minio:latest
+    container_name: alga_minio_dev
+    ports:
+      - "9000:9000"  # MinIO API
+      - "9001:9001"  # MinIO Console UI
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_DOMAIN: localhost
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_dev_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MinIO Client - for bucket initialization
+  minio-init:
+    image: minio/mc:latest
+    container_name: alga_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set minio http://minio:9000 minioadmin minioadmin;
+      mc mb minio/extensions --ignore-existing;
+      echo 'Extension bundles bucket created';
+      mc anonymous set download minio/extensions;
+      echo 'MinIO initialized successfully for local development';
+      exit 0;
+      "
+
+volumes:
+  minio_dev_data:
+    driver: local

@@ -14,6 +14,7 @@ import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { publishEvent } from '../../eventBus/publishers';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -290,34 +291,35 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
         }),
       
         // Get all users involved in the ticket, including avatar file_id
-        trx('users as u')
-        .select(
-          'u.user_id',
-          'u.first_name',
-          'u.last_name',
-          'u.email',
-          'u.user_type',
-          'd.file_id as avatar_file_id'
-        )
-        .leftJoin('document_associations as da', function() {
-          this.on('da.entity_id', '=', 'u.user_id')
-              .andOn('da.tenant', '=', 'u.tenant')
-              .andOnVal('da.entity_type', '=', 'user');
-        })
-        .leftJoin('documents as d', function() {
-           this.on('d.document_id', '=', 'da.document_id')
-              .andOn('d.tenant', '=', 'u.tenant');
-        })
-        .join('comments as c', function() {
-          this.on('u.user_id', '=', 'c.user_id')
-              .andOn('u.tenant', '=', 'c.tenant');
-        })
-        .where({
-          'c.ticket_id': ticketId,
-          'c.tenant': tenant,
-          'u.tenant': tenant
-        })
-        .distinct('u.user_id', 'u.first_name', 'u.last_name', 'u.email', 'u.user_type', 'd.file_id')
+        // This includes users who have commented OR are assigned to the ticket
+        trx.raw(`
+          SELECT DISTINCT u.user_id, u.first_name, u.last_name, u.email, u.user_type, d.file_id as avatar_file_id
+          FROM users u
+          LEFT JOIN document_associations da ON da.entity_id = u.user_id
+            AND da.tenant = u.tenant
+            AND da.entity_type = 'user'
+          LEFT JOIN documents d ON d.document_id = da.document_id
+            AND d.tenant = u.tenant
+          WHERE u.tenant = ?
+            AND (
+              -- Users who have commented
+              u.user_id IN (
+                SELECT c.user_id FROM comments c
+                WHERE c.ticket_id = ? AND c.tenant = ?
+              )
+              -- Or the assigned agent
+              OR u.user_id = (
+                SELECT t.assigned_to FROM tickets t
+                WHERE t.ticket_id = ? AND t.tenant = ?
+              )
+              -- Or additional agents from ticket_resources
+              OR u.user_id IN (
+                SELECT tr.additional_user_id FROM ticket_resources tr
+                WHERE tr.ticket_id = ? AND tr.tenant = ?
+              )
+            )
+        `, [tenant, ticketId, tenant, ticketId, tenant, ticketId, tenant])
+        .then((result: any) => result.rows)
       ]);
 
       return { ticket, conversations, documents, users };
@@ -450,7 +452,7 @@ export async function addClientTicketComment(ticketId: string, content: string, 
         markdownContent = "[Error converting content to markdown]";
       }
 
-      await trx('comments').insert({
+      const [newComment] = await trx('comments').insert({
       tenant,
       ticket_id: ticketId,
       author_type: 'client',
@@ -460,9 +462,25 @@ export async function addClientTicketComment(ticketId: string, content: string, 
         created_at: new Date().toISOString(),
         user_id: session.user.id,
         markdown_content: markdownContent
+      }).returning('*');
+
+      // Publish comment added event
+      await publishEvent({
+        eventType: 'TICKET_COMMENT_ADDED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: session.user.id,
+          comment: {
+            id: newComment.comment_id,
+            content: content,
+            author: `${user.first_name} ${user.last_name}`,
+            isInternal
+          }
+        }
       });
     });
-    
+
     return true; // Return true to indicate success
   } catch (error) {
     console.error('Failed to add comment:', error);
@@ -624,6 +642,9 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
         throw new Error('Ticket not found');
       }
 
+      // Get old status for change tracking
+      const oldStatusId = ticket.status_id;
+
       // Update the ticket status
       await trx('tickets')
         .where({
@@ -635,6 +656,22 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
           updated_at: new Date().toISOString(),
           updated_by: session.user.id
         });
+
+      // Publish ticket updated event
+      await publishEvent({
+        eventType: 'TICKET_UPDATED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: session.user.id,
+          changes: {
+            status_id: {
+              old: oldStatusId,
+              new: newStatusId
+            }
+          }
+        }
+      });
     });
 
   } catch (error) {

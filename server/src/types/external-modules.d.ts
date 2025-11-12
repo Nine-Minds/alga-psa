@@ -25,3 +25,12 @@ declare module '@product/extensions/entry' {
 declare module '@product/workflows/entry' {
   export const DnDFlow: any;
 }
+
+declare module '@product/ext-proxy/handler' {
+  export const dynamic: string;
+  export const GET: any;
+  export const POST: any;
+  export const PUT: any;
+  export const PATCH: any;
+  export const DELETE: any;
+}

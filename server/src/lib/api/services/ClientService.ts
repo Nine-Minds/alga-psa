@@ -327,6 +327,29 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
+      // If the client is being set to inactive, update all associated contacts and users
+      if (data.is_inactive === true) {
+        // Get all contact IDs for this client
+        const contacts = await trx('contacts')
+          .select('contact_name_id')
+          .where({ client_id: id, tenant: context.tenant });
+
+        const contactIds = contacts.map(c => c.contact_name_id);
+
+        // Deactivate all contacts
+        await trx('contacts')
+          .where({ client_id: id, tenant: context.tenant })
+          .update({ is_inactive: true });
+
+        // Deactivate all users associated with these contacts
+        if (contactIds.length > 0) {
+          await trx('users')
+            .whereIn('contact_id', contactIds)
+            .andWhere({ tenant: context.tenant, user_type: 'client' })
+            .update({ is_inactive: true });
+        }
+      }
+
       // Handle tags if provided
       if (data.tags !== undefined) {
         try {

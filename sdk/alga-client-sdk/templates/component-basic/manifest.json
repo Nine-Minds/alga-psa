@@ -1,0 +1,12 @@
+{
+  "name": "__PACKAGE_NAME__",
+  "publisher": "Your Org",
+  "version": "0.1.0",
+  "runtime": "wasm-js@1",
+  "entry": "dist/main.wasm",
+  "capabilities": [
+    "cap:context.read",
+    "cap:log.emit",
+    "cap:secrets.get"
+  ]
+}

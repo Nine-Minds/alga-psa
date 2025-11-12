@@ -756,7 +756,8 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
       work_item_id: null,
       assigned_user_ids: []  // This will be populated by the model
     }, {
-      assignedUserIds: [currentUser.user_id]
+      assignedUserIds: [currentUser.user_id],
+      assignedByUserId: currentUser.user_id
     });
 
     // For ad-hoc entries, use title as name if provided, otherwise use a default name
