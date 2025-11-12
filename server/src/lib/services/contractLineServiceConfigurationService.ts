@@ -198,10 +198,25 @@ export class ContractLineServiceConfigurationService {
             .first();
           const serviceDefaultRate = service?.default_rate;
 
+          // Fetch contract line to validate/set billing_period
+          const ContractLine = (await import('../models/contractLine')).default;
+          const contractLine = await ContractLine.findById(trx, baseConfig.contract_line_id);
+          if (!contractLine) {
+            throw new Error(`Contract line ${baseConfig.contract_line_id} not found`);
+          }
+
+          const bucketBillingPeriod = (typeConfig as IContractLineServiceBucketConfig)?.billing_period;
+          // Validate billing_period matches contract line's billing_frequency
+          if (bucketBillingPeriod && bucketBillingPeriod !== contractLine.billing_frequency) {
+            throw new Error(
+              `Bucket billing period (${bucketBillingPeriod}) must match contract line billing frequency (${contractLine.billing_frequency})`
+            );
+          }
+
           await bucketConfigModel.create({
             config_id: configId,
             total_minutes: (typeConfig as IContractLineServiceBucketConfig)?.total_minutes ?? 0,
-            billing_period: (typeConfig as IContractLineServiceBucketConfig)?.billing_period ?? 'monthly',
+            billing_period: bucketBillingPeriod ?? contractLine.billing_frequency,
             // Use provided rate, else service default, else 0
             overage_rate: (typeConfig as IContractLineServiceBucketConfig)?.overage_rate ?? serviceDefaultRate ?? 0,
             allow_rollover: (typeConfig as IContractLineServiceBucketConfig)?.allow_rollover ?? false,
@@ -391,6 +406,25 @@ export class ContractLineServiceConfigurationService {
       // Create models with transaction
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
+      const ContractLine = (await import('../models/contractLine')).default;
+
+      // 0. Fetch contract line and validate/set bucket billing_period
+      const contractLine = await ContractLine.findById(trx, contractLineId);
+      if (!contractLine) {
+        throw new Error(`Contract line ${contractLineId} not found`);
+      }
+
+      // Validate or set billing_period to match contract line's billing_frequency
+      if (bucketConfigData.billing_period) {
+        if (bucketConfigData.billing_period !== contractLine.billing_frequency) {
+          throw new Error(
+            `Bucket billing period (${bucketConfigData.billing_period}) must match contract line billing frequency (${contractLine.billing_frequency})`
+          );
+        }
+      } else {
+        // Auto-set billing_period to match contract line's billing_frequency
+        bucketConfigData.billing_period = contractLine.billing_frequency;
+      }
 
       // 1. Find existing base configuration
       let baseConfig = await planServiceConfigModel.getByContractLineIdAndServiceId(contractLineId, serviceId);
@@ -434,7 +468,7 @@ export class ContractLineServiceConfigurationService {
         const createData: Omit<IContractLineServiceBucketConfig, 'created_at' | 'updated_at'> = {
             config_id: configId,
             total_minutes: bucketConfigData.total_minutes ?? 0, // Provide defaults if needed
-            billing_period: bucketConfigData.billing_period ?? 'monthly',
+            billing_period: bucketConfigData.billing_period ?? contractLine.billing_frequency,
             overage_rate: bucketConfigData.overage_rate ?? 0,
             allow_rollover: bucketConfigData.allow_rollover ?? false,
             tenant: this.tenant,

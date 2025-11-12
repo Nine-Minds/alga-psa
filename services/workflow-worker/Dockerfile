@@ -19,12 +19,16 @@ COPY package.json package-lock.json ./
 # Copy all workspace package.json files to set up the dependency tree
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
+COPY server/package.json ./server/
 
-# Install dependencies for specific workspaces (exclude ee/server)
-RUN npm install --workspace=shared --workspace=services/workflow-worker
+# Install dependencies for required workspaces (shared, worker, server)
+RUN npm install --workspace=shared --workspace=services/workflow-worker --workspace=server
 
-# Copy shared source code and build it first
+# Copy source code for shared + server workspaces
 COPY shared/ ./shared/
+COPY server/ ./server/
+
+# Build shared workspace first (server is only referenced for type imports)
 WORKDIR /app/shared
 RUN npm run build
 

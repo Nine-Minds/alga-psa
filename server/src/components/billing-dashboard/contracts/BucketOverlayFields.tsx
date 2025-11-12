@@ -17,6 +17,7 @@ interface BucketOverlayFieldsProps {
   unitLabel?: string;
   disabled?: boolean;
   automationId?: string;
+  billingFrequency?: string;
 }
 
 export function BucketOverlayFields({
@@ -25,7 +26,8 @@ export function BucketOverlayFields({
   onChange,
   unitLabel,
   disabled = false,
-  automationId
+  automationId,
+  billingFrequency = 'monthly'
 }: BucketOverlayFieldsProps) {
   const [overageRateInput, setOverageRateInput] = useState<string>('');
 
@@ -73,7 +75,7 @@ export function BucketOverlayFields({
     onChange({
       ...value,
       total_minutes: totalMinutes,
-      billing_period: value.billing_period ?? 'monthly'
+      billing_period: value.billing_period ?? (billingFrequency as 'monthly' | 'weekly')
     });
   };
 
@@ -81,7 +83,7 @@ export function BucketOverlayFields({
     onChange({
       ...value,
       overage_rate: cents,
-      billing_period: value.billing_period ?? 'monthly'
+      billing_period: value.billing_period ?? (billingFrequency as 'monthly' | 'weekly')
     });
   };
 
@@ -89,7 +91,7 @@ export function BucketOverlayFields({
     onChange({
       ...value,
       allow_rollover: checked,
-      billing_period: value.billing_period ?? 'monthly'
+      billing_period: value.billing_period ?? (billingFrequency as 'monthly' | 'weekly')
     });
   };
 
