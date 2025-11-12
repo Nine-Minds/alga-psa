@@ -56,6 +56,11 @@ export const getEventColors = (
       hover = 'hover:bg-green-200';
       text = 'text-green-900';
       break;
+    case 'appointment_request':
+      bg = 'bg-rose-200';
+      hover = 'hover:bg-rose-300';
+      text = 'text-[rgb(var(--color-text-900))]';
+      break;
   }
 
   return { bg, hover, text };

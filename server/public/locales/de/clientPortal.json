@@ -3,6 +3,7 @@
     "dashboard": "Dashboard",
     "tickets": "Support-Tickets",
     "projects": "Projekte",
+    "appointments": "Termine",
     "billing": "Abrechnung",
     "assets": "Assets",
     "clientSettings": "Unternehmenseinstellungen",
@@ -1010,5 +1011,139 @@
     "seconds": "Sekunden",
     "ago": "vor {{time}}",
     "in": "in {{time}}"
+  },
+  "appointments": {
+    "modal": {
+      "title": "Termin anfragen",
+      "editTitle": "Terminanfrage bearbeiten",
+      "step": "Schritt",
+      "of": "von"
+    },
+    "steps": {
+      "service": "Service",
+      "date": "Datum",
+      "time": "Zeit",
+      "confirm": "Bestätigen"
+    },
+    "step1": {
+      "title": "Service auswählen",
+      "description": "Wählen Sie den Service, bei dem Sie Unterstützung benötigen",
+      "selectService": "Wählen Sie einen Service aus",
+      "serviceLabel": "Service",
+      "ticketLabel": "Mit bestehendem Ticket verknüpfen (Optional)",
+      "selectTicket": "Wählen Sie ein Ticket",
+      "noTicket": "Kein Ticket",
+      "ticketHint": "Optional können Sie diesen Termin mit einem bestehenden Support-Ticket verknüpfen"
+    },
+    "step2": {
+      "title": "Datum wählen",
+      "description": "Wählen Sie Ihr bevorzugtes Termindatum",
+      "selectDate": "Wählen Sie ein verfügbares Datum",
+      "selectedDate": "Ausgewähltes Datum"
+    },
+    "step3": {
+      "title": "Zeit & Techniker wählen",
+      "description": "Wählen Sie Ihren bevorzugten Zeitslot und optional einen Techniker",
+      "selectTime": "Verfügbare Zeitslots",
+      "minutes": "Min.",
+      "technicianLabel": "Bevorzugter Techniker",
+      "selectTechnician": "Wählen Sie einen Techniker",
+      "noPreference": "Keine Präferenz",
+      "technicianHint": "Dies ist eine Präferenz und kann je nach Verfügbarkeit angepasst werden"
+    },
+    "step4": {
+      "title": "Überprüfen & Bestätigen",
+      "description": "Fügen Sie zusätzliche Details hinzu und überprüfen Sie Ihre Terminanfrage",
+      "descriptionPlaceholder": "Bitte geben Sie zusätzliche Details zu Ihrer Anfrage an...",
+      "summaryTitle": "Terminübersicht",
+      "service": "Service",
+      "dateTime": "Datum & Uhrzeit",
+      "at": "um",
+      "duration": "Dauer",
+      "technician": "Bevorzugter Techniker",
+      "linkedTicket": "Verknüpftes Ticket",
+      "approvalNote": "Ihre Terminanfrage wird zur Genehmigung eingereicht. Sie erhalten eine E-Mail-Bestätigung, sobald sie genehmigt wurde.",
+      "submit": "Termin anfragen",
+      "update": "Termin aktualisieren"
+    },
+    "status": {
+      "pending": "Genehmigung ausstehend",
+      "approved": "Bestätigt",
+      "declined": "Abgelehnt",
+      "cancelled": "Storniert"
+    },
+    "errors": {
+      "loadServicesFailed": "Fehler beim Laden der verfügbaren Services. Bitte versuchen Sie es erneut.",
+      "loadDatesFailed": "Fehler beim Laden der verfügbaren Termine. Bitte versuchen Sie es erneut.",
+      "loadSlotsFailed": "Fehler beim Laden der verfügbaren Zeitslots. Bitte versuchen Sie es erneut.",
+      "createFailed": "Fehler beim Erstellen der Terminanfrage. Bitte versuchen Sie es erneut.",
+      "updateFailed": "Fehler beim Aktualisieren der Terminanfrage. Bitte versuchen Sie es erneut.",
+      "loadFailed": "Fehler beim Laden der Termine. Bitte versuchen Sie es erneut."
+    },
+    "messages": {
+      "requestSuccess": "Terminanfrage erfolgreich eingereicht!",
+      "requestSuccessDetail": "Wir prüfen Ihre Anfrage und senden Ihnen eine Bestätigungs-E-Mail, sobald sie genehmigt wurde.",
+      "updateSuccess": "Terminanfrage erfolgreich aktualisiert!",
+      "updateSuccessDetail": "Ihre Terminanfrage wurde aktualisiert.",
+      "cancelSuccess": "Termin erfolgreich storniert.",
+      "cancelFailed": "Fehler beim Stornieren des Termins. Bitte versuchen Sie es erneut."
+    },
+    "page": {
+      "title": "Meine Termine",
+      "subtitle": "Ihre Terminanfragen anzeigen und verwalten",
+      "requestButton": "Neuen Termin anfragen",
+      "noAppointments": "Keine Termine gefunden",
+      "noAppointmentsDescription": "Sie haben noch keine Termine angefragt. Fordern Sie jetzt einen an, um zu beginnen!"
+    },
+    "filters": {
+      "all": "Alle",
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "declined": "Abgelehnt"
+    },
+    "table": {
+      "service": "Service",
+      "dateTime": "Datum & Uhrzeit",
+      "status": "Status",
+      "technician": "Techniker",
+      "actions": "Aktionen",
+      "minutes": "Min.",
+      "notAssigned": "Nicht zugewiesen",
+      "viewDetails": "Details anzeigen",
+      "edit": "Bearbeiten",
+      "cancel": "Stornieren"
+    },
+    "details": {
+      "title": "Termindetails",
+      "statusApproved": "Dieser Termin wurde bestätigt",
+      "statusPending": "Dieser Termin wartet auf Genehmigung",
+      "statusDeclined": "Diese Terminanfrage wurde abgelehnt",
+      "statusCancelled": "Dieser Termin wurde storniert",
+      "reason": "Grund",
+      "service": "Service",
+      "dateTime": "Datum & Uhrzeit",
+      "technician": "Zugewiesener Techniker",
+      "linkedTicket": "Verknüpftes Ticket",
+      "description": "Beschreibung",
+      "created": "Angefragt",
+      "approved": "Genehmigt",
+      "cancelButton": "Termin stornieren"
+    },
+    "cancel": {
+      "title": "Termin stornieren",
+      "message": "Sind Sie sicher, dass Sie diese Terminanfrage stornieren möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Ja, stornieren"
+    },
+    "ticketSection": {
+      "title": "Terminanfragen",
+      "service": "Service",
+      "publicRequest": "Öffentliche Anfrage",
+      "minutes": "Minuten",
+      "preferred": "Bevorzugt:",
+      "approvedBy": "Genehmigt von",
+      "on": "am",
+      "declined": "Abgelehnt:",
+      "invalidDateTime": "Ungültiges Datum/Uhrzeit"
+    }
   }
 }
