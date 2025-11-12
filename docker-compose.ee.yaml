@@ -24,10 +24,10 @@ services:
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
-      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_HOST: ${REDIS_HOST_DOCKER:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -95,7 +95,7 @@ services:
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -126,6 +126,14 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: /tmp/alga-migrations
+        target: /app/server/migrations
+        read_only: true
+      - type: bind
+        source: /tmp/alga-seeds
+        target: /app/server/seeds
+        read_only: true
     secrets:
       - postgres_password
       - db_password_server
@@ -154,10 +162,10 @@ services:
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
-      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_HOST: ${REDIS_HOST_DOCKER:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -220,10 +228,10 @@ services:
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
-      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_HOST: ${REDIS_HOST_DOCKER:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: postgres
+      DB_HOST: ${DB_HOST_DOCKER:-postgres}
       DB_PORT: ${DB_PORT:-5432}
     secrets:
       - postgres_password

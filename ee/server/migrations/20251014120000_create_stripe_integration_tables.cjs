@@ -103,10 +103,6 @@ const createStripePrices = (knex) =>
     table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
 
     table.primary(['tenant', 'stripe_price_id']);
-    table
-      .foreign(['tenant', 'stripe_product_id'])
-      .references(['tenant', 'stripe_product_id'])
-      .inTable('stripe_products')
     table.foreign('tenant').references('tenants.tenant');
     table.unique(['tenant', 'stripe_price_external_id']);
     table.unique(['stripe_price_id']);
@@ -144,14 +140,6 @@ const createStripeSubscriptions = (knex) =>
 
     table.primary(['tenant', 'stripe_subscription_id']);
     table.foreign('tenant').references('tenants.tenant');
-    table
-      .foreign(['tenant', 'stripe_customer_id'])
-      .references(['tenant', 'stripe_customer_id'])
-      .inTable('stripe_customers');
-    table
-      .foreign(['tenant', 'stripe_price_id'])
-      .references(['tenant', 'stripe_price_id'])
-      .inTable('stripe_prices');
     table.unique(['tenant', 'stripe_subscription_external_id']);
     table.index(['tenant', 'stripe_customer_id'], 'idx_stripe_subscriptions_customer');
   });
