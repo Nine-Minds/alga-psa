@@ -39,7 +39,8 @@
     "copy": "Copier",
     "duplicate": "Dupliquer",
     "openMenu": "Ouvrir le menu",
-    "confirmDeletion": "Confirmer la suppression"
+    "confirmDeletion": "Confirmer la suppression",
+    "saving": "Enregistrement..."
   },
   "status": {
     "loading": "Chargement...",
@@ -301,6 +302,10 @@
       "bulkDeleteSuccess_one": "{{count}} document a été supprimé avec succès",
       "bulkDeleteSuccess_other": "{{count}} documents ont été supprimés avec succès"
     },
+    "empty": {
+      "default": "Aucun document trouvé",
+      "folder": "Aucun document trouvé dans ce dossier"
+    },
     "validation": {
       "nameRequired": "Le nom du document est obligatoire"
     },
@@ -442,9 +447,194 @@
       "nameLabel": "Nom du dossier",
       "namePlaceholder": "Saisissez le nom du dossier",
       "willCreateIn": "Sera créé dans : {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Voir toutes les notifications",
+      "categories": {
+        "Authentication": "Authentification",
+        "Invoices": "Factures",
+        "Projects": "Projets",
+        "Tickets": "Tickets",
+        "Time Entries": "Entrées de temps"
+      }
     }
   },
   "fields": {
     "notes": "Notes"
+  },
+  "surveys": {
+    "common": {
+      "loading": "Chargement..."
+    },
+    "settings": {
+      "tabLabel": "Enquêtes",
+      "title": "Enquêtes de satisfaction client",
+      "subtitle": "Configurez les modèles, les déclencheurs et l’envoi pour collecter les retours après la clôture des tickets.",
+      "tabs": {
+        "templates": "Modèles",
+        "triggers": "Déclencheurs"
+      },
+      "templateList": {
+        "title": "Modèles d’enquête",
+        "description": "Gérez les invites et les échelles de notation envoyées à vos clients.",
+        "createButton": "Nouveau modèle",
+        "emptyTitle": "Aucun modèle d’enquête pour le moment",
+        "emptyDescription": "Créez votre premier modèle pour définir le contenu et l’échelle de l’enquête.",
+        "table": {
+          "name": "Modèle",
+          "rating": "Échelle",
+          "status": "Statut",
+          "updated": "Mis à jour",
+          "actions": "Actions"
+        },
+        "defaultBadge": "Par défaut",
+        "status": {
+          "enabled": "Activé",
+          "disabled": "Désactivé"
+        },
+        "toasts": {
+          "created": "Modèle créé",
+          "updated": "Modèle mis à jour",
+          "deleted": "Modèle supprimé",
+          "setDefault": "Modèle par défaut mis à jour",
+          "error": "Impossible d’enregistrer le modèle",
+          "deleteError": "Impossible de supprimer le modèle"
+        },
+        "deleteConfirm": "Supprimer ce modèle ? Les invitations déjà envoyées ne seront pas affectées.",
+        "errors": {
+          "load": "Impossible de charger les modèles d’enquête."
+        }
+      },
+      "templateForm": {
+        "titleCreate": "Créer un modèle d’enquête",
+        "titleEdit": "Modifier le modèle d’enquête",
+        "labels": {
+          "name": "Nom du modèle",
+          "ratingType": "Type d’échelle",
+          "ratingScale": "Échelle de notation",
+          "ratingLabels": "Libellés des notes",
+          "promptText": "Invite de l’enquête",
+          "commentPrompt": "Invite de commentaire",
+          "thankYouText": "Message de remerciement",
+          "isDefault": "Définir comme modèle par défaut",
+          "enabled": "Modèle actif"
+        },
+        "placeholders": {
+          "ratingLabels": "Exemple :\n1 = Très insatisfait\n2 = Insatisfait\n3 = Neutre\n4 = Satisfait\n5 = Très satisfait"
+        },
+        "help": {
+          "ratingLabels": "Indiquez un libellé par note en utilisant « valeur = libellé » sur des lignes séparées."
+        },
+        "ratingTypes": {
+          "stars": "Étoiles",
+          "numbers": "Nombres",
+          "emojis": "Émojis"
+        },
+        "actions": {
+          "create": "Créer le modèle",
+          "save": "Enregistrer",
+          "delete": "Supprimer le modèle"
+        }
+      },
+      "triggerList": {
+        "title": "Déclencheurs d’enquête",
+        "description": "Envoyez automatiquement des invitations lorsque vos tickets ou projets se terminent.",
+        "createButton": "Nouveau déclencheur",
+        "emptyTitle": "Aucun déclencheur d’enquête configuré",
+        "emptyDescription": "Créez un déclencheur pour envoyer une enquête à la clôture d’un ticket ou d’un projet.",
+        "table": {
+          "template": "Modèle",
+          "type": "Déclencheur",
+          "conditions": "Conditions",
+          "status": "Statut",
+          "updated": "Mis à jour",
+          "actions": "Actions"
+        },
+        "conditions": {
+          "boards": "Tableaux",
+          "statuses": "Statuts",
+          "priorities": "Priorités",
+          "any": "Tous"
+        },
+        "status": {
+          "enabled": "Activé",
+          "disabled": "Désactivé"
+        },
+        "toasts": {
+          "created": "Déclencheur créé",
+          "updated": "Déclencheur mis à jour",
+          "deleted": "Déclencheur supprimé",
+          "error": "Impossible d’enregistrer le déclencheur",
+          "deleteError": "Impossible de supprimer le déclencheur"
+        },
+        "deleteConfirm": "Supprimer ce déclencheur ? Les invitations déjà en file d’attente seront toujours envoyées.",
+        "errors": {
+          "load": "Impossible de charger les déclencheurs d’enquête."
+        }
+      },
+      "triggerForm": {
+        "titleCreate": "Créer un déclencheur d’enquête",
+        "titleEdit": "Modifier le déclencheur d’enquête",
+        "labels": {
+          "template": "Modèle d’enquête",
+          "triggerType": "Type de déclencheur",
+          "boardIds": "Identifiants de tableau",
+          "statusIds": "Identifiants de statut",
+          "priorities": "Priorités",
+          "enabled": "Déclencheur actif"
+        },
+        "placeholders": {
+          "boardIds": "Sélectionner un tableau",
+          "statusIds": "Ajouter un statut",
+          "priorities": "Ajouter une priorité"
+        },
+        "help": {
+          "conditions": "Laissez un champ vide pour accepter toutes les valeurs."
+        },
+        "actions": {
+          "create": "Créer le déclencheur",
+          "save": "Enregistrer",
+          "delete": "Supprimer le déclencheur"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ticket clôturé",
+          "project_completed": "Projet terminé"
+        },
+        "errors": {
+          "reference": "Impossible de charger les options du déclencheur. Veuillez réessayer."
+        },
+        "noTemplates": "Créez un modèle d’enquête avant d’ajouter des déclencheurs.",
+        "prioritiesMixed": "Les tableaux sélectionnés utilisent différents types de priorité. Toutes les priorités sont affichées."
+      },
+      "response": {
+        "invalidTitle": "Sondage indisponible",
+        "invalidMessage": "Ce lien de feedback n’est plus valide ou a déjà été utilisé.",
+        "ratingPrompt": "Comment s’est passée votre expérience ?",
+        "ratingAssistive": "Sélectionnez une note de 1 à {{scale}}",
+        "commentLabel": "Commentaires supplémentaires (facultatif)",
+        "submitButton": "Envoyer le retour",
+        "submitting": "Envoi du retour…",
+        "submittedTitle": "Merci pour votre réponse !",
+        "submittedMessage": "{{thankYouText}}",
+        "retryButton": "Réessayer",
+        "ratingSubmitted": "Retour envoyé",
+        "errorMessage": "Impossible d’enregistrer votre retour. Merci de réessayer.",
+        "selectRatingError": "Sélectionnez une note avant d’envoyer.",
+        "supportMessage": "Pour toute question, contactez votre technicien."
+      }
+    },
+    "response": {
+      "pageTitle": "Sondage de satisfaction client"
+    }
+  },
+  "notifications": {
+    "viewAll": "Voir toutes les notifications",
+    "categories": {
+      "Authentication": "Authentification",
+      "Invoices": "Factures",
+      "Projects": "Projets",
+      "Tickets": "Tickets",
+      "Time Entries": "Saisies de temps"
+    }
   }
 }

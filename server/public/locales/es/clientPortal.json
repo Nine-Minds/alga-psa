@@ -10,7 +10,8 @@
     "account": "Cuenta",
     "signOut": "Cerrar sesión",
     "clientPortal": "Portal del cliente",
-    "portal": "Portal"
+    "portal": "Portal",
+    "notifications": "Notificaciones"
   },
   "dashboard": {
     "title": "Panel",
@@ -36,6 +37,7 @@
   "tickets": {
     "title": "Tickets de soporte",
     "subtitle": "Consulta y gestiona tus tickets de soporte",
+    "backToTickets": "Volver a los tickets",
     "createNew": "Crear nuevo ticket",
     "createButton": "Crear ticket de soporte",
     "viewAll": "Ver todos los tickets",
@@ -92,7 +94,9 @@
       "category": "Categoría",
       "subcategory": "Subcategoría",
       "attachments": "Adjuntos",
+      "created": "Creado",
       "createdAt": "Creado",
+      "lastUpdated": "Última actualización",
       "updatedAt": "Última actualización",
       "assignedTo": "Asignado a",
       "requester": "Solicitante",
@@ -348,6 +352,8 @@
     "clientInfo": "Información de la empresa",
     "preferences": "Preferencias",
     "security": "Seguridad",
+    "activity": "Actividad",
+    "notificationSettings": "Configuración de notificaciones",
     "fields": {
       "firstName": "Nombre",
       "lastName": "Apellido",
@@ -394,7 +400,9 @@
       "ticketUpdates": "Actualizaciones de tickets",
       "projectUpdates": "Actualizaciones de proyectos",
       "invoices": "Notificaciones de facturas",
-      "announcements": "Anuncios del sistema"
+      "announcements": "Anuncios del sistema",
+      "emailPreferences": "Correo electrónico",
+      "internalPreferences": "Interno"
     },
     "actions": {
       "save": "Guardar cambios",
@@ -833,6 +841,7 @@
     "no": "No",
     "search": "Buscar",
     "filter": "Filtrar",
+    "resetFilters": "Reiniciar filtros",
     "sort": "Ordenar",
     "refresh": "Actualizar",
     "export": "Exportar",
@@ -952,7 +961,29 @@
     "markAllAsRead": "Marcar todo como leído",
     "noNotifications": "No hay notificaciones nuevas",
     "settings": "Configuración de notificaciones",
-    "viewAll": "Ver todas las notificaciones"
+    "viewAll": "Ver todas las notificaciones",
+    "tabs": {
+      "unread": "No leídas",
+      "all": "Todas",
+      "read": "Leídas"
+    },
+    "preferences": {
+      "title": "Preferencias de notificaciones",
+      "description": "Gestiona qué notificaciones internas recibes",
+      "loading": "Cargando preferencias...",
+      "loadError": "Error al cargar las preferencias",
+      "saveError": "Error al guardar la preferencia",
+      "noCategories": "No hay categorías de notificaciones disponibles",
+      "emailPreferences": "Correo electrónico",
+      "internalPreferences": "Interno"
+    },
+    "categories": {
+      "tickets": "Tickets",
+      "invoices": "Facturas",
+      "messages": "Mensajes",
+      "projects": "Proyectos",
+      "system": "Sistema"
+    }
   },
   "pagination": {
     "showing": "Mostrando {{from}} a {{to}} de {{total}} resultados",

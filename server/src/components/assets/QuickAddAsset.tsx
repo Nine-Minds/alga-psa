@@ -16,6 +16,8 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 interface QuickAddAssetProps {
   clientId?: string;
   onAssetAdded: () => void;
+  onClose?: () => void;
+  defaultOpen?: boolean;
 }
 
 type NetworkDeviceType = 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
@@ -64,13 +66,18 @@ interface FormData {
   };
 }
 
-export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
-  const [open, setOpen] = useState(false);
+export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = false }: QuickAddAssetProps) {
+  const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+
+  const handleClose = () => {
+    setOpen(false);
+    onClose?.();
+  };
 
   // Initialize with minimum required fields
   const [formData, setFormData] = useState<FormData>({
@@ -101,6 +108,12 @@ export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
       model: ''
     }
   });
+
+  useEffect(() => {
+    if (defaultOpen) {
+      setOpen(true);
+    }
+  }, [defaultOpen]);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -230,7 +243,7 @@ export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
 
       await createAsset(assetData);
       onAssetAdded();
-      setOpen(false);
+      handleClose();
       // Reset form
       setFormData({
         name: '',
@@ -427,7 +440,7 @@ export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
       
       <Dialog
         isOpen={open}
-        onClose={() => setOpen(false)}
+        onClose={handleClose}
         title="Add New Asset"
         className="max-w-[480px] max-h-[90vh] overflow-y-auto"
         id="quick-add-asset"
@@ -545,7 +558,7 @@ export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
             )}
 
             <div {...withDataAutomationId({ id: 'form-actions' })} className="flex justify-end space-x-2 pt-4">
-              <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
               <Button 

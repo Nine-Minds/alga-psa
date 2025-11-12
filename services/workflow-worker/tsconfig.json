@@ -24,8 +24,10 @@
     "experimentalSpecifierResolution": "node"
   },
   "include": [
-    "src/**/*.ts"
-, "../../shared/utils/retryUtils.ts"  ],
+    "src/**/*.ts",
+    "../../shared/utils/retryUtils.ts",
+    "../../shared/types/**/*.d.ts"
+  ],
   "exclude": [
     "node_modules",
     "dist",

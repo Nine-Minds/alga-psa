@@ -20,7 +20,7 @@ import ClientContactsList from 'server/src/components/contacts/ClientContactsLis
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -56,6 +56,8 @@ import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/opti
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import ClientSurveySummaryCard from 'server/src/components/surveys/ClientSurveySummaryCard';
+import type { SurveyClientSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 
 const SwitchDetailItem: React.FC<{
@@ -169,6 +171,7 @@ interface ClientDetailsProps {
   contacts?: IContact[];
   isInDrawer?: boolean;
   quickView?: boolean;
+  surveySummary?: SurveyClientSatisfactionSummary | null;
 }
 
 const ClientDetails: React.FC<ClientDetailsProps> = ({
@@ -177,7 +180,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   documents = [],
   contacts = [],
   isInDrawer = false,
-  quickView = false
+  quickView = false,
+  surveySummary = null
 }) => {
   const { t } = useTranslation('common');
   const featureFlag = useFeatureFlag('billing-enabled');
@@ -201,6 +205,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
+  const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
+  const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [activeContactsToDeactivate, setActiveContactsToDeactivate] = useState<IContact[]>([]);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
@@ -277,6 +285,71 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       console.error('Error marking client as inactive:', error);
       setDeleteError('An error occurred while marking the client as inactive. Please try again.');
     }
+  };
+
+  const handleReactivateClient = async (reactivateContacts: boolean) => {
+    try {
+      if (reactivateContacts) {
+        // Reactivate all contacts and their associated users
+        const result = await reactivateClientContacts(editedClient.client_id);
+
+        if (!result.success) {
+          toast.error(result.message || 'Failed to reactivate contacts');
+          setIsReactivateDialogOpen(false);
+          return;
+        }
+
+        // Update the client to be active and save
+        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
+
+        // Update local state immediately
+        setEditedClient(updatedClient);
+        setHasUnsavedChanges(false);
+
+        toast.success(`Client and ${result.contactsReactivated} contact(s) have been reactivated successfully.`);
+      } else {
+        // Only reactivate the client (skip contacts)
+        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
+
+        // Update local state immediately
+        setEditedClient(updatedClient);
+        setHasUnsavedChanges(false);
+
+        toast.success('Client has been reactivated successfully.');
+      }
+
+      setIsReactivateDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error reactivating client:', error);
+      toast.error('An error occurred while reactivating the client. Please try again.');
+    }
+  };
+
+  const handleCancelReactivation = () => {
+    setIsReactivateDialogOpen(false);
+    // Keep the client inactive - no changes
+  };
+
+  const handleDeactivateClient = async () => {
+    try {
+      // Deactivate the client (contacts and users will be automatically deactivated by the server action)
+      const updatedClient = await updateClient(editedClient.client_id, { is_inactive: true });
+
+      // Update local state immediately
+      setEditedClient(updatedClient);
+      setHasUnsavedChanges(false);
+
+      toast.success(`Client and ${activeContactsToDeactivate.length} contact(s) have been deactivated successfully.`);
+      setIsDeactivateDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error deactivating client:', error);
+      toast.error('An error occurred while deactivating the client. Please try again.');
+    }
+  };
+
+  const handleCancelDeactivation = () => {
+    setIsDeactivateDialogOpen(false);
+    // Keep the client active - no changes
   };
 
   const resetDeleteState = () => {
@@ -434,22 +507,48 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   }, [editedClient.notes_document_id]);
 
 
-  const handleFieldChange = (field: string, value: string | boolean) => {
+  const handleFieldChange = async (field: string, value: string | boolean) => {
+    // Check if client is being deactivated (is_inactive changing from false to true)
+    if (field === 'is_inactive' && editedClient.is_inactive === false && value === true) {
+      // Fetch active contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
+
+      if (activeContacts.length > 0) {
+        setActiveContactsToDeactivate(activeContacts);
+        setIsDeactivateDialogOpen(true);
+        return; // Don't update the field yet, wait for user confirmation
+      }
+    }
+
+    // Check if client is being reactivated (is_inactive changing from true to false)
+    if (field === 'is_inactive' && editedClient.is_inactive === true && value === false) {
+      // Fetch inactive contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
+
+      if (inactiveContacts.length > 0) {
+        setInactiveContactsToReactivate(inactiveContacts);
+        setIsReactivateDialogOpen(true);
+        return; // Don't update the field yet, wait for user confirmation
+      }
+    }
+
     setEditedClient(prevClient => {
       // Create a deep copy of the previous client
       const updatedClient = JSON.parse(JSON.stringify(prevClient)) as IClient;
-      
+
       if (field.startsWith('properties.') && field !== 'properties.account_manager_id') {
         const propertyField = field.split('.')[1];
-        
+
         // Ensure properties object exists
         if (!updatedClient.properties) {
           updatedClient.properties = {};
         }
-        
+
         // Update the specific property using type assertion
         (updatedClient.properties as any)[propertyField] = value;
-        
+
         // Sync url with properties.website when website is updated
         if (propertyField === 'website' && typeof value === 'string') {
           updatedClient.url = value;
@@ -457,19 +556,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       } else if (field === 'url') {
         // Update the URL field
         updatedClient.url = value as string;
-        
+
         // Sync properties.website with url
         if (!updatedClient.properties) {
           updatedClient.properties = {};
         }
-        
+
         // Use type assertion to set the website property
         (updatedClient.properties as any).website = value as string;
       } else {
         // For all other fields, use type assertion to update directly
         (updatedClient as any)[field] = value;
       }
-      
+
       return updatedClient;
     });
     
@@ -775,7 +874,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </div>
             
             {/* Right Column - Client Locations Only */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Text as="label" size="2" className="text-gray-700 font-medium">{t('clients.locations.sectionTitle', 'Client Locations')}</Text>
                 <Button
@@ -794,6 +893,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   isEditing={false}
                 />
               </div>
+              <ClientSurveySummaryCard summary={surveySummary} />
             </div>
           </div>
           
@@ -1164,6 +1264,78 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           }
           confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
           cancelLabel={deleteError ? "Close" : "Cancel"}
+          isConfirming={false}
+        />
+
+        {/* Deactivate Warning Dialog */}
+        <ConfirmationDialog
+          id="deactivate-client-dialog"
+          isOpen={isDeactivateDialogOpen}
+          onClose={handleCancelDeactivation}
+          onConfirm={handleDeactivateClient}
+          title="Deactivate Client"
+          message={
+            <div className="space-y-3">
+              <p className="font-semibold text-orange-600">
+                ⚠️ Warning: This will deactivate the client and all associated contacts and users.
+              </p>
+              <p>
+                This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Deactivating the client will also deactivate {activeContactsToDeactivate.length === 1 ? 'this contact and their user account' : 'all these contacts and their user accounts'}.
+              </p>
+              {activeContactsToDeactivate.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Active contacts that will be deactivated:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 max-h-40 overflow-y-auto">
+                    {activeContactsToDeactivate.map((contact) => (
+                      <li key={contact.contact_name_id}>
+                        {contact.full_name}
+                        {contact.email && ` (${contact.email})`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-sm text-gray-500 mt-2">
+                Deactivated users will not be able to log into the client portal.
+              </p>
+            </div>
+          }
+          confirmLabel="Deactivate All"
+          cancelLabel="Cancel"
+          isConfirming={false}
+        />
+
+        {/* Reactivate Confirmation Dialog */}
+        <ConfirmationDialog
+          id="reactivate-client-dialog"
+          isOpen={isReactivateDialogOpen}
+          onClose={handleCancelReactivation}
+          onConfirm={() => handleReactivateClient(true)}
+          title="Reactivate Client"
+          message={
+            <div className="space-y-3">
+              <p>
+                This client has {inactiveContactsToReactivate.length} inactive contact{inactiveContactsToReactivate.length !== 1 ? 's' : ''}. Would you like to reactivate {inactiveContactsToReactivate.length === 1 ? 'this contact' : 'all these contacts'} as well?
+              </p>
+              {inactiveContactsToReactivate.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Inactive contacts:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 max-h-40 overflow-y-auto">
+                    {inactiveContactsToReactivate.map((contact) => (
+                      <li key={contact.contact_name_id}>
+                        {contact.full_name}
+                        {contact.email && ` (${contact.email})`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          }
+          confirmLabel="Reactivate All"
+          cancelLabel="Cancel"
+          onCancel={() => handleReactivateClient(false)}
+          thirdButtonLabel="Client Only"
           isConfirming={false}
         />
       </div>

@@ -6,6 +6,7 @@ import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userAc
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -151,9 +152,28 @@ export async function addScheduleEntry(
     const { knex: db } = await createTenantKnex();
     const createdEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await ScheduleEntry.create(trx, entry, {
-        assignedUserIds
+        assignedUserIds,
+        assignedByUserId: currentUser.user_id
       });
     });
+
+    try {
+      await publishEvent({
+        eventType: 'SCHEDULE_ENTRY_CREATED',
+        payload: {
+          tenantId: currentUser.tenant,
+          userId: currentUser.user_id,
+          entryId: createdEntry.entry_id,
+          changes: {
+            after: sanitizeScheduleEntryForEvent(createdEntry),
+            assignedUserIds,
+          },
+        },
+      });
+    } catch (eventError) {
+      console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
+    }
+
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
@@ -231,14 +251,35 @@ export async function updateScheduleEntry(
         assigned_user_ids: entry.assigned_user_ids // Let ScheduleEntry.update handle merging if needed based on updateType
     };
 
+    const editScope = entry.updateType || IEditScope.SINGLE;
     const updatedEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await ScheduleEntry.update(
           trx,
           entry_id,
           updateData,
-          entry.updateType || IEditScope.SINGLE
+          editScope
       );
     });
+
+    if (updatedEntry) {
+      try {
+        await publishEvent({
+          eventType: 'SCHEDULE_ENTRY_UPDATED',
+          payload: {
+            tenantId: currentUser.tenant,
+            userId: currentUser.user_id,
+            entryId: entry_id,
+            changes: {
+              before: sanitizeScheduleEntryForEvent(existingEntry),
+              after: sanitizeScheduleEntryForEvent(updatedEntry),
+              updateType: editScope,
+            },
+          },
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
+      }
+    }
 
     return { success: true, entry: updatedEntry };
   } catch (error) {
@@ -307,6 +348,26 @@ export async function deleteScheduleEntry(entry_id: string, deleteType: IEditSco
     // --- End Permission Check ---
 
     const success = await ScheduleEntry.delete(entry_id, deleteType);
+
+    if (success) {
+      try {
+        await publishEvent({
+          eventType: 'SCHEDULE_ENTRY_DELETED',
+          payload: {
+            tenantId: currentUser.tenant,
+            userId: currentUser.user_id,
+            entryId: entry_id,
+            changes: {
+              before: sanitizeScheduleEntryForEvent(existingEntry),
+              deleteType,
+            },
+          },
+        });
+      } catch (eventError) {
+        console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
+      }
+    }
+
     return { success };
   } catch (error) {
     console.error('Error deleting schedule entry:', error);
@@ -377,4 +438,32 @@ export async function getScheduleEntryById(entryId: string, user: any): Promise<
     console.error('Error fetching schedule entry by ID:', error);
     throw new Error('Failed to fetch schedule entry');
   }
+}
+
+function sanitizeScheduleEntryForEvent(entry: IScheduleEntry | null | undefined) {
+  if (!entry) {
+    return undefined;
+  }
+
+  const toIsoString = (value: unknown): string | null => {
+    if (!value) {
+      return null;
+    }
+    const date = value instanceof Date ? value : new Date(value as string);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  };
+
+  return {
+    id: entry.entry_id,
+    title: entry.title,
+    scheduledStart: toIsoString(entry.scheduled_start),
+    scheduledEnd: toIsoString(entry.scheduled_end),
+    status: entry.status,
+    workItemId: entry.work_item_id,
+    workItemType: entry.work_item_type,
+    isRecurring: entry.is_recurring,
+    recurrencePattern: entry.recurrence_pattern,
+    assignedUserIds: entry.assigned_user_ids ?? [],
+    isPrivate: entry.is_private,
+  };
 }

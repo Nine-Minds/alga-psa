@@ -21,6 +21,7 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { CalendarSyncStatusDisplay } from '../calendar/CalendarSyncStatusDisplay';
 
 const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
 
@@ -643,6 +644,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
+          {/* Calendar Sync Status */}
+          {event && event.entry_id && (
+            <div className="border-t pt-4">
+              <CalendarSyncStatusDisplay entryId={event.entry_id} />
+            </div>
+          )}
         </div>
         <div className="space-y-4">
           <div className="relative z-10">

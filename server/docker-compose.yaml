@@ -1,6 +1,6 @@
 x-common-config: &common-config
   build:
-    context: .
+    context: ..
     dockerfile: Dockerfile.dev
   ports:
     - "${EXPOSE_SERVER_PORT:-3000}:3000"

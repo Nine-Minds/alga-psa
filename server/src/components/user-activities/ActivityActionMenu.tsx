@@ -19,6 +19,7 @@ import {
   hideTask,
   unhideTask
 } from "server/src/lib/actions/workflow-actions/taskInboxActions";
+import { markAsReadAction } from "server/src/lib/actions/internal-notification-actions/internalNotificationActions";
 
 interface ActivityActionMenuProps {
   activity: Activity;
@@ -56,6 +57,9 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
           break;
         case 'unhide':
           await handleUnhideAction();
+          break;
+        case 'mark-read':
+          await handleMarkReadAction();
           break;
         default:
           console.warn(`Unknown action: ${actionId}`);
@@ -162,6 +166,18 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
       await unhideTask(activity.id);
     } else {
       console.warn('Unhide action is only supported for workflow tasks');
+    }
+  };
+
+  // Handle mark as read action - only for notifications
+  const handleMarkReadAction = async () => {
+    if (activity.type === ActivityType.NOTIFICATION) {
+      const notification = activity as any; // Type assertion for notification-specific fields
+      const userId = notification.assignedTo?.[0] ?? '';
+      const tenant = activity.tenant ?? '';
+      await markAsReadAction(tenant, userId, activity.id);
+    } else {
+      console.warn('Mark as read action is only supported for notifications');
     }
   };
 

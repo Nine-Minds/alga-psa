@@ -39,7 +39,8 @@
     "copy": "Kopiëren",
     "duplicate": "Dupliceren",
     "openMenu": "Menu openen",
-    "confirmDeletion": "Verwijderen bevestigen"
+    "confirmDeletion": "Verwijderen bevestigen",
+    "saving": "Opslaan..."
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -301,6 +302,10 @@
       "bulkDeleteSuccess_one": "{{count}} document is succesvol verwijderd",
       "bulkDeleteSuccess_other": "{{count}} documenten zijn succesvol verwijderd"
     },
+    "empty": {
+      "default": "Geen documenten gevonden",
+      "folder": "Geen documenten gevonden in deze map"
+    },
     "validation": {
       "nameRequired": "Documentnaam is verplicht"
     },
@@ -442,9 +447,194 @@
       "nameLabel": "Mapnaam",
       "namePlaceholder": "Voer de mapnaam in",
       "willCreateIn": "Wordt aangemaakt in: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Alle meldingen bekijken",
+      "categories": {
+        "Authentication": "Authenticatie",
+        "Invoices": "Facturen",
+        "Projects": "Projecten",
+        "Tickets": "Tickets",
+        "Time Entries": "Tijdregistraties"
+      }
     }
   },
   "fields": {
     "notes": "Notities"
+  },
+  "surveys": {
+    "common": {
+      "loading": "Bezig met laden..."
+    },
+    "settings": {
+      "tabLabel": "Enquêtes",
+      "title": "Klanttevredenheidsenquêtes",
+      "subtitle": "Configureer sjablonen, triggers en verzending om feedback te verzamelen nadat tickets zijn gesloten.",
+      "tabs": {
+        "templates": "Sjablonen",
+        "triggers": "Triggers"
+      },
+      "templateList": {
+        "title": "Enquêtemodellen",
+        "description": "Beheer de berichten en beoordelingsschalen die naar klanten worden gestuurd.",
+        "createButton": "Nieuw sjabloon",
+        "emptyTitle": "Nog geen enquêtesjablonen",
+        "emptyDescription": "Maak je eerste sjabloon om de tekst en schaal van de enquête vast te leggen.",
+        "table": {
+          "name": "Sjabloon",
+          "rating": "Schaal",
+          "status": "Status",
+          "updated": "Bijgewerkt",
+          "actions": "Acties"
+        },
+        "defaultBadge": "Standaard",
+        "status": {
+          "enabled": "Actief",
+          "disabled": "Inactief"
+        },
+        "toasts": {
+          "created": "Sjabloon gemaakt",
+          "updated": "Sjabloon bijgewerkt",
+          "deleted": "Sjabloon verwijderd",
+          "setDefault": "Standaardsjabloon bijgewerkt",
+          "error": "Sjabloon kon niet worden opgeslagen",
+          "deleteError": "Sjabloon kon niet worden verwijderd"
+        },
+        "deleteConfirm": "Dit sjabloon verwijderen? Reeds verzonden uitnodigingen blijven beschikbaar.",
+        "errors": {
+          "load": "Kan de enquêtesjablonen niet laden."
+        }
+      },
+      "templateForm": {
+        "titleCreate": "Enquêtemodel maken",
+        "titleEdit": "Enquêtemodel bewerken",
+        "labels": {
+          "name": "Naam van het sjabloon",
+          "ratingType": "Beoordelingstype",
+          "ratingScale": "Beoordelingsschaal",
+          "ratingLabels": "Labels",
+          "promptText": "Enquêtevraag",
+          "commentPrompt": "Opmerkingsvraag",
+          "thankYouText": "Bedankbericht",
+          "isDefault": "Instellen als standaardsjabloon",
+          "enabled": "Sjabloon actief"
+        },
+        "placeholders": {
+          "ratingLabels": "Voorbeeld:\n1 = Zeer ontevreden\n2 = Ontevreden\n3 = Neutraal\n4 = Tevreden\n5 = Zeer tevreden"
+        },
+        "help": {
+          "ratingLabels": "Geef per regel “waarde = label” op."
+        },
+        "ratingTypes": {
+          "stars": "Sterren",
+          "numbers": "Getallen",
+          "emojis": "Emoji"
+        },
+        "actions": {
+          "create": "Sjabloon maken",
+          "save": "Wijzigingen opslaan",
+          "delete": "Sjabloon verwijderen"
+        }
+      },
+      "triggerList": {
+        "title": "Enquêtedrivers",
+        "description": "Stuur automatisch uitnodigingen wanneer tickets of projecten worden afgerond.",
+        "createButton": "Nieuwe trigger",
+        "emptyTitle": "Nog geen enquêtetriggers",
+        "emptyDescription": "Maak een trigger om enquêtes te versturen zodra een ticket of project klaar is.",
+        "table": {
+          "template": "Sjabloon",
+          "type": "Trigger",
+          "conditions": "Voorwaarden",
+          "status": "Status",
+          "updated": "Bijgewerkt",
+          "actions": "Acties"
+        },
+        "conditions": {
+          "boards": "Borden",
+          "statuses": "Statussen",
+          "priorities": "Prioriteiten",
+          "any": "Alle"
+        },
+        "status": {
+          "enabled": "Actief",
+          "disabled": "Inactief"
+        },
+        "toasts": {
+          "created": "Trigger gemaakt",
+          "updated": "Trigger bijgewerkt",
+          "deleted": "Trigger verwijderd",
+          "error": "Trigger kon niet worden opgeslagen",
+          "deleteError": "Trigger kon niet worden verwijderd"
+        },
+        "deleteConfirm": "Deze trigger verwijderen? Reeds geplande uitnodigingen worden nog steeds verzonden.",
+        "errors": {
+          "load": "Kan de enquête-triggers niet laden."
+        }
+      },
+      "triggerForm": {
+        "titleCreate": "Enquêtetrigger maken",
+        "titleEdit": "Enquêtetrigger bewerken",
+        "labels": {
+          "template": "Enquêtemodel",
+          "triggerType": "Triggertype",
+          "boardIds": "Board-ID's",
+          "statusIds": "Status-ID's",
+          "priorities": "Prioriteiten",
+          "enabled": "Trigger actief"
+        },
+        "placeholders": {
+          "boardIds": "Selecteer board",
+          "statusIds": "Status toevoegen",
+          "priorities": "Prioriteit toevoegen"
+        },
+        "help": {
+          "conditions": "Laat een veld leeg om elke waarde toe te staan."
+        },
+        "actions": {
+          "create": "Trigger maken",
+          "save": "Wijzigingen opslaan",
+          "delete": "Trigger verwijderen"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ticket afgesloten",
+          "project_completed": "Project afgerond"
+        },
+        "errors": {
+          "reference": "De triggeropties konden niet worden geladen. Probeer het opnieuw."
+        },
+        "noTemplates": "Maak eerst een enquêtemal voordat u triggers toevoegt.",
+        "prioritiesMixed": "De geselecteerde boards gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond."
+      },
+      "response": {
+        "invalidTitle": "Enquête niet beschikbaar",
+        "invalidMessage": "Deze feedbacklink is niet meer geldig of is al gebruikt.",
+        "ratingPrompt": "Hoe was je ervaring?",
+        "ratingAssistive": "Kies een score van 1 tot {{scale}}",
+        "commentLabel": "Extra opmerkingen (optioneel)",
+        "submitButton": "Feedback verzenden",
+        "submitting": "Bezig met verzenden…",
+        "submittedTitle": "Bedankt voor je terugkoppeling!",
+        "submittedMessage": "{{thankYouText}}",
+        "retryButton": "Opnieuw proberen",
+        "ratingSubmitted": "Feedback verzonden",
+        "errorMessage": "Je feedback kon niet worden opgeslagen. Probeer het opnieuw.",
+        "selectRatingError": "Kies een score voordat je verzendt.",
+        "supportMessage": "Neem contact op met je technicus als je vragen hebt."
+      }
+    },
+    "response": {
+      "pageTitle": "Klanttevredenheidsonderzoek"
+    }
+  },
+  "notifications": {
+    "viewAll": "Alle meldingen bekijken",
+    "categories": {
+      "Authentication": "Authenticatie",
+      "Invoices": "Facturen",
+      "Projects": "Projecten",
+      "Tickets": "Tickets",
+      "Time Entries": "Tijdregistraties"
+    }
   }
 }

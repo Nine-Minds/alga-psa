@@ -36,6 +36,20 @@ const AdminApiKeysSetup = dynamic(() => import('../api/AdminApiKeysSetup'), {
   ssr: false
 });
 
+const SsoBulkAssignment = dynamic(
+  () => import('@ee/components/settings/security/SsoBulkAssignment'),
+  {
+    loading: () => (
+      <SettingsTabSkeleton
+        title="Single Sign-On"
+        description="Loading SSO management tools..."
+        showTable
+      />
+    ),
+    ssr: false,
+  },
+);
+
 const SecuritySettingsPage = (): JSX.Element => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,6 +63,7 @@ const SecuritySettingsPage = (): JSX.Element => {
     'user-roles': 'User Roles',
     'policies': 'Policies',
     'api-keys': 'API Keys',
+    'single-sign-on': 'Single Sign-On',
     // 'security': 'Security'
   };
 
@@ -74,6 +89,14 @@ const SecuritySettingsPage = (): JSX.Element => {
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Role Management" description="Loading role configuration..." />}>
           <RoleManagement />
+        </Suspense>
+      ),
+    },
+    {
+      label: "Single Sign-On",
+      content: (
+        <Suspense fallback={<SettingsTabSkeleton title="Single Sign-On" description="Loading SSO management tools..." />}>
+          <SsoBulkAssignment />
         </Suspense>
       ),
     },

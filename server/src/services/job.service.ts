@@ -1,3 +1,4 @@
+import { Knex } from 'knex';
 import { JobScheduler } from '../lib/jobs/jobScheduler';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { JobStatus } from '../types/job';
@@ -140,7 +141,7 @@ export class JobService {
         await this.updateJobRecord(jobRecord.id, { 
           scheduledJobId,
           status: JobStatus.Queued 
-        });
+        }, data.tenantId);
         jobRecord.scheduledJobId = scheduledJobId;
         jobRecord.status = JobStatus.Queued;
       }
@@ -148,7 +149,7 @@ export class JobService {
       await this.updateJobRecord(jobRecord.id, { 
         error: error.message, 
         status: JobStatus.Failed 
-      });
+      }, data.tenantId);
       throw error;
     }
 
@@ -180,14 +181,14 @@ export class JobService {
       updateData.details = updates.details;
     }
 
-    await this.updateJobRecord(jobId, updateData);
+    await this.updateJobRecord(jobId, updateData, updates.tenantId);
   }
 
-  async getJobDetails(jobId: string): Promise<JobDetail[]> {
-    const { knex } = await createTenantKnex();
-    
+  async getJobDetails(jobId: string, knexOrTrx?: Knex | Knex.Transaction): Promise<JobDetail[]> {
+    const db = knexOrTrx || (await createTenantKnex()).knex;
+
     // Get job details from job_details table with correct column names
-    const details = await knex('job_details')
+    const details = await db('job_details')
       .select(
         'detail_id as id',
         'step_name as stepName',
@@ -302,41 +303,48 @@ export class JobService {
       });
   }
 
-  private async updateJobRecord(id: string | undefined, updates: Partial<JobData>): Promise<void> {
+  private async updateJobRecord(id: string | undefined, updates: Partial<JobData>, tenantId?: string): Promise<void> {
     if (!id) {
       throw new Error('Job ID is required for updates');
     }
-    const { knex } = await createTenantKnex();
-    
-    const currentJob = await knex('jobs')
-      .where('job_id', id)
-      .first();
-
-    if (!currentJob) {
-      throw new Error(`Job with ID ${id} not found`);
+    const resolvedTenant = tenantId || updates.tenantId;
+    if (!resolvedTenant) {
+      throw new Error('Tenant ID is required when updating a job record');
     }
 
-    const currentMetadata = currentJob.metadata ?
-      (typeof currentJob.metadata === 'string' ? JSON.parse(currentJob.metadata) : currentJob.metadata)
-      : {};
+    await runWithTenant(resolvedTenant, async () => {
+      const { knex } = await createTenantKnex();
+      
+      const currentJob = await knex('jobs')
+        .where('job_id', id)
+        .first();
 
-    // Add step results directly without modifying their structure
-    const stepResults = updates.stepResults || [];
+      if (!currentJob) {
+        throw new Error(`Job with ID ${id} not found`);
+      }
 
-    const updatedMetadata = {
-      ...currentMetadata,
-      scheduledJobId: updates.scheduledJobId,
-      stepResults: [...(currentMetadata.stepResults || []), ...stepResults]
-    };
+      const currentMetadata = currentJob.metadata ?
+        (typeof currentJob.metadata === 'string' ? JSON.parse(currentJob.metadata) : currentJob.metadata)
+        : {};
 
-    const updateData: Record<string, any> = {
-      status: updates.status,
-      updated_at: new Date(),
-      metadata: JSON.stringify(updatedMetadata)
-    };
+      // Add step results directly without modifying their structure
+      const stepResults = updates.stepResults || [];
 
-    await knex('jobs')
-      .where('job_id', id)
-      .update(updateData);
+      const updatedMetadata = {
+        ...currentMetadata,
+        scheduledJobId: updates.scheduledJobId,
+        stepResults: [...(currentMetadata.stepResults || []), ...stepResults]
+      };
+
+      const updateData: Record<string, any> = {
+        status: updates.status,
+        updated_at: new Date(),
+        metadata: JSON.stringify(updatedMetadata)
+      };
+
+      await knex('jobs')
+        .where('job_id', id)
+        .update(updateData);
+    });
   }
 }

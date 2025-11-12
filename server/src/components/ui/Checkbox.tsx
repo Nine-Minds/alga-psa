@@ -78,6 +78,9 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
         required={required}
         ref={checkboxRef}
         {...withDataAutomationId({ id })}
+        onChange={(event) => {
+          props.onChange?.(event);
+        }}
         {...props}
       />
       {label && (

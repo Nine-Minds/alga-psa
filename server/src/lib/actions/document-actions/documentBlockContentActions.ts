@@ -10,6 +10,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -44,7 +45,7 @@ export async function createBlockDocument(
     // Start transaction to ensure both document and block content are created atomically
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const documentId = uuidv4();
-      
+
       // Create the document directly in the transaction
       const documentData: IDocument = {
         document_id: documentId,
@@ -85,11 +86,42 @@ export async function createBlockDocument(
 
       return {
         document_id: documentResult.document_id,
-        content_id: blockContent.content_id
+        document_name: input.document_name,
+        content_id: blockContent.content_id,
+        block_data: input.block_data
       };
     });
 
-    return result;
+    // After transaction commits successfully, publish event for mention notifications
+    const user = await knex('users')
+      .select('first_name', 'last_name')
+      .where({ user_id: input.user_id || currentUser.user_id, tenant })
+      .first();
+
+    const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+
+    // Publish USER_MENTIONED_IN_DOCUMENT event
+    try {
+      await publishEvent({
+        eventType: 'USER_MENTIONED_IN_DOCUMENT',
+        payload: {
+          tenantId: tenant,
+          documentId: result.document_id,
+          documentName: result.document_name,
+          userId: input.user_id || currentUser.user_id,
+          content: typeof result.block_data === 'string' ? result.block_data : JSON.stringify(result.block_data)
+        }
+      });
+      console.log(`[createBlockDocument] Published USER_MENTIONED_IN_DOCUMENT event for document:`, result.document_id);
+    } catch (eventError) {
+      console.error(`[createBlockDocument] Failed to publish USER_MENTIONED_IN_DOCUMENT event:`, eventError);
+      // Don't throw - allow document creation to succeed even if event publishing fails
+    }
+
+    return {
+      document_id: result.document_id,
+      content_id: result.content_id
+    };
   } catch (error) {
     console.error('Error creating block document:', error);
     throw new Error('Failed to create block document');
@@ -132,7 +164,7 @@ export async function updateBlockContent(
   }
 
   try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Verify document exists and belongs to tenant
       const document = await trx('documents')
         .where({
@@ -183,7 +215,7 @@ export async function updateBlockContent(
         await cache.delete(documentId);
         console.log(`[updateBlockContent] Invalidated preview cache for document ${documentId}`);
 
-        return updatedContent;
+        return { updatedContent, document };
       } else {
         // Create new block content record
         const [newContent] = await trx('document_block_content')
@@ -198,9 +230,38 @@ export async function updateBlockContent(
           })
           .returning(['content_id', 'block_data', 'version_id']);
 
-        return newContent;
+        return { updatedContent: newContent, document };
       }
     });
+
+    // After transaction commits successfully, publish event
+    // Get user details for event
+    const user = await knex('users')
+      .select('first_name', 'last_name')
+      .where({ user_id: input.user_id, tenant })
+      .first();
+
+    const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+
+    // Publish USER_MENTIONED_IN_DOCUMENT event for mention notifications
+    try {
+      await publishEvent({
+        eventType: 'USER_MENTIONED_IN_DOCUMENT',
+        payload: {
+          tenantId: tenant,
+          documentId: documentId,
+          documentName: result.document.document_name,
+          userId: input.user_id,
+          content: typeof input.block_data === 'string' ? input.block_data : JSON.stringify(input.block_data)
+        }
+      });
+      console.log(`[updateBlockContent] Published USER_MENTIONED_IN_DOCUMENT event for document:`, documentId);
+    } catch (eventError) {
+      console.error(`[updateBlockContent] Failed to publish USER_MENTIONED_IN_DOCUMENT event:`, eventError);
+      // Don't throw - allow document update to succeed even if event publishing fails
+    }
+
+    return result.updatedContent;
   } catch (error) {
     console.error('Error updating block content:', error);
     throw new Error('Failed to update block content');

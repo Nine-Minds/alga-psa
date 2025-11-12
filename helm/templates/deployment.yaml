@@ -144,6 +144,18 @@ spec:
             {{- end }}
           {{- end }}
 
+          # ----------- HOCUSPOCUS ----------------
+          {{- if or .Values.hocuspocus.enabled (not .Values.hostedEnv.enabled) }}
+          - name: REQUIRE_HOCUSPOCUS
+            value: "true"
+          - name: HOCUSPOCUS_HOST
+            value: "hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+          - name: HOCUSPOCUS_PORT
+            value: "{{ .Values.hocuspocus.service.port | default 1234 }}"
+          - name: NEXT_PUBLIC_HOCUSPOCUS_URL
+            value: "wss://{{ include "sebastian.resolveHost" . }}/hocuspocus"
+          {{- end }}
+
           # ----------- DB ----------------
           {{- if .Values.db.enabled }}
           - name: DB_TYPE
@@ -299,9 +311,9 @@ spec:
           - name: LOG_EXTERNAL_HTTP_TOKEN
             value: "{{ .Values.logging.external.token }}"
 
-          # ----------- HOCUPOCUS ----------------
+          # ----------- HOCUSPOCUS ----------------
           - name: HOCUSPOCUS_URL
-            value: "ws://houcspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+            value: "ws://hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
 
           # ----------- EMAIL ----------------
           - name: EMAIL_ENABLE

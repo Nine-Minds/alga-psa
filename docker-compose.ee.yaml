@@ -8,7 +8,9 @@ services:
     container_name: ${APP_NAME:-sebastian}_server_ee
     build:
       context: .
-      dockerfile: ee/server/Dockerfile.build
+      dockerfile: Dockerfile.dev
+      args:
+        INCLUDE_EE: "true"
     environment:
       EDITION: enterprise
       DB_NAME: server
@@ -22,10 +24,10 @@ services:
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
-      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_HOST: ${REDIS_HOST_DOCKER:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -49,7 +51,6 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
-    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
       - db_password_server
@@ -79,10 +80,7 @@ services:
   setup:
     build:
       context: .
-      dockerfile: ee/setup/Dockerfile
-      args:
-        SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ee}
-        ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
+      dockerfile: ee/setup/Dockerfile.dev
     container_name: ${APP_NAME:-sebastian}_setup_ee
     environment:
       EDITION: enterprise
@@ -97,7 +95,7 @@ services:
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -128,6 +126,14 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: /tmp/alga-migrations
+        target: /app/server/migrations
+        read_only: true
+      - type: bind
+        source: /tmp/alga-seeds
+        target: /app/server/seeds
+        read_only: true
     secrets:
       - postgres_password
       - db_password_server
@@ -156,10 +162,10 @@ services:
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
-      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_HOST: ${REDIS_HOST_DOCKER:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -222,12 +228,13 @@ services:
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
-      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_HOST: ${REDIS_HOST_DOCKER:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: postgres
+      DB_HOST: ${DB_HOST_DOCKER:-postgres}
       DB_PORT: ${DB_PORT:-5432}
     secrets:
+      - postgres_password
       - db_password_hocuspocus
       - redis_password
     networks:

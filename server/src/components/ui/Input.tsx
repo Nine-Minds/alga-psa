@@ -142,7 +142,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
           className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 ${
             hasErrorState
               ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-              : 'border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent'
+              : 'border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))]'
           } ${className}`}
           value={value}
           disabled={disabled}

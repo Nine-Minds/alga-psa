@@ -1361,7 +1361,7 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     const tenantId = randomUUID();
     const ticketId = randomUUID();
     const assigneeId = randomUUID();
-    const actorId = randomUUID();
+    const performingUserId = randomUUID();
 
     seedTemplate('ticket-assigned', 'Ticket Assigned: {{ticket.title}}', '<p>{{ticket.title}}</p>', {
       subtypeName: 'Ticket Assigned',
@@ -1381,7 +1381,7 @@ describe('ticket email subscriber notification gating (known gap)', () => {
     });
 
     setUser({
-      user_id: actorId,
+      user_id: performingUserId,
       first_name: 'Assigning',
       last_name: 'User',
       email: 'assigner@example.com',
@@ -1394,7 +1394,7 @@ describe('ticket email subscriber notification gating (known gap)', () => {
       payload: {
         tenantId,
         ticketId,
-        userId: actorId,
+        userId: performingUserId,
       },
     });
 

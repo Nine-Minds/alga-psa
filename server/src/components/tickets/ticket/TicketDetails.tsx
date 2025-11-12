@@ -60,6 +60,8 @@ import { IntervalTrackingService } from "server/src/services/IntervalTrackingSer
 import { IntervalManagement } from "server/src/components/time-management/interval-tracking/IntervalManagement";
 import { convertBlockNoteToMarkdown } from "server/src/lib/utils/blocknoteUtils";
 import BackNav from 'server/src/components/ui/BackNav';
+import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
+import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -95,6 +97,7 @@ interface TicketDetailsProps {
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
+    surveySummary?: SurveyTicketSatisfactionSummary | null;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -127,7 +130,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onTicketUpdate,
     onAddComment,
     onUpdateDescription,
-    isSubmitting = false
+    isSubmitting = false,
+    surveySummary = null
 }) => {
     const { data: session } = useSession();
     // Use passed currentUser if available (for drawer), otherwise fallback to session
@@ -1328,6 +1332,7 @@ const handleClose = () => {
                         </Suspense>
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
+                        <TicketSurveySummaryCard summary={surveySummary} />
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
                             <TicketProperties
                                 id={`${id}-properties`}

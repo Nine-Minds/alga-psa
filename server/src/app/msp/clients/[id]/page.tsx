@@ -6,9 +6,10 @@ import { getContactsByClient } from 'server/src/lib/actions/contact-actions/cont
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { notFound } from 'next/navigation';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import { getSurveyClientSummary } from 'server/src/lib/actions/survey-actions/surveyDashboardActions';
 
-const ClientPage = async ({ params }: { params: { id: string } }) => {
-  const { id } = params;
+const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
 
   try {
     // First check if client exists
@@ -19,9 +20,13 @@ const ClientPage = async ({ params }: { params: { id: string } }) => {
     }
 
     // Fetch additional data in parallel
-    const [documents, contacts] = await Promise.all([
+    const [documents, contacts, surveySummary] = await Promise.all([
       getDocumentByClientId(id),
-      getContactsByClient(id, 'all')
+      getContactsByClient(id, 'all'),
+      getSurveyClientSummary(id).catch((error) => {
+        console.error('[ClientPage] Failed to load survey summary', error);
+        return null;
+      })
     ]);
 
     return (
@@ -31,6 +36,7 @@ const ClientPage = async ({ params }: { params: { id: string } }) => {
           documents={documents}
           contacts={contacts}
           isInDrawer={false}
+          surveySummary={surveySummary}
         />
       </div>
     );
