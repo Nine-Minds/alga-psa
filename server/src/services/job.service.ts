@@ -1,3 +1,4 @@
+import { Knex } from 'knex';
 import { JobScheduler } from '../lib/jobs/jobScheduler';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { JobStatus } from '../types/job';
@@ -183,11 +184,11 @@ export class JobService {
     await this.updateJobRecord(jobId, updateData, updates.tenantId);
   }
 
-  async getJobDetails(jobId: string): Promise<JobDetail[]> {
-    const { knex } = await createTenantKnex();
-    
+  async getJobDetails(jobId: string, knexOrTrx?: Knex | Knex.Transaction): Promise<JobDetail[]> {
+    const db = knexOrTrx || (await createTenantKnex()).knex;
+
     // Get job details from job_details table with correct column names
-    const details = await knex('job_details')
+    const details = await db('job_details')
       .select(
         'detail_id as id',
         'step_name as stepName',
