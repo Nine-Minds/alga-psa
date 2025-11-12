@@ -27,6 +27,8 @@ import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/li
 import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
 import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
+import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -70,6 +72,7 @@ interface TicketPropertiesProps {
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   onItilFieldChange?: (field: string, value: any) => void;
+  surveySummary?: SurveyTicketSatisfactionSummary | null;
 }
 
 // Helper function to format location display
@@ -141,6 +144,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   allTagTexts = [],
   onTagsChange,
   onItilFieldChange,
+  surveySummary = null,
 }) => {
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -340,6 +344,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Customer Feedback Survey Summary */}
+      <TicketSurveySummaryCard summary={surveySummary} />
 
       <div {...withDataAutomationId({ id: `${id}-contact-info` })} className={`${styles['card']} p-6 space-y-4`}>
         <h2 className={`${styles['panel-header']}`}>Contact Info</h2>
