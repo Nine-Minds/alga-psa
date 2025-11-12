@@ -33,7 +33,9 @@ export async function getAvailableTimeSlots(
     const { knex } = await createTenantKnex();
 
     // Validate date is not in the past and within booking window
-    const targetDate = new Date(date);
+    // Parse date in UTC to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    const targetDate = new Date(Date.UTC(year, month - 1, day));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -59,8 +61,8 @@ export async function getAvailableTimeSlots(
       minNoticeHours = serviceSettings.minimum_notice_hours ?? 24;
     }
 
-    // Get day of week (0 = Sunday, 6 = Saturday)
-    const dayOfWeek = targetDate.getDay();
+    // Get day of week (0 = Sunday, 6 = Saturday) in UTC
+    const dayOfWeek = targetDate.getUTCDay();
 
     // Check for company-wide exceptions first (user_id is NULL)
     const companyWideException = await knex('availability_exceptions')
@@ -79,7 +81,31 @@ export async function getAvailableTimeSlots(
     // Determine which users to check
     let userIds: string[] = [];
     if (userId) {
-      userIds = [userId];
+      // Check if the specific user has availability for this day of week
+      const userHasAvailability = await knex('availability_settings')
+        .where({
+          tenant: tenantId,
+          setting_type: 'user_hours',
+          user_id: userId,
+          day_of_week: dayOfWeek,
+          is_available: true
+        })
+        .first();
+
+      // Or check if user has an availability exception for this specific date
+      const userHasException = await knex('availability_exceptions')
+        .where({
+          tenant: tenantId,
+          user_id: userId,
+          date: date,
+          is_available: true
+        })
+        .first();
+
+      // Only include the user if they have availability for this day or an exception
+      if (userHasAvailability || userHasException) {
+        userIds = [userId];
+      }
     } else {
       // Get all users with availability settings for this day
       const usersWithSettings = await knex('availability_settings')
@@ -145,7 +171,6 @@ export async function getAvailableTimeSlots(
       return [];
     }
 
-    // Get working hours for each user
     let workingHours = await knex('availability_settings')
       .where({
         tenant: tenantId,
@@ -179,6 +204,10 @@ export async function getAvailableTimeSlots(
       // Add these alternate hours to the working hours array
       workingHours = [...workingHours, ...alternateHours];
     }
+
+    // Keep working hours aligned with the currently active user list
+    const activeUserSet = new Set(userIds);
+    workingHours = workingHours.filter(wh => activeUserSet.has(wh.user_id));
 
     // Get existing schedule entries for the date
     const startOfDay = new Date(date);
@@ -256,9 +285,13 @@ export async function getAvailableTimeSlots(
       return [];
     }
 
+    // Sync working hours with the filtered users
+    const filteredUserSet = new Set(userIds);
+    workingHours = workingHours.filter(wh => filteredUserSet.has(wh.user_id));
+
     // Generate time slots
     const slots: ITimeSlot[] = [];
-    const slotInterval = 30; // Generate slots every 30 minutes
+    const slotInterval = duration <= 30 ? duration : 30;
 
     for (const userHours of workingHours) {
       if (!userHours.start_time || !userHours.end_time) continue;

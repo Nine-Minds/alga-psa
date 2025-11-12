@@ -19,6 +19,7 @@ export type IRole = SharedIRole & { description: string };
 export type IPermission = SharedIPermission;
 
 export interface IUserWithRoles extends IUser {
+  user_id: string;
   roles: IRole[];
   avatarUrl?: string | null;
 }

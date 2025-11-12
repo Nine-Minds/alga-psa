@@ -5,21 +5,28 @@ import path from 'node:path';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';
+import { setMockUser } from '../../../test-utils/testMocks';
 
 let db: Knex;
 let tenantId: string;
 let clientId: string;
 let serviceId: string;
 let contactId: string;
+let contactEmail: string;
 let clientUserId: string;
 let staffUserId: string;
 let staffUser2Id: string;
+let createAppointmentRequest: typeof import('server/src/lib/actions/client-portal-actions/appointmentRequestActions').createAppointmentRequest;
+let approveAppointmentRequest: typeof import('server/src/lib/actions/appointmentRequestManagementActions').approveAppointmentRequest;
+let declineAppointmentRequest: typeof import('server/src/lib/actions/appointmentRequestManagementActions').declineAppointmentRequest;
+let runWithTenant: typeof import('server/src/lib/db').runWithTenant;
 
 // Mock email service
 const sendAppointmentRequestReceivedMock = vi.fn().mockResolvedValue(undefined);
 const sendNewAppointmentRequestMock = vi.fn().mockResolvedValue(undefined);
 const sendAppointmentRequestApprovedMock = vi.fn().mockResolvedValue(undefined);
 const sendAppointmentRequestDeclinedMock = vi.fn().mockResolvedValue(undefined);
+const sendEmailMock = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('server/src/lib/email/system/SystemEmailService', () => ({
   SystemEmailService: {
@@ -27,7 +34,8 @@ vi.mock('server/src/lib/email/system/SystemEmailService', () => ({
       sendAppointmentRequestReceived: sendAppointmentRequestReceivedMock,
       sendNewAppointmentRequest: sendNewAppointmentRequestMock,
       sendAppointmentRequestApproved: sendAppointmentRequestApprovedMock,
-      sendAppointmentRequestDeclined: sendAppointmentRequestDeclinedMock
+      sendAppointmentRequestDeclined: sendAppointmentRequestDeclinedMock,
+      sendEmail: sendEmailMock
     }))
   }
 }));
@@ -46,24 +54,15 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined)
 }));
 
-// Mock current user for actions
-let mockCurrentUser: any = null;
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
-  getCurrentUser: vi.fn(() => mockCurrentUser),
-  getCurrentUserPermissions: vi.fn(() => ['user_schedule:read', 'user_schedule:update'])
-}));
-
-// Import functions after mocks are set up
-const { createAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions');
-const { approveAppointmentRequest, declineAppointmentRequest } = await import('server/src/lib/actions/appointmentRequestManagementActions');
-const { runWithTenant, createTenantKnex } = await import('server/src/lib/db');
-
 // Mock createTenantKnex to use our test db
 vi.mock('server/src/lib/db', async () => {
-  const actual = await vi.importActual('server/src/lib/db') as any;
+  const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
   return {
     ...actual,
-    createTenantKnex: vi.fn(() => ({ knex: db, tenant: tenantId })),
+    createTenantKnex: vi.fn(async () => {
+      // Return current values at runtime, not at mock definition time
+      return { knex: db, tenant: tenantId };
+    }),
     runWithTenant: actual.runWithTenant
   };
 });
@@ -74,11 +73,16 @@ describe('Appointment Notification System Integration Tests', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
     await runMigrationsAndSeeds(db);
+    ({ createAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions'));
+    ({ approveAppointmentRequest, declineAppointmentRequest } = await import('server/src/lib/actions/appointmentRequestManagementActions'));
+    ({ runWithTenant } = await import('server/src/lib/db'));
     tenantId = await createTenant(db, 'Test MSP');
 
     // Create client and contact
     clientId = await createClient(db, tenantId, 'Test Client');
-    contactId = await createContact(db, tenantId, clientId);
+    const contactResult = await createContact(db, tenantId, clientId);
+    contactId = contactResult.contactId;
+    contactEmail = contactResult.email;
 
     // Create client portal user
     clientUserId = await createUser(db, tenantId, {
@@ -124,13 +128,13 @@ describe('Appointment Notification System Integration Tests', () => {
     // Create service
     serviceId = await createService(db, tenantId);
 
-    // Create company for tenant settings
-    await db('companies').insert({
-      company_id: uuidv4(),
-      company_name: 'Test MSP Company',
+    // Create availability settings to allow appointments without contracts
+    await db('availability_settings').insert({
+      availability_setting_id: uuidv4(),
       tenant: tenantId,
-      is_msp: true,
-      created_at: new Date()
+      setting_type: 'service_rules',
+      service_id: serviceId,
+      allow_without_contract: true
     });
 
     // Create tenant settings
@@ -146,6 +150,40 @@ describe('Appointment Notification System Integration Tests', () => {
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    // Clean up test data before destroying connection
+    if (db && tenantId) {
+      // Helper to safely delete from a table if it exists
+      const safeDelete = async (tableName: string) => {
+        try {
+          await db(tableName).where({ tenant: tenantId }).del();
+        } catch (error: any) {
+          // Ignore errors for non-existent tables
+          if (!error.message?.includes('does not exist')) {
+            console.error(`Error deleting from ${tableName}:`, error);
+          }
+        }
+      };
+
+      // Delete in reverse order of creation to respect foreign key constraints
+      await safeDelete('internal_notifications');
+      await safeDelete('schedule_entries');
+      await safeDelete('appointment_requests');
+      await safeDelete('user_roles');
+      await safeDelete('role_permissions');
+      await safeDelete('roles');
+      await safeDelete('permissions');
+      await safeDelete('users');
+      await safeDelete('contacts');
+      await safeDelete('availability_settings');
+      await safeDelete('availability_exceptions');
+      await safeDelete('service_catalog');
+      await safeDelete('service_types');
+      await safeDelete('tenant_settings');
+      await safeDelete('companies');
+      await safeDelete('clients');
+      await safeDelete('tenants');
+    }
+
     if (db) {
       await db.destroy();
     }
@@ -162,15 +200,15 @@ describe('Appointment Notification System Integration Tests', () => {
 
   describe('Email Notifications', () => {
     it('should send appointment request received email to client', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId,
         email: 'client@example.com'
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-15',
         requested_time: '14:00',
         requested_duration: 60,
@@ -188,7 +226,7 @@ describe('Appointment Notification System Integration Tests', () => {
       const emailCall = sendAppointmentRequestReceivedMock.mock.calls[0];
       const [emailData, options] = emailCall;
 
-      expect(emailData.requesterEmail).toBe('test.contact@example.com');
+      expect(emailData.requesterEmail).toBe(contactEmail);
       expect(emailData.serviceName).toBe('Test Service');
       expect(emailData.requestedDate).toBeDefined();
       expect(emailData.requestedTime).toBeDefined();
@@ -200,15 +238,15 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should send new appointment request email to MSP staff', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId,
         email: 'client@example.com'
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-16',
         requested_time: '10:00',
         requested_duration: 30,
@@ -240,15 +278,15 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should send appointment approved email with correct locale', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Create request first
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-17',
         requested_time: '15:00',
         requested_duration: 45
@@ -265,11 +303,11 @@ describe('Appointment Notification System Integration Tests', () => {
       sendAppointmentRequestApprovedMock.mockClear();
 
       // Now approve as staff
-      mockCurrentUser = {
+      setMockUser({
         user_id: staffUserId,
         user_type: 'internal',
         email: 'staff1@example.com'
-      };
+      }, ['user_schedule:update', 'user_schedule:read']);
 
       await runWithTenant(tenantId, async () => {
         const result = await approveAppointmentRequest({
@@ -284,7 +322,7 @@ describe('Appointment Notification System Integration Tests', () => {
 
       const [emailData, options] = sendAppointmentRequestApprovedMock.mock.calls[0];
 
-      expect(emailData.requesterEmail).toBe('test.contact@example.com');
+      expect(emailData.requesterEmail).toBe(contactEmail);
       expect(emailData.serviceName).toBe('Test Service');
       expect(emailData.technicianName).toBe('Staff One');
       expect(emailData.technicianEmail).toBe('staff1@example.com');
@@ -294,15 +332,15 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should send appointment declined email with reason', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Create request first
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-18',
         requested_time: '11:00',
         requested_duration: 60
@@ -319,11 +357,11 @@ describe('Appointment Notification System Integration Tests', () => {
       sendAppointmentRequestDeclinedMock.mockClear();
 
       // Now decline as staff
-      mockCurrentUser = {
+      setMockUser({
         user_id: staffUserId,
         user_type: 'internal',
         email: 'staff1@example.com'
-      };
+      }, ['user_schedule:update', 'user_schedule:read']);
 
       const declineReason = 'No technicians available at that time';
 
@@ -340,7 +378,7 @@ describe('Appointment Notification System Integration Tests', () => {
 
       const [emailData, options] = sendAppointmentRequestDeclinedMock.mock.calls[0];
 
-      expect(emailData.requesterEmail).toBe('test.contact@example.com');
+      expect(emailData.requesterEmail).toBe(contactEmail);
       expect(emailData.serviceName).toBe('Test Service');
       expect(emailData.declineReason).toBe(declineReason);
       expect(emailData.requestNewAppointmentLink).toContain('/client-portal/appointments');
@@ -349,14 +387,14 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should include tenant settings in all emails', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-19',
         requested_time: '09:00',
         requested_duration: 30
@@ -383,14 +421,14 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should replace template variables correctly', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-20',
         requested_time: '16:30',
         requested_duration: 90
@@ -418,14 +456,14 @@ describe('Appointment Notification System Integration Tests', () => {
 
   describe('Internal Notifications', () => {
     it('should create notification for client on request submission', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-21',
         requested_time: '10:00',
         requested_duration: 60
@@ -454,14 +492,14 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should create notifications for MSP staff on request submission', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-22',
         requested_time: '14:00',
         requested_duration: 45
@@ -496,15 +534,15 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should create notification for client on approval', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Create request
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-23',
         requested_time: '11:00',
         requested_duration: 60
@@ -520,10 +558,10 @@ describe('Appointment Notification System Integration Tests', () => {
       createNotificationFromTemplateInternalMock.mockClear();
 
       // Approve as staff
-      mockCurrentUser = {
+      setMockUser({
         user_id: staffUserId,
         user_type: 'internal'
-      };
+      }, ['user_schedule:update', 'user_schedule:read']);
 
       await runWithTenant(tenantId, async () => {
         const result = await approveAppointmentRequest({
@@ -550,15 +588,15 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should create notification for client on decline', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Create request
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-24',
         requested_time: '13:00',
         requested_duration: 30
@@ -574,10 +612,10 @@ describe('Appointment Notification System Integration Tests', () => {
       createNotificationFromTemplateInternalMock.mockClear();
 
       // Decline as staff
-      mockCurrentUser = {
+      setMockUser({
         user_id: staffUserId,
         user_type: 'internal'
-      };
+      }, ['user_schedule:update', 'user_schedule:read']);
 
       const declineReason = 'Insufficient resources';
 
@@ -606,14 +644,14 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should include correct link in notifications', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-25',
         requested_time: '15:00',
         requested_duration: 60
@@ -638,14 +676,14 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should populate metadata correctly for staff notifications', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-26',
         requested_time: '09:30',
         requested_duration: 60
@@ -667,7 +705,7 @@ describe('Appointment Notification System Integration Tests', () => {
       const [, notificationData] = staffCall!;
 
       expect(notificationData.metadata).toBeDefined();
-      expect(notificationData.metadata.appointment_request_id).toBe(appointmentRequestId);
+      expect(notificationData.metadata.appointment_request_id).toBe(appointmentRequestId!);
       expect(notificationData.metadata.requires_action).toBe(true);
     });
   });
@@ -750,11 +788,11 @@ describe('Appointment Notification System Integration Tests', () => {
 
   describe('Multi-Language Notification Support', () => {
     it('should send email notifications in different languages', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Update tenant settings to use German locale
       await db('tenant_settings')
@@ -767,7 +805,7 @@ describe('Appointment Notification System Integration Tests', () => {
         });
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-27',
         requested_time: '10:00',
         requested_duration: 60
@@ -834,15 +872,15 @@ describe('Appointment Notification System Integration Tests', () => {
 
   describe('Cancellation Notifications', () => {
     it('should send cancellation notification to client', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Create request
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-28',
         requested_time: '14:00',
         requested_duration: 60
@@ -883,15 +921,15 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should handle cancellation of already cancelled request gracefully', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Create and cancel request
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-29',
         requested_time: '10:00',
         requested_duration: 30
@@ -927,14 +965,14 @@ describe('Appointment Notification System Integration Tests', () => {
 
   describe('Notification Metadata and Navigation', () => {
     it('should include actionable metadata in staff notifications', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-30',
         requested_time: '11:00',
         requested_duration: 45
@@ -957,7 +995,7 @@ describe('Appointment Notification System Integration Tests', () => {
 
       // Verify metadata
       expect(notificationData.metadata).toBeDefined();
-      expect(notificationData.metadata.appointment_request_id).toBe(appointmentRequestId);
+      expect(notificationData.metadata.appointment_request_id).toBe(appointmentRequestId!);
       expect(notificationData.metadata.requires_action).toBe(true);
 
       // Verify link points to schedule
@@ -965,14 +1003,14 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should include appropriate links for client notifications', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2025-12-31',
         requested_time: '15:00',
         requested_duration: 60
@@ -995,19 +1033,19 @@ describe('Appointment Notification System Integration Tests', () => {
 
       // Link should point to appointment detail page
       expect(notificationData.link).toMatch(/^\/client-portal\/appointments\//);
-      expect(notificationData.link).toContain(appointmentRequestId);
+      expect(notificationData.link).toContain(appointmentRequestId!);
     });
 
     it('should set correct notification types for different events', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       // Create request
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2026-01-02',
         requested_time: '10:00',
         requested_duration: 60
@@ -1028,10 +1066,10 @@ describe('Appointment Notification System Integration Tests', () => {
       createNotificationFromTemplateInternalMock.mockClear();
 
       // Approve request
-      mockCurrentUser = {
+      setMockUser({
         user_id: staffUserId,
         user_type: 'internal'
-      };
+      }, ['user_schedule:update', 'user_schedule:read']);
 
       await runWithTenant(tenantId, async () => {
         const result = await approveAppointmentRequest({
@@ -1050,13 +1088,16 @@ describe('Appointment Notification System Integration Tests', () => {
 
   describe('Error Handling and Edge Cases', () => {
     it('should handle missing email addresses gracefully', async () => {
-      // Create contact without email
+      // Create contact with a placeholder email (database requires it)
       const contactWithoutEmail = uuidv4();
+      const placeholderEmail = `noemail_${contactWithoutEmail.substring(0, 8)}@placeholder.local`;
+
       await db('contacts').insert({
         contact_name_id: contactWithoutEmail,
         tenant: tenantId,
         client_id: clientId,
         full_name: 'No Email Contact',
+        email: placeholderEmail,
         created_at: new Date(),
         updated_at: new Date()
       });
@@ -1068,22 +1109,23 @@ describe('Appointment Notification System Integration Tests', () => {
         username: 'noemail_user',
         first_name: 'No',
         last_name: 'Email',
+        email: placeholderEmail,
         hashed_password: 'hashed',
         user_type: 'client',
         contact_id: contactWithoutEmail,
         is_inactive: false,
         created_at: new Date(),
         updated_at: new Date()
-      });
+      }, []);
 
-      mockCurrentUser = {
+      setMockUser({
         user_id: userWithoutEmail,
         user_type: 'client',
         contact_id: contactWithoutEmail
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2026-01-03',
         requested_time: '14:00',
         requested_duration: 60
@@ -1101,14 +1143,14 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should batch notifications to multiple staff members efficiently', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2026-01-04',
         requested_time: '11:00',
         requested_duration: 30
@@ -1135,25 +1177,23 @@ describe('Appointment Notification System Integration Tests', () => {
     });
 
     it('should include all required data fields in notifications', async () => {
-      mockCurrentUser = {
+      setMockUser({
         user_id: clientUserId,
         user_type: 'client',
         contact_id: contactId
-      };
+      }, []);
 
       const requestData = {
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: '2026-01-05',
         requested_time: '16:00',
         requested_duration: 90,
         description: 'Detailed test description'
       };
 
-      let appointmentRequestId: string;
       await runWithTenant(tenantId, async () => {
         const result = await createAppointmentRequest(requestData);
         expect(result.success).toBe(true);
-        appointmentRequestId = result.data!.appointment_request_id;
       });
 
       const clientCall = createNotificationFromTemplateInternalMock.mock.calls.find(
@@ -1196,37 +1236,49 @@ async function createContact(
   db: Knex,
   tenantId: string,
   clientId: string
-): Promise<string> {
+): Promise<{ contactId: string; email: string }> {
   const contactId = uuidv4();
+  // Use unique email to prevent conflicts between test runs
+  const uniqueEmail = `test.contact.${contactId.substring(0, 8)}@example.com`;
 
   await db('contacts').insert({
     contact_name_id: contactId,
     tenant: tenantId,
     client_id: clientId,
     full_name: 'Test Contact',
-    email: 'test.contact@example.com',
+    email: uniqueEmail,
     phone_number: '555-0200',
     created_at: new Date(),
     updated_at: new Date()
   });
 
-  return contactId;
+  return { contactId, email: uniqueEmail };
 }
 
 async function createService(db: Knex, tenantId: string): Promise<string> {
   const serviceId = uuidv4();
+  const serviceTypeId = uuidv4();
 
+  // First create a service type
+  await db('service_types').insert({
+    id: serviceTypeId,
+    tenant: tenantId,
+    name: 'Test Service Type',
+    billing_method: 'fixed',
+    is_active: true,
+    description: 'Test service type for integration tests'
+  });
+
+  // Then create the service
   await db('service_catalog').insert({
-    service_id: serviceId,
+    service_id: serviceId!,
     tenant: tenantId,
     service_name: 'Test Service',
-    service_type: 'Fixed',
+    custom_service_type_id: serviceTypeId,
+    billing_method: 'fixed',
     description: 'Test service description',
     default_rate: 100,
-    unit_of_measure: 'hour',
-    is_taxable: true,
-    created_at: new Date(),
-    updated_at: new Date()
+    unit_of_measure: 'hour'
   });
 
   return serviceId;

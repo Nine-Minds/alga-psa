@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks';
+import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-utils/testMocks';
 
 let db: Knex;
 let tenantId: string;
@@ -45,15 +45,17 @@ vi.mock('server/src/lib/tenant', () => ({
 }));
 
 // Mock SystemEmailService to prevent actual email sending
+const mockEmailInstance = {
+  sendAppointmentRequestReceived: vi.fn(() => Promise.resolve()),
+  sendNewAppointmentRequest: vi.fn(() => Promise.resolve()),
+  sendAppointmentRequestApproved: vi.fn(() => Promise.resolve()),
+  sendAppointmentRequestDeclined: vi.fn(() => Promise.resolve()),
+  sendEmail: vi.fn(() => Promise.resolve())
+};
+
 vi.mock('server/src/lib/email/system/SystemEmailService', () => ({
   SystemEmailService: {
-    getInstance: vi.fn(() => ({
-      sendAppointmentRequestReceived: vi.fn(() => Promise.resolve()),
-      sendNewAppointmentRequest: vi.fn(() => Promise.resolve()),
-      sendAppointmentRequestApproved: vi.fn(() => Promise.resolve()),
-      sendAppointmentRequestDeclined: vi.fn(() => Promise.resolve()),
-      sendEmail: vi.fn(() => Promise.resolve())
-    }))
+    getInstance: vi.fn(() => mockEmailInstance)
   }
 }));
 
@@ -133,6 +135,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({
         tenantId,
         userId: clientUserId,
@@ -146,7 +149,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60,
@@ -187,14 +190,27 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.clientUserId = clientUserId;
 
       // Create a service without any availability settings
+      const serviceTypeId = uuidv4();
+      await db('service_types').insert({
+        id: serviceTypeId,
+        tenant: tenantId,
+        name: `Service Type ${serviceTypeId.slice(0, 8)}`,
+        billing_method: 'fixed',
+        order_number: Math.floor(Math.random() * 1000000),
+        created_at: db.fn.now(),
+        updated_at: db.fn.now()
+      });
+      createdIds.serviceTypeId = serviceTypeId;
+
       const serviceId = uuidv4();
       await db('service_catalog').insert({
         tenant: tenantId,
-        service_id: serviceId,
+        service_id: serviceId!,
         service_name: 'Unavailable Service',
         description: 'Service with no availability',
         billing_method: 'fixed',
-        default_rate: 5000
+        default_rate: 5000,
+        custom_service_type_id: serviceTypeId
       });
       createdIds.serviceId = serviceId;
 
@@ -203,6 +219,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -210,7 +227,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -233,6 +250,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -240,7 +258,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -265,6 +283,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -272,7 +291,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -297,6 +316,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -307,7 +327,7 @@ describe('Appointment Request Integration Tests', () => {
       const emailInstance = SystemEmailService.getInstance();
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -334,6 +354,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -343,7 +364,7 @@ describe('Appointment Request Integration Tests', () => {
       const { createNotificationFromTemplateInternal } = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -389,6 +410,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -396,7 +418,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -411,15 +433,13 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({
         tenantId,
         userId: 'staff-user-id',
         user: staffUser,
         permissionCheck: () => true
       });
-
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const approveResult = await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -468,6 +488,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -475,7 +496,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -488,10 +509,9 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const SystemEmailService = (await import('server/src/lib/email/system/SystemEmailService')).SystemEmailService;
       const emailInstance = SystemEmailService.getInstance();
@@ -525,6 +545,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -532,7 +553,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -545,12 +566,13 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
-
       const { createNotificationFromTemplateInternal } = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
+
+      // Clear mocks from appointment creation
+      vi.clearAllMocks();
 
       await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -580,6 +602,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -587,7 +610,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -600,10 +623,9 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const approveResult = await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -638,6 +660,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -645,7 +668,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -659,10 +682,9 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const declineResult = await declineAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -707,6 +729,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -714,7 +737,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -726,10 +749,9 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const SystemEmailService = (await import('server/src/lib/email/system/SystemEmailService')).SystemEmailService;
       const emailInstance = SystemEmailService.getInstance();
@@ -762,6 +784,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -769,7 +792,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -781,12 +804,13 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
-
       const { createNotificationFromTemplateInternal } = await import('server/src/lib/actions/internal-notification-actions/internalNotificationActions');
+
+      // Clear mocks from appointment creation
+      vi.clearAllMocks();
 
       await declineAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -821,6 +845,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -828,7 +853,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -857,10 +882,8 @@ describe('Appointment Request Integration Tests', () => {
           user_id: 'staff2-user-id',
           tenant: tenant2Id
         });
+        setMockUser(staffUser2, ['user_schedule:update', 'user_schedule:read']);
         setupCommonMocks({ tenantId: tenant2Id, userId: 'staff2-user-id', user: staffUser2, permissionCheck: () => true });
-
-        const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-        vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
         const approveResult = await approveAppointmentRequest({
           appointment_request_id: createResult.data!.appointment_request_id,
@@ -891,6 +914,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const yesterday = new Date();
@@ -898,7 +922,7 @@ describe('Appointment Request Integration Tests', () => {
       const pastDate = yesterday.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: pastDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -920,6 +944,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -927,7 +952,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '25:00', // Invalid time
         requested_duration: 60
@@ -949,6 +974,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -956,7 +982,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: -30 // Negative duration
@@ -977,6 +1003,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1008,6 +1035,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1015,7 +1043,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -1029,10 +1057,8 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
-
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1040,13 +1066,17 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       // Try to update the approved request as client
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const { updateAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions');
 
       const updateResult = await updateAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
-        requested_time: '15:00'
+        service_id: serviceId!,
+        requested_date: requestDate,
+        requested_time: '15:00',
+        requested_duration: 60
       });
 
       expect(updateResult.success).toBe(false);
@@ -1067,6 +1097,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1074,7 +1105,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -1088,10 +1119,8 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
-
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1099,6 +1128,7 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       // Try to cancel the approved request as client
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const { cancelAppointmentRequest } = await import('server/src/lib/actions/client-portal-actions/appointmentRequestActions');
@@ -1125,6 +1155,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1132,7 +1163,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -1146,10 +1177,9 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const firstApproval = await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1183,6 +1213,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1190,7 +1221,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60,
@@ -1217,6 +1248,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1225,7 +1257,7 @@ describe('Appointment Request Integration Tests', () => {
 
       // Create appointment request with preferred technician (system should still accept)
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60,
@@ -1249,26 +1281,30 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.serviceId = serviceId;
       createdIds.clientUserId = clientUserId;
 
+      // Ensure ticket metadata exists
+      const { statusId, priorityId } = await ensureTicketMetadata(db, tenantId, clientUserId);
+
       // Create a ticket
       const ticketNumber = Math.floor(Math.random() * 100000);
-      const [ticketId] = await db('tickets').insert({
+      const [ticketRow] = await db('tickets').insert({
         tenant: tenantId,
         ticket_number: ticketNumber,
         title: 'Test Ticket',
-        company_id: clientId,
+        client_id: clientId,
         entered_by: clientUserId,
-        status_id: uuidv4(),
-        channel_id: uuidv4(),
-        priority_id: uuidv4(),
-        created_at: db.fn.now(),
+        status_id: statusId,
+        priority_id: priorityId,
+        entered_at: db.fn.now(),
         updated_at: db.fn.now()
       }).returning('ticket_id');
+      const ticketId = ticketRow.ticket_id as string;
 
       const clientUser = createMockUser('client', {
         user_id: clientUserId,
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1276,7 +1312,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const result = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60,
@@ -1301,20 +1337,23 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.clientUserId = clientUserId;
       createdIds.technicianUserId = technicianUserId;
 
+      // Ensure ticket metadata exists
+      const { statusId, priorityId } = await ensureTicketMetadata(db, tenantId, technicianUserId);
+
       // Create a ticket
       const ticketNumber = Math.floor(Math.random() * 100000);
-      const [ticketId] = await db('tickets').insert({
+      const [ticketRow] = await db('tickets').insert({
         tenant: tenantId,
         ticket_number: ticketNumber,
         title: 'Test Ticket for Association',
-        company_id: clientId,
+        client_id: clientId,
         entered_by: clientUserId,
-        status_id: uuidv4(),
-        channel_id: uuidv4(),
-        priority_id: uuidv4(),
-        created_at: db.fn.now(),
+        status_id: statusId,
+        priority_id: priorityId,
+        entered_at: db.fn.now(),
         updated_at: db.fn.now()
       }).returning('ticket_id');
+      const ticketId = ticketRow.ticket_id as string;
 
       // Create appointment request without ticket
       const clientUser = createMockUser('client', {
@@ -1322,6 +1361,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1329,7 +1369,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -1343,10 +1383,9 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const { associateRequestToTicket } = await import('server/src/lib/actions/appointmentRequestManagementActions');
 
@@ -1386,6 +1425,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1393,7 +1433,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -1407,18 +1447,16 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
-
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       const { updateAppointmentRequestDateTime } = await import('server/src/lib/actions/appointmentRequestManagementActions');
 
       const updateResult = await updateAppointmentRequestDateTime({
         appointment_request_id: createResult.data!.appointment_request_id,
-        requested_date: requestDate,
-        requested_time: '15:30',
-        requested_duration: 90
+        new_date: requestDate,
+        new_time: '15:30',
+        new_duration: 90
       });
 
       expect(updateResult.success).toBe(true);
@@ -1453,6 +1491,7 @@ describe('Appointment Request Integration Tests', () => {
         tenant: tenantId,
         contact_id: contactId
       });
+      setMockUser(clientUser, []);
       setupCommonMocks({ tenantId, userId: clientUserId, user: clientUser, permissionCheck: () => true });
 
       const tomorrow = new Date();
@@ -1460,7 +1499,7 @@ describe('Appointment Request Integration Tests', () => {
       const requestDate = tomorrow.toISOString().split('T')[0];
 
       const createResult = await createAppointmentRequest({
-        service_id: serviceId,
+        service_id: serviceId!,
         requested_date: requestDate,
         requested_time: '14:00',
         requested_duration: 60
@@ -1474,10 +1513,8 @@ describe('Appointment Request Integration Tests', () => {
         user_id: 'staff-user-id',
         tenant: tenantId
       });
+      setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
-
-      const { getCurrentUserPermissions } = await import('server/src/lib/actions/user-actions/userActions');
-      vi.mocked(getCurrentUserPermissions).mockResolvedValue(['user_schedule:update']);
 
       await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1489,9 +1526,9 @@ describe('Appointment Request Integration Tests', () => {
 
       const updateResult = await updateAppointmentRequestDateTime({
         appointment_request_id: createResult.data!.appointment_request_id,
-        requested_date: requestDate,
-        requested_time: '16:00',
-        requested_duration: 60
+        new_date: requestDate,
+        new_time: '16:00',
+        new_duration: 60
       });
 
       expect(updateResult.success).toBe(false);
@@ -1518,6 +1555,56 @@ async function ensureTenant(connection: Knex): Promise<string> {
     updated_at: connection.fn.now()
   });
   return newTenantId;
+}
+
+/**
+ * Ensure ticket statuses/priorities exist for a tenant
+ */
+async function ensureTicketMetadata(
+  db: Knex,
+  tenantId: string,
+  createdByUserId: string
+): Promise<{ statusId: string; priorityId: string }> {
+  let status = await db('statuses')
+    .where({ tenant: tenantId, status_type: 'ticket' })
+    .first<{ status_id: string }>('status_id');
+
+  if (!status) {
+    const statusId = uuidv4();
+    await db('statuses').insert({
+      status_id: statusId,
+      tenant: tenantId,
+      name: 'Test Ticket Status',
+      status_type: 'ticket',
+      order_number: 1,
+      created_by: createdByUserId,
+      created_at: db.fn.now(),
+      is_closed: false,
+      is_default: true
+    });
+    status = { status_id: statusId };
+  }
+
+  let priority = await db('priorities')
+    .where({ tenant: tenantId })
+    .first<{ priority_id: string }>('priority_id');
+
+  if (!priority) {
+    const priorityId = uuidv4();
+    await db('priorities').insert({
+      priority_id: priorityId,
+      tenant: tenantId,
+      priority_name: 'Test Priority',
+      created_by: createdByUserId,
+      created_at: db.fn.now()
+    });
+    priority = { priority_id: priorityId };
+  }
+
+  return {
+    statusId: status.status_id,
+    priorityId: priority.priority_id
+  };
 }
 
 /**
@@ -1560,7 +1647,7 @@ async function setupTestData(
     contact_name_id: contactId,
     client_id: clientId,
     full_name: 'Test Contact',
-    email: 'contact@test.com',
+    email: `contact-${contactId.slice(0, 8)}@test.com`,
     created_at: db.fn.now(),
     updated_at: db.fn.now()
   });
@@ -1573,7 +1660,7 @@ async function setupTestData(
     username: `client_${clientId.slice(0, 8)}`,
     first_name: 'Client',
     last_name: 'User',
-    email: 'client@test.com',
+    email: `client-${clientUserId.slice(0, 8)}@test.com`,
     hashed_password: 'hashed',
     user_type: 'client',
     contact_id: contactId,
@@ -1590,7 +1677,7 @@ async function setupTestData(
     username: `tech_${clientId.slice(0, 8)}`,
     first_name: 'Technician',
     last_name: 'User',
-    email: 'tech@test.com',
+    email: `tech-${technicianUserId.slice(0, 8)}@test.com`,
     hashed_password: 'hashed',
     user_type: 'internal',
     is_inactive: false,
@@ -1620,7 +1707,7 @@ async function setupTestData(
     serviceId = uuidv4();
     await db('service_catalog').insert({
       tenant: tenantId,
-      service_id: serviceId,
+      service_id: serviceId!,
       service_name: 'Test Service',
       description: 'Service for testing',
       billing_method: 'fixed',
@@ -1634,7 +1721,7 @@ async function setupTestData(
       availability_setting_id: availabilitySettingId,
       tenant: tenantId,
       setting_type: 'service_rules',
-      service_id: serviceId,
+      service_id: serviceId!,
       is_available: true,
       allow_without_contract: options.allowWithoutContract || false,
       advance_booking_days: 30,
@@ -1669,8 +1756,6 @@ async function setupTestData(
         tenant: tenantId,
         contract_id: contractId,
         contract_name: 'Test Contract',
-        description: 'Contract for testing',
-        start_date: new Date('2025-01-01'),
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -1694,8 +1779,11 @@ async function setupTestData(
         tenant: tenantId,
         contract_line_id: contractLineId,
         contract_id: contractId,
-        line_type: 'Service',
-        start_date: new Date('2025-01-01'),
+        contract_line_name: 'Test Contract Line',
+        description: 'Contract line for testing',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        is_active: true,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -1704,9 +1792,8 @@ async function setupTestData(
       await db('contract_line_services').insert({
         tenant: tenantId,
         contract_line_id: contractLineId,
-        service_id: serviceId,
-        quantity: 1,
-        created_at: db.fn.now()
+        service_id: serviceId!,
+        quantity: 1
       });
     }
   }

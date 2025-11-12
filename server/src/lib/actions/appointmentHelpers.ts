@@ -58,7 +58,10 @@ export async function getScheduleApprovers(
         'p.resource': 'schedule',
         'p.action': 'update'
       })
-      .whereNull('u.is_inactive')
+      .where(function() {
+        this.where('u.is_inactive', false)
+          .orWhereNull('u.is_inactive');
+      })
       .select(
         'u.user_id',
         'u.email',
@@ -88,18 +91,11 @@ export async function getTenantSettings(
     // Extract settings from JSONB column or use defaults
     const tenantSettings = settings?.settings || {};
 
-    // Get company information from companies table (MSP company)
-    const mspCompany = await trx('companies')
-      .where({
-        tenant,
-        is_msp: true
-      })
-      .first();
-
+    // MSP company name should be in tenant settings
     return {
       contactEmail: tenantSettings.supportEmail || tenantSettings.contactEmail || 'support@company.com',
       contactPhone: tenantSettings.supportPhone || tenantSettings.contactPhone || '',
-      tenantName: mspCompany?.company_name || tenantSettings.companyName || 'Your MSP',
+      tenantName: tenantSettings.companyName || 'Your MSP',
       defaultLocale: tenantSettings.defaultLocale || 'en'
     };
   });
@@ -122,7 +118,10 @@ export async function getClientUserIdFromContact(
         contact_id: contactId,
         user_type: 'client'
       })
-      .whereNull('is_inactive')
+      .where(function() {
+        this.where('is_inactive', false)
+          .orWhereNull('is_inactive');
+      })
       .select('user_id')
       .first();
 
@@ -234,14 +233,14 @@ export async function getClientCompanyName(
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx) => {
-    const company = await trx('companies')
+    const client = await trx('clients')
       .where({
-        company_id: clientId,
+        client_id: clientId,
         tenant
       })
-      .select('company_name')
+      .select('client_name')
       .first();
 
-    return company?.company_name || 'Unknown Client';
+    return client?.client_name || 'Unknown Client';
   });
 }

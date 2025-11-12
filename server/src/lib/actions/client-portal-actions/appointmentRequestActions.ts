@@ -199,6 +199,10 @@ export async function createAppointmentRequest(
       }
     }
 
+    // Normalize values for storage
+    const normalizedRequestedDate = validatedData.requested_date;
+    const normalizedRequestedTime = validatedData.requested_time.slice(0, 5);
+
     // Create appointment request
     const appointmentRequest = await withTransaction(db, async (trx: Knex.Transaction) => {
       const now = new Date();
@@ -210,8 +214,8 @@ export async function createAppointmentRequest(
         client_id: clientId,
         contact_id: (currentUser as any).contact_id,
         service_id: validatedData.service_id,
-        requested_date: validatedData.requested_date,
-        requested_time: validatedData.requested_time,
+        requested_date: normalizedRequestedDate,
+        requested_time: normalizedRequestedTime,
         requested_duration: validatedData.requested_duration,
         preferred_assigned_user_id: validatedData.preferred_assigned_user_id || null,
         status: 'pending',
@@ -274,9 +278,7 @@ export async function createAppointmentRequest(
     {
       scheduleEntryId = await withTransaction(db, async (trx: Knex.Transaction) => {
         const entryId = uuidv4();
-        const [startHour, startMinute] = validatedData.requested_time.split(':').map(Number);
-        const scheduledStart = new Date(validatedData.requested_date);
-        scheduledStart.setHours(startHour, startMinute, 0, 0);
+        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00`);
 
         const scheduledEnd = new Date(scheduledStart);
         scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
@@ -432,7 +434,17 @@ export async function createAppointmentRequest(
       // Don't fail the request if email/notification fails
     }
 
-    return { success: true, data: appointmentRequest as IAppointmentRequest };
+    // Re-query the appointment request to get the updated version with schedule_entry_id
+    const updatedAppointmentRequest = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('appointment_requests')
+        .where({
+          appointment_request_id: appointmentRequest.appointment_request_id,
+          tenant
+        })
+        .first();
+    });
+
+    return { success: true, data: updatedAppointmentRequest as IAppointmentRequest };
   } catch (error) {
     console.error('Error creating appointment request:', error);
     const message = error instanceof Error ? error.message : 'Failed to create appointment request';

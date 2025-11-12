@@ -81,7 +81,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -126,7 +126,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -168,7 +168,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -199,7 +199,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -230,7 +230,7 @@ describe('Appointment Availability Integration Tests', () => {
       const mondaySlots = await getAvailableTimeSlots(
         tenantId,
         mondayStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -244,7 +244,7 @@ describe('Appointment Availability Integration Tests', () => {
       const tuesdaySlots = await getAvailableTimeSlots(
         tenantId,
         tuesdayStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -267,7 +267,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         futureDateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -286,7 +286,7 @@ describe('Appointment Availability Integration Tests', () => {
       const nearSlots = await getAvailableTimeSlots(
         tenantId,
         nearDateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -304,7 +304,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         yesterdayStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -330,7 +330,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         tomorrowStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -362,7 +362,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         futureDateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -398,7 +398,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -427,7 +427,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -458,7 +458,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -487,7 +487,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60
       );
 
@@ -512,7 +512,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slotsWithoutException = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -532,7 +532,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -562,7 +562,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60
       );
 
@@ -587,7 +587,7 @@ describe('Appointment Availability Integration Tests', () => {
       const user1Slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -608,7 +608,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60
       );
 
@@ -635,7 +635,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -655,7 +655,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -673,7 +673,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         120,
         userId
       );
@@ -693,13 +693,26 @@ describe('Appointment Availability Integration Tests', () => {
   describe('8. Edge Cases', () => {
     it('should handle no availability settings (use defaults)', async () => {
       // Create minimal test data without availability settings
+      const serviceTypeId = uuidv4();
+      await db('service_types').insert({
+        id: serviceTypeId,
+        tenant: tenantId,
+        name: `Service Type ${serviceTypeId.slice(0, 8)}`,
+        billing_method: 'fixed',
+        order_number: Math.floor(Math.random() * 1000000),
+        created_at: db.fn.now(),
+        updated_at: db.fn.now()
+      });
+      createdIds.serviceTypeId = serviceTypeId;
+
       const serviceId = uuidv4();
       await db('service_catalog').insert({
         tenant: tenantId,
-        service_id: serviceId,
+        service_id: serviceId!,
         service_name: 'Test Service',
         billing_method: 'fixed',
-        default_rate: 10000
+        default_rate: 10000,
+        custom_service_type_id: serviceTypeId
       });
       createdIds.serviceId = serviceId;
 
@@ -723,7 +736,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -743,7 +756,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         60,
         userId
       );
@@ -769,7 +782,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         120,
         userId
       );
@@ -793,7 +806,7 @@ describe('Appointment Availability Integration Tests', () => {
 
       const dates = await getAvailableDates(
         tenantId,
-        serviceId,
+        serviceId!,
         startDate,
         endDate,
         userId
@@ -823,7 +836,7 @@ describe('Appointment Availability Integration Tests', () => {
 
       const dates = await getAvailableDates(
         tenantId,
-        serviceId,
+        serviceId!,
         startDate,
         endDate,
         userId
@@ -927,7 +940,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         15, // 15-minute slots
         userId
       );
@@ -948,7 +961,7 @@ describe('Appointment Availability Integration Tests', () => {
         const currentStart = new Date(slots[i].start_time);
         const gap = (currentStart.getTime() - prevEnd.getTime()) / (1000 * 60);
         expect(gap).toBe(0); // Slots should be continuous
-      });
+      }
     });
 
     it('should generate slots at 30-minute intervals', async () => {
@@ -962,7 +975,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         30, // 30-minute slots
         userId
       );
@@ -986,7 +999,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         45, // 45-minute slots
         userId
       );
@@ -1010,7 +1023,7 @@ describe('Appointment Availability Integration Tests', () => {
       const slots = await getAvailableTimeSlots(
         tenantId,
         dateStr,
-        serviceId,
+        serviceId!,
         240, // 4-hour slots
         userId
       );
@@ -1170,13 +1183,26 @@ describe('Appointment Availability Integration Tests', () => {
 
     it('should handle service with no assigned technicians', async () => {
       // Create service without user availability
+      const serviceTypeId = uuidv4();
+      await db('service_types').insert({
+        id: serviceTypeId,
+        tenant: tenantId,
+        name: `Service Type ${serviceTypeId.slice(0, 8)}`,
+        billing_method: 'fixed',
+        order_number: Math.floor(Math.random() * 1000000),
+        created_at: db.fn.now(),
+        updated_at: db.fn.now()
+      });
+      createdIds.serviceTypeId = serviceTypeId;
+
       const serviceId = uuidv4();
       await db('service_catalog').insert({
         tenant: tenantId,
-        service_id: serviceId,
+        service_id: serviceId!,
         service_name: 'Service With No Techs',
         billing_method: 'fixed',
-        default_rate: 10000
+        default_rate: 10000,
+        custom_service_type_id: serviceTypeId
       });
       createdIds.serviceId = serviceId;
 
@@ -1185,7 +1211,7 @@ describe('Appointment Availability Integration Tests', () => {
         availability_setting_id: serviceSettingId,
         tenant: tenantId,
         setting_type: 'service_rules',
-        service_id: serviceId,
+        service_id: serviceId!,
         is_available: true,
         advance_booking_days: 30,
         minimum_notice_hours: 24
@@ -1383,14 +1409,28 @@ async function setupTestData(
   serviceId: string;
   userId: string;
 }> {
+  // Create service type
+  const serviceTypeId = uuidv4();
+  await db('service_types').insert({
+    id: serviceTypeId,
+    tenant: tenantId,
+    name: `Service Type ${serviceTypeId.slice(0, 8)}`,
+    billing_method: 'fixed',
+    order_number: Math.floor(Math.random() * 1000000),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
+  createdIds.serviceTypeId = serviceTypeId;
+
   // Create service
   const serviceId = uuidv4();
   await db('service_catalog').insert({
     tenant: tenantId,
-    service_id: serviceId,
+    service_id: serviceId!,
     service_name: 'Test Service',
     billing_method: 'fixed',
-    default_rate: 10000
+    default_rate: 10000,
+    custom_service_type_id: serviceTypeId
   });
   createdIds.serviceId = serviceId;
 
@@ -1415,7 +1455,7 @@ async function setupTestData(
     availability_setting_id: serviceSettingId,
     tenant: tenantId,
     setting_type: 'service_rules',
-    service_id: serviceId,
+    service_id: serviceId!,
     is_available: true,
     allow_without_contract: options.allowWithoutContract ?? false,
     advance_booking_days: options.advanceBookingDays ?? 30,
@@ -1455,14 +1495,28 @@ async function setupTestDataMultipleUsers(
   userId: string;
   user2Id: string;
 }> {
+  // Create service type
+  const serviceTypeId = uuidv4();
+  await db('service_types').insert({
+    id: serviceTypeId,
+    tenant: tenantId,
+    name: `Service Type ${serviceTypeId.slice(0, 8)}`,
+    billing_method: 'fixed',
+    order_number: Math.floor(Math.random() * 1000000),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now()
+  });
+  createdIds.serviceTypeId = serviceTypeId;
+
   // Create service
   const serviceId = uuidv4();
   await db('service_catalog').insert({
     tenant: tenantId,
-    service_id: serviceId,
+    service_id: serviceId!,
     service_name: 'Test Service',
     billing_method: 'fixed',
-    default_rate: 10000
+    default_rate: 10000,
+    custom_service_type_id: serviceTypeId
   });
   createdIds.serviceId = serviceId;
 
@@ -1472,7 +1526,7 @@ async function setupTestDataMultipleUsers(
     availability_setting_id: serviceSettingId,
     tenant: tenantId,
     setting_type: 'service_rules',
-    service_id: serviceId,
+    service_id: serviceId!,
     is_available: true,
     allow_without_contract: false,
     advance_booking_days: 30,
@@ -1558,7 +1612,7 @@ async function createScheduleEntry(
     scheduled_start: startTime.toISOString(),
     scheduled_end: endTime.toISOString(),
     status: 'scheduled',
-    work_item_type: 'appointment'
+    work_item_type: 'appointment_request'
   });
 
   await db('schedule_entry_assignees').insert({

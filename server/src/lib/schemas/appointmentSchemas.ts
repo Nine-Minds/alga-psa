@@ -35,6 +35,15 @@ export const createAppointmentRequestSchema = z.object({
   preferred_assigned_user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
   description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+}).refine((data) => {
+  // Validate that requested_date is not in the past
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset to start of day
+  const requestedDate = new Date(data.requested_date);
+  return requestedDate >= today;
+}, {
+  message: 'Requested date cannot be in the past',
+  path: ['requested_date'],
 });
 
 export type CreateAppointmentRequestInput = z.infer<typeof createAppointmentRequestSchema>;
@@ -52,6 +61,15 @@ export const updateAppointmentRequestSchema = z.object({
   preferred_assigned_user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
   description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+}).refine((data) => {
+  // Validate that requested_date is not in the past
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset to start of day
+  const requestedDate = new Date(data.requested_date);
+  return requestedDate >= today;
+}, {
+  message: 'Requested date cannot be in the past',
+  path: ['requested_date'],
 });
 
 export type UpdateAppointmentRequestInput = z.infer<typeof updateAppointmentRequestSchema>;

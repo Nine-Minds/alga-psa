@@ -2037,7 +2037,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().subscribe(eventType, handleInternalNotificationEvent, { channel });
+      await getEventBus().subscribe(eventType as any, handleInternalNotificationEvent, { channel });
       logger.info(`[InternalNotificationSubscriber] Subscribed to ${eventType} on channel "${channel}"`);
     }
 
@@ -2076,7 +2076,7 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().unsubscribe(eventType, handleInternalNotificationEvent, { channel });
+      await getEventBus().unsubscribe(eventType as any, handleInternalNotificationEvent, { channel });
     }
 
     logger.info('[InternalNotificationSubscriber] Successfully unregistered');

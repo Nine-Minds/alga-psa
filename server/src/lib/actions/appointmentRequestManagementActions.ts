@@ -289,10 +289,15 @@ export async function approveAppointmentRequest(
       }
 
       // Use final date/time if provided, otherwise use requested
-      const finalDate = validatedData.final_date || request.requested_date;
-      // Ensure time is in HH:MM format (database might store HH:MM:SS)
-      const requestedTime = request.requested_time.slice(0, 5);
-      const finalTime = validatedData.final_time || requestedTime;
+      const fallbackDate = normalizeDateValue(request.requested_date);
+      const fallbackTime = normalizeTimeValue(request.requested_time);
+
+      if (!fallbackDate || !fallbackTime) {
+        throw new Error('Invalid requested date/time on appointment request');
+      }
+
+      const finalDate = validatedData.final_date ?? fallbackDate;
+      const finalTime = (validatedData.final_time ?? fallbackTime).slice(0, 5);
 
       // Verify assigned user exists
       const assignedUser = await trx('users')
@@ -319,7 +324,17 @@ export async function approveAppointmentRequest(
       }
 
       // Create or update schedule entry
-      const scheduledStart = new Date(`${finalDate}T${finalTime}`);
+      const dateStr = normalizeDateValue(finalDate);
+      if (!dateStr) {
+        throw new Error('Invalid final date provided for approval');
+      }
+
+      const scheduledStart = new Date(`${dateStr}T${finalTime}:00`);
+
+      if (isNaN(scheduledStart.getTime())) {
+        throw new Error(`Invalid date/time: ${dateStr}T${finalTime}`);
+      }
+
       const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
 
       let scheduleEntry;
@@ -922,4 +937,26 @@ export async function associateRequestToTicket(
     const message = error instanceof Error ? error.message : 'Failed to associate request to ticket';
     return { success: false, error: message };
   }
+}
+
+function normalizeDateValue(value: string | Date | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  return value.toISOString().split('T')[0];
+}
+
+function normalizeTimeValue(value: string | Date | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 5);
+  }
+  const hours = value.getHours().toString().padStart(2, '0');
+  const minutes = value.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
