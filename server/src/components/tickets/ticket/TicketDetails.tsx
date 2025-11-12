@@ -60,7 +60,6 @@ import { IntervalTrackingService } from "server/src/services/IntervalTrackingSer
 import { IntervalManagement } from "server/src/components/time-management/interval-tracking/IntervalManagement";
 import { convertBlockNoteToMarkdown } from "server/src/lib/utils/blocknoteUtils";
 import BackNav from 'server/src/components/ui/BackNav';
-import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 interface TicketDetailsProps {
@@ -1332,7 +1331,6 @@ const handleClose = () => {
                         </Suspense>
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
-                        <TicketSurveySummaryCard summary={surveySummary} />
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
                             <TicketProperties
                                 id={`${id}-properties`}
@@ -1376,6 +1374,7 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
+                                surveySummary={surveySummary}
                             />
                         </Suspense>
                         
