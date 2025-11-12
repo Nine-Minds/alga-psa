@@ -1133,6 +1133,17 @@
       "title": "Annuler le rendez-vous",
       "message": "Êtes-vous sûr de vouloir annuler cette demande de rendez-vous ? Cette action ne peut pas être annulée.",
       "confirm": "Oui, annuler"
+    },
+    "ticketSection": {
+      "title": "Demandes de rendez-vous",
+      "service": "Service",
+      "publicRequest": "Demande publique",
+      "minutes": "minutes",
+      "preferred": "Préféré :",
+      "approvedBy": "Approuvé par",
+      "on": "le",
+      "declined": "Refusé :",
+      "invalidDateTime": "Date/heure invalide"
     }
   }
 }

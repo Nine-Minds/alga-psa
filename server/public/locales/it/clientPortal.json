@@ -1134,6 +1134,17 @@
       "title": "Annulla appuntamento",
       "message": "Sei sicuro di voler annullare questa richiesta di appuntamento? Questa azione non può essere annullata.",
       "confirm": "Sì, annulla"
+    },
+    "ticketSection": {
+      "title": "Richieste di appuntamento",
+      "service": "Servizio",
+      "publicRequest": "Richiesta pubblica",
+      "minutes": "minuti",
+      "preferred": "Preferito:",
+      "approvedBy": "Approvato da",
+      "on": "il",
+      "declined": "Rifiutato:",
+      "invalidDateTime": "Data/ora non valida"
     }
   }
 }

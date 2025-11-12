@@ -1133,6 +1133,17 @@
       "title": "Cancelar cita",
       "message": "¿Está seguro de que desea cancelar esta solicitud de cita? Esta acción no se puede deshacer.",
       "confirm": "Sí, cancelar"
+    },
+    "ticketSection": {
+      "title": "Solicitudes de cita",
+      "service": "Servicio",
+      "publicRequest": "Solicitud pública",
+      "minutes": "minutos",
+      "preferred": "Preferido:",
+      "approvedBy": "Aprobado por",
+      "on": "el",
+      "declined": "Rechazado:",
+      "invalidDateTime": "Fecha/hora no válida"
     }
   }
 }

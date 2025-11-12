@@ -1141,6 +1141,17 @@
       "title": "Cancel Appointment",
       "message": "Are you sure you want to cancel this appointment request? This action cannot be undone.",
       "confirm": "Yes, Cancel"
+    },
+    "ticketSection": {
+      "title": "Appointment Requests",
+      "service": "Service",
+      "publicRequest": "Public Request",
+      "minutes": "minutes",
+      "preferred": "Preferred:",
+      "approvedBy": "Approved by",
+      "on": "on",
+      "declined": "Declined:",
+      "invalidDateTime": "Invalid date/time"
     }
   }
 }

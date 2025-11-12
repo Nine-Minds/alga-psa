@@ -1133,6 +1133,17 @@
       "title": "Termin stornieren",
       "message": "Sind Sie sicher, dass Sie diese Terminanfrage stornieren möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
       "confirm": "Ja, stornieren"
+    },
+    "ticketSection": {
+      "title": "Terminanfragen",
+      "service": "Service",
+      "publicRequest": "Öffentliche Anfrage",
+      "minutes": "Minuten",
+      "preferred": "Bevorzugt:",
+      "approvedBy": "Genehmigt von",
+      "on": "am",
+      "declined": "Abgelehnt:",
+      "invalidDateTime": "Ungültiges Datum/Uhrzeit"
     }
   }
 }

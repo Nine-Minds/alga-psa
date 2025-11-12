@@ -1133,6 +1133,17 @@
       "title": "Afspraak annuleren",
       "message": "Weet u zeker dat u dit afspraakverzoek wilt annuleren? Deze actie kan niet ongedaan worden gemaakt.",
       "confirm": "Ja, annuleren"
+    },
+    "ticketSection": {
+      "title": "Afspraakverzoeken",
+      "service": "Service",
+      "publicRequest": "Openbaar verzoek",
+      "minutes": "minuten",
+      "preferred": "Voorkeur:",
+      "approvedBy": "Goedgekeurd door",
+      "on": "op",
+      "declined": "Afgewezen:",
+      "invalidDateTime": "Ongeldige datum/tijd"
     }
   }
 }
