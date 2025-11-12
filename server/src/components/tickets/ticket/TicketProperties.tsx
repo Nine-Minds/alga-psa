@@ -11,7 +11,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle } from 'lucide-react';
+import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
 import styles from './TicketDetails.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
@@ -27,6 +27,7 @@ import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/li
 import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
 import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -155,6 +156,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+  const [appointmentRequestsCount, setAppointmentRequestsCount] = useState<number>(0);
+  const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
+  const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
 
   const uniqueClientsForPicker = React.useMemo(() => {
     if (!clients) return [];
@@ -263,6 +267,25 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     };
     loadDisplay();
   }, []);
+
+  // Fetch appointment requests
+  useEffect(() => {
+    const fetchAppointmentRequests = async () => {
+      if (!ticket.ticket_id) return;
+
+      try {
+        const result = await getAppointmentRequestsByTicketId(ticket.ticket_id);
+        if (result.success && result.data) {
+          setAppointmentRequests(result.data);
+          setAppointmentRequestsCount(result.data.length);
+        }
+      } catch (error) {
+        console.error('Error fetching appointment requests:', error);
+      }
+    };
+
+    fetchAppointmentRequests();
+  }, [ticket.ticket_id]);
 
   return (
     <div className="flex-shrink-0 space-y-6">
@@ -615,7 +638,84 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       </div>
 
       <div className={`${styles['card']} p-6 space-y-4`}>
-        <h2 className={`${styles['panel-header']}`}>Agent team</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={`${styles['panel-header']}`}>Agent team</h2>
+          {/* Appointment Requests Indicator */}
+          {appointmentRequestsCount > 0 && (
+            <div
+              className="relative"
+              onMouseEnter={() => setShowAppointmentTooltip(true)}
+              onMouseLeave={() => setShowAppointmentTooltip(false)}
+            >
+              <a
+                href="/msp/schedule"
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View appointment requests on calendar"
+              >
+                <CalendarIcon className="h-4 w-4 mr-1" />
+                <span>{appointmentRequestsCount} Appointment Request{appointmentRequestsCount !== 1 ? 's' : ''}</span>
+              </a>
+
+              {/* Tooltip */}
+              {showAppointmentTooltip && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {appointmentRequests.map((request, index) => (
+                      <div key={request.appointment_request_id} className="border-b border-gray-100 pb-3 last:border-0">
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="text-xs font-semibold text-gray-700">
+                            Request #{index + 1}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            request.status === 'declined' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {request.status}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-xs text-gray-600">
+                          <div className="flex items-center">
+                            <CalendarIcon className="h-3 w-3 mr-1" />
+                            <span>{new Date(request.requested_date).toLocaleDateString()}</span>
+                            <span className="mx-1">at</span>
+                            <span>{request.requested_time}</span>
+                          </div>
+                          {request.service_name && (
+                            <div className="flex items-center">
+                              <span className="font-medium">Service:</span>
+                              <span className="ml-1">{request.service_name}</span>
+                            </div>
+                          )}
+                          {request.preferred_technician_first_name && (
+                            <div className="flex items-center">
+                              <span className="font-medium">Technician:</span>
+                              <span className="ml-1">
+                                {request.preferred_technician_first_name} {request.preferred_technician_last_name}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>{request.requested_duration} minutes</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 text-center">
+                      Click to view on calendar
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="space-y-4">
           {/* Primary Agent */}
           <div>

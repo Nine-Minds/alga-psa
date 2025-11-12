@@ -29,6 +29,7 @@ import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusA
 import { IStatus } from 'server/src/interfaces/status.interface';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
+import TicketAppointmentRequests from 'server/src/components/tickets/ticket/TicketAppointmentRequests';
 
 interface TicketDetailsProps {
   ticketId: string;
@@ -548,6 +549,16 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
               <Card>
                 <TicketDocumentsSection ticketId={ticket.ticket_id} />
               </Card>
+            </div>
+          )}
+
+          {/* Appointment Requests Section */}
+          {ticket.ticket_id && (
+            <div>
+              <TicketAppointmentRequests
+                ticketId={ticket.ticket_id}
+                id="client-portal-ticket-appointment-requests"
+              />
             </div>
           )}
         </div>

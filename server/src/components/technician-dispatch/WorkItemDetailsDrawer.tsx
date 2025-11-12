@@ -210,7 +210,7 @@ export function WorkItemDetailsDrawer({
                         toast.error('Failed to load interaction data');
                         return null;
                     }
-                    
+
                     return (
                         <div className="h-full">
                             <InteractionDetails
@@ -222,6 +222,137 @@ export function WorkItemDetailsDrawer({
                                     await onTaskUpdate(null);
                                 }}
                             />
+                        </div>
+                    );
+                }
+
+                case 'appointment_request': {
+                    console.log('Loading appointment request with ID:', workItem.work_item_id);
+                    const { getAppointmentRequestById } = await import('server/src/lib/actions/appointmentRequestManagementActions');
+                    const result = await getAppointmentRequestById(workItem.work_item_id);
+                    if (!result.success || !result.data) {
+                        toast.error('Failed to load appointment request data');
+                        return null;
+                    }
+
+                    const appointmentRequest = result.data as any;
+
+                    // Format date and time safely
+                    const formatDate = (date: any) => {
+                        if (!date) return 'N/A';
+                        if (date instanceof Date) return date.toLocaleDateString();
+                        if (typeof date === 'string') return new Date(date).toLocaleDateString();
+                        return String(date);
+                    };
+
+                    const formatTime = (time: any) => {
+                        if (!time) return 'N/A';
+                        if (typeof time === 'string') return time;
+                        return String(time);
+                    };
+
+                    const formatDateTime = (dateTime: any) => {
+                        if (!dateTime) return 'N/A';
+                        if (dateTime instanceof Date) return dateTime.toLocaleString();
+                        if (typeof dateTime === 'string') return new Date(dateTime).toLocaleString();
+                        return String(dateTime);
+                    };
+
+                    return (
+                        <div className="h-full p-4">
+                            <h2 className="text-2xl font-bold mb-4">Appointment Request Details</h2>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <div className="font-semibold text-gray-700">Service</div>
+                                        <div>{appointmentRequest.service_name || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-gray-700">Status</div>
+                                        <div className="capitalize">{String(appointmentRequest.status || 'N/A')}</div>
+                                    </div>
+                                    {appointmentRequest.is_authenticated ? (
+                                        <>
+                                            <div>
+                                                <div className="font-semibold text-gray-700">Client</div>
+                                                <div>{appointmentRequest.client_company_name || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-gray-700">Contact</div>
+                                                <div>{appointmentRequest.contact_name || 'N/A'}</div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div>
+                                                <div className="font-semibold text-gray-700">Company</div>
+                                                <div>{appointmentRequest.company_name || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-gray-700">Requester</div>
+                                                <div>{appointmentRequest.requester_name || 'N/A'}</div>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div>
+                                        <div className="font-semibold text-gray-700">Email</div>
+                                        <div>{appointmentRequest.contact_email || appointmentRequest.requester_email || 'N/A'}</div>
+                                    </div>
+                                    {appointmentRequest.requester_phone && (
+                                        <div>
+                                            <div className="font-semibold text-gray-700">Phone</div>
+                                            <div>{String(appointmentRequest.requester_phone)}</div>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <div className="font-semibold text-gray-700">Requested Date</div>
+                                        <div>{formatDate(appointmentRequest.requested_date)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-gray-700">Requested Time</div>
+                                        <div>{formatTime(appointmentRequest.requested_time)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-gray-700">Duration</div>
+                                        <div>{String(appointmentRequest.requested_duration)} minutes</div>
+                                    </div>
+                                    {appointmentRequest.preferred_technician_first_name && (
+                                        <div>
+                                            <div className="font-semibold text-gray-700">Preferred Technician</div>
+                                            <div>{appointmentRequest.preferred_technician_first_name} {appointmentRequest.preferred_technician_last_name}</div>
+                                        </div>
+                                    )}
+                                </div>
+                                {appointmentRequest.description && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700 mb-1">Description</div>
+                                        <div className="text-sm bg-gray-50 p-3 rounded border">{String(appointmentRequest.description)}</div>
+                                    </div>
+                                )}
+                                {appointmentRequest.declined_reason && (
+                                    <div>
+                                        <div className="font-semibold text-gray-700 mb-1">Decline Reason</div>
+                                        <div className="text-sm bg-red-50 p-3 rounded border border-red-200">{String(appointmentRequest.declined_reason)}</div>
+                                    </div>
+                                )}
+                                {appointmentRequest.approved_by_user_id && (
+                                    <div className="border-t pt-4">
+                                        <div className="font-semibold text-gray-700 mb-2">Approval Information</div>
+                                        <div className="text-sm space-y-1">
+                                            <div>
+                                                <span className="text-gray-600">Approved by:</span>{' '}
+                                                {appointmentRequest.approver_first_name} {appointmentRequest.approver_last_name}
+                                            </div>
+                                            {appointmentRequest.approved_at && (
+                                                <div>
+                                                    <span className="text-gray-600">Approved at:</span>{' '}
+                                                    {formatDateTime(appointmentRequest.approved_at)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     );
                 }

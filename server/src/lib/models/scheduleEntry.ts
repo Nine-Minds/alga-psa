@@ -124,34 +124,8 @@ class ScheduleEntry {
       .select('*')
       .orderBy('scheduled_start', 'asc') as unknown as IScheduleEntry[];
 
-    console.log('[ScheduleEntry.getAll] Query parameters:', {
-      start: start.toISOString(),
-      end: end.toISOString()
-    });
-
-    console.log('[ScheduleEntry.getAll] Regular entries:', {
-      count: regularEntries.length,
-      entries: regularEntries.map((e): { id: string; title: string; start: Date; isRecurring: boolean; hasPattern: boolean; } => ({
-        id: e.entry_id,
-        title: e.title,
-        start: e.scheduled_start,
-        isRecurring: !!e.is_recurring,
-        hasPattern: !!e.recurrence_pattern
-      }))
-    });
-
     // Get recurring entries (virtual instances only)
     const virtualEntries = await this.getRecurringEntriesInRange(start, end);
-    
-    console.log('[ScheduleEntry.getAll] Virtual entries:', {
-      count: virtualEntries.length,
-      entries: virtualEntries.map((e): { id: string; title: string; start: Date; originalId: string | undefined; } => ({
-        id: e.entry_id,
-        title: e.title,
-        start: e.scheduled_start,
-        originalId: e.original_entry_id
-      }))
-    });
 
     const allEntries = [...regularEntries, ...virtualEntries];
     if (allEntries.length === 0) return allEntries;
@@ -166,19 +140,6 @@ class ScheduleEntry {
       // For recurring entries, assigned_user_ids is already populated
       assigned_user_ids: entry.assigned_user_ids || assignedUserIds[entry.entry_id] || []
     }));
-
-    console.log('[ScheduleEntry.getAll] Final entries:', {
-      total: finalEntries.length,
-      regularCount: regularEntries.length,
-      virtualCount: virtualEntries.length,
-      entries: finalEntries.map((e): { id: string; title: string; start: Date; isVirtual: boolean; originalId: string | undefined; } => ({
-        id: e.entry_id,
-        title: e.title,
-        start: e.scheduled_start,
-        isVirtual: e.entry_id.includes('_'),
-        originalId: e.original_entry_id
-      }))
-    });
 
     return finalEntries;
   }
@@ -1163,30 +1124,10 @@ class ScheduleEntry {
       })
       .select('*') as unknown as IScheduleEntry[];
 
-    console.log('[ScheduleEntry.getRecurringEntriesInRange] Master entries found:', {
-      count: masterEntries.length,
-      entries: masterEntries.map(e => ({
-        id: e.entry_id,
-        title: e.title,
-        start: e.scheduled_start,
-        hasPattern: !!e.recurrence_pattern
-      }))
-    });
-
     if (masterEntries.length === 0) return [];
 
     // Only return virtual instances - master entries are already included in getAll()
     const virtualEntries = await this.getRecurringEntriesWithAssignments(db, masterEntries, start, end);
-
-    console.log('[ScheduleEntry.getRecurringEntriesInRange] Generated virtual entries:', {
-      count: virtualEntries.length,
-      entries: virtualEntries.map((e): { id: string; title: string; start: Date; originalId: string | undefined; } => ({
-        id: e.entry_id,
-        title: e.title,
-        start: e.scheduled_start,
-        originalId: e.original_entry_id
-      }))
-    });
 
     return virtualEntries;
   }

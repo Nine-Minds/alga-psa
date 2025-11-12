@@ -636,5 +636,125 @@
       "Tickets": "Tickets",
       "Time Entries": "Tijdregistraties"
     }
+  },
+  "availability": {
+    "settings": {
+      "title": "Beschikbaarheidsinstellingen",
+      "description": "Configureer beschikbaarheidsregels en schema's voor afspraken"
+    },
+    "tabs": {
+      "general": "Algemene instellingen",
+      "userHours": "Gebruikerstijden",
+      "serviceRules": "Serviceregels",
+      "exceptions": "Uitzonderingen"
+    },
+    "general": {
+      "advanceBookingDays": "Dagen vooraf boeken",
+      "advanceBookingDaysHelper": "Hoe ver van tevoren klanten afspraken kunnen boeken",
+      "minimumNoticeHours": "Minimum waarschuwingstijd (uren)",
+      "minimumNoticeHoursHelper": "Minimale tijd vereist voor een afspraak",
+      "defaultBufferBefore": "Standaard buffer ervoor (minuten)",
+      "defaultBufferAfter": "Standaard buffer erna (minuten)",
+      "bufferHelper": "Tijdsbuffer tussen afspraken"
+    },
+    "userHours": {
+      "selectUser": "Selecteer gebruiker",
+      "dayOfWeek": "Dag van de week",
+      "startTime": "Starttijd",
+      "endTime": "Eindtijd",
+      "available": "Beschikbaar",
+      "cloneSettings": "Kloon naar andere gebruikers",
+      "maxAppointmentsPerDay": "Maximum afspraken per dag"
+    },
+    "serviceRules": {
+      "selectService": "Selecteer service",
+      "allowWithoutContract": "Toestaan zonder contract",
+      "advanceBooking": "Dagen vooraf boeken",
+      "maxAppointments": "Maximum afspraken per dag"
+    },
+    "exceptions": {
+      "addException": "Uitzondering toevoegen",
+      "date": "Datum",
+      "reason": "Reden",
+      "userSpecific": "Gebruikersspecifiek",
+      "companyWide": "Bedrijfsbreed"
+    },
+    "messages": {
+      "saveSuccess": "Beschikbaarheidsinstellingen succesvol opgeslagen",
+      "saveFailed": "Kan beschikbaarheidsinstellingen niet opslaan",
+      "loadFailed": "Kan beschikbaarheidsinstellingen niet laden"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Afspraakaanvragen",
+      "approve": "Goedkeuren en plannen",
+      "decline": "Afwijzen",
+      "assignTech": "Technicus toewijzen",
+      "internalNotes": "Interne notities",
+      "viewAll": "Alle verzoeken bekijken",
+      "pendingCount": "{{count}} verzoeken in behandeling",
+      "filterByStatus": "Filteren op status",
+      "filterByService": "Filteren op service",
+      "filterByDate": "Filteren op datum"
+    },
+    "panel": {
+      "title": "Afspraakverzoeken",
+      "description": "Afspraakverzoeken van klanten beoordelen en beheren",
+      "noRequests": "Geen afspraakverzoeken gevonden",
+      "loadingRequests": "Verzoeken laden..."
+    },
+    "card": {
+      "requesterName": "Aanvrager",
+      "companyName": "Bedrijf",
+      "service": "Service",
+      "requestedDateTime": "Gevraagde datum en tijd",
+      "duration": "Duur",
+      "preferredTechnician": "Voorkeurstechnicus",
+      "linkedTicket": "Gekoppeld ticket",
+      "actions": "Acties"
+    },
+    "approvalModal": {
+      "title": "Afspraakverzoek goedkeuren",
+      "confirmDateTime": "Datum en tijd bevestigen",
+      "modifyDateTime": "Datum en tijd wijzigen",
+      "assignedUser": "Toegewezen technicus",
+      "linkToTicket": "Koppelen aan ticket",
+      "internalNotes": "Interne notities",
+      "approve": "Goedkeuren en planningsitem aanmaken",
+      "approving": "Bezig met goedkeuren..."
+    },
+    "declineModal": {
+      "title": "Afspraakverzoek afwijzen",
+      "reason": "Reden voor afwijzing",
+      "reasonRequired": "Geef alstublieft een reden",
+      "reasonPlaceholder": "Leg uit waarom dit verzoek wordt afgewezen...",
+      "decline": "Verzoek afwijzen",
+      "declining": "Bezig met afwijzen..."
+    },
+    "detailsModal": {
+      "title": "Verzoekdetails",
+      "requesterInfo": "Informatie aanvrager",
+      "requestInfo": "Verzoekinformatie",
+      "status": "Status",
+      "createdAt": "Aangevraagd op",
+      "approvedAt": "Goedgekeurd op",
+      "approvedBy": "Goedgekeurd door",
+      "declinedReason": "Reden voor afwijzing"
+    },
+    "status": {
+      "pending": "In behandeling",
+      "approved": "Goedgekeurd",
+      "declined": "Afgewezen",
+      "cancelled": "Geannuleerd"
+    },
+    "messages": {
+      "approveSuccess": "Afspraakverzoek succesvol goedgekeurd",
+      "approveFailed": "Kan afspraakverzoek niet goedkeuren",
+      "declineSuccess": "Afspraakverzoek afgewezen",
+      "declineFailed": "Kan afspraakverzoek niet afwijzen",
+      "loadFailed": "Kan afspraakverzoeken niet laden",
+      "scheduleEntryCreated": "Planningsitem succesvol aangemaakt"
+    }
   }
 }
