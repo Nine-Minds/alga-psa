@@ -1,11 +1,10 @@
 'use server';
 
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
-import { JobService } from 'server/src/services/job.service';
 import { JobStatus } from 'server/src/types/job';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withAdminTransaction } from '@shared/db/index';
+import { JobService } from 'server/src/services/job.service';
 
 export interface JobMetrics {
   total: number;
@@ -30,32 +29,30 @@ export interface JobRecord {
 }
 
 export async function getQueueMetricsAction(): Promise<JobMetrics> {
-  const { tenant } = await createTenantKnex();
-  
+  const { knex, tenant } = await createTenantKnex();
+
   if (!tenant) {
     throw new Error('TENANT environment variable not set');
   }
 
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
-    // Get counts for each job status
-    const [total, completed, failed, pending, active, queued] = await Promise.all([
-      trx('jobs').where('tenant', tenant).count('*').first(),
-      trx('jobs').where({ tenant, status: JobStatus.Completed }).count('*').first(),
-      trx('jobs').where({ tenant, status: JobStatus.Failed }).count('*').first(),
-      trx('jobs').where({ tenant, status: JobStatus.Pending }).count('*').first(),
-      trx('jobs').where({ tenant, status: JobStatus.Active }).count('*').first(),
-      trx('jobs').where({ tenant, status: JobStatus.Queued }).count('*').first(),
-    ]);
+  // Get counts for each job status (RLS automatically filters by tenant)
+  const [total, completed, failed, pending, active, queued] = await Promise.all([
+    knex('jobs').count('*').first(),
+    knex('jobs').where({ status: JobStatus.Completed }).count('*').first(),
+    knex('jobs').where({ status: JobStatus.Failed }).count('*').first(),
+    knex('jobs').where({ status: JobStatus.Pending }).count('*').first(),
+    knex('jobs').where({ status: JobStatus.Active }).count('*').first(),
+    knex('jobs').where({ status: JobStatus.Queued }).count('*').first(),
+  ]);
 
-    return {
-      total: parseInt(String(total?.count || '0'), 10),
-      completed: parseInt(String(completed?.count || '0'), 10),
-      failed: parseInt(String(failed?.count || '0'), 10),
-      pending: parseInt(String(pending?.count || '0'), 10),
-      active: parseInt(String(active?.count || '0'), 10),
-      queued: parseInt(String(queued?.count || '0'), 10),
-    };
-  });
+  return {
+    total: parseInt(String(total?.count || '0'), 10),
+    completed: parseInt(String(completed?.count || '0'), 10),
+    failed: parseInt(String(failed?.count || '0'), 10),
+    pending: parseInt(String(pending?.count || '0'), 10),
+    active: parseInt(String(active?.count || '0'), 10),
+    queued: parseInt(String(queued?.count || '0'), 10),
+  };
 }
 
 export async function getJobDetailsWithHistory(filter: {
@@ -67,16 +64,16 @@ export async function getJobDetailsWithHistory(filter: {
   limit?: number;
   offset?: number;
 }): Promise<JobRecord[]> {
-  const { tenant } = await createTenantKnex();
-  
+  const { knex, tenant } = await createTenantKnex();
+
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Build and execute jobs query (RLS automatically filters by tenant)
     let query = trx('jobs')
       .select('*')
-      .where('tenant', tenant)
       .orderBy('created_at', 'desc');
 
     if (filter.state) {
@@ -99,13 +96,17 @@ export async function getJobDetailsWithHistory(filter: {
     }
 
     const jobs = await query;
-    
-    // Get details for each job
+
+    if (jobs.length === 0) {
+      return [];
+    }
+
+    // Get job details using the service method with the same transaction
     const jobService = await JobService.create();
     const jobsWithDetails = await Promise.all(
       jobs.map(async job => ({
         ...job,
-        details: await jobService.getJobDetails(job.job_id)
+        details: await jobService.getJobDetails(job.job_id, trx)
       }))
     );
 
