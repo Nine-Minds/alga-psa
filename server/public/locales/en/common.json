@@ -554,7 +554,8 @@
           "boards": "Boards",
           "statuses": "Statuses",
           "priorities": "Priorities",
-          "any": "Any"
+          "any": "Any",
+          "unrestricted": "Applies to every ticket and project"
         },
         "status": {
           "enabled": "Enabled",
