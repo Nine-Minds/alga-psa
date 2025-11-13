@@ -412,7 +412,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
             <div className="pr-2">
               <DataTable
                 id="invoice-drafts-table"
-                key={tableKey}
+                key={`${tableKey}-${currentPage}-${pageSize}`}
                 data={filteredInvoices}
                 columns={columns}
                 pagination={true}

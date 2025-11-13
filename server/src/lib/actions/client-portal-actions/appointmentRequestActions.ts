@@ -278,7 +278,8 @@ export async function createAppointmentRequest(
     {
       scheduleEntryId = await withTransaction(db, async (trx: Knex.Transaction) => {
         const entryId = uuidv4();
-        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00`);
+        // Parse as UTC by adding 'Z' suffix to ensure correct timezone interpretation
+        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00Z`);
 
         const scheduledEnd = new Date(scheduledStart);
         scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
@@ -602,8 +603,8 @@ export async function updateAppointmentRequest(
     if (existingRequest.schedule_entry_id) {
       await withTransaction(db, async (trx: Knex.Transaction) => {
         const [startHour, startMinute] = validatedData.requested_time.split(':').map(Number);
-        const scheduledStart = new Date(validatedData.requested_date);
-        scheduledStart.setHours(startHour, startMinute, 0, 0);
+        // Parse date and time as UTC explicitly
+        const scheduledStart = new Date(`${validatedData.requested_date}T${validatedData.requested_time}:00Z`);
 
         const scheduledEnd = new Date(scheduledStart);
         scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
@@ -1457,13 +1458,22 @@ export async function getAvailableTimeSlotsForDate(
       technicians.map((t: any) => `${t.full_name}: ${t.duration}min`));
 
     // Format time slots for UI - always use SERVICE duration for display
+    // Display times in user's timezone for accurate representation
     const timeSlots = slots.map(slot => {
+      const slotTime = new Date(slot.start_time);
       return {
-        time: new Date(slot.start_time).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }),
+        time: userTimezone
+          ? slotTime.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+              timeZone: userTimezone
+            })
+          : slotTime.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }),
         startTime: slot.start_time, // Keep the original UTC ISO timestamp for backend
         available: slot.is_available,
         duration: serviceDuration // Always use service duration for slot display
