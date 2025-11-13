@@ -203,11 +203,11 @@ export default function AppointmentRequestsPanel({
       let approvalTime: string | undefined;
 
       if (finalDateTime && !isNaN(finalDateTime.getTime())) {
-        // Convert Date object to proper string formats
+        // Convert Date object to proper string formats in UTC
         approvalDate = finalDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
-        const hours = finalDateTime.getHours().toString().padStart(2, '0');
-        const minutes = finalDateTime.getMinutes().toString().padStart(2, '0');
-        approvalTime = `${hours}:${minutes}`; // HH:MM
+        const hours = finalDateTime.getUTCHours().toString().padStart(2, '0');
+        const minutes = finalDateTime.getUTCMinutes().toString().padStart(2, '0');
+        approvalTime = `${hours}:${minutes}`; // HH:MM in UTC
       }
       // If finalDateTime is not set, send undefined to use the requested date/time from server
 
