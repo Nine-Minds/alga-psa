@@ -30,6 +30,75 @@ function json(status: number, body: any, headers: HeadersInit = {}) {
   });
 }
 
+const ALLOWED_METHODS = 'GET,POST,PUT,PATCH,DELETE,OPTIONS';
+const ALLOWED_HEADERS = 'content-type,x-request-id,x-idempotency-key,x-alga-tenant';
+
+function normalizeOrigin(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return `${url.protocol}//${url.host}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function extraAllowedOrigins(): string[] {
+  const raw = process.env.EXT_GATEWAY_ALLOWED_ORIGINS;
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function pickCorsOrigin(req: NextRequest): string | null {
+  const originHeader = req.headers.get('origin');
+  if (!originHeader) return null;
+  const normalized = normalizeOrigin(originHeader);
+  if (!normalized) return null;
+
+  const allowlist = new Set([
+    'https://algapsa.com',
+    'https://www.algapsa.com',
+    ...extraAllowedOrigins().map((entry) => normalizeOrigin(entry)).filter(Boolean),
+  ]);
+  if (allowlist.has(normalized)) {
+    return originHeader;
+  }
+  if (normalized.endsWith('.apps.algapsa.com')) {
+    return originHeader;
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    if (normalized === 'http://localhost:3000' || normalized === 'http://127.0.0.1:3000') {
+      return originHeader;
+    }
+  }
+  return null;
+}
+
+function applyCorsHeaders(response: NextResponse, origin: string | null): NextResponse {
+  if (!origin) return response;
+  response.headers.set('access-control-allow-origin', origin);
+  response.headers.set('access-control-allow-credentials', 'true');
+  const vary = response.headers.get('vary');
+  response.headers.set('vary', vary ? `${vary}, Origin` : 'Origin');
+  return response;
+}
+
+function corsPreflight(origin: string | null): NextResponse {
+  const headers = new Headers();
+  if (origin) {
+    headers.set('access-control-allow-origin', origin);
+    headers.set('access-control-allow-credentials', 'true');
+  }
+  headers.set('access-control-allow-methods', ALLOWED_METHODS);
+  headers.set('access-control-allow-headers', ALLOWED_HEADERS);
+  headers.set('access-control-max-age', '180');
+  headers.set('vary', 'Origin, Access-Control-Request-Headers');
+  return new NextResponse(null, { status: 204, headers });
+}
+
 
 // TODO: wire to real auth/session
 // In non-production, return a deterministic tenant for local testing.
@@ -79,6 +148,10 @@ async function resolveEndpoint(
 async function handle(req: NextRequest, { params }: { params: { extensionId: string; path: string[] } }) {
   const method = req.method as Method;
   const requestId = getRequestId(req);
+  const corsOrigin = pickCorsOrigin(req);
+  if (req.method.toUpperCase() === 'OPTIONS') {
+    return corsPreflight(corsOrigin);
+  }
 
   try {
     const extensionId = params.extensionId;
@@ -143,28 +216,31 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
       headers: runnerHeaders,
     });
 
-    return new NextResponse(runnerResp.body as any, {
-      status: runnerResp.status,
-      headers: runnerResp.headers,
-    });
+    return applyCorsHeaders(
+      new NextResponse(runnerResp.body as any, {
+        status: runnerResp.status,
+        headers: runnerResp.headers,
+      }),
+      corsOrigin,
+    );
   } catch (err: any) {
     if (err instanceof AccessError) {
-      return json(err.status, { error: err.message });
+      return applyCorsHeaders(json(err.status, { error: err.message }), corsOrigin);
     }
     if (err instanceof RunnerConfigError) {
       console.error('[ext-gateway] Runner configuration error:', err.message);
-      return json(500, { error: 'Runner not configured' });
+      return applyCorsHeaders(json(500, { error: 'Runner not configured' }), corsOrigin);
     }
     if (err instanceof RunnerRequestError) {
       console.error('[ext-gateway] Runner request error:', err.message, { backend: err.backend, status: err.status });
-      return json(502, { error: 'Runner error' });
+      return applyCorsHeaders(json(502, { error: 'Runner error' }), corsOrigin);
     }
     if (err?.name === 'AbortError') {
-      return json(504, { error: 'Gateway timeout' });
+      return applyCorsHeaders(json(504, { error: 'Gateway timeout' }), corsOrigin);
     }
     console.error('[ext-gateway] Unhandled error:', err);
-    return json(500, { error: 'Internal error' });
+    return applyCorsHeaders(json(500, { error: 'Internal error' }), corsOrigin);
   }
 }
 
-export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE };
+export { handle, handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE, handle as OPTIONS };

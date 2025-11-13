@@ -1,8 +1,8 @@
 # Alga PSA Extension Manifest v2
 
-Manifest v2 is the canonical specification for the Enterprise Extension System. It defines out-of-process execution, signed content-addressed bundles, explicit API endpoints, and iframe-only UI served by the Runner.
+Manifest v2 is the canonical specification for the Enterprise Extension System. It defines out-of-process execution, signed content-addressed bundles, component-model runtime metadata, and iframe-only UI served by the Runner.
 
-- See “Correctness Rules” in the README for canonical routing and UI serving behavior (Gateway route, Runner static UI, iframe bootstrap). Gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- See “Correctness Rules” in the README for canonical routing and UI serving behavior (Gateway route, Runner static UI, iframe bootstrap). Gateway scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 Manifest v2 defines signed, content-addressed bundles executed out-of-process and rendered via iframe UI.
 
@@ -19,7 +19,7 @@ interface ManifestV2 {
   name: string;                 // reverse‑domain ID, e.g., "com.acme.reports"
   publisher: string;            // organization name
   version: string;              // semver
-  runtime: 'wasm-js@1';         // initial supported runtime
+  runtime: 'wasm-js@1';         // componentize-js output (see @alga/extension-runtime)
   capabilities?: string[];      // e.g., ["http.fetch","storage.kv","secrets.get"]
   ui?: {                        // iframe UI (served by Runner)
     type: 'iframe';
@@ -81,7 +81,7 @@ interface ManifestV2 {
 
 - name: reverse‑domain, lowercase alphanumeric, dots, hyphens; unique per registry
 - version: semver
-- runtime: currently `wasm-js@1`
+- runtime: currently `wasm-js@1` (componentized handlers)
 - api.endpoints: unique method+path pairs; paths must start with `/`
 - handler paths, entry, precompiled artifacts, and `ui.entry` must exist in the bundle
 - `ui.hooks.appMenu.label` must be a non-empty string when present
@@ -98,14 +98,24 @@ See [Security & Signing](security_signing.md).
 
 ## Routing & Execution
 
-- Gateway maps `/api/ext/[extensionId]/[...path]` to manifest endpoints based on the tenant’s installed version.
-- Gateway normalizes the request and calls Runner `POST /v1/execute` with `{context, http, limits}`.
+- Gateway maps `/api/ext/[extensionId]/[[...path]]` requests to tenant installs. Endpoint metadata from the manifest is surfaced to operators today; strict enforcement is tracked in the [2025-11-12 plan](../plans/2025-11-12-extension-system-alignment-plan.md#workstream-a-%E2%80%94-gateway--registry).
+- Gateway normalizes the request and calls Runner `POST /v1/execute` with `{context, http, limits, config, providers, secret_envelope}`.
 - Runner executes the handler under isolation and returns `{status, headers, body_b64}` to the Gateway.
 
 See [API Routing Guide](api-routing-guide.md).
 
+## Install Metadata (Config, Providers, Secrets)
+
+Manifest v2 describes the bundle. Tenant-specific configuration is stored separately:
+
+- [`tenant_extension_install_config`](../../server/src/lib/extensions/installConfig.ts) persists per-tenant config maps and provider grants (capability enablement).
+- [`tenant_extension_install_secrets`](../../server/src/lib/extensions/installConfig.ts) stores sealed envelopes (Vault transit or inline) that the Runner decrypts on demand.
+- The gateway attaches `config`, `providers`, and `secret_envelope` to each Runner call so host capabilities (storage/http/secrets/ui_proxy) can enforce policy.
+
+Plan dependencies and outstanding gaps are documented in [2025-11-12-extension-system-alignment-plan](../plans/2025-11-12-extension-system-alignment-plan.md).
+
 ## UI Delivery
 
 - UI is served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (immutable).
-- The host constructs iframe URLs via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and performs secure bootstrap via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45).
-- No in‑process UI rendering and no dynamic import of tenant code in the host.
+- The host constructs iframe URLs via [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38) and performs secure bootstrap via [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45).
+- No in-process UI rendering and no dynamic import of tenant code in the host.

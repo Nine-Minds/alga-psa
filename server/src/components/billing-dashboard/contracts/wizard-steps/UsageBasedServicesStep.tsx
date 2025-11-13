@@ -11,6 +11,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, Activity, DollarSign } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
+import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 
 interface UsageBasedServicesStepProps {
   data: ContractWizardData;
@@ -102,20 +103,21 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     updateData({ usage_services: next });
   };
 
-  const defaultOverlay = (): BucketOverlayInput => ({
+  const defaultOverlay = (billingFrequency: string): BucketOverlayInput => ({
     total_minutes: undefined,
     overage_rate: undefined,
     allow_rollover: false,
-    billing_period: 'monthly',
+    billing_period: billingFrequency as 'monthly' | 'weekly',
   });
 
   const toggleBucketOverlay = (index: number, enabled: boolean) => {
     const next = [...(data.usage_services ?? [])];
     if (enabled) {
       const existing = next[index]?.bucket_overlay;
+      const effectiveBillingFrequency = data.usage_billing_frequency ?? data.billing_frequency;
       next[index] = {
         ...next[index],
-        bucket_overlay: existing ? { ...existing } : defaultOverlay(),
+        bucket_overlay: existing ? { ...existing } : defaultOverlay(effectiveBillingFrequency),
       };
     } else {
       next[index] = { ...next[index], bucket_overlay: undefined };
@@ -214,7 +216,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   <p className="text-xs text-gray-500">
                     {service.unit_rate
                       ? `${formatCurrency(service.unit_rate)}/${service.unit_of_measure || 'unit'}`
-                      : 'Enter the suggested unit rate'}
+                      : 'Enter the unit rate'}
                   </p>
                 </div>
 
@@ -235,7 +237,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
 
               <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
                 <SwitchWithLabel
-                  label="Recommend bucket allocation"
+                  label="Set bucket allocation"
                   checked={Boolean(service.bucket_overlay)}
                   onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                 />
@@ -243,9 +245,10 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   <BucketOverlayFields
                     mode="usage"
                     unitLabel={service.unit_of_measure}
-                    value={service.bucket_overlay ?? defaultOverlay()}
+                    value={service.bucket_overlay ?? defaultOverlay(data.usage_billing_frequency ?? data.billing_frequency)}
                     onChange={(next) => updateBucketOverlay(index, next)}
                     automationId={`usage-bucket-${index}`}
+                    billingFrequency={data.usage_billing_frequency ?? data.billing_frequency}
                   />
                 )}
               </div>
@@ -305,6 +308,15 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
             </div>
           </div>
         </div>
+      )}
+
+      {(data.usage_services?.length ?? 0) > 0 && (
+        <BillingFrequencyOverrideSelect
+          contractBillingFrequency={data.billing_frequency}
+          value={data.usage_billing_frequency}
+          onChange={(value) => updateData({ usage_billing_frequency: value })}
+          label="Alternate Billing Frequency (Optional)"
+        />
       )}
     </div>
   );

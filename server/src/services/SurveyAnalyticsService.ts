@@ -116,7 +116,7 @@ const SurveyAnalyticsService = {
       .select('sr.rating')
       .count<{ count: string }>('sr.response_id as count')
       .groupBy('sr.rating')
-      .orderBy('sr.rating', 'asc');
+      .orderBy('sr.rating', 'asc') as unknown as Array<{ rating: number; count: string }>;
 
     return rows.map((row) => {
       const count = toNumber(row.count);

@@ -23,17 +23,23 @@ const sessionUserRef = vi.hoisted(() => ({
   }
 }));
 
+const permissionRef = vi.hoisted(() => ({
+  value: ['user_schedule:update', 'user_schedule:read'] as string[]
+}));
+
 const permissionCheckRef = vi.hoisted(() => ({
   fn: (user: IUserWithRoles, resource?: string, action?: string) =>
     user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 }));
 
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
-  getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
+  getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user)),
+  getCurrentUserPermissions: vi.fn(() => Promise.resolve(permissionRef.value))
 }));
 
 vi.mock('@/lib/actions/user-actions/userActions', () => ({
-  getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
+  getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user)),
+  getCurrentUserPermissions: vi.fn(() => Promise.resolve(permissionRef.value))
 }));
 
 vi.mock('server/src/lib/auth/getSession', () => ({
@@ -138,6 +144,18 @@ export function mockGetCurrentUser(mockUser: IUserWithRoles) {
   currentUserRef.user = mockUser;
 }
 
+export function setMockPermissions(permissions: string[]) {
+  permissionRef.value = permissions;
+}
+
+export function setMockUser(
+  user: IUserWithRoles,
+  permissions: string[] = ['user_schedule:update', 'user_schedule:read']
+) {
+  mockGetCurrentUser(user);
+  permissionRef.value = permissions;
+}
+
 /**
  * Helper to create a mock user with roles
  * @param type User type ('internal' or 'client')
@@ -146,7 +164,7 @@ export function mockGetCurrentUser(mockUser: IUserWithRoles) {
  */
 export function createMockUser(
   type: 'internal' | 'client' = 'internal',
-  overrides: Partial<IUserWithRoles> = {}
+  overrides: Partial<IUserWithRoles> & Record<string, any> = {}
 ): IUserWithRoles {
   return {
     user_id: overrides.user_id || 'mock-user-id',
@@ -160,7 +178,7 @@ export function createMockUser(
     user_type: type,
     roles: overrides.roles || [],
     ...overrides
-  };
+  } as IUserWithRoles;
 }
 
 /**
@@ -172,6 +190,7 @@ export function setupCommonMocks(options: {
   userId?: string;
   user?: IUserWithRoles;
   permissionCheck?: (user: IUserWithRoles, resource?: string, action?: string) => boolean;
+  permissions?: string[];
 } = {}) {
   const tenantId = options.tenantId || '11111111-1111-1111-1111-111111111111';
   const userId = options.userId || 'mock-user-id';
@@ -181,7 +200,7 @@ export function setupCommonMocks(options: {
   mockNextAuth(userId, tenantId);
   mockNextCache();
   mockRBAC(options.permissionCheck);
-  mockGetCurrentUser(user);
+  setMockUser(user, options.permissions ?? permissionRef.value);
   sessionUserRef.user = {
     id: user.user_id,
     tenant: tenantId

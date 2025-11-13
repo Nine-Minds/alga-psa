@@ -144,6 +144,8 @@ class EditionBuildDiagnosticsPlugin {
   }
 }
 
+const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+
 const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
@@ -658,7 +660,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '5mb', // Increase limit for WASM uploads
+      bodySizeLimit: serverActionsBodyLimit,
     }
   },
   // Skip static optimization for error pages

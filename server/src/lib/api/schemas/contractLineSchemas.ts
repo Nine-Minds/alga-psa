@@ -213,7 +213,7 @@ export const planServiceBucketConfigSchema = z.object({
 
 export const createPlanServiceBucketConfigSchema = z.object({
   total_minutes: z.number().min(1),
-  billing_period: z.string().min(1).default('monthly'),
+  billing_period: billingFrequencySchema.default('monthly'),
   overage_rate: z.number().min(0),
   allow_rollover: z.boolean().default(false)
 });
