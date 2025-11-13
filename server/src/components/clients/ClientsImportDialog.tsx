@@ -561,6 +561,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               </div>
               <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
+                  key={`${currentPage}-${pageSize}`}
                   id="clients-import-preview-table"
                   pagination={true}
                   currentPage={currentPage}
