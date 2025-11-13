@@ -1,0 +1,137 @@
+# Invoice Template GUI Designer Implementation Plan
+
+This implementation roadmap operationalizes the strategic design described in [2025-11-09-invoice-template-gui-designer-plan](./2025-11-09-invoice-template-gui-designer-plan.md). Each task references the sections in that plan ("Plan §...") for the authoritative design details.
+
+## Phase 0 – Foundations (Weeks 0-2)
+
+### Objectives
+- Establish the core schema, state management, and rendering infrastructure needed for later features (Plan §Phased Approach, Phase 0; Plan §Designer Rendering Strategy; Plan §Data Structures & Intermediate Representation).
+
+### Tasks
+1. **IR Schema Finalization**
+   - Draft JSON Schema + Zod validators covering `Document`, `Page`, `Section`, `Container`, and `Element` nodes (Plan §Data Structures & Intermediate Representation).
+   - Implement schema versioning helpers and migration stubs in the compilation service repo (Plan §Data Structures & Intermediate Representation → Serialization).
+   - Review with runtime team to confirm compatibility with existing WASM expectations (Plan §Compilation Pipeline).
+2. **State Management & Command Stack**
+   - Scaffold Zustand stores for layout tree, selection state, and undo/redo command stack following the structure defined in Plan §Designer Rendering Strategy and Plan §Drag-and-Drop Interaction Model.
+   - Implement Immer-based mutation helpers that emit audit metadata required by IR nodes (Plan §Data Structures & Intermediate Representation → Node Schema).
+3. **Rendering Shell Prototype**
+   - Build React canvas wrapper with virtualized page rendering and SVG overlay per Plan §Designer Rendering Strategy.
+   - Integrate placeholder rulers, grid visualization, and snapping guide stubs referencing algorithms in Plan §Layout Constraints, Snapping, and Algorithms.
+4. **Technical Spikes & Proofs of Concept**
+   - Validate Cassowary constraint solving performance with representative templates (Plan §Drag-and-Drop Interaction Model → Constraint Solver).
+   - Prototype compilation pipeline handshake by translating a minimal IR into layout operations consumed by existing WASM runtime (Plan §Compilation Pipeline).
+
+### Exit Criteria
+- Signed-off IR schema and validators.
+- Demoable rendering shell showing mock component placement and guide overlays.
+- Documented findings from constraint and compilation spikes, feeding Phase 1 tasks.
+
+## Phase 1 – MVP Designer (Weeks 2-8)
+
+### Objectives
+- Deliver a fully interactive designer with persistence, data binding, and compilation hooks (Plan §Phased Approach, Phase 1).
+
+### Tasks
+1. **Drag-and-Drop Workspace**
+   **Scope**
+   - Deliver end-to-end drag, drop, move, resize, and rotate interactions for all structural/content elements described in Plan §Drag-and-Drop Interaction Model.
+   - Provide grid snapping, rulers, smart guides, and constraint authoring UI described in Plan §Layout Constraints, Snapping, and Algorithms.
+   - Ensure the command stack + IR mutations remain deterministic so undo/redo and compilation previews stay in sync (Plan §Designer Rendering Strategy → Layout Surface).
+
+   **Work Breakdown**
+   1. *Input & Sensor Layer*: Configure `@dnd-kit` sensors for mouse/touch/keyboard, wrap them with a shared `dragController` service that emits lifecycle events (`start`, `update`, `cancel`, `commit`). Include keyboard affordances (arrow nudge, `Shift` multiplier, `Esc` cancel) and focus trapping.
+   2. *Drop Zone Graph & Hit Testing*: Build a spatial index (quadtree) fed by the virtualized layout tree. Each zone stores allowable child types, multiplicity constraints, and snapping metadata. Expose synchronous `getNearestValidZone(point)` used by hover previews and asynchronous validators for expensive checks (e.g., table column limits).
+   3. *Visual Affordances*: Implement canvas/SVG overlay layers for drag shadows, insertion indicators, rulers, and guides. Overlay reads from the drop zone graph so virtualization never hides valid targets. Add preference toggles (grid spacing, guides on/off) with persistence in user settings.
+   4. *Constraint & Command Integration*: On drop, translate pointer delta into grid-quantized positions, run Cassowary solver to re-evaluate constraints, and emit a single `moveNode` command with before/after snapshots + constraint mutations. Handle conflict resolution (auto-suggest wrap, relax constraint) with toast + inline badges.
+   5. *Validation, QA, and Telemetry*: Instrument drag durations, drop failure reasons, and solver timings. Ship Playwright happy-path test plus Vitest unit coverage for `dropZoneGraph` and `moveNode` command reducer. Create debugging docs covering inspector shortcuts and telemetry dashboards.
+
+   **Milestones & Staffing**
+   - *Week 2-3*: Input & sensor layer complete with placeholder drop outlines; owned by FE1.
+   - *Week 3-4*: Drop zone graph + virtualization integration; pairing FE1+FE2.
+   - *Week 4-5*: Visual affordances, rulers, snapping overlays; FE2 with design partner sign-off.
+   - *Week 5*: Constraint hookups, undo/redo validation, and telemetry instrumentation; FE1 + platform engineer for solver profiling.
+
+   **Definition of Done**
+   - Dragging from library to canvas always lands in a schema-valid location or provides an actionable error suggestion within 200 ms.
+   - Guides + snapping keep pointer drift under 4 px relative error in usability tests.
+   - Undo/redo restores selection + layout 100% in automated regression run.
+   - Observability dashboards expose DnD metrics and no P0 accessibility issues (keyboard-only path recorded in QA notes).
+2. **Component Library & Inspector**
+   - Build catalog UI backed by component metadata (Plan §Drag-and-Drop Interaction Model → Component Library).
+   - Implement property inspector panels for layout, bindings, and styling referencing Plan §Data Binding & Formatting Model and Plan §Styling System.
+3. **Undo/Redo & Grouping**
+   - Finalize command stack persistence, multi-select, grouping, and alignment tooling (Plan §Drag-and-Drop Interaction Model → Selection & Editing; Plan §Sections, Grouping, and Page Management).
+4. **Persistence & API Integration**
+   - Implement GraphQL/REST endpoints for IR CRUD with optimistic concurrency and revision history (Plan §Persistence & Collaboration → Storage & API Layer).
+   - Connect frontend save/load flows including autosave intervals and crash recovery.
+5. **Compilation Integration**
+   - Expose "Compile" action that runs validation, transformation, and code generation stages defined in Plan §Compilation Pipeline.
+   - Store compiled artifacts alongside IR versions and surface errors/warnings in UI (Plan §Compilation Pipeline → Testing & QA).
+6. **Data Binding Workflow**
+   - Implement searchable data dictionary, binding editor UI, and formatting controls (Plan §Data Binding & Formatting Model).
+   - Ensure bindings annotate IR nodes with transformation metadata for compiler consumption.
+7. **Page & Section Management**
+   - Enable creation and configuration of sections, headers/footers, and page break hints (Plan §Sections, Grouping, and Page Management).
+
+### Exit Criteria
+- End-to-end flow from drag-and-drop design to compiled WASM artifact for a baseline template.
+- Persistence with revision history and basic collaboration readiness (locking or optimistic conflict alerts).
+- Positive feedback from internal pilot on usability of MVP features.
+
+## Phase 2 – Advanced Capabilities (Weeks 8-12)
+
+### Objectives
+- Layer on collaboration, responsive behaviors, advanced pagination, and performance hardening (Plan §Phased Approach, Phase 2).
+
+### Tasks
+1. **Responsive & Variant Support**
+   - Implement breakpoint-aware artboards and variant overrides per Plan §Data Structures & Intermediate Representation → Variants and Plan §Designer Rendering Strategy → Preview Modes.
+2. **Collaboration & Presence**
+   - Integrate Y.js CRDT state syncing with awareness indicators (Plan §Persistence & Collaboration → Collaboration).
+   - Add activity feed and comment metadata stored under IR node `metadata` (Plan §Data Structures & Intermediate Representation → Metadata).
+3. **Pagination Intelligence**
+   - Implement two-pass layout estimator and dynamic programming algorithm for page break planning (Plan §Sections & Page Break Compilation Enhancements → Pagination Algorithm).
+   - Surface pagination warnings and manual override controls in the UI.
+4. **Performance Hardening**
+   - Profile drag interactions and compilation pipeline, applying virtualization and batching optimizations (Plan §Designer Rendering Strategy → Performance Considerations).
+   - Establish performance budgets and monitoring hooks.
+5. **Theming & Constraint Governance**
+   - Enforce tenant-specific token policies and validation rules during editing (Plan §Designer Rendering Strategy → Styling System; Plan §Data Binding & Formatting Model → Validation).
+6. **Rollout & Enablement**
+   - Prepare documentation, tutorials, and analytics instrumentation to monitor adoption (Plan §Deliverables; Plan §Success Metrics).
+
+### Exit Criteria
+- Multi-user editing session with conflict-free syncing.
+- Intelligent pagination preventing orphan/crop issues for pilot datasets.
+- Performance metrics within agreed budgets on large templates.
+
+## Quality & Testing Strategy
+
+### Unit Tests
+- **IR Validators**: Schema versioning, node property defaults, constraint serialization (Plan §Data Structures & Intermediate Representation).
+- **State Utilities**: Command stack reducers, selection/grouping helpers, binding formatters (Plan §Drag-and-Drop Interaction Model; Plan §Data Binding & Formatting Model).
+- **Compilation Pipeline**: Individual validation and transformation steps, ensuring deterministic outputs (Plan §Compilation Pipeline → Validation & Transformation Stages).
+
+### Integration Tests
+- **Drag-and-Drop Flows**: Simulate placing components, snapping, constraint resolution across nested containers (Plan §Drag-and-Drop Interaction Model; Plan §Layout Constraints, Snapping, and Algorithms).
+- **Persistence Roundtrip**: Save/load IR documents, verify revision diffs, and compile outputs remain stable (Plan §Persistence & Collaboration; Plan §Compilation Pipeline).
+- **Data Binding & Formatting**: Ensure bindings resolve with mock data sources and formatting adheres to locale rules (Plan §Data Binding & Formatting Model).
+- **Pagination & Sections**: Validate keep-with-next, repeating headers, and page break hints using sample data (Plan §Sections, Grouping, and Page Management; Plan §Sections & Page Break Compilation Enhancements).
+
+### End-to-End / Playwright Tests
+- **Template Authoring Journey**: From opening designer to publishing compiled artifact, including undo/redo and preview (Plan §Phased Approach Phases 1-2).
+- **Collaboration Session**: Two-browser scenario editing the same template, verifying presence indicators and conflict resolution (Plan §Persistence & Collaboration → Collaboration).
+- **Localization & Theming**: Switch locales/themes ensuring styling constraints and token enforcement behave correctly (Plan §Designer Rendering Strategy → Styling System; Plan §Data Binding & Formatting Model).
+- **Large Template Stress Test**: Load template with many sections to confirm virtualization, performance, and pagination warnings (Plan §Designer Rendering Strategy → Performance Considerations; Plan §Sections & Page Break Compilation Enhancements).
+
+## Deliverables & Dependencies
+- Phase-by-phase release notes tying completed tasks back to Plan deliverables (Plan §Deliverables).
+- Coordination checkpoints with WASM runtime and backend teams to align on schema and compilation interfaces (Plan §Compilation Pipeline).
+- QA sign-off anchored by the testing suite above, enabling confident releases without manual regression sweeps.
+
+## Timeline Overview
+- **Weeks 0-2**: Complete Phase 0 foundations.
+- **Weeks 2-8**: Ship MVP designer and initiate pilot.
+- **Weeks 8-12**: Deliver advanced capabilities and prepare GA rollout.
+- **Week 12**: Go/No-Go review referencing Plan §Exit Criteria and Plan §Success Metrics.

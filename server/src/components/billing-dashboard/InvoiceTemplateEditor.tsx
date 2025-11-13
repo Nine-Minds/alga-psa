@@ -1,5 +1,7 @@
 // server/src/components/billing-dashboard/InvoiceTemplateEditor.tsx
-import React, { useState, useEffect, useRef } from 'react'; // Added useRef
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardHeader, CardContent, CardFooter } from 'server/src/components/ui/Card';
@@ -9,6 +11,8 @@ import { getInvoiceTemplate, saveInvoiceTemplate } from 'server/src/lib/actions/
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 import { Editor } from '@monaco-editor/react';
+import { DesignerShell } from 'server/src/components/invoice-designer/DesignerShell';
+import { useInvoiceDesignerStore } from 'server/src/components/invoice-designer/state/designerStore';
 
 interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
@@ -17,6 +21,9 @@ interface InvoiceTemplateEditorProps {
 const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const designerNodes = useInvoiceDesignerStore((state) => state.nodes);
+  const loadNodes = useInvoiceDesignerStore((state) => state.loadNodes);
+  const resetWorkspace = useInvoiceDesignerStore((state) => state.resetWorkspace);
   const [template, setTemplate] = useState<Partial<IInvoiceTemplate> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null); // For generic errors
@@ -41,10 +48,28 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         })
         .finally(() => setIsLoading(false));
     } else {
-      // Initialize with default values for a new template
-      setTemplate({ name: '', assemblyScriptSource: '', isStandard: false }); // Use assemblyScriptSource
+      setTemplate({ name: '', assemblyScriptSource: '', isStandard: false });
+      resetWorkspace();
     }
-  }, [templateId, isNewTemplate]);
+  }, [isNewTemplate, resetWorkspace, templateId]);
+
+  useEffect(() => {
+    if (!template?.assemblyScriptSource) {
+      resetWorkspace();
+      return;
+    }
+    try {
+      const parsed = JSON.parse(template.assemblyScriptSource);
+      if (Array.isArray(parsed?.designerNodes)) {
+        loadNodes(parsed.designerNodes);
+        return;
+      }
+      resetWorkspace();
+    } catch (error) {
+      console.warn('Designer state parse failed, falling back to blank workspace', error);
+      resetWorkspace();
+    }
+  }, [loadNodes, resetWorkspace, template?.assemblyScriptSource]);
 
 
   // Effect for calculating editor height
@@ -101,8 +126,9 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         delete dataToSave.template_id;
       }
 
-      // Call the updated save action
-      const result = await saveInvoiceTemplate(dataToSave as IInvoiceTemplate); // Type assertion might be needed
+      dataToSave.assemblyScriptSource = JSON.stringify({ designerNodes: designerNodes }, null, 2);
+
+      const result = await saveInvoiceTemplate(dataToSave as IInvoiceTemplate);
 
       if (result.success) {
         // Navigate back to the templates list after successful save
@@ -149,8 +175,6 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
          <h2 className="text-xl font-semibold mt-2">{isNewTemplate ? 'Create New Invoice Template' : `Edit Template: ${template?.name || templateId}`}</h2>
        </CardHeader>
        <CardContent>
-         <p>Template Editor Placeholder</p>
-         {/* Add form fields for template name, content, etc. here */}
          <div className="mt-4">
            <label htmlFor="templateName" className="block text-sm font-medium text-gray-700">Template Name</label>
            <Input
@@ -168,26 +192,28 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
              </Alert>
            )}
          </div>
-         <div className="mt-4">
-             <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">AssemblyScript Source</label>
-             {/* Removed h-80, added ref */}
+         <div className="mt-6">
+           <h3 className="text-lg font-semibold text-slate-800 mb-2">Visual Designer</h3>
+           <DesignerShell />
+         </div>
+
+         <div className="mt-6">
+             <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">Serialized Template Payload</label>
              <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
                <Editor
-                 height={editorHeight} // Use calculated height state
-                 defaultLanguage="typescript"
-                 value={template?.assemblyScriptSource || ''}
-                 onChange={(value) => setTemplate(prev => ({ ...prev, assemblyScriptSource: value || '' }))}
+                 height={editorHeight}
+                 defaultLanguage="json"
+                 value={JSON.stringify({ designerNodes: designerNodes }, null, 2)}
                  options={{
                    minimap: { enabled: true },
                    scrollBeyondLastLine: false,
                    automaticLayout: true,
-                   fontSize: 14,
-                   readOnly: isLoading
+                   fontSize: 13,
+                   readOnly: true
                  }}
                  theme="vs-dark"
                />
              </div>
-             {/* Display Compilation Errors */}
              {compilationError && (
                <Alert variant="destructive" className="mt-4" id="template-compilation-error-alert">
                  <AlertDescription>
