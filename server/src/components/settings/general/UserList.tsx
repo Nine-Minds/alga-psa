@@ -299,6 +299,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
   return (
     <div>
       <DataTable
+        key={`${currentPage}-${pageSize}`}
         id="users-table"
         data={visibleUsers}
         columns={columns}

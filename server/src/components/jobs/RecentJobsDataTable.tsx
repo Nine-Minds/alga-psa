@@ -86,6 +86,16 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
   const [data, setData] = React.useState<JobRecord[]>(initialData);
   const intervalRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
   const columns = React.useMemo<ColumnDefinition<JobRecord>[]>(() => [
     {
       title: 'Job Name',
@@ -196,17 +206,18 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
   return (
     <div className="w-full">
       <DataTable
+        key={`${currentPage}-${pageSize}`}
         data={data}
         columns={columns}
         onRowClick={handleRowClick}
         id="recent-jobs-table"
         rowClassName={() => 'hover:bg-[rgb(var(--color-primary-50))] cursor-pointer'}
         initialSorting={[{ id: 'processed_at', desc: true }]}
-        itemsPerPageOptions={[
-          { value: '10', label: '10 rows' },
-          { value: '25', label: '25 rows' },
-          { value: '50', label: '50 rows' },
-        ]}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
       />
 
       <JobDetailsDrawer 
