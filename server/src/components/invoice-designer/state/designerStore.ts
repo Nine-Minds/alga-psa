@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import { solveConstraints } from '../utils/constraintSolver';
+
 export type DesignerComponentType =
   | 'page'
   | 'section'
@@ -35,6 +37,23 @@ export interface DesignerNode {
   metadata?: Record<string, unknown>;
 }
 
+export type ConstraintStrength = 'required' | 'strong' | 'medium' | 'weak';
+
+export type DesignerConstraint =
+  | {
+      id: string;
+      type: 'align-left' | 'align-top' | 'match-width' | 'match-height';
+      nodes: [string, string];
+      strength?: ConstraintStrength;
+    }
+  | {
+      id: string;
+      type: 'aspect-ratio';
+      nodeId: string;
+      ratio: number;
+      strength?: ConstraintStrength;
+    };
+
 interface DesignerMetrics {
   totalDrags: number;
   completedDrops: number;
@@ -44,6 +63,7 @@ interface DesignerMetrics {
 
 interface DesignerState {
   nodes: DesignerNode[];
+  constraints: DesignerConstraint[];
   selectedNodeId: string | null;
   hoverNodeId: string | null;
   snapToGrid: boolean;
@@ -62,6 +82,8 @@ interface DesignerState {
   selectNode: (id: string | null) => void;
   setHoverNode: (id: string | null) => void;
   deleteSelectedNode: () => void;
+  addConstraint: (constraint: DesignerConstraint) => void;
+  removeConstraint: (constraintId: string) => void;
   toggleSnap: () => void;
   setGridSize: (size: number) => void;
   setCanvasScale: (scale: number) => void;
@@ -92,6 +114,7 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
 export const useInvoiceDesignerStore = create<DesignerState>()(
   devtools((set, get) => ({
     nodes: [],
+    constraints: [],
     selectedNodeId: null,
     hoverNodeId: null,
     snapToGrid: true,
@@ -130,12 +153,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
       set((state) => {
         const nextNodes = [...state.nodes, node];
-        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nextNodes)];
+        const resolvedNodes = solveConstraints(nextNodes, state.constraints);
+        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(resolvedNodes)];
         if (nextHistory.length > MAX_HISTORY_LENGTH) {
           nextHistory.shift();
         }
         return {
-          nodes: nextNodes,
+          nodes: resolvedNodes,
           history: nextHistory,
           historyIndex: nextHistory.length - 1,
           selectedNodeId: node.id,
@@ -170,12 +194,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           return { nodes };
         }
 
-        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
+        const resolvedNodes = solveConstraints(nodes, state.constraints);
+        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(resolvedNodes)];
         if (nextHistory.length > MAX_HISTORY_LENGTH) {
           nextHistory.shift();
         }
         return {
-          nodes,
+          nodes: resolvedNodes,
           history: nextHistory,
           historyIndex: nextHistory.length - 1,
         };
@@ -195,12 +220,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (!commit) {
           return { nodes };
         }
-        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
+        const resolvedNodes = solveConstraints(nodes, state.constraints);
+        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(resolvedNodes)];
         if (nextHistory.length > MAX_HISTORY_LENGTH) {
           nextHistory.shift();
         }
         return {
-          nodes,
+          nodes: resolvedNodes,
           history: nextHistory,
           historyIndex: nextHistory.length - 1,
         };
@@ -212,12 +238,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (!commit) {
           return { nodes };
         }
-        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
+        const resolvedNodes = solveConstraints(nodes, state.constraints);
+        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(resolvedNodes)];
         if (nextHistory.length > MAX_HISTORY_LENGTH) {
           nextHistory.shift();
         }
         return {
-          nodes,
+          nodes: resolvedNodes,
           history: nextHistory,
           historyIndex: nextHistory.length - 1,
         };
@@ -266,6 +293,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         };
       }, false, 'designer/deleteNode');
     },
+    addConstraint: (constraint) =>
+      set((state) => ({
+        constraints: [...state.constraints.filter((existing) => existing.id !== constraint.id), constraint],
+      }), false, 'designer/addConstraint'),
+    removeConstraint: (constraintId) =>
+      set((state) => ({ constraints: state.constraints.filter((constraint) => constraint.id !== constraintId) }), false, 'designer/removeConstraint'),
     toggleSnap: () => set((state) => ({ snapToGrid: !state.snapToGrid }), false, 'designer/toggleSnap'),
     setGridSize: (size) => set(() => ({ gridSize: Math.max(2, Math.min(size, 64)) }), false, 'designer/setGridSize'),
     setCanvasScale: (scale) => set(() => ({ canvasScale: Math.min(Math.max(scale, 0.5), 3) }), false, 'designer/setCanvasScale'),
@@ -298,6 +331,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     resetWorkspace: () => {
       set(() => ({
         nodes: [],
+        constraints: [],
         selectedNodeId: null,
         history: [],
         historyIndex: -1,

@@ -3,6 +3,7 @@ import { useDroppable, useDraggable } from '@dnd-kit/core';
 import clsx from 'clsx';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
+import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 
 interface DesignCanvasProps {
   nodes: DesignerNode[];
@@ -179,7 +180,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             isOver && 'ring-2 ring-blue-400'
           )}
           data-designer-canvas="true"
-          style={{ width: 816, height: 1056, ...backgroundStyle }}
+          style={{ width: DESIGNER_CANVAS_WIDTH, height: DESIGNER_CANVAS_HEIGHT, ...backgroundStyle }}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
         >
