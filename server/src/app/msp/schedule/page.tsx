@@ -8,12 +8,15 @@ import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { getAppointmentRequests } from 'server/src/lib/actions/appointmentRequestManagementActions';
+import { getCurrentUserPermissions, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 
 export default function SchedulePage() {
   const [showRequestsPanel, setShowRequestsPanel] = useState(false);
   const [showAvailabilitySettings, setShowAvailabilitySettings] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [canConfigureAvailability, setCanConfigureAvailability] = useState(false);
 
   const fetchPendingCount = async () => {
     const result = await getAppointmentRequests({ status: 'pending' });
@@ -22,8 +25,33 @@ export default function SchedulePage() {
     }
   };
 
+  const checkPermissions = async () => {
+    const permissions = await getCurrentUserPermissions();
+    // User can configure availability if they have 'user:read' permission OR are a team manager
+    const hasUserReadPermission = permissions.includes('user:read');
+
+    if (hasUserReadPermission) {
+      setCanConfigureAvailability(true);
+      return;
+    }
+
+    // Check if user is a team manager
+    try {
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        const teams = await getTeams();
+        const isManager = teams.some(team => team.manager_id === currentUser.user_id);
+        setCanConfigureAvailability(isManager);
+      }
+    } catch (error) {
+      console.error('Failed to check team manager status:', error);
+      setCanConfigureAvailability(false);
+    }
+  };
+
   useEffect(() => {
     fetchPendingCount();
+    checkPermissions();
   }, [refreshKey]);
 
   return (
@@ -31,14 +59,16 @@ export default function SchedulePage() {
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold">Schedule</h1>
         <div className="flex gap-2">
-          <Button
-            id="configure-availability-button"
-            variant="outline"
-            onClick={() => setShowAvailabilitySettings(true)}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Configure Availability
-          </Button>
+          {canConfigureAvailability && (
+            <Button
+              id="configure-availability-button"
+              variant="outline"
+              onClick={() => setShowAvailabilitySettings(true)}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Configure Availability
+            </Button>
+          )}
           <Button
             id="appointment-requests-button"
             variant="outline"
@@ -56,7 +86,7 @@ export default function SchedulePage() {
         </div>
       </div>
       <div className="h-[calc(100vh-120px)]">
-        <ScheduleCalendar />
+        <ScheduleCalendar key={refreshKey} />
       </div>
 
       <AppointmentRequestsPanel
@@ -68,10 +98,12 @@ export default function SchedulePage() {
         }}
       />
 
-      <AvailabilitySettings
-        isOpen={showAvailabilitySettings}
-        onClose={() => setShowAvailabilitySettings(false)}
-      />
+      {canConfigureAvailability && (
+        <AvailabilitySettings
+          isOpen={showAvailabilitySettings}
+          onClose={() => setShowAvailabilitySettings(false)}
+        />
+      )}
     </div>
   );
 }
