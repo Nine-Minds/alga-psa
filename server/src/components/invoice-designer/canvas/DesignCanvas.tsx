@@ -12,6 +12,7 @@ interface DesignCanvasProps {
   showRulers: boolean;
   gridSize: number;
   canvasScale: number;
+  snapToGrid: boolean;
   guides: AlignmentGuide[];
   droppableId: string;
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
@@ -126,6 +127,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   showRulers,
   gridSize,
   canvasScale,
+  snapToGrid,
   guides,
   droppableId,
   onPointerLocationChange,
@@ -145,8 +147,10 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       return;
     }
     const rect = artboardRef.current.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / canvasScale;
-    const y = (event.clientY - rect.top) / canvasScale;
+    const rawX = (event.clientX - rect.left) / canvasScale;
+    const rawY = (event.clientY - rect.top) / canvasScale;
+    const x = snapToGrid ? Math.round(rawX / gridSize) * gridSize : rawX;
+    const y = snapToGrid ? Math.round(rawY / gridSize) * gridSize : rawY;
     onPointerLocationChange({ x, y });
   };
 
@@ -154,7 +158,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 
   useEffect(() => {
     onPointerLocationChange(null);
-  }, [canvasScale, onPointerLocationChange]);
+  }, [canvasScale, snapToGrid, gridSize, onPointerLocationChange]);
 
   return (
     <div className="relative flex-1 overflow-auto bg-slate-100" onClick={() => onNodeSelect(null)}>

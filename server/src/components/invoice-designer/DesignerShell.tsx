@@ -12,11 +12,11 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { restrictToWindowEdges } from '@dnd-kit/modifiers';
+import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
-import { DesignerComponentType, useInvoiceDesignerStore } from './state/designerStore';
+import { DesignerComponentType, DesignerConstraint, useInvoiceDesignerStore } from './state/designerStore';
 import { AlignmentGuide, calculateGuides } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { Button } from 'server/src/components/ui/Button';
@@ -54,6 +54,7 @@ const isNodeDragData = (value: unknown): value is NodeDragData =>
 
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const constraints = useInvoiceDesignerStore((state) => state.constraints);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const setNodePosition = useInvoiceDesignerStore((state) => state.setNodePosition);
@@ -74,6 +75,14 @@ export const DesignerShell: React.FC = () => {
   const redo = useInvoiceDesignerStore((state) => state.redo);
   const metrics = useInvoiceDesignerStore((state) => state.metrics);
   const recordDropResult = useInvoiceDesignerStore((state) => state.recordDropResult);
+  const toggleAspectRatioLock = useInvoiceDesignerStore((state) => state.toggleAspectRatioLock);
+  const constraintError = useInvoiceDesignerStore((state) => state.constraintError);
+  const aspectConstraint = selectedNodeId
+    ? constraints.find(
+        (constraint): constraint is Extract<DesignerConstraint, { type: 'aspect-ratio' }> =>
+          constraint.type === 'aspect-ratio' && constraint.id === `aspect-${selectedNodeId}`
+      )
+    : undefined;
 
   useDesignerShortcuts();
 
@@ -117,7 +126,18 @@ export const DesignerShell: React.FC = () => {
     setNodePosition(nodeId, nextPosition, true);
   };
 
-  const modifiers = useMemo<Modifier[]>(() => [restrictToWindowEdges], []);
+  const snapModifier = useMemo<Modifier | null>(() => {
+    if (!snapToGrid) {
+      return null;
+    }
+    const pixelGrid = Math.max(1, gridSize * canvasScale);
+    return createSnapModifier(pixelGrid);
+  }, [snapToGrid, gridSize, canvasScale]);
+
+  const modifiers = useMemo<Modifier[]>(() => {
+    const base: Modifier[] = [restrictToWindowEdges];
+    return snapModifier ? [...base, snapModifier] : base;
+  }, [snapModifier]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current;
@@ -228,6 +248,7 @@ export const DesignerShell: React.FC = () => {
             showRulers={showRulers}
             gridSize={gridSize}
             canvasScale={canvasScale}
+            snapToGrid={snapToGrid}
             guides={guides}
             activeDrag={activeDrag}
             modifiers={modifiers}
@@ -241,8 +262,13 @@ export const DesignerShell: React.FC = () => {
           />
           <aside className="w-72 border-l border-slate-200 bg-slate-50 p-4 space-y-4">
             <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
-            {selectedNode ? (
-              <div className="space-y-3">
+          {selectedNode ? (
+            <div className="space-y-3">
+              {constraintError && (
+                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {constraintError}
+                </div>
+              )}
               <div>
                 <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
                 <Input
@@ -269,6 +295,22 @@ export const DesignerShell: React.FC = () => {
                   <Input id="prop-height" name="height" type="number" value={propertyDraft.height} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
                 </div>
               </div>
+              <div className="pt-2 border-t border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Lock aspect ratio</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300"
+                    checked={Boolean(aspectConstraint)}
+                    onChange={() => toggleAspectRatioLock(selectedNode.id)}
+                  />
+                </div>
+                {aspectConstraint && (
+                  <p className="text-[11px] text-slate-500">
+                    Preserves width/height ratio ≈ {aspectConstraint.ratio.toFixed(2)}
+                  </p>
+                )}
+              </div>
               <Button id="designer-inspector-apply" variant="outline" onClick={commitPropertyChanges}>
                 Apply
               </Button>
@@ -290,6 +332,7 @@ type DesignerWorkspaceProps = {
   showRulers: boolean;
   gridSize: number;
   canvasScale: number;
+  snapToGrid: boolean;
   guides: AlignmentGuide[];
   activeDrag: ActiveDragState;
   modifiers: Modifier[];
@@ -309,6 +352,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   showRulers,
   gridSize,
   canvasScale,
+  snapToGrid,
   guides,
   activeDrag,
   modifiers,
@@ -336,6 +380,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
         showRulers={showRulers}
         gridSize={gridSize}
         canvasScale={canvasScale}
+        snapToGrid={snapToGrid}
         guides={guides}
         droppableId={DROPPABLE_CANVAS_ID}
         onPointerLocationChange={onPointerLocationChange}

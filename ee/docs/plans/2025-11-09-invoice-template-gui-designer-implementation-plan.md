@@ -33,7 +33,7 @@ This implementation roadmap operationalizes the strategic design described in [2
 - Deliver a fully interactive designer with persistence, data binding, and compilation hooks (Plan §Phased Approach, Phase 1).
 
 ### Tasks
-1. **Drag-and-Drop Workspace** — ✅ _Completed Nov 13, 2025 (drag/drop + snapping live; telemetry pending)_
+1. **Drag-and-Drop Workspace** — ✅ _Completed Nov 13, 2025 (drag/drop + snapping live; telemetry deferred)_
    **Scope**
    - Deliver end-to-end drag, drop, move, resize, and rotate interactions for all structural/content elements described in Plan §Drag-and-Drop Interaction Model.
    - Provide grid snapping, rulers, smart guides, and constraint authoring UI described in Plan §Layout Constraints, Snapping, and Algorithms.
@@ -44,13 +44,13 @@ This implementation roadmap operationalizes the strategic design described in [2
    2. *Drop Zone Graph & Hit Testing*: ✅ Canvas droppable + metadata for allowed node types implemented; advanced quadtree + async validators remain TODO.
    3. *Visual Affordances*: ✅ Canvas overlays, rulers, snapping grid, and palette toggles merged; design QA scheduled for snap strengths.
    4. *Constraint & Command Integration*: ✅ Drops emit atomic history-aware mutations with undo/redo; Cassowary solver + conflict suggestions still outstanding.
-   5. *Validation, QA, and Telemetry*: ⚠️ Basic logging only; Playwright/Vitest + dashboards remain on backlog.
+   5. *Validation, QA, and Telemetry*: ❌ Telemetry & ops instrumentation are out of scope for this release; basic logging only (defer structured dashboards/Playwright automation to future infra work).
 
    **Milestones & Staffing**
    - *Week 2-3*: ✅ Delivered Nov 13, 2025 (FE1) with production-ready sensor layer.
    - *Week 3-4*: ✅ Core drop zone metadata + virtualization hooks finished; enhanced quadtree tracking open.
    - *Week 4-5*: ✅ Visual affordances live; awaiting design sign-off on guide density.
-   - *Week 5*: ⏳ Constraint solver + telemetry instrumentation scheduled once Cassowary spike completes.
+   - *Week 5*: ⏳ Constraint solver ✅; telemetry/ops instrumentation removed from scope (see above).
 
    **Definition of Done**
    - Dragging from library to canvas always lands in a schema-valid location or provides an actionable error suggestion within 200 ms.
