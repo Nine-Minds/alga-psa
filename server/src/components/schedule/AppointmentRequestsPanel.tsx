@@ -421,6 +421,10 @@ export default function AppointmentRequestsPanel({
               {/* Request Information */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
+                  <div className="font-semibold text-gray-700">Reference</div>
+                  <div className="font-mono">{selectedRequest.appointment_request_id.slice(0, 8).toUpperCase()}</div>
+                </div>
+                <div>
                   <div className="font-semibold text-gray-700">Client</div>
                   <div>{selectedRequest.is_authenticated ? (selectedRequest as any).client_company_name : selectedRequest.company_name}</div>
                 </div>
@@ -527,15 +531,17 @@ export default function AppointmentRequestsPanel({
                         />
                       </div>
 
-                      <div>
-                        <Label htmlFor="linked-ticket">Link to Ticket (Optional)</Label>
-                        <Input
-                          id="linked-ticket"
-                          value={linkedTicketId}
-                          onChange={(e) => setLinkedTicketId(e.target.value)}
-                          placeholder="Ticket ID"
-                        />
-                      </div>
+                      {!selectedRequest.ticket_id && (
+                        <div>
+                          <Label htmlFor="linked-ticket">Link to Ticket (Optional)</Label>
+                          <Input
+                            id="linked-ticket"
+                            value={linkedTicketId}
+                            onChange={(e) => setLinkedTicketId(e.target.value)}
+                            placeholder="Enter ticket ID to link..."
+                          />
+                        </div>
+                      )}
 
                       <div className="flex gap-2">
                         <Button

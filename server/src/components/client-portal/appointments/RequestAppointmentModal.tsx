@@ -54,7 +54,8 @@ interface Ticket {
 }
 
 interface TimeSlot {
-  time: string;
+  time: string; // Display time in local timezone (HH:MM)
+  startTime: string; // ISO timestamp (UTC)
   available: boolean;
   duration: number;
 }
@@ -105,7 +106,8 @@ export function RequestAppointmentModal({
 
   // Step 3: Time and technician selection
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>(''); // Display time (HH:MM local)
+  const [selectedTimeISO, setSelectedTimeISO] = useState<string>(''); // ISO timestamp (UTC)
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [preferredTechnicianId, setPreferredTechnicianId] = useState<string>('__no_preference__');
 
@@ -154,6 +156,13 @@ export function RequestAppointmentModal({
     }
   }, [selectedDate, currentStep]);
 
+  // Reload time slots when preferred technician changes (to filter slots by their availability)
+  useEffect(() => {
+    if (selectedDate && currentStep === 3 && timeSlots.length > 0) {
+      loadTimeSlots();
+    }
+  }, [preferredTechnicianId]);
+
   const resetForm = () => {
     setCurrentStep(1);
     setSelectedServiceId('');
@@ -161,6 +170,7 @@ export function RequestAppointmentModal({
     setTicketSearchQuery('');
     setSelectedDate(undefined);
     setSelectedTime('');
+    setSelectedTimeISO('');
     setPreferredTechnicianId('__no_preference__');
     setDescription('');
     setError(null);
@@ -219,7 +229,13 @@ export function RequestAppointmentModal({
       if (!selectedDate) return;
 
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const result = await getAvailableTimeSlotsForDate(selectedServiceId, dateStr, 60);
+      // Pass selected technician to filter slots by their availability
+      // If no technician selected or "__no_preference__", pass undefined to show all available slots
+      const technicianFilter = preferredTechnicianId && preferredTechnicianId !== '__no_preference__'
+        ? preferredTechnicianId
+        : undefined;
+
+      const result = await getAvailableTimeSlotsForDate(selectedServiceId, dateStr, 60, technicianFilter);
 
       if (result.success && result.data) {
         setTimeSlots(result.data.timeSlots);
@@ -265,6 +281,11 @@ export function RequestAppointmentModal({
         slotDuration: selectedSlot?.duration
       });
 
+      // Extract UTC time from the ISO timestamp
+      // The selectedTimeISO is like "2025-11-14T21:00:00.000Z"
+      // We need to extract the time portion in UTC format "21:00"
+      const utcTime = selectedTimeISO ? new Date(selectedTimeISO).toISOString().substring(11, 16) : selectedTime;
+
       let result;
 
       if (isEditMode && editingAppointment) {
@@ -273,7 +294,7 @@ export function RequestAppointmentModal({
           appointment_request_id: editingAppointment.appointment_request_id,
           service_id: selectedServiceId,
           requested_date: format(selectedDate!, 'yyyy-MM-dd'),
-          requested_time: selectedTime,
+          requested_time: utcTime, // Send UTC time
           requested_duration: duration,
           preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
           description: description || undefined,
@@ -284,7 +305,7 @@ export function RequestAppointmentModal({
         result = await createAppointmentRequest({
           service_id: selectedServiceId,
           requested_date: format(selectedDate!, 'yyyy-MM-dd'),
-          requested_time: selectedTime,
+          requested_time: utcTime, // Send UTC time
           requested_duration: duration,
           preferred_assigned_user_id: preferredTechnicianId && preferredTechnicianId !== '__no_preference__' ? preferredTechnicianId : undefined,
           description: description || undefined,
@@ -565,7 +586,12 @@ export function RequestAppointmentModal({
                       <button
                         key={slot.time}
                         id={`time-slot-${slot.time.replace(':', '-')}`}
-                        onClick={() => slot.available && setSelectedTime(slot.time)}
+                        onClick={() => {
+                          if (slot.available) {
+                            setSelectedTime(slot.time);
+                            setSelectedTimeISO(slot.startTime);
+                          }
+                        }}
                         disabled={!slot.available}
                         className={`
                           p-3 rounded-lg border-2 text-sm font-medium transition-all

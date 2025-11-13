@@ -1331,10 +1331,12 @@ export async function getAppointmentRequestsByTicketId(
 export async function getAvailableTimeSlotsForDate(
   serviceId: string,
   date: string,
-  duration?: number
+  duration?: number,
+  userId?: string
 ): Promise<AppointmentRequestResult<{
   timeSlots: Array<{
-    time: string;
+    time: string; // Display time in user's local timezone (HH:MM format)
+    startTime: string; // ISO timestamp for backend (UTC)
     available: boolean;
     duration: number;
   }>;
@@ -1375,13 +1377,18 @@ export async function getAvailableTimeSlotsForDate(
     const serviceDuration = serviceSettings?.config_json?.default_duration || 60;
 
     console.log('[getAvailableTimeSlotsForDate] Using service duration:', serviceDuration);
+    if (userId) {
+      console.log('[getAvailableTimeSlotsForDate] Filtering slots for user:', userId);
+    }
 
     // Get available time slots from service using SERVICE duration
+    // Pass userId to filter slots by specific technician availability
     const slots = await getTimeSlotsFromService(
       tenant,
       date,
       serviceId,
-      serviceDuration
+      serviceDuration,
+      userId
     );
 
     console.log(`[getAvailableTimeSlotsForDate] Found ${slots.length} slots for ${date}`);
@@ -1450,6 +1457,7 @@ export async function getAvailableTimeSlotsForDate(
           minute: '2-digit',
           hour12: false
         }),
+        startTime: slot.start_time, // Keep the original UTC ISO timestamp for backend
         available: slot.is_available,
         duration: serviceDuration // Always use service duration for slot display
       };
