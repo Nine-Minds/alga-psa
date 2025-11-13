@@ -5,8 +5,6 @@
 # Node.js dependencies
 node_modules
 **/node_modules
-**/.next
-**/dist
 npm-debug.log
 
 # Build outputs
