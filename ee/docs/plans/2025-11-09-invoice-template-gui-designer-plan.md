@@ -19,12 +19,15 @@
 1. **Phase 0 – Foundations (2 weeks)**
    - Align on IR schema, component catalog, and compilation contracts.
    - Deliver design prototypes and technical spikes for rendering via React + Canvas/SVG.
+   - **Status (Nov 13, 2025):** _In progress._ Core designer shell and Zustand store are live, but schema + compilation contracts remain outstanding.
 2. **Phase 1 – MVP Designer (6 weeks)**
    - Implement drag-and-drop surface, component sidebar, property inspector, and undo/redo state manager.
    - Persist IR to backend, enable real-time preview and compile-to-WASM API.
+   - **Status (Nov 13, 2025):** _Partially complete._ Drag-and-drop workspace, component palette, rulers/grid, and undoable state mutations shipped behind the templates feature flag (see latest FE work: local server-only run + `@dnd-kit` wiring).
 3. **Phase 2 – Advanced Capabilities (4 weeks)**
-   - Add responsive breakpoints, collaborative editing, theming constraints, and validation workflows.
+   - Add responsive breakpoints, enhanced theming constraints, and validation workflows.
    - Harden compilation pipeline with snapshot testing and performance tuning.
+   - **Status:** Not started.
 
 ## Designer Rendering Strategy
 - **Rendering Stack**: Build the designer as a React 18 application with TypeScript, leveraging a virtual canvas rendered via absolutely positioned HTML elements orchestrated by `react-virtualized` for viewport efficiency. Overlay snapping guides, handles, and spacing indicators using an SVG layer managed by `d3-selection` for low-cost redraws. Mount the designer inside the existing Next.js invoice templates screen via dynamic import.
@@ -163,7 +166,7 @@
 - Week 2: Complete rendering shell, component library scaffolding.
 - Week 4: Drag-and-drop interactions, undo/redo, property inspector MVP.
 - Week 6: Backend persistence, compile API, initial tenant pilot.
-- Week 8: Advanced features (collaboration, responsive layouts), performance hardening.
+- Week 8: Advanced features (responsive layouts, theming/validation), performance hardening.
 - Week 10: GA launch with documentation and enablement.
 
 ## Exit Criteria
