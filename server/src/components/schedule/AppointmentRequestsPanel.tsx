@@ -92,6 +92,24 @@ export default function AppointmentRequestsPanel({
       setTechnicians(users);
     } catch (error) {
       console.error('Failed to load technicians:', error);
+      // If user doesn't have permission to load all users,
+      // they can still approve requests but only assign to themselves
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setTechnicians([{
+          user_id: currentUser.user_id,
+          username: currentUser.email.split('@')[0], // Use email prefix as username
+          first_name: currentUser.first_name,
+          last_name: currentUser.last_name,
+          email: currentUser.email,
+          is_inactive: false,
+          user_type: currentUser.user_type,
+          hashed_password: '',
+          created_at: currentUser.created_at || new Date(),
+          updated_at: new Date(),
+          roles: currentUser.roles || []
+        }]);
+      }
     }
   };
 

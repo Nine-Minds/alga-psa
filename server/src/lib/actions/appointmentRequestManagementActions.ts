@@ -162,6 +162,48 @@ export async function getAppointmentRequests(
     const validatedFilters = filters ? appointmentRequestFilterSchema.parse(filters) : {};
 
     const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Check if user has full admin access
+      const hasFullAccess = await hasPermission(currentUser, 'user', 'read', trx);
+
+      // If user doesn't have full access, they can only see:
+      // 1. Requests assigned to them
+      // 2. Requests they're designated to approve (via availability settings)
+      // 3. Requests for their team members (if they're a team manager)
+      let scopedUserIds: string[] = [];
+
+      if (!hasFullAccess) {
+        // Add current user
+        scopedUserIds.push(currentUser.user_id);
+
+        // Check if user is a team manager and get team member IDs
+        const managedTeams = await trx('teams')
+          .where({ manager_id: currentUser.user_id, tenant })
+          .select('team_id');
+
+        if (managedTeams.length > 0) {
+          const teamIds = managedTeams.map(t => t.team_id);
+          const teamMembers = await trx('team_members')
+            .whereIn('team_id', teamIds)
+            .where({ tenant })
+            .select('user_id');
+
+          scopedUserIds.push(...teamMembers.map(tm => tm.user_id));
+        }
+
+        // Check if user is designated as an approver in availability settings
+        const approverSettings = await trx('availability_settings')
+          .where({ tenant })
+          .whereRaw("config_json->>'default_approver_id' = ?", [currentUser.user_id])
+          .select('user_id');
+
+        if (approverSettings.length > 0) {
+          scopedUserIds.push(...approverSettings.map(s => s.user_id).filter(Boolean));
+        }
+
+        // Remove duplicates
+        scopedUserIds = [...new Set(scopedUserIds)];
+      }
+
       let query = trx('appointment_requests as ar')
         .leftJoin('service_catalog as sc', function() {
           this.on('ar.service_id', 'sc.service_id')
@@ -202,6 +244,11 @@ export async function getAppointmentRequests(
           't.title as ticket_title'
         )
         .orderBy('ar.created_at', 'desc');
+
+      // Apply scoped access filter if user doesn't have full access
+      if (!hasFullAccess && scopedUserIds.length > 0) {
+        query = query.whereIn('ar.preferred_assigned_user_id', scopedUserIds);
+      }
 
       // Apply filters
       if (validatedFilters.status) {
