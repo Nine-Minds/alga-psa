@@ -38,8 +38,17 @@
 
 ## Drag-and-Drop Interaction Model
 - **Component Library**: Categorize elements (Structure: page, section, column; Content: text, table, totals; Media: logo, QR code; Dynamic: itemized table, tax summary) with metadata about allowed nesting and minimum/maximum multiplicity. Component metadata also describes available bindings and formatting presets.
+  | Component | Allowed Parents | Default Auto-Layout & Constraints | Purpose |
+  |-----------|----------------|-----------------------------------|---------|
+  | **Page**  | Document root   | Locks to 8.5×11in canvas, clamps children to margins, inserts 32px vertical gutters between Sections. | Represents printable canvas; only Sections allowed as direct children. |
+  | **Section** | Page           | Creates flex-row container with padding tokens; auto-adds `align-top`, `match-height`, and spacing constraints for child Columns; optional `repeat` behavior (`header`, `body`, `footer`). | Logical grouping (header, line items, totals). |
+  | **Column** | Section        | Applies preset width ratios (50/50, 33/67, etc.), enforces min/max widths, keeps siblings balanced via `match-width`. | Provides vertical stacking context for content blocks. |
+  | **Content Blocks** (text, tables, totals, line items) | Column | Snaps to column grid. Text blocks span full width; totals blocks auto-dock bottom-right via `align-right` + `align-bottom`; tables reserve min-height and expose row templates. | Primary editable elements. |
+  | **Media** (logo, QR, image) | Column, Section (header-only) | Drops with `aspect-ratio` lock + size tokens; logos anchor left, QR codes anchor right; users can override via inspector toggles. | Branding/supporting visuals. |
+  | **Composite Templates** | Palette root | Insert pre-wired tree (e.g., "Header with Logo + Address", "2 Column Totals") plus associated constraint bundle + layout preset ID. | Accelerates common invoice structures. |
 - **DnD Engine**: Use `@dnd-kit` sensors for mouse/touch/keyboard. During drag, project the dragged node through a constraint-aware placement algorithm that calculates the nearest valid drop target via quadtree spatial indexing of drop zones. Implement snap-to-grid positioning with configurable 4/8 pt grids, adjustable per section, and expose rulers with tick marks.
 - **Constraint Solver**: Apply a linear constraint solver (Cassowary via `kiwi.js`) to maintain relationships such as equal widths, alignment, and anchored positions. Constraints are stored on the IR node and re-solved after each drag or property change.
+- **Error Handling & Suggested Fixes**: Unsatisfiable constraint sets roll back the drop and surface (a) blocking constraints, (b) suggested remedies (downgrade strength, wrap in new column, detach from preset), and (c) quick actions to apply them. Solver timings/failures feed telemetry for tuning.
 - **Drop Validation**: Validate placements against parent constraints and schema; provide inline feedback (red outlines, tooltips) when invalid. Offer fix suggestions (e.g., auto-wrap into a section) when conflicts arise.
 - **Selection & Editing**: Multi-select with shift-click, marquee selection, alignment/distribution commands, and context menu shortcuts. Grouped selections can be converted into named groups, capturing relative positions and shared constraints.
 - **Undo/Redo**: Central command stack capturing mutations on IR nodes, persisted in local storage for crash recovery, backed by Immer patches for efficient diffing.
@@ -96,6 +105,7 @@
   - `behaviors`: rules like `groupId`, `reflowPolicy`, `pageBreakPreference`.
   - `metadata`: audit info, author, timestamps, comments.
 - **Bindings**: Declarative expressions referencing invoice data context via JSONPath-like selectors with formatting directives. Structure: `{path: '$.invoice.total', fallback: '0.00', format: {type: 'currency', currency: 'USD', locale: 'en-US', precision: 2}, transforms: ['abs', 'round:2']}`. Bindings reference a central data dictionary that maps invoice domain objects to display names and validation rules.
+- **Layout Presets**: Define reusable `layoutPreset` descriptors that bundle constraint graphs (e.g., `twoColumnEqual`, `headerLogoAddress`, `totalsRightDocked`). Nodes declare `layoutPresetId` + overrides so compiler/runtime can rehydrate preset intent, audit deviations, and offer "reset to preset" in the UI.
 - **Variants**: Support optional variant groups (e.g., multi-language, branding) encoded via conditional nodes referencing tenant flags or binding predicates. Variants include `visibilityConditions` and `styleOverrides` arrays for dynamic adjustments.
 - **Serialization**: IR stored as JSON with strict schema managed via `zod` and formalized in JSON Schema for backend validation; versioned to enable migrations. Schema evolves via `schemaVersion` + migration scripts executed in compilation service.
 - **Intermediate Layout Ops**: Prior to compilation, IR is translated into a list of layout operations (`BeginPage`, `PlaceElement`, `SetConstraint`, `EmitBinding`) to feed the WASM runtime, maintaining stable IDs for diffing and caching.
@@ -174,3 +184,25 @@
 - IR schema version 1.0 published with migration tooling and validation suite in CI.
 - Compilation pipeline integrated with release process, generating WASM artifacts automatically from IR.
 - Feedback loop established (analytics + support channels) to drive future iterations.
+- **Preset Catalog (MVP)**: Ship the following pre-built layouts in Phase 1; each preset inserts a full tree + constraint bundle + inspector toggles:
+  1. **Header: Logo + Address**
+     - _Tree_: Section(header) → Columns[Logo, AddressText].
+     - _Constraints_: Column widths 1:2, Logo block `aspect-ratio` lock + left padding, Address column `align-top` + `match-height`, section padding token `headerPadding`.
+     - _Inspector Toggles_: Swap column order, right-align address text, show/hide accent background.
+  2. **Line Items Table**
+     - _Tree_: Section(body) containing Table element bound to `lineItems` dictionary.
+     - _Constraints_: Table width pinned to section width, header row repeat flag, min-height 320px, row height tokens, pagination hint `repeatHeader`.
+     - _Inspector Toggles_: Show tax column, enable zebra striping, clamp columns to equal width.
+  3. **Totals Stack**
+     - _Tree_: Section(footer) → Column → [Totals block, Note text].
+     - _Constraints_: Totals block `align-right` + `align-bottom`, Note block `align-left`, optional background stripe, spacing token 12px.
+     - _Inspector Toggles_: Include “Balance Due” row, format currency variant, collapse note.
+  4. **Two-Column Summary** (Body)
+     - _Tree_: Section(body) → Columns[Summary list, Contact info].
+     - _Constraints_: Equal column widths, gap 24px, summary list auto-layout stack with icon + text rows, contact column `align-top`.
+     - _Inspector Toggles_: Convert to 3-column layout, switch icon theme.
+  5. **Split Header w/ Payment QR**
+     - _Tree_: Section(header) → Columns[Logo+Address stack, Spacer, QR code block].
+     - _Constraints_: Column ratios 2:1:1, QR block `aspect-ratio` + right alignment, spacer auto-expands, address text wraps with defined line height.
+     - _Inspector Toggles_: Hide QR, change QR data binding, adjust stripe color.
+  Presets share JSON definitions (`layoutPresetId`, allowed overrides, constraint graph) so the designer, compiler, and runtime stay in sync.

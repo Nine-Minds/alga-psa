@@ -44,7 +44,7 @@ This implementation roadmap operationalizes the strategic design described in [2
    2. *Drop Zone Graph & Hit Testing*: ✅ Canvas droppable + metadata for allowed node types implemented; advanced quadtree + async validators remain TODO.
    3. *Visual Affordances*: ✅ Canvas overlays, rulers, snapping grid, and palette toggles merged; design QA scheduled for snap strengths.
    4. *Constraint & Command Integration*: ✅ Drops emit atomic history-aware mutations with undo/redo; Cassowary solver + conflict suggestions still outstanding.
-   5. *Validation, QA, and Telemetry*: ❌ Telemetry & ops instrumentation are out of scope for this release; basic logging only (defer structured dashboards/Playwright automation to future infra work).
+   5. *Validation, QA, and Telemetry*: ❌ Telemetry & ops instrumentation are out of scope for this release; basic logging only (defer structured dashboards/Playwright automation to future infra work). Constraint conflict banner + suggested-fix quick actions remain required for GA.
 
    **Milestones & Staffing**
    - *Week 2-3*: ✅ Delivered Nov 13, 2025 (FE1) with production-ready sensor layer.
@@ -60,22 +60,27 @@ This implementation roadmap operationalizes the strategic design described in [2
 2. **Component Library & Inspector**
    - Build catalog UI backed by component metadata (Plan §Drag-and-Drop Interaction Model → Component Library).
    - Implement property inspector panels for layout, bindings, and styling referencing Plan §Data Binding & Formatting Model and Plan §Styling System.
-3. **Undo/Redo & Grouping**
+3. **Auto-Layout Templates & Hierarchy Rules**
+   - Implement palette presets that drop multi-node snippets (Header, Totals, Line Item Stack) and register corresponding `layoutPresetId` + constraint bundles in the IR.
+   - Enforce parent/child compatibility matrix (Page→Section→Column→Block) at drop time with actionable errors.
+   - Capture preset metadata (node tree, constraint bundle, inspector overrides) in a centralized catalog to keep designer, compiler, and runtime aligned.
+   - Inspector surfaces preset metadata (`layoutPresetId`, constraints list) plus controls to reapply/clear presets.
+4. **Undo/Redo & Grouping**
    - Finalize command stack persistence, multi-select, grouping, and alignment tooling (Plan §Drag-and-Drop Interaction Model → Selection & Editing; Plan §Sections, Grouping, and Page Management).
-4. **Persistence & API Integration**
+5. **Persistence & API Integration**
    - Implement GraphQL/REST endpoints for IR CRUD with optimistic concurrency and revision history (Plan §Persistence & Collaboration → Storage & API Layer).
    - Connect frontend save/load flows including autosave intervals and crash recovery.
-5. **Compilation Integration**
+6. **Compilation Integration**
    - Expose "Compile" action that runs validation, transformation, and code generation stages defined in Plan §Compilation Pipeline.
    - Store compiled artifacts alongside IR versions and surface errors/warnings in UI (Plan §Compilation Pipeline → Testing & QA).
-6. **Data Binding Workflow**
+7. **Data Binding Workflow**
    - Implement searchable data dictionary, binding editor UI, and formatting controls (Plan §Data Binding & Formatting Model).
    - Ensure bindings annotate IR nodes with transformation metadata for compiler consumption.
-7. **Page & Section Management**
+8. **Page & Section Management**
    - Enable creation and configuration of sections, headers/footers, and page break hints (Plan §Sections, Grouping, and Page Management).
 
-### Exit Criteria
 - End-to-end flow from drag-and-drop design to compiled WASM artifact for a baseline template.
+- Component hierarchy enforcement (Sections/Columns/Blocks) + auto-layout presets available for at least the predefined invoice templates (Header, Line Items, Totals).
 - Persistence with revision history and conflict detection (optimistic alerts) so editors avoid silent overwrites.
 - Positive feedback from internal pilot on usability of MVP features.
 

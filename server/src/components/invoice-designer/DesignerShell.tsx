@@ -19,6 +19,7 @@ import { DesignerToolbar } from './toolbar/DesignerToolbar';
 import { DesignerComponentType, DesignerConstraint, useInvoiceDesignerStore } from './state/designerStore';
 import { AlignmentGuide, calculateGuides } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
+import { getPresetById } from './constants/presets';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
@@ -26,14 +27,20 @@ import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
 type ActiveDragState =
-  | { kind: 'palette'; type: DesignerComponentType }
+  | { kind: 'component'; componentType: DesignerComponentType }
+  | { kind: 'preset'; presetId: string }
   | { kind: 'node'; nodeId: string }
   | null;
 
-type PaletteDragData = {
-  fromPalette: true;
-  type: DesignerComponentType;
-};
+type PaletteDragData =
+  | {
+      source: 'component';
+      componentType: DesignerComponentType;
+    }
+  | {
+      source: 'preset';
+      presetId: string;
+    };
 
 type NodeDragData = {
   nodeId: string;
@@ -42,9 +49,8 @@ type NodeDragData = {
 const isPaletteDragData = (value: unknown): value is PaletteDragData =>
   typeof value === 'object' &&
   value !== null &&
-  'fromPalette' in value &&
-  (value as { fromPalette?: boolean }).fromPalette === true &&
-  typeof (value as { type?: unknown }).type === 'string';
+  'source' in value &&
+  ((value as { source?: unknown }).source === 'component' || (value as { source?: unknown }).source === 'preset');
 
 const isNodeDragData = (value: unknown): value is NodeDragData =>
   typeof value === 'object' &&
@@ -56,7 +62,9 @@ export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const constraints = useInvoiceDesignerStore((state) => state.constraints);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
+  const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
+  const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
   const setNodePosition = useInvoiceDesignerStore((state) => state.setNodePosition);
   const updateNodeSize = useInvoiceDesignerStore((state) => state.updateNodeSize);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
@@ -83,6 +91,8 @@ export const DesignerShell: React.FC = () => {
           constraint.type === 'aspect-ratio' && constraint.id === `aspect-${selectedNodeId}`
       )
     : undefined;
+  const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
+  const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
 
   useDesignerShortcuts();
 
@@ -99,7 +109,6 @@ export const DesignerShell: React.FC = () => {
     useSensor(KeyboardSensor)
   );
 
-  const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
   const [propertyDraft, setPropertyDraft] = useState(() => ({
     x: 0,
     y: 0,
@@ -142,7 +151,11 @@ export const DesignerShell: React.FC = () => {
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current;
     if (isPaletteDragData(data)) {
-      setActiveDrag({ kind: 'palette', type: data.type });
+      if (data.source === 'component') {
+        setActiveDrag({ kind: 'component', componentType: data.componentType });
+      } else if (data.source === 'preset') {
+        setActiveDrag({ kind: 'preset', presetId: data.presetId });
+      }
       return;
     }
     if (isNodeDragData(data)) {
@@ -179,11 +192,19 @@ export const DesignerShell: React.FC = () => {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const overCanvas = event.over?.id === DROPPABLE_CANVAS_ID;
-    if (activeDrag?.kind === 'palette') {
+    if (activeDrag?.kind === 'component') {
       const dropPoint = pointerRef.current ?? { x: 120, y: 120 };
       if (overCanvas) {
-        const def = getDefinition(activeDrag.type);
-        addNode(activeDrag.type, dropPoint, def ? { size: def.defaultSize } : undefined);
+        const def = getDefinition(activeDrag.componentType);
+        addNode(activeDrag.componentType, dropPoint, def ? { size: def.defaultSize } : undefined);
+        recordDropResult(true);
+      } else {
+        recordDropResult(false);
+      }
+    } else if (activeDrag?.kind === 'preset') {
+      const dropPoint = pointerRef.current ?? { x: 120, y: 120 };
+      if (overCanvas) {
+        insertPreset(activeDrag.presetId, dropPoint);
         recordDropResult(true);
       } else {
         recordDropResult(false);
@@ -295,6 +316,22 @@ export const DesignerShell: React.FC = () => {
                   <Input id="prop-height" name="height" type="number" value={propertyDraft.height} onChange={handlePropertyInput} onBlur={commitPropertyChanges} />
                 </div>
               </div>
+              {selectedPreset && (
+                <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-700">Layout Preset</span>
+                    <button
+                      type="button"
+                      className="text-blue-600 hover:underline"
+                      onClick={() => clearLayoutPreset(selectedNode.id)}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
+                  <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
+                </div>
+              )}
               <div className="pt-2 border-t border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500">Lock aspect ratio</span>

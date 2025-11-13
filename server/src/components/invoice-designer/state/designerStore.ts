@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { solveConstraints } from '../utils/constraintSolver';
+import { getDefinition } from '../constants/componentCatalog';
+import { LAYOUT_PRESETS, getPresetById, LayoutPresetConstraintDefinition } from '../constants/presets';
 
 export type DesignerComponentType =
   | 'page'
@@ -35,6 +37,7 @@ export interface DesignerNode {
   rotation?: number;
   allowResize?: boolean;
   metadata?: Record<string, unknown>;
+  layoutPresetId?: string;
 }
 
 export type ConstraintStrength = 'required' | 'strong' | 'medium' | 'weak';
@@ -76,6 +79,7 @@ interface DesignerState {
   historyIndex: number;
   constraintError: string | null;
   addNodeFromPalette: (type: DesignerComponentType, dropPoint: Point, defaults?: Partial<DesignerNode>) => void;
+  insertPreset: (presetId: string, dropPoint?: Point) => void;
   moveNode: (id: string, delta: Point, commit?: boolean) => void;
   setNodePosition: (id: string, position: Point, commit?: boolean) => void;
   updateNodeSize: (id: string, size: Size, commit?: boolean) => void;
@@ -86,6 +90,7 @@ interface DesignerState {
   addConstraint: (constraint: DesignerConstraint) => void;
   removeConstraint: (constraintId: string) => void;
   toggleAspectRatioLock: (nodeId: string) => void;
+  clearLayoutPreset: (nodeId: string) => void;
   toggleSnap: () => void;
   setGridSize: (size: number) => void;
   setCanvasScale: (scale: number) => void;
@@ -197,6 +202,81 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           },
         };
       }, false, 'designer/addNodeFromPalette');
+    },
+    insertPreset: (presetId, dropPoint = { x: 120, y: 120 }) => {
+      const preset = getPresetById(presetId);
+      if (!preset) {
+        console.warn('[Designer] unknown layout preset', presetId);
+        return;
+      }
+
+      set((state) => {
+        const origin = dropPoint ?? { x: 120, y: 120 };
+        const keyToId = new Map<string, string>();
+        const createdNodes = preset.nodes.map((nodeDef, index) => {
+          const id = generateId();
+          keyToId.set(nodeDef.key, id);
+          const catalogSize = getDefinition(nodeDef.type)?.defaultSize ?? DEFAULT_SIZE;
+          const size = nodeDef.size ?? catalogSize;
+          return {
+            id,
+            type: nodeDef.type,
+            name: nodeDef.name ?? `${nodeDef.type} ${state.nodes.length + index + 1}`,
+            position: {
+              x: origin.x + nodeDef.offset.x,
+              y: origin.y + nodeDef.offset.y,
+            },
+            size,
+            rotation: 0,
+            canRotate: true,
+            allowResize: true,
+            layoutPresetId: preset.id,
+          } satisfies DesignerNode;
+        });
+
+        const nodes = [...state.nodes, ...createdNodes];
+        const presetConstraints = preset.constraints
+          .map((constraint) => {
+            if (constraint.type === 'aspect-ratio') {
+              const nodeId = keyToId.get(constraint.node);
+              if (!nodeId) return null;
+              return {
+                id: generateId(),
+                type: 'aspect-ratio',
+                nodeId,
+                ratio: constraint.ratio,
+                strength: constraint.strength,
+              } satisfies DesignerConstraint;
+            }
+            const first = keyToId.get(constraint.nodes[0]);
+            const second = keyToId.get(constraint.nodes[1]);
+            if (!first || !second) return null;
+            return {
+              id: generateId(),
+              type: constraint.type,
+              nodes: [first, second],
+              strength: constraint.strength,
+            } satisfies DesignerConstraint;
+          })
+          .filter((constraint): constraint is DesignerConstraint => Boolean(constraint));
+
+        const constraints = [...state.constraints, ...presetConstraints];
+        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nodes, constraints);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+
+        return {
+          nodes: resolvedNodes,
+          constraints,
+          history,
+          historyIndex,
+          constraintError,
+          metrics: {
+            ...state.metrics,
+            totalDrags: state.metrics.totalDrags + createdNodes.length,
+            completedDrops: state.metrics.completedDrops + createdNodes.length,
+          },
+        };
+      }, false, 'designer/insertPreset');
     },
     moveNode: (id, delta, commit = false) => {
       const { snapToGrid: shouldSnap, gridSize } = get();
@@ -373,6 +453,10 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           constraintError,
         };
       }, false, 'designer/toggleAspectRatio'),
+    clearLayoutPreset: (nodeId) =>
+      set((state) => ({
+        nodes: state.nodes.map((node) => (node.id === nodeId ? { ...node, layoutPresetId: undefined } : node)),
+      }), false, 'designer/clearLayoutPreset'),
     toggleSnap: () => set((state) => ({ snapToGrid: !state.snapToGrid }), false, 'designer/toggleSnap'),
     setGridSize: (size) => set(() => ({ gridSize: Math.max(2, Math.min(size, 64)) }), false, 'designer/setGridSize'),
     setCanvasScale: (scale) => set(() => ({ canvasScale: Math.min(Math.max(scale, 0.5), 3) }), false, 'designer/setCanvasScale'),
