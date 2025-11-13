@@ -32,6 +32,37 @@ export function EmailTemplates() {
   const [viewingTemplate, setViewingTemplate] = useState<SystemEmailTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<TenantEmailTemplate | null>(null);
 
+  // Separate pagination state for each category
+  const [paginationState, setPaginationState] = useState<Record<string, { currentPage: number; pageSize: number }>>({});
+
+  const getCurrentPage = (category: string) => {
+    return paginationState[category]?.currentPage ?? 1;
+  };
+
+  const getPageSize = (category: string) => {
+    return paginationState[category]?.pageSize ?? 10;
+  };
+
+  const handlePageChange = (category: string, newPage: number) => {
+    setPaginationState(prev => {
+      const currentState = prev[category] ?? { currentPage: 1, pageSize: 10 };
+      return {
+        ...prev,
+        [category]: {
+          currentPage: newPage,
+          pageSize: currentState.pageSize
+        }
+      };
+    });
+  };
+
+  const handlePageSizeChange = (category: string, newPageSize: number) => {
+    setPaginationState(prev => ({
+      ...prev,
+      [category]: { currentPage: 1, pageSize: newPageSize }
+    }));
+  };
+
   useEffect(() => {
     async function init() {
       try {
@@ -138,21 +169,44 @@ export function EmailTemplates() {
   const columns: ColumnDefinition<typeof templateGroups[string][number]>[] = [
     {
       title: "Event Type",
-      dataIndex: "name",
+      dataIndex: "name" as any,
+      sortable: true,
       render: (_, record): JSX.Element => (
         <div>
           <div className="font-medium">{record.name}</div>
           <div className="text-sm text-gray-500">
-            {record.tenantTemplate 
-              ? "Using custom template" 
+            {record.tenantTemplate
+              ? "Using custom template"
               : "Using standard template"}
           </div>
         </div>
       )
     },
     {
+      title: "Language",
+      dataIndex: "activeTemplate.language_code" as any,
+      sortable: true,
+      render: (_, record): JSX.Element => {
+        const languageCode = record.activeTemplate.language_code;
+        const languageNames: Record<string, string> = {
+          'en': 'English',
+          'fr': 'French',
+          'es': 'Spanish',
+          'de': 'German',
+          'nl': 'Dutch',
+          'it': 'Italian'
+        };
+        return (
+          <div className="text-sm">
+            {languageNames[languageCode] || languageCode.toUpperCase()}
+          </div>
+        );
+      }
+    },
+    {
       title: "Subject",
-      dataIndex: "activeTemplate",
+      dataIndex: "activeTemplate.subject" as any,
+      sortable: true,
       render: (_, record): JSX.Element => (
         <div className="break-words">
           {record.activeTemplate.subject}
@@ -206,7 +260,6 @@ export function EmailTemplates() {
   return (
     <div className="space-y-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold">Email Templates</h2>
         <p className="text-sm text-gray-600 mt-2">
           Each event type has a standard template that can be customized. 
           You can either use the standard template or create a custom version.
@@ -238,20 +291,28 @@ export function EmailTemplates() {
                 vertical-align: top;
               }
               :global(th:nth-child(1)) {
-                width: 25%;
+                width: 20%;
               }
               :global(th:nth-child(2)) {
-                width: 35%;
+                width: 10%;
               }
               :global(th:nth-child(3)) {
+                width: 30%;
+              }
+              :global(th:nth-child(4)) {
                 width: 40%;
               }
             `}</style>
             <DataTable
-              id="email-templates-table"
+              key={`${category}-${getCurrentPage(category)}-${getPageSize(category)}`}
+              id={`email-templates-table-${category}`}
               data={templates}
               columns={columns}
-              pagination={false}
+              pagination={true}
+              currentPage={getCurrentPage(category)}
+              onPageChange={(newPage) => handlePageChange(category, newPage)}
+              pageSize={getPageSize(category)}
+              onItemsPerPageChange={(newPageSize) => handlePageSizeChange(category, newPageSize)}
             />
           </div>
         </Card>
@@ -282,11 +343,27 @@ function ViewTemplateDialog({
 }) {
   if (!template) return null;
 
+  const languageNames: Record<string, string> = {
+    'en': 'English',
+    'fr': 'French',
+    'es': 'Spanish',
+    'de': 'German',
+    'nl': 'Dutch',
+    'it': 'Italian'
+  };
+
   return (
     <Dialog isOpen={!!template} onClose={onClose}>
       <DialogTitle>Standard Template: {formatTemplateName(template.name)}</DialogTitle>
-      
+
       <DialogContent className="space-y-4 max-h-[80vh] overflow-y-auto px-6">
+        <div>
+          <Label>Language</Label>
+          <div className="p-2 bg-gray-50 rounded border">
+            {languageNames[template.language_code] || template.language_code.toUpperCase()}
+          </div>
+        </div>
+
         <div>
           <Label>Subject</Label>
           <div className="p-2 bg-gray-50 rounded border">{template.subject}</div>
@@ -333,7 +410,8 @@ function EditTemplateDialog({
     name: template?.name ?? "",
     subject: template?.subject ?? "",
     html_content: template?.html_content ?? "",
-    text_content: template?.text_content ?? ""
+    text_content: template?.text_content ?? "",
+    language_code: template?.language_code ?? "en"
   });
 
   // Update form data when template changes
@@ -343,11 +421,21 @@ function EditTemplateDialog({
         name: template.name,
         subject: template.subject,
         html_content: template.html_content,
-        text_content: template.text_content
+        text_content: template.text_content,
+        language_code: template.language_code
       });
     }
   }, [template]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const languageNames: Record<string, string> = {
+    'en': 'English',
+    'fr': 'French',
+    'es': 'Spanish',
+    'de': 'German',
+    'nl': 'Dutch',
+    'it': 'Italian'
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -369,8 +457,15 @@ function EditTemplateDialog({
     <Dialog isOpen={isOpen} onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <DialogTitle>Edit Custom Template: {formatTemplateName(template?.name ?? '')}</DialogTitle>
-        
+
         <DialogContent className="space-y-4 max-h-[80vh] overflow-y-auto px-6">
+          <div>
+            <Label>Language</Label>
+            <div className="p-2 bg-gray-50 rounded border text-gray-700">
+              {formData.language_code ? (languageNames[formData.language_code] || formData.language_code.toUpperCase()) : 'N/A'}
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="subject">Subject</Label>
             <Input
