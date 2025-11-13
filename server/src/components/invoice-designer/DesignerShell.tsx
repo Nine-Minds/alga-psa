@@ -216,11 +216,11 @@ export const DesignerShell: React.FC = () => {
         onRedo={redo}
         onGridSizeChange={setGridSize}
       />
-      <div className="flex flex-1 min-h-[560px] bg-white">
-        <div className="w-72">
-          <ComponentPalette />
-        </div>
-        <DndContext sensors={sensors} modifiers={modifiers}>
+      <DndContext sensors={sensors} modifiers={modifiers}>
+        <div className="flex flex-1 min-h-[560px] bg-white">
+          <div className="w-72">
+            <ComponentPalette />
+          </div>
           <DesignerWorkspace
             nodes={nodes}
             selectedNodeId={selectedNodeId}
@@ -239,11 +239,10 @@ export const DesignerShell: React.FC = () => {
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           />
-        </DndContext>
-        <aside className="w-72 border-l border-slate-200 bg-slate-50 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
-          {selectedNode ? (
-            <div className="space-y-3">
+          <aside className="w-72 border-l border-slate-200 bg-slate-50 p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
+            {selectedNode ? (
+              <div className="space-y-3">
               <div>
                 <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
                 <Input
@@ -278,7 +277,8 @@ export const DesignerShell: React.FC = () => {
             <p className="text-sm text-slate-500">Select a component to edit its properties.</p>
           )}
         </aside>
-      </div>
+        </div>
+      </DndContext>
     </div>
   );
 };
