@@ -170,6 +170,22 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             if (event.assigned_user_ids && event.assigned_user_ids.length > 0) {
               setAssignedTechnicianId(event.assigned_user_ids[0]);
             }
+
+            // Fix title for approved appointment requests if it still has [Pending Request] prefix
+            if (result.data.status === 'approved' && event.title.includes('[Pending Request]')) {
+              const serviceName = (result.data as any).service_name;
+              if (serviceName) {
+                const correctedTitle = `Appointment: ${serviceName}`;
+                console.log('[EntryPopup] Correcting title for approved appointment request:', {
+                  oldTitle: event.title,
+                  newTitle: correctedTitle
+                });
+                setEntryData(prev => ({
+                  ...prev,
+                  title: correctedTitle
+                }));
+              }
+            }
           } else {
             console.error('Failed to fetch appointment request:', result.error);
             setAppointmentRequestData(null);
@@ -427,9 +443,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         toast.success('Appointment request approved');
         onClose();
         // Trigger calendar refresh by calling onSave with the updated entry
+        // Update the title to remove [Pending Request] prefix
         if (onSave) {
+          const serviceName = appointmentRequestData ? (appointmentRequestData as any).service_name : null;
+          const correctedTitle = serviceName ? `Appointment: ${serviceName}` : entryData.title;
+
           onSave({
             ...entryData,
+            title: correctedTitle,
             assigned_user_ids: [assignedTechnicianId]
           });
         }
