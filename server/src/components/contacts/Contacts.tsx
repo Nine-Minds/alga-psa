@@ -737,6 +737,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             </div>
           </ReflectionContainer>
           <DataTable
+            key={`${currentPage}-${pageSize}`}
             id="contacts-table"
             data={tableData}
             columns={columns}
