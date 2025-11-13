@@ -9,11 +9,12 @@ const availableSlotsQuerySchema = z.object({
   tenant: z.string().min(1, 'Tenant is required'),
   service_id: z.string().uuid('Service ID must be a valid UUID'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
-  duration: z.string().optional().transform(val => val ? parseInt(val, 10) : 60)
+  duration: z.string().optional().transform(val => val ? parseInt(val, 10) : 60),
+  timezone: z.string().optional()
 });
 
 /**
- * GET /api/public/appointment-request/available-slots?tenant={tenant}&service_id={uuid}&date={YYYY-MM-DD}&duration={minutes}
+ * GET /api/public/appointment-request/available-slots?tenant={tenant}&service_id={uuid}&date={YYYY-MM-DD}&duration={minutes}&timezone={tz}
  *
  * Returns available time slots for a specific date and service
  *
@@ -22,6 +23,7 @@ const availableSlotsQuerySchema = z.object({
  * - service_id: Service UUID - required
  * - date: Date in YYYY-MM-DD format - required
  * - duration: Duration in minutes (optional, defaults to 60)
+ * - timezone: IANA timezone string (optional, e.g., 'America/New_York') - used for minimum notice calculation
  *
  * Response:
  * {
@@ -111,7 +113,9 @@ export async function GET(req: NextRequest) {
       tenantId,
       validatedParams.date,
       validatedParams.service_id,
-      validatedParams.duration
+      validatedParams.duration,
+      undefined, // userId - not supported in public API
+      validatedParams.timezone
     );
 
     logger.info('[available-slots] Retrieved available slots', {

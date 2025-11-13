@@ -18,8 +18,9 @@ import { Knex } from 'knex';
  * @param tenantId - Tenant identifier
  * @param date - Target date in YYYY-MM-DD format
  * @param serviceId - Service being scheduled
- * @param userId - Optional specific user to check availability for
  * @param duration - Appointment duration in minutes
+ * @param userId - Optional specific user to check availability for
+ * @param userTimezone - Optional IANA timezone (e.g., 'America/New_York') for calculating minimum notice
  * @returns Array of available time slots
  */
 export async function getAvailableTimeSlots(
@@ -27,7 +28,8 @@ export async function getAvailableTimeSlots(
   date: string,
   serviceId: string,
   duration: number,
-  userId?: string
+  userId?: string,
+  userTimezone?: string
 ): Promise<ITimeSlot[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -366,8 +368,19 @@ export async function getAvailableTimeSlots(
     }
 
     // Filter out slots that don't meet minimum notice hours
-    const minBookingTime = new Date();
-    minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
+    // Calculate minimum booking time in the user's timezone (or UTC if not provided)
+    let minBookingTime: Date;
+
+    if (userTimezone) {
+      // Get current time in user's timezone
+      const nowInUserTZ = new Date().toLocaleString('en-US', { timeZone: userTimezone });
+      minBookingTime = new Date(nowInUserTZ);
+      minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
+    } else {
+      // Fallback to UTC if no timezone provided
+      minBookingTime = new Date();
+      minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
+    }
 
     const availableSlots = slots.filter(slot => {
       const slotStart = new Date(slot.start_time);
@@ -543,6 +556,7 @@ export async function isSlotAvailable(
  * @param startDate - Start of range (YYYY-MM-DD)
  * @param endDate - End of range (YYYY-MM-DD)
  * @param userId - Optional specific user
+ * @param userTimezone - Optional IANA timezone (e.g., 'America/New_York') for calculating minimum notice
  * @returns Array of dates with availability info
  */
 export async function getAvailableDates(
@@ -550,7 +564,8 @@ export async function getAvailableDates(
   serviceId: string,
   startDate: string,
   endDate: string,
-  userId?: string
+  userId?: string,
+  userTimezone?: string
 ): Promise<IAvailableDate[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -580,7 +595,8 @@ export async function getAvailableDates(
         dateStr,
         serviceId,
         defaultDuration,
-        userId
+        userId,
+        userTimezone
       );
 
       const hasAvailability = slots.length > 0;
