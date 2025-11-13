@@ -1179,7 +1179,8 @@ export async function getAvailableServicesAndTickets(): Promise<AppointmentReque
  * Get available dates for a service (next 30 days)
  */
 export async function getAvailableDatesForService(
-  serviceId: string
+  serviceId: string,
+  userTimezone?: string
 ): Promise<AppointmentRequestResult<string[]>> {
   try {
     const currentUser = await getCurrentUser();
@@ -1210,7 +1211,9 @@ export async function getAvailableDatesForService(
       tenant,
       serviceId,
       startDate,
-      endDate
+      endDate,
+      undefined, // userId
+      userTimezone
     );
 
     // Filter to only dates with availability
@@ -1332,7 +1335,8 @@ export async function getAvailableTimeSlotsForDate(
   serviceId: string,
   date: string,
   duration?: number,
-  userId?: string
+  userId?: string,
+  userTimezone?: string
 ): Promise<AppointmentRequestResult<{
   timeSlots: Array<{
     time: string; // Display time in user's local timezone (HH:MM format)
@@ -1377,18 +1381,21 @@ export async function getAvailableTimeSlotsForDate(
     const serviceDuration = serviceSettings?.config_json?.default_duration || 60;
 
     console.log('[getAvailableTimeSlotsForDate] Using service duration:', serviceDuration);
+    console.log('[getAvailableTimeSlotsForDate] User timezone:', userTimezone || 'UTC (default)');
     if (userId) {
       console.log('[getAvailableTimeSlotsForDate] Filtering slots for user:', userId);
     }
 
     // Get available time slots from service using SERVICE duration
     // Pass userId to filter slots by specific technician availability
+    // Pass userTimezone for accurate minimum notice calculation
     const slots = await getTimeSlotsFromService(
       tenant,
       date,
       serviceId,
       serviceDuration,
-      userId
+      userId,
+      userTimezone
     );
 
     console.log(`[getAvailableTimeSlotsForDate] Found ${slots.length} slots for ${date}`);

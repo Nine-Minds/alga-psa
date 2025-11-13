@@ -30,6 +30,12 @@ exports.seed = async function(knex) {
         description: 'System and administrative notifications',
         is_enabled: true,
         is_default_enabled: true
+      },
+      {
+        name: 'appointments',
+        description: 'Appointment request and scheduling notifications',
+        is_enabled: true,
+        is_default_enabled: true
       }
     ])
     .onConflict('name')
@@ -145,6 +151,34 @@ exports.seed = async function(knex) {
         internal_category_id: getCategoryId('system'),
         name: 'user-mentioned',
         description: 'User mentioned in comment or note',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-created',
+        description: 'New appointment request submitted',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-approved',
+        description: 'Appointment request approved',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-declined',
+        description: 'Appointment request declined',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-cancelled',
+        description: 'Appointment request cancelled',
         is_enabled: true,
         is_default_enabled: true
       }
@@ -528,6 +562,162 @@ exports.seed = async function(knex) {
       it: {
         title: 'È stato menzionato',
         message: '{{authorName}} l\'ha menzionato in {{entityType}} {{entityName}}'
+      }
+    },
+    'appointment-request-created-client': {
+      en: {
+        title: 'Appointment Request Submitted',
+        message: 'Your appointment request for {{serviceName}} on {{requestedDate}} has been submitted and is pending approval.'
+      },
+      fr: {
+        title: 'Demande de rendez-vous soumise',
+        message: 'Votre demande de rendez-vous pour {{serviceName}} le {{requestedDate}} a été soumise et est en attente d\'approbation.'
+      },
+      es: {
+        title: 'Solicitud de cita enviada',
+        message: 'Su solicitud de cita para {{serviceName}} el {{requestedDate}} ha sido enviada y está pendiente de aprobación.'
+      },
+      de: {
+        title: 'Terminanfrage eingereicht',
+        message: 'Ihre Terminanfrage für {{serviceName}} am {{requestedDate}} wurde eingereicht und wartet auf Genehmigung.'
+      },
+      nl: {
+        title: 'Afspraakverzoek ingediend',
+        message: 'Uw afspraakverzoek voor {{serviceName}} op {{requestedDate}} is ingediend en wacht op goedkeuring.'
+      },
+      it: {
+        title: 'Richiesta di appuntamento inviata',
+        message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata inviata ed è in attesa di approvazione.'
+      }
+    },
+    'appointment-request-created-staff': {
+      en: {
+        title: 'New Appointment Request from {{clientName}}',
+        message: '{{requesterName}} has requested an appointment for {{serviceName}} on {{requestedDate}} at {{requestedTime}}.'
+      },
+      fr: {
+        title: 'Nouvelle demande de rendez-vous de {{clientName}}',
+        message: '{{requesterName}} a demandé un rendez-vous pour {{serviceName}} le {{requestedDate}} à {{requestedTime}}.'
+      },
+      es: {
+        title: 'Nueva solicitud de cita de {{clientName}}',
+        message: '{{requesterName}} ha solicitado una cita para {{serviceName}} el {{requestedDate}} a las {{requestedTime}}.'
+      },
+      de: {
+        title: 'Neue Terminanfrage von {{clientName}}',
+        message: '{{requesterName}} hat einen Termin für {{serviceName}} am {{requestedDate}} um {{requestedTime}} angefragt.'
+      },
+      nl: {
+        title: 'Nieuw afspraakverzoek van {{clientName}}',
+        message: '{{requesterName}} heeft een afspraak aangevraagd voor {{serviceName}} op {{requestedDate}} om {{requestedTime}}.'
+      },
+      it: {
+        title: 'Nuova richiesta di appuntamento da {{clientName}}',
+        message: '{{requesterName}} ha richiesto un appuntamento per {{serviceName}} il {{requestedDate}} alle {{requestedTime}}.'
+      }
+    },
+    'appointment-request-approved': {
+      en: {
+        title: 'Appointment Confirmed!',
+        message: 'Your appointment for {{serviceName}} on {{appointmentDate}} at {{appointmentTime}} has been confirmed. Assigned technician: {{technicianName}}.'
+      },
+      fr: {
+        title: 'Rendez-vous confirmé !',
+        message: 'Votre rendez-vous pour {{serviceName}} le {{appointmentDate}} à {{appointmentTime}} a été confirmé. Technicien assigné : {{technicianName}}.'
+      },
+      es: {
+        title: '¡Cita confirmada!',
+        message: 'Su cita para {{serviceName}} el {{appointmentDate}} a las {{appointmentTime}} ha sido confirmada. Técnico asignado: {{technicianName}}.'
+      },
+      de: {
+        title: 'Termin bestätigt!',
+        message: 'Ihr Termin für {{serviceName}} am {{appointmentDate}} um {{appointmentTime}} wurde bestätigt. Zugewiesener Techniker: {{technicianName}}.'
+      },
+      nl: {
+        title: 'Afspraak bevestigd!',
+        message: 'Uw afspraak voor {{serviceName}} op {{appointmentDate}} om {{appointmentTime}} is bevestigd. Toegewezen technicus: {{technicianName}}.'
+      },
+      it: {
+        title: 'Appuntamento confermato!',
+        message: 'Il tuo appuntamento per {{serviceName}} il {{appointmentDate}} alle {{appointmentTime}} è stato confermato. Tecnico assegnato: {{technicianName}}.'
+      }
+    },
+    'appointment-request-declined': {
+      en: {
+        title: 'Appointment Request Update',
+        message: 'Your appointment request for {{serviceName}} could not be accommodated. {{declineReason}}'
+      },
+      fr: {
+        title: 'Mise à jour de la demande de rendez-vous',
+        message: 'Votre demande de rendez-vous pour {{serviceName}} n\'a pas pu être acceptée. {{declineReason}}'
+      },
+      es: {
+        title: 'Actualización de solicitud de cita',
+        message: 'No se pudo acomodar su solicitud de cita para {{serviceName}}. {{declineReason}}'
+      },
+      de: {
+        title: 'Terminanfrage Aktualisierung',
+        message: 'Ihre Terminanfrage für {{serviceName}} konnte nicht berücksichtigt werden. {{declineReason}}'
+      },
+      nl: {
+        title: 'Update afspraakverzoek',
+        message: 'Uw afspraakverzoek voor {{serviceName}} kon niet worden geaccepteerd. {{declineReason}}'
+      },
+      it: {
+        title: 'Aggiornamento richiesta di appuntamento',
+        message: 'La tua richiesta di appuntamento per {{serviceName}} non ha potuto essere accolta. {{declineReason}}'
+      }
+    },
+    'appointment-request-cancelled-client': {
+      en: {
+        title: 'Appointment Request Cancelled',
+        message: 'Your appointment request for {{serviceName}} on {{requestedDate}} has been cancelled successfully.'
+      },
+      fr: {
+        title: 'Demande de rendez-vous annulée',
+        message: 'Votre demande de rendez-vous pour {{serviceName}} le {{requestedDate}} a été annulée avec succès.'
+      },
+      es: {
+        title: 'Solicitud de cita cancelada',
+        message: 'Su solicitud de cita para {{serviceName}} el {{requestedDate}} ha sido cancelada exitosamente.'
+      },
+      de: {
+        title: 'Terminanfrage storniert',
+        message: 'Ihre Terminanfrage für {{serviceName}} am {{requestedDate}} wurde erfolgreich storniert.'
+      },
+      nl: {
+        title: 'Afspraakverzoek geannuleerd',
+        message: 'Uw afspraakverzoek voor {{serviceName}} op {{requestedDate}} is succesvol geannuleerd.'
+      },
+      it: {
+        title: 'Richiesta di appuntamento cancellata',
+        message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata cancellata con successo.'
+      }
+    },
+    'appointment-request-cancelled-staff': {
+      en: {
+        title: 'Appointment Request Cancelled',
+        message: '{{requesterName}} has cancelled their appointment request for {{serviceName}} on {{requestedDate}}.'
+      },
+      fr: {
+        title: 'Demande de rendez-vous annulée',
+        message: '{{requesterName}} a annulé sa demande de rendez-vous pour {{serviceName}} le {{requestedDate}}.'
+      },
+      es: {
+        title: 'Solicitud de cita cancelada',
+        message: '{{requesterName}} ha cancelado su solicitud de cita para {{serviceName}} el {{requestedDate}}.'
+      },
+      de: {
+        title: 'Terminanfrage storniert',
+        message: '{{requesterName}} hat die Terminanfrage für {{serviceName}} am {{requestedDate}} storniert.'
+      },
+      nl: {
+        title: 'Afspraakverzoek geannuleerd',
+        message: '{{requesterName}} heeft zijn/haar afspraakverzoek voor {{serviceName}} op {{requestedDate}} geannuleerd.'
+      },
+      it: {
+        title: 'Richiesta di appuntamento cancellata',
+        message: '{{requesterName}} ha cancellato la sua richiesta di appuntamento per {{serviceName}} il {{requestedDate}}.'
       }
     }
   };
