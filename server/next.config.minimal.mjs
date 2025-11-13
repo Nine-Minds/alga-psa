@@ -1,10 +1,12 @@
+const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
   experimental: {
     serverActions: {
-      bodySizeLimit: '5mb',
+      bodySizeLimit: serverActionsBodyLimit,
     },
     instrumentationHook: false
   }

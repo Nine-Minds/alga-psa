@@ -36,7 +36,6 @@ pub async fn write_atomic(dest: &Path, bytes: impl AsRef<[u8]>) -> Result<()> {
     f.flush().await?;
     #[cfg(unix)]
     {
-        use std::os::unix::prelude::FileExt;
         use std::os::unix::prelude::PermissionsExt;
         // Attempt to fsync for durability
         let _ = f.sync_all().await;

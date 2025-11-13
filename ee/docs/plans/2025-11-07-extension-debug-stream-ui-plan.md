@@ -87,56 +87,34 @@ Core behaviors:
      - Build `ExtDebugEvent` records with `stream: 'stdout' | 'stderr'`.
      - Dispatch to:
        - `tracing` (with target `ext.stdout` / `ext.stderr`),
-       - The `DebugHub` (see next section) when debug streaming is enabled.
+       - The Redis publisher (see next section) when debug streaming is enabled.
 
 2. For host-side WIT log functions (e.g. `alga.log` provider):
    - Generate `ExtDebugEvent` with `stream: 'log'` and appropriate `level`.
-   - Dispatch similarly via `tracing` and `DebugHub` (when enabled).
+   - Dispatch similarly via `tracing` and the Redis publisher (when enabled).
 
 3. Configuration:
    - Env flags:
-     - `RUNNER_DEBUG_STREAM_ENABLED` (bool)
+     - `RUNNER_DEBUG_REDIS_URL`
+     - `RUNNER_DEBUG_REDIS_STREAM_PREFIX`
+     - `RUNNER_DEBUG_REDIS_MAXLEN`
      - `RUNNER_DEBUG_MAX_EVENT_BYTES` (per event cap)
-     - `RUNNER_DEBUG_MAX_BUFFER_BYTES` (per subscription cap)
-     - `RUNNER_DEBUG_EVENT_TTL_SECS` (max retention in buffers)
-   - Behavior when disabled:
-     - Continue emitting to `tracing` only (no in-memory subscriptions / streaming).
+   - Behavior when `RUNNER_DEBUG_REDIS_URL` is unset:
+     - Continue emitting to `tracing` only (no debug stream fan-out).
 
-### 3. Runner: In-Memory DebugHub
+### 3. Runner: Redis Debug Stream Publisher
 
-Add a lightweight event hub responsible for routing debug events to live subscribers.
+Instead of an in-memory hub, the runner now serializes each `ExtDebugEvent` and appends it to a Redis Stream. Key points:
 
-Responsibilities:
-
-- Maintain active subscriptions:
-  - Each subscription has:
-    - `debug_session_id` (opaque, generated),
-    - Filter:
-      - `extensionId` (required),
-      - optional `tenantId`, `installId`,
-      - optional `requestId`,
-    - Created-at timestamp,
-    - Bounded buffer or direct channel to consumer.
-- Receive `ExtDebugEvent` from execution contexts:
-  - For each event:
-    - Match against filters.
-    - Forward to subscribers.
-    - Respect buffer limits and TTL (drop/mark truncated when exceeded).
-
-Constraints:
-
-- Hard limits (configurable):
-  - Max active sessions.
-  - Max events per session and total.
-- Simple implementation:
-  - Tokio broadcast channels or per-subscription mpsc queues guarded by `Arc<RwLock<...>>`.
-- Disabled path:
-  - If `RUNNER_DEBUG_STREAM_ENABLED` is false, the hub is a no-op; events only hit tracing.
+- Stream naming: `${RUNNER_DEBUG_REDIS_STREAM_PREFIX}{tenantId}:{extensionId}` (tenant falls back to `unknown` when unavailable).
+- Command: `XADD <stream> MAXLEN ~ <maxLen> field value ...` with a small bounded payload.
+- Each message includes the fields consumed by EE (`ts`, `level`, `stream`, `tenant`, `extension`, `install`, `request`, `version`, `content_hash`, `message`, `truncated`).
+- If Redis is down, we log and drop events (mirroring logs via `tracing` so operators can still inspect pod logs).
+- Future back-pressure: consider local ring buffer to avoid blocking extension execution if Redis is temporarily unavailable.
 
 Security note:
 
-- The runner itself does not perform caller auth; it trusts filters registered via a backend that has authenticated/authorized the request (see EE backend below).
-- Only accept subscriptions from a known internal caller (identified by `x-runner-service-token` or similar) to avoid untrusted parties binding filters.
+- Redis credentials are provided via `RUNNER_DEBUG_REDIS_URL` (or a mounted secret). ACLs should scope the runner to `XADD` only for the debug keyspace.
 
 ### 4. EE Backend: WebSocket/SSE Proxy
 
@@ -247,8 +225,8 @@ To avoid accidental misuse:
   - Optionally require a capability at install/manifest level:
     - `cap:debug.logs` or similar; when absent, EE refuses debug sessions for that extension except for privileged internal users.
 - Environment flags (runner + EE):
-  - `RUNNER_DEBUG_STREAM_ENABLED`
-  - `RUNNER_DEBUG_STREAM_ENV` (e.g. `dev`, `staging`, `prod`)
+  - `RUNNER_DEBUG_REDIS_URL`
+  - `RUNNER_DEBUG_REDIS_STREAM_PREFIX`
   - EE-side:
     - `EXT_DEBUG_UI_ENABLED`
 - Rate limiting:
@@ -263,24 +241,20 @@ To avoid accidental misuse:
 
 #### Phase 1 — Runner Event Capture
 
-- [x] Implement `ExtDebugEvent` type and `DebugHub` in runner.
-  - Implemented in `ee/runner/src/engine/debug.rs`.
+- [x] Implement `ExtDebugEvent` type and the Redis publisher in the runner.
+  - Implemented in `ee/runner/src/engine/debug.rs` and `debug_redis.rs`.
 - [x] Route:
   - WIT log provider calls to event producer.
-    - Implemented in `ee/runner/src/engine/host_api.rs` to forward `log_info/log_warn/log_error` into `DebugHub`.
+    - Implemented in `ee/runner/src/engine/host_api.rs` to forward `log_info/log_warn/log_error` into Redis.
   - WASI stderr wired to event producer (initial implementation).
-    - Implemented in `ee/runner/src/engine/loader.rs` via a custom `stderr` pipe that forwards guest stderr lines into `DebugHub` when enabled.
+    - Implemented in `ee/runner/src/engine/loader.rs` via a custom `stderr` pipe that forwards guest stderr lines into Redis when enabled.
   - (Optional stdout mirroring remains off by default to avoid noise; can be added later if needed.)
 - [ ] Add basic unit tests:
   - stdout/stderr captured and tagged with correct metadata.
-  - Hub filters events correctly.
 
-#### Phase 2 — Internal Streaming API
+#### Phase 2 — Internal Streaming API (Legacy)
 
-- [x] Implement internal runner endpoint or channel to:
-  - Register subscriptions.
-  - Stream matched `ExtDebugEvent`s.
-  - Implemented SSE endpoint at `/internal/ext-debug/stream` in `ee/runner/src/http/server.rs` using `DebugHub`.
+- [ ] (Deprecated) The original SSE endpoint at `/internal/ext-debug/stream` has been removed now that Redis fan-out is the canonical path.
 - [x] Implement EE backend `/api/ext-debug/stream`:
   - Implemented at `server/src/app/api/ext-debug/stream/route.ts`:
     - AuthN + AuthZ via existing helpers.
@@ -309,7 +283,7 @@ To avoid accidental misuse:
     - This hooks the existing settings-based extensions screen (the canonical management surface) directly into the debug page for the selected extension.
 - [x] Document how extension authors:
   - Inline help on the debug page explains:
-    - Required runner configuration (`RUNNER_DEBUG_STREAM_ENABLED`, `RUNNER_DEBUG_STREAM_AUTH` or `RUNNER_SERVICE_TOKEN`).
+    - Required runner configuration (`RUNNER_DEBUG_REDIS_URL`, stream prefix, Redis ACL credentials).
     - Using structured logging helpers instead of printing secrets.
     - Using `x-request-id` / `context.request_id` and filters to follow specific request flows.
 
@@ -324,6 +298,44 @@ To avoid accidental misuse:
     - Off by default.
     - Can be enabled per tenant/extension with admin approval or for time-limited debugging.
 
+#### Phase 5 — Distributed Event Bus (Redis Streams)
+
+_Motivation: In production, Knative fans requests across runner pods. A Redis-backed fan-out ensures the debug console aggregates logs across all pods and avoids the Kourier routing issues we hit with `runner.msp.svc.cluster.local`._
+
+- [ ] Provision a Redis cluster/namespace dedicated to short-lived “debug events” with strong authentication and TTL defaults (e.g., 15 min retention).
+- [ ] Define stream partitioning: e.g., `ext-debug:<extension_id>` or sharded by `tenant_id:extension_id`. Document key structure, retention policy, and serialization (JSON `ExtDebugEvent`).
+- [ ] Extend the runner:
+  - Add optional `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_STREAM_PREFIX`, `RUNNER_DEBUG_REDIS_MAXLEN` (and future TLS/password flags) env vars so operators can point at the shared Redis cluster without changing code.
+  - On each event, enqueue to Redis Streams (or Pub/Sub) with bounded async buffering; Redis replaces the in-memory `DebugHub` entirely.
+  - Tag events with a monotonic sequence (`xadd` ID) to preserve ordering.
+  - Include metrics + back-pressure handling (drop oldest events, emit warnings) when Redis is unavailable.
+- [ ] Reuse existing Redis stream plumbing where possible:
+  - `server/src/lib/eventBus/index.ts` already manages `XADD`/`XREADGROUP`, consumer groups, trimming, and retry logic.
+  - `shared/workflow/streams/redisStreamClient.ts` shows how to wrap publish/read/ack helpers.
+  - Mirror those patterns for debug streams (new `DebugStreamClient`) instead of reinventing connection management.
+- [ ] Build a lightweight “debug-stream fan-out” worker (can live inside the EE server or as a sidecar) that tails Redis Streams via consumer groups, applies filters server-side, and relays to subscribers.
+- [ ] Security: reuse existing `x-runner-auth` token for publishing auth, and create a dedicated Redis ACL role that only allows XADD/XLEN on the debug keys.
+
+#### Phase 6 — EE Proxy Migration to Redis Streams
+
+- [ ] Update `/api/ext-debug/stream` so that, when the Redis-backed mode is enabled (`EXT_DEBUG_STREAM_MODE=redis`), it:
+  - Validates the user/session as before.
+  - Registers/updates a consumer group per `extensionId` (e.g., `ee-debug-ui`).
+  - Issues `XREADGROUP` with filters (`tenantId`, `installId`, `requestId`) applied server-side before emitting SSE events.
+  - Implements heartbeats + idempotent acking so abandoned sessions don’t stall the stream.
+- [ ] Add multi-tenant scoping at the stream level by embedding tenant + install IDs in stream entries and filtering at the EE layer.
+- [ ] Provide fallbacks: if Redis is unavailable, drop back to the legacy per-pod proxy with an explicit warning in the UI (“live stream limited to a single runner pod”).
+- [ ] Update the debug console copy to explain that live events now aggregate across all runner replicas (when Redis mode is active).
+
+#### Phase 7 — Remove Per-Pod Dependency & Operability
+
+- [ ] Once the Redis path is proven in production, disable direct `/internal/ext-debug/stream` access from EE (keep it only for diagnostics).
+- [ ] Simplify runner configuration: require either Redis streaming _or_ a dedicated `runner-private` ClusterIP if Redis is disabled, so we do not rely on Kourier host matching.
+- [ ] Add observability:
+  - Metrics for stream lag, consumer group backlog, dropped events.
+  - Alerting when Redis retention drops events because of sustained back-pressure.
+- [ ] Document upgrade/rollback steps so operators can toggle between legacy and Redis-backed streaming without dropping all sessions.
+
 ## Dependencies & Coordination
 
 - Runner team:
@@ -331,6 +343,9 @@ To avoid accidental misuse:
 - EE server/gateway team:
   - Add `/api/ext-debug/stream` with proper auth.
   - Wire request_id propagation end-to-end.
+- Platform/Infrastructure:
+  - Operate the Redis cluster/streams (Phase 5+) with appropriate ACLs, backups, and monitoring.
+  - Expose a stable internal DNS name (or service) for the runner if Redis is disabled, so EE does not depend on Kourier host headers for intra-cluster calls.
 - DX/Docs:
   - Update `ee/docs/extension-system/development_guide.md` and related docs to include:
     - How to use the debug console.

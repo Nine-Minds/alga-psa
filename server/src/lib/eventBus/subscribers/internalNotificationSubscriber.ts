@@ -15,7 +15,11 @@ import {
   ProjectTaskAdditionalAgentAssignedEvent,
   InvoiceGeneratedEvent,
   MessageSentEvent,
-  UserMentionedInDocumentEvent
+  UserMentionedInDocumentEvent,
+  AppointmentRequestCreatedEvent,
+  AppointmentRequestApprovedEvent,
+  AppointmentRequestDeclinedEvent,
+  AppointmentRequestCancelledEvent
 } from '../events';
 import { createNotificationFromTemplateInternal } from '../../actions/internal-notification-actions/internalNotificationActions';
 import logger from '@alga-psa/shared/core/logger';
@@ -1634,6 +1638,302 @@ async function handleMessageSent(event: MessageSentEvent): Promise<void> {
 }
 
 /**
+ * Handle appointment request created events
+ */
+async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    clientId,
+    clientUserId,
+    serviceName,
+    requestedDate,
+    requestedTime,
+    requesterName,
+    isAuthenticated
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to CLIENT who created the request (if authenticated)
+    if (isAuthenticated && clientUserId) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: clientUserId,
+        template_name: 'appointment-request-created-client',
+        type: 'info',
+        category: 'appointments',
+        link: `/client-portal/appointments/${appointmentRequestId}`,
+        data: {
+          serviceName,
+          requestedDate,
+          requestedTime,
+          referenceNumber: appointmentRequestId.slice(0, 8).toUpperCase()
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for appointment request (client)', {
+        appointmentRequestId,
+        clientUserId,
+        tenantId
+      });
+    }
+
+    // Send notification to MSP STAFF
+    // Get users with 'schedule' 'update' permission
+    const staffUsers = await db('users as u')
+      .join('user_roles as ur', function() {
+        this.on('u.user_id', 'ur.user_id')
+            .andOn('u.tenant', 'ur.tenant');
+      })
+      .join('roles as r', function() {
+        this.on('ur.role_id', 'r.role_id')
+            .andOn('ur.tenant', 'r.tenant');
+      })
+      .join('role_permissions as rp', function() {
+        this.on('r.role_id', 'rp.role_id')
+            .andOn('r.tenant', 'rp.tenant');
+      })
+      .join('permissions as p', function() {
+        this.on('rp.permission_id', 'p.permission_id');
+      })
+      .where({
+        'u.tenant': tenantId,
+        'u.user_type': 'internal',
+        'p.resource': 'schedule',
+        'p.action': 'update'
+      })
+      .distinct('u.user_id');
+
+    // Get client name if available
+    let clientName = 'Unknown';
+    if (clientId) {
+      const client = await db('companies')
+        .select('company_name')
+        .where({ company_id: clientId, tenant: tenantId })
+        .first();
+      clientName = client?.company_name || 'Unknown';
+    }
+
+    for (const staffUser of staffUsers) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: staffUser.user_id,
+        template_name: 'appointment-request-created-staff',
+        type: 'info',
+        category: 'appointments',
+        link: `/msp/appointments/requests/${appointmentRequestId}`,
+        data: {
+          requesterName: requesterName || 'Unknown',
+          clientName,
+          serviceName,
+          requestedDate,
+          requestedTime
+        },
+        metadata: {
+          appointment_request_id: appointmentRequestId,
+          requires_action: true
+        }
+      });
+    }
+
+    logger.info('[InternalNotificationSubscriber] Created notifications for appointment request (staff)', {
+      appointmentRequestId,
+      staffCount: staffUsers.length,
+      tenantId
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request created', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
+ * Handle appointment request approved events
+ */
+async function handleAppointmentRequestApproved(event: AppointmentRequestApprovedEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    clientUserId,
+    serviceName,
+    requestedDate,
+    requestedTime,
+    assignedUserId
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to CLIENT
+    if (clientUserId) {
+      // Get technician name
+      let technicianName = 'Your technician';
+      if (assignedUserId) {
+        const technician = await db('users')
+          .select('first_name', 'last_name')
+          .where({ user_id: assignedUserId, tenant: tenantId })
+          .first();
+
+        if (technician) {
+          technicianName = `${technician.first_name} ${technician.last_name}`;
+        }
+      }
+
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: clientUserId,
+        template_name: 'appointment-request-approved',
+        type: 'success',
+        category: 'appointments',
+        link: `/client-portal/appointments/${appointmentRequestId}`,
+        data: {
+          serviceName,
+          appointmentDate: requestedDate,
+          appointmentTime: requestedTime,
+          technicianName
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for appointment approved', {
+        appointmentRequestId,
+        clientUserId,
+        tenantId
+      });
+    }
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request approved', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
+ * Handle appointment request declined events
+ */
+async function handleAppointmentRequestDeclined(event: AppointmentRequestDeclinedEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    clientUserId,
+    serviceName,
+    declineReason
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to CLIENT
+    if (clientUserId) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: clientUserId,
+        template_name: 'appointment-request-declined',
+        type: 'warning',
+        category: 'appointments',
+        link: `/client-portal/appointments/${appointmentRequestId}`,
+        data: {
+          serviceName,
+          declineReason: declineReason || 'No reason provided'
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for appointment declined', {
+        appointmentRequestId,
+        clientUserId,
+        tenantId
+      });
+    }
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request declined', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
+ * Handle appointment request cancelled events
+ */
+async function handleAppointmentRequestCancelled(event: AppointmentRequestCancelledEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    serviceName,
+    requestedDate,
+    requesterName
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to MSP STAFF (who had been notified about this request)
+    const staffUsers = await db('users as u')
+      .join('user_roles as ur', function() {
+        this.on('u.user_id', 'ur.user_id')
+            .andOn('u.tenant', 'ur.tenant');
+      })
+      .join('roles as r', function() {
+        this.on('ur.role_id', 'r.role_id')
+            .andOn('ur.tenant', 'r.tenant');
+      })
+      .join('role_permissions as rp', function() {
+        this.on('r.role_id', 'rp.role_id')
+            .andOn('r.tenant', 'rp.tenant');
+      })
+      .join('permissions as p', function() {
+        this.on('rp.permission_id', 'p.permission_id');
+      })
+      .where({
+        'u.tenant': tenantId,
+        'u.user_type': 'internal',
+        'p.resource': 'schedule',
+        'p.action': 'update'
+      })
+      .distinct('u.user_id');
+
+    for (const staffUser of staffUsers) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: staffUser.user_id,
+        template_name: 'appointment-request-cancelled-staff',
+        type: 'info',
+        category: 'appointments',
+        link: `/msp/appointments/requests/${appointmentRequestId}`,
+        data: {
+          requesterName: requesterName || 'A client',
+          serviceName,
+          requestedDate
+        }
+      });
+    }
+
+    logger.info('[InternalNotificationSubscriber] Created notifications for appointment cancelled', {
+      appointmentRequestId,
+      staffCount: staffUsers.length,
+      tenantId
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request cancelled', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
  * Handle all internal notification events
  */
 async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> {
@@ -1688,6 +1988,18 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'USER_MENTIONED_IN_DOCUMENT':
       await handleUserMentionedInDocument(validatedEvent as UserMentionedInDocumentEvent);
       break;
+    case 'APPOINTMENT_REQUEST_CREATED':
+      await handleAppointmentRequestCreated(validatedEvent as AppointmentRequestCreatedEvent);
+      break;
+    case 'APPOINTMENT_REQUEST_APPROVED':
+      await handleAppointmentRequestApproved(validatedEvent as AppointmentRequestApprovedEvent);
+      break;
+    case 'APPOINTMENT_REQUEST_DECLINED':
+      await handleAppointmentRequestDeclined(validatedEvent as AppointmentRequestDeclinedEvent);
+      break;
+    case 'APPOINTMENT_REQUEST_CANCELLED':
+      await handleAppointmentRequestCancelled(validatedEvent as AppointmentRequestCancelledEvent);
+      break;
     default:
       // Silently ignore other events
       break;
@@ -1714,14 +2026,18 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
-      'USER_MENTIONED_IN_DOCUMENT'
+      'USER_MENTIONED_IN_DOCUMENT',
+      'APPOINTMENT_REQUEST_CREATED',
+      'APPOINTMENT_REQUEST_APPROVED',
+      'APPOINTMENT_REQUEST_DECLINED',
+      'APPOINTMENT_REQUEST_CANCELLED'
     ];
 
     // Use a dedicated channel for internal notifications
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().subscribe(eventType, handleInternalNotificationEvent, { channel });
+      await getEventBus().subscribe(eventType as any, handleInternalNotificationEvent, { channel });
       logger.info(`[InternalNotificationSubscriber] Subscribed to ${eventType} on channel "${channel}"`);
     }
 
@@ -1750,13 +2066,17 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
-      'USER_MENTIONED_IN_DOCUMENT'
+      'USER_MENTIONED_IN_DOCUMENT',
+      'APPOINTMENT_REQUEST_CREATED',
+      'APPOINTMENT_REQUEST_APPROVED',
+      'APPOINTMENT_REQUEST_DECLINED',
+      'APPOINTMENT_REQUEST_CANCELLED'
     ];
 
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().unsubscribe(eventType, handleInternalNotificationEvent, { channel });
+      await getEventBus().unsubscribe(eventType as any, handleInternalNotificationEvent, { channel });
     }
 
     logger.info('[InternalNotificationSubscriber] Successfully unregistered');

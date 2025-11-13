@@ -152,9 +152,15 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                 >
                   {t('nav.projects')}
                 </Link>
+                <Link
+                  href="/client-portal/appointments"
+                  className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
+                >
+                  {t('nav.appointments')}
+                </Link>
                 {hasBillingAccess && (
-                  <Link 
-                    href="/client-portal/billing" 
+                  <Link
+                    href="/client-portal/billing"
                     className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                   >
                     {t('nav.billing')}

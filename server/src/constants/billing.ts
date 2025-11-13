@@ -1,6 +1,6 @@
 export const CONTRACT_LINE_TYPE_DISPLAY: Record<string, string> = {
   Fixed: 'Fixed',
-  Hourly: 'Time Based',
+  Hourly: 'Hourly',
   Usage: 'Usage Based'
 };
 

@@ -233,16 +233,12 @@ export async function updateContractLine(
             }
 
             // Remove tenant field if present in updateData to prevent override
-            // Use Object.assign to create a mutable copy if needed, or rely on delete below
             const { tenant: _, ...safeUpdateData } = updateData;
 
-            // If the plan is hourly, remove the per-service fields from the update data
+            // If the plan is hourly, remove only the per-service hourly_rate field
+            // minimum_billable_time and round_up_to_nearest are now contract-line-level
             if (existingPlan.contract_line_type === 'Hourly') {
                 delete safeUpdateData.hourly_rate;
-                delete safeUpdateData.minimum_billable_time;
-                delete safeUpdateData.round_up_to_nearest;
-                // Optional: Log that fields were removed for debugging
-                // console.log(`Hourly plan update: Removed per-service fields for plan ${planId}`);
             }
             delete safeUpdateData.billing_timing;
 
@@ -378,18 +374,56 @@ export async function deleteContractLine(planId: string): Promise<void> {
                 throw new Error('Permission denied: Cannot delete contract lines');
             }
 
-            // Check if plan is in use by clients before attempting to delete
-            const isInUse = await ContractLine.isInUse(trx, planId); // This check might be redundant now, but keep for clarity or remove if desired
-            if (isInUse) {
-                 // This specific error might be superseded by the detailed one below if the FK constraint is hit
-                 // Consider if this pre-check is still necessary or if relying on the DB error is sufficient
-                // throw new Error(`Cannot delete plan that is currently in use by clients in tenant ${tenant}`);
-            }
+            // Check if plan is associated with any contracts and fetch associated clients
+            const contractsWithClients = await trx('contract_line_mappings as clm')
+                .join('contracts as c', 'clm.contract_id', 'c.contract_id')
+                .leftJoin('client_contracts as cc', function() {
+                    this.on('c.contract_id', '=', 'cc.contract_id')
+                        .andOn('cc.is_active', '=', trx.raw('?', [true]));
+                })
+                .leftJoin('clients as cl', function() {
+                    this.on('cc.client_id', '=', 'cl.client_id')
+                        .andOn('cl.tenant', '=', trx.raw('?', [tenant]));
+                })
+                .where('clm.contract_line_id', planId)
+                .where('clm.tenant', tenant)
+                .select('c.contract_name', 'cl.client_name', 'c.contract_id')
+                .orderBy(['c.contract_name', 'cl.client_name']);
 
-            // Check if plan has associated services before attempting to delete
-            const hasServices = await ContractLine.hasAssociatedServices(trx, planId);
-            if (hasServices) {
-                throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
+            if (contractsWithClients.length > 0) {
+                // Group clients by contract
+                const contractMap = new Map<string, { contractName: string; clients: string[] }>();
+
+                for (const row of contractsWithClients) {
+                    if (!contractMap.has(row.contract_id)) {
+                        contractMap.set(row.contract_id, {
+                            contractName: row.contract_name,
+                            clients: []
+                        });
+                    }
+                    if (row.client_name) {
+                        contractMap.get(row.contract_id)!.clients.push(row.client_name);
+                    }
+                }
+
+                // Build detailed error message with contract and client info
+                const details = Array.from(contractMap.values()).map(({ contractName, clients }) => {
+                    if (clients.length > 0) {
+                        return `${contractName} (assigned to: ${clients.join(', ')})`;
+                    }
+                    return contractName;
+                });
+
+                // Create a structured error message that the UI can parse
+                const errorData = JSON.stringify({
+                    type: 'CONTRACT_LINE_IN_USE',
+                    contracts: Array.from(contractMap.values()).map(({ contractName, clients }) => ({
+                        name: contractName,
+                        clients: clients
+                    }))
+                });
+
+                throw new Error(`STRUCTURED_ERROR:${errorData}`);
             }
 
             await ContractLine.delete(trx, planId);

@@ -1,0 +1,20 @@
+{
+  "name": "com.alga.sample.secrets-demo",
+  "publisher": "Alga",
+  "version": "0.1.1",
+  "runtime": "wasm-js@1",
+  "capabilities": ["cap:secrets.get", "cap:log.emit"],
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "hooks": {
+      "appMenu": { "label": "Secrets Demo" }
+    }
+  },
+  "api": {
+    "endpoints": [
+      { "method": "GET", "path": "/", "handler": "dist/main" }
+    ]
+  },
+  "assets": ["ui/**/*"]
+}
