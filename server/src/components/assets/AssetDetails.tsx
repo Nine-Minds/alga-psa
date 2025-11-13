@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
+import DeleteAssetButton from './DeleteAssetButton';
 
 interface AssetDetailsProps {
   asset: Asset;
@@ -601,6 +602,11 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               Edit
             </Button>
           </Link>
+          <DeleteAssetButton
+            assetId={asset.asset_id}
+            assetName={asset.name}
+            redirectTo="/msp/assets"
+          />
         </Flex>
       </Flex>
 
