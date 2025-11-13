@@ -178,6 +178,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             'relative mx-auto rounded-lg border border-slate-300 shadow-inner bg-white',
             isOver && 'ring-2 ring-blue-400'
           )}
+          data-designer-canvas="true"
           style={{ width: 816, height: 1056, ...backgroundStyle }}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}

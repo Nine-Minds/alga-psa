@@ -34,6 +34,7 @@ const PaletteCard: React.FC<{ component: ComponentDefinition }> = ({ component }
       className={`w-full text-left rounded-md border px-3 py-2 mb-2 transition shadow-sm hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
         isDragging ? 'opacity-60 border-dashed' : 'bg-white'
       }`}
+      data-component-type={component.type}
       {...listeners}
       {...attributes}
       type="button"

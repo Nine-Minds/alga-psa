@@ -331,3 +331,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
 export const selectNodes = (state: DesignerState) => state.nodes;
 export const selectSelectedNodeId = (state: DesignerState) => state.selectedNodeId;
+
+if (typeof window !== 'undefined') {
+  (window as typeof window & { __ALGA_INVOICE_DESIGNER_STORE__?: typeof useInvoiceDesignerStore }).__ALGA_INVOICE_DESIGNER_STORE__ =
+    useInvoiceDesignerStore;
+}
