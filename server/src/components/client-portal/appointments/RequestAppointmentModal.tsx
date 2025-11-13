@@ -201,7 +201,10 @@ export function RequestAppointmentModal({
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getAvailableDatesForService(selectedServiceId);
+      // Get user's timezone for accurate availability calculation
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      const result = await getAvailableDatesForService(selectedServiceId, userTimezone);
 
       if (result.success && result.data) {
         // Convert date strings to Date objects in local time (not UTC)
@@ -235,7 +238,10 @@ export function RequestAppointmentModal({
         ? preferredTechnicianId
         : undefined;
 
-      const result = await getAvailableTimeSlotsForDate(selectedServiceId, dateStr, 60, technicianFilter);
+      // Get user's timezone for accurate availability calculation
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      const result = await getAvailableTimeSlotsForDate(selectedServiceId, dateStr, 60, technicianFilter, userTimezone);
 
       if (result.success && result.data) {
         setTimeSlots(result.data.timeSlots);
