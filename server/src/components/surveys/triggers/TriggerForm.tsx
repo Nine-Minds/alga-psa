@@ -387,7 +387,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       ? triggerConditions
       : {};
     const selectedTemplateName = templateOptions.find((option) => option.value === formState.templateId)?.label;
-    const templateDescription = typeof selectedTemplateName === 'string' ? selectedTemplateName : undefined;
+    const templateDescription = typeof selectedTemplateName === 'string' ? selectedTemplateName : '';
 
     setIsSubmitting(true);
     try {
