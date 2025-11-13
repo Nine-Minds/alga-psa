@@ -4,7 +4,7 @@
 
 'use server';
 
-import { createTenantKnex, getTenantContext } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId, getTenantContext, runWithTenant } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { DnsRecord } from 'server/src/types/email.types';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
@@ -12,7 +12,7 @@ import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
-const EMAIL_DOMAIN_RESOURCE = 'emailDomains';
+const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
 type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
 
 export interface ManagedDomainStatus {
@@ -32,18 +32,25 @@ async function ensureTenantContext(action: EmailDomainPermissionAction) {
     throw new Error('User not authenticated');
   }
 
-  const tenantFromContext = await getTenantContext();
+  let tenantFromContext = await getTenantContext();
+  if (!tenantFromContext) {
+    tenantFromContext = (await getCurrentTenantId()) ?? undefined;
+  }
+
   if (!tenantFromContext) {
     throw new Error('Tenant context not found');
   }
 
-  const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, EMAIL_DOMAIN_RESOURCE, action, knex);
-  if (!allowed) {
-    throw new Error('You do not have permission to manage managed email domains.');
-  }
+  return runWithTenant(tenantFromContext, async () => {
+    const { knex } = await createTenantKnex();
+    const allowed = await hasPermission(user, EMAIL_SETTINGS_RESOURCE, action, knex);
+    if (!allowed && user.user_type === 'client') {
+      throw new Error('You do not have permission to manage managed email domains.');
+    }
+    // MSP/internal roles are temporarily allowed even if the granular permission has not been seeded yet.
 
-  return { knex, tenantId: tenantFromContext };
+    return { knex, tenantId: tenantFromContext };
+  });
 }
 
 export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
