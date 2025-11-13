@@ -1121,6 +1121,7 @@
       "statusDeclined": "Questa richiesta di appuntamento è stata rifiutata",
       "statusCancelled": "Questo appuntamento è stato annullato",
       "reason": "Motivo",
+      "reference": "Riferimento",
       "service": "Servizio",
       "dateTime": "Data e ora",
       "technician": "Tecnico assegnato",

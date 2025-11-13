@@ -1120,6 +1120,7 @@
       "statusDeclined": "Dit afspraakverzoek is afgewezen",
       "statusCancelled": "Deze afspraak is geannuleerd",
       "reason": "Reden",
+      "reference": "Referentie",
       "service": "Service",
       "dateTime": "Datum en tijd",
       "technician": "Toegewezen technicus",
