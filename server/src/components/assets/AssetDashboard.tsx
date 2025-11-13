@@ -413,6 +413,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
           aria-label="Select all visible assets"
           className="translate-y-0.5"
           indeterminate={isIndeterminate}
+          containerClassName="m-0 flex items-center justify-center"
         />
       ),
       render: (_: unknown, record: Asset) => (
@@ -423,8 +424,11 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
           aria-label={`Select asset ${record.name}`}
           className="translate-y-0.5"
           onClick={(event) => event.stopPropagation()}
+          containerClassName="m-0 flex items-center justify-center"
         />
-      )
+      ),
+      width: '40px',
+      cellClassName: '!px-3'
     },
     name: {
       dataIndex: 'name',
@@ -432,7 +436,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       render: (_value: unknown, record: Asset) => (
         <Link
           href={`/msp/assets/${record.asset_id}`}
-          className="font-medium text-primary-600 hover:text-primary-700 hover:underline transition-colors"
+          className="font-medium text-primary-600 hover:text-primary-700 hover:underline transition-colors truncate block max-w-[200px]"
         >
           {record.name}
         </Link>
@@ -504,7 +508,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       dataIndex: 'location',
       title: 'Location',
       render: (value: unknown) => (
-        <span className="text-sm text-gray-600">{(value as string) || '—'}</span>
+        <span className="text-sm font-medium text-gray-700">{(value as string) || '—'}</span>
       )
     },
     actions: {
@@ -653,6 +657,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                           checked={statusFilters.includes(status)}
                           onChange={() => toggleFilterValue(statusFilters, status, setStatusFilters)}
                           className="mr-2"
+                          containerClassName="m-0"
                         />
                         <span className="capitalize">{status.replace('_', ' ')}</span>
                       </DropdownMenuItem>
@@ -675,6 +680,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                           checked={typeFilters.includes(type)}
                           onChange={() => toggleFilterValue(typeFilters, type, setTypeFilters)}
                           className="mr-2"
+                          containerClassName="m-0"
                         />
                         <span className="capitalize">{type.replace('_', ' ')}</span>
                       </DropdownMenuItem>
@@ -697,6 +703,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                           checked={clientFilters.includes(value)}
                           onChange={() => toggleFilterValue(clientFilters, value, setClientFilters)}
                           className="mr-2"
+                          containerClassName="m-0"
                         />
                         <span>{label}</span>
                       </DropdownMenuItem>
@@ -719,6 +726,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                           checked={visibleColumnIds.includes(key)}
                           onChange={() => toggleColumn(key)}
                           className="mr-2"
+                          containerClassName="m-0"
                         />
                         <span className="capitalize">{key.replace('_', ' ')}</span>
                       </DropdownMenuItem>

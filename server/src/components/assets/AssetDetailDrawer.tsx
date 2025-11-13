@@ -32,6 +32,7 @@ import type { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Clock3, Copy, FileText, Layers, Link as LinkIcon, ListChecks, Settings2, ShieldCheck } from 'lucide-react';
 import AssetDocuments from './AssetDocuments';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
+import DeleteAssetButton from './DeleteAssetButton';
 
 export const ASSET_DRAWER_TABS = {
   OVERVIEW: 'Overview',
@@ -93,6 +94,8 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     label: 'Asset Detail Drawer'
   });
 
+  const { asset, maintenanceReport, maintenanceHistory, history, tickets, isLoading, error } = state;
+
   useEffect(() => {
     if (!assetId || !isOpen) {
       return;
@@ -130,9 +133,6 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
           history: historyData,
           tickets: ticketData
         });
-        registerDrawer?.({
-          helperText: `${assetData.name} • ${activeTab}`
-        });
       } catch (error) {
         console.error('Failed to load asset drawer data:', error);
         if (isCancelled) {
@@ -156,17 +156,19 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     return () => {
       isCancelled = true;
     };
-  }, [assetId, isOpen, registerDrawer, activeTab]);
+  }, [assetId, isOpen, registerDrawer]);
 
   useEffect(() => {
     if (!assetId) {
       registerDrawer?.({
         helperText: 'Awaiting asset selection'
       });
+    } else if (asset) {
+      registerDrawer?.({
+        helperText: `${asset.name} • ${activeTab}`
+      });
     }
-  }, [assetId, registerDrawer]);
-
-  const { asset, maintenanceReport, maintenanceHistory, history, tickets, isLoading, error } = state;
+  }, [assetId, asset, activeTab, registerDrawer]);
 
   const statusBadge = useMemo(() => {
     if (!asset) {
@@ -215,6 +217,16 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
               <FileText className="h-4 w-4" /> Open asset record
             </Button>
             <CreateTicketFromAssetButton asset={asset} />
+            <DeleteAssetButton
+              assetId={asset.asset_id}
+              assetName={asset.name}
+              variant="ghost"
+              size="sm"
+              label="Delete"
+              onDeleted={() => {
+                onClose();
+              }}
+            />
           </div>
         </div>
 
@@ -277,7 +289,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         )}
       </div>
     );
-  }, [asset, history, maintenanceReport, router, statusBadge]);
+  }, [asset, history, maintenanceReport, router, statusBadge, onClose]);
 
   const maintenanceTab = useMemo(() => {
     if (!asset) {
@@ -432,7 +444,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     { label: ASSET_DRAWER_TABS.MAINTENANCE, content: maintenanceTab },
     { label: ASSET_DRAWER_TABS.TICKETS, content: ticketsTab },
     { label: ASSET_DRAWER_TABS.CONFIGURATION, content: configurationTab },
-    { label: ASSET_DRAWER_TABS.DOCUMENTS, content: documentsTab }
+    { label: ASSET_DRAWER_TABS.DOCUMENTS, content: documentsTab, forceMount: true }
   ], [configurationTab, documentsTab, maintenanceTab, overviewTab, ticketsTab]);
 
   const handleTabChange = (nextTab: string) => {
@@ -457,13 +469,6 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
           </div>
         </header>
 
-        {isLoading && (
-          <div className="flex items-center gap-3 rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-500">
-            <Spinner size="sm" className="text-primary-500" />
-            Loading asset details…
-          </div>
-        )}
-
         {error && !isLoading && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
@@ -471,28 +476,41 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         )}
 
         {!error && (
-          <Tabs
-            value={activeTab}
-            onValueChange={handleTabChange}
-            className="space-y-4"
-          >
-            <TabsList className="w-full gap-2 border-b border-gray-200 text-sm font-medium text-gray-500">
-              {TAB_ORDER.map((tab) => (
-                <TabsTrigger
-                  key={tab}
-                  value={tab}
-                  className="text-sm"
+          <div className="relative">
+            {isLoading && (
+              <div className="pointer-events-auto absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/80 backdrop-blur-sm">
+                <Spinner size="md" className="text-primary-500" />
+                <p className="mt-2 text-sm font-medium text-gray-600">Loading asset details…</p>
+              </div>
+            )}
+            <Tabs
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="space-y-4"
+            >
+              <TabsList className="w-full gap-2 border-b border-gray-200 text-sm font-medium text-gray-500">
+                {TAB_ORDER.map((tab) => (
+                  <TabsTrigger
+                    key={tab}
+                    value={tab}
+                    className="text-sm"
+                  >
+                    {tab}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {tabContent.map(({ label, content, forceMount }) => (
+                <TabsContent
+                  key={label}
+                  value={label}
+                  className="focus:outline-none"
+                  forceMount={forceMount}
                 >
-                  {tab}
-                </TabsTrigger>
+                  {content}
+                </TabsContent>
               ))}
-            </TabsList>
-            {tabContent.map(({ label, content }) => (
-              <TabsContent key={label} value={label} className="focus:outline-none">
-                {content}
-              </TabsContent>
-            ))}
-          </Tabs>
+            </Tabs>
+          </div>
         )}
       </div>
     </Drawer>
