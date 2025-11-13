@@ -16,13 +16,15 @@ import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
-import { DesignerComponentType, DesignerConstraint, useInvoiceDesignerStore } from './state/designerStore';
-import { AlignmentGuide, calculateGuides } from './utils/layout';
+import type { DesignerComponentType, DesignerConstraint, DesignerNode, Point } from './state/designerStore';
+import { useInvoiceDesignerStore } from './state/designerStore';
+import { AlignmentGuide, calculateGuides, clampPositionToParent } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
+import { canNestWithinParent } from './state/hierarchy';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -46,6 +48,12 @@ type NodeDragData = {
   nodeId: string;
 };
 
+type DropTargetMeta = {
+  nodeId: string;
+  nodeType: DesignerComponentType;
+  allowedChildren: DesignerComponentType[];
+};
+
 const isPaletteDragData = (value: unknown): value is PaletteDragData =>
   typeof value === 'object' &&
   value !== null &&
@@ -57,6 +65,42 @@ const isNodeDragData = (value: unknown): value is NodeDragData =>
   value !== null &&
   'nodeId' in value &&
   typeof (value as { nodeId?: unknown }).nodeId === 'string';
+
+const createRestrictToParentBoundsModifier = (nodes: DesignerNode[]): Modifier => ({ active, transform }) => {
+  if (!active || !transform) {
+    return transform;
+  }
+  const data = active.data?.current;
+  if (!isNodeDragData(data)) {
+    return transform;
+  }
+  const node = nodes.find((candidate) => candidate.id === data.nodeId);
+  if (!node) {
+    return transform;
+  }
+  const boundedPosition = clampPositionToParent(node, nodes, {
+    x: node.position.x + transform.x,
+    y: node.position.y + transform.y,
+  });
+  return {
+    ...transform,
+    x: boundedPosition.x - node.position.x,
+    y: boundedPosition.y - node.position.y,
+  };
+};
+
+const buildDescendantPositionMap = (rootId: string, allNodes: DesignerNode[]) => {
+  const positions = new Map<string, Point>();
+  const nodesById = new Map(allNodes.map((node) => [node.id, node]));
+  const walk = (id: string) => {
+    const node = nodesById.get(id);
+    if (!node) return;
+    positions.set(id, { ...node.position });
+    node.childIds.forEach((childId) => walk(childId));
+  };
+  walk(rootId);
+  return positions;
+};
 
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -98,8 +142,14 @@ export const DesignerShell: React.FC = () => {
 
   const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
   const [guides, setGuides] = useState<AlignmentGuide[]>([]);
+  const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
-  const dragSessionRef = useRef<{ nodeId: string; origin: { x: number; y: number } } | null>(null);
+  const dragSessionRef = useRef<{
+    nodeId: string;
+    origin: Point;
+    originalPositions: Map<string, Point>;
+    lastDelta: Point;
+  } | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -131,10 +181,6 @@ export const DesignerShell: React.FC = () => {
     pointerRef.current = point;
   }, []);
 
-  const commitNodePosition = (nodeId: string, nextPosition: { x: number; y: number }) => {
-    setNodePosition(nodeId, nextPosition, true);
-  };
-
   const snapModifier = useMemo<Modifier | null>(() => {
     if (!snapToGrid) {
       return null;
@@ -143,10 +189,25 @@ export const DesignerShell: React.FC = () => {
     return createSnapModifier(pixelGrid);
   }, [snapToGrid, gridSize, canvasScale]);
 
+  const restrictToParentBoundsModifier = useMemo<Modifier>(
+    () => createRestrictToParentBoundsModifier(nodes),
+    [nodes]
+  );
+
   const modifiers = useMemo<Modifier[]>(() => {
-    const base: Modifier[] = [restrictToWindowEdges];
+    const base: Modifier[] = [restrictToParentBoundsModifier, restrictToWindowEdges];
     return snapModifier ? [...base, snapModifier] : base;
-  }, [snapModifier]);
+  }, [restrictToParentBoundsModifier, snapModifier]);
+
+  const renderedNodes = useMemo(() => {
+    if (!previewPositions || Object.keys(previewPositions).length === 0) {
+      return nodes;
+    }
+    return nodes.map((node) => {
+      const override = previewPositions[node.id];
+      return override ? { ...node, position: override } : node;
+    });
+  }, [nodes, previewPositions]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current;
@@ -165,6 +226,8 @@ export const DesignerShell: React.FC = () => {
         dragSessionRef.current = {
           nodeId: data.nodeId,
           origin: { ...node.position },
+          originalPositions: buildDescendantPositionMap(data.nodeId, nodes),
+          lastDelta: { x: 0, y: 0 },
         };
       }
     }
@@ -174,51 +237,108 @@ export const DesignerShell: React.FC = () => {
     if (!dragSessionRef.current || activeDrag?.kind !== 'node') {
       return;
     }
-    const { nodeId, origin } = dragSessionRef.current;
+    const session = dragSessionRef.current;
+    const { nodeId, origin } = session;
     const nextPosition = {
       x: origin.x + event.delta.x,
       y: origin.y + event.delta.y,
     };
     const activeNode = nodes.find((node) => node.id === nodeId);
     if (!activeNode) return;
-    const ghostNode = {
-      ...activeNode,
-      position: nextPosition,
+    const boundedPosition = clampPositionToParent(activeNode, nodes, nextPosition);
+    const delta = {
+      x: boundedPosition.x - origin.x,
+      y: boundedPosition.y - origin.y,
     };
+    if (delta.x !== session.lastDelta.x || delta.y !== session.lastDelta.y) {
+      const nextPreview: Record<string, Point> = {};
+      session.originalPositions.forEach((point, id) => {
+        nextPreview[id] = {
+          x: point.x + delta.x,
+          y: point.y + delta.y,
+        };
+      });
+      setPreviewPositions(nextPreview);
+      session.lastDelta = delta;
+    }
     if (showGuides) {
-      setGuides(calculateGuides(ghostNode, nodes));
+      const projectedPosition = {
+        x: origin.x + session.lastDelta.x,
+        y: origin.y + session.lastDelta.y,
+      };
+      const ghostNode = {
+        ...activeNode,
+        position: projectedPosition,
+      };
+      const guideNodes = nodes.map((node) => {
+        if (session.originalPositions.has(node.id)) {
+          const original = session.originalPositions.get(node.id) ?? node.position;
+          return {
+            ...node,
+            position: {
+              x: original.x + session.lastDelta.x,
+              y: original.y + session.lastDelta.y,
+            },
+          };
+        }
+        return node;
+      });
+      setGuides(calculateGuides(ghostNode, guideNodes));
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const overCanvas = event.over?.id === DROPPABLE_CANVAS_ID;
-    if (activeDrag?.kind === 'component') {
+    if (activeDrag?.kind === 'component' || activeDrag?.kind === 'preset') {
       const dropPoint = pointerRef.current ?? { x: 120, y: 120 };
-      if (overCanvas) {
+      const dropMeta = event.over?.data?.current as DropTargetMeta | undefined;
+      if (!dropMeta) {
+        recordDropResult(false);
+      } else if (
+        activeDrag.kind === 'component' &&
+        canNestWithinParent(activeDrag.componentType, dropMeta.nodeType)
+      ) {
         const def = getDefinition(activeDrag.componentType);
-        addNode(activeDrag.componentType, dropPoint, def ? { size: def.defaultSize } : undefined);
+        addNode(
+          activeDrag.componentType,
+          dropPoint,
+          def
+            ? { parentId: dropMeta.nodeId, defaults: { size: def.defaultSize } }
+            : { parentId: dropMeta.nodeId }
+        );
         recordDropResult(true);
-      } else {
-        recordDropResult(false);
-      }
-    } else if (activeDrag?.kind === 'preset') {
-      const dropPoint = pointerRef.current ?? { x: 120, y: 120 };
-      if (overCanvas) {
-        insertPreset(activeDrag.presetId, dropPoint);
-        recordDropResult(true);
-      } else {
-        recordDropResult(false);
+      } else if (activeDrag.kind === 'preset') {
+        const presetDef = getPresetById(activeDrag.presetId);
+        const rootTypes =
+          presetDef?.nodes.filter((node) => !node.parentKey).map((node) => node.type) ?? [];
+        const presetDropAllowed =
+          rootTypes.length > 0
+            ? rootTypes.every(
+                (type) =>
+                  type === dropMeta.nodeType || canNestWithinParent(type, dropMeta.nodeType)
+              )
+            : canNestWithinParent('section', dropMeta.nodeType);
+        if (!presetDropAllowed) {
+          recordDropResult(false);
+        } else {
+          insertPreset(activeDrag.presetId, dropPoint, dropMeta.nodeId);
+          recordDropResult(true);
+        }
       }
     }
     if (activeDrag?.kind === 'node' && dragSessionRef.current) {
-      const { origin, nodeId } = dragSessionRef.current;
-      const nextPosition = {
-        x: origin.x + event.delta.x,
-        y: origin.y + event.delta.y,
-      };
-      commitNodePosition(nodeId, nextPosition);
+      const session = dragSessionRef.current;
+      const activeNode = nodes.find((node) => node.id === session.nodeId);
+      if (activeNode) {
+        const desiredPosition = {
+          x: session.origin.x + session.lastDelta.x,
+          y: session.origin.y + session.lastDelta.y,
+        };
+        const boundedPosition = clampPositionToParent(activeNode, nodes, desiredPosition);
+        setNodePosition(session.nodeId, boundedPosition, true);
+      }
     }
     dragSessionRef.current = null;
+    setPreviewPositions({});
     setGuides([]);
     setActiveDrag(null);
   };
@@ -227,6 +347,7 @@ export const DesignerShell: React.FC = () => {
     setActiveDrag(null);
     setGuides([]);
     dragSessionRef.current = null;
+    setPreviewPositions({});
   };
 
   const handlePropertyInput = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,7 +357,7 @@ export const DesignerShell: React.FC = () => {
 
   const commitPropertyChanges = () => {
     if (!selectedNodeId) return;
-    commitNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y });
+    setNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y }, true);
     updateNodeSize(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
   };
 
@@ -263,7 +384,7 @@ export const DesignerShell: React.FC = () => {
             <ComponentPalette />
           </div>
           <DesignerWorkspace
-            nodes={nodes}
+            nodes={renderedNodes}
             selectedNodeId={selectedNodeId}
             showGuides={showGuides}
             showRulers={showRulers}

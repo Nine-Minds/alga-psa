@@ -6,6 +6,7 @@ export interface LayoutPresetNodeDefinition {
   offset: Point;
   size?: Size;
   name?: string;
+  parentKey?: string;
 }
 
 export type LayoutPresetConstraintDefinition =
@@ -37,8 +38,39 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Two-column header with locked logo ratio and address stack.',
     category: 'Header',
     nodes: [
-      { key: 'logo', type: 'logo', offset: { x: 0, y: 0 }, size: { width: 200, height: 120 }, name: 'Logo' },
-      { key: 'address', type: 'text', offset: { x: 260, y: 0 }, size: { width: 260, height: 140 }, name: 'Billing Address' },
+      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 640, height: 180 }, name: 'Header Section' },
+      {
+        key: 'column-left',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 260, height: 160 },
+        name: 'Logo Column',
+      },
+      {
+        key: 'column-right',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 260, y: 0 },
+        size: { width: 320, height: 160 },
+        name: 'Address Column',
+      },
+      {
+        key: 'logo',
+        type: 'logo',
+        parentKey: 'column-left',
+        offset: { x: 0, y: 0 },
+        size: { width: 200, height: 120 },
+        name: 'Logo',
+      },
+      {
+        key: 'address',
+        type: 'text',
+        parentKey: 'column-right',
+        offset: { x: 260, y: 0 },
+        size: { width: 260, height: 140 },
+        name: 'Billing Address',
+      },
     ],
     constraints: [
       { type: 'align-top', nodes: ['logo', 'address'], strength: 'strong' },
@@ -52,7 +84,23 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Full-width items table with repeating rows.',
     category: 'Body',
     nodes: [
-      { key: 'table', type: 'table', offset: { x: 0, y: 0 }, size: { width: 520, height: 260 }, name: 'Line Items' },
+      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 520, height: 320 }, name: 'Items Section' },
+      {
+        key: 'column',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 520, height: 320 },
+        name: 'Items Column',
+      },
+      {
+        key: 'table',
+        type: 'table',
+        parentKey: 'column',
+        offset: { x: 0, y: 0 },
+        size: { width: 520, height: 260 },
+        name: 'Line Items',
+      },
     ],
     constraints: [],
   },
@@ -62,8 +110,39 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Totals summary with note block.',
     category: 'Footer',
     nodes: [
-      { key: 'totals', type: 'totals', offset: { x: 280, y: 0 }, size: { width: 280, height: 160 }, name: 'Totals' },
-      { key: 'note', type: 'text', offset: { x: 0, y: 20 }, size: { width: 240, height: 80 }, name: 'Notes' },
+      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 560, height: 200 }, name: 'Totals Section' },
+      {
+        key: 'column-note',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 260, height: 180 },
+        name: 'Notes Column',
+      },
+      {
+        key: 'column-totals',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 280, y: 0 },
+        size: { width: 280, height: 180 },
+        name: 'Totals Column',
+      },
+      {
+        key: 'note',
+        type: 'text',
+        parentKey: 'column-note',
+        offset: { x: 0, y: 20 },
+        size: { width: 240, height: 80 },
+        name: 'Notes',
+      },
+      {
+        key: 'totals',
+        type: 'totals',
+        parentKey: 'column-totals',
+        offset: { x: 280, y: 0 },
+        size: { width: 280, height: 160 },
+        name: 'Totals',
+      },
     ],
     constraints: [
       { type: 'align-top', nodes: ['totals', 'note'], strength: 'weak' },
@@ -75,8 +154,39 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Equal columns for summary and contact info.',
     category: 'Body',
     nodes: [
-      { key: 'summary', type: 'text', offset: { x: 0, y: 0 }, size: { width: 240, height: 160 }, name: 'Summary' },
-      { key: 'contact', type: 'text', offset: { x: 280, y: 0 }, size: { width: 240, height: 160 }, name: 'Contact Info' },
+      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 560, height: 200 }, name: 'Summary Section' },
+      {
+        key: 'column-left',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 260, height: 180 },
+        name: 'Summary Column',
+      },
+      {
+        key: 'column-right',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 280, y: 0 },
+        size: { width: 260, height: 180 },
+        name: 'Contact Column',
+      },
+      {
+        key: 'summary',
+        type: 'text',
+        parentKey: 'column-left',
+        offset: { x: 0, y: 0 },
+        size: { width: 240, height: 160 },
+        name: 'Summary',
+      },
+      {
+        key: 'contact',
+        type: 'text',
+        parentKey: 'column-right',
+        offset: { x: 280, y: 0 },
+        size: { width: 240, height: 160 },
+        name: 'Contact Info',
+      },
     ],
     constraints: [
       { type: 'match-width', nodes: ['summary', 'contact'], strength: 'required' },
@@ -89,9 +199,34 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Logo + address stack with QR code payment block.',
     category: 'Header',
     nodes: [
-      { key: 'logo', type: 'logo', offset: { x: 0, y: 0 }, size: { width: 200, height: 120 } },
-      { key: 'address', type: 'text', offset: { x: 220, y: 0 }, size: { width: 220, height: 140 } },
-      { key: 'qr', type: 'qr', offset: { x: 480, y: 0 }, size: { width: 140, height: 140 } },
+      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 640, height: 200 }, name: 'Split Header' },
+      {
+        key: 'column-logo',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 220, height: 180 },
+        name: 'Logo Column',
+      },
+      {
+        key: 'column-address',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 220, y: 0 },
+        size: { width: 220, height: 180 },
+        name: 'Address Column',
+      },
+      {
+        key: 'column-qr',
+        type: 'column',
+        parentKey: 'section',
+        offset: { x: 480, y: 0 },
+        size: { width: 140, height: 180 },
+        name: 'QR Column',
+      },
+      { key: 'logo', type: 'logo', parentKey: 'column-logo', offset: { x: 0, y: 0 }, size: { width: 200, height: 120 } },
+      { key: 'address', type: 'text', parentKey: 'column-address', offset: { x: 220, y: 0 }, size: { width: 220, height: 140 } },
+      { key: 'qr', type: 'qr', parentKey: 'column-qr', offset: { x: 480, y: 0 }, size: { width: 140, height: 140 } },
     ],
     constraints: [
       { type: 'align-top', nodes: ['logo', 'address'], strength: 'strong' },

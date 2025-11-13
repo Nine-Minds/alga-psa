@@ -4,8 +4,12 @@ import { devtools } from 'zustand/middleware';
 import { solveConstraints } from '../utils/constraintSolver';
 import { getDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS, getPresetById, LayoutPresetConstraintDefinition } from '../constants/presets';
+import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { clampPositionToParent } from '../utils/layout';
+import { canNestWithinParent, getAllowedChildrenForType, getAllowedParentsForType } from './hierarchy';
 
 export type DesignerComponentType =
+  | 'document'
   | 'page'
   | 'section'
   | 'column'
@@ -38,6 +42,9 @@ export interface DesignerNode {
   allowResize?: boolean;
   metadata?: Record<string, unknown>;
   layoutPresetId?: string;
+  parentId: string | null;
+  childIds: string[];
+  allowedChildren: DesignerComponentType[];
 }
 
 export type ConstraintStrength = 'required' | 'strong' | 'medium' | 'weak';
@@ -78,8 +85,12 @@ interface DesignerState {
   history: DesignerNode[][];
   historyIndex: number;
   constraintError: string | null;
-  addNodeFromPalette: (type: DesignerComponentType, dropPoint: Point, defaults?: Partial<DesignerNode>) => void;
-  insertPreset: (presetId: string, dropPoint?: Point) => void;
+  addNodeFromPalette: (
+    type: DesignerComponentType,
+    dropPoint: Point,
+    options?: { defaults?: Partial<DesignerNode>; parentId?: string }
+  ) => void;
+  insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
   moveNode: (id: string, delta: Point, commit?: boolean) => void;
   setNodePosition: (id: string, position: Point, commit?: boolean) => void;
   updateNodeSize: (id: string, size: Size, commit?: boolean) => void;
@@ -105,17 +116,88 @@ interface DesignerState {
 
 const MAX_HISTORY_LENGTH = 50;
 const DEFAULT_SIZE: Size = { width: 160, height: 64 };
-const snapToGrid = (value: number, gridSize: number) => Math.round(value / gridSize) * gridSize;
+export const DOCUMENT_NODE_ID = 'designer-document-root';
+const DEFAULT_PAGE_NODE_ID = 'designer-page-default';
 const generateId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
+const snapToGridValue = (value: number, gridSize: number) => Math.round(value / gridSize) * gridSize;
+
+const createDocumentNode = (): DesignerNode => ({
+  id: DOCUMENT_NODE_ID,
+  type: 'document',
+  name: 'Document',
+  position: { x: 0, y: 0 },
+  size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  canRotate: false,
+  allowResize: false,
+  rotation: 0,
+  metadata: {},
+  layoutPresetId: undefined,
+  parentId: null,
+  childIds: [],
+  allowedChildren: getAllowedChildrenForType('document'),
+});
+
+const createPageNode = (parentId: string, index = 1): DesignerNode => ({
+  id: `${DEFAULT_PAGE_NODE_ID}-${index}-${generateId()}`,
+  type: 'page',
+  name: `Page ${index}`,
+  position: { x: 0, y: 0 },
+  size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  canRotate: false,
+  allowResize: false,
+  rotation: 0,
+  metadata: {},
+  layoutPresetId: undefined,
+  parentId,
+  childIds: [],
+  allowedChildren: getAllowedChildrenForType('page'),
+});
+
+const createInitialNodes = (): DesignerNode[] => {
+  const documentNode = createDocumentNode();
+  const pageNode = createPageNode(documentNode.id);
+  documentNode.childIds = [pageNode.id];
+  return [documentNode, pageNode];
+};
+
+const attachChild = (nodes: DesignerNode[], parentId: string, childId: string) =>
+  nodes.map((node) => {
+    if (node.id !== parentId) return node;
+    if (node.childIds.includes(childId)) {
+      return node;
+    }
+    return { ...node, childIds: [...node.childIds, childId] };
+  });
+
+const detachChild = (nodes: DesignerNode[], parentId: string | null, childId: string) =>
+  parentId
+    ? nodes.map((node) =>
+        node.id === parentId ? { ...node, childIds: node.childIds.filter((id) => id !== childId) } : node
+      )
+    : nodes;
+
+const collectDescendants = (nodes: DesignerNode[], rootId: string): Set<string> => {
+  const map = new Map(nodes.map((node) => [node.id, node]));
+  const toRemove = new Set<string>();
+  const dfs = (id: string) => {
+    toRemove.add(id);
+    const node = map.get(id);
+    node?.childIds.forEach(dfs);
+  };
+  dfs(rootId);
+  return toRemove;
+};
 
 const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
   nodes.map((node) => ({
     ...node,
     position: { ...node.position },
     size: { ...node.size },
+    childIds: [...node.childIds],
+    allowedChildren: [...node.allowedChildren],
   }));
 
 const resolveWithConstraints = (nodes: DesignerNode[], constraints: DesignerConstraint[]) => {
@@ -147,7 +229,7 @@ const appendHistory = (state: DesignerState, nodes: DesignerNode[]) => {
 
 export const useInvoiceDesignerStore = create<DesignerState>()(
   devtools((set, get) => ({
-    nodes: [],
+    nodes: createInitialNodes(),
     constraints: [],
     selectedNodeId: null,
     hoverNodeId: null,
@@ -165,30 +247,59 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       failedDrops: 0,
       totalSelections: 0,
     },
-    addNodeFromPalette: (type, dropPoint, defaults = {}) => {
+    addNodeFromPalette: (type, dropPoint, options = {}) => {
       const { snapToGrid: shouldSnap, gridSize } = get();
       const position = shouldSnap
         ? {
-            x: snapToGrid(dropPoint.x, gridSize),
-            y: snapToGrid(dropPoint.y, gridSize),
+            x: snapToGridValue(dropPoint.x, gridSize),
+            y: snapToGridValue(dropPoint.y, gridSize),
           }
         : dropPoint;
+
+      const resolvedParentId =
+        options.parentId ??
+        (() => {
+          const allowedParents = getAllowedParentsForType(type);
+          if (!allowedParents.length) {
+            return null;
+          }
+          const fallbackParent = get()
+            .nodes.filter((node) => allowedParents.includes(node.type))
+            .at(0);
+          return fallbackParent?.id ?? null;
+        })();
+
+      if (!resolvedParentId) {
+        console.warn('[Designer] unable to resolve parent for', type);
+        return;
+      }
+
+      const parentNode = get().nodes.find((node) => node.id === resolvedParentId);
+      if (!parentNode || !canNestWithinParent(type, parentNode.type)) {
+        console.warn('[Designer] invalid parent drop target', { type, resolvedParentId });
+        return;
+      }
 
       const node: DesignerNode = {
         id: generateId(),
         type,
         name: `${type} ${get().nodes.length + 1}`,
         position,
-        size: defaults.size ?? DEFAULT_SIZE,
+        size: options.defaults?.size ?? DEFAULT_SIZE,
         rotation: 0,
         canRotate: true,
         allowResize: true,
-        ...defaults,
+        ...options.defaults,
+        metadata: options.defaults?.metadata ?? {},
+        parentId: resolvedParentId,
+        childIds: [],
+        allowedChildren: getAllowedChildrenForType(type),
       };
 
       set((state) => {
-        const nextNodes = [...state.nodes, node];
-        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nextNodes, state.constraints);
+        const appendedNodes = [...state.nodes, node];
+        const withParentLink = attachChild(appendedNodes, resolvedParentId, node.id);
+        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(withParentLink, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
         return {
           nodes: resolvedNodes,
@@ -203,7 +314,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         };
       }, false, 'designer/addNodeFromPalette');
     },
-    insertPreset: (presetId, dropPoint = { x: 120, y: 120 }) => {
+    insertPreset: (presetId, dropPoint = { x: 120, y: 120 }, parentId) => {
       const preset = getPresetById(presetId);
       if (!preset) {
         console.warn('[Designer] unknown layout preset', presetId);
@@ -212,14 +323,55 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
       set((state) => {
         const origin = dropPoint ?? { x: 120, y: 120 };
+        const resolvedParentId =
+          parentId ??
+          (() => {
+            const fallbackType = preset.nodes[0]?.type ?? 'section';
+            const allowedParents = getAllowedParentsForType(fallbackType);
+            const fallbackParent = state.nodes.find((node) => allowedParents.includes(node.type));
+            return fallbackParent?.id ?? null;
+          })();
+
+        if (!resolvedParentId) {
+          console.warn('[Designer] unable to resolve parent for preset', presetId);
+          return state;
+        }
+
         const keyToId = new Map<string, string>();
-        const createdNodes = preset.nodes.map((nodeDef, index) => {
-          const id = generateId();
-          keyToId.set(nodeDef.key, id);
+        const nodesById = new Map<string, DesignerNode>(state.nodes.map((node) => [node.id, node]));
+        const parentAssignments: Array<{ parentId: string; childId: string }> = [];
+        const createdNodes: DesignerNode[] = [];
+        const dropParentNode = nodesById.get(resolvedParentId);
+        if (!dropParentNode) {
+          return state;
+        }
+
+        for (let index = 0; index < preset.nodes.length; index += 1) {
+          const nodeDef = preset.nodes[index];
+          if (!nodeDef.parentKey && nodeDef.type === dropParentNode.type) {
+            keyToId.set(nodeDef.key, resolvedParentId);
+            continue;
+          }
+
+          const parentKey = nodeDef.parentKey ? keyToId.get(nodeDef.parentKey) : resolvedParentId;
+          if (!parentKey) {
+            console.warn('[Designer] preset parent resolution failed', nodeDef.key);
+            return state;
+          }
+
+          const parentNode = nodesById.get(parentKey);
+          if (!parentNode || !canNestWithinParent(nodeDef.type, parentNode.type)) {
+            console.warn('[Designer] invalid preset parent assignment', { nodeDef, parentNode });
+            return state;
+          }
+
+          const newId = generateId();
+          keyToId.set(nodeDef.key, newId);
+
           const catalogSize = getDefinition(nodeDef.type)?.defaultSize ?? DEFAULT_SIZE;
           const size = nodeDef.size ?? catalogSize;
-          return {
-            id,
+          const node: DesignerNode = {
+            id: newId,
             type: nodeDef.type,
             name: nodeDef.name ?? `${nodeDef.type} ${state.nodes.length + index + 1}`,
             position: {
@@ -231,10 +383,21 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             canRotate: true,
             allowResize: true,
             layoutPresetId: preset.id,
-          } satisfies DesignerNode;
-        });
+            metadata: {},
+            parentId: parentKey,
+            childIds: [],
+            allowedChildren: getAllowedChildrenForType(nodeDef.type),
+          };
 
-        const nodes = [...state.nodes, ...createdNodes];
+          createdNodes.push(node);
+          parentAssignments.push({ parentId: parentKey, childId: node.id });
+          nodesById.set(node.id, node);
+        }
+
+        let nodes = [...state.nodes, ...createdNodes];
+        parentAssignments.forEach(({ parentId: assignedParent, childId }) => {
+          nodes = attachChild(nodes, assignedParent, childId);
+        });
         const presetConstraints = preset.constraints
           .map((constraint) => {
             if (constraint.type === 'aspect-ratio') {
@@ -281,21 +444,42 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     moveNode: (id, delta, commit = false) => {
       const { snapToGrid: shouldSnap, gridSize } = get();
       set((state) => {
+        const rootNode = state.nodes.find((node) => node.id === id);
+        if (!rootNode) return state;
+        const descendantIds = collectDescendants(state.nodes, id);
+        descendantIds.delete(id);
+        const rawNext = {
+          x: rootNode.position.x + delta.x,
+          y: rootNode.position.y + delta.y,
+        };
+        const snappedNext = shouldSnap
+          ? {
+              x: snapToGridValue(rawNext.x, gridSize),
+              y: snapToGridValue(rawNext.y, gridSize),
+            }
+          : rawNext;
+        const boundedNext = clampPositionToParent(rootNode, state.nodes, snappedNext);
+        const appliedDelta = {
+          x: boundedNext.x - rootNode.position.x,
+          y: boundedNext.y - rootNode.position.y,
+        };
+        if (appliedDelta.x === 0 && appliedDelta.y === 0) {
+          return state;
+        }
         const nodes = state.nodes.map((node) => {
-          if (node.id !== id) return node;
-          const nextPosition = {
-            x: node.position.x + delta.x,
-            y: node.position.y + delta.y,
-          };
-          return {
-            ...node,
-            position: shouldSnap
-              ? {
-                  x: snapToGrid(nextPosition.x, gridSize),
-                  y: snapToGrid(nextPosition.y, gridSize),
-                }
-              : nextPosition,
-          };
+          if (node.id === id) {
+            return { ...node, position: boundedNext };
+          }
+          if (descendantIds.has(node.id)) {
+            return {
+              ...node,
+              position: {
+                x: node.position.x + appliedDelta.x,
+                y: node.position.y + appliedDelta.y,
+              },
+            };
+          }
+          return node;
         });
 
         if (!commit) {
@@ -314,15 +498,41 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     setNodePosition: (id, position, commit = true) => {
       const { snapToGrid: shouldSnap, gridSize } = get();
-      const nextPosition = shouldSnap
-        ? {
-            x: snapToGrid(position.x, gridSize),
-            y: snapToGrid(position.y, gridSize),
-          }
-        : position;
 
       set((state) => {
-        const nodes = state.nodes.map((node) => (node.id === id ? { ...node, position: nextPosition } : node));
+        const rootNode = state.nodes.find((node) => node.id === id);
+        if (!rootNode) return state;
+        const nextPosition = shouldSnap
+          ? {
+              x: snapToGridValue(position.x, gridSize),
+              y: snapToGridValue(position.y, gridSize),
+            }
+          : position;
+        const boundedNext = clampPositionToParent(rootNode, state.nodes, nextPosition);
+        const appliedDelta = {
+          x: boundedNext.x - rootNode.position.x,
+          y: boundedNext.y - rootNode.position.y,
+        };
+        if (appliedDelta.x === 0 && appliedDelta.y === 0) {
+          return state;
+        }
+        const descendantIds = collectDescendants(state.nodes, id);
+        descendantIds.delete(id);
+        const nodes = state.nodes.map((node) => {
+          if (node.id === id) {
+            return { ...node, position: boundedNext };
+          }
+          if (descendantIds.has(node.id)) {
+            return {
+              ...node,
+              position: {
+                x: node.position.x + appliedDelta.x,
+                y: node.position.y + appliedDelta.y,
+              },
+            };
+          }
+          return node;
+        });
         if (!commit) {
           return { nodes };
         }
@@ -381,8 +591,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     deleteSelectedNode: () => {
       const selected = get().selectedNodeId;
       if (!selected) return;
+      const nodeToDelete = get().nodes.find((node) => node.id === selected);
+      if (!nodeToDelete || nodeToDelete.type === 'document') {
+        return;
+      }
       set((state) => {
-        const nodes = state.nodes.filter((node) => node.id !== selected);
+        const idsToRemove = collectDescendants(state.nodes, selected);
+        let nodes = state.nodes.filter((node) => !idsToRemove.has(node.id));
+        nodes = detachChild(nodes, nodeToDelete.parentId, nodeToDelete.id);
         const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nodes, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
         return {
@@ -488,7 +704,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     resetWorkspace: () => {
       set(() => ({
-        nodes: [],
+        nodes: createInitialNodes(),
         constraints: [],
         selectedNodeId: null,
         history: [],

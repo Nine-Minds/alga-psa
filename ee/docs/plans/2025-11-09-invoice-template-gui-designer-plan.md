@@ -19,15 +19,15 @@
 1. **Phase 0 – Foundations (2 weeks)**
    - Align on IR schema, component catalog, and compilation contracts.
    - Deliver design prototypes and technical spikes for rendering via React + Canvas/SVG.
-   - **Status (Nov 13, 2025):** _In progress._ Core designer shell and Zustand store are live, but schema + compilation contracts remain outstanding.
+   - **Status (Nov 13, 2025):** _Complete._ Core designer shell and Zustand store are live, hierarchical IR fields (`parentId`, `childIds`, `allowedChildren`) implemented, and the remaining work has rolled into Phase 1 compilation tasks.
 2. **Phase 1 – MVP Designer (6 weeks)**
    - Implement drag-and-drop surface, component sidebar, property inspector, and undo/redo state manager.
    - Persist IR to backend, enable real-time preview and compile-to-WASM API.
-   - **Status (Nov 13, 2025):** _Partially complete._ Drag-and-drop workspace, component palette, rulers/grid, and undoable state mutations shipped behind the templates feature flag (see latest FE work: local server-only run + `@dnd-kit` wiring).
+   - **Status (Nov 13, 2025):** _In progress._ Base drag/drop, palette, rulers, grid, undo/redo, and the hierarchical IR with nested drop targets are live; composite presets now land inside sections/columns and drag as a unit. Remaining scope covers persistence, inspector polish, and serialization/export work.
 3. **Phase 2 – Advanced Capabilities (4 weeks)**
    - Add responsive breakpoints, enhanced theming constraints, and validation workflows.
    - Harden compilation pipeline with snapshot testing and performance tuning.
-   - **Status:** Not started.
+   - **Status (Nov 13, 2025):** _Not started._ No longer blocked by hierarchy work; will begin once Phase 1 persistence/binding tasks wrap.
 
 ## Designer Rendering Strategy
 - **Rendering Stack**: Build the designer as a React 18 application with TypeScript, leveraging a virtual canvas rendered via absolutely positioned HTML elements orchestrated by `react-virtualized` for viewport efficiency. Overlay snapping guides, handles, and spacing indicators using an SVG layer managed by `d3-selection` for low-cost redraws. Mount the designer inside the existing Next.js invoice templates screen via dynamic import.

@@ -33,7 +33,7 @@ This implementation roadmap operationalizes the strategic design described in [2
 - Deliver a fully interactive designer with persistence, data binding, and compilation hooks (Plan §Phased Approach, Phase 1).
 
 ### Tasks
-1. **Drag-and-Drop Workspace** — ✅ _Completed Nov 13, 2025 (drag/drop + snapping live; telemetry deferred)_
+1. **Drag-and-Drop Workspace** — ✅ _Completed Nov 13, 2025 (hierarchical drop graph + grouped movement shipped)._
    **Scope**
    - Deliver end-to-end drag, drop, move, resize, and rotate interactions for all structural/content elements described in Plan §Drag-and-Drop Interaction Model.
    - Provide grid snapping, rulers, smart guides, and constraint authoring UI described in Plan §Layout Constraints, Snapping, and Algorithms.
@@ -41,9 +41,9 @@ This implementation roadmap operationalizes the strategic design described in [2
 
    **Work Breakdown**
    1. *Input & Sensor Layer*: ✅ Configured `@dnd-kit` sensors plus keyboard affordances/focus management tied to the shared command stack.
-   2. *Drop Zone Graph & Hit Testing*: ✅ Canvas droppable + metadata for allowed node types implemented; advanced quadtree + async validators remain TODO.
+   2. *Drop Zone Graph & Hit Testing*: ✅ Canvas + node-level droppables advertise allowed children/parents; advanced quadtree + async validators remain TODO.
    3. *Visual Affordances*: ✅ Canvas overlays, rulers, snapping grid, and palette toggles merged; design QA scheduled for snap strengths.
-   4. *Constraint & Command Integration*: ✅ Drops emit atomic history-aware mutations with undo/redo; Cassowary solver + conflict suggestions still outstanding.
+   4. *Constraint & Command Integration*: ✅ Drops emit history-aware mutations with undo/redo; hierarchical constraint propagation + subtree drag alignment complete; Cassowary conflict suggestions still outstanding.
    5. *Validation, QA, and Telemetry*: ❌ Telemetry & ops instrumentation are out of scope for this release; basic logging only (defer structured dashboards/Playwright automation to future infra work). Constraint conflict banner + suggested-fix quick actions remain required for GA.
 
    **Milestones & Staffing**
@@ -53,7 +53,7 @@ This implementation roadmap operationalizes the strategic design described in [2
    - *Week 5*: ⏳ Constraint solver ✅; telemetry/ops instrumentation removed from scope (see above).
 
    **Definition of Done**
-   - Dragging from library to canvas always lands in a schema-valid location or provides an actionable error suggestion within 200 ms.
+   - Dragging from library to canvas always lands in a schema-valid location or provides an actionable error suggestion within 200 ms (met for structure/content components; telemetry/error UX still pending).
    - Guides + snapping keep pointer drift under 4 px relative error in usability tests.
    - Undo/redo restores selection + layout 100% in automated regression run.
    - Observability dashboards expose DnD metrics and no P0 accessibility issues (keyboard-only path recorded in QA notes).

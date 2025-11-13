@@ -47,18 +47,35 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({ node, isSelected, onSelect, onR
       nodeId: node.id,
     },
   });
+  const isContainer = node.allowedChildren.length > 0;
+  const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
+    id: `droppable-${node.id}`,
+    disabled: !isContainer,
+    data: isContainer
+      ? {
+          nodeId: node.id,
+          nodeType: node.type,
+          allowedChildren: node.allowedChildren,
+        }
+      : undefined,
+  });
 
   const nodeStyle: React.CSSProperties = {
     width: node.size.width,
     height: node.size.height,
     top: node.position.y,
     left: node.position.x,
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transform: transform && !isDragging ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
   };
+
+  const combinedRef = isContainer ? mergeRefs(setNodeRef, setDropZoneRef) : setNodeRef;
+
+  const draggablePointerDown = listeners?.onPointerDown;
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.stopPropagation();
     onSelect(node.id);
+    draggablePointerDown?.(event);
   };
 
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -92,15 +109,16 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({ node, isSelected, onSelect, onR
 
   return (
     <div
-      ref={setNodeRef}
+      ref={combinedRef}
       style={nodeStyle}
       className={clsx(
         'absolute border rounded-md shadow-sm bg-white select-none',
         isSelected ? 'border-blue-500 ring-2 ring-blue-300' : 'border-slate-300',
+        isNodeDropTarget && 'ring-2 ring-blue-400/60',
         isDragging && 'opacity-80'
       )}
-      onPointerDown={handlePointerDown}
       {...listeners}
+      onPointerDown={handlePointerDown}
       {...attributes}
     >
       <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
@@ -110,12 +128,14 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({ node, isSelected, onSelect, onR
       <div className="p-2 text-[11px] text-slate-500">
         Placeholder content · {node.size.width.toFixed(0)}×{node.size.height.toFixed(0)}
       </div>
-      <div
-        role="button"
-        tabIndex={0}
-        onPointerDown={startResize}
-        className="absolute -bottom-2 -right-2 h-4 w-4 rounded-full border border-blue-500 bg-white cursor-se-resize"
-      />
+      {node.allowResize !== false && (
+        <div
+          role="button"
+          tabIndex={0}
+          onPointerDown={startResize}
+          className="absolute -bottom-2 -right-2 h-4 w-4 rounded-full border border-blue-500 bg-white cursor-se-resize"
+        />
+      )}
     </div>
   );
 };
@@ -135,7 +155,22 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   onResize,
 }) => {
   const artboardRef = useRef<HTMLDivElement>(null);
-  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({ id: droppableId });
+  const documentNode = useMemo(() => nodes.find((node) => node.parentId === null), [nodes]);
+  const defaultPageNode = useMemo(
+    () => nodes.find((node) => node.type === 'page' && node.parentId === documentNode?.id),
+    [nodes, documentNode?.id]
+  );
+  const rootDropMeta = defaultPageNode ?? documentNode;
+  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
+    id: droppableId,
+    data: rootDropMeta
+      ? {
+          nodeId: rootDropMeta.id,
+          nodeType: rootDropMeta.type,
+          allowedChildren: rootDropMeta.allowedChildren,
+        }
+      : undefined,
+  });
 
   const backgroundStyle = useMemo<React.CSSProperties>(() => ({
     backgroundSize: `${gridSize * canvasScale}px ${gridSize * canvasScale}px`,
@@ -192,15 +227,17 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             className="absolute inset-0"
             style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}
           >
-            {nodes.map((node) => (
-              <CanvasNode
-                key={node.id}
-                node={node}
-                isSelected={selectedNodeId === node.id}
-                onSelect={onNodeSelect}
-                onResize={onResize}
-              />
-            ))}
+            {nodes
+              .filter((node) => node.type !== 'document' && node.type !== 'page')
+              .map((node) => (
+                <CanvasNode
+                  key={node.id}
+                  node={node}
+                  isSelected={selectedNodeId === node.id}
+                  onSelect={onNodeSelect}
+                  onResize={onResize}
+                />
+              ))}
             {showGuides && guides.map((guide) => (
               <div
                 key={`${guide.type}-${guide.position}`}
