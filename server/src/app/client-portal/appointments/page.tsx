@@ -347,6 +347,16 @@ export default function AppointmentsPage() {
                   <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
+                      {t('appointments.details.reference')}
+                    </div>
+                    <div className="text-sm font-mono text-gray-900">{selectedAppointment.appointment_request_id.slice(0, 8).toUpperCase()}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700">
                       {t('appointments.details.service')}
                     </div>
                     <div className="text-sm text-gray-900">{selectedAppointment.service_name}</div>

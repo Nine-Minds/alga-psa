@@ -1128,6 +1128,7 @@
       "statusDeclined": "This appointment request was declined",
       "statusCancelled": "This appointment was cancelled",
       "reason": "Reason",
+      "reference": "Reference",
       "service": "Service",
       "dateTime": "Date & Time",
       "technician": "Assigned Technician",

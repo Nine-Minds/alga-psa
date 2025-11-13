@@ -1120,6 +1120,7 @@
       "statusDeclined": "Cette demande de rendez-vous a été refusée",
       "statusCancelled": "Ce rendez-vous a été annulé",
       "reason": "Raison",
+      "reference": "Référence",
       "service": "Service",
       "dateTime": "Date et heure",
       "technician": "Technicien assigné",

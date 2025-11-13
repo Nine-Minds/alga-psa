@@ -1120,6 +1120,7 @@
       "statusDeclined": "Esta solicitud de cita fue rechazada",
       "statusCancelled": "Esta cita fue cancelada",
       "reason": "Motivo",
+      "reference": "Referencia",
       "service": "Servicio",
       "dateTime": "Fecha y hora",
       "technician": "Técnico asignado",

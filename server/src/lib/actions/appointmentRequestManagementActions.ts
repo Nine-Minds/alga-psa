@@ -455,7 +455,9 @@ export async function approveAppointmentRequest(
         throw new Error('Invalid final date provided for approval');
       }
 
-      const scheduledStart = new Date(`${dateStr}T${finalTime}:00`);
+      // Parse the time as UTC to avoid timezone issues
+      // The finalTime should be in HH:MM format
+      const scheduledStart = new Date(`${dateStr}T${finalTime}:00Z`);
 
       if (isNaN(scheduledStart.getTime())) {
         throw new Error(`Invalid date/time: ${dateStr}T${finalTime}`);
