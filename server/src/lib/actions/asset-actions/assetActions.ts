@@ -53,6 +53,78 @@ import { withTransaction } from '@shared/db';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 
+const normalizeNullableString = (value: string | null | undefined) => (value ?? undefined);
+
+function pruneNullishValues(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => pruneNullishValues(item))
+            .filter((item) => item !== undefined);
+    }
+
+    if (value && typeof value === 'object') {
+        const entries = Object.entries(value as Record<string, unknown>).reduce<Record<string, unknown>>((acc, [key, val]) => {
+            const cleanedValue = pruneNullishValues(val);
+            if (cleanedValue !== undefined) {
+                acc[key] = cleanedValue;
+            }
+            return acc;
+        }, {});
+
+        return Object.keys(entries).length > 0 ? entries : undefined;
+    }
+
+    return value === null ? undefined : value;
+}
+
+function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
+    const sanitized = {
+        ...data,
+        workstation: data.workstation ? (({ installed_software, last_login, gpu_model, ...rest }) => ({
+            ...rest,
+            last_login: normalizeNullableString(last_login),
+            gpu_model: normalizeNullableString(gpu_model),
+            installed_software: Array.isArray(installed_software) ? installed_software : []
+        }))(data.workstation) : undefined,
+        network_device: data.network_device ? (({ vlan_config, port_config, ...rest }) => ({
+            ...rest,
+            vlan_config: vlan_config || {},
+            port_config: port_config || {}
+        }))(data.network_device) : undefined,
+        server: data.server ? (({
+            storage_config,
+            network_interfaces,
+            installed_services,
+            raid_config,
+            hypervisor,
+            primary_ip,
+            ...rest
+        }) => ({
+            ...rest,
+            raid_config: normalizeNullableString(raid_config),
+            hypervisor: normalizeNullableString(hypervisor),
+            primary_ip: normalizeNullableString(primary_ip),
+            storage_config: Array.isArray(storage_config) ? storage_config : [],
+            network_interfaces: Array.isArray(network_interfaces) ? network_interfaces : [],
+            installed_services: Array.isArray(installed_services) ? installed_services : []
+        }))(data.server) : undefined,
+        mobile_device: data.mobile_device ? (({ installed_apps, carrier, phone_number, ...rest }) => ({
+            ...rest,
+            carrier: normalizeNullableString(carrier),
+            phone_number: normalizeNullableString(phone_number),
+            installed_apps: Array.isArray(installed_apps) ? installed_apps : []
+        }))(data.mobile_device) : undefined,
+        printer: data.printer ? (({ supported_paper_types, ip_address, ...rest }) => ({
+            ...rest,
+            ip_address: normalizeNullableString(ip_address),
+            supported_paper_types: Array.isArray(supported_paper_types) ? supported_paper_types : [],
+            supply_levels: rest.supply_levels || {}
+        }))(data.printer) : undefined
+    };
+
+    return pruneNullishValues(sanitized) as UpdateAssetRequest;
+}
+
 // Helper function to get extension table data
 async function getExtensionData(knex: Knex, tenant: string, asset_id: string, asset_type: string | undefined): Promise<AssetExtensionType | null> {
     if (!asset_type) return null;
@@ -137,6 +209,22 @@ async function upsertExtensionData(
     } else {
         await knex(table).insert(extensionData);
     }
+}
+
+async function deleteExtensionData(
+    knex: Knex,
+    tenant: string,
+    asset_id: string,
+    asset_type: string | undefined
+): Promise<void> {
+    if (!asset_type) {
+        return;
+    }
+
+    const table = `${asset_type.toLowerCase()}_assets`;
+    await knex(table)
+        .where({ tenant, asset_id })
+        .delete();
 }
 
 // Export getAsset for external use
@@ -379,8 +467,24 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
 
     try {
         const result = await knex.transaction(async (trx: Knex.Transaction) => {
-            // Validate the update data
-            const validatedData = validateData(updateAssetSchema, data);
+            const normalizedData = sanitizeUpdatePayload(data);
+            const validatedData = validateData(updateAssetSchema, normalizedData);
+            const {
+                workstation,
+                network_device,
+                server: serverExtension,
+                mobile_device,
+                printer,
+                ...baseCandidate
+            } = validatedData;
+
+            const extensionPayloads = {
+                workstation,
+                network_device,
+                server: serverExtension,
+                mobile_device,
+                printer
+            };
 
             // Get current asset
             const asset = await trx('assets')
@@ -391,21 +495,37 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
                 throw new Error('Asset not found');
             }
 
-            // Update base asset
-            const [updatedBaseAsset] = await trx('assets')
-                .where({ tenant, asset_id })
-                .update({
-                    ...validatedData,
-                    updated_at: knex.fn.now()
-                })
-                .returning('*');
-
-            // Handle extension table data
-            if (validatedData.asset_type) {
-                const extensionData = data[validatedData.asset_type as keyof UpdateAssetRequest];
-                if (extensionData) {
-                    await upsertExtensionData(trx, tenant, asset_id, validatedData.asset_type, extensionData);
+            // Update base asset fields (excluding extension payloads)
+            const baseUpdateData: Record<string, unknown> = {};
+            Object.entries(baseCandidate).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    baseUpdateData[key] = value;
                 }
+            });
+
+            if (Object.keys(baseUpdateData).length > 0) {
+                baseUpdateData.updated_at = trx.fn.now();
+                await trx('assets')
+                    .where({ tenant, asset_id })
+                    .update(baseUpdateData);
+            } else {
+                await trx('assets')
+                    .where({ tenant, asset_id })
+                    .update({ updated_at: trx.fn.now() });
+            }
+
+            const nextAssetType = (baseCandidate.asset_type as string | undefined) ?? asset.asset_type;
+
+            if (baseCandidate.asset_type && baseCandidate.asset_type !== asset.asset_type) {
+                await deleteExtensionData(trx, tenant, asset_id, asset.asset_type);
+            }
+
+            const extensionData = nextAssetType
+                ? extensionPayloads[nextAssetType as keyof typeof extensionPayloads]
+                : undefined;
+
+            if (extensionData) {
+                await upsertExtensionData(trx, tenant, asset_id, nextAssetType, extensionData);
             }
 
             const currentUser = await getCurrentUser();
@@ -423,32 +543,73 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
                 changed_at: knex.fn.now()
             });
 
-            // Get complete asset data including extension table data
+            // Return normalized asset data for client consumption
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id);
-
-            // Format dates for validation
-            const formattedAsset = {
-                ...completeAsset,
-                created_at: typeof completeAsset.created_at === 'string'
-                    ? completeAsset.created_at
-                    : new Date(completeAsset.created_at).toISOString(),
-                updated_at: typeof completeAsset.updated_at === 'string'
-                    ? completeAsset.updated_at
-                    : new Date(completeAsset.updated_at).toISOString(),
-                purchase_date: completeAsset.purchase_date || '',
-                warranty_end_date: completeAsset.warranty_end_date || '',
-                relationships: completeAsset.relationships || []  // Ensure relationships is always an array
-            };
-
-            return formattedAsset;
+            return formatAssetForOutput(completeAsset);
         });
 
         revalidatePath('/assets');
         revalidatePath(`/assets/${asset_id}`);
+        revalidatePath('/msp/assets');
+        revalidatePath(`/msp/assets/${asset_id}`);
         return validateData(assetSchema, result);
     } catch (error) {
         console.error('Error updating asset:', error);
         throw new Error('Failed to update asset');
+    }
+}
+
+export async function deleteAsset(asset_id: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    if (!await hasPermission(currentUser, 'asset', 'delete')) {
+        throw new Error('Permission denied: Cannot delete assets');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('No tenant found');
+    }
+
+    try {
+        await knex.transaction(async (trx: Knex.Transaction) => {
+            const asset = await trx('assets')
+                .where({ tenant, asset_id })
+                .first();
+
+            if (!asset) {
+                throw new Error('Asset not found');
+            }
+
+            await deleteExtensionData(trx, tenant, asset_id, asset.asset_type);
+
+            await trx('asset_history').where({ tenant, asset_id }).delete();
+            await trx('asset_maintenance_history').where({ tenant, asset_id }).delete();
+            await trx('asset_maintenance_schedules').where({ tenant, asset_id }).delete();
+            await trx('asset_relationships')
+                .where({ tenant, parent_asset_id: asset_id })
+                .orWhere({ tenant, child_asset_id: asset_id })
+                .delete();
+            await trx('asset_associations').where({ tenant, asset_id }).delete();
+            await trx('document_associations')
+                .where({ tenant, entity_type: 'asset', entity_id: asset_id })
+                .delete();
+
+            await trx('assets')
+                .where({ tenant, asset_id })
+                .delete();
+        });
+
+        revalidatePath('/assets');
+        revalidatePath('/msp/assets');
+        revalidatePath(`/assets/${asset_id}`);
+        revalidatePath(`/msp/assets/${asset_id}`);
+    } catch (error) {
+        console.error('Error deleting asset:', error);
+        throw new Error('Failed to delete asset');
     }
 }
 
