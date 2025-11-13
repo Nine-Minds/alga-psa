@@ -5533,7 +5533,7 @@ Apri la fattura: {{invoice.url}}
   // French appointment templates
   
   console.log('Adding French templates...');
-  const frenchTemplates = [
+  const frenchAppointmentTemplates = [
     {
       name: 'appointment-request-received',
       language_code: 'fr',
@@ -7022,12 +7022,13 @@ Examiner et répondre : {{reviewLink}}
     }
   ];
 
-  
+  await insertTemplates(frenchAppointmentTemplates, 'French');
+  console.log('✓ French appointment email templates added');
 
   // Spanish appointment templates
   
   console.log('Adding Spanish templates...');
-  const spanishTemplates = [
+  const spanishAppointmentTemplates = [
     {
       name: 'appointment-request-received',
       language_code: 'es',
@@ -8516,12 +8517,13 @@ Revisar y responder: {{reviewLink}}
     }
   ];
 
-  
+  await insertTemplates(spanishAppointmentTemplates, 'Spanish');
+  console.log('✓ Spanish appointment email templates added');
 
   // German appointment templates
   
   console.log('Adding German templates...');
-  const germanTemplates = [
+  const germanAppointmentTemplates = [
     {
       name: 'appointment-request-received',
       language_code: 'de',
@@ -10010,12 +10012,13 @@ Prüfen und antworten: {{reviewLink}}
     }
   ];
 
-  
+  await insertTemplates(germanAppointmentTemplates, 'German');
+  console.log('✓ German appointment email templates added');
 
   // Dutch appointment templates
   
   console.log('Adding Dutch templates...');
-  const dutchTemplates = [
+  const dutchAppointmentTemplates = [
     {
       name: 'appointment-request-received',
       language_code: 'nl',
@@ -11504,12 +11507,13 @@ Beoordelen en reageren: {{reviewLink}}
     }
   ];
 
-  
+  await insertTemplates(dutchAppointmentTemplates, 'Dutch');
+  console.log('✓ Dutch appointment email templates added');
 
   // Italian appointment templates
   
   console.log('Adding Italian templates...');
-  const italianTemplates = [
+  const italianAppointmentTemplates = [
     {
       name: 'appointment-request-received',
       language_code: 'it',
@@ -12998,8 +13002,8 @@ Rivedi e rispondi: {{reviewLink}}
     }
   ];
 
-  
-
+  await insertTemplates(italianAppointmentTemplates, 'Italian');
+  console.log('✓ Italian appointment email templates added');
 
   console.log('✓ All styled multi-language email templates added including appointments (French, Spanish, German, Dutch, Italian)');
 };
