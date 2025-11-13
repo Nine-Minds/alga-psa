@@ -101,22 +101,28 @@ interface TabsContentProps {
   value: string;
   children: React.ReactNode;
   className?: string;
+  forceMount?: boolean;
 }
 
 export function TabsContent({
   value,
   children,
   className,
+  forceMount = false,
   ...props
 }: TabsContentProps) {
   const { value: selectedValue } = useTabsContext();
   const isSelected = selectedValue === value;
 
-  if (!isSelected) return null;
+  if (!isSelected && !forceMount) {
+    return null;
+  }
 
   return (
     <div
       role="tabpanel"
+      aria-hidden={!isSelected}
+      hidden={!isSelected}
       className={cn(className)}
       {...props}
     >
