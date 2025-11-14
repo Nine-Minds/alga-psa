@@ -1064,7 +1064,7 @@ export default function ProjectDetail({
   // Handler for MoveTaskDialog confirmation
   const handleDialogMoveConfirm = async (targetPhaseId: string, targetStatusId: string | undefined) => {
     if (!taskToMove) return;
- 
+
     console.log(`Moving task ${taskToMove.task_id} to phase ${targetPhaseId} with status ${targetStatusId}`);
     try {
       const movedTask = await moveTaskToPhase(
@@ -1072,16 +1072,27 @@ export default function ProjectDetail({
         targetPhaseId,
         targetStatusId
       );
- 
+
       if (movedTask) {
         const checklistItems = await getTaskChecklistItems(movedTask.task_id);
         const taskWithDetails = { ...movedTask, checklist_items: checklistItems };
- 
-        setProjectTasks(prevTasks =>
-          prevTasks.map(t => t.task_id === movedTask.task_id ? taskWithDetails : t)
-        );
- 
-        toast.success(`Task "${taskToMove.task_name}" moved successfully!`);
+
+        // Check if the task was moved to a different phase than the currently selected one
+        const movedToDifferentPhase = selectedPhase && movedTask.phase_id !== selectedPhase.phase_id;
+
+        if (movedToDifferentPhase) {
+          // Remove the task from the current view since it's no longer in this phase
+          setProjectTasks(prevTasks =>
+            prevTasks.filter(t => t.task_id !== movedTask.task_id)
+          );
+          toast.success(`Task "${taskToMove.task_name}" moved to different phase successfully! Switch to the target phase to see it.`);
+        } else {
+          // Task moved within the same phase (to different status) - update in place
+          setProjectTasks(prevTasks =>
+            prevTasks.map(t => t.task_id === movedTask.task_id ? taskWithDetails : t)
+          );
+          toast.success(`Task "${taskToMove.task_name}" moved successfully!`);
+        }
       } else {
         toast.error("Failed to move task. Please try again.");
       }

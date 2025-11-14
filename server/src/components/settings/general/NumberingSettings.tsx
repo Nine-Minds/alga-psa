@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Button } from 'server/src/components/ui/Button';
+import { Label } from 'server/src/components/ui/Label';
 import { toast } from 'react-hot-toast';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { EntityType } from 'server/src/lib/services/numberingService';
@@ -38,7 +39,7 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
           getNumberSettings(entityType),
           getCurrentUser()
         ]);
-        
+
         if (!numberSettings) {
           // Initialize with default values for new settings
           const defaultSettings = {
@@ -132,29 +133,46 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
     : nextNumber.toString();
   const previewNumber = `${prefix}${paddedNumber}`;
 
+  const InfoTooltip: React.FC<{ text: string }> = ({ text }) => (
+    <div className="group relative inline-block ml-1">
+      <Info className="h-4 w-4 text-gray-400 cursor-help" />
+      <div className="hidden group-hover:block absolute z-10 w-64 p-2 mt-1 text-sm text-white bg-gray-900 rounded-lg shadow-lg -left-28">
+        {text}
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">{entityLabel} Numbering</h3>
-      
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <div className="space-y-4">
+      {/* Section Header */}
+      <div className="mb-6">
+        <h3 className="text-base font-semibold text-gray-900">Number Format</h3>
+        <p className="text-sm text-gray-500 mt-1">Define the prefix, digit padding, and current sequence</p>
+      </div>
+
+      <div className="space-y-6">
+        {/* Prefix Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {entityLabel} Number Prefix
-          </label>
-          <div className="flex space-x-2">
+          <div className="flex items-center mb-2">
+            <Label htmlFor={`${entityId}-prefix-input`} className="text-sm font-medium text-gray-700">
+              {entityLabel} Number Prefix
+            </Label>
+            <InfoTooltip text={`Optional prefix for ${entityType.toLowerCase()} numbers. Leave empty for no prefix or enter a custom prefix (e.g., "${entityType === 'TICKET' ? 'TK-' : entityType === 'INVOICE' ? 'INV-' : entityType === 'PROJECT' ? 'PROJECT-' : ''}")`} />
+          </div>
+          <div className="flex items-center space-x-2">
             <Input
               id={`${entityId}-prefix-input`}
               value={isEditing ? (formState.prefix ?? '') : (settings?.prefix ?? '')}
               onChange={(e) => handleInputChange('prefix', e.target.value)}
               disabled={!isEditing}
-              className="w-32"
-              placeholder={entityType === 'TICKET' ? 'TK-' : 'INV-'}
+              className="!w-48"
+              placeholder={entityType === 'TICKET' ? 'TK-' : entityType === 'INVOICE' ? 'INV-' : 'PRJ-'}
             />
             {!isEditing && isAdmin && (
               <Button
@@ -167,45 +185,47 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
               </Button>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Optional. Leave empty for no prefix or enter a custom prefix (e.g., "{entityType === 'TICKET' ? 'TK-' : 'INV-'}", "{entityType === 'TICKET' ? 'TICKET-' : 'INVOICE-'}")
-          </p>
         </div>
 
+        {/* Minimum Digits Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Minimum Digits
-          </label>
-          <div className="flex space-x-2">
+          <div className="flex items-center mb-2">
+            <Label htmlFor={`${entityId}-padding-length-input`} className="text-sm font-medium text-gray-700">
+              Minimum Digits
+            </Label>
+            <InfoTooltip text="Minimum number of digits for the sequential number. For example, 6 makes '1' become '000001'" />
+          </div>
+          <div className="flex items-center space-x-2">
             <Input
               id={`${entityId}-padding-length-input`}
               type="number"
               value={isEditing ? formState.padding_length : settings?.padding_length ?? 6}
               onChange={(e) => handleInputChange('padding_length', e.target.value)}
               disabled={!isEditing}
-              className="w-32"
+              className="!w-48"
               min={0}
               max={10}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Minimum total digits. E.g., 6 makes "1" become "000001"
-          </p>
         </div>
 
+        {/* Initial Value Field (only if not yet set) */}
         {settings?.initial_value === null && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Initial Value
-            </label>
-            <div className="flex space-x-2">
+            <div className="flex items-center mb-2">
+              <Label htmlFor={`${entityId}-initial-value-input`} className="text-sm font-medium text-gray-700">
+                Initial Value
+              </Label>
+              <InfoTooltip text="Set the starting number for the sequence. This can only be set once." />
+            </div>
+            <div className="flex items-center space-x-2">
               <Input
                 id={`${entityId}-initial-value-input`}
                 type="number"
-                value={isEditing ? formState.initial_value : ''}
+                value={isEditing ? (formState.initial_value ?? '') : ''}
                 onChange={(e) => handleInputChange('initial_value', e.target.value)}
                 disabled={!isEditing}
-                className="w-32"
+                className="!w-48"
                 min={1}
                 placeholder="Enter value"
               />
@@ -213,34 +233,43 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
           </div>
         )}
 
+        {/* Last Used Number Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Last Used Number
-          </label>
-          <div className="flex space-x-2">
+          <div className="flex items-center mb-2">
+            <Label htmlFor={`${entityId}-last-number-input`} className="text-sm font-medium text-gray-700">
+              Last Used Number
+            </Label>
+            <InfoTooltip text="The last number that was assigned. The next number will be one higher than this value." />
+          </div>
+          <div className="flex items-center space-x-2">
             <Input
               id={`${entityId}-last-number-input`}
               type="number"
               value={isEditing ? formState.last_number : settings?.last_number ?? 0}
               onChange={(e) => handleInputChange('last_number', e.target.value)}
               disabled={!isEditing}
-              className="w-32"
+              className="!w-48"
               min={settings?.initial_value ?? 1}
             />
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Next {entityLabel} Number Preview
-          </label>
-          <div className="text-lg font-mono bg-gray-50 p-2 rounded border">
-            {previewNumber}
+        {/* Preview Section */}
+        <div className="pt-4 border-t">
+          <div className="mb-2">
+            <Label className="text-sm font-medium text-gray-700">
+              Next {entityLabel} Number Preview
+            </Label>
+            <p className="text-xs text-gray-500 mt-1">This is the number that will be assigned to the next {entityType.toLowerCase()}</p>
+          </div>
+          <div className="inline-block px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <span className="text-lg font-mono">{previewNumber}</span>
           </div>
         </div>
 
+        {/* Action Buttons */}
         {isEditing && (
-          <div className="flex space-x-2 mt-4">
+          <div className="flex space-x-3 pt-4">
             <Button
               id={`save-${entityId}-settings-button`}
               variant="default"
