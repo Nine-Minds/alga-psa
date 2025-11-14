@@ -54,7 +54,8 @@ export async function enqueueManagedEmailDomainWorkflow(
       }
 
       try {
-        await client.workflow.signal(workflowId, REFRESH_SIGNAL, params);
+        const handle = client.workflow.getHandle(workflowId);
+        await handle.signal(REFRESH_SIGNAL, params);
         return { enqueued: true, alreadyRunning: true };
       } catch (signalError: any) {
         return { enqueued: false, error: signalError?.message ?? 'signal_failed' };
