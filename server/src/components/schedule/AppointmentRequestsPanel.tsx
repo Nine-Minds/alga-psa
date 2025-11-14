@@ -105,6 +105,7 @@ export default function AppointmentRequestsPanel({
           email: currentUser.email,
           is_inactive: false,
           user_type: currentUser.user_type,
+          tenant: currentUser.tenant,
           hashed_password: '',
           created_at: currentUser.created_at || new Date(),
           updated_at: new Date(),
