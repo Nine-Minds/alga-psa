@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
@@ -16,7 +17,18 @@
     "sourceMap": true,
     "noEmit": false,
     "baseUrl": ".",
-    "paths": {}
+    "jsx": "preserve",
+    "paths": {
+      "@shared": ["../../shared"],
+      "@shared/*": ["../../shared/*"],
+      "@alga-psa/shared": ["../../shared"],
+      "@alga-psa/shared/*": ["../../shared/*"],
+      "@product/email-domains/entry": ["../../packages/product-email-domains/ee/entry"],
+      "@product/email-domains/*": ["../../packages/product-email-domains/*"],
+      "@ee": ["../server/src"],
+      "@ee/*": ["../server/src/*"],
+      "server/*": ["../../server/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*"],
