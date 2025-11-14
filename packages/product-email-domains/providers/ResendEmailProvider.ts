@@ -242,11 +242,15 @@ export class ResendEmailProvider implements IEmailProvider {
         dnsRecords: this.transformResendRecords(response.data.records),
       };
     } catch (error: any) {
+      const providerMessage = error.response?.data?.message;
       logger.error(`[ResendEmailProvider:${this.providerId}] Failed to create domain:`, {
         error: error.response?.data || error.message,
         status: error.response?.status,
       });
-      throw this.createEmailError('Failed to create domain', error);
+      const reason = providerMessage
+        ? `Failed to create domain ${domain}: ${providerMessage}`
+        : `Failed to create domain ${domain}`;
+      throw this.createEmailError(reason, error);
     }
   }
 
