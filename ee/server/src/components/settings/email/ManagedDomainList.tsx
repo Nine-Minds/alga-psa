@@ -16,29 +16,56 @@ interface ManagedDomainListProps {
   onDelete: (domain: string) => void | Promise<void>;
 }
 
-const statusIcon: Record<string, React.ReactNode> = {
-  verified: <CheckCircle2 className="h-4 w-4 text-green-600" />,
-  failed: <AlertTriangle className="h-4 w-4 text-red-600" />,
-  pending: <Clock className="h-4 w-4 text-amber-500" />,
+const STATUS_BADGE_STYLES: Record<
+  string,
+  {
+    icon: React.ReactNode;
+    className: string;
+  }
+> = {
+  verified: {
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    className: 'bg-primary-100 text-primary-900 border border-primary-200',
+  },
+  failed: {
+    icon: <AlertTriangle className="h-4 w-4" />,
+    className: 'bg-destructive/10 text-destructive border border-destructive/40',
+  },
+  pending: {
+    icon: <Clock className="h-4 w-4" />,
+    className: 'bg-accent-100 text-accent-900 border border-accent-200',
+  },
 };
+
+const DNS_RECORDS_HELP_TEXT =
+  'Copy each record below into your DNS provider (GoDaddy, Cloudflare, etc.). We cannot change your DNS for you.';
+
+function getDnsEmptyMessage(status?: string) {
+  const normalized = status?.toLowerCase();
+
+  if (normalized === 'pending') {
+    return 'We asked Resend to generate the DNS records for this domain. Once they show up, copy them into your DNS provider because we cannot update it automatically.';
+  }
+
+  if (normalized === 'failed') {
+    return 'We still need DNS instructions from Resend. Click Re-check DNS and, when the records load, publish them inside your DNS provider.';
+  }
+
+  return 'DNS instructions are not available yet. Re-check DNS and copy each record into your DNS provider as soon as it appears.';
+}
 
 function StatusBadge({ status }: { status: string }) {
   const normalized = status?.toLowerCase();
-  let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
-
-  if (normalized === 'verified') {
-    variant = 'default';
-  } else if (normalized === 'failed') {
-    variant = 'destructive';
-  }
+  const config =
+    STATUS_BADGE_STYLES[normalized ?? ''] ??
+    ({
+      icon: <Clock className="h-4 w-4" />,
+      className: 'bg-secondary-100 text-secondary-800 border border-secondary-200',
+    } as const);
 
   return (
-    <Badge
-      variant={variant}
-      className="flex items-center gap-1"
-      data-automation-id="managed-domain-status"
-    >
-      {statusIcon[normalized ?? 'pending']}
+    <Badge className={`gap-1 ${config.className}`} data-automation-id="managed-domain-status">
+      {config.icon}
       {status}
     </Badge>
   );
@@ -65,6 +92,9 @@ export default function ManagedDomainList({
         const normalizedStatus = domain.status?.toLowerCase();
         const showRetry = normalizedStatus === 'pending' || normalizedStatus === 'failed';
         const showDelete = normalizedStatus !== 'verified' || Boolean(domain.failureReason);
+        const dnsRecords = domain.dnsRecords ?? [];
+        const hasRecords = dnsRecords.length > 0;
+        const emptyMessage = getDnsEmptyMessage(normalizedStatus);
 
         return (
           <Card
@@ -122,7 +152,8 @@ export default function ManagedDomainList({
 
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">DNS Records</p>
-                <DnsRecordInstructions records={domain.dnsRecords || []} />
+                {hasRecords ? <p className="text-xs text-gray-500 mb-3">{DNS_RECORDS_HELP_TEXT}</p> : null}
+                <DnsRecordInstructions records={dnsRecords} emptyMessage={emptyMessage} />
               </div>
             </CardContent>
           </Card>
