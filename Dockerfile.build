@@ -31,7 +31,8 @@ WORKDIR /app
 
 COPY . .
 
-# Remove ee directory for CE build to ensure stub implementations are used
+# Remove ee directory for CE build
+# All EE imports now use the @ee webpack alias which resolves to server/src/empty/
 RUN rm -rf /app/ee
 
 # Create a dummy file for the relative import that webpack tries to resolve
@@ -52,7 +53,7 @@ WORKDIR /app/server
 RUN npm install
 
 # Increase Node.js memory limit for the build process
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=8192"
 
 RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" npm run build
 
