@@ -419,9 +419,11 @@ export default function AppointmentsPage() {
                 )}
 
                 <div className="pt-4 border-t border-gray-200">
-                  <div className="text-xs text-gray-500">
-                    {t('appointments.details.created')}: {format(new Date(selectedAppointment.created_at), 'MMM d, yyyy h:mm a')}
-                  </div>
+                  {selectedAppointment.created_at && (
+                    <div className="text-xs text-gray-500">
+                      {t('appointments.details.created')}: {format(new Date(selectedAppointment.created_at), 'MMM d, yyyy h:mm a')}
+                    </div>
+                  )}
                   {selectedAppointment.approved_at && (
                     <div className="text-xs text-gray-500 mt-1">
                       {t('appointments.details.approved')}: {format(new Date(selectedAppointment.approved_at), 'MMM d, yyyy h:mm a')}

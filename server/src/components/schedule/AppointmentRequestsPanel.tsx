@@ -131,18 +131,18 @@ export default function AppointmentRequestsPanel({
     // Handle date/time parsing safely - prefill with requested date/time
     try {
       if (request.requested_date && request.requested_time) {
-        // Database stores time in HH:MM or HH:MM:SS format
+        // Database stores time in HH:MM or HH:MM:SS format (UTC)
         const timeStr = request.requested_time.slice(0, 5); // Get HH:MM only
 
         // Parse time components
         const [hours, minutes] = timeStr.split(':').map(Number);
 
-        // Create date object from the requested date
-        const parsedDate = new Date(request.requested_date);
+        // Create date object from the requested date (parse as UTC)
+        const parsedDate = new Date(request.requested_date + 'T00:00:00Z');
 
-        // Set the time components
+        // Set the time components in UTC
         if (!isNaN(parsedDate.getTime()) && !isNaN(hours) && !isNaN(minutes)) {
-          parsedDate.setHours(hours, minutes, 0, 0);
+          parsedDate.setUTCHours(hours, minutes, 0, 0);
 
           console.log('Prefilling date/time:', {
             date: request.requested_date,
@@ -295,7 +295,7 @@ export default function AppointmentRequestsPanel({
       if (!date || !time) {
         return 'Invalid date/time';
       }
-      const dateTime = new Date(`${date}T${time}`);
+      const dateTime = new Date(`${date}T${time}Z`);
       if (isNaN(dateTime.getTime())) {
         return `${date} ${time}`;
       }
@@ -305,8 +305,9 @@ export default function AppointmentRequestsPanel({
         day: 'numeric',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
-      });
+        minute: '2-digit',
+        timeZone: 'UTC'
+      }) + ' UTC';
     } catch {
       return `${date} ${time}`;
     }

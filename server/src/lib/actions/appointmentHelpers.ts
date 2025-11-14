@@ -91,11 +91,13 @@ export async function getTenantSettings(
     // Extract settings from JSONB column or use defaults
     const tenantSettings = settings?.settings || {};
 
-    // MSP company name should be in tenant settings
+    // Get MSP company name from branding.clientName (same as used in other parts of the system)
+    const tenantName = tenantSettings.branding?.clientName || tenant;
+
     return {
       contactEmail: tenantSettings.supportEmail || tenantSettings.contactEmail || 'support@company.com',
       contactPhone: tenantSettings.supportPhone || tenantSettings.contactPhone || '',
-      tenantName: tenantSettings.companyName || 'Your MSP',
+      tenantName: tenantName,
       defaultLocale: tenantSettings.defaultLocale || 'en'
     };
   });
