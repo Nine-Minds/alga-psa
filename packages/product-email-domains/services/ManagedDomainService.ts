@@ -73,6 +73,25 @@ function parseDnsRecords(raw: unknown, domainName: string): DnsRecord[] {
   return [];
 }
 
+type EmailDomainStatus = 'pending' | 'verified' | 'failed';
+
+function normalizeProviderStatus(status: string | undefined, fallback: EmailDomainStatus = 'pending'): EmailDomainStatus {
+  if (!status) {
+    return fallback;
+  }
+
+  const normalized = status.toLowerCase();
+  if (normalized === 'verified') {
+    return 'verified';
+  }
+
+  if (normalized === 'failed' || normalized === 'rejected' || normalized === 'temporary_failure') {
+    return 'failed';
+  }
+
+  return 'pending';
+}
+
 interface ManagedDomainServiceOptions {
   tenantId: string;
   knex: Knex;
@@ -126,7 +145,7 @@ export class ManagedDomainService {
     const record = {
       tenant: this.tenantId,
       domain_name: options.domain,
-      status: providerResult.status ?? 'pending',
+      status: normalizeProviderStatus(providerResult.status),
       provider_id: provider.providerId,
       provider_domain_id: providerResult.domainId,
       dns_records: JSON.stringify(providerResult.dnsRecords ?? []),
@@ -190,8 +209,13 @@ export class ManagedDomainService {
 
     const providerVerification = await provider.verifyDomain!(providerDomainId);
 
+    const fallbackStatus: EmailDomainStatus = existing.status === 'verified'
+      ? 'verified'
+      : existing.status === 'failed'
+        ? 'failed'
+        : 'pending';
     const updatedDnsRecords = providerVerification.dnsRecords ?? dnsRecords;
-    const updatedStatus = providerVerification.status ?? existing.status;
+    const updatedStatus = normalizeProviderStatus(providerVerification.status, fallbackStatus);
     const domainName = identifier.domain ?? existing.domain_name;
 
     await ensureEmailDomainSchema(this.knex);
