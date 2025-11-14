@@ -32,8 +32,8 @@ temporal:
   address: temporal-frontend.temporal.svc.cluster.local:7233
   # Temporal namespace to use
   namespace: default
-  # Task queue name
-  taskQueue: tenant-workflows
+  # Task queue name (comma-separated for multiple queues)
+  taskQueue: tenant-workflows,portal-domain-workflows,email-domain-workflows
   # Maximum concurrent activity executions
   maxConcurrentActivityExecutions: 10
   # Maximum concurrent workflow task executions
