@@ -5,6 +5,7 @@
 'use server';
 
 import { createTenantKnex, getCurrentTenantId, getTenantContext, runWithTenant } from 'server/src/lib/db';
+import type { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { DnsRecord } from 'server/src/types/email.types';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
@@ -14,6 +15,25 @@ import { hasPermission } from 'server/src/lib/auth/rbac';
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
 type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
+
+type TenantColumnName = 'tenant_id' | 'tenant';
+let cachedTenantColumn: Promise<TenantColumnName> | null = null;
+
+async function getEmailDomainTenantColumn(knex: Knex): Promise<TenantColumnName> {
+  if (!cachedTenantColumn) {
+    cachedTenantColumn = (async () => {
+      if (await knex.schema.hasColumn('email_domains', 'tenant_id')) {
+        return 'tenant_id';
+      }
+      if (await knex.schema.hasColumn('email_domains', 'tenant')) {
+        return 'tenant';
+      }
+      throw new Error('email_domains table missing tenant identifier column');
+    })();
+  }
+
+  return cachedTenantColumn;
+}
 
 export interface ManagedDomainStatus {
   domain: string;
@@ -55,9 +75,10 @@ async function ensureTenantContext(action: EmailDomainPermissionAction) {
 
 export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
   const { knex, tenantId } = await ensureTenantContext('read');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const rows = await knex('email_domains')
-    .where({ tenant_id: tenantId })
+    .where({ [tenantColumn]: tenantId })
     .orderBy('created_at', 'desc');
 
   return rows.map((row: any) => {
@@ -82,6 +103,7 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
 
 export async function requestManagedEmailDomain(domainName: string) {
   const { knex, tenantId } = await ensureTenantContext('create');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const normalizedDomain = domainName.trim().toLowerCase();
   if (!isValidDomain(normalizedDomain)) {
@@ -92,13 +114,13 @@ export async function requestManagedEmailDomain(domainName: string) {
 
   await knex('email_domains')
     .insert({
-      tenant_id: tenantId,
+      [tenantColumn]: tenantId,
       domain_name: normalizedDomain,
       status: 'pending',
       created_at: now,
       updated_at: now,
     })
-    .onConflict(['tenant_id', 'domain_name'])
+    .onConflict([tenantColumn, 'domain_name'])
     .merge({
       status: 'pending',
       failure_reason: null,
@@ -121,10 +143,11 @@ export async function requestManagedEmailDomain(domainName: string) {
 
 export async function refreshManagedEmailDomain(domainName: string) {
   const { knex, tenantId } = await ensureTenantContext('update');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ tenant_id: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -147,10 +170,11 @@ export async function refreshManagedEmailDomain(domainName: string) {
 
 export async function deleteManagedEmailDomain(domainName: string) {
   const { knex, tenantId } = await ensureTenantContext('delete');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ tenant_id: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -159,7 +183,7 @@ export async function deleteManagedEmailDomain(domainName: string) {
 
   const now = new Date();
   await knex('email_domains')
-    .where({ tenant_id: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
     .update({
       status: 'deleting',
       updated_at: now,
