@@ -4,7 +4,7 @@ import { IUser } from 'server/src/interfaces/auth.interfaces';
 import UserDetails from './UserDetails';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
-import UserAvatar from '../../ui/UserAvatar';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
