@@ -239,7 +239,7 @@ export class ResendEmailProvider implements IEmailProvider {
       return {
         domainId: response.data.id,
         status: response.data.status,
-        dnsRecords: this.transformResendRecords(response.data.records),
+        dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
       };
     } catch (error: any) {
       const providerMessage: string | undefined = error.response?.data?.message;
@@ -258,7 +258,7 @@ export class ResendEmailProvider implements IEmailProvider {
           return {
             domainId: existing.id,
             status: existing.status,
-            dnsRecords: this.transformResendRecords(existing.records),
+            dnsRecords: this.transformResendRecords(existing.records, existing.name),
           };
         }
       }
@@ -297,7 +297,7 @@ export class ResendEmailProvider implements IEmailProvider {
       return {
         domain: response.data.name,
         status: response.data.status,
-        dnsRecords: this.transformResendRecords(response.data.records),
+        dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
         providerId: this.providerId,
         verifiedAt: response.data.status === 'verified' ? new Date(response.data.created_at) : undefined,
       };
@@ -445,14 +445,33 @@ export class ResendEmailProvider implements IEmailProvider {
     };
   }
 
-  private transformResendRecords(records: ResendDomainResponse['records']): DnsRecord[] {
+  private transformResendRecords(records: ResendDomainResponse['records'], domain?: string): DnsRecord[] {
+    const suffix = domain?.toLowerCase().replace(/\.$/, '');
     return records.map((record) => ({
       type: record.type.toUpperCase() as DnsRecord['type'],
-      name: record.name,
+      name: this.ensureAbsoluteRecordName(record.name, suffix),
       value: record.value,
       ttl: record.ttl ? parseInt(record.ttl, 10) : undefined,
       priority: record.priority ? parseInt(record.priority, 10) : undefined,
     }));
+  }
+
+  private ensureAbsoluteRecordName(name: string, domain?: string): string {
+    if (!domain) {
+      return name;
+    }
+
+    const trimmed = (name || '').replace(/\.$/, '').trim();
+    if (trimmed === '' || trimmed === '@') {
+      return domain;
+    }
+
+    const lower = trimmed.toLowerCase();
+    if (lower === domain || lower.endsWith(`.${domain}`)) {
+      return trimmed;
+    }
+
+    return `${trimmed}.${domain}`;
   }
 
   private createEmailError(message: string, error: any): EmailProviderError {
