@@ -36,6 +36,7 @@ export interface IProject extends TenantEntity, ITaggable {
   contact_name?: string | null;
   contact_name_id?: string | null;
   budgeted_hours?: number | null;
+  project_number: string; // e.g., "PRJ-0001"
 }
 
 export interface IProjectPhase extends TenantEntity {

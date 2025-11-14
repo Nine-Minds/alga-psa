@@ -16,12 +16,13 @@ import { z } from 'zod';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { 
-    createProjectSchema, 
-    updateProjectSchema, 
+import {
+    createProjectSchema,
+    updateProjectSchema,
     projectPhaseSchema
 } from '../../schemas/project.schemas';
 import { OrderingService } from 'server/src/lib/services/orderingService';
+import { SharedNumberingService } from '@shared/services/numberingService';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -539,6 +540,14 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
         // Ensure we're passing all fields including assigned_to and contact_name_id
         const fullProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'create', trx);
+
+            // Generate project number
+            const projectNumber = await SharedNumberingService.getNextNumber(
+                'PROJECT',
+                { knex: trx, tenant: currentUser.tenant! }
+            );
+            console.log(`[createProject] Generated project number: ${projectNumber}`);
+
             const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
             const defaultStatus = projectStatuses[0];
             // Remove tenant field if present in validatedData
@@ -550,10 +559,11 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
                 is_closed: defaultStatus.is_closed,
                 assigned_to: safeValidatedData.assigned_to || null,
                 contact_name_id: safeValidatedData.contact_name_id || null,
-                wbs_code: wbsCode
+                wbs_code: wbsCode,
+                project_number: projectNumber
             };
             console.log('Project data with status:', projectDataWithStatus); // Debug log
-            
+
             // Add debug logging before database insert
             console.log('Creating project with data:', projectDataWithStatus);
 

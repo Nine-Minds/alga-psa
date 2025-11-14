@@ -5,12 +5,13 @@ import { IClient, IProject, IUserWithRoles } from 'server/src/interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Copy } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import { Button } from 'server/src/components/ui/Button';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { TagManager } from 'server/src/components/tags';
+import { toast } from 'react-hot-toast';
 
 interface ProjectInfoProps {
   project: IProject;
@@ -97,10 +98,25 @@ export default function ProjectInfo({
 
   return (
     <div className="space-y-2 mb-4">
-      {/* First line: Back nav, title, tags, and edit button */}
+      {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
           <BackNav href="/msp/projects">Back to Projects</BackNav>
+
+          {/* Project number badge */}
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(currentProject.project_number || '');
+              toast.success('Project number copied!');
+            }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-mono font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+            title="Click to copy project number"
+            id="project-number-badge"
+          >
+            {currentProject.project_number}
+            <Copy className="h-4 w-4" />
+          </button>
+
           <h1 className="text-xl font-bold">{currentProject.project_name}</h1>
           {/* Tags using TagManager for inline editing */}
           {onTagsChange && (
