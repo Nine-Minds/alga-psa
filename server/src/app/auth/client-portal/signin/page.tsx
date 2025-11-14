@@ -4,7 +4,7 @@ import ClientPortalTenantDiscovery from 'server/src/components/auth/ClientPortal
 import { I18nWrapper } from 'server/src/components/i18n/I18nWrapper';
 import { getTenantBrandingByDomain, getTenantLocaleByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
 import { getSession } from 'server/src/lib/auth/getSession';
-import { isValidTenantSlug } from 'server/src/lib/utils/tenantSlug';
+import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 
 export default async function ClientSignInPage({
   searchParams,

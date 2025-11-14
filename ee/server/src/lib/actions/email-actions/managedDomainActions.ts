@@ -7,7 +7,7 @@
 import { createTenantKnex, getCurrentTenantId, getTenantContext, runWithTenant } from 'server/src/lib/db';
 import type { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import type { DnsRecord } from 'server/src/types/email.types';
+import type { DnsRecord } from '@shared/types/email';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 import { hasPermission } from 'server/src/lib/auth/rbac';
