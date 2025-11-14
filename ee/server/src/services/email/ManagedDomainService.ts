@@ -132,8 +132,10 @@ export class ManagedDomainService {
     const updatedDnsRecords = providerVerification.dnsRecords ?? dnsRecords;
     const updatedStatus = providerVerification.status ?? existing.status;
 
+    const domainName = identifier.domain ?? existing.domain_name;
+
     await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant_id: this.tenantId, domain_name: domain })
+      .where({ tenant_id: this.tenantId, domain_name: domainName })
       .update({
         status: updatedStatus,
         dns_records: JSON.stringify(updatedDnsRecords ?? []),
