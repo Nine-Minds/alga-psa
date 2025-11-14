@@ -66,6 +66,7 @@ COPY --from=development /app/shared /app/shared
 # Copy built temporal-workflows
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
+COPY --from=development /app/packages/product-email-domains/node_modules /app/packages/product-email-domains/node_modules
 
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
@@ -85,4 +86,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE 8080
 
 # Default command runs the worker
-CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]
+CMD ["node", "dist/worker.js"]
