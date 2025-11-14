@@ -41,7 +41,7 @@ interface WorkerConfig {
  * Get worker configuration from environment variables
  */
 function getWorkerConfig(): WorkerConfig {
-  const defaultQueues = ["tenant-workflows", "portal-domain-workflows"];
+  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows"];
   const queuesEnv =
     process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
 
