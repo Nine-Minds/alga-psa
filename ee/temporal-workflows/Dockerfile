@@ -85,4 +85,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE 8080
 
 # Default command runs the worker
-CMD ["node", "dist/worker.js"]
+CMD ["node", "dist/ee/temporal-workflows/src/worker.js"]
