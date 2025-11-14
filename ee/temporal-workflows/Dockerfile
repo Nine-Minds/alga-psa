@@ -17,6 +17,9 @@ COPY packages/ /app/packages/
 COPY ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
 COPY tsconfig.base.json /app/tsconfig.base.json
 
+WORKDIR /app/packages/product-email-domains
+RUN npm install --ignore-scripts
+
 WORKDIR /app/ee/temporal-workflows
 # Install global build tooling required by shared package scripts
 RUN npm install -g typescript
@@ -37,6 +40,10 @@ RUN npm run build
 WORKDIR /app
 COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
 # Provide source files referenced via TS path aliases
+COPY packages/ /app/packages/
+
+WORKDIR /app/packages/product-email-domains
+RUN npm install --ignore-scripts
 
 WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build
