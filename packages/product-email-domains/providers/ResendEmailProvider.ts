@@ -283,7 +283,7 @@ export class ResendEmailProvider implements IEmailProvider {
 
     try {
       const response = await this.client!.get<{ data: ResendDomainResponse[] }>('/domains');
-      return response.data.data.map((domain) => ({
+      return response.data.data.map((domain: ResendDomainResponse) => ({
         domainId: domain.id,
         domain: domain.name,
         status: domain.status,
