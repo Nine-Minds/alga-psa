@@ -17,7 +17,7 @@ import { TagFilter, TagManager } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, Copy } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
@@ -152,8 +152,9 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const filteredProjects = useMemo(() => {
     let filtered = projects.filter(project =>
-      project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (filterStatus === 'all' || 
+      (project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       project.project_number?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterStatus === 'all' ||
        (filterStatus === 'active' && !project.is_inactive) ||
        (filterStatus === 'inactive' && project.is_inactive))
     );
@@ -268,9 +269,35 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const columns: ColumnDefinition<IProject>[] = [
     {
+      title: 'Number',
+      dataIndex: 'project_number',
+      width: '10%',
+      render: (text: string, record: IProject) => {
+        const copyProjectNumber = () => {
+          navigator.clipboard.writeText(text);
+          toast.success('Project number copied!');
+        };
+
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              copyProjectNumber();
+            }}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-mono font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+            title="Click to copy"
+            id={`copy-project-number-${record.project_id}`}
+          >
+            {text}
+            <Copy className="w-3 h-3" />
+          </button>
+        );
+      },
+    },
+    {
       title: 'Project Name',
       dataIndex: 'project_name',
-      width: '20%',
+      width: '18%',
       render: (text: string, record: IProject) => (
         <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words">
           {text}

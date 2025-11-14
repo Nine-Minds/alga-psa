@@ -7,7 +7,7 @@
 import type { Knex } from 'knex';
 
 // Define supported entity types
-export type EntityType = 'TICKET' | 'INVOICE';
+export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT';
 
 export interface NumberingServiceDependencies {
   knex: Knex | Knex.Transaction;
