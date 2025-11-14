@@ -132,7 +132,7 @@ export default function AppointmentsPage() {
         <div className="text-sm">
           <div className="flex items-center gap-1 text-gray-900">
             <Calendar className="h-3 w-3" />
-            {format(new Date(value), 'MMM d, yyyy')}
+            {format(new Date(value + 'T00:00:00Z'), 'MMM d, yyyy')}
           </div>
           <div className="flex items-center gap-1 text-gray-600 mt-1">
             <Clock className="h-3 w-3" />
@@ -370,7 +370,7 @@ export default function AppointmentsPage() {
                       {t('appointments.details.dateTime')}
                     </div>
                     <div className="text-sm text-gray-900">
-                      {format(new Date(selectedAppointment.requested_date), 'EEEE, MMMM d, yyyy')}
+                      {format(new Date(selectedAppointment.requested_date + 'T00:00:00Z'), 'EEEE, MMMM d, yyyy')}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                       {selectedAppointment.requested_time} ({selectedAppointment.requested_duration} {t('appointments.table.minutes')})

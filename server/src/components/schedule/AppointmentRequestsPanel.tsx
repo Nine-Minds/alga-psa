@@ -8,6 +8,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import UserPicker from 'server/src/components/ui/UserPicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import toast from 'react-hot-toast';
@@ -56,7 +57,7 @@ export default function AppointmentRequestsPanel({
   const [isTicketDrawerOpen, setIsTicketDrawerOpen] = useState(false);
 
   // Users for technician assignment
-  const [technicians, setTechnicians] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]);
+  const [technicians, setTechnicians] = useState<IUserWithRoles[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -501,13 +502,15 @@ export default function AppointmentRequestsPanel({
                       <h3 className="font-semibold text-lg">Approval Details</h3>
 
                       <div>
-                        <Label>Assign Technician *</Label>
-                        <CustomSelect
+                        <UserPicker
                           id="assign-technician"
-                          options={technicianOptions}
+                          label="Assign Technician *"
+                          users={technicians}
                           value={assignedTechnicianId}
                           onValueChange={setAssignedTechnicianId}
                           placeholder="Select technician"
+                          userTypeFilter="internal"
+                          buttonWidth="full"
                         />
                       </div>
 
