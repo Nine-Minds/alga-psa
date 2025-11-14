@@ -17,7 +17,8 @@ export default function DnsRecordInstructions({ records, emptyMessage }: DnsReco
   if (!records || records.length === 0) {
     return (
       <p className="text-sm text-gray-500">
-        {emptyMessage ?? 'DNS records will appear here once the provider generates them.'}
+        {emptyMessage ??
+          'We are preparing the DNS records for this domain. As soon as they appear, copy them into your DNS provider because we cannot update it for you.'}
       </p>
     );
   }
