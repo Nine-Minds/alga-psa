@@ -19,7 +19,7 @@ exports.up = async function(knex) {
   // Seed next_number table for PROJECT entity type for all existing tenants
   await knex.raw(`
     INSERT INTO next_number (tenant, entity_type, last_number, initial_value, prefix, padding_length)
-    SELECT tenant, 'PROJECT', 0, 1, 'PRJ', 4
+    SELECT tenant, 'PROJECT', 0, 1, 'PROJECT', 4
     FROM tenants
     ON CONFLICT (tenant, entity_type) DO NOTHING
   `);
