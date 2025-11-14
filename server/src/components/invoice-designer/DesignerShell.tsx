@@ -695,6 +695,7 @@ export const DesignerShell: React.FC = () => {
         onRedo={redo}
         onGridSizeChange={setGridSize}
       />
+      <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
       <DndContext sensors={sensors} modifiers={modifiers}>
         <div className="flex flex-1 min-h-[560px] bg-white">
           <div className="w-72">
@@ -870,6 +871,67 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
           </div>
         )}
       </DragOverlay>
+    </div>
+  );
+};
+
+type DesignerBreadcrumbsProps = {
+  nodes: DesignerNode[];
+  selectedNodeId: string | null;
+  onSelect: (nodeId: string | null) => void;
+};
+
+const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, selectedNodeId, onSelect }) => {
+  const breadcrumbs = React.useMemo(() => {
+    if (!selectedNodeId) return [];
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const path: DesignerNode[] = [];
+    let currentId: string | null = selectedNodeId;
+    while (currentId) {
+      const current = nodeMap.get(currentId);
+      if (!current) break;
+      if (current.type !== 'document') {
+        path.push(current);
+      }
+      currentId = current.parentId ?? null;
+    }
+    return path.reverse();
+  }, [nodes, selectedNodeId]);
+
+  if (breadcrumbs.length === 0) {
+    return (
+      <div className="border-t border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">
+        Select a component on the canvas to view its hierarchy.
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 flex items-center flex-wrap gap-1">
+      <span className="font-semibold text-slate-700 mr-1">Hierarchy</span>
+      {breadcrumbs.map((node, index) => {
+        const isActive = index === breadcrumbs.length - 1;
+        return (
+          <React.Fragment key={node.id}>
+            {index > 0 && <span className="text-slate-400">/</span>}
+            <button
+              type="button"
+              className={`px-1 py-0.5 rounded ${
+                isActive ? 'bg-blue-100 text-blue-700 cursor-default' : 'hover:underline text-slate-600'
+              }`}
+              onClick={() => {
+                if (!isActive) {
+                  onSelect(node.id);
+                }
+              }}
+              aria-current={isActive ? 'page' : undefined}
+              disabled={isActive}
+            >
+              {node.name}
+            </button>
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };
