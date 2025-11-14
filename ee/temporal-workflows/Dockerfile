@@ -35,6 +35,7 @@ FROM base AS development
 WORKDIR /app/shared
 RUN npm install
 RUN npm run build
+RUN npm run build
 
 # Now build temporal-workflows
 WORKDIR /app
