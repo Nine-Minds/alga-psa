@@ -1,22 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  getTicketNumberSettings, 
-  updateTicketPrefix, 
-  updateInitialValue, 
-  updateLastNumber 
+import {
+  getTicketNumberSettings,
+  updateTicketPrefix,
+  updateInitialValue,
+  updateLastNumber,
+  updatePaddingLength
 } from 'server/src/lib/actions/ticket-number-actions/ticketNumberActions';
 import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Edit2 } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { toast } from 'react-hot-toast';
 
 interface TicketNumberSettings {
   prefix: string;
   last_number: number;
-  initial_value: number;
+  initial_value: number | null;
+  padding_length: number;
 }
 
 const TicketNumberingSettings = () => {
@@ -24,25 +29,13 @@ const TicketNumberingSettings = () => {
   const [settings, setSettings] = useState<TicketNumberSettings | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Editing state
-  const [editingPrefix, setEditingPrefix] = useState(false);
-  const [editingInitialValue, setEditingInitialValue] = useState(false);
-  const [editingLastNumber, setEditingLastNumber] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Temporary values while editing
-  const [tempPrefix, setTempPrefix] = useState('');
-  const [tempInitialValue, setTempInitialValue] = useState('');
-  const [tempLastNumber, setTempLastNumber] = useState('');
-
-  // Pending values awaiting confirmation
-  const [pendingPrefix, setPendingPrefix] = useState<string>('');
-  const [pendingInitialValue, setPendingInitialValue] = useState<string>('');
-  const [pendingLastNumber, setPendingLastNumber] = useState<string>('');
-  // Confirmation dialog states
-  const [showPrefixConfirmation, setShowPrefixConfirmation] = useState(false);
-  const [showInitialValueConfirmation, setShowInitialValueConfirmation] = useState(false);
-  const [showLastNumberConfirmation, setShowLastNumberConfirmation] = useState(false);
+  // Form state
+  const [formState, setFormState] = useState<Partial<TicketNumberSettings>>({});
 
   useEffect(() => {
     const init = async () => {
@@ -51,338 +44,267 @@ const TicketNumberingSettings = () => {
           getTicketNumberSettings(),
           getCurrentUser()
         ]);
-        
-        console.log('Number settings:', numberSettings); // Debug log
-        console.log('User:', user); // Debug log
-        
+
         if (!numberSettings) {
           setError('No ticket numbering settings found. Please contact your administrator.');
           return;
         }
-        
+
         setSettings(numberSettings);
+        setFormState(numberSettings);
         setIsAdmin(user?.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? false);
       } catch (err) {
         setError('Failed to load ticket numbering settings');
-        console.error('Error:', err); // Enhanced error logging
+        console.error('Error:', err);
       }
     };
 
     init();
   }, []);
 
-  const startEditing = (field: 'prefix' | 'initial' | 'last') => {
-    setError(null);
-    switch (field) {
-      case 'prefix':
-        setTempPrefix(settings?.prefix || '');
-        setEditingPrefix(true);
-        break;
-      case 'initial':
-        setTempInitialValue(settings?.initial_value?.toString() || '');
-        setEditingInitialValue(true);
-        break;
-      case 'last':
-        setTempLastNumber(settings?.last_number.toString() || '');
-        setEditingLastNumber(true);
-        break;
-    }
+  const handleInputChange = (field: keyof TicketNumberSettings, value: string) => {
+    setFormState(prev => ({
+      ...prev,
+      [field]: field === 'prefix' ? value : parseInt(value, 10) || 0
+    }));
   };
 
-  const handleConfirm = async (field: 'prefix' | 'initial' | 'last') => {
-    if (!settings) return;
-    
+  const handleSave = async () => {
     try {
       setError(null);
-      setSuccessMessage(null);
 
-      let result;
-      switch (field) {
-        case 'prefix':
-          const updatedSettings = await updateTicketPrefix(pendingPrefix);
-          setSettings(updatedSettings);
-          setSuccessMessage('Prefix updated successfully');
-          setShowPrefixConfirmation(false);
-          setEditingPrefix(false);
-          break;
+      if (!settings) return;
 
-        case 'initial':
-          const initialValue = parseInt(pendingInitialValue, 10);
-          result = await updateInitialValue(initialValue);
-          if (result.success && result.settings) {
-            setSettings(result.settings);
-            setSuccessMessage('Initial value updated successfully');
-            setEditingInitialValue(false);
-            setShowInitialValueConfirmation(false);
-          } else {
-            throw new Error(result.error || 'Failed to update initial value');
-          }
-          break;
-
-        case 'last':
-          const lastNumber = parseInt(pendingLastNumber, 10);
-          result = await updateLastNumber(lastNumber);
-          if (result.success && result.settings) {
-            setSettings(result.settings);
-            setSuccessMessage('Last number updated successfully');
-            setEditingLastNumber(false);
-            setShowLastNumberConfirmation(false);
-          } else {
-            throw new Error(result.error || 'Failed to update last number');
-          }
-          break;
+      // Update each field that changed
+      if (formState.prefix !== settings.prefix) {
+        await updateTicketPrefix(formState.prefix || '');
       }
+
+      if (formState.padding_length !== settings.padding_length) {
+        const result = await updatePaddingLength(formState.padding_length!);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update padding length');
+        }
+      }
+
+      if (formState.last_number !== settings.last_number) {
+        const result = await updateLastNumber(formState.last_number!);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update last number');
+        }
+      }
+
+      if (settings.initial_value === null && formState.initial_value !== null) {
+        const result = await updateInitialValue(formState.initial_value!);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update initial value');
+        }
+      }
+
+      // Reload settings
+      const updatedSettings = await getTicketNumberSettings();
+      setSettings(updatedSettings);
+      setFormState(updatedSettings);
+      toast.success('Settings updated successfully');
+      setIsEditing(false);
+      setShowConfirmation(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to update ${field}`);
+      setError(err instanceof Error ? err.message : 'Failed to update settings');
       console.error(err);
     }
   };
 
-  const cancelEdit = (field: 'prefix' | 'initial' | 'last') => {
+  const handleCancel = () => {
     setError(null);
-    switch (field) {
-      case 'prefix':
-        setEditingPrefix(false);
-        setTempPrefix('');
-        break;
-      case 'initial':
-        setEditingInitialValue(false);
-        setTempInitialValue('');
-        break;
-      case 'last':
-        setEditingLastNumber(false);
-        setTempLastNumber('');
-        break;
-    }
+    setFormState(settings || {});
+    setIsEditing(false);
   };
 
   if (!settings) {
     return <div>Loading...</div>;
   }
 
-  const nextNumber = parseInt(settings.last_number.toString(), 10) + 1;
-  const previewNumber = `${settings.prefix}${nextNumber}`;
+  const nextNumber = isEditing
+    ? parseInt((formState.last_number?.toString() ?? '0'), 10) + 1
+    : parseInt(settings.last_number.toString(), 10) + 1;
+
+  const paddingLength = isEditing
+    ? formState.padding_length ?? 6
+    : settings.padding_length ?? 6;
+
+  const prefix = isEditing
+    ? (formState.prefix ?? '')
+    : (settings.prefix ?? '');
+
+  const paddedNumber = paddingLength > 0
+    ? nextNumber.toString().padStart(paddingLength, '0')
+    : nextNumber.toString();
+  const previewNumber = `${prefix}${paddedNumber}`;
+
+  const InfoTooltip: React.FC<{ text: string }> = ({ text }) => (
+    <div className="group relative inline-block ml-1">
+      <Info className="h-4 w-4 text-gray-400 cursor-help" />
+      <div className="hidden group-hover:block absolute z-10 w-64 p-2 mt-1 text-sm text-white bg-gray-900 rounded-lg shadow-lg -left-28">
+        {text}
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">Ticket Numbering</h3>
-      
       {error && (
-        <div className="mb-4 text-red-600">{error}</div>
-      )}
-      
-      {successMessage && (
-        <div className="mb-4 text-green-600">{successMessage}</div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <div className="space-y-4">
+      {/* Section Header */}
+      <div className="mb-6">
+        <h3 className="text-base font-semibold text-gray-900">Number Format</h3>
+        <p className="text-sm text-gray-500 mt-1">Define the prefix, digit padding, and current sequence</p>
+      </div>
+
+      <div className="space-y-6">
+        {/* Prefix Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ticket Number Prefix
-          </label>
-          <div className="flex space-x-2">
-            {editingPrefix ? (
-              <>
-                <Input
-                  value={tempPrefix}
-                  onChange={(e) => setTempPrefix(e.target.value)}
-                  className="w-32"
-                />
-                <Button
-                  id="save-prefix-button"
-                  variant="default"
-                  onClick={() => {
-                    setPendingPrefix(tempPrefix);
-                    setShowPrefixConfirmation(true);
-                  }}
-                  disabled={!isAdmin}
-                >
-                  Save
-                </Button>
-                <Button
-                  id="cancel-prefix-button"
-                  variant="outline"
-                  onClick={() => cancelEdit('prefix')}
-                >
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <Input
-                  value={settings.prefix}
-                  disabled
-                  className="w-32"
-                />
-                {isAdmin && (
-                  <Button
-                    id="edit-prefix-button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => startEditing('prefix')}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </>
+          <div className="flex items-center mb-2">
+            <Label htmlFor="ticket-prefix-input" className="text-sm font-medium text-gray-700">
+              Ticket Number Prefix
+            </Label>
+            <InfoTooltip text="Optional prefix for ticket numbers. Leave empty for no prefix or enter a custom prefix (e.g., 'TK-')" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Input
+              id="ticket-prefix-input"
+              value={isEditing ? (formState.prefix ?? '') : (settings.prefix ?? '')}
+              onChange={(e) => handleInputChange('prefix', e.target.value)}
+              disabled={!isEditing}
+              className="!w-48"
+              placeholder="TK-"
+            />
+            {!isEditing && isAdmin && (
+              <Button
+                id="edit-ticket-settings-button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
             )}
           </div>
-          {!isAdmin && (
-            <p className="text-sm text-gray-500 mt-1">
-              Only administrators can modify the ticket number prefix
-            </p>
-          )}
         </div>
 
+        {/* Minimum Digits Field */}
+        <div>
+          <div className="flex items-center mb-2">
+            <Label htmlFor="ticket-padding-length-input" className="text-sm font-medium text-gray-700">
+              Minimum Digits
+            </Label>
+            <InfoTooltip text="Minimum number of digits for the sequential number. For example, 6 makes '1' become '000001'" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Input
+              id="ticket-padding-length-input"
+              type="number"
+              value={isEditing ? formState.padding_length : settings.padding_length ?? 6}
+              onChange={(e) => handleInputChange('padding_length', e.target.value)}
+              disabled={!isEditing}
+              className="!w-48"
+              min={0}
+              max={10}
+            />
+          </div>
+        </div>
+
+        {/* Initial Value Field (only if not yet set) */}
         {settings.initial_value === null && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Set Initial Value
-            </label>
-            <div className="flex space-x-2">
-              {editingInitialValue ? (
-                <>
-                  <Input
-                    type="number"
-                    value={tempInitialValue}
-                    onChange={(e) => setTempInitialValue(e.target.value)}
-                    className="w-32"
-                    min={1}
-                  />
-                  <Button
-                    id="save-initial-value-button"
-                    variant="default"
-                    onClick={() => {
-                      setPendingInitialValue(tempInitialValue);
-                      setShowInitialValueConfirmation(true);
-                    }}
-                    disabled={!isAdmin}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    id="cancel-initial-value-button"
-                    variant="outline"
-                    onClick={() => cancelEdit('initial')}
-                  >
-                    Cancel
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Input
-                    value=""
-                    placeholder="Enter value"
-                    disabled
-                    className="w-32"
-                  />
-                  {isAdmin && (
-                    <Button
-                      id="edit-initial-value-button"
-                      variant="outline"
-                      onClick={() => startEditing('initial')}
-                    >
-                      Set Value
-                    </Button>
-                  )}
-                </>
-              )}
+            <div className="flex items-center mb-2">
+              <Label htmlFor="ticket-initial-value-input" className="text-sm font-medium text-gray-700">
+                Initial Value
+              </Label>
+              <InfoTooltip text="Set the starting number for the sequence. This can only be set once." />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Input
+                id="ticket-initial-value-input"
+                type="number"
+                value={isEditing ? (formState.initial_value ?? '') : ''}
+                onChange={(e) => handleInputChange('initial_value', e.target.value)}
+                disabled={!isEditing}
+                className="!w-48"
+                min={1}
+                placeholder="Enter value"
+              />
             </div>
           </div>
         )}
 
+        {/* Last Used Number Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Last Used Number
-          </label>
-          <div className="flex space-x-2">
-            {editingLastNumber ? (
-              <>
-                <Input
-                  type="number"
-                  value={tempLastNumber}
-                  onChange={(e) => setTempLastNumber(e.target.value)}
-                  className="w-32"
-                  min={settings.initial_value}
-                />
-                <Button
-                  id="save-last-number-button"
-                  variant="default"
-                  onClick={() => {
-                    setPendingLastNumber(tempLastNumber);
-                    setShowLastNumberConfirmation(true);
-                  }}
-                  disabled={!isAdmin}
-                >
-                  Save
-                </Button>
-                <Button
-                  id="cancel-last-number-button"
-                  variant="outline"
-                  onClick={() => cancelEdit('last')}
-                >
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <Input
-                  value={settings.last_number}
-                  disabled
-                  className="w-32"
-                />
-                {isAdmin && (
-                  <Button
-                    id="edit-last-number-button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => startEditing('last')}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </>
-            )}
+          <div className="flex items-center mb-2">
+            <Label htmlFor="ticket-last-number-input" className="text-sm font-medium text-gray-700">
+              Last Used Number
+            </Label>
+            <InfoTooltip text="The last number that was assigned. The next number will be one higher than this value." />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Input
+              id="ticket-last-number-input"
+              type="number"
+              value={isEditing ? formState.last_number : settings.last_number}
+              onChange={(e) => handleInputChange('last_number', e.target.value)}
+              disabled={!isEditing}
+              className="!w-48"
+              min={settings.initial_value ?? 1}
+            />
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Next Ticket Number Preview
-          </label>
-          <div className="text-lg font-mono bg-gray-50 p-2 rounded border">
-            {previewNumber}
+        {/* Preview Section */}
+        <div className="pt-4 border-t">
+          <div className="mb-2">
+            <Label className="text-sm font-medium text-gray-700">
+              Next Ticket Number Preview
+            </Label>
+            <p className="text-xs text-gray-500 mt-1">This is the number that will be assigned to the next ticket</p>
+          </div>
+          <div className="inline-block px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <span className="text-2xl font-mono font-semibold text-gray-900">{previewNumber}</span>
           </div>
         </div>
+
+        {/* Action Buttons */}
+        {isEditing && (
+          <div className="flex space-x-3 pt-4">
+            <Button
+              id="save-ticket-settings-button"
+              variant="default"
+              onClick={() => setShowConfirmation(true)}
+              disabled={!isAdmin}
+            >
+              Save Changes
+            </Button>
+            <Button
+              id="cancel-ticket-settings-button"
+              variant="outline"
+              onClick={handleCancel}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
       </div>
-      <ConfirmationDialog
-        id="prefix-confirmation-dialog"
-        isOpen={showPrefixConfirmation}
-        onClose={() => setShowPrefixConfirmation(false)}
-        onConfirm={() => handleConfirm('prefix')}
-        title="Update Ticket Number Prefix"
-        message="Changing the ticket number prefix will affect what number will be generated for new tickets. This change will not affect existing tickets. Are you sure you want to proceed?"
-        confirmLabel="Update Prefix"
-      />
 
       <ConfirmationDialog
-        id="last-number-confirmation-dialog"
-        isOpen={showLastNumberConfirmation}
-        onClose={() => setShowLastNumberConfirmation(false)}
-        onConfirm={() => handleConfirm('last')}
-        title="Update Last Used Number"
-        message="Changing the last used number will affect what number will be generated for new tickets. This change will not affect existing tickets. Are you sure you want to proceed?"
-        confirmLabel="Update Number"
-      />
-
-      <ConfirmationDialog
-        id="initial-value-confirmation-dialog"
-        isOpen={showInitialValueConfirmation}
-        onClose={() => setShowInitialValueConfirmation(false)}
-        onConfirm={() => handleConfirm('initial')}
-        title="Set Initial Value"
-        message="Setting the initial value will affect what number will be generated for new tickets. This change will not affect existing tickets. Are you sure you want to proceed?"
-        confirmLabel="Set Value"
+        id="ticket-settings-confirmation-dialog"
+        isOpen={showConfirmation}
+        onClose={() => setShowConfirmation(false)}
+        onConfirm={handleSave}
+        title="Update Ticket Number Settings"
+        message="Changing these settings will affect how new ticket numbers are generated. This change will not affect existing tickets. Are you sure you want to proceed?"
+        confirmLabel="Update Settings"
       />
     </div>
   );

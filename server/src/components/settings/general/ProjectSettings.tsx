@@ -1,73 +1,109 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
+import NumberingSettings from './NumberingSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 
-export default function ProjectSettings() {
+const ProjectSettings = (): JSX.Element => {
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams?.get('section');
+
+  // Map URL slugs to tab labels
+  const sectionToLabelMap: Record<string, string> = {
+    'project-numbering': 'Project Numbering',
+    'statuses': 'Statuses',
+    'templates': 'Templates'
+  };
+
+  // Determine initial active tab based on URL parameter
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
+    return initialLabel || 'Project Numbering'; // Default to 'Project Numbering'
+  });
+
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
+    const targetTab = currentLabel || 'Project Numbering';
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
+    }
+  }, [sectionParam, activeTab]);
+
+  const tabs = [
+    {
+      label: "Project Numbering",
+      content: <NumberingSettings entityType="PROJECT" />
+    },
+    {
+      label: "Statuses",
+      content: (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="text-gray-400">Status Configuration</CardTitle>
+            <CardDescription className="text-gray-400">
+              Coming soon: Manage project statuses
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )
+    },
+    {
+      label: "Templates",
+      content: (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="text-gray-400">Project Templates</CardTitle>
+            <CardDescription className="text-gray-400">
+              Coming soon: Create and manage project templates
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )
+    }
+  ];
+
+  const updateURL = (tabLabel: string) => {
+    // Map tab labels back to URL slugs
+    const labelToSlugMap: Record<string, string> = Object.entries(sectionToLabelMap).reduce((acc, [slug, label]) => {
+      acc[label] = slug;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const urlSlug = labelToSlugMap[tabLabel];
+
+    // Build new URL with tab and section parameters
+    const currentSearchParams = new URLSearchParams(window.location.search);
+
+    if (urlSlug && urlSlug !== 'project-numbering') {
+      currentSearchParams.set('section', urlSlug);
+    } else {
+      currentSearchParams.delete('section');
+    }
+
+    // Keep existing tab parameter
+    const newUrl = currentSearchParams.toString()
+      ? `/msp/settings?${currentSearchParams.toString()}`
+      : '/msp/settings?tab=projects';
+
+    window.history.pushState({}, '', newUrl);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Project Numbering Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Project Numbering</CardTitle>
-          <CardDescription>
-            Customize how project numbers are generated and displayed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Number Prefix
-              </label>
-              <input
-                type="text"
-                value="PRJ"
-                disabled
-                className="w-32 px-3 py-2 border rounded-md bg-gray-50 text-gray-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Currently fixed to "PRJ". Future versions will allow customization.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Current Number
-              </label>
-              <div className="text-sm text-gray-600">
-                Next project will be numbered: <span className="font-mono font-medium">PRJ-XXXX</span>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <h4 className="text-sm font-medium mb-2">Example Format</h4>
-              <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-md font-mono text-sm">
-                PRJ-0001
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Placeholder for future settings */}
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-gray-400">Status Configuration</CardTitle>
-          <CardDescription className="text-gray-400">
-            Coming in Phase 2: Manage project statuses
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-gray-400">Project Templates</CardTitle>
-          <CardDescription className="text-gray-400">
-            Coming soon: Create and manage project templates
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h2 className="text-xl font-bold mb-4 text-gray-800">Project Settings</h2>
+      <CustomTabs
+        tabs={tabs}
+        defaultTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          updateURL(tab);
+        }}
+      />
     </div>
   );
-}
+};
+
+export default ProjectSettings;
