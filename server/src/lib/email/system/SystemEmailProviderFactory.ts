@@ -1,7 +1,7 @@
 import logger from '@alga-psa/shared/core/logger';
 import { IEmailProvider, EmailProviderConfig } from '../../../types/email.types';
 import { SMTPEmailProvider } from '../../../services/email/providers/SMTPEmailProvider';
-import { ResendEmailProvider } from '../../../services/email/providers/ResendEmailProvider';
+import { ResendEmailProvider } from '@product/email-domains/providers/ResendEmailProvider';
 
 export interface SystemEmailProviderConfig {
   providerType: 'smtp' | 'resend';

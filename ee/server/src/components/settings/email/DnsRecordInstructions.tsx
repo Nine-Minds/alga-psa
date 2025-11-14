@@ -5,7 +5,7 @@ import { Copy } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent } from 'server/src/components/ui/Card';
 import { Label } from 'server/src/components/ui/Label';
-import type { DnsRecord } from 'server/src/types/email.types';
+import type { DnsRecord } from '@shared/types/email';
 import toast from 'react-hot-toast';
 
 interface DnsRecordInstructionsProps {

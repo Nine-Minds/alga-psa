@@ -18,7 +18,7 @@ import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
-import { buildTenantPortalSlug } from 'server/src/lib/utils/tenantSlug';
+import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable

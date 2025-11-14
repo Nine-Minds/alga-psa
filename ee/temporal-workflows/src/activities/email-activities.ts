@@ -4,7 +4,7 @@ import type {
   SendWelcomeEmailActivityInput,
   SendWelcomeEmailActivityResult,
 } from "../types/workflow-types";
-import { buildTenantPortalSlug } from 'server/src/lib/utils/tenantSlug';
+import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 
 const logger = () => Context.current().log;
 
