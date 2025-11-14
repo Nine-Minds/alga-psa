@@ -34,6 +34,11 @@ COPY . .
 # Remove ee directory for CE build
 RUN rm -rf /app/ee
 
+# Copy CE stubs from server/src/empty to ee/server/src for @ee alias resolution
+# This ensures both TypeScript and webpack can resolve @ee imports during CE builds
+RUN mkdir -p /app/ee/server && \
+    cp -r /app/server/src/empty /app/ee/server/src
+
 # Create minimal stubs for packages that use relative paths (not @ee alias)
 # packages/product-chat/ee/entry.tsx uses ../../../ee/server/src/services/*
 RUN mkdir -p /app/ee/server/src/services && \
@@ -56,6 +61,10 @@ RUN npm install
 
 # Increase Node.js memory limit for the build process
 ENV NODE_OPTIONS="--max-old-space-size=8192"
+
+# Set edition to community for proper module resolution
+ENV EDITION="ce"
+ENV NEXT_PUBLIC_EDITION="community"
 
 RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" npm run build
 
