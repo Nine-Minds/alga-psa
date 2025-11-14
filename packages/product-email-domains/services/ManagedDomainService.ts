@@ -38,6 +38,41 @@ async function ensureEmailDomainSchema(knex: Knex): Promise<void> {
   return schemaValidationPromise;
 }
 
+function parseDnsRecords(raw: unknown, domainName: string): DnsRecord[] {
+  if (!raw) {
+    return [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw as DnsRecord[];
+  }
+
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as DnsRecord[];
+    } catch (error) {
+      logger.warn('[ManagedDomainService] Failed to parse dns_records JSON string', {
+        domainName,
+        error: error instanceof Error ? error.message : error,
+      });
+      return [];
+    }
+  }
+
+  if (typeof raw === 'object') {
+    try {
+      return JSON.parse(JSON.stringify(raw)) as DnsRecord[];
+    } catch (error) {
+      logger.warn('[ManagedDomainService] Failed to normalize dns_records object', {
+        domainName,
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+  }
+
+  return [];
+}
+
 interface ManagedDomainServiceOptions {
   tenantId: string;
   knex: Knex;
@@ -145,7 +180,7 @@ export class ManagedDomainService {
       );
     }
 
-    const dnsRecords: DnsRecord[] = existing.dns_records ? JSON.parse(existing.dns_records) : [];
+    const dnsRecords: DnsRecord[] = parseDnsRecords(existing.dns_records, existing.domain_name);
     const dnsLookup = await verifyDnsRecords(dnsRecords);
 
     const providerDomainId = existing.provider_domain_id;
