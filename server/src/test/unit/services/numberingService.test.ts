@@ -1,5 +1,6 @@
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { Knex } from 'knex';
+import { vi } from 'vitest';
 
 describe('SharedNumberingService', () => {
   let mockKnex: any;
@@ -7,7 +8,7 @@ describe('SharedNumberingService', () => {
 
   beforeEach(() => {
     mockKnex = {
-      raw: jest.fn()
+      raw: vi.fn()
     };
   });
 
