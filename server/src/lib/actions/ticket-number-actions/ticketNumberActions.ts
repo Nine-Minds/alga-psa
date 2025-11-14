@@ -75,7 +75,7 @@ export async function updateInitialValue(value: number): Promise<UpdateNumberRes
 
 export async function updateLastNumber(value: number): Promise<UpdateNumberResponse> {
   const { knex: db, tenant } = await createTenantKnex();
-  
+
   try {
     // Validate input
     if (!Number.isInteger(value) || value < 1) {
@@ -111,5 +111,32 @@ export async function updateLastNumber(value: number): Promise<UpdateNumberRespo
   } catch (error) {
     console.error('Error updating last number:', error);
     return { success: false, error: 'Failed to update last number' };
+  }
+}
+
+export async function updatePaddingLength(value: number): Promise<UpdateNumberResponse> {
+  const { knex: db, tenant } = await createTenantKnex();
+
+  try {
+    // Validate input
+    if (!Number.isInteger(value) || value < 0 || value > 10) {
+      return { success: false, error: 'Padding length must be between 0 and 10' };
+    }
+
+    // Update the padding length
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      await trx('next_number')
+        .where('entity_type', 'TICKET')
+        .andWhere('tenant', tenant)
+        .update({
+          padding_length: value
+        });
+    });
+
+    const updatedSettings = await getTicketNumberSettings();
+    return { success: true, settings: updatedSettings };
+  } catch (error) {
+    console.error('Error updating padding length:', error);
+    return { success: false, error: 'Failed to update padding length' };
   }
 }

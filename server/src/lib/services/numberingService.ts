@@ -2,12 +2,12 @@ import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
 
 // Define supported entity types
-export type EntityType = 'TICKET' | 'INVOICE';
+export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT';
 
 export class NumberingService {
   /**
    * Generates the next sequential number for a given entity type
-   * @param entityType The type of entity to generate a number for ('TICKET' | 'INVOICE')
+   * @param entityType The type of entity to generate a number for ('TICKET' | 'INVOICE' | 'PROJECT')
    * @returns A formatted string containing the next number with prefix and padding
    * @throws Error if tenant context is missing or number generation fails
    */
