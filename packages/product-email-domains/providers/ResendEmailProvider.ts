@@ -242,15 +242,43 @@ export class ResendEmailProvider implements IEmailProvider {
         dnsRecords: this.transformResendRecords(response.data.records),
       };
     } catch (error: any) {
-      const providerMessage = error.response?.data?.message;
+      const providerMessage: string | undefined = error.response?.data?.message;
+      const statusCode = error.response?.status;
       logger.error(`[ResendEmailProvider:${this.providerId}] Failed to create domain:`, {
         error: error.response?.data || error.message,
-        status: error.response?.status,
+        status: statusCode,
       });
+
+      if (statusCode === 403 && providerMessage?.toLowerCase().includes('registered already')) {
+        const existing = await this.findDomainByName(domain).catch(() => null);
+        if (existing && existing.status !== 'verified') {
+          logger.warn(
+            `[ResendEmailProvider:${this.providerId}] Domain already exists with status ${existing.status}, returning existing DNS records`
+          );
+          return {
+            domainId: existing.id,
+            status: existing.status,
+            dnsRecords: this.transformResendRecords(existing.records),
+          };
+        }
+      }
+
       const reason = providerMessage
         ? `Failed to create domain ${domain}: ${providerMessage}`
         : `Failed to create domain ${domain}`;
       throw this.createEmailError(reason, error);
+    }
+  }
+
+  private async findDomainByName(domain: string): Promise<ResendDomainResponse | null> {
+    try {
+      const response = await this.client!.get<{ data: ResendDomainResponse[] }>('/domains');
+      return response.data.data.find((entry) => entry.name.toLowerCase() === domain.toLowerCase()) ?? null;
+    } catch (error) {
+      logger.warn(`[ResendEmailProvider:${this.providerId}] Unable to fetch existing domains`, {
+        error: (error as any)?.response?.data || (error as any)?.message || error,
+      });
+      return null;
     }
   }
 
