@@ -35,6 +35,8 @@ RUN npm run build
 # Now build temporal-workflows
 WORKDIR /app
 COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
+# Provide source files referenced via TS path aliases
+COPY packages/ /app/packages/
 
 WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build

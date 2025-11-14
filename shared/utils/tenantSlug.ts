@@ -2,9 +2,6 @@ const TENANT_ID_HEX_LENGTH = 32;
 const TENANT_SLUG_LENGTH = 12;
 const TENANT_SLUG_REGEX = /^[a-f0-9]{12}$/;
 
-/**
- * Normalize a UUID tenant id by stripping dashes and lowercasing.
- */
 function normalizeTenantId(tenantId: string): string {
   if (!tenantId) {
     throw new Error('Tenant ID is required to build a portal slug');

@@ -94,7 +94,7 @@ async function getKnexForTenant(tenantId: string, context: ActionExecutionContex
     return context.knex as Knex;
   }
 
-  const module = await import('server/src/lib/db/db');
+  const module = await import('@shared/db/tenant');
   return module.getConnection(tenantId);
 }
 

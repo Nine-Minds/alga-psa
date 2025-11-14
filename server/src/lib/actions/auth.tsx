@@ -7,7 +7,7 @@ import logger from "server/src/utils/logger";
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { analytics } from '../analytics/posthog';
 import { getTenantIdBySlug } from './tenant-actions/tenantSlugActions';
-import { isValidTenantSlug } from '../utils/tenantSlug';
+import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 
 interface AuthenticateUserOptions {
     tenantId?: string;

@@ -1,7 +1,7 @@
 import { promises as dns } from 'dns';
 
 import logger from '@alga-psa/shared/core/logger';
-import type { DnsRecord } from 'server/src/types/email.types';
+import type { DnsRecord } from '@shared/types/email';
 
 export interface DnsLookupResult {
   record: DnsRecord;

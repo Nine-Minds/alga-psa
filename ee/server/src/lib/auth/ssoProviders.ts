@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import logger from '@alga-psa/shared/core/logger';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
-import { buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from 'server/src/lib/utils/tenantSlug';
+import { buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from '@shared/utils/tenantSlug';
 
 type InternalUserType = 'internal' | 'client';
 

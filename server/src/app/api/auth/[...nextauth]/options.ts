@@ -15,7 +15,7 @@ import {
     type PortalSessionTokenPayload,
 } from "server/src/lib/auth/sessionCookies";
 import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
-import { buildTenantPortalSlug, isValidTenantSlug } from "server/src/lib/utils/tenantSlug";
+import { buildTenantPortalSlug, isValidTenantSlug } from "@shared/utils/tenantSlug";
 import { isEnterprise } from "server/src/lib/features";
 import {
     applyOAuthAccountHints,

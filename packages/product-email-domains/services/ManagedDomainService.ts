@@ -2,11 +2,8 @@ import { Knex } from 'knex';
 
 import logger from '@alga-psa/shared/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
-import type {
-  DomainVerificationResult,
-  DnsRecord,
-} from 'server/src/types/email.types';
-import { ResendEmailProvider } from 'server/src/services/email/providers/ResendEmailProvider';
+import type { DomainVerificationResult, DnsRecord } from '@shared/types/email';
+import { ResendEmailProvider } from '@product/email-domains/providers/ResendEmailProvider';
 
 import { verifyDnsRecords, type DnsLookupResult } from './dnsLookup';
 
@@ -131,7 +128,6 @@ export class ManagedDomainService {
 
     const updatedDnsRecords = providerVerification.dnsRecords ?? dnsRecords;
     const updatedStatus = providerVerification.status ?? existing.status;
-
     const domainName = identifier.domain ?? existing.domain_name;
 
     await this.knex(EMAIL_DOMAINS_TABLE)
@@ -202,62 +198,55 @@ export class ManagedDomainService {
     if (existing.provider_domain_id) {
       try {
         await provider.deleteDomain!(existing.provider_domain_id);
-      } catch (error: any) {
+      } catch (error) {
         logger.warn('[ManagedDomainService] Failed to delete domain from provider', {
           tenantId: this.tenantId,
           domain,
-          error: error?.message,
+          error: error instanceof Error ? error.message : 'unknown_error',
         });
       }
     }
 
     await this.knex(EMAIL_DOMAINS_TABLE)
       .where({ tenant_id: this.tenantId, domain_name: domain })
-      .del();
+      .update({
+        status: 'deleted',
+        updated_at: new Date(),
+      });
   }
 
   private async getProvider(): Promise<ResendEmailProvider> {
-    if (!this.providerPromise) {
-      this.providerPromise = this.createProvider();
+    if (this.providerPromise) {
+      return this.providerPromise;
     }
+
+    this.providerPromise = (async () => {
+      const secretProvider = await getSecretProviderInstance().catch((error) => {
+        logger.warn('[ManagedDomainService] Failed to initialize secret provider, falling back to env vars', {
+          error: error instanceof Error ? error.message : error,
+        });
+        return null;
+      });
+
+      const apiKey =
+        (await secretProvider?.getAppSecret('resend_api_key')) ||
+        process.env.RESEND_API_KEY;
+
+      if (!apiKey) {
+        throw new Error('Managed domain provisioning requires RESEND_API_KEY to be configured');
+      }
+
+      const provider = new ResendEmailProvider(MANAGED_PROVIDER_ID);
+      await provider.initialize({
+        apiKey,
+        baseUrl: process.env.RESEND_BASE_URL,
+        defaultFromDomain: process.env.RESEND_DEFAULT_DOMAIN,
+      });
+
+      return provider;
+    })();
 
     return this.providerPromise;
-  }
-
-  private async createProvider(): Promise<ResendEmailProvider> {
-    const provider = new ResendEmailProvider(MANAGED_PROVIDER_ID);
-    const config = await this.getProviderConfig();
-    await provider.initialize(config);
-    return provider;
-  }
-
-  private async getProviderConfig(): Promise<Record<string, any>> {
-    const secretProvider = await this.safeGetSecretProvider();
-    const apiKey = (await secretProvider?.getAppSecret?.('RESEND_API_KEY')) ?? process.env.RESEND_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('RESEND_API_KEY is not configured for managed domains');
-    }
-
-    const baseUrl = process.env.RESEND_BASE_URL;
-    const defaultFromDomain = process.env.RESEND_DEFAULT_FROM_DOMAIN;
-
-    return {
-      apiKey,
-      ...(baseUrl ? { baseUrl } : {}),
-      ...(defaultFromDomain ? { defaultFromDomain } : {}),
-    };
-  }
-
-  private async safeGetSecretProvider(): Promise<Awaited<ReturnType<typeof getSecretProviderInstance>> | null> {
-    try {
-      return await getSecretProviderInstance();
-    } catch (error) {
-      logger.warn('[ManagedDomainService] Failed to initialize secret provider, falling back to env vars', {
-        error: (error as Error)?.message,
-      });
-      return null;
-    }
   }
 }
 
