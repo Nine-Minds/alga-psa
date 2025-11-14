@@ -11,6 +11,33 @@ const EMAIL_DOMAINS_TABLE = 'email_domains';
 const TENANT_EMAIL_SETTINGS_TABLE = 'tenant_email_settings';
 const MANAGED_PROVIDER_ID = 'managed-resend';
 
+let schemaValidationPromise: Promise<void> | null = null;
+
+async function ensureEmailDomainSchema(knex: Knex): Promise<void> {
+  if (!schemaValidationPromise) {
+    schemaValidationPromise = (async () => {
+      const emailDomainsHasTenant = await knex.schema.hasColumn(EMAIL_DOMAINS_TABLE, 'tenant');
+      if (!emailDomainsHasTenant) {
+        throw new Error(
+          `[ManagedDomainService] ${EMAIL_DOMAINS_TABLE}.tenant column is missing. ` +
+          'Confirm that migration server/migrations/20250804000000_standardize_email_tenant_columns.cjs has executed.'
+        );
+      }
+
+      const emailSettingsHasTenant = await knex.schema.hasColumn(TENANT_EMAIL_SETTINGS_TABLE, 'tenant');
+
+      if (!emailSettingsHasTenant) {
+        throw new Error(
+          `[ManagedDomainService] ${TENANT_EMAIL_SETTINGS_TABLE}.tenant column is missing. ` +
+          'Confirm that migration server/migrations/20250804000000_standardize_email_tenant_columns.cjs has executed.'
+        );
+      }
+    })();
+  }
+
+  return schemaValidationPromise;
+}
+
 interface ManagedDomainServiceOptions {
   tenantId: string;
   knex: Knex;
@@ -49,6 +76,7 @@ export class ManagedDomainService {
   }
 
   async createDomain(options: CreateDomainOptions): Promise<CreateDomainResult> {
+    await ensureEmailDomainSchema(this.knex);
     const provider = await this.getProvider();
 
     logger.info('[ManagedDomainService] Creating managed domain', {
@@ -61,7 +89,7 @@ export class ManagedDomainService {
 
     const now = new Date();
     const record = {
-      tenant_id: this.tenantId,
+      tenant: this.tenantId,
       domain_name: options.domain,
       status: providerResult.status ?? 'pending',
       provider_id: provider.providerId,
@@ -74,7 +102,7 @@ export class ManagedDomainService {
 
     await this.knex(EMAIL_DOMAINS_TABLE)
       .insert(record)
-      .onConflict(['tenant_id', 'domain_name'])
+      .onConflict(['tenant', 'domain_name'])
       .merge({
         status: record.status,
         provider_id: record.provider_id,
@@ -98,7 +126,8 @@ export class ManagedDomainService {
       throw new Error('Domain name or provider domain id must be provided');
     }
 
-    const query = this.knex(EMAIL_DOMAINS_TABLE).where({ tenant_id: this.tenantId });
+    await ensureEmailDomainSchema(this.knex);
+    const query = this.knex(EMAIL_DOMAINS_TABLE).where({ tenant: this.tenantId });
 
     if (identifier.domain) {
       query.andWhere({ domain_name: identifier.domain });
@@ -130,8 +159,9 @@ export class ManagedDomainService {
     const updatedStatus = providerVerification.status ?? existing.status;
     const domainName = identifier.domain ?? existing.domain_name;
 
+    await ensureEmailDomainSchema(this.knex);
     await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant_id: this.tenantId, domain_name: domainName })
+      .where({ tenant: this.tenantId, domain_name: domainName })
       .update({
         status: updatedStatus,
         dns_records: JSON.stringify(updatedDnsRecords ?? []),
@@ -151,28 +181,31 @@ export class ManagedDomainService {
   async activateDomain(domain: string): Promise<void> {
     const now = new Date();
 
+    await ensureEmailDomainSchema(this.knex);
     await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant_id: this.tenantId, domain_name: domain })
+      .where({ tenant: this.tenantId, domain_name: domain })
       .update({
         status: 'verified',
         verified_at: now,
         updated_at: now,
       });
 
+    await ensureEmailDomainSchema(this.knex);
+
     const existingSettings = await this.knex(TENANT_EMAIL_SETTINGS_TABLE)
-      .where({ tenant_id: this.tenantId })
+      .where({ tenant: this.tenantId })
       .first();
 
     if (existingSettings) {
       await this.knex(TENANT_EMAIL_SETTINGS_TABLE)
-        .where({ tenant_id: this.tenantId })
+        .where({ tenant: this.tenantId })
         .update({
           default_from_domain: domain,
           updated_at: now,
         });
     } else {
       await this.knex(TENANT_EMAIL_SETTINGS_TABLE).insert({
-        tenant_id: this.tenantId,
+        tenant: this.tenantId,
         default_from_domain: domain,
         custom_domains: JSON.stringify([domain]),
         email_provider: 'resend',
@@ -187,8 +220,9 @@ export class ManagedDomainService {
   async deleteDomain(domain: string): Promise<void> {
     const provider = await this.getProvider();
 
+    await ensureEmailDomainSchema(this.knex);
     const existing = await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant_id: this.tenantId, domain_name: domain })
+      .where({ tenant: this.tenantId, domain_name: domain })
       .first();
 
     if (!existing) {
@@ -208,7 +242,7 @@ export class ManagedDomainService {
     }
 
     await this.knex(EMAIL_DOMAINS_TABLE)
-      .where({ tenant_id: this.tenantId, domain_name: domain })
+      .where({ tenant: this.tenantId, domain_name: domain })
       .update({
         status: 'deleted',
         updated_at: new Date(),
