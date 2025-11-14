@@ -84,6 +84,12 @@ This implementation roadmap operationalizes the strategic design described in [2
 - Persistence with revision history and conflict detection (optimistic alerts) so editors avoid silent overwrites.
 - Positive feedback from internal pilot on usability of MVP features.
 
+### Component Gap Backlog (tracked for Phase 1/2 follow-up)
+- Add structured **field**/**label** primitives with binding metadata so invoice metadata (dates, PO numbers, addresses) no longer relies on generic text blocks.
+- Ship a **line-item table editor** (column definitions, formatting types, sample data preview) instead of requiring manual IR edits for table schema changes.
+- Introduce **granular totals widgets** (subtotal, discount, tax rows, custom computed lines) to complement the aggregate `totals` block.
+- Define **signature/action widgets** (sign-off blocks, “Pay Now” CTA, attachment list) to support common invoice workflows absent from the current component library.
+
 ## Phase 2 – Advanced Capabilities (Weeks 8-12)
 
 ### Objectives

@@ -16,10 +16,19 @@ export type DesignerComponentType =
   | 'text'
   | 'totals'
   | 'table'
+  | 'field'
+  | 'label'
+  | 'subtotal'
+  | 'tax'
+  | 'discount'
+  | 'custom-total'
   | 'image'
   | 'logo'
   | 'qr'
-  | 'dynamic-table';
+  | 'dynamic-table'
+  | 'signature'
+  | 'action-button'
+  | 'attachment-list';
 
 export interface Point {
   x: number;
@@ -95,6 +104,7 @@ interface DesignerState {
   setNodePosition: (id: string, position: Point, commit?: boolean) => void;
   updateNodeSize: (id: string, size: Size, commit?: boolean) => void;
   updateNodeName: (id: string, name: string) => void;
+  updateNodeMetadata: (id: string, metadata: Record<string, unknown>) => void;
   selectNode: (id: string | null) => void;
   setHoverNode: (id: string | null) => void;
   deleteSelectedNode: () => void;
@@ -575,6 +585,22 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           historyIndex: nextHistory.length - 1,
         };
       }, false, 'designer/updateNodeName');
+    },
+    updateNodeMetadata: (id, metadata) => {
+      set((state) => {
+        const nodes = state.nodes.map((node) =>
+          node.id === id ? { ...node, metadata: { ...(node.metadata ?? {}), ...metadata } } : node
+        );
+        const nextHistory = [...state.history.slice(0, state.historyIndex + 1), snapshotNodes(nodes)];
+        if (nextHistory.length > MAX_HISTORY_LENGTH) {
+          nextHistory.shift();
+        }
+        return {
+          nodes,
+          history: nextHistory,
+          historyIndex: nextHistory.length - 1,
+        };
+      }, false, 'designer/updateNodeMetadata');
     },
     selectNode: (id) => {
       set((state) => ({

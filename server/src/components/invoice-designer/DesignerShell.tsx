@@ -113,6 +113,7 @@ export const DesignerShell: React.FC = () => {
   const updateNodeSize = useInvoiceDesignerStore((state) => state.updateNodeSize);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
+  const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
   const toggleSnap = useInvoiceDesignerStore((state) => state.toggleSnap);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const toggleGuides = useInvoiceDesignerStore((state) => state.toggleGuides);
@@ -209,6 +210,318 @@ export const DesignerShell: React.FC = () => {
     });
   }, [nodes, previewPositions]);
 
+  const renderMetadataInspector = () => {
+    if (!selectedNode) {
+      return null;
+    }
+    const metadata = (selectedNode.metadata ?? {}) as Record<string, any>;
+    const applyMetadata = (patch: Record<string, unknown>) => updateNodeMetadata(selectedNode.id, patch);
+
+    if (selectedNode.type === 'field') {
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Field Binding</p>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Binding key</label>
+            <Input
+              id="designer-field-binding"
+              value={metadata.bindingKey ?? ''}
+              onChange={(event) => applyMetadata({ bindingKey: event.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Format</label>
+            <select
+              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+              value={metadata.format ?? 'text'}
+              onChange={(event) => applyMetadata({ format: event.target.value })}
+            >
+              <option value="text">Text</option>
+              <option value="number">Number</option>
+              <option value="currency">Currency</option>
+              <option value="date">Date</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Placeholder</label>
+            <Input
+              id="designer-field-placeholder"
+              value={metadata.placeholder ?? ''}
+              onChange={(event) => applyMetadata({ placeholder: event.target.value })}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedNode.type === 'label') {
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Label Text</p>
+          <Input
+            id="designer-label-text"
+            value={metadata.text ?? selectedNode.name ?? ''}
+            onChange={(event) => applyMetadata({ text: event.target.value })}
+          />
+        </div>
+      );
+    }
+
+    if (selectedNode.type === 'table' || selectedNode.type === 'dynamic-table') {
+      const columns: Array<Record<string, any>> = Array.isArray(metadata.columns) ? metadata.columns : [];
+      const updateColumns = (next: Array<Record<string, any>>) => applyMetadata({ columns: next });
+      const updateColumn = (columnId: string, patch: Record<string, unknown>) => {
+        updateColumns(
+          columns.map((column) => (column.id === columnId ? { ...column, ...patch } : column))
+        );
+      };
+      const handleAddColumn = () => {
+        updateColumns([
+          ...columns,
+          {
+            id: createLocalId(),
+            header: 'New Column',
+            key: 'data.field',
+            type: 'text',
+            width: 120,
+          },
+        ]);
+      };
+      const handleRemoveColumn = (columnId: string) => {
+        updateColumns(columns.filter((column) => column.id !== columnId));
+      };
+
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-3">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+            <span>Table Columns</span>
+            <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
+              Add column
+            </Button>
+          </div>
+          {columns.length === 0 && (
+            <p className="text-xs text-slate-500">No columns defined. Add at least one column.</p>
+          )}
+          {columns.map((column) => (
+            <div key={column.id} className="border border-slate-100 rounded-md p-2 space-y-2 bg-slate-50">
+              <div className="flex items-center justify-between">
+                <Input
+                  id={`column-header-${column.id}`}
+                  value={column.header ?? ''}
+                  onChange={(event) => updateColumn(column.id, { header: event.target.value })}
+                  className="text-xs"
+                />
+                <Button
+                  id={`designer-remove-column-${column.id}`}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveColumn(column.id)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                <div>
+                  <label className="block mb-1">Binding key</label>
+                  <Input
+                    id={`column-key-${column.id}`}
+                    value={column.key ?? ''}
+                    onChange={(event) => updateColumn(column.id, { key: event.target.value })}
+                    className="text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1">Type</label>
+                  <select
+                    className="w-full border border-slate-300 rounded-md px-2 py-1 text-xs"
+                    value={column.type ?? 'text'}
+                    onChange={(event) => updateColumn(column.id, { type: event.target.value })}
+                  >
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                    <option value="currency">Currency</option>
+                    <option value="date">Date</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1">Width (px)</label>
+                  <Input
+                    id={`column-width-${column.id}`}
+                    type="number"
+                    value={column.width ?? 120}
+                    onChange={(event) => updateColumn(column.id, { width: Number(event.target.value) })}
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (['subtotal', 'tax', 'discount', 'custom-total'].includes(selectedNode.type)) {
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Totals Row</p>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Label</label>
+            <Input
+              id="designer-total-label"
+              value={metadata.label ?? selectedNode.name ?? ''}
+              onChange={(event) => applyMetadata({ label: event.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Binding key</label>
+            <Input
+              id="designer-total-binding"
+              value={metadata.bindingKey ?? ''}
+              onChange={(event) => applyMetadata({ bindingKey: event.target.value })}
+            />
+          </div>
+          {selectedNode.type === 'custom-total' && (
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Computation notes</label>
+              <textarea
+                className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+                value={metadata.notes ?? ''}
+                onChange={(event) => applyMetadata({ notes: event.target.value })}
+              />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (selectedNode.type === 'action-button') {
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Button</p>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Label</label>
+            <Input
+              id="designer-button-label"
+              value={metadata.label ?? 'Button'}
+              onChange={(event) => applyMetadata({ label: event.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Action type</label>
+            <select
+              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+              value={metadata.actionType ?? 'url'}
+              onChange={(event) => applyMetadata({ actionType: event.target.value })}
+            >
+              <option value="url">URL</option>
+              <option value="mailto">Email</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Action value</label>
+            <Input
+              id="designer-button-action"
+              value={metadata.actionValue ?? ''}
+              onChange={(event) => applyMetadata({ actionValue: event.target.value })}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedNode.type === 'signature') {
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Signature Block</p>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Signer label</label>
+            <Input
+              id="designer-signature-label"
+              value={metadata.signerLabel ?? 'Authorized Signature'}
+              onChange={(event) => applyMetadata({ signerLabel: event.target.value })}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={Boolean(metadata.includeDate)}
+              onChange={(event) => applyMetadata({ includeDate: event.target.checked })}
+            />
+            Include signing date
+          </label>
+        </div>
+      );
+    }
+
+    if (selectedNode.type === 'attachment-list') {
+      const items: Array<Record<string, any>> = Array.isArray(metadata.items) ? metadata.items : [];
+      const updateItems = (next: Array<Record<string, any>>) => applyMetadata({ items: next });
+      const updateItem = (itemId: string, patch: Record<string, unknown>) => {
+        updateItems(items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
+      };
+      const addItem = () => {
+        updateItems([
+          ...items,
+          {
+            id: createLocalId(),
+            label: 'Attachment',
+            url: 'https://example.com',
+          },
+        ]);
+      };
+      const removeItem = (itemId: string) => updateItems(items.filter((item) => item.id !== itemId));
+
+      return (
+        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Attachments</p>
+          <div>
+            <label className="text-xs text-slate-500 block mb-1">Title</label>
+            <Input
+              id="designer-attachments-title"
+              value={metadata.title ?? 'Attachments'}
+              onChange={(event) => applyMetadata({ title: event.target.value })}
+            />
+          </div>
+          <div className="flex items-center justify-between text-xs text-slate-600">
+            <span>Items</span>
+            <Button id="designer-attachment-add" variant="outline" size="xs" onClick={addItem}>
+              Add
+            </Button>
+          </div>
+          {items.length === 0 && <p className="text-xs text-slate-500">No attachments defined.</p>}
+          {items.map((item) => (
+            <div key={item.id} className="border border-slate-100 rounded-md p-2 space-y-2 bg-slate-50">
+              <div className="flex items-center justify-between">
+                <Input
+                  id={`attachment-label-${item.id}`}
+                  value={item.label ?? ''}
+                  onChange={(event) => updateItem(item.id, { label: event.target.value })}
+                  className="text-xs"
+                />
+                <Button
+                  id={`designer-attachment-remove-${item.id}`}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeItem(item.id)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <Input
+                id={`attachment-url-${item.id}`}
+                value={item.url ?? ''}
+                onChange={(event) => updateItem(item.id, { url: event.target.value })}
+                className="text-xs"
+              />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current;
     if (isPaletteDragData(data)) {
@@ -298,11 +611,15 @@ export const DesignerShell: React.FC = () => {
         canNestWithinParent(activeDrag.componentType, dropMeta.nodeType)
       ) {
         const def = getDefinition(activeDrag.componentType);
+        const defaultMetadata = def ? buildDefaultMetadata(activeDrag.componentType, def.defaultMetadata) : undefined;
         addNode(
           activeDrag.componentType,
           dropPoint,
           def
-            ? { parentId: dropMeta.nodeId, defaults: { size: def.defaultSize } }
+            ? {
+                parentId: dropMeta.nodeId,
+                defaults: { size: def.defaultSize, metadata: defaultMetadata },
+              }
             : { parentId: dropMeta.nodeId }
         );
         recordDropResult(true);
@@ -469,6 +786,7 @@ export const DesignerShell: React.FC = () => {
                   </p>
                 )}
               </div>
+              {renderMetadataInspector()}
               <Button id="designer-inspector-apply" variant="outline" onClick={commitPropertyChanges}>
                 Apply
               </Button>
@@ -554,4 +872,40 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
       </DragOverlay>
     </div>
   );
+};
+const createLocalId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+
+const deepClone = <T,>(value: T): T => {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value));
+};
+
+const buildDefaultMetadata = (
+  componentType: DesignerComponentType,
+  metadata?: Record<string, unknown>
+): Record<string, unknown> | undefined => {
+  if (!metadata) {
+    return undefined;
+  }
+  const clone = deepClone(metadata);
+  if (componentType === 'table' && Array.isArray((clone as { columns?: unknown }).columns)) {
+    (clone as { columns: Array<Record<string, unknown>> }).columns = (
+      (clone as { columns: Array<Record<string, unknown>> }).columns ?? []
+    ).map((column) => ({
+      ...column,
+      id: column.id ? `${column.id}-${createLocalId()}` : createLocalId(),
+    }));
+  }
+  if (componentType === 'attachment-list' && Array.isArray((clone as { items?: unknown }).items)) {
+    (clone as { items: Array<Record<string, unknown>> }).items = (
+      (clone as { items: Array<Record<string, unknown>> }).items ?? []
+    ).map((item) => ({
+      ...item,
+      id: item.id ? `${item.id}-${createLocalId()}` : createLocalId(),
+    }));
+  }
+  return clone;
 };

@@ -19,7 +19,24 @@ const HIERARCHY_RULES: Record<DesignerComponentType, HierarchyConfig> = {
     allowedParents: ['page'],
   },
   column: {
-    allowedChildren: ['text', 'totals', 'table', 'dynamic-table', 'image', 'logo', 'qr'],
+    allowedChildren: [
+      'text',
+      'totals',
+      'table',
+      'dynamic-table',
+      'image',
+      'logo',
+      'qr',
+      'field',
+      'label',
+      'subtotal',
+      'tax',
+      'discount',
+      'custom-total',
+      'signature',
+      'action-button',
+      'attachment-list',
+    ],
     allowedParents: ['section'],
   },
   text: {
@@ -38,6 +55,30 @@ const HIERARCHY_RULES: Record<DesignerComponentType, HierarchyConfig> = {
     allowedChildren: [],
     allowedParents: ['column'],
   },
+  field: {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  label: {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  subtotal: {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  tax: {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  discount: {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  'custom-total': {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
   image: {
     allowedChildren: [],
     allowedParents: ['column'],
@@ -47,6 +88,18 @@ const HIERARCHY_RULES: Record<DesignerComponentType, HierarchyConfig> = {
     allowedParents: ['column'],
   },
   qr: {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  signature: {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  'action-button': {
+    allowedChildren: [],
+    allowedParents: ['column'],
+  },
+  'attachment-list': {
     allowedChildren: [],
     allowedParents: ['column'],
   },

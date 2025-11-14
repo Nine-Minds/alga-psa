@@ -40,6 +40,36 @@ interface CanvasNodeProps {
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
 }
 
+const getPreviewContent = (node: DesignerNode) => {
+  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  switch (node.type) {
+    case 'field':
+      return `Field: ${metadata.bindingKey ?? 'binding'}`;
+    case 'label':
+      return `Label: ${metadata.text ?? node.name}`;
+    case 'subtotal':
+    case 'tax':
+    case 'discount':
+    case 'custom-total':
+      return `${metadata.label ?? node.name}: {${metadata.bindingKey ?? 'binding'}}`;
+    case 'table':
+    case 'dynamic-table': {
+      const columns = Array.isArray((metadata as { columns?: unknown }).columns)
+        ? (metadata as { columns: Array<Record<string, unknown>> }).columns
+        : [];
+      return `Table (${columns.length || 'no'} columns)`;
+    }
+    case 'action-button':
+      return metadata.label ? `Button: ${metadata.label}` : 'Button';
+    case 'signature':
+      return metadata.signerLabel ? `Signature · ${metadata.signerLabel}` : 'Signature';
+    case 'attachment-list':
+      return metadata.title ? `Attachments: ${metadata.title}` : 'Attachments';
+    default:
+      return `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}`;
+  }
+};
+
 const CanvasNode: React.FC<CanvasNodeProps> = ({ node, isSelected, onSelect, onResize }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `node-${node.id}`,
@@ -71,6 +101,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({ node, isSelected, onSelect, onR
   const combinedRef = isContainer ? mergeRefs(setNodeRef, setDropZoneRef) : setNodeRef;
 
   const draggablePointerDown = listeners?.onPointerDown;
+  const previewContent = useMemo(() => getPreviewContent(node), [node]);
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.stopPropagation();
@@ -125,9 +156,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({ node, isSelected, onSelect, onR
         <span>{node.name}</span>
         <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
       </div>
-      <div className="p-2 text-[11px] text-slate-500">
-        Placeholder content · {node.size.width.toFixed(0)}×{node.size.height.toFixed(0)}
-      </div>
+      <div className="p-2 text-[11px] text-slate-500 whitespace-pre-wrap">{previewContent}</div>
       {node.allowResize !== false && (
         <div
           role="button"
