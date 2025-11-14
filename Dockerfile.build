@@ -34,9 +34,19 @@ COPY . .
 # Remove ee directory for CE build to ensure stub implementations are used
 RUN rm -rf /app/ee
 
-# Create a dummy file for the relative import that webpack tries to resolve
+# Create stub files for EE modules that are imported in CE code
 RUN mkdir -p /app/ee/server/src/lib/extensions && \
     echo "export const initializeExtensions = async () => { console.log('CE build - extensions not available'); };" > /app/ee/server/src/lib/extensions/initialize.js
+
+# Create stub for EE RightSidebar component
+RUN mkdir -p /app/ee/server/src/components/layout && \
+    echo "export default function RightSidebar() { return null; }" > /app/ee/server/src/components/layout/RightSidebar.tsx
+
+# Create stubs for EE chat services
+RUN mkdir -p /app/ee/server/src/services && \
+    printf "export class ChatStreamService {\n  static async handleChatStream(req: any): Promise<Response> {\n    return new Response('Chat streaming is only available in Enterprise Edition', {\n      status: 404,\n      headers: { 'Content-Type': 'application/json' },\n    });\n  }\n  constructor() {\n    throw new Error('Chat service is only available in Enterprise Edition');\n  }\n}\n" > /app/ee/server/src/services/chatStreamService.ts && \
+    printf "export class TemporaryApiKeyService {\n  static async cleanupExpiredAiKeys(): Promise<number> {\n    return 0;\n  }\n  constructor() {\n    throw new Error('Temporary API key service is only available in Enterprise Edition');\n  }\n}\n" > /app/ee/server/src/services/temporaryApiKeyService.ts && \
+    printf "export class ChatCompletionsService {\n  constructor() {\n    throw new Error('Chat completions service is only available in Enterprise Edition');\n  }\n}\n" > /app/ee/server/src/services/chatCompletionsService.ts
 
 # Remove EE-specific scripts that shouldn't be in CE build
 RUN rm -f /app/server/src/scripts/check-extension.ts
