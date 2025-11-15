@@ -10,10 +10,17 @@ export interface OAuthAccountLinkInput {
   lastUsedAt?: Date | string | null;
 }
 
-export interface OAuthAccountLinkRecord extends OAuthAccountLinkInput {
-  link_id: string;
-  created_at: Date | string;
-  updated_at: Date | string;
+export interface OAuthAccountLinkRecord {
+  tenant: string;
+  user_id: string;
+  provider: OAuthLinkProvider;
+  provider_account_id: string;
+  provider_email: string | null;
+  metadata: Record<string, unknown>;
+  linked_at: Date;
+  last_used_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export class OAuthAccountLinkConflictError extends Error {
