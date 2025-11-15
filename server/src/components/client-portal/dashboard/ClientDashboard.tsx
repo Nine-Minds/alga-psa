@@ -258,11 +258,11 @@ export function ClientDashboard() {
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {format(new Date(appointment.requested_date), 'MMM d, yyyy')}
+                          {format(new Date(appointment.requested_date + 'T00:00:00Z'), 'MMM d, yyyy')}
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {appointment.requested_time}
+                          {appointment.requested_time} UTC
                         </div>
                       </div>
                       {appointment.preferred_assigned_user_name && (

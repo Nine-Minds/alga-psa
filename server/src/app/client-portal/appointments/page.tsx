@@ -132,7 +132,7 @@ export default function AppointmentsPage() {
         <div className="text-sm">
           <div className="flex items-center gap-1 text-gray-900">
             <Calendar className="h-3 w-3" />
-            {format(new Date(value), 'MMM d, yyyy')}
+            {format(new Date(value + 'T00:00:00Z'), 'MMM d, yyyy')}
           </div>
           <div className="flex items-center gap-1 text-gray-600 mt-1">
             <Clock className="h-3 w-3" />
@@ -370,7 +370,7 @@ export default function AppointmentsPage() {
                       {t('appointments.details.dateTime')}
                     </div>
                     <div className="text-sm text-gray-900">
-                      {format(new Date(selectedAppointment.requested_date), 'EEEE, MMMM d, yyyy')}
+                      {format(new Date(selectedAppointment.requested_date + 'T00:00:00Z'), 'EEEE, MMMM d, yyyy')}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                       {selectedAppointment.requested_time} ({selectedAppointment.requested_duration} {t('appointments.table.minutes')})
@@ -419,9 +419,11 @@ export default function AppointmentsPage() {
                 )}
 
                 <div className="pt-4 border-t border-gray-200">
-                  <div className="text-xs text-gray-500">
-                    {t('appointments.details.created')}: {format(new Date(selectedAppointment.created_at), 'MMM d, yyyy h:mm a')}
-                  </div>
+                  {selectedAppointment.created_at && (
+                    <div className="text-xs text-gray-500">
+                      {t('appointments.details.created')}: {format(new Date(selectedAppointment.created_at), 'MMM d, yyyy h:mm a')}
+                    </div>
+                  )}
                   {selectedAppointment.approved_at && (
                     <div className="text-xs text-gray-500 mt-1">
                       {t('appointments.details.approved')}: {format(new Date(selectedAppointment.approved_at), 'MMM d, yyyy h:mm a')}
