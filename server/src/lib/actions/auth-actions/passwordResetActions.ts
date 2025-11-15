@@ -5,6 +5,7 @@ import { getAdminConnection } from '@shared/db/admin';
 import { PasswordResetService } from '../../services/PasswordResetService';
 import { sendPasswordResetEmail } from '../../email/sendPasswordResetEmail';
 import { getSystemEmailService } from '../../email';
+import { TenantEmailService } from '../../services/TenantEmailService';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 
 export interface RequestResetResult {
@@ -102,19 +103,25 @@ export async function requestPasswordReset(
       }
       console.log('[PasswordReset] Tenant context established:', tenant);
 
-      // Ensure system email is configured before proceeding
-      console.log('[PasswordReset] Getting system email service...');
-      const systemEmailService = await getSystemEmailService();
-      const emailConfigured = await systemEmailService.isConfigured();
-      console.log('[PasswordReset] Email service configured:', emailConfigured);
+      // Ensure at least one email provider path is configured before proceeding
+      console.log('[PasswordReset] Checking tenant email service configuration...');
+      const tenantEmailService = TenantEmailService.getInstance(tenant);
+      let emailConfigured = await tenantEmailService.isConfigured();
+      console.log('[PasswordReset] Tenant email configured:', emailConfigured);
       
       if (!emailConfigured) {
-        console.error('[PasswordReset] Email service is not configured!');
-        // Still return success for security
-        return { 
-          success: true, 
-          message: 'If an account exists with this email, you will receive a password reset link shortly.' 
-        };
+        console.log('[PasswordReset] Falling back to system email configuration check');
+        const systemEmailService = await getSystemEmailService();
+        emailConfigured = await systemEmailService.isConfigured();
+        console.log('[PasswordReset] System email configured:', emailConfigured);
+        if (!emailConfigured) {
+          console.error('[PasswordReset] Neither tenant nor system email service is configured!');
+          // Still return success for security
+          return { 
+            success: true, 
+            message: 'If an account exists with this email, you will receive a password reset link shortly.' 
+          };
+        }
       }
 
       // Use a transaction to ensure atomicity

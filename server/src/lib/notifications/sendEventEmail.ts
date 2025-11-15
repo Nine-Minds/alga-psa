@@ -374,13 +374,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
-    const systemFrom = process.env.EMAIL_FROM;
-    const systemFromName = process.env.EMAIL_FROM_NAME || 'Portal Notifications';
     const result = await service.sendEmail({
       to: params.to,
       tenantId: params.tenantId,
       templateProcessor: processor,
-      ...(systemFrom ? { from: /<[^>]+>/.test(systemFrom) ? systemFrom : `${systemFromName} <${systemFrom}>` } : {})
     });
 
     if (!result.success) {
