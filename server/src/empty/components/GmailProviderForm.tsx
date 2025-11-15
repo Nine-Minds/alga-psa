@@ -4,4 +4,4 @@
  */
 
 // Re-export the CE version of GmailProviderForm
-export { GmailProviderForm } from '../../components/GmailProviderForm';
+export { GmailProviderForm } from '@/components/GmailProviderForm';
