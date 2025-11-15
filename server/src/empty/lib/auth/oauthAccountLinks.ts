@@ -10,6 +10,12 @@ export interface OAuthAccountLinkInput {
   lastUsedAt?: Date | string | null;
 }
 
+export interface OAuthAccountLinkRecord extends OAuthAccountLinkInput {
+  link_id: string;
+  created_at: Date | string;
+  updated_at: Date | string;
+}
+
 export class OAuthAccountLinkConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -17,14 +23,20 @@ export class OAuthAccountLinkConflictError extends Error {
   }
 }
 
-export async function upsertOAuthAccountLink(): Promise<void> {
+export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Promise<void> {
   throw new Error('OAuth account linking is only available in Enterprise Edition');
 }
 
-export async function findOAuthAccountLink() {
+export async function findOAuthAccountLink(
+  provider: OAuthLinkProvider,
+  providerAccountId: string,
+): Promise<OAuthAccountLinkRecord | undefined> {
   return undefined;
 }
 
-export async function listOAuthAccountLinksForUser() {
+export async function listOAuthAccountLinksForUser(
+  tenant: string,
+  userId: string,
+): Promise<OAuthAccountLinkRecord[]> {
   return [];
 }

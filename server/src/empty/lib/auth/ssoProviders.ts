@@ -24,14 +24,19 @@ export interface OAuthProfileMappingResult {
   contactId?: string;
 }
 
-export async function mapOAuthProfileToExtendedUser(): Promise<OAuthProfileMappingResult> {
+export async function mapOAuthProfileToExtendedUser(
+  input: OAuthProfileMappingInput,
+): Promise<OAuthProfileMappingResult> {
   throw new Error('OAuth providers are only available in Enterprise Edition');
 }
 
-export async function applyOAuthAccountHints(): Promise<OAuthProfileMappingResult> {
+export async function applyOAuthAccountHints(
+  user: OAuthProfileMappingResult,
+  account: Record<string, unknown> | null | undefined,
+): Promise<OAuthProfileMappingResult> {
   throw new Error('OAuth providers are only available in Enterprise Edition');
 }
 
-export function decodeOAuthJwtPayload(): Record<string, unknown> | undefined {
+export function decodeOAuthJwtPayload(token: string | undefined): Record<string, unknown> | undefined {
   return undefined;
 }
