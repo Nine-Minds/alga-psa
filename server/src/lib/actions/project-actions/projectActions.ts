@@ -499,7 +499,7 @@ export async function generateNextWbsCode(): Promise<string> {
     }
 }
 
-export async function createProject(projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'wbs_code'> & {
+export async function createProject(projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'wbs_code' | 'project_number'> & {
   assigned_to?: string | null;
   contact_name_id?: string | null;
 }): Promise<IProject> {
