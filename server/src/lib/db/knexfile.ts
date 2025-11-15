@@ -20,7 +20,8 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 setTypeParser(20, parseFloat);
-setTypeParser(1114, str => new Date(str + 'Z'));
+setTypeParser(1114, str => new Date(str + 'Z')); // TIMESTAMP WITHOUT TIME ZONE - add Z to parse as UTC
+setTypeParser(1184, str => new Date(str)); // TIMESTAMP WITH TIME ZONE - already has timezone info, parse as-is
 
 import { getSecret } from '../utils/getSecret';
 
@@ -68,6 +69,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       reapIntervalMillis: 1000,
       createTimeoutMillis: 30000,
       destroyTimeoutMillis: 5000
+    },
+    afterCreate: (conn: any, done: Function) => {
+      conn.query('SET TIME ZONE \'UTC\'', (err: Error) => {
+        done(err, conn);
+      });
     }
   },
   production: {
@@ -86,6 +92,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       reapIntervalMillis: 300,
       createTimeoutMillis: 3000,
       destroyTimeoutMillis: 300
+    },
+    afterCreate: (conn: any, done: Function) => {
+      conn.query('SET TIME ZONE \'UTC\'', (err: Error) => {
+        done(err, conn);
+      });
     }
   }
 };
@@ -146,10 +157,18 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
           console.error('See docs/setup_guide.md (Troubleshooting → Postgres authentication loop).');
         }
       });
-      // With CitusDB, tenant isolation is handled automatically at the shard level
-      // No need to set app.current_tenant session variable
-      console.log(`Connection created for tenant: ${tenant} (CitusDB handles isolation automatically)`);
-      done(null, conn);
+      // Set timezone to UTC for all timestamps
+      conn.query('SET TIME ZONE \'UTC\'', (err: Error) => {
+        if (err) {
+          console.error('Error setting timezone to UTC:', err);
+          done(err, conn);
+          return;
+        }
+        // With CitusDB, tenant isolation is handled automatically at the shard level
+        // No need to set app.current_tenant session variable
+        console.log(`Connection created for tenant: ${tenant} (CitusDB handles isolation automatically, timezone set to UTC)`);
+        done(null, conn);
+      });
     },
     afterRelease: (conn: any, done: Function) => {
       console.log('Releasing connection back to the pool');

@@ -281,8 +281,8 @@ export async function createAppointmentRequest(
         // Parse as UTC by adding 'Z' suffix to ensure correct timezone interpretation
         const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00Z`);
 
-        const scheduledEnd = new Date(scheduledStart);
-        scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
+        // Calculate end time by adding milliseconds to avoid timezone conversion issues
+        const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
         // Create schedule entry
         await trx('schedule_entries').insert({
