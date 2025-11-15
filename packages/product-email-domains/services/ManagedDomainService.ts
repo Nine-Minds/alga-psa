@@ -212,7 +212,7 @@ export class ManagedDomainService {
 
     if (
       allRecordsMatched &&
-      providerVerification.status === 'not_started' &&
+      providerVerification.providerStatus === 'not_started' &&
       typeof provider.startDomainVerification === 'function'
     ) {
       try {

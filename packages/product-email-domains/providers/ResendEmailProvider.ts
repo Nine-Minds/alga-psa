@@ -236,9 +236,10 @@ export class ResendEmailProvider implements IEmailProvider {
         status: response.data.status,
       });
 
+      const { normalizedStatus } = this.normalizeDomainStatus(response.data.status);
       return {
         domainId: response.data.id,
-        status: response.data.status,
+        status: normalizedStatus,
         dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
       };
     } catch (error: any) {
@@ -255,9 +256,10 @@ export class ResendEmailProvider implements IEmailProvider {
           logger.warn(
             `[ResendEmailProvider:${this.providerId}] Domain already exists with status ${existing.status}, returning existing DNS records`
           );
+          const { normalizedStatus } = this.normalizeDomainStatus(existing.status);
           return {
             domainId: existing.id,
-            status: existing.status,
+            status: normalizedStatus,
             dnsRecords: this.transformResendRecords(existing.records, existing.name),
           };
         }
@@ -294,9 +296,11 @@ export class ResendEmailProvider implements IEmailProvider {
         status: response.data.status,
       });
 
+      const { normalizedStatus, rawStatus } = this.normalizeDomainStatus(response.data.status);
       return {
         domain: response.data.name,
-        status: response.data.status,
+        status: normalizedStatus,
+        providerStatus: rawStatus,
         dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
         providerId: this.providerId,
         verifiedAt: response.data.status === 'verified' ? new Date(response.data.created_at) : undefined,
@@ -500,6 +504,20 @@ export class ResendEmailProvider implements IEmailProvider {
     }
 
     return `${trimmed}.${domain}`;
+  }
+
+  private normalizeDomainStatus(status?: string): { normalizedStatus: DomainVerificationResult['status']; rawStatus?: string } {
+    const raw = status ?? 'pending';
+    let normalized: DomainVerificationResult['status'];
+    if (raw === 'verified') {
+      normalized = 'verified';
+    } else if (raw === 'failed' || raw === 'rejected' || raw === 'temporary_failure') {
+      normalized = 'failed';
+    } else {
+      normalized = 'pending';
+    }
+
+    return { normalizedStatus: normalized, rawStatus: raw };
   }
 
   private createEmailError(message: string, error: any): EmailProviderError {
