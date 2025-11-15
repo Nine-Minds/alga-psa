@@ -19,6 +19,7 @@ interface ManagedDomainServiceLike {
   }>;
   activateDomain: (domain: string) => Promise<void>;
   deleteDomain: (domain: string) => Promise<void>;
+  startDomainVerification?: (domainId: string) => Promise<DomainVerificationResult>;
 }
 
 interface ManagedDomainServiceCtor {
