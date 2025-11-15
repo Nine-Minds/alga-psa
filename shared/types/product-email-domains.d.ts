@@ -14,6 +14,7 @@ declare module '@product/email-domains/entry' {
       }>;
       activateDomain: (domain: string) => Promise<void>;
       deleteDomain: (domain: string) => Promise<void>;
+      startDomainVerification?: (domainId: string) => Promise<unknown>;
     };
   };
 }

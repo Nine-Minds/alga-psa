@@ -310,6 +310,34 @@ export class ResendEmailProvider implements IEmailProvider {
     }
   }
 
+  async startDomainVerification(domainId: string): Promise<DomainVerificationResult> {
+    this.ensureInitialized();
+
+    try {
+      logger.info(`[ResendEmailProvider:${this.providerId}] Starting verification for domain: ${domainId}`);
+      const response = await this.client!.post<ResendDomainResponse>(`/domains/${domainId}/verify`);
+
+      logger.info(`[ResendEmailProvider:${this.providerId}] Provider verification started`, {
+        id: response.data.id,
+        status: response.data.status,
+      });
+
+      return {
+        domain: response.data.name,
+        status: response.data.status,
+        dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
+        providerId: this.providerId,
+        verifiedAt: response.data.status === 'verified' ? new Date(response.data.created_at) : undefined,
+      };
+    } catch (error: any) {
+      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to start domain verification:`, {
+        error: error.response?.data || error.message,
+        status: error.response?.status,
+      });
+      throw this.createEmailError('Failed to start domain verification', error);
+    }
+  }
+
   async listDomains(): Promise<Array<{ domainId: string; domain: string; status: string; verifiedAt?: Date }>> {
     this.ensureInitialized();
 
