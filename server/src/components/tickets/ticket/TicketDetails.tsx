@@ -547,16 +547,21 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
+        const normalizedValue =
+            field === 'assigned_to'
+                ? (newValue && newValue !== 'unassigned' ? newValue : null)
+                : newValue;
+
         // Store the previous value before updating
         const previousValue = ticket[field];
         
         // Optimistically update the UI
-        setTicket(prevTicket => ({ ...prevTicket, [field]: newValue }));
+        setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
         try {
             // Use the optimized handler if provided
             if (onTicketUpdate) {
-                await onTicketUpdate(field, newValue);
+                await onTicketUpdate(field, normalizedValue);
                 
                 // If we're changing the assigned_to field, we need to handle additional resources
                 // This will be handled by the container component and passed back in props
@@ -570,10 +575,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     return;
                 }
                 
-                const result = await updateTicket(ticket.ticket_id || '', { [field]: newValue }, user);
+                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue }, user);
                 
                 if (result === 'success') {
-                    console.log(`${field} changed to: ${newValue}`);
+                    console.log(`${field} changed to: ${normalizedValue}`);
                     
                     // If we're changing the assigned_to field, refresh the additional resources
                     if (field === 'assigned_to') {
