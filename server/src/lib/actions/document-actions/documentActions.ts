@@ -1422,6 +1422,21 @@ export async function getAllDocuments(
             })
             .where('document_associations.entity_type', filters.entityType);
         }
+
+        // Add folder filtering
+        if (filters.folder_path !== undefined && !filters.showAllDocuments) {
+          if (filters.folder_path === null || filters.folder_path === '') {
+            // Root folder - documents with no folder_path
+            query = query.whereNull('documents.folder_path');
+          } else {
+            // Specific folder - match exact path or subfolders
+            query = query.where(function() {
+              this.where('documents.folder_path', filters.folder_path)
+                .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
+            });
+          }
+        }
+        // If showAllDocuments is true, don't add any folder filtering - show all documents
       }
       return query;
     };
@@ -1538,6 +1553,21 @@ export async function getAllDocuments(
               })
               .where('document_associations.entity_type', filters.entityType);
           }
+
+          // Add folder filtering
+          if (filters.folder_path !== undefined && !filters.showAllDocuments) {
+            if (filters.folder_path === null || filters.folder_path === '') {
+              // Root folder - documents with no folder_path
+              query = query.whereNull('documents.folder_path');
+            } else {
+              // Specific folder - match exact path or subfolders
+              query = query.where(function() {
+                this.where('documents.folder_path', filters.folder_path)
+                  .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
+              });
+            }
+          }
+          // If showAllDocuments is true, don't add any folder filtering - show all documents
         }
         return query;
       };
@@ -1659,10 +1689,25 @@ export async function getAllDocuments(
               })
               .where('document_associations.entity_type', filters.entityType);
           }
+
+          // Add folder filtering
+          if (filters.folder_path !== undefined && !filters.showAllDocuments) {
+            if (filters.folder_path === null || filters.folder_path === '') {
+              // Root folder - documents with no folder_path
+              query = query.whereNull('documents.folder_path');
+            } else {
+              // Specific folder - match exact path or subfolders
+              query = query.where(function() {
+                this.where('documents.folder_path', filters.folder_path)
+                  .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
+              });
+            }
+          }
+          // If showAllDocuments is true, don't add any folder filtering - show all documents
         }
         return query;
       };
-      
+
       let query = buildBaseTrxQuery()
         .select(
           'documents.*',
@@ -2401,8 +2446,104 @@ export async function getDocumentsByFolder(
   }
   // If folderPath is null and includeSubfolders is true, don't add any folder filtering - show all documents
 
+  // Add joins for filtering by document type
+  query = query
+    .leftJoin('document_types as dt', function() {
+      this.on('d.type_id', '=', 'dt.type_id')
+          .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+    })
+    .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id');
+
+  // Apply additional filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      query = query.whereRaw('LOWER(d.document_name) LIKE ?',
+        [`%${filters.searchTerm.toLowerCase()}%`]);
+    }
+
+    if (filters.type) {
+      if (filters.type === 'application/pdf') {
+        query = query.where(function() {
+          this.where(function() {
+            this.where('dt.type_name', '=', 'application/pdf')
+                .orWhere('sdt.type_name', '=', 'application/pdf');
+          }).whereNotNull('d.file_id');
+        });
+      } else if (filters.type === 'image') {
+        query = query.where(function() {
+          this.where(function() {
+            this.where('dt.type_name', 'like', 'image/%')
+                .orWhere('sdt.type_name', 'like', 'image/%');
+          }).whereNotNull('d.file_id');
+        });
+      } else if (filters.type === 'text') {
+        query = query.where(function() {
+          this.where('dt.type_name', 'like', 'text/%')
+              .orWhere('sdt.type_name', 'like', 'text/%')
+              .orWhere('dt.type_name', '=', 'application/msword')
+              .orWhere('sdt.type_name', '=', 'application/msword')
+              .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+              .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+              .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
+              .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+              .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+              .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+              .orWhereNull('d.file_id');
+        });
+      } else if (filters.type === 'application') {
+        query = query.where(function() {
+          this.where(function() {
+            this.where(function() {
+              this.where('dt.type_name', 'like', 'application/%')
+                  .whereNot('dt.type_name', '=', 'application/pdf')
+                  .whereNot('dt.type_name', '=', 'application/msword')
+                  .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                  .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                  .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+            }).orWhere(function() {
+              this.where('sdt.type_name', 'like', 'application/%')
+                  .whereNot('sdt.type_name', '=', 'application/pdf')
+                  .whereNot('sdt.type_name', '=', 'application/msword')
+                  .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                  .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                  .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+            });
+          }).whereNotNull('d.file_id');
+        });
+      } else {
+        query = query.where(function() {
+          this.where('dt.type_name', 'like', `${filters.type}%`)
+              .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+        });
+      }
+    }
+
+    if (filters.uploadedBy) {
+      query = query.where('d.created_by', filters.uploadedBy);
+    }
+
+    if (filters.updated_at_start) {
+      query = query.where('d.updated_at', '>=', filters.updated_at_start);
+    }
+
+    if (filters.updated_at_end) {
+      const endDate = new Date(filters.updated_at_end);
+      endDate.setDate(endDate.getDate() + 1);
+      query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
+    }
+
+    if (filters.entityType) {
+      query = query
+        .leftJoin('document_associations as da', function() {
+          this.on('d.document_id', '=', 'da.document_id')
+              .andOn('da.tenant', '=', knex.raw('?', [tenant]));
+        })
+        .where('da.entity_type', filters.entityType);
+    }
+  }
+
   // Get total count
-  const countResult = await query.clone().count('* as count');
+  const countResult = await query.clone().countDistinct('d.document_id as count');
   const total = parseInt(countResult[0].count as string);
 
   // Get paginated results with joins for sorting support
@@ -2416,8 +2557,21 @@ export async function getDocumentsByFolder(
     })
     .select(
       'd.*',
-      knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-    );
+      knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+      knex.raw(`
+        COALESCE(dt.type_name, sdt.type_name) as type_name,
+        COALESCE(dt.icon, sdt.icon) as type_icon
+      `),
+      // Add natural sort field for ORDER BY compatibility with DISTINCT
+      knex.raw(`
+        CASE
+          WHEN d.document_name ~ '^[0-9]'
+          THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+          ELSE 0
+        END as numeric_prefix
+      `)
+    )
+    .distinct('d.document_id');
 
   // Apply sorting based on filters
   if (filters?.sortBy) {
@@ -2429,28 +2583,14 @@ export async function getDocumentsByFolder(
       query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
     } else if (sortField === 'document_name') {
       // Natural sort for document_name: sort numerically by leading digits, then alphabetically
-      query = query.orderByRaw(`
-        CASE
-          WHEN d.document_name ~ '^[0-9]'
-          THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
-          ELSE 0
-        END ${sortOrder},
-        d.document_name ${sortOrder}
-      `);
+      query = query.orderByRaw(`numeric_prefix ${sortOrder}, d.document_name ${sortOrder}`);
     } else {
       // For other fields, prefix with table alias
       query = query.orderBy(`d.${sortField}`, sortOrder);
     }
   } else {
     // Default sort by document_name asc with natural sorting
-    query = query.orderByRaw(`
-      CASE
-        WHEN d.document_name ~ '^[0-9]'
-        THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
-        ELSE 0
-      END ASC,
-      d.document_name ASC
-    `);
+    query = query.orderByRaw(`numeric_prefix ASC, d.document_name ASC`);
   }
 
   // Apply pagination after sorting
