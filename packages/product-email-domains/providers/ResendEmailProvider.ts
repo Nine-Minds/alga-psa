@@ -236,17 +236,51 @@ export class ResendEmailProvider implements IEmailProvider {
         status: response.data.status,
       });
 
+      const { normalizedStatus } = this.normalizeDomainStatus(response.data.status);
       return {
         domainId: response.data.id,
-        status: response.data.status,
-        dnsRecords: this.transformResendRecords(response.data.records),
+        status: normalizedStatus,
+        dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
       };
     } catch (error: any) {
+      const providerMessage: string | undefined = error.response?.data?.message;
+      const statusCode = error.response?.status;
       logger.error(`[ResendEmailProvider:${this.providerId}] Failed to create domain:`, {
         error: error.response?.data || error.message,
-        status: error.response?.status,
+        status: statusCode,
       });
-      throw this.createEmailError('Failed to create domain', error);
+
+      if (statusCode === 403 && providerMessage?.toLowerCase().includes('registered already')) {
+        const existing = await this.findDomainByName(domain).catch(() => null);
+        if (existing && existing.status !== 'verified') {
+          logger.warn(
+            `[ResendEmailProvider:${this.providerId}] Domain already exists with status ${existing.status}, returning existing DNS records`
+          );
+          const { normalizedStatus } = this.normalizeDomainStatus(existing.status);
+          return {
+            domainId: existing.id,
+            status: normalizedStatus,
+            dnsRecords: this.transformResendRecords(existing.records, existing.name),
+          };
+        }
+      }
+
+      const reason = providerMessage
+        ? `Failed to create domain ${domain}: ${providerMessage}`
+        : `Failed to create domain ${domain}`;
+      throw this.createEmailError(reason, error);
+    }
+  }
+
+  private async findDomainByName(domain: string): Promise<ResendDomainResponse | null> {
+    try {
+      const response = await this.client!.get<{ data: ResendDomainResponse[] }>('/domains');
+      return response.data.data.find((entry) => entry.name.toLowerCase() === domain.toLowerCase()) ?? null;
+    } catch (error) {
+      logger.warn(`[ResendEmailProvider:${this.providerId}] Unable to fetch existing domains`, {
+        error: (error as any)?.response?.data || (error as any)?.message || error,
+      });
+      return null;
     }
   }
 
@@ -262,10 +296,12 @@ export class ResendEmailProvider implements IEmailProvider {
         status: response.data.status,
       });
 
+      const { normalizedStatus, rawStatus } = this.normalizeDomainStatus(response.data.status);
       return {
         domain: response.data.name,
-        status: response.data.status,
-        dnsRecords: this.transformResendRecords(response.data.records),
+        status: normalizedStatus,
+        providerStatus: rawStatus,
+        dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
         providerId: this.providerId,
         verifiedAt: response.data.status === 'verified' ? new Date(response.data.created_at) : undefined,
       };
@@ -275,6 +311,34 @@ export class ResendEmailProvider implements IEmailProvider {
         status: error.response?.status,
       });
       throw this.createEmailError('Failed to verify domain', error);
+    }
+  }
+
+  async startDomainVerification(domainId: string): Promise<DomainVerificationResult> {
+    this.ensureInitialized();
+
+    try {
+      logger.info(`[ResendEmailProvider:${this.providerId}] Starting verification for domain: ${domainId}`);
+      const response = await this.client!.post<ResendDomainResponse>(`/domains/${domainId}/verify`);
+
+      logger.info(`[ResendEmailProvider:${this.providerId}] Provider verification started`, {
+        id: response.data.id,
+        status: response.data.status,
+      });
+
+      return {
+        domain: response.data.name,
+        status: response.data.status,
+        dnsRecords: this.transformResendRecords(response.data.records, response.data.name),
+        providerId: this.providerId,
+        verifiedAt: response.data.status === 'verified' ? new Date(response.data.created_at) : undefined,
+      };
+    } catch (error: any) {
+      logger.error(`[ResendEmailProvider:${this.providerId}] Failed to start domain verification:`, {
+        error: error.response?.data || error.message,
+        status: error.response?.status,
+      });
+      throw this.createEmailError('Failed to start domain verification', error);
     }
   }
 
@@ -413,14 +477,47 @@ export class ResendEmailProvider implements IEmailProvider {
     };
   }
 
-  private transformResendRecords(records: ResendDomainResponse['records']): DnsRecord[] {
+  private transformResendRecords(records: ResendDomainResponse['records'], domain?: string): DnsRecord[] {
+    const suffix = domain?.toLowerCase().replace(/\.$/, '');
     return records.map((record) => ({
       type: record.type.toUpperCase() as DnsRecord['type'],
-      name: record.name,
+      name: this.ensureAbsoluteRecordName(record.name, suffix),
       value: record.value,
       ttl: record.ttl ? parseInt(record.ttl, 10) : undefined,
       priority: record.priority ? parseInt(record.priority, 10) : undefined,
     }));
+  }
+
+  private ensureAbsoluteRecordName(name: string, domain?: string): string {
+    if (!domain) {
+      return name;
+    }
+
+    const trimmed = (name || '').replace(/\.$/, '').trim();
+    if (trimmed === '' || trimmed === '@') {
+      return domain;
+    }
+
+    const lower = trimmed.toLowerCase();
+    if (lower === domain || lower.endsWith(`.${domain}`)) {
+      return trimmed;
+    }
+
+    return `${trimmed}.${domain}`;
+  }
+
+  private normalizeDomainStatus(status?: string): { normalizedStatus: DomainVerificationResult['status']; rawStatus?: string } {
+    const raw = status ?? 'pending';
+    let normalized: DomainVerificationResult['status'];
+    if (raw === 'verified') {
+      normalized = 'verified';
+    } else if (raw === 'failed' || raw === 'rejected' || raw === 'temporary_failure') {
+      normalized = 'failed';
+    } else {
+      normalized = 'pending';
+    }
+
+    return { normalizedStatus: normalized, rawStatus: raw };
   }
 
   private createEmailError(message: string, error: any): EmailProviderError {

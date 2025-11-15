@@ -38,7 +38,9 @@
     "resend": "^4.6.0",
     "stripe": "^19.1.0",
     "uuid": "^10.0.0",
-    "winston": "^3.13.1"
+    "winston": "^3.13.1",
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@temporalio/nyc-test-coverage": "^1.8.0",
