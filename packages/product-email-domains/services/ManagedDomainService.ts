@@ -201,13 +201,34 @@ export class ManagedDomainService {
 
     const dnsRecords: DnsRecord[] = parseDnsRecords(existing.dns_records, existing.domain_name);
     const dnsLookup = await verifyDnsRecords(dnsRecords);
+    const allRecordsMatched = dnsLookup.length > 0 && dnsLookup.every((entry) => entry.matchedValue);
 
     const providerDomainId = existing.provider_domain_id;
     if (!providerDomainId) {
       throw new Error(`Managed domain ${existing.domain_name} missing provider domain id`);
     }
 
-    const providerVerification = await provider.verifyDomain!(providerDomainId);
+    let providerVerification = await provider.verifyDomain!(providerDomainId);
+
+    if (
+      allRecordsMatched &&
+      providerVerification.status === 'not_started' &&
+      typeof provider.startDomainVerification === 'function'
+    ) {
+      try {
+        logger.info('[ManagedDomainService] Starting provider domain verification', {
+          tenantId: this.tenantId,
+          domain: existing.domain_name,
+        });
+        providerVerification = await provider.startDomainVerification(providerDomainId);
+      } catch (error) {
+        logger.warn('[ManagedDomainService] Failed to start provider verification (will retry)', {
+          tenantId: this.tenantId,
+          domain: existing.domain_name,
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+    }
 
     const fallbackStatus: EmailDomainStatus = existing.status === 'verified'
       ? 'verified'
