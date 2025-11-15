@@ -69,6 +69,7 @@ export interface DomainVerificationResult {
   dnsRecords?: DnsRecord[];
   failureReason?: string;
   providerId?: string;
+  providerStatus?: string;
 }
 
 export interface DnsRecord {
