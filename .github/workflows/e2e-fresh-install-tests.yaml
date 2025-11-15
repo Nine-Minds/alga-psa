@@ -162,6 +162,13 @@ jobs:
           docker-compose --version # Verify installation
         shell: bash
 
+      - name: Build server image with no cache
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Building server image with --no-cache to ensure fresh build"
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache server setup
+        shell: bash
+
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
         run: |
