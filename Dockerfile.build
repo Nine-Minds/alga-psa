@@ -42,9 +42,9 @@ RUN mkdir -p /app/ee/server/src && \
 # Create minimal stubs for packages that use relative paths (not @ee alias)
 # packages/product-chat/ee/entry.tsx uses ../../../ee/server/src/services/*
 RUN mkdir -p /app/ee/server/src/services && \
-    printf "export class ChatStreamService {\n  static async handleChatStream(req) {\n    return new Response(JSON.stringify({ error: 'Chat streaming is only available in Enterprise Edition' }), {\n      status: 404,\n      headers: { 'Content-Type': 'application/json' },\n    });\n  }\n}\n" > /app/ee/server/src/services/chatStreamService.js && \
+    printf "export class ChatStreamService {\n  static async handleChatStream(req) {\n    return new Response(JSON.stringify({ error: 'Chat streaming is only available in Enterprise Edition' }), {\n      status: 404,\n      headers: { 'Content-Type': 'application/json' },\n    });\n  }\n  static async handleTitleStream(req) {\n    return new Response(JSON.stringify({ error: 'Chat streaming is only available in Enterprise Edition' }), {\n      status: 404,\n      headers: { 'Content-Type': 'application/json' },\n    });\n  }\n}\n" > /app/ee/server/src/services/chatStreamService.js && \
     printf "export class TemporaryApiKeyService {\n  static async cleanupExpiredAiKeys() {\n    return 0;\n  }\n}\n" > /app/ee/server/src/services/temporaryApiKeyService.js && \
-    printf "export class ChatCompletionsService {}\n" > /app/ee/server/src/services/chatCompletionsService.js
+    printf "export class ChatCompletionsService {\n  static async handleRequest(req) {\n    return new Response(JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }), {\n      status: 404,\n      headers: { 'Content-Type': 'application/json' },\n    });\n  }\n  static async handleExecute(req) {\n    return new Response(JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }), {\n      status: 404,\n      headers: { 'Content-Type': 'application/json' },\n    });\n  }\n}\n" > /app/ee/server/src/services/chatCompletionsService.js
 
 # Remove EE-specific scripts that shouldn't be in CE build
 RUN rm -f /app/server/src/scripts/check-extension.ts
