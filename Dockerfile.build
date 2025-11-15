@@ -36,8 +36,8 @@ RUN rm -rf /app/ee
 
 # Copy CE stubs from server/src/empty to ee/server/src for @ee alias resolution
 # This ensures both TypeScript and webpack can resolve @ee imports during CE builds
-RUN mkdir -p /app/ee/server && \
-    cp -r /app/server/src/empty /app/ee/server/src
+RUN mkdir -p /app/ee/server/src && \
+    cp -r /app/server/src/empty/. /app/ee/server/src/
 
 # Create minimal stubs for packages that use relative paths (not @ee alias)
 # packages/product-chat/ee/entry.tsx uses ../../../ee/server/src/services/*
