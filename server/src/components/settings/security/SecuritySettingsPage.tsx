@@ -3,11 +3,7 @@
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
-import { Switch } from "server/src/components/ui/Switch";
-import { Label } from "server/src/components/ui/Label";
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 
 // Dynamic imports for heavy settings components
@@ -50,21 +46,24 @@ const SsoBulkAssignment = dynamic(
   },
 );
 
+const SessionManagement = dynamic(() => import('./SessionManagement'), {
+  loading: () => <SettingsTabSkeleton title="Sessions" description="Loading active sessions..." showTable={true} />,
+  ssr: false
+});
+
 const SecuritySettingsPage = (): JSX.Element => {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const [twoFactorAuth, setTwoFactorAuth] = React.useState(false);
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
     'roles': 'Roles',
+    'sessions': 'Sessions',
     'permissions': 'Permissions',
     'user-roles': 'User Roles',
     'policies': 'Policies',
     'api-keys': 'API Keys',
     'single-sign-on': 'Single Sign-On',
-    // 'security': 'Security'
   };
 
   // Determine initial active tab based on URL parameter
@@ -89,6 +88,14 @@ const SecuritySettingsPage = (): JSX.Element => {
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Role Management" description="Loading role configuration..." />}>
           <RoleManagement />
+        </Suspense>
+      ),
+    },
+    {
+      label: "Sessions",
+      content: (
+        <Suspense fallback={<SettingsTabSkeleton title="Active Sessions" description="Loading active sessions..." />}>
+          <SessionManagement />
         </Suspense>
       ),
     },

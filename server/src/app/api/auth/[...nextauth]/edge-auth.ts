@@ -35,6 +35,10 @@ export const { auth } = NextAuth({
         (session.user as any).username = token.username as string | undefined;
         (session.user as any).image = token.image as string | undefined;
         (session.user as any).proToken = token.proToken as string | undefined;
+
+        // NEW: Add session_id and login_method to enable session management
+        (session as any).session_id = token.session_id as string | undefined;
+        (session as any).login_method = token.login_method as string | undefined;
       }
       return session as any;
     },

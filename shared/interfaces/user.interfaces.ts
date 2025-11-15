@@ -20,6 +20,7 @@ export interface IUser {
   updated_at?: Date | string;
   two_factor_enabled?: boolean;
   two_factor_secret?: string;
+  two_factor_required_new_device?: boolean;
   is_google_user?: boolean;
   is_inactive: boolean;
   tenant: string;
