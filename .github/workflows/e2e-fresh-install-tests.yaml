@@ -162,6 +162,16 @@ jobs:
           docker-compose --version # Verify installation
         shell: bash
 
+      - name: Free up disk space
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Freeing up disk space before build..."
+          df -h
+          docker system prune -a -f --volumes
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          df -h
+        shell: bash
+
       - name: Build server image with no cache
         if: steps.install_docker_compose.outcome == 'success'
         run: |
