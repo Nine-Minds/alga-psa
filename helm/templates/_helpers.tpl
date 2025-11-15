@@ -77,3 +77,27 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $suffix -}}
 {{- end -}}
 {{- end }}
+
+{{/* Render GOOGLE_OAUTH_* env vars from gmail_integration config */}}
+{{- define "sebastian.googleOAuthEnv" -}}
+{{- if and .Values.gmail_integration.enabled .Values.gmail_integration.client_id .Values.gmail_integration.client_secret }}
+- name: GOOGLE_OAUTH_CLIENT_ID
+  value: "{{ .Values.gmail_integration.client_id }}"
+- name: GOOGLE_OAUTH_CLIENT_SECRET
+  value: "{{ .Values.gmail_integration.client_secret }}"
+{{- end }}
+{{- end }}
+
+{{/*
+Render MICROSOFT_OAUTH_* env vars using the microsoft_integration config.
+*/}}
+{{- define "sebastian.microsoftOAuthEnv" -}}
+{{- if and .Values.microsoft_integration.enabled .Values.microsoft_integration.client_id }}
+- name: MICROSOFT_OAUTH_CLIENT_ID
+  value: "{{ .Values.microsoft_integration.client_id }}"
+{{- end }}
+{{- if and .Values.microsoft_integration.enabled .Values.microsoft_integration.client_secret }}
+- name: MICROSOFT_OAUTH_CLIENT_SECRET
+  value: "{{ .Values.microsoft_integration.client_secret }}"
+{{- end }}
+{{- end }}
