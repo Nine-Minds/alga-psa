@@ -1,4 +1,4 @@
-FROM node:20.9-alpine
+FROM node:20.19-alpine
 
 # Install required system dependencies
 RUN apk add --no-cache \

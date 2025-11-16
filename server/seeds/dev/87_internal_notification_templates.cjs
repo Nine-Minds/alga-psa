@@ -163,6 +163,20 @@ exports.seed = async function(knex) {
       },
       {
         internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-created-client',
+        description: 'New appointment request submitted (client notification)',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-created-staff',
+        description: 'New appointment request submitted (staff notification)',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
         name: 'appointment-request-approved',
         description: 'Appointment request approved',
         is_enabled: true,
@@ -179,6 +193,20 @@ exports.seed = async function(knex) {
         internal_category_id: getCategoryId('appointments'),
         name: 'appointment-request-cancelled',
         description: 'Appointment request cancelled',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-cancelled-client',
+        description: 'Appointment request cancelled (client notification)',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('appointments'),
+        name: 'appointment-request-cancelled-staff',
+        description: 'Appointment request cancelled (staff notification)',
         is_enabled: true,
         is_default_enabled: true
       }
