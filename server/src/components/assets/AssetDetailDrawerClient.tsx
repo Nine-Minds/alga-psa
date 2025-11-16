@@ -80,6 +80,16 @@ export function AssetDetailDrawerClient({
   const router = useRouter();
   const desiredTab = activeTab;
 
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const nextTab = value as AssetDrawerTab;
+      if (TAB_ORDER.includes(nextTab)) {
+        onTabChange(nextTab);
+      }
+    },
+    [onTabChange]
+  );
+
   const visibleAssetId = selectedAssetId;
 
   const registerDrawer = useRegisterUIComponent<ContainerComponent>({
@@ -183,7 +193,7 @@ export function AssetDetailDrawerClient({
             {error}
           </div>
         ) : (
-          <Tabs value={desiredTab} onValueChange={onTabChange} className="space-y-4">
+          <Tabs value={desiredTab} onValueChange={handleTabChange} className="space-y-4">
             <TabsList className="w-full gap-2 border-b border-gray-200 text-sm font-medium text-gray-500">
               {TAB_ORDER.map(tab => (
                 <TabsTrigger key={tab} value={tab} className="text-sm">
