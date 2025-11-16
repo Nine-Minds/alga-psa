@@ -5,6 +5,7 @@ import { Card, Flex, Text, Heading } from '@radix-ui/themes';
 import { Asset, AssetMaintenanceReport, AssetRelationship, NetworkDeviceAsset } from '../../interfaces/asset.interfaces';
 import { getAssetMaintenanceReport } from '../../lib/actions/asset-actions/assetActions';
 import { Button } from '../../components/ui/Button';
+import Spinner from 'server/src/components/ui/Spinner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Documents from '../../components/documents/Documents';
@@ -48,20 +49,27 @@ import DeleteAssetButton from './DeleteAssetButton';
 
 interface AssetDetailsProps {
   asset: Asset;
+  maintenanceReport?: AssetMaintenanceReport | null;
 }
 
-export default function AssetDetails({ asset }: AssetDetailsProps) {
+export default function AssetDetails({ asset, maintenanceReport: initialMaintenanceReport }: AssetDetailsProps) {
   const updateDetails = useRegisterUIComponent({
     id: 'asset-details',
     type: 'container',
     label: 'Asset Details'
   });
 
-  const [maintenanceReport, setMaintenanceReport] = React.useState<AssetMaintenanceReport | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [maintenanceReport, setMaintenanceReport] = React.useState<AssetMaintenanceReport | null>(initialMaintenanceReport || null);
+  const [isLoading, setIsLoading] = React.useState(!initialMaintenanceReport);
   const router = useRouter();
 
   React.useEffect(() => {
+    if (initialMaintenanceReport) {
+      setMaintenanceReport(initialMaintenanceReport);
+      setIsLoading(false);
+      return;
+    }
+
     const loadMaintenanceReport = async () => {
       try {
         const report = await getAssetMaintenanceReport(asset.asset_id);
@@ -74,7 +82,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
     };
 
     loadMaintenanceReport();
-  }, [asset.asset_id]);
+  }, [asset.asset_id, initialMaintenanceReport]);
 
   const getNetworkDeviceIcon = (deviceType: NetworkDeviceAsset['device_type']) => {
     switch (deviceType) {
@@ -610,7 +618,31 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
         </Flex>
       </Flex>
 
-      <CustomTabs tabs={tabContent} />
+      <div className="relative">
+        {isLoading && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/70 backdrop-blur-sm">
+            <Spinner size="md" className="text-primary-500" />
+            <Text as="p" size="2" className="mt-2 text-gray-600">Loading details…</Text>
+          </div>
+        )}
+        <CustomTabs
+          tabs={tabContent.map((tab) => ({
+            ...tab,
+            content: isLoading ? renderTabSkeleton(tab.label) : tab.content,
+          }))}
+        />
+      </div>
+    </div>
+  );
+}
+
+function renderTabSkeleton(label: string) {
+  const rows = Array.from({ length: label === 'Documents' ? 6 : 4 });
+  return (
+    <div className="space-y-4">
+      {rows.map((_, index) => (
+        <div key={`${label}-skeleton-${index}`} className="h-16 animate-pulse rounded-lg bg-gray-100" />
+      ))}
     </div>
   );
 }

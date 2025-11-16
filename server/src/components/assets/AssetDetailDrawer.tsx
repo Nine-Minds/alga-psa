@@ -20,12 +20,8 @@ import {
   isServerAsset,
   isWorkstationAsset
 } from 'server/src/interfaces/asset.interfaces';
-import {
-  getAsset,
-  getAssetHistory,
-  getAssetLinkedTickets,
-  getAssetMaintenanceReport
-} from 'server/src/lib/actions/asset-actions/assetActions';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { getAssetDetailBundle } from 'server/src/lib/actions/asset-actions/assetActions';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import type { ContainerComponent } from 'server/src/types/ui-reflection/types';
@@ -60,6 +56,7 @@ interface DrawerState {
   maintenanceHistory?: AssetMaintenanceHistory[];
   history?: AssetHistory[];
   tickets?: AssetTicketSummary[];
+  documents?: IDocument[];
 }
 
 const TAB_ORDER: AssetDrawerTab[] = [
@@ -85,7 +82,8 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     maintenanceReport: null,
     maintenanceHistory: [],
     history: [],
-    tickets: []
+    tickets: [],
+    documents: []
   });
 
   const registerDrawer = useRegisterUIComponent<ContainerComponent>({
@@ -94,7 +92,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     label: 'Asset Detail Drawer'
   });
 
-  const { asset, maintenanceReport, maintenanceHistory, history, tickets, isLoading, error } = state;
+  const { asset, maintenanceReport, maintenanceHistory, history, tickets, documents, isLoading, error } = state;
 
   useEffect(() => {
     if (!assetId || !isOpen) {
@@ -111,12 +109,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
       }));
 
       try {
-        const [assetData, maintenanceData, historyData, ticketData] = await Promise.all([
-          getAsset(assetId),
-          getAssetMaintenanceReport(assetId),
-          getAssetHistory(assetId),
-          getAssetLinkedTickets(assetId)
-        ]);
+        const bundle = await getAssetDetailBundle(assetId);
 
         if (isCancelled) {
           return;
@@ -125,13 +118,12 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         setState({
           isLoading: false,
           error: null,
-          asset: assetData,
-          maintenanceReport: maintenanceData,
-          maintenanceHistory: Array.isArray(maintenanceData?.maintenance_history)
-            ? (maintenanceData.maintenance_history as AssetMaintenanceHistory[])
-            : [],
-          history: historyData,
-          tickets: ticketData
+          asset: bundle.asset,
+          maintenanceReport: bundle.maintenanceReport,
+          maintenanceHistory: bundle.maintenanceHistory,
+          history: bundle.history,
+          tickets: bundle.tickets,
+          documents: bundle.documents
         });
       } catch (error) {
         console.error('Failed to load asset drawer data:', error);
@@ -146,7 +138,8 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
           maintenanceReport: null,
           maintenanceHistory: [],
           history: [],
-          tickets: []
+          tickets: [],
+          documents: []
         });
       }
     };
@@ -435,7 +428,11 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     }
 
     return (
-      <AssetDocuments assetId={asset.asset_id} tenant={asset.tenant} />
+      <AssetDocuments
+        assetId={asset.asset_id}
+        tenant={asset.tenant}
+        initialDocuments={documents}
+      />
     );
   }, [asset]);
 
@@ -478,7 +475,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         {!error && (
           <div className="relative">
             {isLoading && (
-              <div className="pointer-events-auto absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/80 backdrop-blur-sm">
+              <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/70 backdrop-blur-sm">
                 <Spinner size="md" className="text-primary-500" />
                 <p className="mt-2 text-sm font-medium text-gray-600">Loading asset details…</p>
               </div>
@@ -506,7 +503,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
                   className="focus:outline-none"
                   forceMount={forceMount}
                 >
-                  {content}
+                  {isLoading ? renderTabSkeleton(label as AssetDrawerTab) : content}
                 </TabsContent>
               ))}
             </Tabs>
@@ -514,6 +511,20 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         )}
       </div>
     </Drawer>
+  );
+}
+
+function renderTabSkeleton(tab: AssetDrawerTab) {
+  const rows = Array.from({ length: tab === ASSET_DRAWER_TABS.DOCUMENTS ? 6 : 4 });
+  return (
+    <div className="space-y-4">
+      {rows.map((_, index) => (
+        <div
+          key={`${tab}-skeleton-${index}`}
+          className="h-16 rounded-lg bg-gray-100 animate-pulse"
+        />
+      ))}
+    </div>
   );
 }
 

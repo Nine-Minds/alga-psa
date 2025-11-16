@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useTransition } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { Card } from 'server/src/components/ui/Card';
@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator
 } from 'server/src/components/ui/DropdownMenu';
 import { Asset, AssetListResponse, ClientMaintenanceSummary } from 'server/src/interfaces/asset.interfaces';
-import { getClientMaintenanceSummary, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getClientMaintenanceSummaries, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -95,6 +95,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   const [activeDrawerTab, setActiveDrawerTab] = useState<AssetDrawerTab>(ASSET_DRAWER_TABS.OVERVIEW);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const drawerClosePendingRef = useRef(false);
+  const [, startTransition] = useTransition();
 
   const searchParamsString = useMemo(() => searchParams?.toString() ?? '', [searchParams]);
 
@@ -185,7 +186,9 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     if (activeDrawerTab !== nextTab) {
       setActiveDrawerTab(nextTab);
     }
-    router.replace(buildDrawerUrl(asset.asset_id, nextTab), { scroll: false });
+    startTransition(() => {
+      router.replace(buildDrawerUrl(asset.asset_id, nextTab), { scroll: false });
+    });
   }, [activeDrawerTab, buildDrawerUrl, drawerAssetId, isDrawerOpen, router]);
 
   const handleDrawerClose = useCallback(() => {
@@ -201,7 +204,9 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
 
     if (hadAssetId) {
       const query = params.toString();
-      router.replace(query ? `/msp/assets?${query}` : '/msp/assets', { scroll: false });
+      startTransition(() => {
+        router.replace(query ? `/msp/assets?${query}` : '/msp/assets', { scroll: false });
+      });
     }
   }, [router, searchParamsString]);
 
@@ -212,13 +217,17 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     if (!drawerAssetId) {
       return;
     }
-    router.replace(buildDrawerUrl(drawerAssetId, tab), { scroll: false });
+    startTransition(() => {
+      router.replace(buildDrawerUrl(drawerAssetId, tab), { scroll: false });
+    });
   }, [activeDrawerTab, buildDrawerUrl, drawerAssetId, router]);
 
   const triggerQuickAdd = useCallback(() => {
     const params = new URLSearchParams();
     params.set('intent', 'new-asset');
-    router.replace(`/msp/assets?${params.toString()}`, { scroll: false });
+    startTransition(() => {
+      router.replace(`/msp/assets?${params.toString()}`, { scroll: false });
+    });
   }, [router]);
 
   const handleCommandSelectAsset = useCallback((asset: Asset) => {
@@ -252,12 +261,13 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     async function loadMaintenanceSummaries() {
       setLoading(true);
       try {
-        const summaries: Record<string, ClientMaintenanceSummary> = {};
-        for (const clientId of Object.keys(assetsByClient)) {
-          const summary = await getClientMaintenanceSummary(clientId);
-          summaries[clientId] = summary;
+        const clientIds = Object.keys(assetsByClient);
+        if (clientIds.length === 0) {
+          setMaintenanceSummaries({});
+        } else {
+          const summaries = await getClientMaintenanceSummaries(clientIds);
+          setMaintenanceSummaries(summaries);
         }
-        setMaintenanceSummaries(summaries);
       } catch (error) {
         console.error('Error loading maintenance summaries:', error);
       }
@@ -822,6 +832,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                 helper="Across all tenants"
                 icon={<Boxes className="h-4 w-4 text-blue-500" />}
                 value={totalAssets}
+                isLoading={loading}
               />
               <SummaryTile
                 id="metric-active-schedules"
@@ -829,6 +840,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                 helper="Lifecycle automation"
                 icon={<TrendingUp className="h-4 w-4 text-emerald-500" />}
                 value={maintenanceStats.totalSchedules}
+                isLoading={loading}
               />
               <SummaryTile
                 id="metric-overdue-maintenance"
@@ -836,6 +848,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                 helper="Needs attention"
                 icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
                 value={maintenanceStats.overdueMaintenances}
+                isLoading={loading}
               />
               <SummaryTile
                 id="metric-upcoming-maintenance"
@@ -843,6 +856,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                 helper="Next 30 days"
                 icon={<Clock className="h-4 w-4 text-violet-500" />}
                 value={maintenanceStats.upcomingMaintenances}
+                isLoading={loading}
               />
             </div>
 
@@ -877,22 +891,6 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
         onClearFilters={clearFilters}
       />
 
-      {loading && (
-        <div
-          {...withDataAutomationId({ id: 'loading-overlay' })}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        >
-          <div className="mx-4 max-w-sm rounded-xl bg-white p-8 shadow-2xl">
-            <div className="space-y-4 text-center">
-              <Spinner size="lg" className="mx-auto text-primary-500" />
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-gray-900">Loading maintenance data...</p>
-                <p className="text-sm text-gray-500">Please wait while we fetch the information</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -903,9 +901,10 @@ type SummaryTileProps = {
   helper: string;
   value: number;
   icon: React.ReactNode;
+  isLoading?: boolean;
 };
 
-function SummaryTile({ id, title, helper, value, icon }: SummaryTileProps) {
+function SummaryTile({ id, title, helper, value, icon, isLoading }: SummaryTileProps) {
   return (
     <Card className="p-4" {...withDataAutomationId({ id })}>
       <div className="flex items-center gap-3">
@@ -914,7 +913,11 @@ function SummaryTile({ id, title, helper, value, icon }: SummaryTileProps) {
         </div>
         <div>
           <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
+          {isLoading ? (
+            <div className="mt-1 h-6 w-20 animate-pulse rounded bg-gray-200" />
+          ) : (
+            <p className="text-2xl font-semibold text-gray-900">{value}</p>
+          )}
           <p className="text-xs text-gray-500">{helper}</p>
         </div>
       </div>

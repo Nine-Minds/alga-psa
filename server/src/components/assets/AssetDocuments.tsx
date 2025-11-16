@@ -9,11 +9,12 @@ import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/do
 interface AssetDocumentsProps {
     assetId: string;
     tenant: string;
+    initialDocuments?: IDocument[];
 }
 
-const AssetDocuments: React.FC<AssetDocumentsProps> = ({ assetId, tenant }) => {
-    const [documents, setDocuments] = useState<IDocument[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+const AssetDocuments: React.FC<AssetDocumentsProps> = ({ assetId, tenant, initialDocuments }) => {
+    const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
+    const [isLoading, setIsLoading] = useState(!initialDocuments);
 
     const loadDocuments = async () => {
         try {
@@ -31,8 +32,13 @@ const AssetDocuments: React.FC<AssetDocumentsProps> = ({ assetId, tenant }) => {
     };
 
     useEffect(() => {
+        if (initialDocuments && initialDocuments.length > 0) {
+            setDocuments(initialDocuments);
+            setIsLoading(false);
+            return;
+        }
         loadDocuments();
-    }, [assetId]);
+    }, [assetId, initialDocuments]);
 
     return (
         <Documents
