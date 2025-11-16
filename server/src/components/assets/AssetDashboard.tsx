@@ -19,7 +19,6 @@ import {
 import { Asset, AssetListResponse, ClientMaintenanceSummary } from 'server/src/interfaces/asset.interfaces';
 import { getClientMaintenanceSummaries, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetActionRail } from './AssetActionRail';
@@ -95,6 +94,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   const [activeDrawerTab, setActiveDrawerTab] = useState<AssetDrawerTab>(ASSET_DRAWER_TABS.OVERVIEW);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const drawerClosePendingRef = useRef(false);
+  const drawerOpenPendingRef = useRef(false);
   const [, startTransition] = useTransition();
 
   const searchParamsString = useMemo(() => searchParams?.toString() ?? '', [searchParams]);
@@ -151,32 +151,28 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     }
 
     if (assetParam) {
-      if (assetParam !== drawerAssetId) {
-        setDrawerAssetId(assetParam);
-      }
-      if (!isDrawerOpen) {
-        setIsDrawerOpen(true);
-      }
-      const resolvedTab = panelParamToTab(panelParam);
-      if (resolvedTab !== activeDrawerTab) {
-        setActiveDrawerTab(resolvedTab);
-      }
+      setDrawerAssetId(assetParam);
+      setIsDrawerOpen(true);
+      setActiveDrawerTab(panelParamToTab(panelParam));
+      drawerOpenPendingRef.current = false;
     } else {
-      if (drawerAssetId !== null) {
-        setDrawerAssetId(null);
+      if (drawerOpenPendingRef.current) {
+        // We initiated an open and are still waiting for the router to reflect it.
+        return;
       }
-      if (isDrawerOpen) {
-        setIsDrawerOpen(false);
-      }
-      if (activeDrawerTab !== ASSET_DRAWER_TABS.OVERVIEW) {
-        setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
-      }
+      setDrawerAssetId(null);
+      setIsDrawerOpen(false);
+      setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
     }
-  }, [searchParamsString, panelParamToTab, drawerAssetId, isDrawerOpen, activeDrawerTab]);
+  }, [searchParamsString, panelParamToTab]);
 
   const openDrawerForAsset = useCallback((asset: Asset, tab?: AssetDrawerTab) => {
     const nextTab = tab ?? ASSET_DRAWER_TABS.OVERVIEW;
     drawerClosePendingRef.current = false;
+    const params = new URLSearchParams(searchParamsString);
+    if (!params.get('assetId')) {
+      drawerOpenPendingRef.current = true;
+    }
     if (drawerAssetId !== asset.asset_id) {
       setDrawerAssetId(asset.asset_id);
     }
@@ -189,7 +185,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     startTransition(() => {
       router.replace(buildDrawerUrl(asset.asset_id, nextTab), { scroll: false });
     });
-  }, [activeDrawerTab, buildDrawerUrl, drawerAssetId, isDrawerOpen, router]);
+  }, [activeDrawerTab, buildDrawerUrl, drawerAssetId, isDrawerOpen, router, searchParamsString]);
 
   const handleDrawerClose = useCallback(() => {
     const params = new URLSearchParams(searchParamsString);
@@ -228,6 +224,18 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     startTransition(() => {
       router.replace(`/msp/assets?${params.toString()}`, { scroll: false });
     });
+  }, [router]);
+
+  const openAssetRecordPage = useCallback((assetId: string, options?: { newTab?: boolean }) => {
+    const url = `/msp/assets/${assetId}`;
+    if (options?.newTab) {
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+
+    router.push(url);
   }, [router]);
 
   const handleCommandSelectAsset = useCallback((asset: Asset) => {
@@ -444,12 +452,33 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       dataIndex: 'name',
       title: 'Name',
       render: (_value: unknown, record: Asset) => (
-        <Link
-          href={`/msp/assets/${record.asset_id}`}
-          className="font-medium text-primary-600 hover:text-primary-700 hover:underline transition-colors truncate block max-w-[200px]"
+        <button
+          type="button"
+          className="font-medium text-primary-600 hover:text-primary-700 hover:underline transition-colors truncate block max-w-[200px] text-left"
+          onClick={(event) => {
+            if (event.metaKey || event.ctrlKey) {
+              event.preventDefault();
+              openAssetRecordPage(record.asset_id, { newTab: true });
+              return;
+            }
+
+            if (event.shiftKey || event.altKey) {
+              event.preventDefault();
+              openAssetRecordPage(record.asset_id);
+              return;
+            }
+
+            openDrawerForAsset(record);
+          }}
+          onAuxClick={(event) => {
+            if (event.button === 1) {
+              event.preventDefault();
+              openAssetRecordPage(record.asset_id, { newTab: true });
+            }
+          }}
         >
           {record.name}
-        </Link>
+        </button>
       )
     },
     asset_tag: {
@@ -571,7 +600,9 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
     toggleSelectAll,
     toggleAssetSelection,
     getAssetTypeIcon,
-    renderAssetDetails
+    renderAssetDetails,
+    openDrawerForAsset,
+    openAssetRecordPage
   ]);
 
   const columns: ColumnDefinition<Asset>[] = useMemo(() => {

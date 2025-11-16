@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Drawer from 'server/src/components/ui/Drawer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from 'server/src/components/ui/Tabs';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
 import { Card } from 'server/src/components/ui/Card';
-import Spinner from 'server/src/components/ui/Spinner';
 import {
   Asset,
   AssetHistory,
@@ -22,6 +21,7 @@ import {
 } from 'server/src/interfaces/asset.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getAssetDetailBundle } from 'server/src/lib/actions/asset-actions/assetActions';
+import type { AssetDetailBundle } from 'server/src/lib/actions/asset-actions/assetActions';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import type { ContainerComponent } from 'server/src/types/ui-reflection/types';
@@ -48,17 +48,6 @@ interface AssetDetailDrawerProps {
   onClose: () => void;
 }
 
-interface DrawerState {
-  isLoading: boolean;
-  error?: string | null;
-  asset?: Asset | null;
-  maintenanceReport?: AssetMaintenanceReport | null;
-  maintenanceHistory?: AssetMaintenanceHistory[];
-  history?: AssetHistory[];
-  tickets?: AssetTicketSummary[];
-  documents?: IDocument[];
-}
-
 const TAB_ORDER: AssetDrawerTab[] = [
   ASSET_DRAWER_TABS.OVERVIEW,
   ASSET_DRAWER_TABS.MAINTENANCE,
@@ -75,16 +64,10 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onClose }: AssetDetailDrawerProps) {
   const router = useRouter();
-  const [state, setState] = useState<DrawerState>({
-    isLoading: false,
-    error: null,
-    asset: null,
-    maintenanceReport: null,
-    maintenanceHistory: [],
-    history: [],
-    tickets: [],
-    documents: []
-  });
+  const bundleCacheRef = useRef<Map<string, AssetDetailBundle>>(new Map());
+  const [currentBundle, setCurrentBundle] = useState<AssetDetailBundle | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const registerDrawer = useRegisterUIComponent<ContainerComponent>({
     id: 'asset-detail-drawer',
@@ -92,66 +75,68 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
     label: 'Asset Detail Drawer'
   });
 
-  const { asset, maintenanceReport, maintenanceHistory, history, tickets, documents, isLoading, error } = state;
 
   useEffect(() => {
     if (!assetId || !isOpen) {
+      setCurrentBundle(null);
+      setIsLoading(false);
+      setError(null);
       return;
     }
 
     let isCancelled = false;
+    const cached = bundleCacheRef.current.get(assetId);
+    if (cached) {
+      setCurrentBundle(cached);
+      setIsLoading(false);
+      setError(null);
+    } else {
+      setCurrentBundle(null);
+      setIsLoading(true);
+      setError(null);
+    }
 
-    const loadDrawerData = async () => {
-      setState(prev => ({
-        ...prev,
-        isLoading: true,
-        error: null
-      }));
-
+    const loadBundle = async () => {
       try {
         const bundle = await getAssetDetailBundle(assetId);
-
         if (isCancelled) {
           return;
         }
-
-        setState({
-          isLoading: false,
-          error: null,
-          asset: bundle.asset,
-          maintenanceReport: bundle.maintenanceReport,
-          maintenanceHistory: bundle.maintenanceHistory,
-          history: bundle.history,
-          tickets: bundle.tickets,
-          documents: bundle.documents
-        });
-      } catch (error) {
-        console.error('Failed to load asset drawer data:', error);
+        bundleCacheRef.current.set(assetId, bundle);
+        setCurrentBundle(bundle);
+        setIsLoading(false);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load asset drawer data:', err);
         if (isCancelled) {
           return;
         }
-
-        setState({
-          isLoading: false,
-          error: 'Unable to load asset details right now. Please try again.',
-          asset: null,
-          maintenanceReport: null,
-          maintenanceHistory: [],
-          history: [],
-          tickets: [],
-          documents: []
-        });
+        setIsLoading(false);
+        setError('Unable to load asset details right now. Please try again.');
+        if (!cached) {
+          setCurrentBundle(null);
+        }
       }
     };
 
-    void loadDrawerData();
+    if (!cached) {
+      void loadBundle();
+    }
 
     return () => {
       isCancelled = true;
     };
-  }, [assetId, isOpen, registerDrawer]);
+  }, [assetId, isOpen]);
+
+  const asset = currentBundle?.asset ?? null;
+  const maintenanceReport = currentBundle?.maintenanceReport ?? null;
+  const maintenanceHistory = currentBundle?.maintenanceHistory ?? [];
+  const history = currentBundle?.history ?? [];
+  const tickets = currentBundle?.tickets ?? [];
+  const documents = currentBundle?.documents ?? [];
 
   useEffect(() => {
+    const asset = currentBundle?.asset;
     if (!assetId) {
       registerDrawer?.({
         helperText: 'Awaiting asset selection'
@@ -161,7 +146,7 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         helperText: `${asset.name} • ${activeTab}`
       });
     }
-  }, [assetId, asset, activeTab, registerDrawer]);
+  }, [assetId, activeTab, currentBundle, registerDrawer]);
 
   const statusBadge = useMemo(() => {
     if (!asset) {
@@ -434,8 +419,9 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
         initialDocuments={documents}
       />
     );
-  }, [asset]);
+  }, [asset, documents]);
 
+  const bundleReady = Boolean(currentBundle);
   const tabContent = useMemo(() => [
     { label: ASSET_DRAWER_TABS.OVERVIEW, content: overviewTab },
     { label: ASSET_DRAWER_TABS.MAINTENANCE, content: maintenanceTab },
@@ -449,6 +435,8 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
       onTabChange(nextTab as AssetDrawerTab);
     }
   };
+
+  const showSkeleton = isLoading && !bundleReady;
 
   return (
     <Drawer
@@ -466,49 +454,39 @@ export function AssetDetailDrawer({ assetId, isOpen, activeTab, onTabChange, onC
           </div>
         </header>
 
-        {error && !isLoading && (
+        {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        {!error && (
-          <div className="relative">
-            {isLoading && (
-              <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/70 backdrop-blur-sm">
-                <Spinner size="md" className="text-primary-500" />
-                <p className="mt-2 text-sm font-medium text-gray-600">Loading asset details…</p>
-              </div>
-            )}
-            <Tabs
-              value={activeTab}
-              onValueChange={handleTabChange}
-              className="space-y-4"
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="space-y-4"
+        >
+          <TabsList className="w-full gap-2 border-b border-gray-200 text-sm font-medium text-gray-500">
+            {TAB_ORDER.map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="text-sm"
+              >
+                {tab}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {tabContent.map(({ label, content, forceMount }) => (
+            <TabsContent
+              key={label}
+              value={label}
+              className="focus:outline-none"
+              forceMount={forceMount}
             >
-              <TabsList className="w-full gap-2 border-b border-gray-200 text-sm font-medium text-gray-500">
-                {TAB_ORDER.map((tab) => (
-                  <TabsTrigger
-                    key={tab}
-                    value={tab}
-                    className="text-sm"
-                  >
-                    {tab}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {tabContent.map(({ label, content, forceMount }) => (
-                <TabsContent
-                  key={label}
-                  value={label}
-                  className="focus:outline-none"
-                  forceMount={forceMount}
-                >
-                  {isLoading ? renderTabSkeleton(label as AssetDrawerTab) : content}
-                </TabsContent>
-              ))}
-            </Tabs>
-          </div>
-        )}
+              {showSkeleton ? renderTabSkeleton(label as AssetDrawerTab) : content}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     </Drawer>
   );
