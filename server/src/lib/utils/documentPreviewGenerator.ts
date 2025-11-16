@@ -363,7 +363,7 @@ async function generateVideoPreviews(
 
   try {
     // Check if fluent-ffmpeg is available
-    let ffmpeg;
+    let ffmpeg: any;
     try {
       ffmpeg = require('fluent-ffmpeg');
     } catch (requireError) {
