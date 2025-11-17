@@ -181,24 +181,58 @@ exports.up = async function(knex) {
     console.log('Final wait before setting NOT NULL constraint...');
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // One final check right before ALTER TABLE
-    const lastCheck = await knex.raw(`
-      SELECT COUNT(*) as count
+    // One final check right before ALTER TABLE - query actual rows to force distributed check
+    const lastCheckRows = await knex.raw(`
+      SELECT project_id, tenant, project_name
       FROM projects
       WHERE project_number IS NULL
+      LIMIT 100
     `);
 
-    console.log(`Final NULL check: ${lastCheck.rows[0].count} NULL values`);
+    console.log(`Final NULL check: ${lastCheckRows.rows.length} NULL values found`);
 
-    if (parseInt(lastCheck.rows[0].count) > 0) {
-      throw new Error(`❌ Cannot proceed: ${lastCheck.rows[0].count} projects still have NULL project_number`);
+    if (lastCheckRows.rows.length > 0) {
+      console.log('Found NULL projects:');
+      lastCheckRows.rows.forEach((p, idx) => {
+        if (idx < 10) { // Show first 10
+          console.log(`  - ${p.project_name} (${p.tenant})`);
+        }
+      });
+
+      // Try one more backfill for these specific projects
+      console.log('\nAttempting final targeted backfill...');
+      for (const project of lastCheckRows.rows) {
+        const result = await knex.raw(
+          `SELECT generate_next_number(:tenant::uuid, 'PROJECT') as number`,
+          { tenant: project.tenant }
+        );
+        const projectNumber = result.rows[0].number;
+
+        await knex('projects')
+          .where({ tenant: project.tenant, project_id: project.project_id })
+          .update({ project_number: projectNumber });
+
+        console.log(`  ✓ ${projectNumber}: ${project.project_name}`);
+      }
+
+      // Wait and check again
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      const finalFinalCheck = await knex.raw(`
+        SELECT COUNT(*) as count
+        FROM projects
+        WHERE project_number IS NULL
+      `);
+
+      if (parseInt(finalFinalCheck.rows[0].count) > 0) {
+        throw new Error(`❌ Cannot proceed: ${finalFinalCheck.rows[0].count} projects still have NULL project_number after final backfill`);
+      }
     }
 
     // Now make the column NOT NULL (after all projects have numbers)
+    // Use raw SQL instead of Knex schema builder for better Citus compatibility
     console.log('Making project_number column NOT NULL...');
-    await knex.schema.alterTable('projects', (table) => {
-      table.string('project_number', 50).notNullable().alter();
-    });
+    await knex.raw(`ALTER TABLE projects ALTER COLUMN project_number SET NOT NULL`);
     console.log('✅ Column altered to NOT NULL');
   } else {
     console.log('ℹ️  Column is already NOT NULL, skipping');
