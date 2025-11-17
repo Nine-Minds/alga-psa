@@ -1,5 +1,10 @@
 # Invoice Template System Documentation
 
+**Related Documentation:**
+- [billing.md](./billing.md) - Overall billing system architecture
+- [billing_cycles.md](./billing_cycles.md) - Billing cycle management
+- [invoice_finalization.md](./invoice_finalization.md) - Invoice finalization process
+
 ## 1. Overview
 
 The Invoice Template System allows users to customize the appearance and layout of generated invoices. It supports two types of templates:
@@ -8,6 +13,13 @@ The Invoice Template System allows users to customize the appearance and layout 
 *   **Custom Templates:** User-created or modified templates, tailored to specific business needs. Users can clone standard templates or create new ones from scratch.
 
 Templates are written in **AssemblyScript**, a subset of TypeScript that compiles to **WebAssembly (Wasm)**. This approach allows for safe, sandboxed execution of custom template logic on the server while providing a familiar TypeScript-like syntax for developers or advanced users creating templates.
+
+**Key Files:**
+- [invoiceTemplates.ts](../server/src/lib/actions/invoiceTemplates.ts) - Server actions
+- [InvoiceTemplates.tsx](../server/src/components/billing-dashboard/InvoiceTemplates.tsx) - Template list UI
+- [InvoiceTemplateEditor.tsx](../server/src/components/billing-dashboard/InvoiceTemplateEditor.tsx) - Template editor UI
+- [wasm-executor.ts](../server/src/lib/invoice-renderer/wasm-executor.ts) - Wasm execution
+- [layout-renderer.ts](../server/src/lib/invoice-renderer/layout-renderer.ts) - Layout to HTML/CSS conversion
 
 ## 2. Architecture
 
@@ -102,6 +114,24 @@ These Next.js Server Actions handle the core logic for managing invoice template
     6.  Returns the final rendered output (e.g., HTML/CSS for PDF generation).
 *   **`compileStandardTemplate(templateCode)`:** Compiles a specific standard template identified by its `standard_invoice_template_code`. Reads the source from disk (`server/src/invoice-templates/assemblyscript/standard/`), compiles it, calculates the SHA, and updates the corresponding record in the `standard_invoice_templates` table with the new `wasmBinary`, `sha`, and `updated_at` timestamp. Used during startup sync.
 
+### Additional Actions (Not Yet Fully Implemented)
+
+The following server actions exist but are **placeholder implementations**:
+
+*   **`getCustomFields()`** - Line 274: Logs warning "getCustomFields implementation needed" and returns empty array.
+*   **`saveCustomField()`** - Line 280: Logs warning "saveCustomField implementation needed".
+*   **`getConditionalRules(templateId)`** - Line 287: Logs warning and returns empty array.
+*   **`saveConditionalRule()`** - Line 293: Logs warning "saveConditionalRule implementation needed".
+
+**Note:** The underlying database tables (`custom_fields`, `conditional_display_rules`, `invoice_annotations`) exist in the schema but the server actions are not yet fully implemented.
+
+### Additional Actions (Implemented)
+
+The following additional server actions exist and are fully implemented:
+
+*   **`getDefaultTemplate()`** - Line 128: Fetches the tenant's default template from `invoice_template_assignments`.
+*   **`setClientTemplate(clientId, templateId)`** - Line 134: Sets a template for a specific client (client-level override).
+
 ## 5. Database Schema
 
 ### 5.1. `invoice_templates` (Tenant-Specific Custom Templates)
@@ -109,23 +139,36 @@ These Next.js Server Actions handle the core logic for managing invoice template
 *   `template_id` (UUID, PK): Unique identifier for the custom template.
 *   `tenant` (VARCHAR, FK to `tenants.id`): Tenant identifier (shard key).
 *   `name` (VARCHAR): User-defined name for the template.
-*   `assemblyScriptSource` (TEXT): The AssemblyScript source code provided by the user.
-*   `wasmBinary` (BYTEA): The compiled WebAssembly binary code.
-*   `sha` (TEXT): SHA hash of the `assemblyScriptSource` for change detection.
+*   `assemblyScriptSource` (TEXT): The AssemblyScript source code provided by the user. **Note:** Replaced the legacy `dsl` column via migration `20250429214404_remove_dsl_not_null_constraint.cjs`.
+*   `wasmBinary` (BYTEA): The compiled WebAssembly binary code. Added via migration `20250429225500_add_wasm_binary_to_invoice_templates.cjs`.
+*   `sha` (TEXT): SHA hash of the `assemblyScriptSource` for change detection. Added alongside other schema updates.
+*   `version` (INTEGER): Version tracking for templates.
 *   `is_default` (BOOLEAN, legacy): Maintained for backward compatibility; tenant defaults are resolved through `invoice_template_assignments`.
 *   `created_at` (TIMESTAMP): Timestamp of creation.
 *   `updated_at` (TIMESTAMP): Timestamp of last update.
 
+**Migration History:**
+- wasmPath column: Added via `20250426220800_add_wasm_fields_to_invoice_templates.cjs`, then removed via `20250429230000_remove_wasm_path_from_invoice_templates.cjs`
+- DSL column removed: `20250429214404_remove_dsl_not_null_constraint.cjs`
+- wasmBinary column added: `20250429225500_add_wasm_binary_to_invoice_templates.cjs`
+
 ### 5.2. `standard_invoice_templates` (System-Wide Standard Templates)
 
-*   `standard_invoice_template_id` (UUID, PK): Unique identifier.
+*   `template_id` (UUID, PK): Unique identifier. **Note:** Documentation previously incorrectly listed this as `standard_invoice_template_id`, but the actual column name is `template_id` per migration `20241209202308_add_standard_invoice_templates.cjs`.
 *   `name` (VARCHAR): Name of the standard template (e.g., "Standard Template", "Detailed Template").
 *   `standard_invoice_template_code` (TEXT, UNIQUE): Stable code identifier (e.g., "standard-default", "standard-detailed"), matches filename.
-*   `assemblyScriptSource` (TEXT): The canonical AssemblyScript source code read from the filesystem.
-*   `wasmBinary` (BYTEA): The compiled WebAssembly binary code.
-*   `sha` (TEXT): SHA hash of the `assemblyScriptSource` from the filesystem.
+*   `assemblyScriptSource` (TEXT): The canonical AssemblyScript source code read from the filesystem. **Note:** Replaced the legacy `dsl` column via migration `20250426221300_update_standard_templates_with_wasm.cjs`.
+*   `wasmBinary` (BYTEA): The compiled WebAssembly binary code. Added via migration `20250426221300_update_standard_templates_with_wasm.cjs`.
+*   `sha` (TEXT): SHA hash of the `assemblyScriptSource` from the filesystem. Added via migration `20250430143709_add_standard_template_fields.cjs`.
+*   `version` (INTEGER): Version tracking for templates.
 *   `created_at` (TIMESTAMP): Timestamp of creation.
 *   `updated_at` (TIMESTAMP): Timestamp of last update (reflects last compilation).
+
+**Migration History:**
+- Original creation: Migration not specified in verification
+- DSL column removed: `20250426221300_update_standard_templates_with_wasm.cjs`
+- SHA, code, and source fields added: `20250430143709_add_standard_template_fields.cjs`
+- wasmBinary added: `20250427170715_alter_standard_templates_wasm_binary.cjs`
 
 ### 5.3. `invoice_template_assignments` (Default Template Scopes)
 
@@ -175,7 +218,7 @@ A process runs at server startup to ensure the `standard_invoice_templates` tabl
         *   Compares the file's SHA and timestamp with the database record's `sha` and `updated_at`.
         *   If the file's SHA differs AND the file's timestamp is newer than the database timestamp, it calls `compileStandardTemplate` to recompile the template and update the database record.
 *   **Integration (`initializeApp.ts`, `actions/initializeApp.ts`):** The `syncStandardTemplates` function is called as part of the server's initialization sequence, ensuring checks run every time the application starts.
-*   **Build Process (`next.config.mjs`):** The `copy-webpack-plugin` is configured in the Next.js build process to copy the standard template source files (`server/src/invoice-templates/assemblyscript/standard/*.ts`) into the build output directory (e.g., `.next/server/`) so they are accessible at runtime by the `syncStandardTemplates` task.
+*   **Build Process (`next.config.mjs`):** ⚠️ **Note:** The `copy-webpack-plugin` configuration for copying standard template source files is currently **commented out** (lines 540-564). Standard templates are accessed from the source directory at runtime, not from a copied build output location.
 
 ## 8. Workflow Examples
 
