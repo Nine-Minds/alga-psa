@@ -5,8 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from 'server/src/app/api/auth/[...nextauth]/edge-auth';
-import { UserSession } from 'server/src/lib/models/UserSession';
+import { revokeSessionAction } from 'server/src/lib/actions/session-actions/sessionActions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,60 +25,15 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
-    const session = await auth();
-
-    if (!session?.user?.id || !session?.user?.tenant) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { sessionId } = params;
-
-    // Verify the session belongs to the current user
-    const targetSession = await UserSession.findById(
-      session.user.tenant,
-      sessionId
-    );
-
-    if (!targetSession) {
-      return NextResponse.json(
-        { error: 'Session not found' },
-        { status: 404 }
-      );
-    }
-
-    if (targetSession.user_id !== session.user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden - This session does not belong to you' },
-        { status: 403 }
-      );
-    }
-
-    // Check if this is the current session
-    const currentSessionId = (session as any).session_id;
-    const isCurrentSession = sessionId === currentSessionId;
-
-    // Revoke the session
-    await UserSession.revokeSession(
-      session.user.tenant,
-      sessionId,
-      'user_logout'
-    );
-
-    return NextResponse.json({
-      success: true,
-      is_current: isCurrentSession,
-      message: isCurrentSession
-        ? 'Current session revoked - you will be logged out'
-        : 'Session revoked successfully',
-    });
+    const result = await revokeSessionAction(sessionId);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('[DELETE /api/auth/sessions/:sessionId] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    const status = message.includes('Unauthorized') ? 401 :
+                   message.includes('Forbidden') || message.includes('not belong') ? 403 :
+                   message.includes('not found') ? 404 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

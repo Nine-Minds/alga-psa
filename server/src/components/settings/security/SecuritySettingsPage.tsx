@@ -46,7 +46,7 @@ const SsoBulkAssignment = dynamic(
   },
 );
 
-const SessionManagement = dynamic(() => import('./SessionManagement'), {
+const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'), {
   loading: () => <SettingsTabSkeleton title="Sessions" description="Loading active sessions..." showTable={true} />,
   ssr: false
 });
@@ -95,7 +95,7 @@ const SecuritySettingsPage = (): JSX.Element => {
       label: "Sessions",
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Active Sessions" description="Loading active sessions..." />}>
-          <SessionManagement />
+          <AdminSessionManagement />
         </Suspense>
       ),
     },

@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getSession } from "server/src/lib/auth/getSession";
 import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
 import { MspLayoutClient } from "./MspLayoutClient";
+import { UserSession } from "server/src/lib/models/UserSession";
 
 export default async function MspLayout({
   children,
@@ -9,6 +11,25 @@ export default async function MspLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
+
+  // Check if session has been revoked (force logout on every page load)
+  if (session?.session_id && session?.user?.tenant) {
+    try {
+      const isRevoked = await UserSession.isRevoked(
+        session.user.tenant,
+        (session as any).session_id
+      );
+
+      if (isRevoked) {
+        console.log('[msp-layout] Session revoked, redirecting to signin:', (session as any).session_id);
+        redirect('/auth/msp/signin?error=SessionRevoked');
+      }
+    } catch (error) {
+      console.error('[msp-layout] Session revocation check failed:', error);
+      // Don't block on errors
+    }
+  }
+
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';

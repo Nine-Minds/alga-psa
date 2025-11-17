@@ -756,5 +756,64 @@
       "loadFailed": "Kan afspraakverzoeken niet laden",
       "scheduleEntryCreated": "Planningsitem succesvol aangemaakt"
     }
+  },
+  "sessionManagement": {
+    "title": "Actieve sessies",
+    "description": "Beheer uw actieve inlogsessies op alle apparaten (maximaal 5 sessies)",
+    "states": {
+      "loading": "Sessies laden...",
+      "noSessions": "Geen actieve sessies gevonden"
+    },
+    "labels": {
+      "unknownDevice": "Onbekend apparaat",
+      "currentSession": "Huidige sessie",
+      "yourSession": "Uw sessie",
+      "lastActive": "Laatst actief"
+    },
+    "loginMethods": {
+      "password": "Wachtwoord",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Intern",
+      "client": "Klant"
+    },
+    "actions": {
+      "logout": "Uitloggen",
+      "revoke": "Intrekken",
+      "revoking": "Intrekken...",
+      "loggingOut": "Uitloggen...",
+      "logoutFromOther": "Uitloggen van {{count}} ander apparaat{{count, plural, one {} other {en}}}"
+    },
+    "confirmations": {
+      "logoutCurrent": "Dit zal u uitloggen van uw huidige sessie. Weet u het zeker?",
+      "logoutAllOther": "Dit zal u uitloggen van alle andere apparaten. Weet u het zeker?"
+    },
+    "prompts": {
+      "enter2FA": "Voer uw 2FA-code in:"
+    },
+    "messages": {
+      "loggingOut": "Uitloggen...",
+      "sessionRevoked": "Sessie succesvol ingetrokken"
+    },
+    "warnings": {
+      "oauthLogout": "Dit zal u alleen uitloggen van Alga PSA. U blijft ingelogd bij {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Kan sessies niet ophalen",
+      "loadFailed": "Kan actieve sessies niet laden",
+      "revokeFailed": "Kan sessie niet intrekken",
+      "revokeAllFailed": "Kan sessies niet intrekken",
+      "logoutAllFailed": "Kan niet uitloggen van andere apparaten",
+      "adminAccessRequired": "Onvoldoende rechten om alle sessies te bekijken"
+    },
+    "admin": {
+      "title": "Alle gebruikerssessies",
+      "description": "{{sessionCount}} actieve sessies van {{userCount}} gebruikers",
+      "searchPlaceholder": "Zoeken op gebruikersnaam, e-mail, apparaat of IP-adres...",
+      "noResults": "Geen sessies komen overeen met uw zoekopdracht"
+    }
   }
 }

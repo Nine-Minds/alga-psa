@@ -4,13 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
+import { Input } from 'server/src/components/ui/Input';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import {
-  getUserSessionsAction,
+  getAllSessionsAction,
   revokeSessionAction,
-  revokeAllOtherSessionsAction,
 } from 'server/src/lib/actions/session-actions/sessionActions';
 import {
   Monitor,
@@ -21,6 +21,9 @@ import {
   Clock,
   LogOut,
   AlertTriangle,
+  User,
+  Mail,
+  Search,
 } from 'lucide-react';
 
 interface LocationData {
@@ -32,6 +35,10 @@ interface LocationData {
 
 interface Session {
   session_id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_type: string;
   device_name: string | null;
   device_type: string | null;
   ip_address: string | null;
@@ -47,21 +54,23 @@ interface SessionsResponse {
   total: number;
 }
 
-export default function SessionManagement() {
+export default function AdminSessionManagement() {
   const { t } = useTranslation('common');
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
-  const [revokingAll, setRevokingAll] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const data = await getUserSessionsAction();
+      const data = await getAllSessionsAction();
       setSessions(data.sessions);
+      setFilteredSessions(data.sessions);
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
-      toast.error(t('sessionManagement.errors.loadFailed'));
+      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -70,6 +79,23 @@ export default function SessionManagement() {
   useEffect(() => {
     fetchSessions();
   }, []);
+
+  // Filter sessions based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredSessions(sessions);
+      return;
+    }
+
+    const term = searchTerm.toLowerCase();
+    const filtered = sessions.filter(session =>
+      session.user_name.toLowerCase().includes(term) ||
+      session.user_email.toLowerCase().includes(term) ||
+      session.device_name?.toLowerCase().includes(term) ||
+      session.ip_address?.toLowerCase().includes(term)
+    );
+    setFilteredSessions(filtered);
+  }, [searchTerm, sessions]);
 
   const revokeSession = async (sessionId: string, isCurrent: boolean) => {
     if (isCurrent) {
@@ -98,47 +124,6 @@ export default function SessionManagement() {
       toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.revokeFailed'));
     } finally {
       setRevoking(null);
-    }
-  };
-
-  const revokeAllOtherSessions = async () => {
-    const confirmed = confirm(
-      t('sessionManagement.confirmations.logoutAllOther')
-    );
-    if (!confirmed) return;
-
-    try {
-      setRevokingAll(true);
-
-      // First attempt without 2FA code
-      let result = await revokeAllOtherSessionsAction();
-
-      // Check if 2FA is required
-      if (result.requires_2fa) {
-        // Prompt for 2FA code
-        const twoFactorCode = prompt(t('sessionManagement.prompts.enter2FA'));
-        if (!twoFactorCode) {
-          setRevokingAll(false);
-          return;
-        }
-
-        // Retry with 2FA code
-        result = await revokeAllOtherSessionsAction({
-          two_factor_code: twoFactorCode,
-        });
-      }
-
-      if (!result.success) {
-        throw new Error(result.message || t('sessionManagement.errors.revokeAllFailed'));
-      }
-
-      toast.success(result.message);
-      await fetchSessions();
-    } catch (error) {
-      console.error('Failed to revoke sessions:', error);
-      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.logoutAllFailed'));
-    } finally {
-      setRevokingAll(false);
     }
   };
 
@@ -172,11 +157,20 @@ export default function SessionManagement() {
     );
   };
 
+  const getUserTypeBadge = (userType: string) => {
+    const isInternal = userType === 'internal';
+    return (
+      <Badge variant={isInternal ? 'default' : 'secondary'} className="text-xs">
+        {isInternal ? t('sessionManagement.userTypes.internal') : t('sessionManagement.userTypes.client')}
+      </Badge>
+    );
+  };
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{t('sessionManagement.title')}</CardTitle>
+          <CardTitle>{t('sessionManagement.admin.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
@@ -187,39 +181,46 @@ export default function SessionManagement() {
     );
   }
 
-  const otherSessionsCount = sessions.filter(s => !s.is_current).length;
+  const totalUsers = new Set(sessions.map(s => s.user_id)).size;
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{t('sessionManagement.title')}</CardTitle>
+            <CardTitle>{t('sessionManagement.admin.title')}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('sessionManagement.description')}
+              {t('sessionManagement.admin.description', {
+                sessionCount: sessions.length,
+                userCount: totalUsers
+              })}
             </p>
           </div>
-          {otherSessionsCount > 0 && (
-            <Button
-              id="logout-all-other-sessions"
-              variant="outline"
-              onClick={revokeAllOtherSessions}
-              disabled={revokingAll}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              {revokingAll ? t('sessionManagement.actions.loggingOut') : t('sessionManagement.actions.logoutFromOther', { count: otherSessionsCount })}
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent>
-        {sessions.length === 0 ? (
+        {/* Search bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="session-search"
+              type="text"
+              placeholder={t('sessionManagement.admin.searchPlaceholder')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {filteredSessions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {t('sessionManagement.states.noSessions')}
+            {searchTerm ? t('sessionManagement.admin.noResults') : t('sessionManagement.states.noSessions')}
           </div>
         ) : (
           <div className="space-y-4">
-            {sessions.map((session) => (
+            {filteredSessions.map((session) => (
               <div
                 key={session.session_id}
                 className={`border rounded-lg p-4 ${
@@ -232,15 +233,29 @@ export default function SessionManagement() {
                       {getDeviceIcon(session.device_type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      {/* User information */}
+                      <div className="mb-2 pb-2 border-b">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-semibold">{session.user_name}</span>
+                          {getUserTypeBadge(session.user_type)}
+                          {session.is_current && (
+                            <Badge variant="default" className="text-xs">
+                              {t('sessionManagement.labels.yourSession')}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span>{session.user_email}</span>
+                        </div>
+                      </div>
+
+                      {/* Device information */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
                         <h4 className="font-medium">
                           {session.device_name || t('sessionManagement.labels.unknownDevice')}
                         </h4>
-                        {session.is_current && (
-                          <Badge variant="default" className="text-xs">
-                            {t('sessionManagement.labels.currentSession')}
-                          </Badge>
-                        )}
                         {getLoginMethodBadge(session.login_method)}
                       </div>
 

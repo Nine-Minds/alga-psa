@@ -20,6 +20,7 @@ import {
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
 import type { IUserWithRoles } from 'server/src/types';
 import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
+import SessionManagement from 'server/src/components/settings/security/SessionManagement';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
@@ -287,7 +288,12 @@ export function ClientProfile() {
     },
     {
       label: t('profile.security'),
-      content: <PasswordChangeForm />,
+      content: (
+        <div className="space-y-6">
+          <PasswordChangeForm />
+          <SessionManagement />
+        </div>
+      ),
     },
     {
       label: t('profile.activity', 'Activity'),
