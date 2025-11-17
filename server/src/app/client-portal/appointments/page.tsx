@@ -128,18 +128,32 @@ export default function AppointmentsPage() {
       title: t('appointments.table.dateTime'),
       dataIndex: 'requested_date',
       width: '20%',
-      render: (value: string, record: AppointmentRequest) => (
-        <div className="text-sm">
-          <div className="flex items-center gap-1 text-gray-900">
-            <Calendar className="h-3 w-3" />
-            {format(new Date(value), 'MMM d, yyyy')}
+      render: (value: string, record: AppointmentRequest) => {
+        let dateDisplay = 'N/A';
+        try {
+          if (value) {
+            const date = new Date(value + 'T00:00:00Z');
+            if (!isNaN(date.getTime())) {
+              dateDisplay = format(date, 'MMM d, yyyy');
+            }
+          }
+        } catch {
+          dateDisplay = 'N/A';
+        }
+
+        return (
+          <div className="text-sm">
+            <div className="flex items-center gap-1 text-gray-900">
+              <Calendar className="h-3 w-3" />
+              {dateDisplay}
+            </div>
+            <div className="flex items-center gap-1 text-gray-600 mt-1">
+              <Clock className="h-3 w-3" />
+              {record.requested_time || 'N/A'} ({record.requested_duration} {t('appointments.table.minutes')})
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-gray-600 mt-1">
-            <Clock className="h-3 w-3" />
-            {record.requested_time} ({record.requested_duration} {t('appointments.table.minutes')})
-          </div>
-        </div>
-      )
+        );
+      }
     },
     {
       title: t('appointments.table.status'),
@@ -347,6 +361,16 @@ export default function AppointmentsPage() {
                   <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
+                      {t('appointments.details.reference')}
+                    </div>
+                    <div className="text-sm font-mono text-gray-900">{selectedAppointment.appointment_request_id.slice(0, 8).toUpperCase()}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700">
                       {t('appointments.details.service')}
                     </div>
                     <div className="text-sm text-gray-900">{selectedAppointment.service_name}</div>
@@ -360,10 +384,19 @@ export default function AppointmentsPage() {
                       {t('appointments.details.dateTime')}
                     </div>
                     <div className="text-sm text-gray-900">
-                      {format(new Date(selectedAppointment.requested_date), 'EEEE, MMMM d, yyyy')}
+                      {(() => {
+                        try {
+                          if (!selectedAppointment.requested_date) return 'N/A';
+                          const date = new Date(selectedAppointment.requested_date + 'T00:00:00Z');
+                          if (isNaN(date.getTime())) return 'N/A';
+                          return format(date, 'EEEE, MMMM d, yyyy');
+                        } catch {
+                          return 'N/A';
+                        }
+                      })()}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
-                      {selectedAppointment.requested_time} ({selectedAppointment.requested_duration} {t('appointments.table.minutes')})
+                      {selectedAppointment.requested_time || 'N/A'} ({selectedAppointment.requested_duration} {t('appointments.table.minutes')})
                     </div>
                   </div>
                 </div>
@@ -409,14 +442,32 @@ export default function AppointmentsPage() {
                 )}
 
                 <div className="pt-4 border-t border-gray-200">
-                  <div className="text-xs text-gray-500">
-                    {t('appointments.details.created')}: {format(new Date(selectedAppointment.created_at), 'MMM d, yyyy h:mm a')}
-                  </div>
-                  {selectedAppointment.approved_at && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {t('appointments.details.approved')}: {format(new Date(selectedAppointment.approved_at), 'MMM d, yyyy h:mm a')}
-                    </div>
-                  )}
+                  {selectedAppointment.created_at && (() => {
+                    try {
+                      const date = new Date(selectedAppointment.created_at);
+                      if (!isNaN(date.getTime())) {
+                        return (
+                          <div className="text-xs text-gray-500">
+                            {t('appointments.details.created')}: {format(date, 'MMM d, yyyy h:mm a')}
+                          </div>
+                        );
+                      }
+                    } catch {}
+                    return null;
+                  })()}
+                  {selectedAppointment.approved_at && (() => {
+                    try {
+                      const date = new Date(selectedAppointment.approved_at);
+                      if (!isNaN(date.getTime())) {
+                        return (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {t('appointments.details.approved')}: {format(date, 'MMM d, yyyy h:mm a')}
+                          </div>
+                        );
+                      }
+                    } catch {}
+                    return null;
+                  })()}
                 </div>
               </div>
             </div>

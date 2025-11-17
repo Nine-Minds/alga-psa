@@ -85,7 +85,6 @@ const SettingsPage = (): JSX.Element =>  {
     projects: 'Projects',
     'interaction-types': 'Interaction Types',
     notifications: 'Notifications',
-    surveys: 'Surveys',
     'time-entry': 'Time Entry',
     billing: 'Billing',
     'import-export': 'Import/Export',
@@ -200,10 +199,6 @@ const SettingsPage = (): JSX.Element =>  {
     {
       label: "Notifications",
       content: <NotificationsTab />,
-    },
-    {
-      label: "Surveys",
-      content: <SurveySettings />,
     },
     {
       label: "Time Entry",

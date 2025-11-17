@@ -306,6 +306,7 @@ const ClientsList = ({
     return (
         <div className="w-full">
             <DataTable
+                key={`${currentPage}-${pageSize}`}
                 id="clients-table"
                 data={filteredClients}
                 columns={columns}

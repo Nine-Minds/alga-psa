@@ -311,7 +311,7 @@ Thank you for choosing {{tenantName}}
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: linear-gradient(135deg, #8A4DEA, #40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -354,8 +354,8 @@ Thank you for choosing {{tenantName}}
       font-size: 16px;
     }
     .appointment-box {
-      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-      border: 2px solid #10b981;
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
       padding: 24px;
       margin: 24px 0;
       border-radius: 8px;
@@ -365,14 +365,14 @@ Thank you for choosing {{tenantName}}
       margin: 0 0 20px 0;
       font-size: 18px;
       font-weight: 600;
-      color: #065f46;
+      color: #5b38b0;
     }
     .appointment-detail {
       margin: 12px 0;
       font-size: 16px;
     }
     .appointment-detail strong {
-      color: #047857;
+      color: #5b38b0;
       display: block;
       font-size: 14px;
       text-transform: uppercase;
@@ -403,17 +403,14 @@ Thank you for choosing {{tenantName}}
     }
     .action-button {
       display: inline-block;
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
-      color: white;
+      background: #8A4DEA;
+      color: #ffffff;
       padding: 14px 28px;
-      border-radius: 8px;
+      border-radius: 10px;
       text-decoration: none;
       font-weight: 600;
       font-size: 16px;
       margin: 8px 0;
-    }
-    .action-button:hover {
-      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     }
     .policy-box {
       background-color: #fef3c7;
@@ -592,7 +589,7 @@ Thank you for choosing {{tenantName}}
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      background: linear-gradient(135deg, #8A4DEA, #40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -842,7 +839,7 @@ Thank you for choosing {{tenantName}}
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     }
     .header {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      background: linear-gradient(135deg, #8A4DEA, #40CFF9);
       color: white;
       padding: 32px 24px;
       text-align: center;
@@ -975,18 +972,12 @@ Thank you for choosing {{tenantName}}
       text-align: center;
     }
     .approve-button {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-    }
-    .approve-button:hover {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      background: #10b981;
+      color: #ffffff;
     }
     .review-button {
-      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
-      color: white;
-    }
-    .review-button:hover {
-      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      background: #8A4DEA;
+      color: #ffffff;
     }
     .footer {
       padding: 24px;
@@ -1157,7 +1148,7 @@ Please review this request and take appropriate action. The requester is waiting
   <style>
     body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
     .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
-    .header { background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%); color: white; padding: 32px 24px; text-align: center; }
+    .header { background: linear-gradient(135deg, #8A4DEA, #40CFF9); color: white; padding: 32px 24px; text-align: center; }
     .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
     .header p { margin: 0; font-size: 16px; opacity: 0.95; }
     .content { padding: 32px 24px; }
@@ -1245,15 +1236,15 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
   <style>
     body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
     .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
-    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 32px 24px; text-align: center; }
+    .header { background: linear-gradient(135deg, #8A4DEA, #40CFF9); color: white; padding: 32px 24px; text-align: center; }
     .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
     .checkmark { width: 64px; height: 64px; background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 32px; }
     .content { padding: 32px 24px; }
     .greeting { font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0; }
     .message { color: #475569; margin: 0 0 24px 0; font-size: 16px; }
-    .appointment-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; padding: 24px; margin: 24px 0; border-radius: 8px; text-align: center; }
+    .appointment-box { background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%); border: 2px solid #8A4DEA; padding: 24px; margin: 24px 0; border-radius: 8px; text-align: center; }
     .appointment-detail { margin: 12px 0; font-size: 16px; }
-    .appointment-detail strong { color: #047857; display: block; font-size: 14px; text-transform: uppercase; margin-bottom: 4px; }
+    .appointment-detail strong { color: #5b38b0; display: block; font-size: 14px; text-transform: uppercase; margin-bottom: 4px; }
     .appointment-detail span { color: #1e293b; font-size: 18px; font-weight: 600; }
     .policy-box { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 6px; }
     .footer { padding: 24px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0; }
@@ -1335,7 +1326,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
   <style>
     body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
     .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
-    .header { background: linear-gradient(135deg, #64748b 0%, #475569 100%); color: white; padding: 32px 24px; text-align: center; }
+    .header { background: linear-gradient(135deg, #8A4DEA, #40CFF9); color: white; padding: 32px 24px; text-align: center; }
     .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
     .content { padding: 32px 24px; }
     .greeting { font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0; }
@@ -1407,7 +1398,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
   <style>
     body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
     .container { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); }
-    .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 32px 24px; text-align: center; }
+    .header { background: linear-gradient(135deg, #8A4DEA, #40CFF9); color: white; padding: 32px 24px; text-align: center; }
     .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
     .content { padding: 32px 24px; }
     .greeting { font-size: 18px; font-weight: 600; color: #1e293b; margin: 0 0 16px 0; }

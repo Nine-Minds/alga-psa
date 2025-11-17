@@ -258,11 +258,20 @@ export function ClientDashboard() {
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {format(new Date(appointment.requested_date), 'MMM d, yyyy')}
+                          {(() => {
+                            try {
+                              if (!appointment.requested_date) return 'N/A';
+                              const date = new Date(appointment.requested_date + 'T00:00:00Z');
+                              if (isNaN(date.getTime())) return 'N/A';
+                              return format(date, 'MMM d, yyyy');
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()}
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {appointment.requested_time}
+                          {appointment.requested_time ? `${appointment.requested_time} UTC` : 'N/A'}
                         </div>
                       </div>
                       {appointment.preferred_assigned_user_name && (

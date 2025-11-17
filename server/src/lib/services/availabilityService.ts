@@ -18,8 +18,9 @@ import { Knex } from 'knex';
  * @param tenantId - Tenant identifier
  * @param date - Target date in YYYY-MM-DD format
  * @param serviceId - Service being scheduled
- * @param userId - Optional specific user to check availability for
  * @param duration - Appointment duration in minutes
+ * @param userId - Optional specific user to check availability for
+ * @param userTimezone - Optional IANA timezone (e.g., 'America/New_York') for calculating minimum notice
  * @returns Array of available time slots
  */
 export async function getAvailableTimeSlots(
@@ -27,7 +28,8 @@ export async function getAvailableTimeSlots(
   date: string,
   serviceId: string,
   duration: number,
-  userId?: string
+  userId?: string,
+  userTimezone?: string
 ): Promise<ITimeSlot[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -37,7 +39,7 @@ export async function getAvailableTimeSlots(
     const [year, month, day] = date.split('-').map(Number);
     const targetDate = new Date(Date.UTC(year, month - 1, day));
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     if (targetDate < today) {
       return [];
@@ -209,11 +211,10 @@ export async function getAvailableTimeSlots(
     const activeUserSet = new Set(userIds);
     workingHours = workingHours.filter(wh => activeUserSet.has(wh.user_id));
 
-    // Get existing schedule entries for the date
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Get existing schedule entries for the date (using UTC for consistency)
+    const [yearForQuery, monthForQuery, dayForQuery] = date.split('-').map(Number);
+    const startOfDay = new Date(Date.UTC(yearForQuery, monthForQuery - 1, dayForQuery, 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(yearForQuery, monthForQuery - 1, dayForQuery, 23, 59, 59, 999));
 
     const scheduleEntries = await knex('schedule_entries')
       .where({ tenant: tenantId })
@@ -299,11 +300,12 @@ export async function getAvailableTimeSlots(
       const [startHour, startMinute] = userHours.start_time.split(':').map(Number);
       const [endHour, endMinute] = userHours.end_time.split(':').map(Number);
 
-      let currentSlotTime = new Date(date);
-      currentSlotTime.setHours(startHour, startMinute, 0, 0);
+      // Use UTC methods to ensure consistent timezone handling
+      // Parse date as UTC and set hours in UTC
+      const [year, month, day] = date.split('-').map(Number);
+      let currentSlotTime = new Date(Date.UTC(year, month - 1, day, startHour, startMinute, 0, 0));
 
-      const endTime = new Date(date);
-      endTime.setHours(endHour, endMinute, 0, 0);
+      const endTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute, 0, 0));
 
       while (currentSlotTime < endTime) {
         const slotEnd = new Date(currentSlotTime);
@@ -366,8 +368,19 @@ export async function getAvailableTimeSlots(
     }
 
     // Filter out slots that don't meet minimum notice hours
-    const minBookingTime = new Date();
-    minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
+    // Calculate minimum booking time in the user's timezone (or UTC if not provided)
+    let minBookingTime: Date;
+
+    if (userTimezone) {
+      // Get current time in user's timezone
+      const nowInUserTZ = new Date().toLocaleString('en-US', { timeZone: userTimezone });
+      minBookingTime = new Date(nowInUserTZ);
+      minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
+    } else {
+      // Fallback to UTC if no timezone provided
+      minBookingTime = new Date();
+      minBookingTime.setHours(minBookingTime.getHours() + minNoticeHours);
+    }
 
     const availableSlots = slots.filter(slot => {
       const slotStart = new Date(slot.start_time);
@@ -497,15 +510,15 @@ export async function isSlotAvailable(
         continue;
       }
 
-      // Check if slot is within working hours
+      // Check if slot is within working hours (use UTC for consistency)
       const [whStartHour, whStartMinute] = userHours.start_time.split(':').map(Number);
       const [whEndHour, whEndMinute] = userHours.end_time.split(':').map(Number);
 
       const whStart = new Date(start);
-      whStart.setHours(whStartHour, whStartMinute, 0, 0);
+      whStart.setUTCHours(whStartHour, whStartMinute, 0, 0);
 
       const whEnd = new Date(start);
-      whEnd.setHours(whEndHour, whEndMinute, 0, 0);
+      whEnd.setUTCHours(whEndHour, whEndMinute, 0, 0);
 
       if (start < whStart || end > whEnd) {
         continue;
@@ -543,6 +556,7 @@ export async function isSlotAvailable(
  * @param startDate - Start of range (YYYY-MM-DD)
  * @param endDate - End of range (YYYY-MM-DD)
  * @param userId - Optional specific user
+ * @param userTimezone - Optional IANA timezone (e.g., 'America/New_York') for calculating minimum notice
  * @returns Array of dates with availability info
  */
 export async function getAvailableDates(
@@ -550,7 +564,8 @@ export async function getAvailableDates(
   serviceId: string,
   startDate: string,
   endDate: string,
-  userId?: string
+  userId?: string,
+  userTimezone?: string
 ): Promise<IAvailableDate[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -580,7 +595,8 @@ export async function getAvailableDates(
         dateStr,
         serviceId,
         defaultDuration,
-        userId
+        userId,
+        userTimezone
       );
 
       const hasAvailability = slots.length > 0;

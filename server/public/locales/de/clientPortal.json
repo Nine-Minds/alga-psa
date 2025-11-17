@@ -1120,6 +1120,7 @@
       "statusDeclined": "Diese Terminanfrage wurde abgelehnt",
       "statusCancelled": "Dieser Termin wurde storniert",
       "reason": "Grund",
+      "reference": "Referenz",
       "service": "Service",
       "dateTime": "Datum & Uhrzeit",
       "technician": "Zugewiesener Techniker",

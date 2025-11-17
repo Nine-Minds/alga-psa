@@ -278,10 +278,11 @@ export async function createAppointmentRequest(
     {
       scheduleEntryId = await withTransaction(db, async (trx: Knex.Transaction) => {
         const entryId = uuidv4();
-        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00`);
+        // Parse as UTC by adding 'Z' suffix to ensure correct timezone interpretation
+        const scheduledStart = new Date(`${normalizedRequestedDate}T${normalizedRequestedTime}:00Z`);
 
-        const scheduledEnd = new Date(scheduledStart);
-        scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
+        // Calculate end time by adding milliseconds to avoid timezone conversion issues
+        const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
         // Create schedule entry
         await trx('schedule_entries').insert({
@@ -602,8 +603,8 @@ export async function updateAppointmentRequest(
     if (existingRequest.schedule_entry_id) {
       await withTransaction(db, async (trx: Knex.Transaction) => {
         const [startHour, startMinute] = validatedData.requested_time.split(':').map(Number);
-        const scheduledStart = new Date(validatedData.requested_date);
-        scheduledStart.setHours(startHour, startMinute, 0, 0);
+        // Parse date and time as UTC explicitly
+        const scheduledStart = new Date(`${validatedData.requested_date}T${validatedData.requested_time}:00Z`);
 
         const scheduledEnd = new Date(scheduledStart);
         scheduledEnd.setMinutes(scheduledEnd.getMinutes() + validatedData.requested_duration);
@@ -1179,7 +1180,8 @@ export async function getAvailableServicesAndTickets(): Promise<AppointmentReque
  * Get available dates for a service (next 30 days)
  */
 export async function getAvailableDatesForService(
-  serviceId: string
+  serviceId: string,
+  userTimezone?: string
 ): Promise<AppointmentRequestResult<string[]>> {
   try {
     const currentUser = await getCurrentUser();
@@ -1210,7 +1212,9 @@ export async function getAvailableDatesForService(
       tenant,
       serviceId,
       startDate,
-      endDate
+      endDate,
+      undefined, // userId
+      userTimezone
     );
 
     // Filter to only dates with availability
@@ -1331,10 +1335,13 @@ export async function getAppointmentRequestsByTicketId(
 export async function getAvailableTimeSlotsForDate(
   serviceId: string,
   date: string,
-  duration?: number
+  duration?: number,
+  userId?: string,
+  userTimezone?: string
 ): Promise<AppointmentRequestResult<{
   timeSlots: Array<{
-    time: string;
+    time: string; // Display time in user's local timezone (HH:MM format)
+    startTime: string; // ISO timestamp for backend (UTC)
     available: boolean;
     duration: number;
   }>;
@@ -1375,13 +1382,21 @@ export async function getAvailableTimeSlotsForDate(
     const serviceDuration = serviceSettings?.config_json?.default_duration || 60;
 
     console.log('[getAvailableTimeSlotsForDate] Using service duration:', serviceDuration);
+    console.log('[getAvailableTimeSlotsForDate] User timezone:', userTimezone || 'UTC (default)');
+    if (userId) {
+      console.log('[getAvailableTimeSlotsForDate] Filtering slots for user:', userId);
+    }
 
     // Get available time slots from service using SERVICE duration
+    // Pass userId to filter slots by specific technician availability
+    // Pass userTimezone for accurate minimum notice calculation
     const slots = await getTimeSlotsFromService(
       tenant,
       date,
       serviceId,
-      serviceDuration
+      serviceDuration,
+      userId,
+      userTimezone
     );
 
     console.log(`[getAvailableTimeSlotsForDate] Found ${slots.length} slots for ${date}`);
@@ -1443,13 +1458,18 @@ export async function getAvailableTimeSlotsForDate(
       technicians.map((t: any) => `${t.full_name}: ${t.duration}min`));
 
     // Format time slots for UI - always use SERVICE duration for display
+    // Display times as UTC (business hours) without timezone conversion
+    // since working hours represent when the business is open
     const timeSlots = slots.map(slot => {
+      const slotTime = new Date(slot.start_time);
       return {
-        time: new Date(slot.start_time).toLocaleTimeString('en-US', {
+        time: slotTime.toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
-          hour12: false
+          hour12: false,
+          timeZone: 'UTC' // Always display in UTC to match how working hours are stored
         }),
+        startTime: slot.start_time, // Keep the original UTC ISO timestamp for backend
         available: slot.is_available,
         duration: serviceDuration // Always use service duration for slot display
       };

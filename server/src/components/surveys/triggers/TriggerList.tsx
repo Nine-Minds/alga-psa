@@ -201,37 +201,70 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
     return map;
   }, [referenceData?.priorities]);
 
-  const formatCondition = (values: string[] | undefined, lookup: Map<string, string>) =>
+  const getConditionText = (values: string[] | undefined, lookup: Map<string, string>) =>
     values && values.length > 0
       ? values.map((value) => lookup.get(value) ?? value).join(', ')
-      : t('surveys.settings.triggerList.conditions.any', 'Any');
+      : null;
 
-  const renderConditions = (trigger: SurveyTrigger) => (
-    <div className="space-y-1 text-xs text-gray-600">
-      {trigger.triggerType === 'ticket_closed' && (
-        <div>
-          <span className="font-medium">
-            {t('surveys.settings.triggerList.conditions.boards', 'Boards')}:
-          </span>{' '}
-          {formatCondition(('board_id' in trigger.triggerConditions ? trigger.triggerConditions.board_id : undefined), boardsMap)}
-        </div>
-      )}
-      <div>
-        <span className="font-medium">
-          {t('surveys.settings.triggerList.conditions.statuses', 'Statuses')}:
-        </span>{' '}
-        {formatCondition(trigger.triggerConditions.status_id, statusMap)}
+  const renderConditions = (trigger: SurveyTrigger) => {
+    const boardText =
+      trigger.triggerType === 'ticket_closed'
+        ? getConditionText(
+            'board_id' in trigger.triggerConditions ? trigger.triggerConditions.board_id : undefined,
+            boardsMap
+          )
+        : null;
+    const statusText = getConditionText(trigger.triggerConditions.status_id, statusMap);
+    const priorityText =
+      trigger.triggerType === 'ticket_closed'
+        ? getConditionText(
+            'priority' in trigger.triggerConditions ? trigger.triggerConditions.priority : undefined,
+            priorityMap
+          )
+        : null;
+
+    const hasFilters = Boolean(boardText || statusText || priorityText);
+
+    if (!hasFilters) {
+      return (
+        <span className="text-xs text-gray-500">
+          {t(
+            'surveys.settings.triggerList.conditions.unrestricted',
+            'Applies to every ticket and project'
+          )}
+        </span>
+      );
+    }
+
+    return (
+      <div className="space-y-1 text-xs text-gray-600">
+        {boardText && (
+          <div>
+            <span className="font-medium">
+              {t('surveys.settings.triggerList.conditions.boards', 'Boards')}
+            </span>{' '}
+            <span>{boardText}</span>
+          </div>
+        )}
+        {statusText && (
+          <div>
+            <span className="font-medium">
+              {t('surveys.settings.triggerList.conditions.statuses', 'Statuses')}
+            </span>{' '}
+            <span>{statusText}</span>
+          </div>
+        )}
+        {priorityText && (
+          <div>
+            <span className="font-medium">
+              {t('surveys.settings.triggerList.conditions.priorities', 'Priorities')}
+            </span>{' '}
+            <span>{priorityText}</span>
+          </div>
+        )}
       </div>
-      {trigger.triggerType === 'ticket_closed' && (
-        <div>
-          <span className="font-medium">
-            {t('surveys.settings.triggerList.conditions.priorities', 'Priorities')}:
-          </span>{' '}
-          {formatCondition(('priority' in trigger.triggerConditions ? trigger.triggerConditions.priority : undefined), priorityMap)}
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <Card>

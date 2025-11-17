@@ -10,6 +10,7 @@ import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxSer
 import axios from 'axios'; // For QBO API calls
 import type { Knex } from 'knex';
 import { ManagedDomainService as ManagedDomainServiceExport } from '@product/email-domains/entry';
+import type { DnsLookupResult } from '@shared/types/email';
 
 // --- Mock Secret Retrieval ---
 
@@ -76,11 +77,12 @@ type ManagedDomainServiceLike = {
   }>;
   checkDomainStatus: (identifier: { domain?: string; providerDomainId?: string }) => Promise<{
     provider: any;
-    dnsLookup: any;
+    dnsLookup: DnsLookupResult[];
     providerDomainId: string;
   }>;
   activateDomain: (domain: string) => Promise<void>;
   deleteDomain: (domain: string) => Promise<void>;
+  startDomainVerification?: (domainId: string) => Promise<any>;
 };
 
 type ManagedDomainServiceCtor = {
@@ -94,7 +96,7 @@ async function getKnexForTenant(tenantId: string, context: ActionExecutionContex
     return context.knex as Knex;
   }
 
-  const module = await import('server/src/lib/db/db');
+  const module = await import('@shared/db/tenant');
   return module.getConnection(tenantId);
 }
 

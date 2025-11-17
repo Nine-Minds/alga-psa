@@ -1,7 +1,7 @@
 import { Context } from '@temporalio/activity';
 import type { Knex } from 'knex';
 
-import type { DomainVerificationResult, DnsRecord } from 'server/src/types/email.types';
+import type { DomainVerificationResult, DnsRecord, DnsLookupResult } from '@shared/types/email';
 import { ManagedDomainService as ManagedDomainServiceExport } from '@product/email-domains/entry';
 
 const log = () => Context.current().log;
@@ -14,11 +14,12 @@ interface ManagedDomainServiceLike {
   }>;
   checkDomainStatus: (identifier: { domain?: string; providerDomainId?: string }) => Promise<{
     provider: DomainVerificationResult;
-    dnsLookup: unknown;
+    dnsLookup: DnsLookupResult[];
     providerDomainId: string;
   }>;
   activateDomain: (domain: string) => Promise<void>;
   deleteDomain: (domain: string) => Promise<void>;
+  startDomainVerification?: (domainId: string) => Promise<DomainVerificationResult>;
 }
 
 interface ManagedDomainServiceCtor {
@@ -26,6 +27,8 @@ interface ManagedDomainServiceCtor {
 }
 
 const ManagedDomainServiceCtor = ManagedDomainServiceExport as ManagedDomainServiceCtor | undefined;
+
+import { getConnection } from '@shared/db/tenant';
 
 async function buildService(tenantId: string): Promise<ManagedDomainServiceLike> {
   if (!tenantId) {
@@ -36,7 +39,6 @@ async function buildService(tenantId: string): Promise<ManagedDomainServiceLike>
     throw new Error('ManagedDomainService is unavailable in this build');
   }
 
-  const { getConnection } = await import('server/src/lib/db/db');
   const knex = await getConnection(tenantId);
   return ManagedDomainServiceCtor.forTenant({ tenantId, knex });
 }
@@ -84,7 +86,7 @@ export interface CheckManagedEmailDomainStatusResult {
   verifiedAt: string | null;
   failureReason?: string | null;
   provider: DomainVerificationResult;
-  dnsLookup: unknown;
+  dnsLookup: DnsLookupResult[];
 }
 
 export async function checkManagedEmailDomainStatus(

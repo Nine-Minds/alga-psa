@@ -2,7 +2,7 @@
 
 import logger from '@alga-psa/shared/core/logger';
 import { getAdminConnection } from '@shared/db/admin';
-import { buildTenantPortalSlug, getSlugParts, isValidTenantSlug } from '../../utils/tenantSlug';
+import { buildTenantPortalSlug, getSlugParts, isValidTenantSlug } from '@shared/utils/tenantSlug';
 
 export async function getTenantIdBySlug(slug: string): Promise<string | null> {
   if (!isValidTenantSlug(slug)) {

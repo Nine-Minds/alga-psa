@@ -17,6 +17,7 @@ export default function SurveyModuleFrame({ children }: SurveyModuleFrameProps) 
       { label: 'Dashboard', href: '/msp/surveys/dashboard' },
       { label: 'Responses', href: '/msp/surveys/responses' },
       { label: 'Analytics', href: '/msp/surveys/analytics' },
+      { label: 'Setup', href: '/msp/surveys/settings' },
     ],
     []
   );

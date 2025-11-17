@@ -231,24 +231,35 @@ export class CalendarProviderService {
         })
         .returning('*');
 
-      // Create vendor-specific configuration
-      const vendorInsert = await this.prepareVendorConfigForStorage(
+      const { encrypted: vendorInsert, normalized: normalizedVendorConfig } =
+        await this.prepareVendorConfigForStorage(data.providerType, data.vendorConfig);
+
+      const hasVendorData = Object.keys(normalizedVendorConfig).length > 0;
+      const vendorHasRequiredFields = this.hasRequiredVendorFields(
         data.providerType,
-        data.vendorConfig
+        normalizedVendorConfig
       );
 
-      const vendorRecord = {
-        calendar_provider_id: provider.id,
-        tenant: data.tenant,
-        ...vendorInsert,
-        created_at: db.fn.now(),
-        updated_at: db.fn.now()
-      };
+      if (hasVendorData && !vendorHasRequiredFields) {
+        console.warn(
+          `[CalendarProviderService] Skipping vendor config insert for ${data.providerType} provider ${provider.id} because required credentials are missing`
+        );
+      }
 
-      if (data.providerType === 'google') {
-        await db('google_calendar_provider_config').insert(vendorRecord);
-      } else if (data.providerType === 'microsoft') {
-        await db('microsoft_calendar_provider_config').insert(vendorRecord);
+      if (vendorHasRequiredFields) {
+        const vendorRecord = {
+          calendar_provider_id: provider.id,
+          tenant: data.tenant,
+          ...vendorInsert,
+          created_at: db.fn.now(),
+          updated_at: db.fn.now()
+        };
+
+        if (data.providerType === 'google') {
+          await db('google_calendar_provider_config').insert(vendorRecord);
+        } else if (data.providerType === 'microsoft') {
+          await db('microsoft_calendar_provider_config').insert(vendorRecord);
+        }
       }
 
       console.log(`✅ Created calendar provider: ${provider.provider_name} (${provider.id})`);
@@ -316,25 +327,45 @@ export class CalendarProviderService {
 
       // Update vendor-specific configuration if provided
       if (data.vendorConfig !== undefined) {
-        const vendorUpdate = await this.prepareVendorConfigForStorage(
-          existingProvider.provider_type,
-          data.vendorConfig
-        );
+        const { encrypted: vendorUpdate, normalized: normalizedVendorConfig } =
+          await this.prepareVendorConfigForStorage(
+            existingProvider.provider_type,
+            data.vendorConfig
+          );
 
         const vendorTable =
           existingProvider.provider_type === 'google'
             ? 'google_calendar_provider_config'
             : 'microsoft_calendar_provider_config';
 
-        const updatePayload =
-          Object.keys(vendorUpdate).length > 0
-            ? { ...vendorUpdate, updated_at: db.fn.now() }
-            : { updated_at: db.fn.now() };
-
-        await db(vendorTable)
+        const existingVendorRecord = await db(vendorTable)
           .where('calendar_provider_id', providerId)
           .andWhere('tenant', tenant)
-          .update(updatePayload);
+          .first();
+
+        if (existingVendorRecord) {
+          const updatePayload =
+            Object.keys(vendorUpdate).length > 0
+              ? { ...vendorUpdate, updated_at: db.fn.now() }
+              : { updated_at: db.fn.now() };
+
+          await db(vendorTable)
+            .where('calendar_provider_id', providerId)
+            .andWhere('tenant', tenant)
+            .update(updatePayload);
+        } else if (this.hasRequiredVendorFields(existingProvider.provider_type, normalizedVendorConfig)) {
+          await db(vendorTable).insert({
+            calendar_provider_id: providerId,
+            tenant,
+            ...vendorUpdate,
+            created_at: db.fn.now(),
+            updated_at: db.fn.now()
+          });
+        } else if (Object.keys(normalizedVendorConfig).length > 0) {
+          throw new Error(
+            `${existingProvider.provider_type} vendor configuration is missing required credentials`
+          );
+        }
       }
 
       // Fetch updated provider with vendor config
@@ -510,14 +541,23 @@ export class CalendarProviderService {
   private async prepareVendorConfigForStorage(
     providerType: 'google' | 'microsoft',
     rawConfig: any
-  ): Promise<Record<string, unknown>> {
+  ): Promise<{
+    normalized: Record<string, unknown>;
+    encrypted: Record<string, unknown>;
+  }> {
     if (!rawConfig) {
-      return {};
+      return {
+        normalized: {},
+        encrypted: {}
+      };
     }
 
     const normalized = this.normalizeVendorConfigInput(providerType, rawConfig);
     const encrypted = await this.encryptVendorConfig(normalized);
-    return this.stripUndefinedValues(encrypted);
+    return {
+      normalized,
+      encrypted: this.stripUndefinedValues(encrypted)
+    };
   }
 
   private stripUndefinedValues<T extends Record<string, unknown>>(obj: T): T {
@@ -528,6 +568,28 @@ export class CalendarProviderService {
       }
     }
     return result as T;
+  }
+
+  private hasRequiredVendorFields(
+    providerType: 'google' | 'microsoft',
+    config: Record<string, unknown>
+  ): boolean {
+    if (!config || Object.keys(config).length === 0) {
+      return false;
+    }
+
+    const requiredFields =
+      providerType === 'google'
+        ? ['client_id', 'client_secret', 'project_id', 'redirect_uri', 'calendar_id']
+        : ['client_id', 'client_secret', 'tenant_id', 'redirect_uri', 'calendar_id'];
+
+    return requiredFields.every((field) => {
+      const value = config[field];
+      if (value === undefined || value === null) {
+        return false;
+      }
+      return typeof value === 'string' ? value.trim().length > 0 : true;
+    });
   }
 
   private async encryptVendorConfig(

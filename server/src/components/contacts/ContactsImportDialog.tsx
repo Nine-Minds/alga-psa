@@ -441,6 +441,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         )}
       </div>
       <DataTable
+        key={`${currentPage}-${pageSize}`}
         id="contacts-import-preview-table"
         data={importResults}
         pagination={true}
@@ -658,6 +659,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               />
               <div className="max-h-96 overflow-x-auto overflow-y-auto">
                 <DataTable
+                  key={`${currentPage}-${pageSize}`}
                   id="contacts-import-preview-table"
                   pagination={true}
                   currentPage={currentPage}

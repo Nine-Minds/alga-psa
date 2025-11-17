@@ -311,11 +311,6 @@ token:
 auth:
   nextauth_session_expires: 86400
 
-google_auth:
-  enabled: false
-  client_id: "get from google"
-  client_secret: "get from google"
-
 # Gmail Integration (Enterprise Edition)
 gmail_integration:
   enabled: false

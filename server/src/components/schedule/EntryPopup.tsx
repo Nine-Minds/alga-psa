@@ -12,13 +12,14 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { format, isWeekend, addYears } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { IScheduleEntry, IRecurrencePattern, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { AddWorkItemDialog } from 'server/src/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -169,6 +170,22 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             // Pre-fill assigned technician if one exists
             if (event.assigned_user_ids && event.assigned_user_ids.length > 0) {
               setAssignedTechnicianId(event.assigned_user_ids[0]);
+            }
+
+            // Fix title for approved appointment requests if it still has [Pending Request] prefix
+            if (result.data.status === 'approved' && event.title.includes('[Pending Request]')) {
+              const serviceName = (result.data as any).service_name;
+              if (serviceName) {
+                const correctedTitle = `Appointment: ${serviceName}`;
+                console.log('[EntryPopup] Correcting title for approved appointment request:', {
+                  oldTitle: event.title,
+                  newTitle: correctedTitle
+                });
+                setEntryData(prev => ({
+                  ...prev,
+                  title: correctedTitle
+                }));
+              }
             }
           } else {
             console.error('Failed to fetch appointment request:', result.error);
@@ -427,9 +444,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         toast.success('Appointment request approved');
         onClose();
         // Trigger calendar refresh by calling onSave with the updated entry
+        // Update the title to remove [Pending Request] prefix
         if (onSave) {
+          const serviceName = appointmentRequestData ? (appointmentRequestData as any).service_name : null;
+          const correctedTitle = serviceName ? `Appointment: ${serviceName}` : entryData.title;
+
           onSave({
             ...entryData,
+            title: correctedTitle,
             assigned_user_ids: [assignedTechnicianId]
           });
         }
@@ -463,9 +485,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       if (result.success) {
         toast.success('Appointment request declined');
         onClose();
-        // Trigger calendar refresh
-        if (onSave) {
-          onSave(entryData);
+        // Don't call onSave - the schedule entry was deleted by the decline action
+        // Just refresh the calendar by calling onDelete if available
+        if (onDelete && event.entry_id) {
+          onDelete(event.entry_id);
         }
       } else {
         toast.error(result.error || 'Failed to decline request');
@@ -666,7 +689,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <div>
               <Label>Requested Date & Time</Label>
               <div className="text-sm bg-gray-50 p-3 rounded border">
-                {format(new Date(event.scheduled_start), 'PPP p')} - {format(new Date(event.scheduled_end), 'p')}
+                {formatInTimeZone(new Date(event.scheduled_start), 'UTC', 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), 'UTC', 'p')} UTC
               </div>
             </div>
 
@@ -692,20 +715,22 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 </Alert>
 
                 <div>
-                  <Label>Assign Technician *</Label>
-                  <CustomSelect
+                  <UserPicker
                     id="assign-technician-request"
-                    options={users.map(u => ({ value: u.user_id, label: `${u.first_name} ${u.last_name}` }))}
+                    label="Assign Technician *"
+                    users={users}
                     value={assignedTechnicianId}
                     onValueChange={setAssignedTechnicianId}
                     placeholder="Select technician"
+                    userTypeFilter="internal"
+                    buttonWidth="full"
                   />
                 </div>
 
                 <div>
                   <Label>Scheduled Date & Time</Label>
                   <div className="text-sm bg-gray-50 p-3 rounded border">
-                    {format(new Date(event.scheduled_start), 'PPP p')} - {format(new Date(event.scheduled_end), 'p')}
+                    {formatInTimeZone(new Date(event.scheduled_start), 'UTC', 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), 'UTC', 'p')} UTC
                   </div>
                 </div>
 

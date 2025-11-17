@@ -85,6 +85,7 @@ export async function cloneSystemTemplateAction(
       subject: systemTemplate.subject,
       html_content: systemTemplate.html_content,
       text_content: systemTemplate.text_content,
+      language_code: systemTemplate.language_code,
       system_template_id: systemTemplateId
     };
     

@@ -8,6 +8,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import UserPicker from 'server/src/components/ui/UserPicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import toast from 'react-hot-toast';
@@ -56,7 +57,7 @@ export default function AppointmentRequestsPanel({
   const [isTicketDrawerOpen, setIsTicketDrawerOpen] = useState(false);
 
   // Users for technician assignment
-  const [technicians, setTechnicians] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]);
+  const [technicians, setTechnicians] = useState<IUserWithRoles[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -92,6 +93,25 @@ export default function AppointmentRequestsPanel({
       setTechnicians(users);
     } catch (error) {
       console.error('Failed to load technicians:', error);
+      // If user doesn't have permission to load all users,
+      // they can still approve requests but only assign to themselves
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setTechnicians([{
+          user_id: currentUser.user_id,
+          username: currentUser.email.split('@')[0], // Use email prefix as username
+          first_name: currentUser.first_name,
+          last_name: currentUser.last_name,
+          email: currentUser.email,
+          is_inactive: false,
+          user_type: currentUser.user_type,
+          tenant: currentUser.tenant,
+          hashed_password: '',
+          created_at: currentUser.created_at || new Date(),
+          updated_at: new Date(),
+          roles: currentUser.roles || []
+        }]);
+      }
     }
   };
 
@@ -111,18 +131,18 @@ export default function AppointmentRequestsPanel({
     // Handle date/time parsing safely - prefill with requested date/time
     try {
       if (request.requested_date && request.requested_time) {
-        // Database stores time in HH:MM or HH:MM:SS format
+        // Database stores time in HH:MM or HH:MM:SS format (UTC)
         const timeStr = request.requested_time.slice(0, 5); // Get HH:MM only
 
         // Parse time components
         const [hours, minutes] = timeStr.split(':').map(Number);
 
-        // Create date object from the requested date
-        const parsedDate = new Date(request.requested_date);
+        // Create date object from the requested date (parse as UTC)
+        const parsedDate = new Date(request.requested_date + 'T00:00:00Z');
 
-        // Set the time components
+        // Set the time components in UTC
         if (!isNaN(parsedDate.getTime()) && !isNaN(hours) && !isNaN(minutes)) {
-          parsedDate.setHours(hours, minutes, 0, 0);
+          parsedDate.setUTCHours(hours, minutes, 0, 0);
 
           console.log('Prefilling date/time:', {
             date: request.requested_date,
@@ -185,11 +205,11 @@ export default function AppointmentRequestsPanel({
       let approvalTime: string | undefined;
 
       if (finalDateTime && !isNaN(finalDateTime.getTime())) {
-        // Convert Date object to proper string formats
+        // Convert Date object to proper string formats in UTC
         approvalDate = finalDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
-        const hours = finalDateTime.getHours().toString().padStart(2, '0');
-        const minutes = finalDateTime.getMinutes().toString().padStart(2, '0');
-        approvalTime = `${hours}:${minutes}`; // HH:MM
+        const hours = finalDateTime.getUTCHours().toString().padStart(2, '0');
+        const minutes = finalDateTime.getUTCMinutes().toString().padStart(2, '0');
+        approvalTime = `${hours}:${minutes}`; // HH:MM in UTC
       }
       // If finalDateTime is not set, send undefined to use the requested date/time from server
 
@@ -275,7 +295,7 @@ export default function AppointmentRequestsPanel({
       if (!date || !time) {
         return 'Invalid date/time';
       }
-      const dateTime = new Date(`${date}T${time}`);
+      const dateTime = new Date(`${date}T${time}Z`);
       if (isNaN(dateTime.getTime())) {
         return `${date} ${time}`;
       }
@@ -285,8 +305,9 @@ export default function AppointmentRequestsPanel({
         day: 'numeric',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
-      });
+        minute: '2-digit',
+        timeZone: 'UTC'
+      }) + ' UTC';
     } catch {
       return `${date} ${time}`;
     }
@@ -403,6 +424,10 @@ export default function AppointmentRequestsPanel({
               {/* Request Information */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
+                  <div className="font-semibold text-gray-700">Reference</div>
+                  <div className="font-mono">{selectedRequest.appointment_request_id.slice(0, 8).toUpperCase()}</div>
+                </div>
+                <div>
                   <div className="font-semibold text-gray-700">Client</div>
                   <div>{selectedRequest.is_authenticated ? (selectedRequest as any).client_company_name : selectedRequest.company_name}</div>
                 </div>
@@ -479,13 +504,15 @@ export default function AppointmentRequestsPanel({
                       <h3 className="font-semibold text-lg">Approval Details</h3>
 
                       <div>
-                        <Label>Assign Technician *</Label>
-                        <CustomSelect
+                        <UserPicker
                           id="assign-technician"
-                          options={technicianOptions}
+                          label="Assign Technician *"
+                          users={technicians}
                           value={assignedTechnicianId}
                           onValueChange={setAssignedTechnicianId}
                           placeholder="Select technician"
+                          userTypeFilter="internal"
+                          buttonWidth="full"
                         />
                       </div>
 
@@ -509,15 +536,17 @@ export default function AppointmentRequestsPanel({
                         />
                       </div>
 
-                      <div>
-                        <Label htmlFor="linked-ticket">Link to Ticket (Optional)</Label>
-                        <Input
-                          id="linked-ticket"
-                          value={linkedTicketId}
-                          onChange={(e) => setLinkedTicketId(e.target.value)}
-                          placeholder="Ticket ID"
-                        />
-                      </div>
+                      {!selectedRequest.ticket_id && (
+                        <div>
+                          <Label htmlFor="linked-ticket">Link to Ticket (Optional)</Label>
+                          <Input
+                            id="linked-ticket"
+                            value={linkedTicketId}
+                            onChange={(e) => setLinkedTicketId(e.target.value)}
+                            placeholder="Enter ticket ID to link..."
+                          />
+                        </div>
+                      )}
 
                       <div className="flex gap-2">
                         <Button

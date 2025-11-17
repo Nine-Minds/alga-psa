@@ -120,39 +120,60 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     try {
       console.log('[AvailabilitySettings] Starting loadInitialData');
 
-      // Load all users first
-      const fetchedUsers = await getAllUsers(false, 'internal');
-      console.log('[AvailabilitySettings] Loaded users:', fetchedUsers.length);
-      setAllUsers(fetchedUsers);
-
-      // Check if current user is a manager
+      // Check if current user is a manager first
+      let userManagedTeams: ITeam[] = [];
       if (session?.user?.id) {
         const teams = await getTeams();
-        const userManagedTeams = teams.filter(team => team.manager_id === session.user.id);
+        userManagedTeams = teams.filter(team => team.manager_id === session.user.id);
 
         if (userManagedTeams.length > 0) {
-          // User is a manager
           setIsManager(true);
           setManagedTeams(userManagedTeams);
+        }
+      }
 
-          // Auto-select first team if only one team
-          if (userManagedTeams.length === 1) {
-            setSelectedTeamId(userManagedTeams[0].team_id);
-            // Filter users for this team
-            const teamMemberIds = userManagedTeams[0].members?.map(m => m.user_id) || [];
-            const filteredUsers = fetchedUsers.filter(user => teamMemberIds.includes(user.user_id));
-            setUsers(filteredUsers);
-          } else {
-            // Multiple teams - wait for user to select
-            setUsers([]);
-          }
+      // Try to load all users (requires user:read permission)
+      let fetchedUsers: Omit<IUserWithRoles, 'tenant'>[] = [];
+      try {
+        fetchedUsers = await getAllUsers(false, 'internal');
+        console.log('[AvailabilitySettings] Loaded all users:', fetchedUsers.length);
+        setAllUsers(fetchedUsers);
+      } catch (error) {
+        console.log('[AvailabilitySettings] Cannot load all users (permission denied), loading team members only');
+        // If user doesn't have permission to load all users, load team members from managed teams
+        if (userManagedTeams.length > 0) {
+          const allMembers: Omit<IUserWithRoles, 'tenant'>[] = [];
+          userManagedTeams.forEach(team => {
+            if (team.members) {
+              allMembers.push(...team.members);
+            }
+          });
+          // Remove duplicates
+          const uniqueMembers = Array.from(
+            new Map(allMembers.map(m => [m.user_id, m])).values()
+          );
+          fetchedUsers = uniqueMembers;
+          setAllUsers(uniqueMembers);
+          console.log('[AvailabilitySettings] Loaded team members:', uniqueMembers.length);
+        }
+      }
+
+      // Set up users based on manager status
+      if (userManagedTeams.length > 0) {
+        // Auto-select first team if only one team
+        if (userManagedTeams.length === 1) {
+          setSelectedTeamId(userManagedTeams[0].team_id);
+          // Filter users for this team
+          const teamMemberIds = userManagedTeams[0].members?.map(m => m.user_id) || [];
+          const filteredUsers = fetchedUsers.filter(user => teamMemberIds.includes(user.user_id));
+          setUsers(filteredUsers);
         } else {
-          // Not a manager - show all users (admin)
-          setIsManager(false);
-          setUsers(fetchedUsers);
+          // Multiple teams - wait for user to select
+          setUsers([]);
         }
       } else {
-        // No session - show all users
+        // Not a manager - show all users (admin)
+        setIsManager(false);
         setUsers(fetchedUsers);
       }
 
