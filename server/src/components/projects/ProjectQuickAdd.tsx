@@ -8,7 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { IProject, IClient, IStatus } from 'server/src/interfaces';
 import { toast } from 'react-hot-toast';
-import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
+import { createProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
@@ -105,14 +105,12 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         return;
       }
       
-      const wbsCode = await generateNextWbsCode();
-      const projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant'> = {
+      const projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code' | 'project_number'> = {
         project_name: projectName,
         description: description || null,
         client_id: selectedClientId,
         start_date: startDate || null,
         end_date: endDate || null,
-        wbs_code: wbsCode,
         is_inactive: false,
         status: selectedStatusId,
         assigned_to: selectedUserId || null,

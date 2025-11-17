@@ -152,8 +152,9 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const filteredProjects = useMemo(() => {
     let filtered = projects.filter(project =>
-      project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (filterStatus === 'all' || 
+      (project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       project.project_number?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterStatus === 'all' ||
        (filterStatus === 'active' && !project.is_inactive) ||
        (filterStatus === 'inactive' && project.is_inactive))
     );
@@ -268,9 +269,21 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const columns: ColumnDefinition<IProject>[] = [
     {
+      title: 'Number',
+      dataIndex: 'project_number',
+      width: '10%',
+      render: (text: string, record: IProject) => {
+        return (
+          <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800">
+            {text}
+          </Link>
+        );
+      },
+    },
+    {
       title: 'Project Name',
       dataIndex: 'project_name',
-      width: '20%',
+      width: '18%',
       render: (text: string, record: IProject) => (
         <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words">
           {text}

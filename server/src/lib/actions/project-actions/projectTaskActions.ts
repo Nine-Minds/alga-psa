@@ -729,11 +729,6 @@ export async function moveTaskToPhase(
                 updated_at: trx.fn.now()
             };
             
-            // If moving to different project, update project_id
-            if (targetProjectId && targetProjectId !== currentPhase.project_id) {
-                updateData.project_id = targetProjectId;
-            }
-            
             const [updatedTask] = await trx<IProjectTask>('project_tasks')
                 .where('task_id', taskId)
                 .andWhere('tenant', tenant!)
