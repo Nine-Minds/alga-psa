@@ -12,7 +12,7 @@ import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIC
 import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useTranslation } from 'server/src/lib/i18n/client';
-import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
+import SsoProviderButtons from '@/empty/components/auth/SsoProviderButtons';
 
 interface ClientLoginFormProps {
   callbackUrl: string;

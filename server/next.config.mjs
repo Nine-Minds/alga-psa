@@ -155,6 +155,7 @@ const nextConfig = {
       '@emoji-mart/data/sets/15/native.json': path.join(__dirname, '../node_modules/@emoji-mart/data/sets/15/native.json'),
       // Base app alias
       '@': './src',
+      'server/src': './src', // Add explicit alias for server/src imports
       '@ee': isEE ? '../ee/server/src' : './src/empty',
       '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
@@ -293,6 +294,7 @@ const nextConfig = {
       alias: {
         ...config.resolve.alias,
         '@': path.join(__dirname, 'src'),
+        'server/src': path.join(__dirname, 'src'), // Add explicit alias for server/src imports
         '@ee': isEE
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
@@ -498,6 +500,11 @@ const nextConfig = {
     // Externalize ts-morph for both client and server to prevent bundling issues
     // ts-morph is a huge library that shouldn't be bundled
     config.externals.push('ts-morph');
+
+    // Externalize optional ffmpeg dependencies
+    // These are optional runtime dependencies that may not be installed
+    config.externals.push('ffmpeg-static');
+    config.externals.push('ffprobe-static');
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({
