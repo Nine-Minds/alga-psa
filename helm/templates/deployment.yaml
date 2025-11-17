@@ -466,6 +466,14 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- GOOGLE CALENDAR INTEGRATION ----------------
+          {{- if .Values.google_calendar_integration.enabled }}
+          - name: GOOGLE_CALENDAR_CLIENT_ID
+            value: "{{ .Values.google_calendar_integration.client_id }}"
+          - name: GOOGLE_CALENDAR_CLIENT_SECRET
+            value: "{{ .Values.google_calendar_integration.client_secret }}"
+          {{- end }}
+
           # ----------- NM-STORE INTEGRATION ----------------
           {{- if .Values.nm_store_integration }}
           {{- if .Values.nm_store_integration.url }}
