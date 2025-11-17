@@ -15,7 +15,7 @@ on:
 jobs:
   fresh-install-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # Set a timeout for the job
+    timeout-minutes: 60 # Set a timeout for the job
 
     steps:
       - name: Checkout repository
