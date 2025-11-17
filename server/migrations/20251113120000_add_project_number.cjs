@@ -233,18 +233,26 @@ exports.up = async function(knex) {
     // Use raw SQL instead of Knex schema builder for better Citus compatibility
     console.log('Making project_number column NOT NULL...');
 
+    // Detect if this is a Citus distributed database
+    let isCitusDistributed = false;
     try {
-      // First, try to set NOT NULL on all shards (Citus-specific)
-      // Check if this is a Citus distributed table
-      const isCitus = await knex.raw(`
+      const citusCheck = await knex.raw(`
         SELECT EXISTS (
           SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'projects'::regclass
         ) as is_distributed
       `);
+      isCitusDistributed = citusCheck.rows[0]?.is_distributed;
+    } catch (error) {
+      // pg_dist_partition doesn't exist - this is standard PostgreSQL, not Citus
+      console.log('Standard PostgreSQL detected (not Citus)');
+      isCitusDistributed = false;
+    }
 
-      if (isCitus.rows[0]?.is_distributed) {
-        console.log('Detected Citus distributed table, setting NOT NULL on all shards...');
+    if (isCitusDistributed) {
+      // Citus distributed table - use shard-based approach
+      console.log('Detected Citus distributed table, setting NOT NULL on all shards...');
 
+      try {
         // Set NOT NULL on all shards first
         await knex.raw(`
           SELECT * FROM run_command_on_shards(
@@ -265,33 +273,16 @@ exports.up = async function(knex) {
           AND attnotnull = false
         `);
         console.log('✅ Updated coordinator metadata');
-      } else {
-        // Standard PostgreSQL (non-Citus)
+      } catch (error) {
+        throw new Error(`Failed to set NOT NULL on Citus shards: ${error.message}`);
+      }
+    } else {
+      // Standard PostgreSQL (non-Citus)
+      try {
         await knex.raw(`ALTER TABLE projects ALTER COLUMN project_number SET NOT NULL`);
         console.log('✅ Column altered to NOT NULL');
-      }
-    } catch (error) {
-      console.error('❌ Failed to set NOT NULL:', error.message);
-
-      // If the standard approach failed, try the Citus workaround anyway
-      console.log('Attempting Citus-specific workaround...');
-      try {
-        await knex.raw(`
-          SELECT * FROM run_command_on_shards(
-            'projects',
-            $$ALTER TABLE %s ALTER COLUMN project_number SET NOT NULL$$
-          )
-        `);
-        await knex.raw(`
-          UPDATE pg_attribute
-          SET attnotnull = true
-          WHERE attrelid = 'projects'::regclass
-          AND attname = 'project_number'
-          AND attnotnull = false
-        `);
-        console.log('✅ Citus workaround successful');
-      } catch (citusError) {
-        throw new Error(`Failed to set NOT NULL constraint: ${error.message}. Citus workaround also failed: ${citusError.message}`);
+      } catch (error) {
+        throw new Error(`Failed to set NOT NULL constraint: ${error.message}`);
       }
     }
   } else {

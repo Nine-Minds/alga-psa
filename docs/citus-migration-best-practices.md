@@ -94,16 +94,29 @@ exports.config = { transaction: false };
 
 ## Best Practices
 
-### 1. Always Check for Citus
+### 1. Always Check for Citus (Safely)
 
-Before performing DDL that might behave differently on Citus:
+Before performing DDL that might behave differently on Citus, check if the table is distributed. **Important**: Wrap the check in try-catch since `pg_dist_partition` doesn't exist in standard PostgreSQL:
 
 ```javascript
-const isCitus = await knex.raw(`
-  SELECT EXISTS (
-    SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'citus'
-  ) as has_citus
-`);
+let isCitusDistributed = false;
+try {
+  const citusCheck = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'table_name'::regclass
+    ) as is_distributed
+  `);
+  isCitusDistributed = citusCheck.rows[0]?.is_distributed;
+} catch (error) {
+  // pg_dist_partition doesn't exist - standard PostgreSQL
+  isCitusDistributed = false;
+}
+
+if (isCitusDistributed) {
+  // Use Citus-specific approach
+} else {
+  // Use standard PostgreSQL approach
+}
 ```
 
 ### 2. Use Raw SQL for DDL
