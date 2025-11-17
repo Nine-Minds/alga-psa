@@ -72,6 +72,10 @@ exports.up = async function(knex) {
     console.log(`  ✅ Completed tenant ${tenant}\n`);
   }
 
+  // Wait for Citus to propagate changes across all shards
+  console.log('Waiting for distributed changes to propagate...');
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
   // Verify no NULL values remain before setting NOT NULL
   const nullCount = await knex('projects')
     .whereNull('project_number')
@@ -111,6 +115,10 @@ exports.up = async function(knex) {
         console.log(`    ✓ ${projectNumber}: ${project.project_name}`);
       }
     }
+
+    // Wait for Citus to propagate retry changes
+    console.log('Waiting for distributed retry changes to propagate...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Final verification
     const finalNullCount = await knex('projects')
