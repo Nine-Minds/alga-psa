@@ -1,6 +1,5 @@
-import type { DnsLookupResult } from '@shared/types/email';
-
 declare module '@product/email-domains/entry' {
+  type DnsLookupResult = import('@shared/types/email').DnsLookupResult;
   // Minimal surface needed for shared workflow registration without pulling in full package.
   export const ManagedDomainService: {
     forTenant: (options: { tenantId: string; knex: unknown }) => {
