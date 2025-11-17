@@ -7,14 +7,25 @@ import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 import { isTwoFactorEnabled, verifyTwoFactorCode } from 'server/src/lib/auth/twoFactorHelpers';
 
-interface SessionWithUser extends IUserSession {
-  user_name?: string;
-  user_email?: string;
-  user_type?: string;
+// Session for current user (no user info needed)
+export interface SessionData extends IUserSession {
   is_current: boolean;
 }
 
-export interface SessionsResponse {
+// Session with user info for admin view
+export interface SessionWithUser extends IUserSession {
+  user_name: string;
+  user_email: string;
+  user_type: string;
+  is_current: boolean;
+}
+
+export interface UserSessionsResponse {
+  sessions: SessionData[];
+  total: number;
+}
+
+export interface AllSessionsResponse {
   sessions: SessionWithUser[];
   total: number;
 }
@@ -39,7 +50,7 @@ export interface RevokeAllSessionsResult {
 /**
  * Get current user's active sessions
  */
-export async function getUserSessionsAction(): Promise<SessionsResponse> {
+export async function getUserSessionsAction(): Promise<UserSessionsResponse> {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
@@ -55,7 +66,7 @@ export async function getUserSessionsAction(): Promise<SessionsResponse> {
   );
 
   // Mark current session
-  const sessionsWithCurrent = sessions.map(sess => ({
+  const sessionsWithCurrent: SessionData[] = sessions.map(sess => ({
     ...sess,
     is_current: sess.session_id === currentSessionId
   }));
@@ -69,7 +80,7 @@ export async function getUserSessionsAction(): Promise<SessionsResponse> {
 /**
  * Get all users' active sessions (admin only)
  */
-export async function getAllSessionsAction(): Promise<SessionsResponse> {
+export async function getAllSessionsAction(): Promise<AllSessionsResponse> {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
@@ -113,7 +124,11 @@ export async function getAllSessionsAction(): Promise<SessionsResponse> {
       ? JSON.parse(sess.location_data)
       : sess.location_data,
     // Mark sessions belonging to current user
-    is_current: sess.user_id === currentUser.user_id
+    is_current: sess.user_id === currentUser.user_id,
+    // Ensure required fields have defaults if user is deleted
+    user_name: sess.user_name || 'Unknown User',
+    user_email: sess.user_email || 'unknown@example.com',
+    user_type: sess.user_type || 'internal'
   }));
 
   return {

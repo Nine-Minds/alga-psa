@@ -11,6 +11,7 @@ import { useTranslation } from 'server/src/lib/i18n/client';
 import {
   getAllSessionsAction,
   revokeSessionAction,
+  type SessionWithUser,
 } from 'server/src/lib/actions/session-actions/sessionActions';
 import {
   Monitor,
@@ -26,38 +27,10 @@ import {
   Search,
 } from 'lucide-react';
 
-interface LocationData {
-  city?: string;
-  country?: string;
-  countryCode?: string;
-  timezone?: string;
-}
-
-interface Session {
-  session_id: string;
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  user_type: string;
-  device_name: string | null;
-  device_type: string | null;
-  ip_address: string | null;
-  location_data: LocationData | null;
-  last_activity_at: string;
-  created_at: string;
-  login_method: string | null;
-  is_current: boolean;
-}
-
-interface SessionsResponse {
-  sessions: Session[];
-  total: number;
-}
-
 export default function AdminSessionManagement() {
   const { t } = useTranslation('common');
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<SessionWithUser[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<SessionWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

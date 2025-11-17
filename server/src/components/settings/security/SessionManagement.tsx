@@ -11,6 +11,7 @@ import {
   getUserSessionsAction,
   revokeSessionAction,
   revokeAllOtherSessionsAction,
+  type SessionData,
 } from 'server/src/lib/actions/session-actions/sessionActions';
 import {
   Monitor,
@@ -23,33 +24,9 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-interface LocationData {
-  city?: string;
-  country?: string;
-  countryCode?: string;
-  timezone?: string;
-}
-
-interface Session {
-  session_id: string;
-  device_name: string | null;
-  device_type: string | null;
-  ip_address: string | null;
-  location_data: LocationData | null;
-  last_activity_at: string;
-  created_at: string;
-  login_method: string | null;
-  is_current: boolean;
-}
-
-interface SessionsResponse {
-  sessions: Session[];
-  total: number;
-}
-
 export default function SessionManagement() {
   const { t } = useTranslation('common');
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
