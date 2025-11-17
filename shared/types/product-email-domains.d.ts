@@ -1,3 +1,5 @@
+import type { DnsLookupResult } from '@shared/types/email';
+
 declare module '@product/email-domains/entry' {
   // Minimal surface needed for shared workflow registration without pulling in full package.
   export const ManagedDomainService: {
@@ -9,7 +11,7 @@ declare module '@product/email-domains/entry' {
       }>;
       checkDomainStatus: (identifier: { domain?: string; providerDomainId?: string }) => Promise<{
         provider: unknown;
-        dnsLookup: unknown;
+        dnsLookup: DnsLookupResult[];
         providerDomainId: string;
       }>;
       activateDomain: (domain: string) => Promise<void>;

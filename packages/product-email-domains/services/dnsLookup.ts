@@ -1,14 +1,7 @@
 import { promises as dns } from 'dns';
 
 import logger from '@alga-psa/shared/core/logger';
-import type { DnsRecord } from '@shared/types/email';
-
-export interface DnsLookupResult {
-  record: DnsRecord;
-  values: string[];
-  matchedValue?: boolean;
-  error?: string;
-}
+import type { DnsRecord, DnsLookupResult } from '@shared/types/email';
 
 function flattenTxtRecords(records: string[][]): string[] {
   return records.map((entry) => entry.join(''));
@@ -70,16 +63,24 @@ export async function lookupDnsRecord(record: DnsRecord): Promise<string[]> {
 
 export async function verifyDnsRecords(records: DnsRecord[]): Promise<DnsLookupResult[]> {
   const results: DnsLookupResult[] = [];
+  const checkedAt = new Date().toISOString();
 
   for (const record of records) {
     const values = await lookupDnsRecord(record);
     const matchedValue = record.value ? values.some((value) => value.toLowerCase() === record.value.toLowerCase()) : undefined;
+    const error: DnsLookupResult['error'] =
+      values.length === 0
+        ? 'not_found'
+        : record.value && matchedValue === false
+          ? 'mismatch'
+          : undefined;
 
     results.push({
       record,
       values,
       matchedValue,
-      error: values.length === 0 ? 'not_found' : undefined,
+      error,
+      checkedAt,
     });
   }
 

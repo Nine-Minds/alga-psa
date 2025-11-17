@@ -93,6 +93,7 @@ export default function ManagedDomainList({
         const showRetry = normalizedStatus === 'pending' || normalizedStatus === 'failed';
         const showDelete = normalizedStatus !== 'verified' || Boolean(domain.failureReason);
         const dnsRecords = domain.dnsRecords ?? [];
+        const dnsLookupResults = domain.dnsLookupResults ?? [];
         const hasRecords = dnsRecords.length > 0;
         const emptyMessage = getDnsEmptyMessage(normalizedStatus);
 
@@ -153,7 +154,12 @@ export default function ManagedDomainList({
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">DNS Records</p>
                 {hasRecords ? <p className="text-xs text-gray-500 mb-3">{DNS_RECORDS_HELP_TEXT}</p> : null}
-                <DnsRecordInstructions records={dnsRecords} emptyMessage={emptyMessage} />
+                <DnsRecordInstructions
+                  records={dnsRecords}
+                  emptyMessage={emptyMessage}
+                  detections={dnsLookupResults}
+                  lastCheckedAt={domain.dnsLastCheckedAt}
+                />
               </div>
             </CardContent>
           </Card>
