@@ -88,8 +88,8 @@ export default function MoveTaskDialog({
 
           <div className="mb-6"> {/* Increased bottom margin */}
             <TreeSelect<'project' | 'phase' | 'status'>
-                // Use phase from selectedTargetPath for the value, default to empty string
-                value={selectedTargetPath?.['phase'] || ''}
+                // Use status if selected, otherwise phase, to show full path including status
+                value={selectedTargetPath?.['status'] || selectedTargetPath?.['phase'] || ''}
                 onValueChange={handleTreeSelect}
                 options={projectTreeData}
                 placeholder="Select target project/phase/status..."
