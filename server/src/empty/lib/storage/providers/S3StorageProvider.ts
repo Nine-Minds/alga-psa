@@ -1,6 +1,6 @@
 import { Readable } from 'stream';
-import { BaseStorageProvider, UploadResult, StorageError } from '../../../../lib/storage/providers/StorageProvider';
-import { S3ProviderConfig, StorageCapabilities } from '../../../../types/storage';
+import { BaseStorageProvider, UploadResult, StorageError } from '@/lib/storage/providers/StorageProvider';
+import { S3ProviderConfig, StorageCapabilities } from '@/types/storage';
 
 export class S3StorageProvider extends BaseStorageProvider {
     constructor(config: S3ProviderConfig) {

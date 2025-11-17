@@ -1,7 +1,9 @@
+// Community Edition stub for SSO Auto-link functionality
+// This feature is only available in Enterprise Edition
+
 export async function isAutoLinkEnabledForTenant(
-  _tenantId: string | undefined,
-  _userType: "internal" | "client"
+  tenantId: string | undefined,
+  userType: "internal" | "client"
 ): Promise<boolean> {
-  // CE build stub: SSO auto-linking is enterprise-only
   return false;
 }
