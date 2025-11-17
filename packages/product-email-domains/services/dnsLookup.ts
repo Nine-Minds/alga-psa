@@ -1,14 +1,12 @@
 import { promises as dns } from 'dns';
 
 import logger from '@alga-psa/shared/core/logger';
-import type { DnsRecord } from '@shared/types/email';
+import type { DnsRecord, DnsLookupResult } from '@shared/types/email';
 
-export interface DnsLookupResult {
-  record: DnsRecord;
-  values: string[];
-  matchedValue?: boolean;
-  error?: string;
-}
+const normalize = (value?: string | null): string | null =>
+  typeof value === 'string' ? value.trim().toLowerCase() : null;
+
+const stripMxPriority = (value: string): string => value.replace(/^\d+\s+/, '').trim();
 
 function flattenTxtRecords(records: string[][]): string[] {
   return records.map((entry) => entry.join(''));
@@ -70,16 +68,58 @@ export async function lookupDnsRecord(record: DnsRecord): Promise<string[]> {
 
 export async function verifyDnsRecords(records: DnsRecord[]): Promise<DnsLookupResult[]> {
   const results: DnsLookupResult[] = [];
+  const checkedAt = new Date().toISOString();
 
   for (const record of records) {
     const values = await lookupDnsRecord(record);
-    const matchedValue = record.value ? values.some((value) => value.toLowerCase() === record.value.toLowerCase()) : undefined;
+    let matchedValue: boolean | undefined;
+
+    if (record.value) {
+      const expected = normalize(record.value);
+      if (expected) {
+        matchedValue = values.some((raw) => {
+          const normalizedValue = normalize(raw);
+          if (!normalizedValue) {
+            return false;
+          }
+
+          if (record.type === 'MX') {
+            const withoutPriority = stripMxPriority(normalizedValue);
+            if (withoutPriority === expected) {
+              return true;
+            }
+
+            if (record.priority != null) {
+              const prefixed = `${record.priority}`.trim();
+              if (normalizedValue.startsWith(`${prefixed} `) && withoutPriority === expected) {
+                return true;
+              }
+            }
+
+            return normalizedValue === expected;
+          }
+
+          return normalizedValue === expected;
+        });
+      }
+    }
+
+    if (typeof matchedValue === 'undefined' && record.value) {
+      matchedValue = false;
+    }
+    const error: DnsLookupResult['error'] =
+      values.length === 0
+        ? 'not_found'
+        : record.value && matchedValue === false
+          ? 'mismatch'
+          : undefined;
 
     results.push({
       record,
       values,
       matchedValue,
-      error: values.length === 0 ? 'not_found' : undefined,
+      error,
+      checkedAt,
     });
   }
 

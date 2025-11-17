@@ -1,7 +1,7 @@
 import { Context } from '@temporalio/activity';
 import type { Knex } from 'knex';
 
-import type { DomainVerificationResult, DnsRecord } from '@shared/types/email';
+import type { DomainVerificationResult, DnsRecord, DnsLookupResult } from '@shared/types/email';
 import { ManagedDomainService as ManagedDomainServiceExport } from '@product/email-domains/entry';
 
 const log = () => Context.current().log;
@@ -14,7 +14,7 @@ interface ManagedDomainServiceLike {
   }>;
   checkDomainStatus: (identifier: { domain?: string; providerDomainId?: string }) => Promise<{
     provider: DomainVerificationResult;
-    dnsLookup: unknown;
+    dnsLookup: DnsLookupResult[];
     providerDomainId: string;
   }>;
   activateDomain: (domain: string) => Promise<void>;
@@ -86,7 +86,7 @@ export interface CheckManagedEmailDomainStatusResult {
   verifiedAt: string | null;
   failureReason?: string | null;
   provider: DomainVerificationResult;
-  dnsLookup: unknown;
+  dnsLookup: DnsLookupResult[];
 }
 
 export async function checkManagedEmailDomainStatus(

@@ -7,7 +7,7 @@
 import { createTenantKnex, getCurrentTenantId, getTenantContext, runWithTenant } from 'server/src/lib/db';
 import type { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import type { DnsRecord } from '@shared/types/email';
+import type { DnsRecord, DnsLookupResult } from '@shared/types/email';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -41,6 +41,8 @@ export interface ManagedDomainStatus {
   providerId?: string | null;
   providerDomainId?: string | null;
   dnsRecords: DnsRecord[];
+  dnsLookupResults?: DnsLookupResult[];
+  dnsLastCheckedAt?: string | null;
   verifiedAt?: string | null;
   failureReason?: string | null;
   updatedAt?: string | null;
@@ -87,6 +89,11 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
         ? row.dns_records
         : JSON.parse(row.dns_records)
       : [];
+    const parsedDnsLookup: DnsLookupResult[] = row.dns_lookup_results
+      ? Array.isArray(row.dns_lookup_results)
+        ? row.dns_lookup_results
+        : JSON.parse(row.dns_lookup_results)
+      : [];
 
     return {
       domain: row.domain_name,
@@ -94,6 +101,8 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
       providerId: row.provider_id,
       providerDomainId: row.provider_domain_id,
       dnsRecords: parsedRecords,
+      dnsLookupResults: parsedDnsLookup,
+      dnsLastCheckedAt: row.dns_last_checked_at ? new Date(row.dns_last_checked_at).toISOString() : null,
       verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
       failureReason: row.failure_reason,
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,

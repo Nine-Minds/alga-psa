@@ -5,7 +5,8 @@ import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider'
 import type { DomainVerificationResult, DnsRecord } from '@shared/types/email';
 import { ResendEmailProvider } from '@product/email-domains/providers/ResendEmailProvider';
 
-import { verifyDnsRecords, type DnsLookupResult } from './dnsLookup';
+import { verifyDnsRecords } from './dnsLookup';
+import type { DnsLookupResult } from '@shared/types/email';
 
 const EMAIL_DOMAINS_TABLE = 'email_domains';
 const TENANT_EMAIL_SETTINGS_TABLE = 'tenant_email_settings';
@@ -239,6 +240,11 @@ export class ManagedDomainService {
     const updatedStatus = normalizeProviderStatus(providerVerification.status, fallbackStatus);
     const domainName = identifier.domain ?? existing.domain_name;
 
+    const updatedAt = new Date();
+    const verifiedAt =
+      providerVerification.status === 'verified'
+        ? updatedAt
+        : existing.verified_at;
     await ensureEmailDomainSchema(this.knex);
     await this.knex(EMAIL_DOMAINS_TABLE)
       .where({ tenant: this.tenantId, domain_name: domainName })
@@ -247,8 +253,10 @@ export class ManagedDomainService {
         dns_records: JSON.stringify(updatedDnsRecords ?? []),
         failure_reason: providerVerification.failureReason ?? null,
         provider_id: provider.providerId,
-        verified_at: providerVerification.status === 'verified' ? new Date() : existing.verified_at,
-        updated_at: new Date(),
+        verified_at: verifiedAt,
+        dns_lookup_results: JSON.stringify(dnsLookup ?? []),
+        dns_last_checked_at: updatedAt,
+        updated_at: updatedAt,
       });
 
     return {

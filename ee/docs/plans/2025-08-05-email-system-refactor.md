@@ -1,4 +1,4 @@
-# Email System Refactoring Plan
+/# Email System Refactoring Plan
 
 ## Intro / Rationale
 

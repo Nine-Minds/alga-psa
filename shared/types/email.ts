@@ -80,6 +80,14 @@ export interface DnsRecord {
   priority?: number;
 }
 
+export interface DnsLookupResult {
+  record: DnsRecord;
+  values: string[];
+  matchedValue?: boolean;
+  error?: 'not_found' | 'mismatch' | 'lookup_failed';
+  checkedAt?: string;
+}
+
 export interface TenantEmailSettings {
   tenantId: string;
   defaultFromDomain?: string;
