@@ -15,7 +15,7 @@
 exports.up = async function(knex) {
   await knex.schema.alterTable('sessions', (table) => {
     // IP and location tracking
-    table.inet('ip_address');
+    table.string('ip_address', 45); // Support IPv4 and IPv6
     table.jsonb('location_data'); // {city, country, timezone}
 
     // Device information
@@ -45,11 +45,12 @@ exports.up = async function(knex) {
   await knex.schema.raw('ALTER TABLE sessions ALTER COLUMN token DROP NOT NULL');
 
   // Add indexes for performance
+  // IMPORTANT: Include tenant column for CitusDB distributed table compatibility
   await knex.schema.raw(
     'CREATE INDEX idx_sessions_user_active ON sessions(tenant, user_id) WHERE revoked_at IS NULL'
   );
   await knex.schema.raw(
-    'CREATE INDEX idx_sessions_expires_at ON sessions(expires_at) WHERE revoked_at IS NULL'
+    'CREATE INDEX idx_sessions_expires_at ON sessions(tenant, expires_at) WHERE revoked_at IS NULL'
   );
   // NOTE: No token_hash index - we use session_id (PK) as lookup key
 };
