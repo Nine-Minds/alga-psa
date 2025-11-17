@@ -17,6 +17,10 @@ export default [
   // IMPORTANT: This must come first before other configs that might ignore these files
   {
     files: ["**/migrations/**/*.cjs"],
+    ignores: [
+      "**/migrations/**/utils/**", // Exclude utility files in utils directories
+      "ee/server/migrations/**/*", // Exclude EE migrations entirely
+    ],
     languageOptions: {
       globals: {
         ...globals.node
