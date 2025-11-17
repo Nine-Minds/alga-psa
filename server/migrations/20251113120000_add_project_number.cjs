@@ -100,18 +100,23 @@ exports.up = async function(knex) {
 
   // Wait for Citus to propagate changes across all shards
   console.log('Waiting for distributed changes to propagate...');
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise(resolve => setTimeout(resolve, 5000));
 
-  // Verify no NULL values remain before setting NOT NULL
-  const nullCount = await knex('projects')
-    .whereNull('project_number')
-    .count('* as count')
-    .first();
+  // Force a fresh query by using raw SQL to avoid any query caching
+  const nullProjects = await knex.raw(`
+    SELECT project_id, project_name, tenant
+    FROM projects
+    WHERE project_number IS NULL
+    LIMIT 10
+  `);
 
-  console.log(`\nVerifying backfill: ${nullCount.count} projects with NULL project_number`);
+  console.log(`\nVerifying backfill: ${nullProjects.rows.length} projects with NULL project_number found`);
 
-  if (parseInt(nullCount.count) > 0) {
-    console.log(`⚠️  Found ${nullCount.count} projects still with NULL project_number`);
+  if (nullProjects.rows.length > 0) {
+    console.log('⚠️  NULL projects found:');
+    nullProjects.rows.forEach(p => {
+      console.log(`  - ${p.project_name} (tenant: ${p.tenant})`);
+    });
     console.log('Attempting additional backfill...\n');
 
     // Retry backfill for any remaining NULL values
@@ -144,16 +149,22 @@ exports.up = async function(knex) {
 
     // Wait for Citus to propagate retry changes
     console.log('Waiting for distributed retry changes to propagate...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // Final verification
-    const finalNullCount = await knex('projects')
-      .whereNull('project_number')
-      .count('* as count')
-      .first();
+    // Final verification with raw SQL
+    const finalNullProjects = await knex.raw(`
+      SELECT project_id, project_name, tenant
+      FROM projects
+      WHERE project_number IS NULL
+      LIMIT 10
+    `);
 
-    if (parseInt(finalNullCount.count) > 0) {
-      throw new Error(`❌ Migration failed: Still have ${finalNullCount.count} projects with NULL project_number!`);
+    if (finalNullProjects.rows.length > 0) {
+      console.log('❌ Still have NULL projects after retry:');
+      finalNullProjects.rows.forEach(p => {
+        console.log(`  - ${p.project_name} (tenant: ${p.tenant})`);
+      });
+      throw new Error(`❌ Migration failed: Still have ${finalNullProjects.rows.length}+ projects with NULL project_number!`);
     }
   }
 
@@ -166,6 +177,23 @@ exports.up = async function(knex) {
   `);
 
   if (isNullable.rows[0]?.is_nullable === 'YES') {
+    // Extra wait before ALTER TABLE to ensure all shards are consistent
+    console.log('Final wait before setting NOT NULL constraint...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // One final check right before ALTER TABLE
+    const lastCheck = await knex.raw(`
+      SELECT COUNT(*) as count
+      FROM projects
+      WHERE project_number IS NULL
+    `);
+
+    console.log(`Final NULL check: ${lastCheck.rows[0].count} NULL values`);
+
+    if (parseInt(lastCheck.rows[0].count) > 0) {
+      throw new Error(`❌ Cannot proceed: ${lastCheck.rows[0].count} projects still have NULL project_number`);
+    }
+
     // Now make the column NOT NULL (after all projects have numbers)
     console.log('Making project_number column NOT NULL...');
     await knex.schema.alterTable('projects', (table) => {
