@@ -4,7 +4,7 @@ import path from 'path';
  * ESLint rule to enforce proper migration file naming conventions.
  *
  * Migration files must:
- * 1. Be named with yyyymmddhhmm prefix (e.g., 202410311430_description.cjs)
+ * 1. Be named with yyyymmddhhmm or yyyymmddhhmmss prefix (e.g., 202410311430_description.cjs or 20241031143045_description.cjs)
  * 2. Have timestamps that are not in the future (compared to current date)
  *
  * This rule only applies to files in directories containing "migration" in the path.
@@ -13,17 +13,18 @@ import path from 'path';
  * This prevents errors on existing legacy migrations that don't follow the naming convention.
  */
 
-const MIGRATION_FILENAME_PATTERN = /^(\d{12})_.*\.cjs$/;
+const MIGRATION_FILENAME_PATTERN = /^(\d{12}(?:\d{2})?)_.*\.cjs$/;
 // Only enforce the rule for migrations on or after this date (yyyymmdd format)
 const CUTOFF_DATE = '20251101';
 
 function parseTimestamp(timestampStr) {
-  // Parse yyyymmddhhmm format
+  // Parse yyyymmddhhmm or yyyymmddhhmmss format
   const year = parseInt(timestampStr.substring(0, 4), 10);
   const month = parseInt(timestampStr.substring(4, 6), 10);
   const day = parseInt(timestampStr.substring(6, 8), 10);
   const hour = parseInt(timestampStr.substring(8, 10), 10);
   const minute = parseInt(timestampStr.substring(10, 12), 10);
+  const second = timestampStr.length >= 14 ? parseInt(timestampStr.substring(12, 14), 10) : 0;
 
   // Validate ranges before creating Date object
   // This prevents JavaScript from auto-correcting invalid dates (e.g., month 13 -> Jan next year)
@@ -39,8 +40,11 @@ function parseTimestamp(timestampStr) {
   if (minute < 0 || minute > 59) {
     return { valid: false, date: null };
   }
+  if (second < 0 || second > 59) {
+    return { valid: false, date: null };
+  }
 
-  const date = new Date(year, month - 1, day, hour, minute); // JS months are 0-indexed
+  const date = new Date(year, month - 1, day, hour, minute, second); // JS months are 0-indexed
 
   // Verify the date components weren't rolled over by JavaScript
   // E.g., Feb 31 becomes Mar 3, so we need to check that didn't happen
@@ -49,16 +53,13 @@ function parseTimestamp(timestampStr) {
     date.getMonth() !== month - 1 ||
     date.getDate() !== day ||
     date.getHours() !== hour ||
-    date.getMinutes() !== minute
+    date.getMinutes() !== minute ||
+    date.getSeconds() !== second
   ) {
     return { valid: false, date: null };
   }
 
   return { valid: true, date };
-}
-
-function isValidDate(date) {
-  return date instanceof Date && !isNaN(date.getTime());
 }
 
 function isFutureDate(date) {
@@ -77,7 +78,7 @@ export default {
     schema: [], // no options
     messages: {
       invalidFormat:
-        "Migration file '{{filename}}' must be named with yyyymmddhhmm prefix followed by underscore and description (e.g., 202410311430_add_users_table.cjs)",
+        "Migration file '{{filename}}' must be named with yyyymmddhhmm or yyyymmddhhmmss prefix followed by underscore and description (e.g., 202410311430_add_users_table.cjs or 20241031143045_add_users_table.cjs)",
       futureTimestamp:
         "Migration file '{{filename}}' has a timestamp in the future ({{timestamp}}). Migration timestamps must not be later than the current date.",
       invalidTimestamp:

@@ -31,6 +31,16 @@ ruleTester.run('migration-filename', migrationFilename, {
       filename: '/app/server/migrations/202511010000_cutoff_date.cjs',
     },
     {
+      // Valid migration file with 14-digit format (yyyymmddhhmmss)
+      code: 'exports.up = function(knex) {};',
+      filename: '/app/server/migrations/20251102090000_create_import_framework_tables.cjs',
+    },
+    {
+      // Valid migration file with 14-digit format and seconds
+      code: 'exports.up = function(knex) {};',
+      filename: '/app/server/migrations/20251104112815_add_hourly_fields_to_contract_lines.cjs',
+    },
+    {
       // File not in migrations directory should be ignored
       code: 'console.log("test");',
       filename: '/app/server/lib/202599991231_not_a_migration.cjs',
@@ -54,17 +64,7 @@ ruleTester.run('migration-filename', migrationFilename, {
       ],
     },
     {
-      // Invalid format - 14 digits instead of 12 (after cutoff date)
-      code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/20251120164841_wrong_format.cjs',
-      errors: [
-        {
-          messageId: 'invalidFormat',
-        },
-      ],
-    },
-    {
-      // Invalid format - 10 digits instead of 12 (after cutoff)
+      // Invalid format - 10 digits instead of 12/14 (after cutoff)
       code: 'exports.up = function(knex) {};',
       filename: '/app/server/migrations/2025110116_wrong_format.cjs',
       errors: [
