@@ -981,7 +981,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
                     logger.info("User sign in successful with email", credentials.email);
                     const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
-                    const userResponse = {
+                    const userResponse: ExtendedUser = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
@@ -994,12 +994,48 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         contactId: user.contact_id,
                         tenantSlug: tenantSlugForUser,
                     };
+
+                    // NEW: Capture device information for session tracking
+                    if (request) {
+                        try {
+                            const ip = getClientIp(request as any);
+                            const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
+                            const deviceFingerprint = generateDeviceFingerprint(userAgent);
+                            const deviceInfo = getDeviceInfo(userAgent);
+
+                            // Enforce platform-level max sessions (hardcoded for security)
+                            const MAX_SESSIONS = 5; // Platform security policy
+                            await UserSession.enforceMaxSessions(userResponse.tenant!, userResponse.id, MAX_SESSIONS);
+
+                            userResponse.deviceInfo = {
+                                ip,
+                                userAgent,
+                                deviceFingerprint,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type,
+                                locationData: null,
+                            };
+
+                            // Set login method for credentials provider
+                            userResponse.loginMethod = 'credentials';
+
+                            console.log('[auth] Device info captured in Credentials provider:', {
+                                ip,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type
+                            });
+                        } catch (error) {
+                            console.error('[auth] Failed to capture device info:', error);
+                        }
+                    }
+
                     console.log('Authorization successful. Returning user data:', {
                         id: userResponse.id,
                         email: userResponse.email,
                         username: userResponse.username,
                         userType: userResponse.user_type,
-                        tenant: userResponse.tenant
+                        tenant: userResponse.tenant,
+                        hasDeviceInfo: !!userResponse.deviceInfo
                     });
                     console.log('==== Credentials OAuth Authorization Complete ====');
                     return userResponse;
@@ -1729,7 +1765,7 @@ export const options: NextAuthConfig = {
 
                     logger.info("User sign in successful with email", credentials.email);
                     const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
-                    const userResponse = {
+                    const userResponse: ExtendedUser = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
@@ -1742,12 +1778,48 @@ export const options: NextAuthConfig = {
                         contactId: user.contact_id,
                         tenantSlug: tenantSlugForUser,
                     };
+
+                    // NEW: Capture device information for session tracking
+                    if (request) {
+                        try {
+                            const ip = getClientIp(request as any);
+                            const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
+                            const deviceFingerprint = generateDeviceFingerprint(userAgent);
+                            const deviceInfo = getDeviceInfo(userAgent);
+
+                            // Enforce platform-level max sessions (hardcoded for security)
+                            const MAX_SESSIONS = 5; // Platform security policy
+                            await UserSession.enforceMaxSessions(userResponse.tenant!, userResponse.id, MAX_SESSIONS);
+
+                            userResponse.deviceInfo = {
+                                ip,
+                                userAgent,
+                                deviceFingerprint,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type,
+                                locationData: null,
+                            };
+
+                            // Set login method for credentials provider
+                            userResponse.loginMethod = 'credentials';
+
+                            console.log('[auth] Device info captured in Credentials provider (Client Portal):', {
+                                ip,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type
+                            });
+                        } catch (error) {
+                            console.error('[auth] Failed to capture device info:', error);
+                        }
+                    }
+
                     console.log('Authorization successful. Returning user data:', {
                         id: userResponse.id,
                         email: userResponse.email,
                         username: userResponse.username,
                         userType: userResponse.user_type,
-                        tenant: userResponse.tenant
+                        tenant: userResponse.tenant,
+                        hasDeviceInfo: !!userResponse.deviceInfo
                     });
                     console.log('==== Credentials OAuth Authorization Complete ====');
                     return userResponse;
