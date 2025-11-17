@@ -291,11 +291,16 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       throw new Error('Tenant is required');
     }
 
-    // Ensure system email is configured before proceeding (avoid burning rate limits when misconfigured)
-    const systemEmailService = await getSystemEmailService();
-    const emailConfigured = await systemEmailService.isConfigured();
+    // Ensure at least one email path is configured before proceeding
+    const tenantEmailService = TenantEmailService.getInstance(tenant);
+    let emailConfigured = await tenantEmailService.isConfigured();
+
     if (!emailConfigured) {
-      return { success: false, error: 'Email service is disabled or not configured' };
+      const systemEmailService = await getSystemEmailService();
+      emailConfigured = await systemEmailService.isConfigured();
+      if (!emailConfigured) {
+        return { success: false, error: 'Email service is disabled or not configured' };
+      }
     }
 
     // Get contact details
