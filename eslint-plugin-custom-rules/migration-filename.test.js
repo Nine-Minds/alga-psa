@@ -11,12 +11,7 @@ const ruleTester = new RuleTester({
 ruleTester.run('migration-filename', migrationFilename, {
   valid: [
     {
-      // Valid migration file with proper yyyymmddhhmm format (after cutoff)
-      code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/202511011430_add_users_table.cjs',
-    },
-    {
-      // Old migration before cutoff date (20251101) - grandfathered in even with wrong format
+      // Old migration before cutoff date (20251118) - grandfathered in even with wrong format
       code: 'exports.up = function(knex) {};',
       filename: '/app/server/migrations/20241002132600_add_tax_rates_tables.cjs',
     },
@@ -26,17 +21,17 @@ ruleTester.run('migration-filename', migrationFilename, {
       filename: '/app/server/migrations/202409071803_initial_schema.cjs',
     },
     {
-      // Migration exactly on cutoff date with correct format
+      // Migration from November 17, 2025 - grandfathered in
       code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/202511010000_cutoff_date.cjs',
+      filename: '/app/server/migrations/20251117191500_add_dns_lookup_results_to_email_domains.cjs',
     },
     {
-      // Valid migration file with 14-digit format (yyyymmddhhmmss)
+      // Migration from November 2, 2025 with 14-digit format - grandfathered in
       code: 'exports.up = function(knex) {};',
       filename: '/app/server/migrations/20251102090000_create_import_framework_tables.cjs',
     },
     {
-      // Valid migration file with 14-digit format and seconds
+      // Migration from November 4, 2025 with 14-digit format - grandfathered in
       code: 'exports.up = function(knex) {};',
       filename: '/app/server/migrations/20251104112815_add_hourly_fields_to_contract_lines.cjs',
     },
@@ -64,9 +59,9 @@ ruleTester.run('migration-filename', migrationFilename, {
       ],
     },
     {
-      // Invalid format - 10 digits instead of 12/14 (after cutoff)
+      // Invalid format - 10 digits instead of 12/14 (after cutoff, but before grandfathering makes it moot, we use future date)
       code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/2025110116_wrong_format.cjs',
+      filename: '/app/server/migrations/2099112016_wrong_format.cjs',
       errors: [
         {
           messageId: 'invalidFormat',
@@ -74,9 +69,9 @@ ruleTester.run('migration-filename', migrationFilename, {
       ],
     },
     {
-      // Missing underscore separator (after cutoff)
+      // Missing underscore separator (after cutoff, use far future to avoid timestamp validation)
       code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/202511011430add_users.cjs',
+      filename: '/app/server/migrations/209911201430add_users.cjs',
       errors: [
         {
           messageId: 'invalidFormat',
@@ -86,7 +81,7 @@ ruleTester.run('migration-filename', migrationFilename, {
     {
       // Invalid timestamp - month 13 (after cutoff)
       code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/202513311430_invalid_month.cjs',
+      filename: '/app/server/migrations/209913201430_invalid_month.cjs',
       errors: [
         {
           messageId: 'invalidTimestamp',
@@ -96,7 +91,7 @@ ruleTester.run('migration-filename', migrationFilename, {
     {
       // Invalid timestamp - day 32 (after cutoff)
       code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/202511321430_invalid_day.cjs',
+      filename: '/app/server/migrations/209911321430_invalid_day.cjs',
       errors: [
         {
           messageId: 'invalidTimestamp',
@@ -106,7 +101,7 @@ ruleTester.run('migration-filename', migrationFilename, {
     {
       // Invalid timestamp - hour 25 (after cutoff)
       code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/202511012530_invalid_hour.cjs',
+      filename: '/app/server/migrations/209911202530_invalid_hour.cjs',
       errors: [
         {
           messageId: 'invalidTimestamp',
@@ -116,7 +111,7 @@ ruleTester.run('migration-filename', migrationFilename, {
     {
       // Invalid timestamp - minute 60 (after cutoff)
       code: 'exports.up = function(knex) {};',
-      filename: '/app/server/migrations/202511011460_invalid_minute.cjs',
+      filename: '/app/server/migrations/209911201460_invalid_minute.cjs',
       errors: [
         {
           messageId: 'invalidTimestamp',

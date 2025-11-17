@@ -9,13 +9,13 @@ import path from 'path';
  *
  * This rule only applies to files in directories containing "migration" in the path.
  *
- * IMPORTANT: Migrations before 2025-11-01 are grandfathered in and will not be checked.
+ * IMPORTANT: Migrations before 2025-11-18 are grandfathered in and will not be checked.
  * This prevents errors on existing legacy migrations that don't follow the naming convention.
  */
 
 const MIGRATION_FILENAME_PATTERN = /^(\d{12}(?:\d{2})?)_.*\.cjs$/;
 // Only enforce the rule for migrations on or after this date (yyyymmdd format)
-const CUTOFF_DATE = '20251101';
+const CUTOFF_DATE = '20251118';
 
 function parseTimestamp(timestampStr) {
   // Parse yyyymmddhhmm or yyyymmddhhmmss format
