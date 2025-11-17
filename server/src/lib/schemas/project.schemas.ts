@@ -108,7 +108,8 @@ export const taskChecklistItemSchema = tenantSchema.extend({
 export const createProjectSchema = projectSchema.omit({
   project_id: true,
   created_at: true,
-  updated_at: true
+  updated_at: true,
+  wbs_code: true  // wbs_code is auto-generated
 });
 
 export const updateProjectSchema = projectSchema.partial().omit({
@@ -121,14 +122,16 @@ export const createPhaseSchema = projectPhaseSchema.omit({
   phase_id: true,
   created_at: true,
   updated_at: true,
-  tenant: true
+  tenant: true,
+  wbs_code: true  // wbs_code is auto-generated
 });
 
 export const createTaskSchema = projectTaskSchema.omit({
   task_id: true,
   created_at: true,
   updated_at: true,
-  tenant: true
+  tenant: true,
+  wbs_code: true  // wbs_code is auto-generated
 }).extend({
   assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val)
 });

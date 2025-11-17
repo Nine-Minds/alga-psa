@@ -22,6 +22,7 @@ import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -375,6 +376,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 setHasChanges(true);
               }}
               useInlineInput={true}
+            />
+          </div>
+
+          <div>
+            <ProjectTaskStatusEditor
+              projectId={project.project_id}
+              onChange={() => setHasChanges(true)}
             />
           </div>
 
