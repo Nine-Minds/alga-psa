@@ -9,7 +9,7 @@
  */
 
 import crypto from 'crypto';
-import UAParser from 'ua-parser-js';
+import { UAParser } from 'ua-parser-js';
 
 export interface DeviceInfo {
   name: string; // "Chrome on macOS"
