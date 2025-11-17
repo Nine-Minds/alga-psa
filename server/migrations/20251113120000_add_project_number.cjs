@@ -72,6 +72,57 @@ exports.up = async function(knex) {
     console.log(`  ✅ Completed tenant ${tenant}\n`);
   }
 
+  // Verify no NULL values remain before setting NOT NULL
+  const nullCount = await knex('projects')
+    .whereNull('project_number')
+    .count('* as count')
+    .first();
+
+  console.log(`\nVerifying backfill: ${nullCount.count} projects with NULL project_number`);
+
+  if (parseInt(nullCount.count) > 0) {
+    console.log(`⚠️  Found ${nullCount.count} projects still with NULL project_number`);
+    console.log('Attempting additional backfill...\n');
+
+    // Retry backfill for any remaining NULL values
+    for (const { tenant } of tenants) {
+      const remainingProjects = await knex('projects')
+        .select('project_id', 'project_name', 'created_at')
+        .where({ tenant })
+        .whereNull('project_number')
+        .orderBy('created_at', 'asc');
+
+      if (remainingProjects.length === 0) continue;
+
+      console.log(`Tenant ${tenant}: Backfilling ${remainingProjects.length} remaining project(s)`);
+
+      for (const project of remainingProjects) {
+        const result = await knex.raw(
+          `SELECT generate_next_number(:tenant::uuid, 'PROJECT') as number`,
+          { tenant }
+        );
+
+        const projectNumber = result.rows[0].number;
+
+        await knex('projects')
+          .where({ tenant, project_id: project.project_id })
+          .update({ project_number: projectNumber });
+
+        console.log(`    ✓ ${projectNumber}: ${project.project_name}`);
+      }
+    }
+
+    // Final verification
+    const finalNullCount = await knex('projects')
+      .whereNull('project_number')
+      .count('* as count')
+      .first();
+
+    if (parseInt(finalNullCount.count) > 0) {
+      throw new Error(`❌ Migration failed: Still have ${finalNullCount.count} projects with NULL project_number!`);
+    }
+  }
+
   // Now make the column NOT NULL (after all projects have numbers)
   console.log('Making project_number column NOT NULL...');
   await knex.schema.alterTable('projects', (table) => {
@@ -103,3 +154,7 @@ exports.down = async function(knex) {
     .where('entity_type', 'PROJECT')
     .delete();
 };
+
+// Disable transaction for Citus DB compatibility
+// Distributed queries and updates work better outside transactions
+exports.config = { transaction: false };
