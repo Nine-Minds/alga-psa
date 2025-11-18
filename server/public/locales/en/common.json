@@ -41,8 +41,6 @@
     "openMenu": "Open menu",
     "confirmDeletion": "Confirm Deletion",
     "saving": "Saving..."
-    "confirmDeletion": "Confirm Deletion",
-    "saving": "Saving..."
   },
   "status": {
     "loading": "Loading...",
@@ -909,6 +907,22 @@
       "errorMessage": "We could not record your feedback. Please try again.",
       "selectRatingError": "Select a rating before submitting.",
       "supportMessage": "If you have questions, please contact your technician."
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Comments",
+        "internal_only": "Internal Only",
+        "placeholder": "Add a comment... Use @ to mention teammates",
+        "add_comment": "Add Comment",
+        "no_comments": "No comments yet. Be the first to comment!",
+        "edited": "Edited",
+        "error_creating": "Failed to create comment. Please try again.",
+        "error_updating": "Failed to update comment. Please try again.",
+        "error_deleting": "Failed to delete comment. Please try again.",
+        "confirm_delete": "Are you sure you want to delete this comment?"
+      }
     }
   }
 }
