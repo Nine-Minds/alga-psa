@@ -9,7 +9,7 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { submitSurveyResponse } from 'server/src/lib/actions/surveyResponseActions';
 import type { SurveyInvitationView } from 'server/src/lib/actions/surveyResponseActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
-import { RatingButton, RatingDisplay } from 'server/src/components/surveys/shared/RatingDisplay';
+import { RatingButton, RatingDisplay, type RatingType } from 'server/src/components/surveys/shared/RatingDisplay';
 
 interface SurveyResponsePageProps {
   token: string;
@@ -107,7 +107,7 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
             {selectedRating && (
               <RatingDisplay
                 rating={selectedRating}
-                type={invitation.template.ratingType}
+                type={invitation.template.ratingType as RatingType}
                 scale={ratingScale}
                 size="md"
               />
@@ -154,7 +154,7 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
                   <RatingButton
                     key={rating}
                     rating={rating}
-                    type={invitation.template.ratingType}
+                    type={invitation.template.ratingType as RatingType}
                     scale={ratingScale}
                     label={label}
                     selected={isSelected}

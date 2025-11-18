@@ -625,12 +625,6 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
             </div>
           </div>
 
-          <Alert>
-            <ShieldCheck className="h-4 w-4" />
-            <AlertDescription>
-              Bulk SSO changes are limited to workspace admins (the <code>settings.update</code> permission). We log every run for auditing.
-            </AlertDescription>
-          </Alert>
           <Alert variant="info">
             <AlertDescription>
               Client portal bulk assignments are coming soon. For now, this tool applies only to internal MSP users.

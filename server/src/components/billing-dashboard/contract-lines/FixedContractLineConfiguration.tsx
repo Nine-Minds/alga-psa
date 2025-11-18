@@ -82,7 +82,7 @@ export function FixedPlanConfiguration({
         setPlanName(fetchedPlan.contract_line_name);
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
-        setIsCustom(fetchedPlan.is_custom);
+        setIsCustom(fetchedPlan.is_custom ?? false);
         setBillingTiming((fetchedPlan.billing_timing ?? 'arrears') as 'arrears' | 'advance');
 
         // Fetch fixed config
@@ -280,7 +280,7 @@ export function FixedPlanConfiguration({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label htmlFor="base-rate">Monthly Base Rate *</Label>
+                <Label htmlFor="base-rate">Recurring Base Rate *</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <Input
@@ -312,7 +312,7 @@ export function FixedPlanConfiguration({
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  The total monthly fee for all fixed services combined
+                  The total recurring fee for all fixed services combined
                 </p>
               </div>
               <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">

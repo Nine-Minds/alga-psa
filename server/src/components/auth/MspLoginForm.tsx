@@ -11,7 +11,7 @@ import { AlertProps } from '../../interfaces/general.interfaces';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import SsoProviderButtons from '@ee/components/auth/SsoProviderButtons';
+import SsoProviderButtons from '@/empty/components/auth/SsoProviderButtons';
 
 interface MspLoginFormProps {
   callbackUrl: string;

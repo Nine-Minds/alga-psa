@@ -14,13 +14,15 @@ interface BucketServiceConfigPanelProps {
   onConfigurationChange: (updates: Partial<IContractLineServiceBucketConfig>) => void;
   className?: string;
   disabled?: boolean;
+  contractLineBillingFrequency?: string;
 }
 
 export function BucketServiceConfigPanel({
   configuration,
   onConfigurationChange,
   className = '',
-  disabled = false
+  disabled = false,
+  contractLineBillingFrequency
 }: BucketServiceConfigPanelProps) {
   const [totalMinutes, setTotalMinutes] = useState<number>(configuration.total_minutes || 0);
   const [billingPeriod, setBillingPeriod] = useState<string>(configuration.billing_period || 'monthly');
@@ -118,9 +120,15 @@ export function BucketServiceConfigPanel({
               className="w-full"
               disabled={disabled}
             />
-            <p className="text-sm text-gray-500 mt-1">
-              The period over which the bucket hours are allocated
-            </p>
+            {contractLineBillingFrequency && billingPeriod !== contractLineBillingFrequency ? (
+              <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                <span className="font-semibold">⚠️ Mismatch:</span> Bucket billing period ({billingPeriod}) should match contract line billing frequency ({contractLineBillingFrequency})
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 mt-1">
+                The period over which the bucket hours are allocated
+              </p>
+            )}
           </div>
 
           <div>

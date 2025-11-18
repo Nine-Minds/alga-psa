@@ -44,6 +44,7 @@ interface GenericPlanServicesListProps {
 interface EnhancedPlanService extends IContractLineService {
   configuration?: IContractLineServiceConfiguration;
   configurationType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+  typeConfig?: any; // Type-specific configuration (Fixed, Hourly, Usage, or Bucket)
   // Added fields for display consistency
   service_name?: string;
   service_type_name?: string; // Changed from service_category
@@ -61,6 +62,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
   const [error, setError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<EnhancedPlanService | null>(null);
   const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null); // State for plan type
+  const [contractLineBillingFrequency, setContractLineBillingFrequency] = useState<string | null>(null);
   // Removed tenant state
 
   const fetchData = useCallback(async () => { // Added useCallback
@@ -86,6 +88,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
         throw new Error(`Contract line with ID ${contractLineId} not found.`);
       }
       setPlanType(planDetails.contract_line_type); // Store the plan type
+      setContractLineBillingFrequency(planDetails.billing_frequency); // Store the billing frequency
 
       // Enhance services with details and configuration
       const enhancedServices: EnhancedPlanService[] = servicesWithConfigurations.map(configInfo => {
@@ -103,6 +106,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
           updated_at: configInfo.configuration.updated_at,
           configuration: configInfo.configuration,
           configurationType: configInfo.configuration.configuration_type,
+          typeConfig: configInfo.typeConfig, // Include type-specific config
           service_name: configInfo.service.service_name || 'Unknown Service',
           service_type_name: configInfo.service.service_type_name || 'N/A', // Use directly from joined data
           billing_method: configInfo.service.billing_method,
@@ -183,7 +187,30 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
   };
 
   const planServiceColumns: ColumnDefinition<EnhancedPlanService>[] = [
-    { title: 'Service Name', dataIndex: 'service_name' },
+    {
+      title: 'Service Name',
+      dataIndex: 'service_name',
+      render: (value, record) => {
+        // Check for bucket billing period mismatch
+        const isBucket = record.configurationType === 'Bucket';
+        const bucketConfig = isBucket ? record.typeConfig : null;
+        const hasMismatch = isBucket &&
+          bucketConfig &&
+          contractLineBillingFrequency &&
+          bucketConfig.billing_period !== contractLineBillingFrequency;
+
+        return (
+          <div className="flex items-center gap-2">
+            <span>{value}</span>
+            {hasMismatch && (
+              <Badge variant="warning" className="text-xs">
+                ⚠️ Billing mismatch
+              </Badge>
+            )}
+          </div>
+        );
+      }
+    },
     { title: 'Service Type', dataIndex: 'service_type_name' }, // Changed title and dataIndex
     {
       title: 'Billing Method',

@@ -419,7 +419,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
             <div className="pr-2">
               <DataTable
                 id="invoices-finalized-table"
-                key={tableKey}
+                key={`${tableKey}-${currentPage}-${pageSize}`}
                 data={filteredInvoices}
                 columns={columns}
                 pagination={true}

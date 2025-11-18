@@ -22,7 +22,7 @@ describe('CalendarProviderService encryption helpers', () => {
       syncToken: 'google-sync-token'
     };
 
-    const encrypted = await (service as any).prepareVendorConfigForStorage('google', vendorConfig);
+    const { encrypted } = await (service as any).prepareVendorConfigForStorage('google', vendorConfig);
 
     expect(encrypted.client_secret).toMatch(/^enc:/);
     expect(encrypted.refresh_token).toMatch(/^enc:/);
@@ -47,7 +47,7 @@ describe('CalendarProviderService encryption helpers', () => {
       redirectUri: 'https://example.com/oauth/microsoft'
     };
 
-    const encrypted = await (service as any).prepareVendorConfigForStorage('microsoft', vendorConfig);
+    const { encrypted } = await (service as any).prepareVendorConfigForStorage('microsoft', vendorConfig);
 
     expect(encrypted.client_secret).toMatch(/^enc:/);
     expect(encrypted.refresh_token).toMatch(/^enc:/);
@@ -76,7 +76,7 @@ describe('CalendarProviderService encryption helpers', () => {
       updated_at: new Date().toISOString()
     };
 
-    const vendorConfig = await (service as any).prepareVendorConfigForStorage('google', {
+    const { encrypted: vendorConfig } = await (service as any).prepareVendorConfigForStorage('google', {
       clientId: 'google-client-id',
       clientSecret: 'google-client-secret',
       refreshToken: 'google-refresh-token',

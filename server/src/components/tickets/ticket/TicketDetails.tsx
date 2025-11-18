@@ -60,7 +60,6 @@ import { IntervalTrackingService } from "server/src/services/IntervalTrackingSer
 import { IntervalManagement } from "server/src/components/time-management/interval-tracking/IntervalManagement";
 import { convertBlockNoteToMarkdown } from "server/src/lib/utils/blocknoteUtils";
 import BackNav from 'server/src/components/ui/BackNav';
-import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 interface TicketDetailsProps {
@@ -548,16 +547,21 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
+        const normalizedValue =
+            field === 'assigned_to'
+                ? (newValue && newValue !== 'unassigned' ? newValue : null)
+                : newValue;
+
         // Store the previous value before updating
         const previousValue = ticket[field];
         
         // Optimistically update the UI
-        setTicket(prevTicket => ({ ...prevTicket, [field]: newValue }));
+        setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
         try {
             // Use the optimized handler if provided
             if (onTicketUpdate) {
-                await onTicketUpdate(field, newValue);
+                await onTicketUpdate(field, normalizedValue);
                 
                 // If we're changing the assigned_to field, we need to handle additional resources
                 // This will be handled by the container component and passed back in props
@@ -571,10 +575,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     return;
                 }
                 
-                const result = await updateTicket(ticket.ticket_id || '', { [field]: newValue }, user);
+                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue }, user);
                 
                 if (result === 'success') {
-                    console.log(`${field} changed to: ${newValue}`);
+                    console.log(`${field} changed to: ${normalizedValue}`);
                     
                     // If we're changing the assigned_to field, refresh the additional resources
                     if (field === 'assigned_to') {
@@ -1332,7 +1336,6 @@ const handleClose = () => {
                         </Suspense>
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
-                        <TicketSurveySummaryCard summary={surveySummary} />
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
                             <TicketProperties
                                 id={`${id}-properties`}
@@ -1376,6 +1379,7 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
+                                surveySummary={surveySummary}
                             />
                         </Suspense>
                         

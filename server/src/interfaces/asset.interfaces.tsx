@@ -339,7 +339,7 @@ export interface AssetMaintenanceReport {
   last_maintenance?: string;
   next_maintenance?: string;
   compliance_rate: number;
-  maintenance_history: unknown[];
+  maintenance_history: AssetMaintenanceHistory[];
 }
 
 export interface ClientMaintenanceSummary {

@@ -1,7 +1,12 @@
 import { Card } from "server/src/components/ui/Card";
 import { AlertCircle } from "lucide-react";
 
-export default function ConnectSso() {
+interface ConnectSsoProps {
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+export default function ConnectSso({ searchParams }: ConnectSsoProps) {
+  // searchParams not used in CE stub
   return (
     <div className="container mx-auto max-w-2xl py-8">
       <Card className="p-8 text-center space-y-4">

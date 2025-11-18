@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { getPortalDomain } from '../../models/PortalDomainModel';
-import { buildTenantPortalSlug } from './tenantSlug';
+import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import logger from '@alga-psa/shared/core/logger';
 
 /**

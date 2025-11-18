@@ -1,8 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use moka::future::Cache;
-use serde::Deserialize;
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use tokio::time::timeout;
 use url::Url;
 
@@ -85,20 +84,29 @@ impl RegistryClient for HttpRegistryClient {
         extension_id: &str,
         content_hash: &str,
     ) -> Result<bool> {
+        tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Registry validation request started");
+
         // Short-circuit if strict validation disabled.
         if !self.strict {
+            tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Strict validation disabled - allowing request");
             return Ok(true);
         }
 
+        tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Strict validation enabled - checking registry");
+
         // Missing base URL in strict mode - treat as not validated.
         let Some(base) = &self.base_url else {
+            tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Registry base URL not configured in strict mode - denying validation");
             return Ok(false);
         };
 
         let key = Self::cache_key(tenant_id, extension_id, content_hash);
         if let Some(v) = self.cache.get(&key).await {
+            tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, cached=%v, "Registry validation served from cache");
             return Ok(v);
         }
+
+        tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Registry validation not in cache - querying registry");
 
         // Compose a GET to something like: {base}/api/installs/validate?tenant=...&extension=...&hash=...
         let mut url = base.clone();
@@ -116,41 +124,75 @@ impl RegistryClient for HttpRegistryClient {
             .append_pair("ts", &now_ms.to_string());
 
         // Keep fast timeout
-        let mut rb = self.http.get(url);
+        let mut rb = self.http.get(url.clone());
 
         if let Some(key) = &self.api_key {
+            let key_prefix: String = key.chars().take(4).collect();
+            tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, key_len=%key.len(), key_prefix=%key_prefix, "Attaching API key to registry request");
             rb = rb.header("x-api-key", key);
+        } else {
+            tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "No API key configured - registry request may be unauthorized");
         }
+
         let req = rb.build()?;
         let fut = self.http.execute(req);
 
+        tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, registry_url=%url.to_string(), "Sending validation request to registry (750ms timeout)");
+
         // 750ms budget to avoid head-of-line blocking on hot path
         let resp = match timeout(Duration::from_millis(750), fut).await {
-            Ok(Ok(r)) => r,
-            _ => {
-                // On timeout/error in strict mode, be conservative and deny
+            Ok(Ok(r)) => {
+                tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, status=%r.status().as_u16(), "Registry validation response received");
+                r
+            }
+            Ok(Err(e)) => {
+                tracing::error!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, err=%e.to_string(), "Registry validation request failed");
+                tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "On request failure in strict mode - denying validation");
+                self.cache.insert(key, false).await;
+                return Ok(false);
+            }
+            Err(_e) => {
+                tracing::error!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, timeout_ms=750u64, "Registry validation request timed out");
+                tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "On timeout in strict mode - denying validation");
                 self.cache.insert(key, false).await;
                 return Ok(false);
             }
         };
 
         // Interpret JSON { valid: bool } or truthy status 200
-        let valid = if resp.status().is_success() {
+        let status = resp.status();
+        let valid = if status.is_success() {
             match resp.text().await {
                 Ok(txt) => {
-                    tracing::info!(tenant=%tenant_id, extension=%extension_id, hash=%content_hash, status=200u16, body_len=%txt.len(), body_sample=%txt.chars().take(200).collect::<String>(), "validate response body");
-                    serde_json::from_str::<serde_json::Value>(&txt)
+                    let valid_val = serde_json::from_str::<serde_json::Value>(&txt)
                         .ok()
                         .and_then(|v| v.get("valid").and_then(|b| b.as_bool()))
-                        .unwrap_or(false)
+                        .unwrap_or(false);
+
+                    tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, status=%status.as_u16(), body_len=%txt.len(), valid=%valid_val, "Registry validation response parsed");
+                    if txt.len() > 0 {
+                        tracing::debug!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, body_sample=%txt.chars().take(200).collect::<String>(), "Registry response body");
+                    }
+
+                    valid_val
                 }
-                Err(_) => false,
+                Err(_e) => {
+                    tracing::error!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Failed to parse registry validation response body");
+                    false
+                }
             }
         } else {
+            tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, status=%status.as_u16(), "Registry returned non-success status");
             false
         };
 
         self.cache.insert(key, valid).await;
+        if valid {
+            tracing::info!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Registry validation APPROVED - extension allowed");
+        } else {
+            tracing::warn!(tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "Registry validation DENIED - extension not allowed");
+        }
+
         Ok(valid)
     }
 }
@@ -158,6 +200,7 @@ impl RegistryClient for HttpRegistryClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
     struct AllowAll;
     #[async_trait]
     impl RegistryClient for AllowAll {

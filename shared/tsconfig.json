@@ -17,6 +17,6 @@
       "@alga-psa/shared/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "lib/**/*.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.d.ts", "lib/**/*.ts"],
   "exclude": ["node_modules", "dist", "workflow/workflows/system-email-processing-workflow.ts"]
 }

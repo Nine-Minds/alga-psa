@@ -52,6 +52,7 @@ export interface ContractWizardData {
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   fixed_base_rate?: number;
+  fixed_billing_frequency?: string;
   enable_proration: boolean;
   hourly_services: Array<{
     service_id: string;
@@ -59,6 +60,7 @@ export interface ContractWizardData {
     hourly_rate?: number;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
+  hourly_billing_frequency?: string;
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
   usage_services?: Array<{
@@ -68,6 +70,7 @@ export interface ContractWizardData {
     unit_of_measure?: string;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
+  usage_billing_frequency?: string;
   contract_id?: string;
   is_draft?: boolean;
   template_id?: string;
@@ -223,10 +226,13 @@ export function ContractWizard({
     po_number: wizardData.po_number,
     po_amount: wizardData.po_amount,
     fixed_base_rate: wizardData.fixed_base_rate,
+    fixed_billing_frequency: wizardData.fixed_billing_frequency,
     enable_proration: wizardData.enable_proration,
-    fixed_services: wizardData.fixed_services ?? [],
     hourly_services: wizardData.hourly_services ?? [],
+    hourly_billing_frequency: wizardData.hourly_billing_frequency,
+    fixed_services: wizardData.fixed_services ?? [],
     usage_services: wizardData.usage_services ?? [],
+    usage_billing_frequency: wizardData.usage_billing_frequency,
     minimum_billable_time: wizardData.minimum_billable_time,
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,

@@ -3,6 +3,7 @@
     "dashboard": "Dashboard",
     "tickets": "Ticket di supporto",
     "projects": "Progetti",
+    "appointments": "Appuntamenti",
     "billing": "Fatturazione",
     "assets": "Asset",
     "clientSettings": "Impostazioni cliente",
@@ -1011,5 +1012,140 @@
     "seconds": "Secondi",
     "ago": "{{time}} fa",
     "in": "tra {{time}}"
+  },
+  "appointments": {
+    "modal": {
+      "title": "Richiedi appuntamento",
+      "editTitle": "Modifica richiesta di appuntamento",
+      "step": "Passaggio",
+      "of": "di"
+    },
+    "steps": {
+      "service": "Servizio",
+      "date": "Data",
+      "time": "Orario",
+      "confirm": "Conferma"
+    },
+    "step1": {
+      "title": "Seleziona servizio",
+      "description": "Scegli il servizio per cui hai bisogno di assistenza",
+      "selectService": "Seleziona un servizio",
+      "serviceLabel": "Servizio",
+      "ticketLabel": "Collega a ticket esistente (Opzionale)",
+      "selectTicket": "Seleziona un ticket",
+      "noTicket": "Nessun ticket",
+      "ticketHint": "Collega facoltativamente questo appuntamento a un ticket di supporto esistente"
+    },
+    "step2": {
+      "title": "Scegli data",
+      "description": "Seleziona la data preferita per l'appuntamento",
+      "selectDate": "Seleziona una data disponibile",
+      "selectedDate": "Data selezionata"
+    },
+    "step3": {
+      "title": "Seleziona orario e tecnico",
+      "description": "Scegli la fascia oraria preferita e seleziona facoltativamente un tecnico",
+      "selectTime": "Fasce orarie disponibili",
+      "minutes": "min",
+      "technicianLabel": "Tecnico preferito",
+      "selectTechnician": "Seleziona un tecnico",
+      "noPreference": "Nessuna preferenza",
+      "technicianHint": "Questa è una preferenza e può essere modificata in base alla disponibilità"
+    },
+    "step4": {
+      "title": "Rivedi e conferma",
+      "description": "Aggiungi ulteriori dettagli e rivedi la tua richiesta di appuntamento",
+      "descriptionPlaceholder": "Fornisci ulteriori dettagli sulla tua richiesta...",
+      "summaryTitle": "Riepilogo appuntamento",
+      "service": "Servizio",
+      "dateTime": "Data e ora",
+      "at": "alle",
+      "duration": "Durata",
+      "technician": "Tecnico preferito",
+      "linkedTicket": "Ticket collegato",
+      "approvalNote": "La tua richiesta di appuntamento sarà inviata per l'approvazione. Riceverai un'email di conferma una volta approvata.",
+      "submit": "Richiedi appuntamento",
+      "update": "Aggiorna appuntamento"
+    },
+    "status": {
+      "pending": "In attesa di approvazione",
+      "approved": "Confermato",
+      "declined": "Rifiutato",
+      "cancelled": "Annullato"
+    },
+    "errors": {
+      "loadServicesFailed": "Impossibile caricare i servizi disponibili. Riprova.",
+      "loadDatesFailed": "Impossibile caricare le date disponibili. Riprova.",
+      "loadSlotsFailed": "Impossibile caricare le fasce orarie disponibili. Riprova.",
+      "createFailed": "Impossibile creare la richiesta di appuntamento. Riprova.",
+      "updateFailed": "Impossibile aggiornare la richiesta di appuntamento. Riprova.",
+      "loadFailed": "Impossibile caricare gli appuntamenti. Riprova."
+    },
+    "messages": {
+      "requestSuccess": "Richiesta di appuntamento inviata con successo!",
+      "requestSuccessDetail": "Esamineremo la tua richiesta e ti invieremo un'email di conferma una volta approvata.",
+      "updateSuccess": "Richiesta di appuntamento aggiornata con successo!",
+      "updateSuccessDetail": "La tua richiesta di appuntamento è stata aggiornata.",
+      "cancelSuccess": "Appuntamento annullato con successo.",
+      "cancelFailed": "Impossibile annullare l'appuntamento. Riprova."
+    },
+    "page": {
+      "title": "I miei appuntamenti",
+      "subtitle": "Visualizza e gestisci le tue richieste di appuntamento",
+      "requestButton": "Richiedi nuovo appuntamento",
+      "noAppointments": "Nessun appuntamento trovato",
+      "noAppointmentsDescription": "Non hai ancora richiesto appuntamenti. Richiedine uno ora per iniziare!"
+    },
+    "filters": {
+      "all": "Tutti",
+      "pending": "In attesa",
+      "approved": "Approvati",
+      "declined": "Rifiutati"
+    },
+    "table": {
+      "service": "Servizio",
+      "dateTime": "Data e ora",
+      "status": "Stato",
+      "technician": "Tecnico",
+      "actions": "Azioni",
+      "minutes": "min",
+      "notAssigned": "Non assegnato",
+      "viewDetails": "Vedi dettagli",
+      "edit": "Modifica",
+      "cancel": "Annulla"
+    },
+    "details": {
+      "title": "Dettagli appuntamento",
+      "statusApproved": "Questo appuntamento è stato confermato",
+      "statusPending": "Questo appuntamento è in attesa di approvazione",
+      "statusDeclined": "Questa richiesta di appuntamento è stata rifiutata",
+      "statusCancelled": "Questo appuntamento è stato annullato",
+      "reason": "Motivo",
+      "reference": "Riferimento",
+      "service": "Servizio",
+      "dateTime": "Data e ora",
+      "technician": "Tecnico assegnato",
+      "linkedTicket": "Ticket collegato",
+      "description": "Descrizione",
+      "created": "Richiesto",
+      "approved": "Approvato",
+      "cancelButton": "Annulla appuntamento"
+    },
+    "cancel": {
+      "title": "Annulla appuntamento",
+      "message": "Sei sicuro di voler annullare questa richiesta di appuntamento? Questa azione non può essere annullata.",
+      "confirm": "Sì, annulla"
+    },
+    "ticketSection": {
+      "title": "Richieste di appuntamento",
+      "service": "Servizio",
+      "publicRequest": "Richiesta pubblica",
+      "minutes": "minuti",
+      "preferred": "Preferito:",
+      "approvedBy": "Approvato da",
+      "on": "il",
+      "declined": "Rifiutato:",
+      "invalidDateTime": "Data/ora non valida"
+    }
   }
 }
