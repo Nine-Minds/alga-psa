@@ -11,7 +11,8 @@ import {
 } from '../events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
-import { createTenantKnex } from '../../db';
+import { runWithTenant } from '../../db';
+import { getConnection } from '../../db/db';
 import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 
@@ -27,7 +28,8 @@ async function sendNotificationIfEnabled(
   recipientUserId?: string
 ): Promise<void> {
   try {
-    const { knex } = await createTenantKnex();
+    await runWithTenant(params.tenantId, async () => {
+      const knex = await getConnection(params.tenantId);
 
     // 1. Check global notification settings
     const settings = await knex('notification_settings')
@@ -134,6 +136,7 @@ async function sendNotificationIfEnabled(
         });
       }
     }
+    }); // end runWithTenant
 
   } catch (error) {
     logger.error('[ProjectEmailSubscriber] Error in sendNotificationIfEnabled:', {
@@ -253,7 +256,7 @@ function formatFieldName(field: string): string {
 async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
-  
+
   try {
     logger.info('[ProjectEmailSubscriber] Handling project created event:', {
       eventId: event.id,
@@ -261,13 +264,14 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       tenantId
     });
 
-    const { knex: db, tenant } = await createTenantKnex();
-    
-    logger.info('[ProjectEmailSubscriber] Fetching project details');
-    
-    // Get project details with debug logging
-    const query = db('projects as p')
-      .where('p.tenant', tenant!)
+    await runWithTenant(tenantId, async () => {
+      const db = await getConnection(tenantId);
+
+      logger.info('[ProjectEmailSubscriber] Fetching project details');
+
+      // Get project details with debug logging
+      const query = db('projects as p')
+        .where('p.tenant', tenantId)
       .select(
         'p.*',
         'dcl.email as client_email',
@@ -326,7 +330,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       const contact = await db('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenant!
+          tenant: tenantId
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -434,7 +438,8 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
         context: emailContext,
         replyContext
       }, 'Project Created', project.assigned_to);
-    }
+      }
+    }); // end runWithTenant
 
   } catch (error) {
     logger.error('Error handling project created event:', {
@@ -453,34 +458,34 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, changes } = payload;
 
-  // Check if the status change indicates the project is being closed
-  if (changes?.status) {
-    const { knex: db, tenant } = await createTenantKnex();
-    const status = await db('statuses')
-      .where('status_id', changes.status)
-      .andWhere('tenant', tenant!)
-      .first();
-    
-    if (status?.is_closed) {
-      // Convert this to a ProjectClosedEvent
-      const closedEvent: ProjectClosedEvent = {
-        ...event,
-        eventType: 'PROJECT_CLOSED',
-        payload: {
-          ...payload,
-          changes,
-        },
-      };
-      return handleProjectClosed(closedEvent);
-    }
-  }
-
   try {
-    const { knex: db, tenant } = await createTenantKnex();
+    await runWithTenant(tenantId, async () => {
+      const db = await getConnection(tenantId);
+
+      // Check if the status change indicates the project is being closed
+      if (changes?.status) {
+        const status = await db('statuses')
+          .where('status_id', changes.status)
+          .andWhere('tenant', tenantId)
+          .first();
+
+        if (status?.is_closed) {
+          // Convert this to a ProjectClosedEvent
+          const closedEvent: ProjectClosedEvent = {
+            ...event,
+            eventType: 'PROJECT_CLOSED',
+            payload: {
+              ...payload,
+              changes,
+            },
+          };
+          return handleProjectClosed(closedEvent);
+        }
+      }
     
     // Get project details with debug logging
     const query = db('projects as p')
-      .where('p.tenant', tenant!)
+      .where('p.tenant', tenantId)
       .select(
         'p.*',
         'dcl.email as client_email',
@@ -539,7 +544,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
       const contact = await db('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenant!
+          tenant: tenantId
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -624,7 +629,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
       .where({
         user_id: payload.userId,
         is_inactive: false,
-        tenant: tenant!
+        tenant: tenantId
       })
       .first();
 
@@ -678,6 +683,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
         replyContext
       }, 'Project Updated', project.assigned_to);
     }
+    }); // end runWithTenant
 
   } catch (error) {
     logger.error('Error handling project updated event:', {
@@ -695,12 +701,13 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
 async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
-  
+
   try {
-    const { knex: db, tenant } = await createTenantKnex();
-    
-    // Get project details with debug logging
-    const query = db('projects as p')
+    await runWithTenant(tenantId, async () => {
+      const db = await getConnection(tenantId);
+
+      // Get project details with debug logging
+      const query = db('projects as p')
       .select(
         'p.*',
         'dcl.email as client_email',
@@ -759,7 +766,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
       const contact = await db('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenant!
+          tenant: tenantId
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -875,6 +882,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         replyContext
       }, 'Project Closed', project.assigned_to);
     }
+    }); // end runWithTenant
 
   } catch (error) {
     logger.error('Error handling project closed event:', {
@@ -892,12 +900,13 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
 async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, assignedTo } = payload;
-  
+
   try {
-    const { knex: db, tenant } = await createTenantKnex();
-    
-    // Get project and user details
-    const query = db('projects as p')
+    await runWithTenant(tenantId, async () => {
+      const db = await getConnection(tenantId);
+
+      // Get project and user details
+      const query = db('projects as p')
       .select(
         'p.*',
         'c.client_name',
@@ -991,6 +1000,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
         projectId: project.project_id || payload.projectId
       }
     }, 'Project Assigned', assignedTo);
+    }); // end runWithTenant
 
   } catch (error) {
     logger.error('Error handling project assigned event:', {
@@ -1008,12 +1018,13 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
 async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, assignedTo, additionalUsers = [] } = payload;
-  
+
   try {
-    const { knex: db, tenant } = await createTenantKnex();
-    
-    // Get task, project and user details
-    const query = db('project_tasks as t')
+    await runWithTenant(tenantId, async () => {
+      const db = await getConnection(tenantId);
+
+      // Get task, project and user details
+      const query = db('project_tasks as t')
       .select(
         't.task_id',
         't.task_name',
@@ -1136,6 +1147,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
         }
       }, 'Project Task Assigned', additionalUser.user_id);
     }
+    }); // end runWithTenant
 
   } catch (error) {
     logger.error('Error handling project task assigned event:', {

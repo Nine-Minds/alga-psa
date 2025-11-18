@@ -11,9 +11,9 @@ import {
 } from '../events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
+import { runWithTenant } from '../../db';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
-import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 import type { Knex } from 'knex';
@@ -105,7 +105,8 @@ async function sendNotificationIfEnabled(
   recipientUserId?: string
 ): Promise<void> {
   try {
-    const { knex } = await createTenantKnex();
+    await runWithTenant(params.tenantId, async () => {
+      const knex = await getConnection(params.tenantId);
 
     // 1. Check global notification settings
     const settings = await knex('notification_settings')
@@ -212,6 +213,7 @@ async function sendNotificationIfEnabled(
         });
       }
     }
+    }); // end runWithTenant
 
   } catch (error) {
     logger.error('[TicketEmailSubscriber] Error in sendNotificationIfEnabled:', {

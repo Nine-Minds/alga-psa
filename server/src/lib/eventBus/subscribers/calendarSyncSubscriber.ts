@@ -14,7 +14,8 @@ import {
 import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
 import logger from '@shared/core/logger';
-import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
+import { runWithTenant } from 'server/src/lib/db';
+import { getConnection } from 'server/src/lib/db/db';
 import { TenantEmailService } from 'server/src/lib/services/TenantEmailService';
 import { StaticTemplateProcessor } from 'server/src/lib/email/tenant/templateProcessors';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
@@ -306,7 +307,7 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
         calendarProviderId
       });
 
-      const { knex } = await createTenantKnex();
+      const knex = await getConnection(tenantId);
 
       const mapping = await knex('calendar_event_mappings')
         .where('id', mappingId)
