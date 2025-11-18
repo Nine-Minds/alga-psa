@@ -1,24 +1,24 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button } from 'server/src/components/ui/button';
-import TextEditor, { DEFAULT_BLOCK } from '@/components/editor/TextEditor';
-import { createTaskComment } from '@/lib/actions/project-actions/projectTaskCommentActions';
+import { Button } from 'server/src/components/ui/Button';
+import TextEditor, { DEFAULT_BLOCK } from 'server/src/components/editor/TextEditor';
+import { createTaskComment } from 'server/src/lib/actions/project-actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 
 interface TaskCommentFormProps {
   taskId: string;
   projectId: string;
   onCommentAdded: () => void;
+  onCancel?: () => void;
 }
 
 export function TaskCommentForm({
   taskId,
   projectId,
-  onCommentAdded
+  onCommentAdded,
+  onCancel
 }: TaskCommentFormProps): JSX.Element {
-  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const editorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
 
@@ -77,14 +77,36 @@ export function TaskCommentForm({
         editorRef={editorRef}
         initialContent={DEFAULT_BLOCK}
       />
-      <Button
-        id="add-task-comment-button"
-        onClick={handleSubmit}
-        disabled={isSubmitting}
-        variant="default"
-      >
-        {isSubmitting ? t('common.submitting') : t('projects.task.comments.add_comment')}
-      </Button>
+      <div className="flex justify-end gap-2">
+        <Button
+          id="add-task-comment-button"
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSubmit();
+          }}
+          disabled={isSubmitting}
+          variant="default"
+        >
+          {isSubmitting ? 'Submitting...' : 'Add Comment'}
+        </Button>
+        {onCancel && (
+          <Button
+            id="cancel-task-comment-button"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCancel();
+            }}
+            disabled={isSubmitting}
+            variant="outline"
+          >
+            Cancel
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from '@/lib/i18n/client';
-import { Lock } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
+import { ArrowUpDown, Lock } from 'lucide-react';
+import { Badge } from 'server/src/components/ui/Badge';
 import TaskComment from './TaskComment';
-import { TaskCommentForm } from './TaskCommentForm';
-import { getTaskComments } from '@/lib/actions/project-actions/projectTaskCommentActions';
-import { IProjectTaskCommentWithUser } from '@/interfaces/projectTaskComment.interface';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { TaskCommentForm } from 'server/src/components/projects/TaskCommentForm';
+import { getTaskComments } from 'server/src/lib/actions/project-actions/projectTaskCommentActions';
+import { IProjectTaskCommentWithUser } from 'server/src/interfaces/projectTaskComment.interface';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { getCurrentUser, getCurrentUserAvatarUrl } from 'server/src/lib/actions/user-actions/userActions';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
+import { Button } from 'server/src/components/ui/Button';
 
 interface TaskCommentThreadProps {
   taskId: string;
@@ -20,10 +21,11 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   taskId,
   projectId
 }) => {
-  const { t } = useTranslation('common');
   const [comments, setComments] = useState<IProjectTaskCommentWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
+  const [currentUser, setCurrentUser] = useState<{ user_id: string; name: string; avatarUrl: string | null } | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [reverseOrder, setReverseOrder] = useState(false);
 
   const loadComments = async () => {
     try {
@@ -32,7 +34,6 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       setComments(fetchedComments);
     } catch (error) {
       console.error('Failed to load comments:', error);
-      // TODO: Show error toast
     } finally {
       setIsLoading(false);
     }
@@ -41,7 +42,15 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const loadCurrentUser = async () => {
     try {
       const user = await getCurrentUser();
-      setCurrentUserId(user?.user_id);
+      if (user) {
+        const avatarUrl = await getCurrentUserAvatarUrl();
+
+        setCurrentUser({
+          user_id: user.user_id,
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          avatarUrl: avatarUrl
+        });
+      }
     } catch (error) {
       console.error('Failed to load current user:', error);
     }
@@ -54,6 +63,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
 
   const handleCommentAdded = () => {
     loadComments();
+    setShowEditor(false);
   };
 
   const handleCommentUpdated = () => {
@@ -64,28 +74,92 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     loadComments();
   };
 
+  const toggleCommentOrder = () => {
+    setReverseOrder(!reverseOrder);
+  };
+
+  // Sort comments based on reverseOrder
+  const sortedComments = [...comments].sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return reverseOrder ? dateB - dateA : dateA - dateB;
+  });
+
   return (
     <div
       {...withDataAutomationId({ id: `task-comment-thread-${taskId}` })}
       className="space-y-4"
     >
-      {/* Header */}
+      {/* Header with Sort Button */}
       <div className="flex items-center justify-between">
-        <h3
-          {...withDataAutomationId({ id: 'task-comments-title' })}
-          className="text-lg font-semibold text-gray-900"
-        >
-          {t('projects.task.comments.title', 'Comments')}
-        </h3>
-        <Badge
-          {...withDataAutomationId({ id: 'task-comments-internal-badge' })}
-          variant="secondary"
-          className="flex items-center gap-1"
-        >
-          <Lock className="h-3 w-3" />
-          {t('projects.task.comments.internal_only', 'Internal Only')}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <h3
+            {...withDataAutomationId({ id: 'task-comments-title' })}
+            className="text-lg font-semibold text-gray-900"
+          >
+            Comments
+          </h3>
+          <Badge
+            {...withDataAutomationId({ id: 'task-comments-internal-badge' })}
+            variant="secondary"
+            className="flex items-center gap-1"
+          >
+            <Lock className="h-3 w-3" />
+            Internal Only
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            {...withDataAutomationId({ id: 'task-comments-sort-toggle' })}
+            onClick={toggleCommentOrder}
+            className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-1 rounded hover:bg-gray-100"
+          >
+            <ArrowUpDown className="w-4 h-4" />
+            <span>{reverseOrder ? 'Newest first' : 'Oldest first'}</span>
+          </button>
+          {!showEditor && (
+            <Button
+              id="task-comments-add-button"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowEditor(true);
+              }}
+            >
+              Add Comment
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Comment Form at Top (when visible) */}
+      {showEditor && (
+        <div
+          {...withDataAutomationId({ id: 'task-comment-form-container' })}
+          className="border rounded-lg p-4 bg-gray-50"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <UserAvatar
+                {...withDataAutomationId({ id: 'task-comment-current-user-avatar' })}
+                userId={currentUser?.user_id || ''}
+                userName={currentUser?.name || ''}
+                avatarUrl={currentUser?.avatarUrl || null}
+                size="md"
+              />
+            </div>
+            <div className="flex-grow">
+              <TaskCommentForm
+                taskId={taskId}
+                projectId={projectId}
+                onCommentAdded={handleCommentAdded}
+                onCancel={() => setShowEditor(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (
@@ -93,7 +167,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
           {...withDataAutomationId({ id: 'task-comments-loading' })}
           className="text-center py-8 text-gray-500"
         >
-          {t('common.loading', 'Loading...')}
+          Loading...
         </div>
       )}
 
@@ -103,7 +177,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
           {...withDataAutomationId({ id: 'task-comments-empty' })}
           className="text-center py-8 text-gray-500"
         >
-          {t('projects.task.comments.empty', 'No comments yet. Be the first to comment!')}
+          No comments yet. Be the first to comment!
         </div>
       )}
 
@@ -113,29 +187,17 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
           {...withDataAutomationId({ id: 'task-comments-list' })}
           className="space-y-3"
         >
-          {comments.map((comment) => (
+          {sortedComments.map((comment) => (
             <TaskComment
               key={comment.taskCommentId}
               comment={comment}
               onUpdate={handleCommentUpdated}
               onDelete={handleCommentDeleted}
-              currentUserId={currentUserId}
+              currentUserId={currentUser?.user_id}
             />
           ))}
         </div>
       )}
-
-      {/* Comment Form */}
-      <div
-        {...withDataAutomationId({ id: 'task-comment-form-container' })}
-        className="border-t pt-4"
-      >
-        <TaskCommentForm
-          taskId={taskId}
-          projectId={projectId}
-          onCommentAdded={handleCommentAdded}
-        />
-      </div>
     </div>
   );
 };

@@ -79,7 +79,7 @@ export function InternalNotificationPreferences() {
       }
     }
     init();
-  }, [t, i18n]);
+  }, [i18n.language]);
 
   const getCategoryPreference = (categoryId: number): boolean => {
     // Check if there's a category-level preference

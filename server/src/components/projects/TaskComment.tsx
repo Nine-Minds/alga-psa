@@ -4,15 +4,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { formatDistanceToNow } from 'date-fns';
 import { Pencil, Trash } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import TextEditor from '../editor/TextEditor';
 import RichTextViewer from '../editor/RichTextViewer';
 import UserAvatar from '../ui/UserAvatar';
 import { Button } from '../ui/Button';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
-import { IProjectTaskCommentWithUser } from '@/interfaces/projectTaskComment.interface';
-import { updateTaskComment, deleteTaskComment } from '@/lib/actions/project-actions/projectTaskCommentActions';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { IProjectTaskCommentWithUser } from 'server/src/interfaces/projectTaskComment.interface';
+import { updateTaskComment, deleteTaskComment } from 'server/src/lib/actions/project-actions/projectTaskCommentActions';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
 interface TaskCommentProps {
   comment: IProjectTaskCommentWithUser;
@@ -162,7 +162,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
             {...withDataAutomationId({ id: `${commentId}-avatar` })}
             userId={comment.userId}
             userName={authorName}
-            avatarUrl={null}
+            avatarUrl={comment.avatarUrl || null}
             size="md"
           />
         </div>

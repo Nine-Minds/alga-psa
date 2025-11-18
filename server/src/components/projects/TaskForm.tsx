@@ -41,6 +41,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple from './TaskDocumentsSimple';
+import TaskCommentThread from './TaskCommentThread';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
@@ -1285,6 +1286,16 @@ export default function TaskForm({
             <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
               <TaskDocumentsSimple
                 taskId={task.task_id}
+              />
+            </div>
+          )}
+
+          {/* Full width Comments section */}
+          {mode === 'edit' && task && (
+            <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+              <TaskCommentThread
+                taskId={task.task_id}
+                projectId={phase.project_id}
               />
             </div>
           )}
