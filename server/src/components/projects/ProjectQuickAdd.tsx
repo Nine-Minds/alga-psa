@@ -270,12 +270,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   placeholder="Enter budgeted hours"
                 />
               </div>
-              <ProjectTaskStatusSelector
-                availableStatuses={taskStatuses}
-                selectedStatuses={selectedTaskStatuses}
-                onChange={setSelectedTaskStatuses}
-                error={hasAttemptedSubmit && selectedTaskStatuses.length === 0 ? 'At least one task status must be selected' : undefined}
-              />
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
@@ -294,6 +288,12 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   />
                 </div>
               </div>
+              <ProjectTaskStatusSelector
+                availableStatuses={taskStatuses}
+                selectedStatuses={selectedTaskStatuses}
+                onChange={setSelectedTaskStatuses}
+                error={hasAttemptedSubmit && selectedTaskStatuses.length === 0 ? 'At least one task status must be selected' : undefined}
+              />
               <div className="flex justify-between mt-6">
                 <Button id='cancel-button' variant="ghost" onClick={() => {
                   setHasAttemptedSubmit(false);

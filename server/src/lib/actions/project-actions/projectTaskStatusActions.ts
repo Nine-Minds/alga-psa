@@ -114,10 +114,7 @@ export async function updateProjectStatusMapping(
 
   await knex('project_status_mappings')
     .where({ project_status_mapping_id: mappingId, tenant })
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    });
+    .update(updates);
 
   // Publish event
   await publishEvent({
@@ -299,19 +296,10 @@ export async function createTenantProjectStatus(
         is_closed: statusData.is_closed,
         order_number: orderNumber,
         color: statusData.color,
-        icon: statusData.icon
+        icon: statusData.icon,
+        created_at: new Date().toISOString()
       })
       .returning('*');
-
-    // Publish event
-    await publishEvent({
-      eventType: 'TENANT_STATUS_CREATED',
-      payload: {
-        tenantId: tenant,
-        statusId: status.status_id,
-        itemType: 'project_task'
-      }
-    });
 
     return status;
     // Advisory lock automatically released at transaction end
@@ -334,20 +322,7 @@ export async function updateTenantProjectStatus(
 
   await knex('statuses')
     .where({ status_id: statusId, tenant, item_type: 'project_task' })
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    });
-
-  // Publish event
-  await publishEvent({
-    eventType: 'TENANT_STATUS_UPDATED',
-    payload: {
-      tenantId: tenant,
-      statusId,
-      updates
-    }
-  });
+    .update(updates);
 }
 
 /**
@@ -381,15 +356,6 @@ export async function deleteTenantProjectStatus(
     await trx('statuses')
       .where({ status_id: statusId, tenant, item_type: 'project_task' })
       .del();
-
-    // Publish event
-    await publishEvent({
-      eventType: 'TENANT_STATUS_DELETED',
-      payload: {
-        tenantId: tenant,
-        statusId
-      }
-    });
   });
 }
 
@@ -416,14 +382,5 @@ export async function reorderTenantProjectStatuses(
         })
         .update({ order_number });
     }
-
-    // Publish event
-    await publishEvent({
-      eventType: 'TENANT_STATUSES_REORDERED',
-      payload: {
-        tenantId: tenant,
-        statusOrder
-      }
-    });
   });
 }
