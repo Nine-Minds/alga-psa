@@ -186,6 +186,9 @@ export async function updateBlockContent(
         .first();
 
       if (existingContent) {
+        // Capture old content before updating
+        const oldContent = existingContent.block_data;
+
         // Update existing content
         const [updatedContent] = await trx('document_block_content')
           .where({
@@ -215,7 +218,7 @@ export async function updateBlockContent(
         await cache.delete(documentId);
         console.log(`[updateBlockContent] Invalidated preview cache for document ${documentId}`);
 
-        return { updatedContent, document };
+        return { updatedContent, document, oldContent };
       } else {
         // Create new block content record
         const [newContent] = await trx('document_block_content')
@@ -245,15 +248,27 @@ export async function updateBlockContent(
 
     // Publish USER_MENTIONED_IN_DOCUMENT event for mention notifications
     try {
+      const newContent = typeof input.block_data === 'string' ? input.block_data : JSON.stringify(input.block_data);
+
+      // Build event payload with old and new content for updates
+      const eventPayload: any = {
+        tenantId: tenant,
+        documentId: documentId,
+        documentName: result.document.document_name,
+        userId: input.user_id,
+        content: newContent
+      };
+
+      // If this is an update (oldContent exists), include comparison data
+      if (result.oldContent !== undefined) {
+        eventPayload.oldContent = result.oldContent;
+        eventPayload.newContent = newContent;
+        eventPayload.isUpdate = true;
+      }
+
       await publishEvent({
         eventType: 'USER_MENTIONED_IN_DOCUMENT',
-        payload: {
-          tenantId: tenant,
-          documentId: documentId,
-          documentName: result.document.document_name,
-          userId: input.user_id,
-          content: typeof input.block_data === 'string' ? input.block_data : JSON.stringify(input.block_data)
-        }
+        payload: eventPayload
       });
       console.log(`[updateBlockContent] Published USER_MENTIONED_IN_DOCUMENT event for document:`, documentId);
     } catch (eventError) {
