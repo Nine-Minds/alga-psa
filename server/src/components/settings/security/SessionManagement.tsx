@@ -38,7 +38,7 @@ export default function SessionManagement() {
       setSessions(data.sessions);
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
-      toast.error(t('sessionManagement.errors.loadFailed'));
+      toast.error(t('sessionManagement.errors.loadFailed', 'Failed to load sessions'));
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export default function SessionManagement() {
   const revokeSession = async (sessionId: string, isCurrent: boolean) => {
     if (isCurrent) {
       const confirmed = confirm(
-        t('sessionManagement.confirmations.logoutCurrent')
+        t('sessionManagement.confirmations.logoutCurrent', 'Are you sure you want to logout from this device?')
       );
       if (!confirmed) return;
     }
@@ -61,18 +61,18 @@ export default function SessionManagement() {
       const result = await revokeSessionAction(sessionId);
 
       if (result.is_current) {
-        toast.success(t('sessionManagement.messages.loggingOut'));
+        toast.success(t('sessionManagement.messages.loggingOut', 'Logging out...'));
         // Redirect to login after a short delay
         setTimeout(() => {
           window.location.href = '/auth/msp/signin';
         }, 1000);
       } else {
-        toast.success(t('sessionManagement.messages.sessionRevoked'));
+        toast.success(t('sessionManagement.messages.sessionRevoked', 'Session revoked successfully'));
         await fetchSessions();
       }
     } catch (error) {
       console.error('Failed to revoke session:', error);
-      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.revokeFailed'));
+      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.revokeFailed', 'Failed to revoke session'));
     } finally {
       setRevoking(null);
     }
@@ -80,7 +80,7 @@ export default function SessionManagement() {
 
   const revokeAllOtherSessions = async () => {
     const confirmed = confirm(
-      t('sessionManagement.confirmations.logoutAllOther')
+      t('sessionManagement.confirmations.logoutAllOther', 'Are you sure you want to logout from all other devices?')
     );
     if (!confirmed) return;
 
@@ -93,7 +93,7 @@ export default function SessionManagement() {
       // Check if 2FA is required
       if (result.requires_2fa) {
         // Prompt for 2FA code
-        const twoFactorCode = prompt(t('sessionManagement.prompts.enter2FA'));
+        const twoFactorCode = prompt(t('sessionManagement.prompts.enter2FA', 'Please enter your 2FA code:'));
         if (!twoFactorCode) {
           setRevokingAll(false);
           return;
@@ -106,14 +106,14 @@ export default function SessionManagement() {
       }
 
       if (!result.success) {
-        throw new Error(result.message || t('sessionManagement.errors.revokeAllFailed'));
+        throw new Error(result.message || t('sessionManagement.errors.revokeAllFailed', 'Failed to revoke all other sessions'));
       }
 
       toast.success(result.message);
       await fetchSessions();
     } catch (error) {
       console.error('Failed to revoke sessions:', error);
-      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.logoutAllFailed'));
+      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.logoutAllFailed', 'Failed to logout from all other devices'));
     } finally {
       setRevokingAll(false);
     }
@@ -134,10 +134,10 @@ export default function SessionManagement() {
     if (!method) return null;
 
     const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-      credentials: { label: t('sessionManagement.loginMethods.password'), variant: 'default' },
-      google: { label: t('sessionManagement.loginMethods.googleOAuth'), variant: 'secondary' },
-      microsoft: { label: t('sessionManagement.loginMethods.microsoftOAuth'), variant: 'secondary' },
-      keycloak: { label: t('sessionManagement.loginMethods.keycloak'), variant: 'outline' },
+      credentials: { label: t('sessionManagement.loginMethods.password', 'Password'), variant: 'default' },
+      google: { label: t('sessionManagement.loginMethods.googleOAuth', 'Google OAuth'), variant: 'secondary' },
+      microsoft: { label: t('sessionManagement.loginMethods.microsoftOAuth', 'Microsoft OAuth'), variant: 'secondary' },
+      keycloak: { label: t('sessionManagement.loginMethods.keycloak', 'Keycloak'), variant: 'outline' },
     };
 
     const config = variants[method] || { label: method, variant: 'outline' as const };
@@ -153,11 +153,11 @@ export default function SessionManagement() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{t('sessionManagement.title')}</CardTitle>
+          <CardTitle>{t('sessionManagement.title', 'Active Sessions')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            {t('sessionManagement.states.loading')}
+            {t('sessionManagement.states.loading', 'Loading sessions...')}
           </div>
         </CardContent>
       </Card>
@@ -171,9 +171,9 @@ export default function SessionManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{t('sessionManagement.title')}</CardTitle>
+            <CardTitle>{t('sessionManagement.title', 'Active Sessions')}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('sessionManagement.description')}
+              {t('sessionManagement.description', 'Manage your active sessions and logout from other devices')}
             </p>
           </div>
           {otherSessionsCount > 0 && (
@@ -184,7 +184,7 @@ export default function SessionManagement() {
               disabled={revokingAll}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              {revokingAll ? t('sessionManagement.actions.loggingOut') : t('sessionManagement.actions.logoutFromOther', { count: otherSessionsCount })}
+              {revokingAll ? t('sessionManagement.actions.loggingOut', 'Logging out...') : t('sessionManagement.actions.logoutFromOther', 'Logout from {{count}} other device(s)', { count: otherSessionsCount })}
             </Button>
           )}
         </div>
@@ -192,7 +192,7 @@ export default function SessionManagement() {
       <CardContent>
         {sessions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {t('sessionManagement.states.noSessions')}
+            {t('sessionManagement.states.noSessions', 'No active sessions found')}
           </div>
         ) : (
           <div className="space-y-4">
@@ -211,11 +211,11 @@ export default function SessionManagement() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-medium">
-                          {session.device_name || t('sessionManagement.labels.unknownDevice')}
+                          {session.device_name || t('sessionManagement.labels.unknownDevice', 'Unknown Device')}
                         </h4>
                         {session.is_current && (
                           <Badge variant="default" className="text-xs">
-                            {t('sessionManagement.labels.currentSession')}
+                            {t('sessionManagement.labels.currentSession', 'Current Session')}
                           </Badge>
                         )}
                         {getLoginMethodBadge(session.login_method)}
@@ -243,7 +243,7 @@ export default function SessionManagement() {
                         <div className="flex items-center gap-2">
                           <Clock className="h-3.5 w-3.5" />
                           <span>
-                            {t('sessionManagement.labels.lastActive')}{' '}
+                            {t('sessionManagement.labels.lastActive', 'Last active')}{' '}
                             {formatDistanceToNow(new Date(session.last_activity_at), {
                               addSuffix: true,
                             })}
@@ -255,7 +255,7 @@ export default function SessionManagement() {
                         <div className="mt-2 flex items-start gap-2 text-xs text-amber-600 dark:text-amber-500">
                           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                           <span>
-                            {t('sessionManagement.warnings.oauthLogout', { provider: session.login_method === 'google' ? 'Google' : 'Microsoft' })}
+                            {t('sessionManagement.warnings.oauthLogout', 'Revoking this session will not revoke {{provider}} OAuth access. Revoke access from your {{provider}} account settings.', { provider: session.login_method === 'google' ? 'Google' : 'Microsoft' })}
                           </span>
                         </div>
                       )}
@@ -271,10 +271,10 @@ export default function SessionManagement() {
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     {revoking === session.session_id
-                      ? t('sessionManagement.actions.revoking')
+                      ? t('sessionManagement.actions.revoking', 'Revoking...')
                       : session.is_current
-                      ? t('sessionManagement.actions.logout')
-                      : t('sessionManagement.actions.revoke')}
+                      ? t('sessionManagement.actions.logout', 'Logout')
+                      : t('sessionManagement.actions.revoke', 'Revoke')}
                   </Button>
                 </div>
               </div>

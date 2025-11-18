@@ -4,6 +4,7 @@ import { getSession } from "server/src/lib/auth/getSession";
 import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { UserSession } from "server/src/lib/models/UserSession";
+import { getSessionCookieConfig } from "server/src/lib/auth/sessionCookies";
 
 export default async function MspLayout({
   children,
@@ -21,7 +22,13 @@ export default async function MspLayout({
       );
 
       if (isRevoked) {
-        console.log('[msp-layout] Session revoked, redirecting to signin:', (session as any).session_id);
+        console.log('[msp-layout] Session revoked, clearing cookie and redirecting:', (session as any).session_id);
+
+        // Clear the session cookie to force logout
+        const cookieStore = await cookies();
+        const sessionCookieConfig = getSessionCookieConfig();
+        cookieStore.delete(sessionCookieConfig.name);
+
         redirect('/auth/msp/signin?error=SessionRevoked');
       }
     } catch (error) {

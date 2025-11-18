@@ -4,6 +4,7 @@ import {
   getSessionCookieConfig,
   getSessionMaxAge,
 } from "server/src/lib/auth/sessionCookies";
+import { UserSession } from "server/src/lib/models/UserSession";
 
 const EDGE_SESSION_MAX_AGE = getSessionMaxAge();
 const EDGE_SESSION_COOKIE = getSessionCookieConfig();
@@ -22,7 +23,32 @@ export const { auth } = NextAuth({
   },
   providers: [],
   callbacks: {
+    async jwt({ token }) {
+      // Check if session was revoked
+      if (token.session_id && token.tenant) {
+        try {
+          const isRevoked = await UserSession.isRevoked(
+            token.tenant as string,
+            token.session_id as string
+          );
+
+          if (isRevoked) {
+            console.log('[edge-auth] Session revoked, invalidating token:', token.session_id);
+            return null; // This will invalidate the session
+          }
+        } catch (error) {
+          console.error('[edge-auth] Session revocation check error:', error);
+          // Don't block on errors
+        }
+      }
+      return token;
+    },
     async session({ session, token }) {
+      // If token is null (revoked), return null session
+      if (!token) {
+        return null as any;
+      }
+
       // Map custom claims from JWT into session.user for Edge consumers
       if (session.user && token) {
         (session.user as any).id = token.id as string | undefined;

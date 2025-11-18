@@ -1,9 +1,11 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { getHierarchicalLocaleAction } from "server/src/lib/actions/locale-actions/getHierarchicalLocale";
 import { UserSession } from "server/src/lib/models/UserSession";
+import { getSessionCookieConfig } from "server/src/lib/auth/sessionCookies";
 
 export default async function Layout({
   children,
@@ -21,7 +23,13 @@ export default async function Layout({
       );
 
       if (isRevoked) {
-        console.log('[client-portal-layout] Session revoked, redirecting to signin:', (session as any).session_id);
+        console.log('[client-portal-layout] Session revoked, clearing cookie and redirecting:', (session as any).session_id);
+
+        // Clear the session cookie to force logout
+        const cookieStore = await cookies();
+        const sessionCookieConfig = getSessionCookieConfig();
+        cookieStore.delete(sessionCookieConfig.name);
+
         redirect('/auth/client-portal/signin?error=SessionRevoked');
       }
     } catch (error) {

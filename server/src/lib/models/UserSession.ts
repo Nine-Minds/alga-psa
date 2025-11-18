@@ -273,10 +273,10 @@ export class UserSession {
   /**
    * In-memory cache for session revocation status
    * Format: { "tenant:sessionId": { revoked: boolean, timestamp: number } }
-   * TTL: 30 seconds (trade-off between performance and revocation speed)
+   * TTL: 5 seconds (trade-off between performance and revocation speed)
    */
   private static revocationCache = new Map<string, { revoked: boolean; timestamp: number }>();
-  private static readonly CACHE_TTL_MS = 30000; // 30 seconds
+  private static readonly CACHE_TTL_MS = 5000; // 5 seconds
 
   /**
    * Check if a session is revoked (with caching)
