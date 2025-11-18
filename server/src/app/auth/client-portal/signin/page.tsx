@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import ClientPortalSignIn from 'server/src/components/auth/ClientPortalSignIn';
 import ClientPortalTenantDiscovery from 'server/src/components/auth/ClientPortalTenantDiscovery';
+import PortalSwitchPrompt from 'server/src/components/auth/PortalSwitchPrompt';
 import { I18nWrapper } from 'server/src/components/i18n/I18nWrapper';
 import { getTenantBrandingByDomain, getTenantLocaleByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
 import { getSession } from 'server/src/lib/auth/getSession';
@@ -16,21 +17,16 @@ export default async function ClientSignInPage({
   const session = await getSession();
   if (session?.user) {
     if (session.user.user_type === 'internal') {
-      const canonicalBase = process.env.NEXTAUTH_URL;
-
-      if (!canonicalBase) {
-        throw new Error('NEXTAUTH_URL must be set to redirect MSP users from client portal sign-in');
-      }
-
-      let mspRedirect: string;
-
-      try {
-        mspRedirect = new URL('/msp/dashboard', canonicalBase).toString();
-      } catch (error) {
-        throw new Error('NEXTAUTH_URL is invalid and cannot be used for MSP redirect');
-      }
-
-      return redirect(mspRedirect);
+      // MSP user trying to access client portal - show portal switch prompt
+      return (
+        <PortalSwitchPrompt
+          currentPortal="msp"
+          targetPortal="client"
+          currentPortalUrl="/msp/dashboard"
+          targetPortalSigninUrl="/auth/client-portal/signin"
+          userEmail={session.user.email}
+        />
+      );
     }
 
     return redirect(callbackUrl);

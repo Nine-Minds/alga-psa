@@ -14,19 +14,27 @@ export default async function Layout({
   // Use the full auth with revocation checks in the layout
   // This ensures revoked sessions are caught on every page navigation
   const session = await getSessionWithRevocationCheck();
+  const cookieStore = await cookies();
+  const sessionCookieConfig = getSessionCookieConfig();
 
-  // If session is null (either not logged in or revoked), clear cookie and redirect
+  // If session is null, handle appropriately
   if (!session) {
-    const cookieStore = await cookies();
-    const sessionCookieConfig = getSessionCookieConfig();
     const hasCookie = cookieStore.has(sessionCookieConfig.name);
 
     if (hasCookie) {
       // Had a cookie but session is null - likely revoked
-      console.log('[client-portal-layout] Session invalid or revoked, clearing cookie');
+      console.log('[client-portal-layout] Session invalid or revoked, clearing cookie and redirecting');
       cookieStore.delete(sessionCookieConfig.name);
-      redirect('/auth/client-portal/signin?error=SessionRevoked');
     }
+
+    // Always redirect to signin if no session
+    redirect('/auth/client-portal/signin?error=SessionRevoked');
+  }
+
+  // Check if user is trying to access wrong portal
+  if (session.user.user_type === 'internal') {
+    console.log('[client-portal-layout] MSP user trying to access client portal, redirecting to switch prompt');
+    redirect('/auth/client-portal/signin');
   }
 
   // Get branding from session tenant (no host header needed!)
