@@ -1,10 +1,8 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { getHierarchicalLocaleAction } from "server/src/lib/actions/locale-actions/getHierarchicalLocale";
-import { getSessionCookieConfig } from "server/src/lib/auth/sessionCookies";
 
 export default async function Layout({
   children,
@@ -14,20 +12,13 @@ export default async function Layout({
   // Use the full auth with revocation checks in the layout
   // This ensures revoked sessions are caught on every page navigation
   const session = await getSessionWithRevocationCheck();
-  const cookieStore = await cookies();
-  const sessionCookieConfig = getSessionCookieConfig();
 
-  // If session is null, handle appropriately
+  // If session is null, redirect to signin
+  // Note: We don't delete the cookie here because Next.js doesn't allow cookie
+  // modification in Server Components. The JWT callback returning null will
+  // naturally invalidate the session, and the signin page can handle cleanup.
   if (!session) {
-    const hasCookie = cookieStore.has(sessionCookieConfig.name);
-
-    if (hasCookie) {
-      // Had a cookie but session is null - likely revoked
-      console.log('[client-portal-layout] Session invalid or revoked, clearing cookie and redirecting');
-      cookieStore.delete(sessionCookieConfig.name);
-    }
-
-    // Always redirect to signin if no session
+    console.log('[client-portal-layout] No session found, redirecting to signin');
     redirect('/auth/client-portal/signin?error=SessionRevoked');
   }
 

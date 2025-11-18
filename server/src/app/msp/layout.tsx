@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
 import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
 import { MspLayoutClient } from "./MspLayoutClient";
-import { getSessionCookieConfig } from "server/src/lib/auth/sessionCookies";
 
 export default async function MspLayout({
   children,
@@ -13,20 +12,13 @@ export default async function MspLayout({
   // Use the full auth with revocation checks in the layout
   // This ensures revoked sessions are caught on every page navigation
   const session = await getSessionWithRevocationCheck();
-  const cookieStore = await cookies();
-  const sessionCookieConfig = getSessionCookieConfig();
 
-  // If session is null, handle appropriately
+  // If session is null, redirect to signin
+  // Note: We don't delete the cookie here because Next.js doesn't allow cookie
+  // modification in Server Components. The JWT callback returning null will
+  // naturally invalidate the session, and the signin page can handle cleanup.
   if (!session) {
-    const hasCookie = cookieStore.has(sessionCookieConfig.name);
-
-    if (hasCookie) {
-      // Had a cookie but session is null - likely revoked
-      console.log('[msp-layout] Session invalid or revoked, clearing cookie and redirecting');
-      cookieStore.delete(sessionCookieConfig.name);
-    }
-
-    // Always redirect to signin if no session
+    console.log('[msp-layout] No session found, redirecting to signin');
     redirect('/auth/msp/signin?error=SessionRevoked');
   }
 
@@ -36,6 +28,7 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
+  const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
   let needsOnboarding = false;
