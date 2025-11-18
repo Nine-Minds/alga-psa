@@ -379,13 +379,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             </div>
           </div>
 
-          <div>
-            <ProjectTaskStatusEditor
-              projectId={project.project_id}
-              onChange={() => setHasChanges(true)}
-            />
-          </div>
-
           <div className="flex items-center space-x-2">
             <span className={`px-2 py-1 rounded text-sm ${project.is_inactive ? 'text-gray-800' : 'text-gray-800'}`}>
               {project.is_inactive ? 'Inactive' : 'Active'}
@@ -398,6 +391,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 setHasChanges(true);
                 clearErrorIfSubmitted();
               }}
+            />
+          </div>
+
+          <div>
+            <ProjectTaskStatusEditor
+              projectId={project.project_id}
+              onChange={() => setHasChanges(true)}
             />
           </div>
         </div>
