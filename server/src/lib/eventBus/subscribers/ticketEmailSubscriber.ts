@@ -1252,26 +1252,13 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       }, 'Ticket Assigned', ticket.assigned_to);
     }
 
-    const locationEmail = ticket.client_email;
-    const contactEmail = ticket.contact_email;
+    // Send to contact email if available, otherwise client email
+    const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
 
-    // Notify the client's default location email - external user, no userId
-    if (locationEmail) {
+    if (primaryEmail) {
       await sendIfUnique({
         tenantId,
-        to: locationEmail,
-        subject: `Ticket Assigned: ${ticket.title}`,
-        template: 'ticket-assigned',
-        context: buildContext(portalUrl),
-        replyContext
-      }, 'Ticket Assigned');
-    }
-
-    // Notify the ticket contact when different from the default location email - external user, no userId
-    if (contactEmail) {
-      await sendIfUnique({
-        tenantId,
-        to: contactEmail,
+        to: primaryEmail,
         subject: `Ticket Assigned: ${ticket.title}`,
         template: 'ticket-assigned',
         context: buildContext(portalUrl),
