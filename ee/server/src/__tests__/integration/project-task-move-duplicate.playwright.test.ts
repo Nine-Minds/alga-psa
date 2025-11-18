@@ -21,7 +21,9 @@ test.describe('Project Task Move and Duplicate with Full Path Display', () => {
   test.beforeAll(async () => {
     context = new E2ETestContext({
       baseUrl: TEST_CONFIG.baseUrl,
-      browserOptions: {
+      browserOptions: process.env.CI ? {
+        headless: true,
+      } : {
         headless: false,
         slowMo: 100,
       },

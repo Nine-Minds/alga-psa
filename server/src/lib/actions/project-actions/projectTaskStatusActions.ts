@@ -6,6 +6,7 @@ import { withTransaction } from '@shared/db';
 import { IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
 import { IStatus } from 'server/src/interfaces/status.interface';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 /**
  * Add a status to a project
@@ -24,6 +25,12 @@ export async function addStatusToProject(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -110,6 +117,12 @@ export async function updateProjectStatusMapping(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   await knex('project_status_mappings')
@@ -138,6 +151,12 @@ export async function deleteProjectStatusMapping(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -202,6 +221,12 @@ export async function reorderProjectStatuses(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -254,6 +279,12 @@ export async function createTenantProjectStatus(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -318,6 +349,12 @@ export async function updateTenantProjectStatus(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   await knex('statuses')
@@ -336,6 +373,12 @@ export async function deleteTenantProjectStatus(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -370,6 +413,12 @@ export async function reorderTenantProjectStatuses(
     throw new Error('User tenant not found');
   }
   const tenant = currentUser.tenant;
+
+  // RBAC check
+  if (!await hasPermission(currentUser, 'project', 'update')) {
+    throw new Error('Permission denied: Cannot update project');
+  }
+
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
