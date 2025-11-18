@@ -129,7 +129,7 @@ export default function DuplicateTaskDialog({
  
           <div className="mb-4">
             <TreeSelect<'project' | 'phase' | 'status'>
-                value={selectedTargetPath?.['phase'] || ''}
+                value={selectedTargetPath?.['status'] || selectedTargetPath?.['phase'] || ''}
                 onValueChange={handleTreeSelect}
                 options={projectTreeData}
                 placeholder="Select target project/phase/status..."

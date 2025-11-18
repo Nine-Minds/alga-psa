@@ -35,7 +35,8 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [selectedStatusType, setSelectedStatusType] = useState<ItemType>(() => {
     // Use initialStatusType if provided, otherwise default to 'ticket'
-    const validTypes: ItemType[] = ['ticket', 'project', 'interaction'];
+    // Note: 'project' type moved to Settings > Projects > Project Statuses
+    const validTypes: ItemType[] = ['ticket', 'interaction'];
     const typeFromUrl = initialStatusType || searchParams?.get('type');
     return validTypes.includes(typeFromUrl as ItemType) ? (typeFromUrl as ItemType) : 'ticket';
   });
@@ -254,19 +255,9 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
               className="data-[state=checked]:bg-primary-500"
             />
             <span className="text-xs text-gray-400 ml-2">
-              {record.is_closed 
-                ? `${
-                    type === 'project' ? 'Projects' : 
-                    type === 'ticket' ? 'Tickets' : 
-                    type === 'project_task' ? 'Tasks' : 
-                    'Interactions'
-                  } with this status will be marked as closed` 
-                : `${
-                    type === 'project' ? 'Projects' : 
-                    type === 'ticket' ? 'Tickets' : 
-                    type === 'project_task' ? 'Tasks' : 
-                    'Interactions'
-                  } with this status will remain open`
+              {record.is_closed
+                ? `${type === 'ticket' ? 'Tickets' : 'Interactions'} with this status will be marked as closed`
+                : `${type === 'ticket' ? 'Tickets' : 'Interactions'} with this status will remain open`
               }
             </span>
           </div>
@@ -363,14 +354,6 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
           </p>
         </div>
       )}
-      {selectedStatusType === 'project' && (
-        <div className="bg-blue-50 p-4 rounded-md mb-4">
-          <p className="text-sm text-blue-700">
-            <strong>Project Statuses:</strong> Define the workflow stages for your projects.
-            Mark statuses as "closed" to indicate project completion.
-          </p>
-        </div>
-      )}
       {selectedStatusType === 'interaction' && (
         <div className="bg-blue-50 p-4 rounded-md mb-4">
           <p className="text-sm text-blue-700">
@@ -400,7 +383,6 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
             }}
             options={[
               { value: 'ticket', label: 'Ticket Statuses' },
-              { value: 'project', label: 'Project Statuses' },
               { value: 'interaction', label: 'Interaction Statuses' }
             ]}
             className="w-64"

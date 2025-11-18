@@ -13,6 +13,10 @@ export interface IProjectStatusMapping extends TenantEntity {
   custom_name: string | null;
   display_order: number;
   is_visible: boolean;
+  // Joined fields from statuses/standard_statuses
+  status_name?: string;
+  name?: string; // Alias for compatibility
+  is_closed?: boolean;
 }
 
 
@@ -123,6 +127,8 @@ export type ProjectStatus = {
   standard_status_id?: string;
   item_type?: ItemType;
   status_type?: ItemType;
+  color?: string | null; // Hex color code from statuses table
+  icon?: string | null; // Lucide icon name from statuses table
 };
 
 export interface IStandardTaskType {

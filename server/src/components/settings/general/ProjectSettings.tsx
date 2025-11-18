@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import NumberingSettings from './NumberingSettings';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { TenantProjectTaskStatusSettings } from 'server/src/components/settings/projects/TenantProjectTaskStatusSettings';
+import { ProjectStatusSettings } from 'server/src/components/settings/projects/ProjectStatusSettings';
+import { Card, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 
 const ProjectSettings = (): JSX.Element => {
   const searchParams = useSearchParams();
@@ -13,7 +15,8 @@ const ProjectSettings = (): JSX.Element => {
   // Map URL slugs to tab labels
   const sectionToLabelMap: Record<string, string> = {
     'project-numbering': 'Project Numbering',
-    'statuses': 'Statuses',
+    'project-statuses': 'Project Statuses',
+    'task-statuses': 'Task Statuses',
     'templates': 'Templates'
   };
 
@@ -38,17 +41,12 @@ const ProjectSettings = (): JSX.Element => {
       content: <NumberingSettings entityType="PROJECT" />
     },
     {
-      label: "Statuses",
-      content: (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle className="text-gray-400">Status Configuration</CardTitle>
-            <CardDescription className="text-gray-400">
-              Coming soon: Manage project statuses
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )
+      label: "Project Statuses",
+      content: <ProjectStatusSettings />
+    },
+    {
+      label: "Task Statuses",
+      content: <TenantProjectTaskStatusSettings />
     },
     {
       label: "Templates",
