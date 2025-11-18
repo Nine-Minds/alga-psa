@@ -435,7 +435,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         await knex('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
           .andWhere('tenant', this.config.tenant)
-          .update({ webhook_expires_at: newExpiry, updated_at: new Date().toISOString() });
+          .update({
+            webhook_expires_at: newExpiry,
+            last_subscription_renewal: this.config.last_subscription_renewal,
+            updated_at: new Date().toISOString()
+          });
       } catch (dbErr: any) {
         this.log('warn', `Failed to persist webhook renewal: ${dbErr?.message}`);
       }
