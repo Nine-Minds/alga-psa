@@ -114,6 +114,13 @@ exports.seed = async function(knex) {
       },
       {
         internal_category_id: getCategoryId('projects'),
+        name: 'task-comment-added',
+        description: 'Comment added to task',
+        is_enabled: true,
+        is_default_enabled: true
+      },
+      {
+        internal_category_id: getCategoryId('projects'),
         name: 'milestone-completed',
         description: 'Project milestone completed',
         is_enabled: true,
@@ -434,6 +441,12 @@ exports.seed = async function(knex) {
       it: {
         title: 'Attività assegnata',
         message: 'L\'attività "{{taskName}}" del progetto "{{projectName}}" le è stata assegnata'
+      }
+    },
+    'task-comment-added': {
+      en: {
+        title: 'New Task Comment',
+        message: '{{authorName}} added a comment to task "{{taskName}}"'
       }
     },
     'milestone-completed': {

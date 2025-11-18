@@ -6,6 +6,7 @@ import { withTransaction } from '@shared/db';
 import { convertBlockNoteToMarkdown } from '@/lib/utils/blocknoteUtils';
 import { publishEvent } from '@/lib/eventBus/publishers';
 import { IProjectTaskComment, IProjectTaskCommentWithUser } from '@/interfaces/projectTaskComment.interface';
+import { getEntityImageUrlsBatch } from '@/lib/utils/avatarUtils';
 import { Knex } from 'knex';
 
 /**
@@ -93,7 +94,7 @@ export async function getTaskComments(
   const { knex: db, tenant } = await createTenantKnex();
 
   const comments = await db('project_task_comments')
-    .where({ task_id: taskId, tenant })
+    .where({ 'project_task_comments.task_id': taskId, 'project_task_comments.tenant': tenant })
     .leftJoin('users', function() {
       this.on('project_task_comments.user_id', 'users.user_id')
         .andOn('project_task_comments.tenant', 'users.tenant');
@@ -105,6 +106,10 @@ export async function getTaskComments(
       'users.email'
     )
     .orderBy('project_task_comments.created_at', 'asc');
+
+  // Get avatar URLs for all users
+  const userIds = [...new Set(comments.map((c: any) => c.user_id).filter(Boolean))];
+  const avatarUrls = await getEntityImageUrlsBatch('user', userIds, tenant);
 
   // Map snake_case to camelCase
   return comments.map((comment: any) => ({
@@ -121,6 +126,7 @@ export async function getTaskComments(
     firstName: comment.first_name,
     lastName: comment.last_name,
     email: comment.email,
+    avatarUrl: avatarUrls.get(comment.user_id) || null,
   }));
 }
 

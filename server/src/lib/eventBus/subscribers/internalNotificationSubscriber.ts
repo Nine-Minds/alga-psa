@@ -1195,8 +1195,13 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
       }
     }
   } catch (error) {
+    console.error('[InternalNotificationSubscriber] Error handling task comment added (full error):', error);
     logger.error('[InternalNotificationSubscriber] Error handling task comment added', {
-      error,
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : error,
       taskId,
       tenantId
     });

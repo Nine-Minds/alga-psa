@@ -151,7 +151,32 @@ export default function TextEditor({
       const users = await searchUsersForMentions(query);
       console.log('[TextEditor] Received users:', users.length);
 
-      const items = users.map((user) => ({
+      const items: DefaultReactSuggestionItem[] = [];
+
+      // Add @everyone option if it matches the query
+      if ('everyone'.includes(query.toLowerCase()) || query === '') {
+        items.push({
+          title: 'Everyone',
+          subtext: '@everyone - Mention all internal users',
+          onItemClick: () => {
+            console.log('[TextEditor] @everyone selected');
+            editor.insertInlineContent([
+              {
+                type: "mention",
+                props: {
+                  userId: '@everyone',
+                  username: 'everyone',
+                  displayName: 'Everyone'
+                }
+              },
+              " ", // Add space after mention
+            ]);
+          },
+        });
+      }
+
+      // Add regular user items
+      items.push(...users.map((user) => ({
         title: user.display_name,
         subtext: user.username ? `@${user.username}` : user.email,
         onItemClick: () => {
@@ -168,7 +193,7 @@ export default function TextEditor({
             " ", // Add space after mention
           ]);
         },
-      }));
+      })));
 
       console.log('[TextEditor] Returning items:', items.length);
       return items;

@@ -18,4 +18,5 @@ export interface IProjectTaskCommentWithUser extends IProjectTaskComment {
   firstName: string;
   lastName: string;
   email: string;
+  avatarUrl?: string | null;
 }
