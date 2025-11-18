@@ -418,15 +418,15 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         }
       }
 
-      // Create contact if contact data is provided
-      if (contactData.full_name.trim() || contactData.email.trim()) {
+      // Create contact if contact data is provided (both name and email are required)
+      if (contactData.full_name.trim() && contactData.email.trim()) {
         try {
           await createClientContact({
             clientId: newClient.client_id,
-            fullName: contactData.full_name,
-            email: contactData.email,
-            phone: contactData.phone_number,
-            jobTitle: contactData.role,
+            fullName: contactData.full_name.trim(),
+            email: contactData.email.trim(),
+            phone: contactData.phone_number?.trim() || '',
+            jobTitle: contactData.role?.trim() || ''
           });
         } catch (contactError) {
           console.error("Error creating client contact:", contactError);

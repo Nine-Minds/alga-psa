@@ -11,6 +11,7 @@ import {
   getAllClients,
   getAllClientsPaginated,
   deleteClient,
+  archiveClient,
   updateClient,
   importClientsFromCSV,
   exportClientsToCSV,
@@ -360,7 +361,6 @@ const Clients: React.FC = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
-  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
 
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -505,20 +505,19 @@ const Clients: React.FC = () => {
   const handleDeleteClient = async (client: IClient) => {
     setClientToDelete(client);
     setDeleteError(null);
-    setShowDeactivateOption(false);
+    setShowArchiveOption(false);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
     if (!clientToDelete) return;
-    
+
     try {
       const result = await deleteClient(clientToDelete.client_id);
-      
+
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
           handleDependencyError(result, setDeleteError);
-          setShowDeactivateOption(true);
           return;
         }
         throw new Error(result.message || 'Failed to delete client');
@@ -526,7 +525,7 @@ const Clients: React.FC = () => {
 
       // Show success toast
       toast.success(`${clientToDelete.client_name} has been deleted successfully.`);
-      
+
       setRefreshKey(prev => prev + 1);
       resetDeleteState();
     } catch (error) {
@@ -699,7 +698,6 @@ const Clients: React.FC = () => {
     setIsDeleteDialogOpen(false);
     setClientToDelete(null);
     setDeleteError(null);
-    setShowDeactivateOption(false);
   };
 
   const handleExportToCSV = async () => {
@@ -882,11 +880,13 @@ const Clients: React.FC = () => {
             </div>
 
             {/* View Switcher */}
-            <ViewSwitcher
-              currentView={viewMode}
-              onChange={(mode) => void handleViewModeChange(mode)}
-              options={viewOptions}
-            />
+            {!isViewModeLoading && viewMode && (
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={(mode) => void handleViewModeChange(mode)}
+                options={viewOptions}
+              />
+            )}
           </div>
         </div>
 
@@ -965,8 +965,8 @@ const Clients: React.FC = () => {
       />
 
       {/* Single client delete confirmation dialog */}
-      <Dialog 
-        isOpen={isDeleteDialogOpen} 
+      <Dialog
+        isOpen={isDeleteDialogOpen}
         onClose={resetDeleteState}
         id="single-delete-confirmation-dialog"
         title="Delete Client"
@@ -982,15 +982,6 @@ const Clients: React.FC = () => {
                 Are you sure you want to delete {clientToDelete?.client_name}? This action cannot be undone.
               </p>
             )}
-            
-            {showDeactivateOption && deleteError && (
-              <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
-                <p className="text-sm text-blue-800">
-                  <strong>Alternative Option:</strong> You can mark this client as inactive instead.
-                  Inactive clients are hidden from most views but retain all their data and can be marked as active later.
-                </p>
-              </div>
-            )}
           </div>
           
           <DialogFooter>
@@ -1002,16 +993,6 @@ const Clients: React.FC = () => {
               >
                 Cancel
               </Button>
-              
-              {showDeactivateOption && (
-                <Button
-                  variant="ghost"
-                  onClick={() => void handleMarkClientInactive()}
-                  id="single-delete-mark-inactive"
-                >
-                  Mark as Inactive
-                </Button>
-              )}
               
               {!deleteError && (
                 <Button

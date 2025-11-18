@@ -33,7 +33,16 @@ export function useFeatureFlag(
   loading: boolean;
   error: Error | null;
 } {
-  const { data: session } = useSession();
+  // Safely get session - handle cases where SessionProvider isn't available
+  let session = null;
+  try {
+    const sessionResult = useSession();
+    session = sessionResult?.data;
+  } catch (error) {
+    // SessionProvider not available, continue without session
+    console.warn('useSession hook called outside of SessionProvider context');
+  }
+
   const posthog = usePostHog();
   const [enabled, setEnabled] = useState<boolean>(() => {
     if (featureFlagsDisabled) {

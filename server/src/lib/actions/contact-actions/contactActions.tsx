@@ -12,6 +12,7 @@ import { createTag } from 'server/src/lib/actions/tagActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
+import { deleteEntityTags } from '../../utils/tagCleanup';
 
 // Shared column mapping for contact sorting
 const CONTACT_SORT_COLUMNS = {
@@ -90,6 +91,16 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
 export async function deleteContact(contactId: string) {
   console.log('🔍 Starting deleteContact function with contactId:', contactId);
 
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for contact deletion
+  if (!await hasPermission(currentUser, 'contact', 'delete')) {
+    throw new Error('Permission denied: Cannot delete contacts');
+  }
+
   const { knex: db, tenant } = await createTenantKnex();
   console.log('🔍 Got database connection, tenant:', tenant);
 
@@ -123,7 +134,19 @@ export async function deleteContact(contactId: string) {
 
     // Check for dependencies
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check for tickets
+      // Check if this is the primary contact for their client (PSA best practice)
+      if (contact.client_id) {
+        const clientInfo = await trx('clients')
+          .where({ client_id: contact.client_id, tenant })
+          .first();
+
+        if (clientInfo && clientInfo.primary_contact_id === contactId) {
+          dependencies.push('primary_contact');
+          counts['primary_contact'] = 1;
+        }
+      }
+
+      // Check for tickets (including closed tickets per PSA best practice)
       const ticketCount = await trx('tickets')
         .where({
           contact_name_id: contactId,
@@ -136,7 +159,7 @@ export async function deleteContact(contactId: string) {
         counts['ticket'] = Number(ticketCount.count);
       }
 
-      // Check for interactions
+      // Check for interactions (communication history)
       const interactionCount = await trx('interactions')
         .where({
           contact_name_id: contactId,
@@ -147,6 +170,23 @@ export async function deleteContact(contactId: string) {
       if (interactionCount && Number(interactionCount.count) > 0) {
         dependencies.push('interaction');
         counts['interaction'] = Number(interactionCount.count);
+      }
+
+      // Check for contract approvals/signatures (PSA best practice)
+      const contractCount = await trx('contracts')
+        .where({
+          approved_by: contactId,
+          tenant
+        })
+        .orWhere({
+          contact_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (contractCount && Number(contractCount.count) > 0) {
+        dependencies.push('contract');
+        counts['contract'] = Number(contractCount.count);
       }
 
       // Check for document associations
@@ -183,19 +223,44 @@ export async function deleteContact(contactId: string) {
       // The comments table doesn't have a contact_name_id column (removed by migration 20250217202553_drop_contact_columns.cjs)
     });
 
-    // If there are dependencies, throw a detailed error
+    // If there are dependencies, throw a detailed error with PSA-friendly messaging
     if (dependencies.length > 0) {
-      const dependencyList = dependencies.map(dep => `${counts[dep]} ${dep}${counts[dep] > 1 ? 's' : ''}`).join(', ');
-      throw new Error(`VALIDATION_ERROR: Cannot delete contact because it has associated records: ${dependencyList}. Please remove or reassign these records first.`);
+      const readableTypes: Record<string, string> = {
+        'primary_contact': 'primary contact for client',
+        'ticket': 'tickets (including closed)',
+        'interaction': 'communication history',
+        'contract': 'contracts or approvals',
+        'document': 'document associations',
+        'project': 'projects'
+      };
+
+      const dependencyList = dependencies.map(dep => {
+        const readableName = readableTypes[dep] || dep;
+        const count = counts[dep];
+        return count === 1 ? readableName : `${count} ${readableName}`;
+      }).join(', ');
+
+      let errorMessage = `VALIDATION_ERROR: Cannot delete contact with business history: ${dependencyList}. `;
+
+      if (dependencies.includes('primary_contact')) {
+        errorMessage += 'Please assign a different primary contact to the client first. ';
+      }
+
+      errorMessage += 'Consider marking the contact as inactive instead to preserve data integrity.';
+
+      throw new Error(errorMessage);
     }
 
-    // If no dependencies, proceed with simple deletion (only the contact record)
+    // If no dependencies, proceed with contact deletion
     console.log('🔍 Proceeding with contact deletion...');
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
         console.log('🔍 Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
 
-        // Only delete the contact record itself - no associated data
+        // Clean up any tags associated with this contact
+        await deleteEntityTags(trx, contactId, 'contact');
+
+        // Delete the contact record itself
         const deleted = await trx('contacts')
           .where({ contact_name_id: contactId, tenant })
           .delete();
@@ -656,9 +721,9 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     full_name: contactData.full_name || '',
     email: contactData.email,
     phone_number: contactData.phone_number,
-    client_id: contactData.client_id || undefined,
+    client_id: contactData.client_id || null,
     role: contactData.role,
-    notes: contactData.notes || undefined,
+    notes: contactData.notes || null,
     is_inactive: contactData.is_inactive
   };
 

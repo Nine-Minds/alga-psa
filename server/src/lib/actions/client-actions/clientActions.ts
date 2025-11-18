@@ -722,20 +722,19 @@ export async function deleteClient(clientId: string): Promise<{
         counts['interaction'] = Number(interactionCount.count);
       }
 
-      // Check for locations
-      const locationCount = await trx('client_locations')
-        .join('clients', 'clients.client_id', 'client_locations.client_id')
-        .where({ 
-          'client_locations.client_id': clientId,
-          'clients.tenant': tenant 
-        })
-        .count('* as count')
+      // Check for assets/devices (PSA best practice)
+      const assetCount = await trx('assets')
+        .where({ client_id: clientId, tenant })
+        .count('asset_id as count')
         .first();
-      console.log('Location count result:', locationCount);
-      if (locationCount && Number(locationCount.count) > 0) {
-        dependencies.push('location');
-        counts['location'] = Number(locationCount.count);
+      console.log('Asset count result:', assetCount);
+      if (assetCount && Number(assetCount.count) > 0) {
+        dependencies.push('asset');
+        counts['asset'] = Number(assetCount.count);
       }
+
+      // Note: Locations/addresses are no longer considered blocking dependencies
+      // as per PSA best practices - they will be deleted automatically with the client
 
       // Check for service usage
       const usageCount = await trx('usage_tracking')
@@ -769,38 +768,64 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('bucket_usage');
         counts['bucket_usage'] = Number(bucketUsageCount.count);
       }
-    });
 
-    // We're automatically deleting tax rates and settings when deleting the client,
-    // so we don't need to check them as dependencies
+      // Check for client tax settings - we'll delete these automatically if no other dependencies exist
+      const taxSettingsCount = await trx('client_tax_settings')
+        .where({ client_id: clientId, tenant })
+        .count('client_id as count')
+        .first();
+      console.log('Client tax settings count result:', taxSettingsCount);
+      // Note: we don't add tax settings to dependencies since we'll delete them automatically
+    });
 
     // If there are dependencies, return error with details
     if (dependencies.length > 0) {
       const readableTypes: Record<string, string> = {
         'contact': 'contacts',
-        'ticket': 'active tickets',
-        'project': 'active projects',
+        'ticket': 'tickets (including closed)',
+        'project': 'projects',
         'document': 'documents',
-        'invoice': 'invoices',
+        'invoice': 'invoices or billing history',
         'interaction': 'interactions',
-        'location': 'locations',
+        'asset': 'assets or devices',
         'service_usage': 'service usage records',
         'bucket_usage': 'bucket usage records',
-        'contract_line': 'contract lines'
+        'contract_line': 'contracts or subscriptions'
       };
 
       return {
         success: false,
         code: 'COMPANY_HAS_DEPENDENCIES',
-        message: 'Client has associated records and cannot be deleted',
+        message: 'Cannot delete client with active business records. Consider archiving instead to preserve data integrity.',
         dependencies: dependencies.map((dep: string): string => readableTypes[dep] || dep),
         counts
       };
     }
 
-    // If no dependencies, proceed with simple deletion (only the client record)
+    // If no dependencies, proceed with deletion (client and associated tax settings)
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Only delete the client record itself - no associated data
+      // First delete client tax settings to avoid foreign key constraint violations
+      const deletedTaxSettings = await trx('client_tax_settings')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedTaxSettings > 0) {
+        console.log(`Deleted ${deletedTaxSettings} client tax settings records`);
+      }
+
+      // Clean up client locations (addresses don't block deletion per PSA best practices)
+      const deletedLocations = await trx('client_locations')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedLocations > 0) {
+        console.log(`Deleted ${deletedLocations} client location records`);
+      }
+
+      // Clean up any tags associated with this client
+      await deleteEntityTags(trx, clientId, 'client');
+
+      // Finally delete the client record itself
       const deleted = await trx('clients')
         .where({ client_id: clientId, tenant })
         .delete();
@@ -818,6 +843,158 @@ export async function deleteClient(clientId: string): Promise<{
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to delete client'
+    };
+  }
+}
+
+export async function archiveClient(clientId: string): Promise<{
+  success: boolean;
+  message?: string;
+}> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for client updating (archiving is an update operation)
+  if (!await hasPermission(currentUser, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot archive clients');
+  }
+
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // First verify the client exists and belongs to this tenant
+    const client = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .first();
+    });
+
+    if (!client) {
+      return {
+        success: false,
+        message: 'Client not found'
+      };
+    }
+
+    // Check if this is the tenant's default client
+    const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenantClient = await trx('tenant_companies')
+        .where({
+          client_id: clientId,
+          tenant,
+          is_default: true
+        })
+        .first();
+      return !!tenantClient;
+    });
+
+    if (isDefaultClient) {
+      return {
+        success: false,
+        message: 'Cannot archive the default client. Please set another client as default in General Settings first.'
+      };
+    }
+
+    // Archive the client and associated contacts/users
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Archive the client
+      await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .update({
+          is_inactive: true,
+          updated_at: new Date().toISOString()
+        });
+
+      // Archive all associated contacts
+      await trx('contacts')
+        .where({ client_id: clientId, tenant })
+        .update({
+          is_inactive: true,
+          updated_at: new Date().toISOString()
+        });
+
+      // Archive all users associated with the client's contacts
+      const contacts = await trx('contacts')
+        .select('contact_name_id')
+        .where({ client_id: clientId, tenant });
+
+      const contactIds = contacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+      if (contactIds.length > 0) {
+        await trx('users')
+          .whereIn('contact_id', contactIds)
+          .andWhere({ tenant, user_type: 'client' })
+          .update({
+            is_inactive: true,
+            updated_at: new Date().toISOString()
+          });
+      }
+    });
+
+    return { success: true, message: 'Client has been archived successfully. All related contacts and users have also been archived.' };
+  } catch (error) {
+    console.error('Error archiving client:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to archive client'
+    };
+  }
+}
+
+export async function reactivateClient(clientId: string): Promise<{
+  success: boolean;
+  message?: string;
+}> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  // Check permission for client updating
+  if (!await hasPermission(currentUser, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot reactivate clients');
+  }
+
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const client = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .first();
+    });
+
+    if (!client) {
+      return {
+        success: false,
+        message: 'Client not found'
+      };
+    }
+
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Reactivate the client
+      await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .update({
+          is_inactive: false,
+          updated_at: new Date().toISOString()
+        });
+    });
+
+    return { success: true, message: 'Client has been reactivated successfully.' };
+  } catch (error) {
+    console.error('Error reactivating client:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to reactivate client'
     };
   }
 }

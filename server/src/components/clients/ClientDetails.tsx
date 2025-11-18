@@ -20,7 +20,7 @@ import ClientContactsList from 'server/src/components/contacts/ClientContactsLis
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, archiveClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -204,7 +204,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
+  const [showArchiveOption, setShowArchiveOption] = useState(false);
+  const [wantsArchive, setWantsArchive] = useState(false);
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
@@ -234,18 +235,40 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleDeleteClient = () => {
     setDeleteError(null);
-    setShowDeactivateOption(false);
+    setShowArchiveOption(false);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
     try {
+      // If user wants to archive instead of delete, call the archive function
+      if (wantsArchive) {
+        const result = await archiveClient(editedClient.client_id);
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to archive client');
+        }
+
+        // Update local state immediately to reflect archived status
+        const updatedClient = {
+          ...editedClient,
+          is_inactive: true,
+          updated_at: new Date().toISOString()
+        };
+        setEditedClient(updatedClient);
+        setHasUnsavedChanges(false);
+
+        setIsDeleteDialogOpen(false);
+        toast.success("Client has been archived successfully.");
+        return;
+      }
+
+      // Otherwise try to delete
       const result = await deleteClient(editedClient.client_id);
 
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
           handleDependencyError(result, setDeleteError);
-          setShowDeactivateOption(true);
+          setShowArchiveOption(true);
           return;
         }
         throw new Error(result.message || 'Failed to delete client');
@@ -327,7 +350,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleCancelReactivation = () => {
     setIsReactivateDialogOpen(false);
-    // Keep the client inactive - no changes
+    // Revert the toggle back to inactive since user cancelled
+    setEditedClient(prevClient => ({
+      ...prevClient,
+      is_inactive: true
+    }));
   };
 
   const handleDeactivateClient = async () => {
@@ -349,13 +376,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleCancelDeactivation = () => {
     setIsDeactivateDialogOpen(false);
-    // Keep the client active - no changes
+    // Revert the toggle back to active since user cancelled
+    setEditedClient(prevClient => ({
+      ...prevClient,
+      is_inactive: false
+    }));
   };
 
   const resetDeleteState = () => {
     setIsDeleteDialogOpen(false);
     setDeleteError(null);
-    setShowDeactivateOption(false);
+    setShowArchiveOption(false);
+    setWantsArchive(false);
   };
 
   // Helper function to handle dependency errors (copied from main Clients page)
@@ -508,31 +540,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
 
   const handleFieldChange = async (field: string, value: string | boolean) => {
-    // Check if client is being deactivated (is_inactive changing from false to true)
-    if (field === 'is_inactive' && editedClient.is_inactive === false && value === true) {
-      // Fetch active contacts for this client
-      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
-      const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
-
-      if (activeContacts.length > 0) {
-        setActiveContactsToDeactivate(activeContacts);
-        setIsDeactivateDialogOpen(true);
-        return; // Don't update the field yet, wait for user confirmation
-      }
-    }
-
-    // Check if client is being reactivated (is_inactive changing from true to false)
-    if (field === 'is_inactive' && editedClient.is_inactive === true && value === false) {
-      // Fetch inactive contacts for this client
-      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
-      const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
-
-      if (inactiveContacts.length > 0) {
-        setInactiveContactsToReactivate(inactiveContacts);
-        setIsReactivateDialogOpen(true);
-        return; // Don't update the field yet, wait for user confirmation
-      }
-    }
 
     setEditedClient(prevClient => {
       // Create a deep copy of the previous client
@@ -1256,13 +1263,42 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
           onConfirm={confirmDelete}
-          title="Delete Client"
+          title={wantsArchive ? "Archive Client" : "Delete Client"}
           message={
-            deleteError
-              ? deleteError
-              : "Are you sure you want to delete this client? This action cannot be undone."
+            deleteError ? (
+              <div className="space-y-4">
+                <p>{deleteError}</p>
+                {showArchiveOption && (
+                  <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        id="archive-toggle"
+                        type="checkbox"
+                        checked={wantsArchive}
+                        onChange={(e) => setWantsArchive(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="archive-toggle" className="text-sm font-medium text-blue-900">
+                        Archive instead of delete (preserves all data)
+                      </label>
+                    </div>
+                    {wantsArchive && (
+                      <p className="text-sm text-blue-700 mt-2">
+                        ✓ This will hide the client from active lists while preserving all business records for reporting and compliance.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              "Are you sure you want to delete this client? This action cannot be undone."
+            )
           }
-          confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
+          confirmLabel={
+            deleteError
+              ? (wantsArchive ? "Archive" : undefined)
+              : "Delete"
+          }
           cancelLabel={deleteError ? "Close" : "Cancel"}
           isConfirming={false}
         />
