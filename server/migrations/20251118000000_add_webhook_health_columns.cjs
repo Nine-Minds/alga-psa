@@ -12,14 +12,10 @@ exports.up = async function(knex) {
     table.timestamp('last_notification_received_at');
   });
   
-  // Detect tenant column name
-  const hasTenant = await knex.schema.hasColumn('email_provider_health', 'tenant');
-  const tenantCol = hasTenant ? 'tenant' : 'tenant_id';
-
-  // Add index for monitoring
+  // Add index for monitoring, using the standardized 'tenant' column
   await knex.schema.raw(`
     CREATE INDEX idx_email_provider_health_subscription_status 
-    ON email_provider_health (${tenantCol}, subscription_status)
+    ON email_provider_health (tenant, subscription_status)
   `);
 };
 
