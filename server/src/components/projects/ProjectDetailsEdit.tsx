@@ -286,46 +286,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
-              <DatePicker
-                id="start_date"
-                value={project.start_date ? new Date(project.start_date) : undefined}
-                onChange={(date) => {
-                  setProject(prev => ({
-                    ...prev,
-                    start_date: date || null,
-                  }));
-                  setHasChanges(true);
-                  clearErrorIfSubmitted();
-                }}
-                placeholder="Select start date"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
-              </label>
-              <DatePicker
-                id="end_date"
-                value={project.end_date ? new Date(project.end_date) : undefined}
-                onChange={(date) => {
-                  setProject(prev => ({
-                    ...prev,
-                    end_date: date || null,
-                  }));
-                  setHasChanges(true);
-                  clearErrorIfSubmitted();
-                }}
-                placeholder="Select end date"
-              />
-            </div>
-          </div>
-
           <div>
             <label htmlFor="budgeted_hours" className="block text-sm font-medium text-gray-700 mb-1">
               Budgeted Hours
@@ -377,6 +337,46 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               }}
               useInlineInput={true}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
+                Start Date
+              </label>
+              <DatePicker
+                id="start_date"
+                value={project.start_date ? new Date(project.start_date) : undefined}
+                onChange={(date) => {
+                  setProject(prev => ({
+                    ...prev,
+                    start_date: date || null,
+                  }));
+                  setHasChanges(true);
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Select start date"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
+                End Date
+              </label>
+              <DatePicker
+                id="end_date"
+                value={project.end_date ? new Date(project.end_date) : undefined}
+                onChange={(date) => {
+                  setProject(prev => ({
+                    ...prev,
+                    end_date: date || null,
+                  }));
+                  setHasChanges(true);
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Select end date"
+              />
+            </div>
           </div>
 
           <div>

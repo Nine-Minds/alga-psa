@@ -396,27 +396,48 @@ export function TenantProjectTaskStatusSettings() {
                 containerClassName="mb-0"
               />
 
-              {/* Preview Badge */}
+              {/* Preview */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Preview
                 </label>
                 <div
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                  className="p-4 rounded-lg border min-h-[120px]"
                   style={{
-                    backgroundColor: formData.color || '#6B7280',
-                    border: '1px solid rgba(0,0,0,0.1)'
+                    backgroundColor: (() => {
+                      const hex = formData.color || '#6B7280';
+                      const num = parseInt(hex.replace('#', ''), 16);
+                      const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * 0.85));
+                      const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * 0.85));
+                      const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * 0.85));
+                      return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+                    })(),
+                    borderColor: formData.color || '#6B7280'
                   }}
                 >
-                  {formData.icon && (() => {
-                    const IconComponent = (LucideIcons as any)[formData.icon];
-                    return IconComponent ? (
-                      <IconComponent className="w-4 h-4" style={{ color: '#ffffff' }} />
-                    ) : null;
-                  })()}
-                  <span className="text-sm font-medium" style={{ color: '#ffffff' }}>
-                    {formData.name || 'Status Name'}
-                  </span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                      style={{
+                        backgroundColor: formData.color || '#6B7280',
+                        border: '1px solid rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      {formData.icon && (() => {
+                        const IconComponent = (LucideIcons as any)[formData.icon];
+                        return IconComponent ? (
+                          <IconComponent className="w-4 h-4" style={{ color: '#ffffff' }} />
+                        ) : null;
+                      })()}
+                      <span className="text-sm font-medium" style={{ color: '#ffffff' }}>
+                        {formData.name || 'Status Name'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                    <div className="text-xs text-gray-500 mb-1">Sample Task</div>
+                    <div className="text-sm text-gray-700">This is how tasks will appear in the column</div>
+                  </div>
                 </div>
               </div>
 
@@ -436,9 +457,10 @@ export function TenantProjectTaskStatusSettings() {
                       setFormData({ ...formData, color: backgroundColor || '#6B7280' });
                     }}
                     trigger={
-                      <button
+                      <Button
                         type="button"
-                        className="w-full flex items-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        variant="outline"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 justify-start h-auto"
                         id="color-picker-trigger"
                       >
                         <div
@@ -450,7 +472,7 @@ export function TenantProjectTaskStatusSettings() {
                           <div className="text-sm font-medium">{formData.color || '#6B7280'}</div>
                         </div>
                         <Palette className="w-4 h-4 text-gray-400" />
-                      </button>
+                      </Button>
                     }
                   />
                 </div>
@@ -460,10 +482,11 @@ export function TenantProjectTaskStatusSettings() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Icon
                   </label>
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowIconPicker(true)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    variant="outline"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 justify-start h-auto"
                     id="icon-picker-trigger"
                   >
                     {formData.icon && (() => {
@@ -482,7 +505,7 @@ export function TenantProjectTaskStatusSettings() {
                       <div className="text-sm font-medium">{formData.icon}</div>
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </button>
+                  </Button>
 
                   {/* Icon Picker Modal */}
                   {showIconPicker && (
@@ -511,15 +534,17 @@ export function TenantProjectTaskStatusSettings() {
                                   const isSelected = formData.icon === iconName;
 
                                   return (
-                                    <button
+                                    <Button
                                       key={iconName}
                                       type="button"
                                       onClick={() => {
                                         setFormData({ ...formData, icon: iconName });
                                         setShowIconPicker(false);
                                       }}
+                                      variant="ghost"
+                                      size="icon"
                                       className={`
-                                        flex items-center justify-center w-8 h-8 rounded border transition-all
+                                        w-8 h-8 rounded border
                                         hover:border-primary-500 hover:bg-primary-50
                                         ${isSelected ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white'}
                                       `}
@@ -527,7 +552,7 @@ export function TenantProjectTaskStatusSettings() {
                                       id={`icon-option-${iconName}`}
                                     >
                                       <IconComponent className={`w-4 h-4 ${isSelected ? 'text-primary-600' : 'text-gray-600'}`} />
-                                    </button>
+                                    </Button>
                                   );
                                 })}
                               </div>
