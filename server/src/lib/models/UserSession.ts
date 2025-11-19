@@ -12,7 +12,6 @@
  */
 
 import { getConnection } from 'server/src/lib/db/db';
-import type { Knex } from 'knex';
 import type { LocationData } from 'server/src/lib/auth/geolocation';
 
 export interface IUserSession {
@@ -273,10 +272,10 @@ export class UserSession {
   /**
    * In-memory cache for session revocation status
    * Format: { "tenant:sessionId": { revoked: boolean, timestamp: number } }
-   * TTL: 5 seconds (trade-off between performance and revocation speed)
+   * TTL: 30 seconds (trade-off between performance and revocation speed)
    */
   private static revocationCache = new Map<string, { revoked: boolean; timestamp: number }>();
-  private static readonly CACHE_TTL_MS = 5000; // 5 seconds
+  private static readonly CACHE_TTL_MS = 30000; // 30 seconds
 
   /**
    * Check if a session is revoked (with caching)
@@ -356,12 +355,13 @@ export class UserSession {
         .orderBy('last_activity_at', 'asc') // Oldest first
         .forUpdate(); // CRITICAL: Row-level lock
 
-      // If user already has maxSessions or more, revoke oldest ones
+      // If user will exceed maxSessions after login, revoke oldest ones
+      // Note: This is called BEFORE creating the new session
       if (sessions.length >= maxSessions) {
-        // Calculate how many sessions to revoke
-        // Example: User has 5 sessions, limit is 5, logging in creates 6th
-        // Need to revoke: 5 - 5 + 1 = 1 session
-        const toRevoke = sessions.length - maxSessions + 1;
+        // Calculate how many sessions to revoke to make room for the new one
+        // Example: User has 5 sessions, limit is 5, logging in will create 6th
+        // Need to revoke: (5 - 5) + 1 = 1 session
+        const toRevoke = (sessions.length - maxSessions) + 1;
 
         // Get the oldest sessions to revoke
         const sessionsToRevoke = sessions.slice(0, toRevoke);

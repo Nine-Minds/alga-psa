@@ -72,6 +72,29 @@ const _middleware = auth((request) => {
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
 
+  // Handle SessionRevoked error by clearing cookie before reaching signin page
+  if (isAuthPage && (pathname === '/auth/msp/signin' || pathname === '/auth/client-portal/signin')) {
+    const error = request.nextUrl.searchParams.get('error');
+    if (error === 'SessionRevoked') {
+      const cookieName = process.env.NODE_ENV === 'production'
+        ? '__Secure-authjs.session-token'
+        : 'authjs.session-token';
+
+      console.log('[middleware] SessionRevoked error detected, clearing cookie and redirecting');
+
+      // Create redirect without error param
+      const cleanUrl = request.nextUrl.clone();
+      cleanUrl.searchParams.delete('error');
+
+      const redirectResponse = NextResponse.redirect(cleanUrl);
+      // Clear the session cookie
+      redirectResponse.cookies.delete(cookieName);
+      redirectResponse.headers.set('x-pathname', cleanUrl.pathname);
+
+      return redirectResponse;
+    }
+  }
+
   // Redirect vanity domains to canonical for client portal signin (before auth check)
   if (pathname === '/auth/client-portal/signin') {
     const canonicalUrlEnv = getCanonicalUrl();

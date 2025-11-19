@@ -184,7 +184,7 @@ export default function SessionManagement() {
               disabled={revokingAll}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              {revokingAll ? t('sessionManagement.actions.loggingOut', 'Logging out...') : t('sessionManagement.actions.logoutFromOther', 'Logout from {{count}} other device(s)', { count: otherSessionsCount })}
+              {revokingAll ? t('sessionManagement.actions.loggingOut', 'Logging out...') : t('sessionManagement.actions.logoutFromOther', 'Logout from {{count}} other device', { count: otherSessionsCount }) + (otherSessionsCount === 1 ? '' : 's')}
             </Button>
           )}
         </div>

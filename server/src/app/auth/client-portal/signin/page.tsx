@@ -5,7 +5,6 @@ import PortalSwitchPrompt from 'server/src/components/auth/PortalSwitchPrompt';
 import { I18nWrapper } from 'server/src/components/i18n/I18nWrapper';
 import { getTenantBrandingByDomain, getTenantLocaleByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
 import { getSession } from 'server/src/lib/auth/getSession';
-import { clearSessionCookie } from 'server/src/lib/actions/auth-actions/clearSessionCookie';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 
 export default async function ClientSignInPage({
@@ -15,14 +14,6 @@ export default async function ClientSignInPage({
 }) {
   const params = await searchParams;
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/client-portal/dashboard';
-  const error = typeof params?.error === 'string' ? params.error : undefined;
-
-  // If there's a SessionRevoked error, clear the cookie and redirect to remove error param
-  if (error === 'SessionRevoked') {
-    await clearSessionCookie();
-    // Redirect to signin without error param to prevent loops
-    redirect('/auth/client-portal/signin');
-  }
 
   // Get portalDomain from query parameter (set by middleware for vanity domains)
   const portalDomain = typeof params?.portalDomain === 'string' ? params.portalDomain : null;

@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import MspSignIn from 'server/src/components/auth/MspSignIn';
 import PortalSwitchPrompt from 'server/src/components/auth/PortalSwitchPrompt';
 import { getSession } from 'server/src/lib/auth/getSession';
-import { clearSessionCookie } from 'server/src/lib/actions/auth-actions/clearSessionCookie';
 
 export default async function MspSignInPage({
   searchParams,
@@ -11,14 +10,6 @@ export default async function MspSignInPage({
 }) {
   const params = await searchParams;
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/msp/dashboard';
-  const error = typeof params?.error === 'string' ? params.error : undefined;
-
-  // If there's a SessionRevoked error, clear the cookie and redirect to remove error param
-  if (error === 'SessionRevoked') {
-    await clearSessionCookie();
-    // Redirect to signin without error param to prevent loops
-    redirect('/auth/msp/signin');
-  }
 
   const session = await getSession();
   if (session?.user) {
