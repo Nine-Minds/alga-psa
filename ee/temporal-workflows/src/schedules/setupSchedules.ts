@@ -22,8 +22,8 @@ const logger = createLogger({
 export async function setupSchedules() {
   const temporalAddress = process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233';
   const temporalNamespace = process.env.TEMPORAL_NAMESPACE || 'default';
-  // Use specific queue if defined, or default
-  const taskQueue = process.env.TEMPORAL_TASK_QUEUE || 'tenant-workflows';
+  // Use specific queue for email maintenance
+  const taskQueue = 'email-domain-workflows';
 
   logger.info('Initializing Temporal Schedules...', { temporalAddress, temporalNamespace });
 
@@ -55,9 +55,28 @@ export async function setupSchedules() {
       logger.info(`Successfully created schedule: ${scheduleId}`);
     } catch (error: any) {
       if (error?.code === 6 || error?.name === 'ScheduleAlreadyRunning' || error?.message?.includes('AlreadyExists')) {
-        logger.info(`Schedule ${scheduleId} already exists. Skipping creation.`);
+        logger.info(`Schedule ${scheduleId} already exists. Updating configuration...`);
+        try {
+          const handle = client.schedule.getHandle(scheduleId);
+          await handle.update((prev) => ({
+            ...prev,
+            spec: {
+              intervals: [{ every: '15m' }],
+            },
+            action: {
+              type: 'startWorkflow',
+              workflowType: emailWebhookMaintenanceWorkflow,
+              args: [{ lookAheadMinutes: 1440 }],
+              taskQueue: 'email-domain-workflows',
+              workflowExecutionTimeout: '10m',
+            },
+          }));
+          logger.info(`Successfully updated schedule: ${scheduleId}`);
+        } catch (updateError: any) {
+          logger.error(`Failed to update existing schedule ${scheduleId}`, updateError);
+        }
       } else {
-        logger.warn(`Failed to create schedule ${scheduleId}: ${error.message}. This is expected if schedule already exists.`);
+        logger.warn(`Failed to create schedule ${scheduleId}: ${error.message}.`);
       }
     }
 
