@@ -193,6 +193,18 @@ export class EmailWebhookMaintenanceService {
         throw new Error('Cannot recreate subscription: webhook_notification_url is missing in config');
     }
 
+    // Validate URL before attempting registration
+    if (config.webhook_notification_url.includes('localhost') || !config.webhook_notification_url.startsWith('https://')) {
+      const msg = `Invalid webhook URL detected: ${config.webhook_notification_url}. Microsoft requires a public HTTPS endpoint. Check APPLICATION_URL env var.`;
+      logger.error(msg, { providerId: config.id, tenant: config.tenant });
+      throw new Error(msg);
+    }
+
+    logger.info(`Attempting to recreate subscription with URL: ${config.webhook_notification_url}`, { 
+      providerId: config.id, 
+      tenant: config.tenant 
+    });
+
     const result = await adapter.initializeWebhook(config.webhook_notification_url);
     
     if (!result.success) {
