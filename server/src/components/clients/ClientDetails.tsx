@@ -19,6 +19,7 @@ import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validat
 import ClientContactsList from 'server/src/components/contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import BillingConfiguration from './BillingConfiguration';
 import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, archiveClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -1271,14 +1272,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 {showArchiveOption && (
                   <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
                     <div className="flex items-center space-x-3">
-                      <input
-                        id="archive-toggle"
-                        type="checkbox"
+                      <Checkbox
+                        id={`archive-toggle-${editedClient.client_id}`}
                         checked={wantsArchive}
                         onChange={(e) => setWantsArchive(e.target.checked)}
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <label htmlFor="archive-toggle" className="text-sm font-medium text-blue-900">
+                      <label
+                        htmlFor={`archive-toggle-${editedClient.client_id}`}
+                        className="text-sm font-medium text-blue-900 cursor-pointer"
+                      >
                         Archive instead of delete (preserves all data)
                       </label>
                     </div>
@@ -1296,7 +1298,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           }
           confirmLabel={
             deleteError
-              ? (wantsArchive ? "Archive" : undefined)
+              ? (wantsArchive ? "Archive" : "Delete")
               : "Delete"
           }
           cancelLabel={deleteError ? "Close" : "Cancel"}

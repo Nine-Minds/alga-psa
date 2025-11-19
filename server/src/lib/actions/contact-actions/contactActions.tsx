@@ -97,7 +97,7 @@ export async function deleteContact(contactId: string) {
   }
 
   // Check permission for contact deletion
-  if (!await hasPermission(currentUser, 'contact', 'delete')) {
+  if (!await hasPermission(currentUser.user_id, tenant, 'contacts.delete')) {
     throw new Error('Permission denied: Cannot delete contacts');
   }
 
@@ -1641,15 +1641,15 @@ export async function updateContactPortalAdminStatus(
       throw new Error('Unauthorized');
     }
 
-    // Check permissions
-    const hasUpdatePermission = await hasPermission(currentUser, 'client', 'update');
-    if (!hasUpdatePermission) {
-      throw new Error('You do not have permission to update client settings');
-    }
-
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permissions
+    const hasUpdatePermission = await hasPermission(currentUser.user_id, tenant, 'clients.update');
+    if (!hasUpdatePermission) {
+      throw new Error('You do not have permission to update client settings');
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
