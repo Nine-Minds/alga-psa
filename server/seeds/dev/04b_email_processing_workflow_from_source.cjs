@@ -20,7 +20,9 @@ function loadWorkflowCodeFromSource() {
       return generatedContent;
     }
 
-    throw new Error(`Workflow source not found. Checked: ${workflowTsPath} and ${workflowGeneratedPath}`);
+    console.warn(`Workflow source not found. Checked: ${workflowTsPath} and ${workflowGeneratedPath}`);
+    console.warn('Seed will no-op so docker prebuilt images without source artifacts do not fail.');
+    return null;
   }
 
   console.log(`Reading workflow from source file: ${workflowTsPath}`);
@@ -57,6 +59,10 @@ exports.seed = async function(knex) {
   try {
     // Load the workflow code from the TypeScript source
     const workflowCode = loadWorkflowCodeFromSource();
+    if (!workflowCode) {
+      console.log('System Email Processing Workflow source artifacts were not found; skipping this seed.');
+      return;
+    }
     
     // Check if the system email processing workflow already exists
     const existingReg = await knex('system_workflow_registrations')

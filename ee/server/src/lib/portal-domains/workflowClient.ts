@@ -43,7 +43,8 @@ export async function enqueuePortalDomainWorkflow(
       }
 
       try {
-        await client.workflow.signal(workflowId, RECONCILE_SIGNAL, params);
+        const handle = client.workflow.getHandle(workflowId);
+        await handle.signal(RECONCILE_SIGNAL, params);
         return { enqueued: true, signaled: true };
       } catch (signalError) {
         return { enqueued: false };

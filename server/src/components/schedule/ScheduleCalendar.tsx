@@ -104,7 +104,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     project_task: 'rgb(var(--color-secondary-100))',
     non_billable_category: 'rgb(var(--color-accent-100))',
     ad_hoc: 'rgb(var(--color-border-200))',
-    interaction: 'rgb(220 252 231)' // Tailwind green-100
+    interaction: 'rgb(220 252 231)', // Tailwind green-100
+    appointment_request: 'rgb(254 205 211)' // Tailwind rose-200
   };
 
   const workItemHoverColors: Record<WorkItemType, string> = {
@@ -112,7 +113,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     project_task: 'rgb(var(--color-secondary-200))',
     non_billable_category: 'rgb(var(--color-accent-200))',
     ad_hoc: 'rgb(var(--color-border-300))',
-    interaction: 'rgb(187 247 208)' // Tailwind green-200
+    interaction: 'rgb(187 247 208)', // Tailwind green-200
+    appointment_request: 'rgb(253 164 175)' // Tailwind rose-300 (paler)
   };
 
   const Legend = () => (
@@ -125,7 +127,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
               style={{ backgroundColor: color }}
             ></div>
             <span className="capitalize text-sm font-medium text-[rgb(var(--color-text-900))]">
-              {type === 'ad_hoc' ? 'Ad-hoc Entry' : type.replace('_', ' ')}
+              {type === 'ad_hoc' ? 'Ad-Hoc Entry' :
+               type === 'appointment_request' ? 'Appointment Request' :
+               type.replace('_', ' ')}
             </span>
           </div>
         ))}

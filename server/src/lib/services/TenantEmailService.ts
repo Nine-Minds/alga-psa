@@ -5,7 +5,8 @@ import {
   TenantEmailSettings, 
   EmailAddress,
   IEmailProvider,
-  EmailMessage
+  EmailMessage,
+  EmailProviderConfig
 } from '../../types/email.types';
 import logger from '@alga-psa/shared/core/logger';
 import { 
@@ -40,6 +41,7 @@ export class TenantEmailService extends BaseEmailService {
   private static instances: Map<string, TenantEmailService> = new Map();
   private tenantId: string;
   private providerManager: EmailProviderManager | null = null;
+  private tenantSettings: TenantEmailSettings | null = null;
 
   private constructor(tenantId: string) {
     super();
@@ -74,18 +76,24 @@ export class TenantEmailService extends BaseEmailService {
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
     if (!this.providerManager) {
+      let settings: TenantEmailSettings | null = null;
       try {
         const knex = await getConnection(this.tenantId);
-        const settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
+        settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
 
         if (settings) {
           this.providerManager = new EmailProviderManager();
           await this.providerManager.initialize(settings);
+          this.tenantSettings = settings;
         } else {
           logger.warn(`[${this.getServiceName()}] No tenant email settings found`);
+          this.tenantSettings = null;
         }
       } catch (error) {
         logger.error(`[${this.getServiceName()}] Failed to initialize tenant provider:`, error);
+        if (settings) {
+          this.tenantSettings = settings;
+        }
 
         if (isEnterprise) {
           logger.info(`[${this.getServiceName()}] Using system email provider (Enterprise Edition)`);
@@ -135,17 +143,12 @@ export class TenantEmailService extends BaseEmailService {
     if (params?.from) {
       return params.from as EmailAddress | string;
     }
-    // Prefer system-configured from if available
-    const envFrom = process.env.EMAIL_FROM;
-    const envFromName = process.env.EMAIL_FROM_NAME || 'Portal Notifications';
-    if (envFrom) {
-      // If EMAIL_FROM already includes a name, use it as-is
-      // Otherwise, wrap with a default friendly name
-      const hasAngleBrackets = /<[^>]+>/.test(envFrom);
-      return hasAngleBrackets ? envFrom : `${envFromName} <${envFrom}>`;
+
+    const resolved = this.buildTenantFromAddress();
+    if (resolved.name) {
+      return `${resolved.name} <${resolved.email}>`;
     }
-    // Safe default (may be rejected by providers if domain unverified)
-    return 'Portal Notifications <noreply@example.com>';
+    return resolved.email;
   }
   /**
    * Get tenant email settings from database
@@ -165,17 +168,7 @@ export class TenantEmailService extends BaseEmailService {
         return null;
       }
       
-      return {
-        tenantId,
-        defaultFromDomain: settings.default_from_domain,
-        customDomains: settings.custom_domains || [],
-        emailProvider: settings.email_provider,
-        providerConfigs: settings.provider_configs || [],
-        trackingEnabled: settings.tracking_enabled,
-        maxDailyEmails: settings.max_daily_emails,
-        createdAt: settings.created_at,
-        updatedAt: settings.updated_at
-      };
+      return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
     } catch (error) {
       logger.error(`[TenantEmailService] Error fetching tenant email settings:`, error);
       return null;
@@ -252,5 +245,203 @@ export class TenantEmailService extends BaseEmailService {
         error: 'Failed to validate email settings'
       };
     }
+  }
+
+  private static normalizeSettingsRecord(tenantId: string, settings: any): TenantEmailSettings {
+    return {
+      tenantId,
+      defaultFromDomain: settings.default_from_domain || undefined,
+      customDomains: this.normalizeDomains(settings.custom_domains),
+      emailProvider: settings.email_provider,
+      providerConfigs: this.normalizeProviderConfigs(settings.provider_configs),
+      trackingEnabled: Boolean(settings.tracking_enabled),
+      maxDailyEmails: settings.max_daily_emails ?? undefined,
+      createdAt: settings.created_at,
+      updatedAt: settings.updated_at
+    };
+  }
+
+  private static normalizeDomains(raw: unknown): string[] {
+    if (!raw) {
+      return [];
+    }
+
+    if (Array.isArray(raw)) {
+      return raw.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+    }
+
+    if (Buffer.isBuffer(raw)) {
+      return this.normalizeDomains(raw.toString('utf8'));
+    }
+
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        return [];
+      }
+      try {
+        const parsed = JSON.parse(trimmed);
+        return this.normalizeDomains(parsed);
+      } catch {
+        return trimmed
+          .split(',')
+          .map(part => part.trim())
+          .filter(Boolean);
+      }
+    }
+
+    return [];
+  }
+
+  private static normalizeProviderConfigs(raw: unknown): EmailProviderConfig[] {
+    if (!raw) {
+      return [];
+    }
+
+    if (Array.isArray(raw)) {
+      return raw as EmailProviderConfig[];
+    }
+
+    if (Buffer.isBuffer(raw)) {
+      return this.normalizeProviderConfigs(raw.toString('utf8'));
+    }
+
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        return [];
+      }
+      try {
+        const parsed = JSON.parse(trimmed);
+        return this.normalizeProviderConfigs(parsed);
+      } catch (error) {
+        logger.warn('[TenantEmailService] Failed to parse provider_configs JSON', {
+          error: error instanceof Error ? error.message : error
+        });
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  private buildTenantFromAddress(): EmailAddress {
+    const providerAddress = this.getProviderConfiguredAddress();
+    const envAddress = this.parseAddress(process.env.EMAIL_FROM);
+    const fallbackName = providerAddress?.name || envAddress?.name || process.env.EMAIL_FROM_NAME || 'Portal Notifications';
+    const fallbackEmail = providerAddress?.email || envAddress?.email || 'notifications@example.com';
+
+    const baseEmail = providerAddress?.email || envAddress?.email || fallbackEmail;
+    const emailParts = this.extractEmailParts(baseEmail);
+    const localPart = this.sanitizeLocalPart(emailParts?.localPart);
+
+    const configuredDomain = this.sanitizeDomain(this.tenantSettings?.defaultFromDomain);
+    const fallbackDomain = this.sanitizeDomain(emailParts?.domain) || this.sanitizeDomain(this.extractDomainFromAddress(fallbackEmail));
+    const targetDomain = configuredDomain || fallbackDomain;
+
+    const email = targetDomain ? `${localPart}@${targetDomain}` : baseEmail;
+
+    return {
+      email,
+      name: fallbackName
+    };
+  }
+
+  private getProviderConfiguredAddress(): EmailAddress | null {
+    const configs = this.tenantSettings?.providerConfigs || [];
+    const enabledConfig = configs.find(config => config.isEnabled && config.config);
+
+    if (!enabledConfig) {
+      return null;
+    }
+
+    const configFrom = enabledConfig.config.from;
+    const configFromName = enabledConfig.config.fromName || enabledConfig.config.from_name;
+    if (typeof configFrom === 'string' && configFrom.trim().length > 0) {
+      const parsed = this.parseAddress(configFrom.trim()) || { email: configFrom.trim() };
+      if (!parsed.name && typeof configFromName === 'string' && configFromName.trim().length > 0) {
+        parsed.name = configFromName.trim();
+      }
+      return parsed;
+    }
+
+    return null;
+  }
+
+  private parseAddress(value?: string | EmailAddress | null): EmailAddress | null {
+    if (!value) {
+      return null;
+    }
+
+    if (typeof value === 'object') {
+      if (!value.email) {
+        return null;
+      }
+      return { email: value.email, name: value.name };
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const match = trimmed.match(/^(?:"?([^"]*)"?\s*)?<([^>]+)>$/);
+    if (match) {
+      const name = match[1]?.trim();
+      return {
+        email: match[2].trim(),
+        name: name || undefined
+      };
+    }
+
+    return { email: trimmed };
+  }
+
+  private extractEmailParts(email?: string | null): { localPart: string; domain?: string } | null {
+    if (!email) {
+      return null;
+    }
+
+    const [localPart, domain] = email.split('@');
+    if (!domain) {
+      return { localPart: localPart || email };
+    }
+
+    return { localPart, domain };
+  }
+
+  private sanitizeLocalPart(localPart?: string | null): string {
+    if (!localPart) {
+      return 'notifications';
+    }
+
+    const normalized = localPart
+      .toLowerCase()
+      .replace(/[^a-z0-9._+-]/g, '');
+
+    return normalized || 'notifications';
+  }
+
+  private sanitizeDomain(domain?: string | null): string | null {
+    if (!domain) {
+      return null;
+    }
+
+    const normalized = domain.trim().replace(/^@/, '').toLowerCase();
+    return normalized || null;
+  }
+
+  private extractDomainFromAddress(address?: string): string | null {
+    if (!address) {
+      return null;
+    }
+
+    const parsed = this.parseAddress(address);
+    if (!parsed?.email) {
+      return null;
+    }
+
+    const parts = this.extractEmailParts(parsed.email);
+    return parts?.domain || null;
   }
 }

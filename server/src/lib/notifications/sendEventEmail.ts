@@ -7,6 +7,7 @@ import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from '../i18n/config';
 import Handlebars from 'handlebars';
+import { EmailAddress } from '../../types/email.types';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 
@@ -31,6 +32,7 @@ export interface SendEmailParams {
     threadId?: string;
     conversationToken?: string;
   };
+  from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
    * If not provided, will be resolved based on user preferences
@@ -384,19 +386,13 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
-    const systemFrom = process.env.EMAIL_FROM;
-    const systemFromName = process.env.EMAIL_FROM_NAME || 'Portal Notifications';
-    
-    // Determine From address: prefer explicit param, fallback to system config
-    const fromAddress = params.from || (systemFrom ? (/ <[^>]+>/.test(systemFrom) ? systemFrom : `${systemFromName} <${systemFrom}>`) : undefined);
-
     const result = await service.sendEmail({
       to: params.to,
       tenantId: params.tenantId,
       templateProcessor: processor,
       headers: params.headers,
       providerId: params.providerId,
-      from: fromAddress
+      from: params.from
     });
 
     if (!result.success) {

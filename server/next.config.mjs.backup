@@ -6,6 +6,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Disable static generation entirely
@@ -114,7 +116,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '5mb', // Increase limit for WASM uploads
+      bodySizeLimit: serverActionsBodyLimit,
     },
     instrumentationHook: true
   }

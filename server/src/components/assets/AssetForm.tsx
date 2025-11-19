@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset, ServerAsset, MobileDeviceAsset, PrinterAsset } from 'server/src/interfaces/asset.interfaces';
+import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { Asset, CreateAssetRequest, UpdateAssetRequest, WorkstationAsset, NetworkDeviceAsset, ServerAsset, MobileDeviceAsset, PrinterAsset } from 'server/src/interfaces/asset.interfaces';
+import { IClientSummary, IClientLocation, IClientWithLocation } from 'server/src/interfaces/client.interfaces';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
@@ -9,12 +11,17 @@ import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import Spinner from 'server/src/components/ui/Spinner';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getAsset, updateAsset } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getClients } from 'server/src/lib/actions/clientAction';
+import { getClientLocations } from 'server/src/lib/actions/client-actions/clientLocationActions';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { useRouter } from 'next/navigation';
-import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale } from 'lucide-react';
+import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
 import { Text } from '@radix-ui/themes';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import Drawer from 'server/src/components/ui/Drawer';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 
 interface AssetFormProps {
   assetId: string;
@@ -27,6 +34,8 @@ type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' |
   mobile_device?: Omit<MobileDeviceAsset, 'tenant' | 'asset_id'>;
   printer?: Omit<PrinterAsset, 'tenant' | 'asset_id'>;
 };
+
+type ClientOptionSummary = Omit<IClientSummary, 'tenant'>;
 
 
 const STATUS_OPTIONS = [
@@ -60,8 +69,20 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clients, setClients] = useState<ClientOptionSummary[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [clientsError, setClientsError] = useState<string | null>(null);
+  const [clientLocations, setClientLocations] = useState<IClientLocation[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [locationsError, setLocationsError] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [customLocation, setCustomLocation] = useState('');
+  const [isClientDrawerOpen, setIsClientDrawerOpen] = useState(false);
+  const [clientDrawerData, setClientDrawerData] = useState<IClientWithLocation | null>(null);
+  const [clientDrawerLoading, setClientDrawerLoading] = useState(false);
+  const [clientDrawerError, setClientDrawerError] = useState<string | null>(null);
 
-  const updateForm = useRegisterUIComponent({
+  useRegisterUIComponent({
     id: 'asset-edit-form',
     type: 'form',
     label: 'Edit Asset',
@@ -166,6 +187,8 @@ export default function AssetForm({ assetId }: AssetFormProps) {
             supply_levels: data.printer.supply_levels || {}
           } : undefined
         });
+        setCustomLocation(data.location || '');
+        setSelectedLocationId(data.location ? 'custom' : '');
       } catch (error) {
         console.error('Error loading asset:', error);
         setError('Failed to load asset details');
@@ -174,8 +197,86 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       }
     };
   
-    loadAsset();
+    void loadAsset();
   }, [assetId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadClients = async () => {
+      try {
+        setClientsLoading(true);
+        setClientsError(null);
+        const clientList = await getClients();
+        if (!isMounted) return;
+        setClients(clientList);
+      } catch (err) {
+        console.error('Error loading clients:', err);
+        if (isMounted) {
+          setClientsError('Unable to load clients');
+        }
+      } finally {
+        if (isMounted) {
+          setClientsLoading(false);
+        }
+      }
+    };
+
+    void loadClients();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadLocations = async () => {
+      if (!formData.client_id) {
+        setClientLocations([]);
+        setSelectedLocationId('custom');
+        return;
+      }
+
+      try {
+        setLocationsLoading(true);
+        setLocationsError(null);
+        const locations = await getClientLocations(formData.client_id);
+        if (!isMounted) return;
+        setClientLocations(locations);
+
+        if (locations.length === 0) {
+          setSelectedLocationId('custom');
+        } else {
+          setSelectedLocationId((current) => {
+            if (!current || current === 'custom') {
+              return current || '';
+            }
+            const stillExists = locations.some(loc => loc.location_id === current);
+            return stillExists ? current : 'custom';
+          });
+        }
+      } catch (err) {
+        console.error('Error loading client locations:', err);
+        if (isMounted) {
+          setLocationsError('Unable to load locations for this client');
+          setClientLocations([]);
+          setSelectedLocationId('custom');
+        }
+      } finally {
+        if (isMounted) {
+          setLocationsLoading(false);
+        }
+      }
+    };
+
+    void loadLocations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.client_id]);
 
   const getAssetTypeIcon = () => {
     const iconClass = "h-16 w-16 text-primary-500 mb-4";
@@ -195,6 +296,111 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (asset?.mobile_device) return <Smartphone className={iconClass} />;
     if (asset?.printer) return <PrinterIcon className={iconClass} />;
     return null;
+  };
+
+  const clientOptions = useMemo(() => (
+    clients.map(client => ({ value: client.id, label: client.name }))
+  ), [clients]);
+
+  const selectedClient = useMemo(() => (
+    clients.find(client => client.id === formData.client_id) || null
+  ), [clients, formData.client_id]);
+
+  const formatClientLocation = (location: IClientLocation) => {
+    const parts = [
+      location.location_name,
+      location.address_line1,
+      location.address_line2,
+      location.city,
+      location.state_province,
+      location.postal_code,
+      location.country_name
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
+
+  const locationOptions = useMemo(() => {
+    const options = clientLocations.map((location) => ({
+      value: location.location_id,
+      label: location.location_name || formatClientLocation(location)
+    }));
+
+    return [
+      ...options,
+      { value: 'custom', label: 'Custom location' }
+    ];
+  }, [clientLocations]);
+
+  const handleClientChange = (clientId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      client_id: clientId,
+      location: ''
+    }));
+    setSelectedLocationId('custom');
+    setCustomLocation('');
+    setClientLocations([]);
+  };
+
+  const handleLocationSelect = (value: string) => {
+    if (value === 'custom') {
+      setSelectedLocationId('custom');
+      setFormData(prev => ({
+        ...prev,
+        location: customLocation
+      }));
+      return;
+    }
+
+    const location = clientLocations.find(loc => loc.location_id === value);
+    setSelectedLocationId(value);
+    if (location) {
+      setFormData(prev => ({
+        ...prev,
+        location: formatClientLocation(location)
+      }));
+    }
+  };
+
+  const handleCustomLocationChange = (value: string) => {
+    setCustomLocation(value);
+    setSelectedLocationId('custom');
+    setFormData(prev => ({
+      ...prev,
+      location: value
+    }));
+  };
+
+  const handleOpenClientDrawer = async () => {
+    if (!formData.client_id) {
+      return;
+    }
+
+    setIsClientDrawerOpen(true);
+    setClientDrawerLoading(true);
+    setClientDrawerError(null);
+
+    try {
+      const clientData = await getClientById(formData.client_id);
+      if (!clientData) {
+        setClientDrawerError('Client record could not be found.');
+        setClientDrawerData(null);
+      } else {
+        setClientDrawerData(clientData);
+      }
+    } catch (err) {
+      console.error('Error loading client quick view:', err);
+      setClientDrawerError('Unable to load client details.');
+      setClientDrawerData(null);
+    } finally {
+      setClientDrawerLoading(false);
+    }
+  };
+
+  const handleCloseClientDrawer = () => {
+    setIsClientDrawerOpen(false);
+    setClientDrawerData(null);
+    setClientDrawerError(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -773,12 +979,12 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
       // Remove any undefined or empty string values from the root object
       const cleanedData = Object.fromEntries(
-        Object.entries(formattedData).filter(([_, value]) => 
+        Object.entries(formattedData).filter(([, value]) => 
           value !== undefined && value !== ''
         )
-      );
+      ) as UpdateAssetRequest;
 
-      await updateAsset(assetId, formattedData);
+      await updateAsset(assetId, cleanedData);
       router.push(`/msp/assets/${assetId}`);
       router.refresh();
     } catch (error) {
@@ -814,118 +1020,198 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Edit Asset</h1>
       </div>
 
-      <form id="asset-edit-form" onSubmit={handleSubmit} className="space-y-6">
-        <Card id="basic-info-section" className="p-6 border border-[rgb(var(--color-border-200))]">
-          <div id="asset-type-icon" className="flex flex-col items-center mb-6">
+      <form
+        id="asset-edit-form"
+        onSubmit={(event) => {
+          void handleSubmit(event);
+        }}
+        className="space-y-6"
+      >
+        <Card id="basic-info-section" className="p-6 border border-[rgb(var(--color-border-200))] space-y-6">
+          <div id="asset-type-icon" className="flex flex-col items-center">
             {getAssetTypeIcon()}
             <Text size="5" weight="medium" className="text-[rgb(var(--color-text-900))]">
               Basic Information
             </Text>
           </div>
 
-          <div id="basic-info-fields-grid" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div id="basic-info-left-column" className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Name
-                </label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1"
-                />
+          <div className="space-y-6">
+            <div>
+              <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
+                Client & Location
+              </Text>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="asset-client-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    Client
+                  </label>
+                  <CustomSelect
+                    id="asset-client-select"
+                    value={formData.client_id}
+                    onValueChange={handleClientChange}
+                    options={clientOptions}
+                    placeholder={clientsLoading ? 'Loading clients…' : 'Select client'}
+                    disabled={clientsLoading || saving}
+                    className="mt-1"
+                  />
+                  {clientsError && (
+                    <p className="mt-2 text-sm text-red-600">{clientsError}</p>
+                  )}
+                  {selectedClient && (
+                    <div className="mt-2 text-sm text-[rgb(var(--color-text-600))] flex flex-wrap items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary-500" />
+                      <span>{selectedClient.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleOpenClientDrawer()}
+                        className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-500"
+                      >
+                        View client
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="asset-location-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    Primary Location
+                  </label>
+                  <CustomSelect
+                    id="asset-location-select"
+                    value={selectedLocationId}
+                    onValueChange={handleLocationSelect}
+                    options={locationOptions}
+                    placeholder={formData.client_id ? (locationsLoading ? 'Loading locations…' : 'Select a location') : 'Select a client first'}
+                    disabled={!formData.client_id || locationsLoading}
+                    className="mt-1"
+                  />
+                  {locationsLoading && (
+                    <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">Loading locations…</p>
+                  )}
+                  {locationsError && (
+                    <p className="mt-2 text-sm text-red-600">{locationsError}</p>
+                  )}
+                  {!locationsLoading && formData.client_id && clientLocations.length === 0 && !locationsError && (
+                    <Alert variant="info" className="mt-2">
+                      <AlertDescription>
+                        This client doesn’t have any saved locations yet. Use custom entry or create one from the client record.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {selectedLocationId === 'custom' && (
+                    <Input
+                      id="custom-location-input"
+                      className="mt-3"
+                      value={customLocation}
+                      onChange={(e) => handleCustomLocationChange(e.target.value)}
+                      placeholder="Enter a custom location or area"
+                    />
+                  )}
+                  {formData.client_id && (
+                    <Link
+                      href={`/msp/clients/${formData.client_id}?panel=locations`}
+                      className="mt-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-500"
+                    >
+                      Manage client locations
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
                 </div>
               </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-            Asset Tag
-                </label>
-                <Input
-                  id="asset_tag"
-                  name="asset_tag"
-                  value={formData.asset_tag}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Serial Number
-                </label>
-                <Input
-                  id="serial_number"
-                  name="serial_number"
-                  value={formData.serial_number}
-                  onChange={handleInputChange}
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="status" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-              Status
-            </label>
-            <CustomSelect
-              id="status-select"
-              value={formData.status}
-              onValueChange={handleSelectChange}
-              options={STATUS_OPTIONS}
-              className="mt-1"
-            />
-          </div>
-
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="location" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Location
-                </label>
-                <Input
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="purchase_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  Purchase Date
-                </label>
-                <DatePicker
-                  id="purchase_date"
-                  value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
-                  onChange={(date) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      purchase_date: date ? date.toISOString().split('T')[0] : ''
-                    }));
-                  }}
-                  placeholder="Select purchase date"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="warranty_end_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                  Warranty End Date
-                </label>
-                <DatePicker
-                  id="warranty_end_date"
-                  value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
-                  onChange={(date) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      warranty_end_date: date ? date.toISOString().split('T')[0] : ''
-                    }));
-                  }}
-                  placeholder="Select warranty end date"
-                />
+            <div className="border-t border-[rgb(var(--color-border-200))] pt-6">
+              <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
+                Asset Basics
+              </Text>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                      Name
+                    </label>
+                    <Input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="asset_tag" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                      Asset Tag
+                    </label>
+                    <Input
+                      id="asset_tag"
+                      name="asset_tag"
+                      value={formData.asset_tag}
+                      onChange={handleInputChange}
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="serial_number" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                      Serial Number
+                    </label>
+                    <Input
+                      id="serial_number"
+                      name="serial_number"
+                      value={formData.serial_number}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                      Status
+                    </label>
+                    <CustomSelect
+                      id="status-select"
+                      value={formData.status}
+                      onValueChange={handleSelectChange}
+                      options={STATUS_OPTIONS}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="purchase_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                      Purchase Date
+                    </label>
+                    <DatePicker
+                      id="purchase_date"
+                      value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
+                      onChange={(date) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          purchase_date: date ? date.toISOString().split('T')[0] : ''
+                        }));
+                      }}
+                      placeholder="Select purchase date"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="warranty_end_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                      Warranty End Date
+                    </label>
+                    <DatePicker
+                      id="warranty_end_date"
+                      value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
+                      onChange={(date) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          warranty_end_date: date ? date.toISOString().split('T')[0] : ''
+                        }));
+                      }}
+                      placeholder="Select warranty end date"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -973,6 +1259,29 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           </div>
         )}
       </form>
+
+      <Drawer
+        id="asset-client-quick-view"
+        isOpen={isClientDrawerOpen}
+        onClose={handleCloseClientDrawer}
+      >
+        {clientDrawerLoading && (
+          <div className="flex min-h-[200px] items-center justify-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
+            <Spinner size="sm" className="text-primary-500" />
+            Loading client profile...
+          </div>
+        )}
+
+        {!clientDrawerLoading && clientDrawerError && (
+          <Alert variant="destructive">
+            <AlertDescription>{clientDrawerError}</AlertDescription>
+          </Alert>
+        )}
+
+        {!clientDrawerLoading && !clientDrawerError && clientDrawerData && (
+          <ClientDetails client={clientDrawerData} isInDrawer quickView />
+        )}
+      </Drawer>
     </div>
   );
 }

@@ -262,7 +262,7 @@ export const assetMaintenanceReportSchema = z.object({
   last_maintenance: z.string().optional(),
   next_maintenance: z.string().optional(),
   compliance_rate: z.number(),
-  maintenance_history: z.array(z.unknown())
+  maintenance_history: z.array(assetMaintenanceHistorySchema)
 });
 
 export const clientMaintenanceSummarySchema = z.object({

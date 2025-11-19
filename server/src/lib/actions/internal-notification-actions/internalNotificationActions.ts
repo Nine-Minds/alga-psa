@@ -335,6 +335,15 @@ export async function getNotificationsAction(
 ): Promise<InternalNotificationListResponse> {
   const { knex } = await (await import("../../db")).createTenantKnex();
 
+  console.log('[getNotificationsAction] Fetching notifications for:', {
+    tenant: request.tenant,
+    user_id: request.user_id,
+    limit: request.limit,
+    offset: request.offset,
+    is_read: request.is_read,
+    category: request.category
+  });
+
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const limit = request.limit || 20;
     const offset = request.offset || 0;

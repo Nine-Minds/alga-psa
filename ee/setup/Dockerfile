@@ -5,11 +5,10 @@ FROM ${SERVER_IMAGE_REPO}:${ALGA_IMAGE_TAG}
 
 USER root
 
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    sqlite3 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk update && apk add --no-cache \
+    postgresql16-client \
+    sqlite \
+    curl
 
 WORKDIR /opt/setup
 

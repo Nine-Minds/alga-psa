@@ -20,6 +20,7 @@ interface EmailProviderListProps {
   onTestConnection: (provider: EmailProvider) => void;
   onRefresh: () => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
+  onRetryRenewal: (provider: EmailProvider) => void;
   onAddClick?: () => void;
 }
 
@@ -30,6 +31,7 @@ export function EmailProviderList({
   onTestConnection,
   onRefresh,
   onRefreshWatchSubscription,
+  onRetryRenewal,
   onAddClick
 }: EmailProviderListProps) {
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
@@ -95,6 +97,7 @@ export function EmailProviderList({
             onDelete={onDelete}
             onTestConnection={onTestConnection}
             onRefreshWatchSubscription={onRefreshWatchSubscription}
+            onRetryRenewal={onRetryRenewal}
             onChangeDefaults={handleChangeDefaults}
           />
         ))}

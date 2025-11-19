@@ -4,24 +4,34 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { DatePicker } from 'server/src/components/ui/DatePicker';import { TextArea } from 'server/src/components/ui/TextArea';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { format, isWeekend, addYears } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { IScheduleEntry, IRecurrencePattern, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { AddWorkItemDialog } from 'server/src/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { CalendarSyncStatusDisplay } from '../calendar/CalendarSyncStatusDisplay';
+import {
+  approveAppointmentRequest as approveRequest,
+  declineAppointmentRequest as declineRequest,
+  getAppointmentRequestById,
+  IAppointmentRequest
+} from 'server/src/lib/actions/appointmentRequestManagementActions';
+import toast from 'react-hot-toast';
+import { Label } from 'server/src/components/ui/Label';
 
 const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
 
@@ -117,6 +127,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  // Appointment request specific state
+  const [isAppointmentRequest, setIsAppointmentRequest] = useState(false);
+  const [appointmentRequestData, setAppointmentRequestData] = useState<IAppointmentRequest | null>(null);
+  const [showDeclineForm, setShowDeclineForm] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [assignedTechnicianId, setAssignedTechnicianId] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
     // Determine mode and permissions
     const isEditing = !!event;
     const isCurrentUserSoleAssignee = isEditing && event.assigned_user_ids?.length === 1 && event.assigned_user_ids[0] === currentUserId;
@@ -137,7 +155,51 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     // Add a message to display when a user can't edit a private event
     const privateEventMessage = isPrivateEvent && !isCurrentUserSoleAssignee ?
       "This is a private entry. Only the creator can view or edit details." : null;
-  
+
+    // Detect if this is an appointment request and fetch its data
+    useEffect(() => {
+      const fetchAppointmentRequest = async () => {
+        if (event && event.work_item_type === 'appointment_request' && event.work_item_id) {
+          setIsAppointmentRequest(true);
+
+          // Fetch the appointment request data to check its status
+          const result = await getAppointmentRequestById(event.work_item_id);
+          if (result.success && result.data) {
+            setAppointmentRequestData(result.data);
+
+            // Pre-fill assigned technician if one exists
+            if (event.assigned_user_ids && event.assigned_user_ids.length > 0) {
+              setAssignedTechnicianId(event.assigned_user_ids[0]);
+            }
+
+            // Fix title for approved appointment requests if it still has [Pending Request] prefix
+            if (result.data.status === 'approved' && event.title.includes('[Pending Request]')) {
+              const serviceName = (result.data as any).service_name;
+              if (serviceName) {
+                const correctedTitle = `Appointment: ${serviceName}`;
+                console.log('[EntryPopup] Correcting title for approved appointment request:', {
+                  oldTitle: event.title,
+                  newTitle: correctedTitle
+                });
+                setEntryData(prev => ({
+                  ...prev,
+                  title: correctedTitle
+                }));
+              }
+            }
+          } else {
+            console.error('Failed to fetch appointment request:', result.error);
+            setAppointmentRequestData(null);
+          }
+        } else {
+          setIsAppointmentRequest(false);
+          setAppointmentRequestData(null);
+        }
+      };
+
+      fetchAppointmentRequest();
+    }, [event]);
+
     // Fetch available work items when dialog opens
   useEffect(() => {
     if (isEditingWorkItem) {
@@ -357,6 +419,88 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
   };
 
+  // Handle appointment request approval
+  const handleApproveRequest = async () => {
+    if (!event || !event.work_item_id) return;
+
+    if (!assignedTechnicianId) {
+      toast.error('Please assign a technician');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const startDate = new Date(event.scheduled_start);
+      const endDate = new Date(event.scheduled_end);
+
+      const result = await approveRequest({
+        appointment_request_id: event.work_item_id,
+        assigned_user_id: assignedTechnicianId,
+        final_date: startDate.toISOString().split('T')[0],
+        final_time: startDate.toTimeString().slice(0, 5)
+      });
+
+      if (result.success) {
+        toast.success('Appointment request approved');
+        onClose();
+        // Trigger calendar refresh by calling onSave with the updated entry
+        // Update the title to remove [Pending Request] prefix
+        if (onSave) {
+          const serviceName = appointmentRequestData ? (appointmentRequestData as any).service_name : null;
+          const correctedTitle = serviceName ? `Appointment: ${serviceName}` : entryData.title;
+
+          onSave({
+            ...entryData,
+            title: correctedTitle,
+            assigned_user_ids: [assignedTechnicianId]
+          });
+        }
+      } else {
+        toast.error(result.error || 'Failed to approve request');
+      }
+    } catch (error) {
+      console.error('Failed to approve request:', error);
+      toast.error('Failed to approve request');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle appointment request decline
+  const handleDeclineRequest = async () => {
+    if (!event || !event.work_item_id) return;
+
+    if (!declineReason.trim()) {
+      toast.error('Please provide a reason for declining');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const result = await declineRequest({
+        appointment_request_id: event.work_item_id,
+        decline_reason: declineReason
+      });
+
+      if (result.success) {
+        toast.success('Appointment request declined');
+        onClose();
+        // Don't call onSave - the schedule entry was deleted by the decline action
+        // Just refresh the calendar by calling onDelete if available
+        if (onDelete && event.entry_id) {
+          onDelete(event.entry_id);
+        }
+      } else {
+        toast.error(result.error || 'Failed to decline request');
+      }
+    } catch (error) {
+      console.error('Failed to decline request:', error);
+      toast.error('Failed to decline request');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleSave = () => {
     if (!canEditFields && isEditing) return;
     
@@ -460,7 +604,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       <div className="shrink-0 pb-4 border-b flex justify-between items-center">
         {isInDrawer && (
           <h2 className="text-xl font-bold">
-            {viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
+            {(isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending') ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
           </h2>
         )}
         <div className={`flex gap-2 ${!isInDrawer ? 'ml-auto' : ''}`}>
@@ -494,6 +638,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             </AlertDescription>
           </Alert>
         )}
+      </div>  
         {/* Display message for private events */}
         {privateEventMessage && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
@@ -511,6 +656,161 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             </div>
           </div>
         )}
+
+        {/* Info badge for approved appointment requests */}
+        {isAppointmentRequest && event && appointmentRequestData && appointmentRequestData.status === 'approved' && (
+          <Alert className="border-green-200 bg-green-50 mb-4">
+            <AlertDescription>
+              <p className="font-medium text-green-900">Approved Appointment</p>
+              <p className="text-sm text-green-700 mt-1">
+                This appointment originated from a client request{appointmentRequestData.approved_at ? ` and was approved on ${format(new Date(appointmentRequestData.approved_at), 'PPP')}` : ''}.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Status display for declined/cancelled appointment requests */}
+        {isAppointmentRequest && event && appointmentRequestData && (appointmentRequestData.status === 'declined' || appointmentRequestData.status === 'cancelled') && (
+          <div className="space-y-4">
+            <Alert className={appointmentRequestData.status === 'declined' ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}>
+              <AlertDescription>
+                <p className={`font-medium ${appointmentRequestData.status === 'declined' ? 'text-red-900' : 'text-gray-900'}`}>
+                  {appointmentRequestData.status === 'declined' ? 'Declined Appointment Request' : 'Cancelled Appointment Request'}
+                </p>
+                <p className={`text-sm mt-1 ${appointmentRequestData.status === 'declined' ? 'text-red-700' : 'text-gray-700'}`}>
+                  {appointmentRequestData.status === 'declined' &&
+                    `This appointment request was declined${appointmentRequestData.declined_reason ? `: ${appointmentRequestData.declined_reason}` : '.'}`}
+                  {appointmentRequestData.status === 'cancelled' &&
+                    'This appointment request was cancelled by the client.'}
+                </p>
+              </AlertDescription>
+            </Alert>
+
+            <div>
+              <Label>Requested Date & Time</Label>
+              <div className="text-sm bg-gray-50 p-3 rounded border">
+                {formatInTimeZone(new Date(event.scheduled_start), 'UTC', 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), 'UTC', 'p')} UTC
+              </div>
+            </div>
+
+            {event.notes && (
+              <div>
+                <Label>Notes</Label>
+                <div className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
+                  {event.notes}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Appointment Request Approval UI - Only for PENDING requests */}
+        {isAppointmentRequest && event && appointmentRequestData && appointmentRequestData.status === 'pending' && (
+          <div className="space-y-4">
+                <Alert className="border-rose-200 bg-rose-50">
+                  <AlertDescription>
+                    <p className="font-medium text-rose-900">Pending Appointment Request</p>
+                    <p className="text-sm text-rose-700 mt-1">This is an appointment request from a client. You can approve or decline it below.</p>
+                  </AlertDescription>
+                </Alert>
+
+                <div>
+                  <UserPicker
+                    id="assign-technician-request"
+                    label="Assign Technician *"
+                    users={users}
+                    value={assignedTechnicianId}
+                    onValueChange={setAssignedTechnicianId}
+                    placeholder="Select technician"
+                    userTypeFilter="internal"
+                    buttonWidth="full"
+                  />
+                </div>
+
+                <div>
+                  <Label>Scheduled Date & Time</Label>
+                  <div className="text-sm bg-gray-50 p-3 rounded border">
+                    {formatInTimeZone(new Date(event.scheduled_start), 'UTC', 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), 'UTC', 'p')} UTC
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Notes</Label>
+                  <div className="text-sm bg-gray-50 p-3 rounded border whitespace-pre-wrap">
+                    {event.notes || 'No notes provided'}
+                  </div>
+                </div>
+
+                {!showDeclineForm ? (
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      id="approve-appointment-request"
+                      onClick={handleApproveRequest}
+                      disabled={isProcessing || !assignedTechnicianId}
+                      className="flex-1"
+                      type="button"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button
+                      id="decline-appointment-request-show"
+                      variant="outline"
+                      onClick={() => setShowDeclineForm(true)}
+                      disabled={isProcessing}
+                      className="flex-1"
+                      type="button"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Decline
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <Label htmlFor="decline-reason">Reason for Declining *</Label>
+                      <TextArea
+                        id="decline-reason"
+                        value={declineReason}
+                        onChange={(e) => setDeclineReason(e.target.value)}
+                        placeholder="Please provide a reason for declining this request..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        id="confirm-decline-request"
+                        variant="destructive"
+                        onClick={handleDeclineRequest}
+                        disabled={isProcessing || !declineReason.trim()}
+                        className="flex-1"
+                        type="button"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Confirm Decline
+                      </Button>
+                      <Button
+                        id="cancel-decline-request"
+                        variant="outline"
+                        onClick={() => {
+                          setShowDeclineForm(false);
+                          setDeclineReason('');
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1"
+                        type="button"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+          </div>
+        )}
+
+        {/* Regular Edit Form - show if NOT an appointment request OR if it's an approved appointment request */}
+        {(!isAppointmentRequest || (appointmentRequestData && appointmentRequestData.status === 'approved')) && (
         <div className="min-w-0">
           <div className="relative">
             {viewOnly ? (
@@ -550,7 +850,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               />
             )}
           </div>
-          </div>
+
+          <div className="space-y-4">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700">
               Title
@@ -767,6 +1068,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             )}
           </div>
         )}
+        </div>
+        )}
+
       <div className="mt-6 flex justify-end space-x-3">
         {/* Only show Cancel/Close button if not in a drawer, since the drawer will have its own close button */}
         {!isInDrawer && (
@@ -774,7 +1078,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             Cancel
           </Button>
         )}
-        {viewOnly ? (
+
+        {/* Buttons section - different for appointment requests vs regular entries */}
+        {viewOnly || (isAppointmentRequest && appointmentRequestData && appointmentRequestData.status !== 'approved') ? (
           <Button
             id="close-entry-btn"
             onClick={onClose}
@@ -786,10 +1092,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             id="save-entry-btn"
             type="submit"
             className={`${
-              (entryData.work_item_type === 'ad_hoc' && !entryData.title?.trim()) || 
-              !entryData.scheduled_start || 
-              !entryData.scheduled_end || 
-              entryData.assigned_user_ids.length === 0 
+              (entryData.work_item_type === 'ad_hoc' && !entryData.title?.trim()) ||
+              !entryData.scheduled_start ||
+              !entryData.scheduled_end ||
+              entryData.assigned_user_ids.length === 0
                 ? 'opacity-50' : ''
             }`}
             // Disable save only if editing AND user lacks permission to edit these fields
@@ -837,7 +1143,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       isOpen={true}
       onClose={onClose}
       hideCloseButton={false}
-      title={viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
+      title={(isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending') ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
     >
       <EntryPopupContext.Provider value={contextValue}>
         {content}

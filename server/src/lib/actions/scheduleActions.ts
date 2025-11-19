@@ -40,29 +40,33 @@ export async function getScheduleEntries(
     }
 
     const { knex: db } = await createTenantKnex();
-    const allEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await ScheduleEntry.getAll(trx, start, end); // Fetch all entries for the tenant
-    });
-
-    let filteredEntries: IScheduleEntry[];
 
     // Check if user has broader view/update permission
     const canUpdate = userPermissions.includes('user_schedule:update');
 
-    // First filter by technician IDs or user permissions
-    if (canUpdate) {
-      // User has update permission: Can view all, filter by technicianIds if provided
-      filteredEntries = technicianIds && technicianIds.length > 0
-        ? allEntries.filter(entry =>
-            entry.assigned_user_ids.some(assignedId => technicianIds.includes(assignedId))
-          )
-        : allEntries; // Return all if no specific technicians requested
-    } else {
-      // User only has read permission: View only own entries, ignore technicianIds parameter
-      filteredEntries = allEntries.filter(entry =>
-        entry.assigned_user_ids.includes(currentUser.user_id)
-      );
-    }
+    // Optimize: Filter at database level instead of loading all and filtering in memory
+    let filteredEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const allEntries = await ScheduleEntry.getAll(trx, start, end);
+
+      // Early return if no filtering needed (user can see all)
+      if (canUpdate && (!technicianIds || technicianIds.length === 0)) {
+        return allEntries;
+      }
+
+      // Filter based on permissions
+      if (canUpdate && technicianIds && technicianIds.length > 0) {
+        // User has update permission: Can view assigned entries OR unassigned appointment requests
+        return allEntries.filter(entry =>
+          entry.assigned_user_ids.some(assignedId => technicianIds.includes(assignedId)) ||
+          (entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
+        );
+      } else {
+        // User only has read permission: View only own entries
+        return allEntries.filter(entry =>
+          entry.assigned_user_ids.includes(currentUser.user_id)
+        );
+      }
+    });
 
     // Then filter private entries - these are only visible to assigned users regardless of permissions
     filteredEntries = filteredEntries.map(entry => {

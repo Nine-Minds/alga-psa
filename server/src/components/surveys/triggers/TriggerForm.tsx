@@ -381,7 +381,13 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
       (triggerConditions as any).priority = selectedPriorityIds;
     }
 
-    const payloadConditions = Object.keys(triggerConditions).length > 0 ? triggerConditions : undefined;
+    const payloadConditions = Object.values(triggerConditions).some(
+      (value) => Array.isArray(value) && value.length > 0
+    )
+      ? triggerConditions
+      : {};
+    const selectedTemplateName = templateOptions.find((option) => option.value === formState.templateId)?.label;
+    const templateDescription = typeof selectedTemplateName === 'string' ? selectedTemplateName : '';
 
     setIsSubmitting(true);
     try {
@@ -396,7 +402,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         });
         toast({
           title: t('surveys.settings.triggerList.toasts.updated', 'Trigger updated'),
-          description: '',
+          description: templateDescription,
         });
       } else {
         result = await createSurveyTrigger({
@@ -407,7 +413,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
         });
         toast({
           title: t('surveys.settings.triggerList.toasts.created', 'Trigger created'),
-          description: '',
+          description: templateDescription,
         });
       }
 
@@ -508,6 +514,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           onValueChange={(value) => handleChange('templateId', value || null)}
           placeholder={t('surveys.settings.triggerForm.labels.template', 'Survey template')}
           disabled={templateOptions.length === 0}
+          label={t('surveys.settings.triggerForm.labels.template', 'Survey template')}
         />
 
         <CustomSelect
@@ -522,6 +529,7 @@ export function TriggerForm({ templates, trigger, onSuccess, onDeleteSuccess, on
           value={formState.triggerType}
           onValueChange={(value) => handleChange('triggerType', (value as TriggerType) || 'ticket_closed')}
           placeholder={t('surveys.settings.triggerForm.labels.triggerType', 'Trigger type')}
+          label={t('surveys.settings.triggerForm.labels.triggerType', 'Trigger type')}
         />
       </div>
 

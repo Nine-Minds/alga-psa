@@ -6,25 +6,26 @@ Key guarantees: See “Correctness Rules” in the README for the canonical list
 
 ## Overview
 
-- Out-of-process execution: Extension handlers run in a separate Runner service (Wasmtime).
+- Out-of-process execution: Componentized extension handlers run in a separate Runner service (Wasmtime Component APIs).
 - Signed, content-addressed bundles: Stored in object storage (e.g., S3/MinIO), addressed by `sha256/<hash>`, with signature verification.
-- Secure Gateway: Host exposes `/api/ext/[extensionId]/[...]`, resolves tenant install → version → manifest endpoint, and invokes Runner.
+- Secure Gateway: Host exposes `/api/ext/[extensionId]/[[...path]]`, resolves tenant install metadata (version, content hash, config map, provider grants, sealed secret envelope), and invokes Runner.
 - UI via iframe (Runner-hosted): Client UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`. There is no Next.js route for ext-ui.
 
 ## Components (by concern)
 
-- API Gateway (Next.js): `server/src/app/api/ext/[extensionId]/[...path]/route.ts`
-  - Resolves tenant install, version/content hash, manifest endpoint, and proxies to the Runner.
-  - Enforces header/size/time restrictions, RBAC, and request normalization.
-  - Reference scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- API Gateway (Next.js): `server/src/app/api/ext/[extensionId]/[[...path]]/route.ts`
+  - Resolves tenant install via [@ee/lib/extensions/installConfig](../../server/src/lib/extensions/installConfig.ts), supplies `{config, providers, secret_envelope}` with each execute request, and proxies to the Runner.
+  - Enforces header/size/time restrictions, session auth, and request normalization (RBAC hardening tracked in [2025-11-12 plan](../plans/2025-11-12-extension-system-alignment-plan.md)).
+  - Reference scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 - Runner (EE): `ee/runner/...`
-  - Rust service embedding Wasmtime; fetches modules by content hash; verifies integrity/signatures; enforces capability-scoped Host API.
+  - Rust service embedding Wasmtime Component APIs; fetches modules by content hash; verifies integrity/signatures; enforces capability-scoped host APIs (http, storage, secrets, logging, ui proxy, debug events).
   - Serves static UI assets for iframe delivery at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`.
+  - Emits structured debug events to Redis Streams when `RUNNER_DEBUG_REDIS_URL` is configured.
 
 - Registry + Services (EE): `ee/server/src/lib/extensions/**`
-  - Registry/read models, installation flow, bundle resolution, and signature/trust-bundle integration.
-  - Registry v2 service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
+  - Registry/read models, installation flow, bundle resolution, install config + secret storage, and signature/trust-bundle integration.
+  - Registry v2 service scaffold: [ExtensionRegistryServiceV2](../../server/src/lib/extensions/registry-v2.ts:48)
 
 - Object Storage (S3/MinIO):
   - Stores published bundles at content-addressed keys, plus optional precompiled Wasmtime artifacts.
@@ -74,10 +75,10 @@ sequenceDiagram
   participant S3 as Object Storage
 
   FE->>GW: HTTP /api/ext/{extensionId}/{...}
-  GW->>REG: Resolve tenant install → version → content_hash
-  REG-->>GW: {version_id, content_hash}
-  GW->>GW: Resolve manifest endpoint (method, path → handler)
-  GW->>RUN: POST /v1/execute {context, http, limits}
+  GW->>REG: Resolve tenant install → {version_id, content_hash, config, providers, secret_envelope}
+  REG-->>GW: install metadata
+  GW->>GW: (optional) resolve manifest endpoint metadata
+  GW->>RUN: POST /v1/execute {context, http, limits, config, providers, secret_envelope}
   RUN->>RUN: Check cache for module by content_hash
   alt cache miss
     RUN->>S3: GET sha256/<hash>/entry.wasm (or bundle.tar.zst)
@@ -92,8 +93,8 @@ sequenceDiagram
 ```
 
 Key points:
-- Gateway derives tenant context, validates RBAC, and normalizes request/headers/body.
-- Runner enforces execution limits and capability policies; egress is allowlisted.
+- Gateway derives tenant context, validates authz (RBAC hardening pending), normalizes request/headers/body, and attaches install metadata.
+- Runner enforces execution limits and capability policies; egress is allowlisted and capability-scoped.
 
 ## UI Asset Serving Flow (Runner-hosted)
 
@@ -115,7 +116,7 @@ sequenceDiagram
   RUN-->>BR: 200 OK (file) + ETag + immutable Cache-Control
 ```
 
-The URL embeds `contentHash`, enabling long‑lived immutable caching for UI assets. The host app constructs the iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes postMessage bridge via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45).
+The URL embeds `contentHash`, enabling long‑lived immutable caching for UI assets. The host app constructs the iframe src via [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes the postMessage bridge via [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45).
 
 ## Iframe Bootstrap (Host App)
 
@@ -125,20 +126,24 @@ Client bootstrap features implemented in the host:
 - Bridges theme tokens into `:root` and via postMessage; handles `ready`, `resize`, and `navigate` messages.
 
 References:
-- [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
-- [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+- [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Environment & Configuration
 
 Gateway:
 - `RUNNER_BASE_URL` — internal URL for Runner (`POST /v1/execute`)
 - `EXT_GATEWAY_TIMEOUT_MS` — default gateway timeout (ms)
+- `EXT_GATEWAY_ALLOWED_ORIGINS`, `DEV_TENANT_ID` — host routing helpers
+- `DEBUG_STREAM_REDIS_URL`, `RUNNER_DEBUG_REDIS_STREAM_PREFIX`, credentials — required for `/api/ext-debug/stream`
 
 Runner:
 - `RUNNER_PUBLIC_BASE` — public base for serving ext-ui assets
 - `SIGNING_TRUST_BUNDLE` — trust anchors for signature verification
 - `EXT_EGRESS_ALLOWLIST` — hostnames allowed for `alga.http.fetch`
-- Memory/timeouts — enforced per invocation
+- `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_MAXLEN`, `RUNNER_DEBUG_MAX_EVENT_BYTES` — enable Redis-backed debug streaming
+- `UI_PROXY_BASE_URL`, `UI_PROXY_AUTH_KEY`, `UI_PROXY_TIMEOUT_MS` — enable the UI proxy capability
+- Memory/timeouts — enforced per invocation (configurable via execute request limits)
 
 Object Storage (S3/MinIO):
 - `BUNDLE_STORE_BASE` — content-addressed root/prefix
@@ -156,10 +161,11 @@ Caches:
 - Quotas/limits: memory caps, timeouts, and concurrency per tenant/extension.
 - UI isolation: sandboxed iframes; origin validation aligned with `RUNNER_PUBLIC_BASE`.
 
-## Error Handling & Retries
+## Error Handling, Debugging & Retries
 
 - Gateway: short timeouts; idempotency keys for non-GET; limited retries on 502/503/504.
-- Runner: structured errors for policy violations; quarantine or disable misbehaving extensions.
+- Runner: structured errors for policy violations; quarantine or disable misbehaving extensions; emits `ExtDebugEvent` entries for stdout/stderr/log lines.
+- EE Debug Console: `/api/ext-debug/stream` proxies Redis Streams to the MSP UI at `/msp/extensions/[id]/debug`. Capability gating + audit logging tracked in [Workstream B](../plans/2025-11-12-extension-system-alignment-plan.md).
 - UI assets (Runner): 404 on path mismatch; immutable caching with ETag; safe defaults for mime types.
 
 ## Local Development Notes
@@ -170,7 +176,8 @@ Caches:
 
 ## Related Sources
 
-- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- Iframe bootstrap + src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
-- Registry v2 service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
+- Gateway route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- Install config + secret envelopes: [@ee/lib/extensions/installConfig](../../server/src/lib/extensions/installConfig.ts)
+- Iframe bootstrap + src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Debug stream Redis client: [server/src/lib/extensions/debugStream/redis.ts](../../server/src/lib/extensions/debugStream/redis.ts)
 - Runner overview: [runner.md](runner.md)

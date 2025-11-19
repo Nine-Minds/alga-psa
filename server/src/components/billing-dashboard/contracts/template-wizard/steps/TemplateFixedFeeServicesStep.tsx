@@ -7,11 +7,11 @@ import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Package } from 'lucide-react';
+import { Plus, X, Package, DollarSign } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { BucketOverlayFields } from '../../BucketOverlayFields';
-import { TemplateBucketOverlayInput, TemplateWizardData } from '../TemplateWizard';
+import { TemplateWizardData } from '../TemplateWizard';
+import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
 
 interface TemplateFixedFeeServicesStepProps {
   data: TemplateWizardData;
@@ -24,6 +24,7 @@ export function TemplateFixedFeeServicesStep({
 }: TemplateFixedFeeServicesStepProps) {
   const [services, setServices] = useState<IService[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [baseRateInput, setBaseRateInput] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -45,6 +46,12 @@ export function TemplateFixedFeeServicesStep({
     void load();
   }, []);
 
+  useEffect(() => {
+    if (data.fixed_base_rate !== undefined) {
+      setBaseRateInput((data.fixed_base_rate / 100).toFixed(2));
+    }
+  }, [data.fixed_base_rate]);
+
   const serviceOptions = services.map((service) => ({
     value: service.service_id,
     label: service.service_name,
@@ -54,7 +61,7 @@ export function TemplateFixedFeeServicesStep({
     updateData({
       fixed_services: [
         ...data.fixed_services,
-        { service_id: '', service_name: '', quantity: 1, bucket_overlay: undefined },
+        { service_id: '', service_name: '', quantity: 1 },
       ],
     });
   };
@@ -81,32 +88,49 @@ export function TemplateFixedFeeServicesStep({
     updateData({ fixed_services: next });
   };
 
-  const getDefaultOverlay = (): TemplateBucketOverlayInput => ({
-    total_minutes: undefined,
-    overage_rate: undefined,
-    allow_rollover: false,
-    billing_period: 'monthly',
-  });
+  // Build preview services list
+  const previewServices = React.useMemo(() => {
+    const items: Array<{
+      id: string;
+      name: string;
+      quantity?: number;
+      serviceId: string;
+    }> = [];
 
-  const toggleBucketOverlay = (index: number, enabled: boolean) => {
-    const next = [...data.fixed_services];
-    if (enabled) {
-      next[index] = {
-        ...next[index],
-        bucket_overlay: next[index].bucket_overlay
-          ? { ...next[index].bucket_overlay }
-          : getDefaultOverlay(),
-      };
-    } else {
-      next[index] = { ...next[index], bucket_overlay: undefined };
+    // Add individual services
+    for (const service of data.fixed_services) {
+      if (service.service_id) {
+        items.push({
+          id: `service-${service.service_id}`,
+          name: service.service_name || 'Unknown Service',
+          quantity: service.quantity ?? 1,
+          serviceId: service.service_id,
+        });
+      }
     }
-    updateData({ fixed_services: next });
+
+    return items;
+  }, [data.fixed_services]);
+
+  const handlePreviewQuantityChange = (itemId: string, quantity: number) => {
+    if (itemId.startsWith('service-')) {
+      const serviceId = itemId.replace('service-', '');
+      const serviceIndex = data.fixed_services.findIndex((s) => s.service_id === serviceId);
+      if (serviceIndex !== -1) {
+        handleQuantityChange(serviceIndex, quantity);
+      }
+    }
   };
 
-  const updateBucketOverlay = (index: number, overlay: TemplateBucketOverlayInput) => {
-    const next = [...data.fixed_services];
-    next[index] = { ...next[index], bucket_overlay: { ...overlay } };
-    updateData({ fixed_services: next });
+  const handlePreviewRemoveService = (itemId: string) => {
+    if (itemId.startsWith('service-')) {
+      // Remove individual service
+      const serviceId = itemId.replace('service-', '');
+      const serviceIndex = data.fixed_services.findIndex((s) => s.service_id === serviceId);
+      if (serviceIndex !== -1) {
+        handleRemoveService(serviceIndex);
+      }
+    }
   };
 
   return (
@@ -119,11 +143,72 @@ export function TemplateFixedFeeServicesStep({
           </p>
         </div>
 
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
-            <strong>What are Fixed Fee Services?</strong> These services have a set monthly price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
+        <div className="p-4 bg-accent-50 border border-accent-200 rounded-md">
+          <p className="text-sm text-accent-900">
+            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
           </p>
         </div>
+
+        <TemplateServicePreviewSection
+          services={previewServices}
+          serviceType="fixed"
+          onQuantityChange={handlePreviewQuantityChange}
+          onRemoveService={handlePreviewRemoveService}
+        />
+
+        {data.fixed_services.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Recurring Base Rate (Optional)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <Input
+                id="fixed_base_rate"
+                type="text"
+                inputMode="decimal"
+                value={baseRateInput}
+                onChange={(event) => {
+                  const value = event.target.value.replace(/[^0-9.]/g, '');
+                  const decimalCount = (value.match(/\./g) || []).length;
+                  if (decimalCount <= 1) {
+                    setBaseRateInput(value);
+                  }
+                }}
+                onBlur={() => {
+                  if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                    setBaseRateInput('');
+                    updateData({ fixed_base_rate: undefined });
+                  } else {
+                    const dollars = parseFloat(baseRateInput) || 0;
+                    const cents = Math.round(dollars * 100);
+                    updateData({ fixed_base_rate: cents });
+                    setBaseRateInput((cents / 100).toFixed(2));
+                  }
+                }}
+                placeholder="0.00"
+                className="pl-7"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Suggested total recurring fee for all fixed services combined.
+            </p>
+          </div>
+        )}
+
+        {data.fixed_services.length > 0 && (
+          <div className="space-y-2">
+            <SwitchWithLabel
+              label="Enable proration (Optional)"
+              checked={data.enable_proration ?? false}
+              onCheckedChange={(checked) => updateData({ enable_proration: checked })}
+            />
+            <p className="text-xs text-gray-500">
+              When enabled, suggests that the recurring fee should be prorated if the contract starts or ends mid-cycle.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
@@ -153,7 +238,7 @@ export function TemplateFixedFeeServicesStep({
 
                 <div className="space-y-2">
                   <Label htmlFor={`template-fixed-quantity-${index}`} className="text-sm">
-                    Quantity Guidance
+                    Quantity (Optional)
                   </Label>
                   <Input
                     id={`template-fixed-quantity-${index}`}
@@ -163,24 +248,9 @@ export function TemplateFixedFeeServicesStep({
                     onChange={(event) =>
                       handleQuantityChange(index, Math.max(1, Number(event.target.value) || 1))
                     }
-                    className="w-28"
+                    className="w-24"
                   />
-                </div>
-
-                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
-                  <SwitchWithLabel
-                    label="Recommend bucket of hours"
-                    checked={Boolean(service.bucket_overlay)}
-                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
-                  />
-                  {service.bucket_overlay && (
-                    <BucketOverlayFields
-                      mode="hours"
-                      value={service.bucket_overlay ?? getDefaultOverlay()}
-                      onChange={(overlay) => updateBucketOverlay(index, overlay)}
-                      automationId={`template-fixed-bucket-${index}`}
-                    />
-                  )}
+                  <p className="text-xs text-gray-500">Suggested quantity when creating contracts</p>
                 </div>
               </div>
 

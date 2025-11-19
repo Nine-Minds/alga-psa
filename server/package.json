@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.13.8",
+  "version": "0.14.6",
   "private": true,
   "type": "module",
   "engines": {
@@ -164,7 +164,9 @@
     "qrcode": "^1.5.4",
     "querystring-es3": "^0.2.1",
     "rate-limiter-flexible": "^5.0.5",
+    "react": "^18",
     "react-big-calendar": "^1.17.1",
+    "react-dom": "^18",
     "react-day-picker": "^9.5.0",
     "react-error-boundary": "^5.0.0",
     "react-hook-form": "^7.54.2",

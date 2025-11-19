@@ -3,7 +3,7 @@ import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { withTransaction } from '@alga-psa/shared/db';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
-import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
+import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
 
 interface GooglePubSubMessage {

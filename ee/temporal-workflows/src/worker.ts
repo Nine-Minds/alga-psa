@@ -7,6 +7,7 @@ import {
   validateStartup,
   logConfiguration,
 } from "./config/startupValidation.js";
+import { setupSchedules } from "./schedules/setupSchedules.js";
 
 // Load environment variables
 dotenv.config();
@@ -41,7 +42,7 @@ interface WorkerConfig {
  * Get worker configuration from environment variables
  */
 function getWorkerConfig(): WorkerConfig {
-  const defaultQueues = ["tenant-workflows", "portal-domain-workflows"];
+  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows"];
   const queuesEnv =
     process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
 
@@ -200,6 +201,9 @@ async function main(): Promise<void> {
     // Get configuration
     const config = getWorkerConfig();
     logger.info("Worker configuration", config);
+
+    // Initialize schedules
+    await setupSchedules();
 
     const workers = await createWorkers(config);
 

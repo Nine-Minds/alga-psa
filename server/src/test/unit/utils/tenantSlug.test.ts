@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTenantPortalSlug, getSlugParts, isValidTenantSlug } from 'server/src/lib/utils/tenantSlug';
+import { buildTenantPortalSlug, getSlugParts, isValidTenantSlug } from '@shared/utils/tenantSlug';
 
 describe('tenant slug utilities', () => {
   it('builds slug from tenant UUID deterministically', () => {

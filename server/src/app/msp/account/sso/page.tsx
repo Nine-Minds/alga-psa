@@ -1,4 +1,4 @@
-import ConnectSso from "@ee/components/settings/account/ConnectSso";
+import ConnectSso from "@/empty/components/settings/account/ConnectSso";
 
 interface PageProps {
   searchParams?: Record<string, string | string[] | undefined>;

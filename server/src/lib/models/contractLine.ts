@@ -108,8 +108,6 @@ const ContractLine = {
 
     const {
       hourly_rate,
-      minimum_billable_time,
-      round_up_to_nearest,
       enable_overtime,
       overtime_rate,
       overtime_threshold,

@@ -7,11 +7,11 @@ enabled: true
 
 # Image configuration
 image:
-  repository: harbor.nineminds.com/nineminds/temporal-worker
+  repository: ""  # Set to your container registry and image name
   tag: latest
   pullPolicy: Always
   is_private: true
-  credentials: harbor-credentials
+  credentials: ""  # Set to your registry credentials secret name
 
 # Number of replicas
 replicaCount: 2
@@ -32,8 +32,8 @@ temporal:
   address: temporal-frontend.temporal.svc.cluster.local:7233
   # Temporal namespace to use
   namespace: default
-  # Task queue name
-  taskQueue: tenant-workflows
+  # Task queue name (comma-separated for multiple queues)
+  taskQueue: tenant-workflows,portal-domain-workflows,email-domain-workflows
   # Maximum concurrent activity executions
   maxConcurrentActivityExecutions: 10
   # Maximum concurrent workflow task executions
@@ -41,7 +41,7 @@ temporal:
 
 # NM Store configuration
 nm_store:
-  baseUrl: http://nm-store-release.msp.svc.cluster.local:3000
+  baseUrl: ""  # Set to your NM Store service URL
 
 # Logging configuration
 logLevel: info
@@ -57,8 +57,8 @@ encryption:
 vault:
   enabled: false  # Enable in production
   role: temporal-worker
-  secretPath: secret/data/alga-psa/temporal-worker
-  sharedSecretPath: secret/data/alga-psa/shared
+  secretPath: secret/data/app/temporal-worker
+  sharedSecretPath: secret/data/app/shared
 
 # Local secrets (used when Vault is disabled)
 # IMPORTANT: Change these in production!
@@ -162,7 +162,7 @@ extraEnv: []
 # Portal domain management configuration
 portalDomain:
   # Namespace where TLS certificates are issued (source secrets)
-  certificateNamespace: msp
+  certificateNamespace: ""  # Set to your certificate namespace
   # Namespace where Istio gateway resources (and replicated TLS secrets) live
   gatewayNamespace: istio-system
   # Whether to create RBAC bindings that allow the worker to sync TLS secrets
@@ -185,8 +185,8 @@ extraVolumeMounts: []
 db:
   host: "postgresql.default.svc.cluster.local"
   port: "5432"
-  serverDatabase: "msp_server"
-  user: "msp_server"
+  serverDatabase: "app_server"
+  user: "app_user"
   # Secret references for passwords
   serverPasswordSecret:
     name: "db-secrets"
@@ -207,11 +207,11 @@ stripe:
   secretKeySecret:
     name: "stripe-credentials"
     key: "STRIPE_SECRET_KEY"
-  # Master billing tenant ID (Nine Minds tenant ID for billing operations)
+  # Master billing tenant ID (organization tenant ID for billing operations)
   masterBillingTenantId: ""  # Should be set via override or secret
 
 # Application configuration
-applicationUrl: "https://algapsa.com"
+applicationUrl: ""  # Set to your application URL (e.g., https://example.com)
 
 # Namespace override (optional)
 namespace: ""

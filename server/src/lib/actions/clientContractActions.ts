@@ -12,6 +12,7 @@ interface CreateClientContractData {
   contract_id: string;
   start_date: string;
   end_date?: string | null;
+  is_active?: boolean;
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;
@@ -64,7 +65,7 @@ export async function createClientContract(
       contract_id: data.contract_id,
       start_date: data.start_date,
       end_date: data.end_date || null,
-      is_active: true,
+      is_active: data.is_active ?? true,
       tenant,
       created_at: timestamp,
       updated_at: timestamp,

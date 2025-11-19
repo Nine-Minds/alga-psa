@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
-import { BaseEmailAdapter } from './base/BaseEmailAdapter';
-import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
+import { BaseEmailAdapter } from '@alga-psa/shared/services/email/providers/base/BaseEmailAdapter';
+import { EmailMessageDetails, EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';

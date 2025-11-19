@@ -15,7 +15,6 @@ import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITax
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
 import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces' // Added IServiceType
-import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput'
 import { useTenant } from 'server/src/components/TenantProvider'
 
 interface QuickAddServiceProps {
@@ -455,14 +454,17 @@ console.log('[QuickAddService] Service created successfully');
                 </div>
                 <div>
                   <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</Label>
-                  <UnitOfMeasureInput
+                  <Input
+                    id="unitOfMeasure"
+                    type="text"
                     value={serviceData.unit_of_measure}
-                    onChange={(value) => {
-                      console.log('[QuickAddService] UnitOfMeasureInput onChange called with:', value);
-                      setServiceData({ ...serviceData, unit_of_measure: value });
+                    onChange={(e) => {
+                      console.log('[QuickAddService] Unit of Measure onChange called with:', e.target.value);
+                      setServiceData({ ...serviceData, unit_of_measure: e.target.value });
                     }}
                     placeholder="e.g., GB, API call, user"
-                    serviceType={allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name}
+                    required
+                    className={`${hasAttemptedSubmit && !serviceData.unit_of_measure ? 'border-red-500' : ''}`}
                   />
                   <p className="text-xs text-gray-500 mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
                 </div>

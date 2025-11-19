@@ -50,7 +50,8 @@ export default function DocumentsPage() {
     updated_at_end: '',
     sortBy: 'updated_at',
     sortOrder: 'desc',
-    showAllDocuments: false
+    showAllDocuments: false,
+    folder_path: currentFolder || undefined
   });
 
   const {
@@ -82,7 +83,8 @@ export default function DocumentsPage() {
       updated_at_end: '',
       sortBy: 'updated_at',
       sortOrder: 'desc',
-      showAllDocuments: false
+      showAllDocuments: false,
+      folder_path: currentFolder || undefined
     };
     setFilterInputs(clearedFilters);
   };
@@ -91,7 +93,7 @@ export default function DocumentsPage() {
     await refetchDocuments();
   };
 
-  const handleFolderNavigate = (folderPath: string | null) => {
+  const handleFolderNavigate = (folderPath: string | null, clearShowAll: boolean = true) => {
     const params = new URLSearchParams(searchParams.toString());
     if (folderPath) {
       params.set('folder', folderPath);
@@ -100,27 +102,40 @@ export default function DocumentsPage() {
     }
     const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
     router.replace(newUrl);
+
+    // Update filters immediately for responsive UI
+    if (clearShowAll) {
+      setFilterInputs(prev => ({
+        ...prev,
+        showAllDocuments: false,
+        folder_path: folderPath || undefined
+      }));
+    }
   };
 
   const handleShowAllDocuments = () => {
     // Navigate to root folder (no folder parameter)
-    handleFolderNavigate(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('folder');
+    const newUrl = window.location.pathname;
+    router.replace(newUrl);
+
     // Set showAllDocuments flag to display all documents without folder hierarchy
     setFilterInputs({
       ...filterInputs,
-      showAllDocuments: true
+      showAllDocuments: true,
+      folder_path: undefined
     });
   };
 
 
-  // Clear showAllDocuments flag when folder changes
+  // Update folder_path and clear showAllDocuments flag when folder changes
   useEffect(() => {
-    if (currentFolder && filterInputs.showAllDocuments) {
-      setFilterInputs(prev => ({
-        ...prev,
-        showAllDocuments: false
-      }));
-    }
+    setFilterInputs(prev => ({
+      ...prev,
+      folder_path: currentFolder || undefined,
+      showAllDocuments: currentFolder ? false : prev.showAllDocuments
+    }));
   }, [currentFolder]);
 
   useEffect(() => {
