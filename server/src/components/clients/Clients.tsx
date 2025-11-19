@@ -994,14 +994,24 @@ const Clients: React.FC = () => {
                 Cancel
               </Button>
               
-              {!deleteError && (
+              {deleteError && showArchiveOption ? (
                 <Button
-                  onClick={() => void confirmDelete()}
-                  id="single-delete-confirm"
-                  variant="destructive"
+                  onClick={() => void handleMarkClientInactive()}
+                  id="mark-inactive-button"
+                  variant="ghost"
                 >
-                  Delete
+                  Mark as Inactive
                 </Button>
+              ) : (
+                !deleteError && (
+                  <Button
+                    onClick={() => void confirmDelete()}
+                    id="single-delete-confirm"
+                    variant="destructive"
+                  >
+                    Delete
+                  </Button>
+                )
               )}
             </div>
           </DialogFooter>
