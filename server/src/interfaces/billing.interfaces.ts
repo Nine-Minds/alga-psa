@@ -86,6 +86,7 @@ export interface IBillingResult extends TenantEntity {
   discounts: IDiscount[];
   adjustments: IAdjustment[];
   finalAmount: number;
+  currency_code: string;
 }
 
 export interface IClientContractLine extends TenantEntity {
@@ -99,6 +100,7 @@ export interface IClientContractLine extends TenantEntity {
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
+  currency_code?: string;
   custom_rate?: number;
   client_contract_id?: string; // Reference to the client contract assignment
   template_contract_id?: string;

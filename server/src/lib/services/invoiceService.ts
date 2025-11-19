@@ -652,6 +652,14 @@ export async function calculateAndDistributeTax(
 ): Promise<number> {
   // 1. Fetch all relevant data
   console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
+  
+  // Fetch invoice to get currency_code
+  const invoice = await tx('invoices')
+    .select('currency_code')
+    .where({ invoice_id: invoiceId, tenant })
+    .first();
+  const currencyCode = invoice?.currency_code || 'USD';
+
   const invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
     .where({ invoice_id: invoiceId, tenant })
     .select('*');
@@ -807,7 +815,9 @@ export async function calculateAndDistributeTax(
           client.client_id,
           regionalTaxableBase,
           Temporal.Now.plainDateISO().toString(), // Consider using invoice date if available
-          region
+          region,
+          true, // is_taxable
+          currencyCode
         );
         regionalTotalTax = regionalTaxResult.taxAmount;
         taxRate = regionalTaxResult.taxRate;

@@ -10,6 +10,7 @@ import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '../ui/ContactPicker';
+import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
 
 interface BillingConfigFormProps {
     billingConfig: {
@@ -21,6 +22,7 @@ interface BillingConfigFormProps {
         billing_contact_id?: string;
         billing_email?: string;
         region_code?: string | null; // Added for tax region
+        default_currency_code?: string | null; // Added
     };
     handleSelectChange: (name: string) => (value: string) => void;
     clientId: string;
@@ -182,6 +184,15 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     onValueChange={handleSelectChange('invoice_template_id')}
                     options={templateOptions}
                     disabled={isLoadingTemplates} // Use renamed state
+                />
+            </div>
+
+            <div className="space-y-2">
+                <CustomSelect
+                    label="Default Currency"
+                    value={billingConfig.default_currency_code || 'USD'}
+                    onValueChange={handleSelectChange('default_currency_code')}
+                    options={CURRENCY_OPTIONS}
                 />
             </div>
 

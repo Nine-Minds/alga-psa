@@ -1,0 +1,34 @@
+npm warn Unknown project config "sharp_binary_host". This will stop working in the next major version of npm.
+npm warn Unknown project config "sharp_libvips_binary_host". This will stop working in the next major version of npm.
+
+> server@0.13.8 migrate:ee
+> node scripts/run-ee-migrations.js
+
+Copying CE migrations from /Users/roberisaacs/alga-psa.worktrees/multi-currency/server/migrations -> /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-ee-migrations-xl8fSR/migrations
+Overlaying EE migrations from /Users/roberisaacs/alga-psa.worktrees/multi-currency/ee/server/migrations -> /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-ee-migrations-xl8fSR/migrations
+Prepared merged migrations in: /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-ee-migrations-xl8fSR/migrations
+Running migrations with Knex...
+npm warn Unknown env config "sharp-libvips-binary-host". This will stop working in the next major version of npm.
+npm warn Unknown env config "sharp-binary-host". This will stop working in the next major version of npm.
+npm warn Unknown project config "sharp_binary_host". This will stop working in the next major version of npm.
+npm warn Unknown project config "sharp_libvips_binary_host". This will stop working in the next major version of npm.
+Using environment: migration
+password authentication failed for user "postgres"
+error: password authentication failed for user "postgres"
+    at Parser.parseErrorMessage (/Users/roberisaacs/alga-psa.worktrees/multi-currency/node_modules/pg-protocol/dist/parser.js:285:98)
+    at Parser.handlePacket (/Users/roberisaacs/alga-psa.worktrees/multi-currency/node_modules/pg-protocol/dist/parser.js:122:29)
+    at Parser.parse (/Users/roberisaacs/alga-psa.worktrees/multi-currency/node_modules/pg-protocol/dist/parser.js:35:38)
+    at Socket.<anonymous> (/Users/roberisaacs/alga-psa.worktrees/multi-currency/node_modules/pg-protocol/dist/index.js:11:42)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23)
+EE migration run failed: npx knex migrate:latest --knexfile /Users/roberisaacs/alga-psa.worktrees/multi-currency/server/knexfile.cjs --env migration exited with code 1
+npm error Lifecycle script `migrate:ee` failed with error:
+npm error code 1
+npm error path /Users/roberisaacs/alga-psa.worktrees/multi-currency/server
+npm error workspace server@0.13.8
+npm error location /Users/roberisaacs/alga-psa.worktrees/multi-currency/server
+npm error command failed
+npm error command sh -c node scripts/run-ee-migrations.js

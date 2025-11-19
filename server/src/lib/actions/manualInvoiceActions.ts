@@ -28,6 +28,7 @@ interface ManualInvoiceRequest {
   items: ManualInvoiceItem[];
   expirationDate?: string; // Add expiration date for prepayments
   isPrepayment?: boolean;
+  currency_code?: string;
 }
 
 export async function generateManualInvoice(request: ManualInvoiceRequest): Promise<InvoiceViewModel> {
@@ -52,6 +53,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     due_date: currentDate, // You may want to calculate this based on payment terms
     invoice_number: invoiceNumber,
     status: 'draft',
+    currency_code: request.currency_code || client.default_currency_code || 'USD',
     subtotal: 0,
     tax: 0,
     total_amount: 0,
@@ -129,6 +131,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       invoice_date: Temporal.PlainDate.from(currentDate),
       due_date: Temporal.PlainDate.from(currentDate),
       status: 'draft',
+      currencyCode: invoice.currency_code,
       subtotal: Math.ceil(subtotal),
       tax: Math.ceil(computedTotalTax),
       total: Math.ceil(subtotal + computedTotalTax),
@@ -204,11 +207,12 @@ export async function updateManualInvoice(
       tenant
     );
 
-    // Update invoice updated_at timestamp
+    // Update invoice updated_at timestamp and currency if provided
     await trx('invoices')
       .where({ invoice_id: invoiceId })
       .update({
-        updated_at: currentDate
+        updated_at: currentDate,
+        ...(request.currency_code ? { currency_code: request.currency_code } : {})
       });
   });
 
@@ -251,6 +255,7 @@ export async function updateManualInvoice(
     invoice_date: toPlainDate(existingInvoice.invoice_date),
     due_date: toPlainDate(existingInvoice.due_date),
     status: existingInvoice.status,
+    currencyCode: updatedInvoice.currency_code,
     subtotal: updatedInvoice.subtotal,
     tax: updatedInvoice.tax,
     total: updatedInvoice.total_amount,

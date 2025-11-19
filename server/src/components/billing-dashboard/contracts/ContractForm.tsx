@@ -13,6 +13,7 @@ import { updateContract } from 'server/src/lib/actions/contractActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
 
 interface ContractFormProps {
   contract: IContract;
@@ -24,6 +25,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
   const [description, setDescription] = useState(contract.contract_description ?? '');
   const [status, setStatus] = useState<string>(contract.status);
   const [billingFrequency, setBillingFrequency] = useState(contract.billing_frequency);
+  const [currencyCode, setCurrencyCode] = useState(contract.currency_code || 'USD');
   const [isSaving, setIsSaving] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -60,6 +62,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
         contract_name: contractName,
         contract_description: description || undefined,
         billing_frequency: billingFrequency,
+        currency_code: currencyCode,
         tenant
       };
 
@@ -126,19 +129,31 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
             />
           </div>
 
-          <div>
-            <Label htmlFor="billing-frequency">Billing Frequency *</Label>
-            <CustomSelect
-              id="billing-frequency"
-              value={billingFrequency}
-              onValueChange={(value) => {
-                setBillingFrequency(value);
-                clearErrorIfSubmitted();
-              }}
-              options={BILLING_FREQUENCY_OPTIONS}
-              placeholder="Select billing frequency"
-              className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="billing-frequency">Billing Frequency *</Label>
+              <CustomSelect
+                id="billing-frequency"
+                value={billingFrequency}
+                onValueChange={(value) => {
+                  setBillingFrequency(value);
+                  clearErrorIfSubmitted();
+                }}
+                options={BILLING_FREQUENCY_OPTIONS}
+                placeholder="Select billing frequency"
+                className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
+              />
+            </div>
+            <div>
+              <Label htmlFor="currency-code">Currency</Label>
+              <CustomSelect
+                id="currency-code"
+                value={currencyCode}
+                onValueChange={setCurrencyCode}
+                options={CURRENCY_OPTIONS}
+                placeholder="Select currency"
+              />
+            </div>
           </div>
 
           <div>
