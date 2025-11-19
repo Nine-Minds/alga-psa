@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -24,6 +25,8 @@ import {
   User,
   Mail,
   Search,
+  Filter,
+  X,
 } from 'lucide-react';
 
 export default function AdminSessionManagement() {
@@ -32,6 +35,13 @@ export default function AdminSessionManagement() {
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Filter states
+  const [selectedUser, setSelectedUser] = useState<string>('');
+  const [selectedLoginMethod, setSelectedLoginMethod] = useState<string>('');
+  const [selectedUserType, setSelectedUserType] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
 
   const fetchSessions = async () => {
     try {
@@ -51,22 +61,77 @@ export default function AdminSessionManagement() {
     fetchSessions();
   }, []);
 
-  // Filter sessions based on search term
+  // Filter sessions based on all filter criteria
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredSessions(sessions);
-      return;
+    let filtered = [...sessions];
+
+    // Search term filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(session =>
+        session.user_name.toLowerCase().includes(term) ||
+        session.user_email.toLowerCase().includes(term) ||
+        session.device_name?.toLowerCase().includes(term) ||
+        session.ip_address?.toLowerCase().includes(term)
+      );
     }
 
-    const term = searchTerm.toLowerCase();
-    const filtered = sessions.filter(session =>
-      session.user_name.toLowerCase().includes(term) ||
-      session.user_email.toLowerCase().includes(term) ||
-      session.device_name?.toLowerCase().includes(term) ||
-      session.ip_address?.toLowerCase().includes(term)
-    );
+    // User filter
+    if (selectedUser) {
+      filtered = filtered.filter(session => session.user_id === selectedUser);
+    }
+
+    // Login method filter
+    if (selectedLoginMethod) {
+      filtered = filtered.filter(session => session.login_method === selectedLoginMethod);
+    }
+
+    // User type filter
+    if (selectedUserType) {
+      filtered = filtered.filter(session => session.user_type === selectedUserType);
+    }
+
+    // Date range filter (last activity)
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      filtered = filtered.filter(session =>
+        new Date(session.last_activity_at) >= fromDate
+      );
+    }
+
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // End of day
+      filtered = filtered.filter(session =>
+        new Date(session.last_activity_at) <= toDate
+      );
+    }
+
     setFilteredSessions(filtered);
-  }, [searchTerm, sessions]);
+  }, [searchTerm, selectedUser, selectedLoginMethod, selectedUserType, dateFrom, dateTo, sessions]);
+
+  // Get unique users for filter dropdown
+  const uniqueUsers = Array.from(
+    new Map(sessions.map(s => [s.user_id, { id: s.user_id, name: s.user_name, email: s.user_email }]))
+      .values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
+
+  // Get unique login methods
+  const uniqueLoginMethods: string[] = Array.from(
+    new Set(sessions.map(s => s.login_method).filter((method): method is string => Boolean(method)))
+  ).sort();
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedUser('');
+    setSelectedLoginMethod('');
+    setSelectedUserType('');
+    setDateFrom('');
+    setDateTo('');
+  };
+
+  const hasActiveFilters = searchTerm || selectedUser || selectedLoginMethod || selectedUserType || dateFrom || dateTo;
 
   const revokeSession = async (sessionId: string, isCurrent: boolean) => {
     if (isCurrent) {
@@ -167,6 +232,110 @@ export default function AdminSessionManagement() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Filters */}
+        <div className="mb-4 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* User Filter */}
+            <div>
+              <label htmlFor="user-filter" className="text-sm font-medium mb-1 block">
+                User
+              </label>
+              <CustomSelect
+                id="user-filter"
+                value={selectedUser}
+                onValueChange={setSelectedUser}
+                options={[
+                  { value: '', label: 'All Users' },
+                  ...uniqueUsers.map(u => ({
+                    value: u.id,
+                    label: `${u.name}${u.email ? ` (${u.email})` : ''}`
+                  }))
+                ]}
+              />
+            </div>
+
+            {/* Login Method Filter */}
+            <div>
+              <label htmlFor="login-method-filter" className="text-sm font-medium mb-1 block">
+                Login Method
+              </label>
+              <CustomSelect
+                id="login-method-filter"
+                value={selectedLoginMethod}
+                onValueChange={setSelectedLoginMethod}
+                options={[
+                  { value: '', label: 'All Methods' },
+                  ...uniqueLoginMethods.map(method => ({
+                    value: method,
+                    label: method === 'credentials' ? 'Password' :
+                           method === 'google' ? 'Google OAuth' :
+                           method === 'microsoft' ? 'Microsoft OAuth' :
+                           method === 'keycloak' ? 'Keycloak' : method
+                  }))
+                ]}
+              />
+            </div>
+
+            {/* User Type Filter */}
+            <div>
+              <label htmlFor="user-type-filter" className="text-sm font-medium mb-1 block">
+                User Type
+              </label>
+              <CustomSelect
+                id="user-type-filter"
+                value={selectedUserType}
+                onValueChange={setSelectedUserType}
+                options={[
+                  { value: '', label: 'All Types' },
+                  { value: 'internal', label: 'Internal' },
+                  { value: 'client', label: 'Client' }
+                ]}
+              />
+            </div>
+
+            {/* Date Range Filters */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label htmlFor="date-from" className="text-sm font-medium mb-1 block">
+                  From
+                </label>
+                <Input
+                  id="date-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="date-to" className="text-sm font-medium mb-1 block">
+                  To
+                </label>
+                <Input
+                  id="date-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <div className="flex justify-end">
+              <Button
+                id="clear-filters"
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Search bar */}
         <div className="mb-4">
           <div className="relative">

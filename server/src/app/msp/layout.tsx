@@ -14,12 +14,10 @@ export default async function MspLayout({
   const session = await getSessionWithRevocationCheck();
 
   // If session is null, redirect to signin
-  // Note: We don't delete the cookie here because Next.js doesn't allow cookie
-  // modification in Server Components. The JWT callback returning null will
-  // naturally invalidate the session, and the signin page can handle cleanup.
+  // Don't include error parameter to avoid redirect loops
   if (!session) {
     console.log('[msp-layout] No session found, redirecting to signin');
-    redirect('/auth/msp/signin?error=SessionRevoked');
+    redirect('/auth/msp/signin');
   }
 
   // Check if user is trying to access wrong portal

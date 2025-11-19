@@ -14,12 +14,10 @@ export default async function Layout({
   const session = await getSessionWithRevocationCheck();
 
   // If session is null, redirect to signin
-  // Note: We don't delete the cookie here because Next.js doesn't allow cookie
-  // modification in Server Components. The JWT callback returning null will
-  // naturally invalidate the session, and the signin page can handle cleanup.
+  // Don't include error parameter to avoid redirect loops
   if (!session) {
     console.log('[client-portal-layout] No session found, redirecting to signin');
-    redirect('/auth/client-portal/signin?error=SessionRevoked');
+    redirect('/auth/client-portal/signin');
   }
 
   // Check if user is trying to access wrong portal
