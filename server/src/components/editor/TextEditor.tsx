@@ -140,6 +140,38 @@ export default function TextEditor({
         class: 'block-note-editor',
         contenteditable: 'true'
       }
+    },
+    _tiptapOptions: {
+      editorProps: {
+        handlePaste: (view, event, slice) => {
+          const { state, dispatch } = view;
+          const { selection } = state;
+
+          // Check if we're pasting into an empty block
+          const $pos = selection.$anchor;
+          const parent = $pos.parent;
+
+          // If the current block is empty and we have slice content
+          if (parent.content.size === 0 && slice.content.size > 0) {
+            try {
+              const tr = state.tr;
+
+              // Use the correct ProseMirror replace method
+              tr.replace(selection.from, selection.to, slice);
+
+              dispatch(tr);
+              return true;
+            } catch (error) {
+              console.error('Paste error:', error);
+              // Fall back to default behavior if our custom handling fails
+              return false;
+            }
+          }
+
+          // For non-empty blocks, let BlockNote handle it normally
+          return false;
+        }
+      }
     }
   });
 
@@ -236,11 +268,21 @@ export default function TextEditor({
   return (
     <div className="w-full h-full min-w-0">
       {children}
-      <div className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0">
+      <div
+        className="min-h-[100px] h-full w-full bg-white border border-gray-200 rounded-lg p-4 overflow-auto min-w-0"
+        onDragStart={(e) => {
+          // Only prevent drag from elements with draggable="true" attribute (the drag handle)
+          const target = e.target as HTMLElement;
+          if (target.getAttribute('draggable') === 'true') {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+      >
         <BlockNoteView
           editor={editor}
           theme="light"
-          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0"
+          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden"
           editable={true}
           style={{
             overflowWrap: 'break-word',
