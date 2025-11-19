@@ -360,6 +360,7 @@ const Clients: React.FC = () => {
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showArchiveOption, setShowArchiveOption] = useState(false);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
 
   // Quick View state
@@ -681,16 +682,18 @@ const Clients: React.FC = () => {
   };
 
   const handleDependencyError = (
-    result: DependencyResult, 
+    result: DependencyResult,
     setError: (error: string) => void
   ) => {
     const dependencyText = formatDependencyText(result);
-    
+
     setError(
       `Unable to delete this client.\n\n` +
       `This client has the following associated records:\n• ${dependencyText.split(', ').join('\n• ')}\n\n` +
       `Please remove or reassign these items before deleting the client.`
     );
+
+    setShowArchiveOption(true);
   };
 
 
@@ -698,6 +701,7 @@ const Clients: React.FC = () => {
     setIsDeleteDialogOpen(false);
     setClientToDelete(null);
     setDeleteError(null);
+    setShowArchiveOption(false);
   };
 
   const handleExportToCSV = async () => {
