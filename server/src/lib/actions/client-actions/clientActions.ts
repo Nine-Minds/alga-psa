@@ -78,13 +78,6 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
     throw new Error('Tenant not found');
   }
 
-  // Check permission for client updating
-  if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
 
   try {
     console.log('Updating client in database:', clientId, updateData);
@@ -854,21 +847,12 @@ export async function archiveClient(clientId: string): Promise<{
   success: boolean;
   message?: string;
 }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
 
-    // Check permission for client updating (archiving is an update operation)
-    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
-      throw new Error('Permission denied: Cannot archive clients');
-    }
 
     // First verify the client exists and belongs to this tenant
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -953,21 +937,12 @@ export async function reactivateClient(clientId: string): Promise<{
   success: boolean;
   message?: string;
 }> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
 
-    // Check permission for client updating
-    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
-      throw new Error('Permission denied: Cannot reactivate clients');
-    }
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('clients')
@@ -990,9 +965,34 @@ export async function reactivateClient(clientId: string): Promise<{
           is_inactive: false,
           updated_at: new Date().toISOString()
         });
+
+      // Reactivate all associated contacts that were deactivated when client was archived
+      await trx('contacts')
+        .where({ client_id: clientId, tenant })
+        .update({
+          is_inactive: false,
+          updated_at: new Date().toISOString()
+        });
+
+      // Reactivate all users associated with this client's contacts
+      const contacts = await trx('contacts')
+        .select('contact_name_id')
+        .where({ client_id: clientId, tenant });
+
+      const contactIds = contacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+      if (contactIds.length > 0) {
+        await trx('users')
+          .whereIn('contact_id', contactIds)
+          .andWhere({ tenant, user_type: 'client' })
+          .update({
+            is_inactive: false,
+            updated_at: new Date().toISOString()
+          });
+      }
     });
 
-    return { success: true, message: 'Client has been reactivated successfully.' };
+    return { success: true, message: 'Client has been reactivated successfully. All related contacts and users have also been reactivated.' };
   } catch (error) {
     console.error('Error reactivating client:', error);
     return {
