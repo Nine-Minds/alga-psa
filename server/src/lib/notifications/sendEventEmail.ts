@@ -47,6 +47,16 @@ export interface SendEmailParams {
    * Ensures client's defaultLocale preference is respected
    */
   recipientClientId?: string;
+  /**
+   * Optional: custom email headers for threading or other purposes.
+   * Will be passed directly to the email provider.
+   */
+  headers?: Record<string, string>;
+  /**
+   * Optional: specific provider ID to use for sending this email.
+   * If provided, the system will attempt to use this provider instead of the tenant default.
+   */
+  providerId?: string;
 }
 
 function applyReplyMarkers(
@@ -376,11 +386,17 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     const processor = new StaticTemplateProcessor(subject, html, text);
     const systemFrom = process.env.EMAIL_FROM;
     const systemFromName = process.env.EMAIL_FROM_NAME || 'Portal Notifications';
+    
+    // Determine From address: prefer explicit param, fallback to system config
+    const fromAddress = params.from || (systemFrom ? (/ <[^>]+>/.test(systemFrom) ? systemFrom : `${systemFromName} <${systemFrom}>`) : undefined);
+
     const result = await service.sendEmail({
       to: params.to,
       tenantId: params.tenantId,
       templateProcessor: processor,
-      ...(systemFrom ? { from: /<[^>]+>/.test(systemFrom) ? systemFrom : `${systemFromName} <${systemFrom}>` } : {})
+      headers: params.headers,
+      providerId: params.providerId,
+      from: fromAddress
     });
 
     if (!result.success) {

@@ -4,7 +4,8 @@ import { EmailProviderManager } from '../../services/email/EmailProviderManager'
 import { 
   TenantEmailSettings, 
   EmailAddress,
-  IEmailProvider
+  IEmailProvider,
+  EmailMessage
 } from '../../types/email.types';
 import logger from '@alga-psa/shared/core/logger';
 import { 
@@ -25,6 +26,8 @@ export interface SendEmailParams {
   attachments?: any[];
   replyTo?: EmailAddress;
   templateProcessor: ITemplateProcessor;
+  headers?: Record<string, string>;
+  providerId?: string;
 }
 
 export interface EmailSettingsValidation {
@@ -55,6 +58,18 @@ export class TenantEmailService extends BaseEmailService {
 
   protected getServiceName(): string {
     return `TenantEmailService[${this.tenantId}]`;
+  }
+
+  /**
+   * Override sendEmail to support provider-specific routing
+   */
+  public async sendEmail(params: BaseEmailParams): Promise<EmailSendResult> {
+    // Note: We are intentionally ignoring params.providerId for routing purposes.
+    // All outbound emails should go through the configured outbound provider (e.g. Resend/SMTP).
+    // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve 
+    // the correct 'From' address, which is passed in params.from.
+    
+    return super.sendEmail(params);
   }
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {

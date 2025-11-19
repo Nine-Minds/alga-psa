@@ -1566,8 +1566,47 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Determine primary email (contact first, then client)
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
 
+    // Only notify external contacts (primaryEmail) if the comment is public and NOT from a contact
+    const isPublicComment = !payload.comment?.is_internal;
+    // Check author_type if available, otherwise fallback to checking if user is an agent (internal user)
+    // Assuming payload.userId is present for agents
+    const isFromAgent = payload.comment?.author_type ? payload.comment.author_type !== 'contact' : !!payload.userId;
+
     // Send to primary email if available - external user, no userId
-    if (primaryEmail) {
+    if (primaryEmail && isPublicComment && isFromAgent) {
+      // Extract threading info from ticket metadata
+      const emailMetadata = ticket.email_metadata || {};
+      const providerId = emailMetadata.providerId;
+      const messageId = emailMetadata.messageId; // Original message ID from inbound email
+      
+      const headers: Record<string, string> = {};
+      if (messageId) {
+          headers['In-Reply-To'] = messageId;
+          const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
+          // Append original messageId to references to maintain chain
+          headers['References'] = [...refs, messageId].join(' ');
+      }
+
+      // Resolve From address based on providerId (if available) to maintain channel consistency
+      // This ensures the reply comes from the same address that received the original email
+      let fromAddress: { email: string; name?: string } | undefined;
+      if (providerId) {
+        try {
+          const provider = await db('email_providers')
+            .select('mailbox')
+            .where({ id: providerId, tenant: tenantId })
+            .first();
+            
+          if (provider && provider.mailbox) {
+             // Use ticket board name as sender name if available, otherwise default
+             const senderName = ticket.board_name || 'Support';
+             fromAddress = { email: provider.mailbox, name: senderName };
+          }
+        } catch (err) {
+           logger.warn('[TicketEmailSubscriber] Failed to resolve provider mailbox for From address:', { error: err, providerId });
+        }
+      }
+
       // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
       const emailParams: SendEmailParams = {
         tenantId,
@@ -1579,7 +1618,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           ticketId: ticket.ticket_id || payload.ticketId,
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
-        }
+        },
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        providerId: providerId,
+        from: fromAddress as any // Cast to satisfy type if needed (SendEmailParams expects EmailAddress)
       };
 
       // Add clientId for locale resolution if we're sending to a contact/client

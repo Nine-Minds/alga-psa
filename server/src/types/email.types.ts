@@ -30,7 +30,7 @@ export interface EmailMessage {
 
 export interface EmailProviderConfig {
   providerId: string;
-  providerType: 'smtp' | 'resend' | 'ses' | 'sendgrid';
+  providerType: 'smtp' | 'resend' | 'ses' | 'sendgrid' | 'microsoft' | 'google';
   isEnabled: boolean;
   config: Record<string, any>; // Provider-specific configuration
   rateLimits?: {
