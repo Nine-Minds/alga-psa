@@ -1,5 +1,5 @@
 import { EmailProviderAdapter } from '../../../../interfaces/emailProvider.interface';
-import { EmailProviderConfig, EmailMessageDetails } from '../../../../interfaces/email.interfaces';
+import { EmailProviderConfig, EmailMessageDetails } from '../../../../interfaces/inbound-email.interfaces';
 
 /**
  * Base abstract class for email provider adapters

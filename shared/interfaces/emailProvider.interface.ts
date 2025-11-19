@@ -1,4 +1,4 @@
-import { EmailMessageDetails, EmailProviderConfig } from './email.interfaces';
+import { EmailMessageDetails, EmailProviderConfig } from './inbound-email.interfaces';
 
 /**
  * Base interface for email provider adapters

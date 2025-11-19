@@ -7,7 +7,7 @@ import { getSecretProviderInstance } from '@shared/core';
 import { setupPubSub } from './setupPubSub';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
 import { configureGmailProvider } from './configureGmailProvider';
-import { EmailWebhookMaintenanceService } from '../../../services/email/EmailWebhookMaintenanceService';
+import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 
 
 /**

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { EmailWebhookMaintenanceService } from '../EmailWebhookMaintenanceService';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { getAdminConnection } from '../../../db/admin';
 import { MicrosoftGraphAdapter } from '../providers/MicrosoftGraphAdapter';
 
 // Mock dependencies
-vi.mock('@alga-psa/shared/db/admin');
+vi.mock('../../../db/admin');
 vi.mock('../providers/MicrosoftGraphAdapter');
-vi.mock('@shared/core/logger', () => ({
+vi.mock('../../../core/logger', () => ({
   default: {
     info: vi.fn(),
     warn: vi.fn(),
