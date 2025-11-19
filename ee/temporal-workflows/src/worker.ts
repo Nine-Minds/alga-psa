@@ -7,6 +7,7 @@ import {
   validateStartup,
   logConfiguration,
 } from "./config/startupValidation.js";
+import { setupSchedules } from "./schedules/setupSchedules.js";
 
 // Load environment variables
 dotenv.config();
@@ -200,6 +201,9 @@ async function main(): Promise<void> {
     // Get configuration
     const config = getWorkerConfig();
     logger.info("Worker configuration", config);
+
+    // Initialize schedules
+    await setupSchedules();
 
     const workers = await createWorkers(config);
 
