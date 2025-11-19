@@ -4,24 +4,32 @@
  */
 
 exports.up = async function(knex) {
+  const addColumnIfNotExists = async (tableName, columnName, type) => {
+    const exists = await knex.schema.hasColumn(tableName, columnName);
+    if (!exists) {
+      await knex.schema.table(tableName, (table) => {
+        if (type === 'timestamp') {
+           table.timestamp(columnName).nullable();
+        } else {
+           table.text(columnName).nullable();
+        }
+      });
+    }
+  };
+
   // Add columns to microsoft_email_provider_config
-  await knex.schema.table('microsoft_email_provider_config', function(table) {
-    table.text('webhook_subscription_id').nullable();
-    table.text('webhook_verification_token').nullable();
-    table.timestamp('webhook_expires_at').nullable();
-    table.timestamp('last_subscription_renewal').nullable();
-  });
+  await addColumnIfNotExists('microsoft_email_provider_config', 'webhook_subscription_id', 'text');
+  await addColumnIfNotExists('microsoft_email_provider_config', 'webhook_verification_token', 'text');
+  await addColumnIfNotExists('microsoft_email_provider_config', 'webhook_expires_at', 'timestamp');
+  await addColumnIfNotExists('microsoft_email_provider_config', 'last_subscription_renewal', 'timestamp');
 
   // Add columns to google_email_provider_config
-  await knex.schema.table('google_email_provider_config', function(table) {
-    // Google does not use subscriptionId/verificationToken/expiresAt for watches, but we can store them if needed for other scenarios
-    table.text('webhook_subscription_id').nullable(); // Not directly used by Gmail watch
-    table.text('webhook_verification_token').nullable(); // Not directly used by Gmail watch
-    table.timestamp('webhook_expires_at').nullable(); // Not directly used by Gmail watch
-    table.timestamp('last_subscription_renewal').nullable(); // Not directly used by Gmail watch
-  });
+  await addColumnIfNotExists('google_email_provider_config', 'webhook_subscription_id', 'text');
+  await addColumnIfNotExists('google_email_provider_config', 'webhook_verification_token', 'text');
+  await addColumnIfNotExists('google_email_provider_config', 'webhook_expires_at', 'timestamp');
+  await addColumnIfNotExists('google_email_provider_config', 'last_subscription_renewal', 'timestamp');
 
-  console.log('✅ Added webhook configuration columns to vendor email config tables');
+  console.log('✅ Added webhook configuration columns to vendor email config tables (idempotent)');
 };
 
 exports.down = async function(knex) {
