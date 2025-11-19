@@ -7,6 +7,7 @@ import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from '../i18n/config';
 import Handlebars from 'handlebars';
+import { EmailAddress } from '../../types/email.types';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 
@@ -31,6 +32,7 @@ export interface SendEmailParams {
     threadId?: string;
     conversationToken?: string;
   };
+  from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
    * If not provided, will be resolved based on user preferences
@@ -47,6 +49,16 @@ export interface SendEmailParams {
    * Ensures client's defaultLocale preference is respected
    */
   recipientClientId?: string;
+  /**
+   * Optional: custom email headers for threading or other purposes.
+   * Will be passed directly to the email provider.
+   */
+  headers?: Record<string, string>;
+  /**
+   * Optional: specific provider ID to use for sending this email.
+   * If provided, the system will attempt to use this provider instead of the tenant default.
+   */
+  providerId?: string;
 }
 
 function applyReplyMarkers(
@@ -378,6 +390,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       to: params.to,
       tenantId: params.tenantId,
       templateProcessor: processor,
+      headers: params.headers,
+      providerId: params.providerId,
+      from: params.from
     });
 
     if (!result.success) {
