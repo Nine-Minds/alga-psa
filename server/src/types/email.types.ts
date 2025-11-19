@@ -82,6 +82,7 @@ export interface DnsRecord {
 export interface TenantEmailSettings {
   tenantId: string;
   defaultFromDomain?: string;
+  ticketingFromEmail?: string | null;
   customDomains: string[];
   emailProvider: 'smtp' | 'resend';
   providerConfigs: EmailProviderConfig[];

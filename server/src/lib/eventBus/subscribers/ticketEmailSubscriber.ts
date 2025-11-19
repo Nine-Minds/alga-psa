@@ -19,6 +19,7 @@ import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
+import { TenantEmailService } from '../../services/TenantEmailService';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -30,6 +31,24 @@ function getBaseUrl(): string {
 
 function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}
+
+async function resolveTicketingFromAddress(knex: Knex, tenantId: string) {
+  try {
+    const settings = await TenantEmailService.getTenantEmailSettings(tenantId, knex);
+    const candidate = settings?.ticketingFromEmail;
+
+    if (candidate) {
+      return { email: candidate };
+    }
+  } catch (error) {
+    logger.warn('[TicketEmailSubscriber] Failed to resolve ticketing from address', {
+      tenantId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+
+  return undefined;
 }
 
 async function resolveTicketLinks(
@@ -460,6 +479,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       });
     }
 
+    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+
     const formatDateTime = (value?: Date | string | null) => {
       if (!value) {
         return 'Not available';
@@ -613,7 +634,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         subject: emailSubject,
         template: 'ticket-created',
         context: buildContext(portalUrl),
-        replyContext
+        replyContext,
+        from: ticketingFromAddress
       }, 'Ticket Created');
     }
 
@@ -625,7 +647,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         subject: emailSubject,
         template: 'ticket-created',
         context: buildContext(internalUrl),
-        replyContext
+        replyContext,
+        from: ticketingFromAddress
       }, 'Ticket Created', ticket.assigned_to);
     }
 
@@ -911,6 +934,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
     });
 
+    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+
     // Send to primary recipient (contact or client) - external user, no userId
     await sendNotificationIfEnabled({
       tenantId,
@@ -921,7 +946,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       replyContext: {
         ticketId: ticket.ticket_id || payload.ticketId,
         threadId: ticket.email_metadata?.threadId
-      }
+      },
+      from: ticketingFromAddress
     }, 'Ticket Updated');
 
     // Send to assigned user if different from primary recipient
@@ -935,7 +961,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       replyContext: {
         ticketId: ticket.ticket_id || payload.ticketId,
         threadId: ticket.email_metadata?.threadId
-      }
+      },
+      from: ticketingFromAddress
     }, 'Ticket Updated', ticket.assigned_to);
     }
 
@@ -963,7 +990,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
-        }
+        },
+        from: ticketingFromAddress
       }, 'Ticket Updated', resource.user_id);
       }
     }
@@ -1217,6 +1245,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       threadId: ticket.email_metadata?.threadId
     };
 
+    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+
     const sentEmails = new Set<string>();
     const normalizeEmail = (email: string) => email.trim().toLowerCase();
     const sendIfUnique = async (
@@ -1233,8 +1263,9 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         return;
       }
       sentEmails.add(key);
+      const payloadWithFrom = ticketingFromAddress ? { ...params, from: ticketingFromAddress } : params;
       await sendNotificationIfEnabled(
-        params,
+        payloadWithFrom,
         subtypeName,
         recipientUserId ?? undefined
       );
@@ -1553,6 +1584,14 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Determine primary email (contact first, then client)
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
 
+    const emailMetadata = ticket.email_metadata || {};
+
+    const senderName = ticket.board_name || 'Support';
+    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+    const fromAddress = ticketingFromAddress
+      ? { email: ticketingFromAddress.email, name: senderName }
+      : undefined;
+
     // Only notify external contacts (primaryEmail) if the comment is public and NOT from a contact
     const isPublicComment = !payload.comment?.is_internal;
     // Check author_type if available, otherwise fallback to checking if user is an agent (internal user)
@@ -1562,8 +1601,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Send to primary email if available - external user, no userId
     if (primaryEmail && isPublicComment && isFromAgent) {
       // Extract threading info from ticket metadata
-      const emailMetadata = ticket.email_metadata || {};
-      const providerId = emailMetadata.providerId;
       const messageId = emailMetadata.messageId; // Original message ID from inbound email
       
       const headers: Record<string, string> = {};
@@ -1572,26 +1609,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
           // Append original messageId to references to maintain chain
           headers['References'] = [...refs, messageId].join(' ');
-      }
-
-      // Resolve From address based on providerId (if available) to maintain channel consistency
-      // This ensures the reply comes from the same address that received the original email
-      let fromAddress: { email: string; name?: string } | undefined;
-      if (providerId) {
-        try {
-          const provider = await db('email_providers')
-            .select('mailbox')
-            .where({ id: providerId, tenant: tenantId })
-            .first();
-            
-          if (provider && provider.mailbox) {
-             // Use ticket board name as sender name if available, otherwise default
-             const senderName = ticket.board_name || 'Support';
-             fromAddress = { email: provider.mailbox, name: senderName };
-          }
-        } catch (err) {
-           logger.warn('[TicketEmailSubscriber] Failed to resolve provider mailbox for From address:', { error: err, providerId });
-        }
       }
 
       // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
@@ -1607,7 +1624,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           threadId: ticket.email_metadata?.threadId
         },
         headers: Object.keys(headers).length > 0 ? headers : undefined,
-        providerId: providerId,
         from: fromAddress as any // Cast to satisfy type if needed (SendEmailParams expects EmailAddress)
       };
 
@@ -1631,7 +1647,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           ticketId: ticket.ticket_id || payload.ticketId,
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
-        }
+        },
+        from: fromAddress as any
       }, 'Ticket Comment Added', ticket.assigned_to);
     }
 
@@ -1642,14 +1659,15 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           tenantId,
           to: resource.email,
           subject: `New Comment on Ticket: ${ticket.title}`,
-          template: 'ticket-comment-added',
-          context: buildContext(internalUrl),
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            commentId: payload.comment?.id,
-            threadId: ticket.email_metadata?.threadId
-          }
-        }, 'Ticket Comment Added', resource.user_id);
+        template: 'ticket-comment-added',
+        context: buildContext(internalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          commentId: payload.comment?.id,
+          threadId: ticket.email_metadata?.threadId
+        },
+        from: fromAddress as any
+      }, 'Ticket Comment Added', resource.user_id);
       }
     }
 
@@ -1905,6 +1923,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     };
 
+    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+    const fromAddress = ticketingFromAddress
+      ? { email: ticketingFromAddress.email, name: ticket.board_name || 'Support' }
+      : undefined;
+
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
 
@@ -1924,7 +1947,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
-        }
+        },
+        from: fromAddress
       }, 'Ticket Closed');
     }
 
@@ -1939,7 +1963,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         replyContext: {
           ticketId: ticket.ticket_id || payload.ticketId,
           threadId: ticket.email_metadata?.threadId
-        }
+        },
+        from: fromAddress
       }, 'Ticket Closed', ticket.assigned_to);
     }
 
@@ -1967,7 +1992,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             threadId: ticket.email_metadata?.threadId
-          }
+          },
+          from: fromAddress
         }, 'Ticket Closed', resource.user_id);
       }
     }

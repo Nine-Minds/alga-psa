@@ -251,6 +251,7 @@ export class TenantEmailService extends BaseEmailService {
     return {
       tenantId,
       defaultFromDomain: settings.default_from_domain || undefined,
+      ticketingFromEmail: settings.ticketing_from_email || null,
       customDomains: this.normalizeDomains(settings.custom_domains),
       emailProvider: settings.email_provider,
       providerConfigs: this.normalizeProviderConfigs(settings.provider_configs),
