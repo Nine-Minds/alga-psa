@@ -9,14 +9,6 @@ export interface ValidationResult {
 // Common emoji regex pattern used across validation functions
 const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
 
-// Professional validation lists - what real SaaS/CRM platforms use
-const VALID_TLDS = [
-  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'co', 'io', 'ai', 'app', 'dev',
-  'us', 'uk', 'ca', 'au', 'de', 'fr', 'jp', 'cn', 'in', 'br', 'ru', 'mx', 'it', 'es', 'nl', 'se', 'no', 'dk', 'fi',
-  'biz', 'info', 'name', 'pro', 'aero', 'coop', 'museum', 'travel', 'mobi', 'tel', 'asia', 'jobs', 'cat',
-  'tech', 'online', 'store', 'site', 'website', 'space', 'club', 'xyz', 'top', 'win', 'bid'
-];
-
 // Disposable/temporary email domains - commonly blocked by professional platforms
 const DISPOSABLE_EMAIL_DOMAINS = [
   '10minutemail.com', '20minutemail.com', 'mailinator.com', 'guerrillamail.com', 'tempmail.org',
@@ -30,6 +22,37 @@ const FAKE_DOMAINS = [
   'test.com', 'example.com', 'sample.com', 'demo.com', 'fake.com', 'invalid.com',
   'test.test', 'example.org', 'sample.org', 'localhost', 'test.local'
 ];
+
+const MIN_TLD_LENGTH = 2;
+const MAX_TLD_LENGTH = 63;
+const TLD_CHARACTER_PATTERN = /^[a-z0-9-]+$/;
+
+function isLikelyValidTld(tld: string): boolean {
+  if (!tld) {
+    return false;
+  }
+
+  const normalizedTld = tld.toLowerCase();
+
+  if (normalizedTld.length < MIN_TLD_LENGTH || normalizedTld.length > MAX_TLD_LENGTH) {
+    return false;
+  }
+
+  if (!TLD_CHARACTER_PATTERN.test(normalizedTld)) {
+    return false;
+  }
+
+  if (normalizedTld.startsWith('-') || normalizedTld.endsWith('-')) {
+    return false;
+  }
+
+  // Allow punycode (xn--) but disallow other double-hyphen prefixes
+  if (normalizedTld.includes('--') && !normalizedTld.startsWith('xn--')) {
+    return false;
+  }
+
+  return true;
+}
 
 // Client name validation - enterprise-level rules
 export function validateClientName(name: string): string | null {
@@ -143,11 +166,11 @@ export function validateWebsiteUrl(url: string): string | null {
       return 'Please enter a valid website URL with a domain extension';
     }
     
-    // Validate TLD against known valid TLDs
+    // Validate TLD format
     const parts = hostname.split('.');
     const tld = parts[parts.length - 1];
     
-    if (!VALID_TLDS.includes(tld)) {
+    if (!isLikelyValidTld(tld)) {
       return 'Please enter a website with a valid domain extension';
     }
     
@@ -216,11 +239,11 @@ export function validateEmailAddress(email: string): string | null {
     return 'Please enter a valid email domain';
   }
   
-  // Validate TLD against known valid TLDs (like professional platforms)
+  // Validate TLD format (supports modern ICANN + IDN punycode TLDs)
   const domainParts = domain.split('.');
   const tld = domainParts[domainParts.length - 1];
   
-  if (!VALID_TLDS.includes(tld)) {
+  if (!isLikelyValidTld(tld)) {
     return 'Please enter an email with a valid domain extension';
   }
   
@@ -974,4 +997,3 @@ export function validateClientForm(formData: {
     errors
   };
 }
-
