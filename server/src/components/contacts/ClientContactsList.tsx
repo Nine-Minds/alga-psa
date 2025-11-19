@@ -51,7 +51,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       setLoading(true);
       setError(null);
       try {
-        const fetchedContacts = await getContactsByClient(clientId, 'active'); // Default to active
+        const fetchedContacts = await getContactsByClient(clientId, 'all'); // Show both active and inactive
         setContacts(fetchedContacts);
       } catch (err) {
         console.error('Error fetching client contacts:', err);
@@ -91,7 +91,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     const handleDrawerClose = () => {
       if (changesSavedInDrawer) {
         // Refresh contacts list
-        getContactsByClient(clientId, 'active').then(setContacts);
+        getContactsByClient(clientId, 'all').then(setContacts);
         setChangesSavedInDrawer(false);
       }
     };
@@ -270,7 +270,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           onClick={() => {
             setLoading(true);
             setError(null);
-            getContactsByClient(clientId, 'active')
+            getContactsByClient(clientId, 'all')
               .then(setContacts)
               .catch(err => {
                 console.error('Error retrying contact fetch:', err);
@@ -310,7 +310,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         isOpen={isQuickAddContactOpen}
         onClose={() => setIsQuickAddContactOpen(false)}
         onContactAdded={() => {
-          getContactsByClient(clientId, 'active').then(setContacts);
+          getContactsByClient(clientId, 'all').then(setContacts);
         }}
         clients={clients}
         selectedClientId={clientId}

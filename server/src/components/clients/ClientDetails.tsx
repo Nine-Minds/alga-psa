@@ -11,7 +11,7 @@ import { TagManager } from 'server/src/components/tags';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from '../FeaturePlaceholder';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
-import { useTags } from 'server/src/context/TagContext';
+// import { useTags } from 'server/src/context/TagContext'; // Temporarily removed to fix TagProvider error
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
@@ -54,7 +54,7 @@ import ClientContractLineDashboard from '../billing-dashboard/ClientContractLine
 import { toast } from 'react-hot-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import ClientSurveySummaryCard from 'server/src/components/surveys/ClientSurveySummaryCard';
@@ -226,12 +226,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const { tags: allTags } = useTags();
+  // const { tags: allTags } = useTags(); // Temporarily commented to fix TagProvider error
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const drawer = useDrawer();
+  // Try to get drawer context, but handle gracefully if not available
+  let drawer = null;
+  try {
+    drawer = useDrawer();
+  } catch (error) {
+    // DrawerProvider not available, which is fine when not in drawer mode
+    drawer = null;
+  }
 
 
   const handleDeleteClient = () => {
@@ -241,29 +248,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   };
 
   const confirmDelete = async () => {
+    if (!editedClient) return;
+
     try {
-      // If user wants to archive instead of delete, call the archive function
-      if (wantsArchive) {
-        const result = await archiveClient(editedClient.client_id);
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to archive client');
-        }
-
-        // Update local state immediately to reflect archived status
-        const updatedClient = {
-          ...editedClient,
-          is_inactive: true,
-          updated_at: new Date().toISOString()
-        };
-        setEditedClient(updatedClient);
-        setHasUnsavedChanges(false);
-
-        setIsDeleteDialogOpen(false);
-        toast.success("Client has been archived successfully.");
-        return;
-      }
-
-      // Otherwise try to delete
       const result = await deleteClient(editedClient.client_id);
 
       if (!result.success) {
@@ -275,19 +262,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         throw new Error(result.message || 'Failed to delete client');
       }
 
-      setIsDeleteDialogOpen(false);
+      // Show success toast
+      toast.success(`${editedClient.client_name} has been deleted successfully.`);
 
-      toast.success("Client has been deleted successfully.");
+      resetDeleteState();
 
       // Navigate back or close drawer depending on context
-      if (isInDrawer) {
+      if (isInDrawer && drawer) {
         drawer.closeDrawer();
       } else {
         router.push('/msp/clients');
       }
     } catch (error: any) {
-      console.error('Failed to delete client:', error);
-      setDeleteError(error.message || 'Failed to delete client. Please try again.');
+      console.error('Error deleting client:', error);
+      setDeleteError('An error occurred while deleting the client. Please try again.');
     }
   };
 
@@ -300,7 +288,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       toast.success("Client has been marked as inactive successfully.");
 
       // Navigate back or close drawer depending on context
-      if (isInDrawer) {
+      if (isInDrawer && drawer) {
         drawer.closeDrawer();
       } else {
         router.push('/msp/clients');
@@ -391,27 +379,25 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setWantsArchive(false);
   };
 
-  // Helper function to handle dependency errors (copied from main Clients page)
-  const handleDependencyError = (result: any, setError: (error: string) => void) => {
-    const dependencies = result.dependencies || {};
-    const dependencyMessages: string[] = [];
+  // Helper function to format dependency text (matching Clients.tsx)
+  const formatDependencyText = (result: DependencyResult) => {
+    return result.dependencies
+      .map(dep => `${result.counts[dep]} ${dep}${result.counts[dep] > 1 ? 's' : ''}`)
+      .join(', ');
+  };
 
-    if (dependencies.tickets > 0) {
-      dependencyMessages.push(`${dependencies.tickets} ticket${dependencies.tickets !== 1 ? 's' : ''}`);
-    }
-    if (dependencies.contacts > 0) {
-      dependencyMessages.push(`${dependencies.contacts} contact${dependencies.contacts !== 1 ? 's' : ''}`);
-    }
-    if (dependencies.projects > 0) {
-      dependencyMessages.push(`${dependencies.projects} project${dependencies.projects !== 1 ? 's' : ''}`);
-    }
+  // Helper function to handle dependency errors (matching Clients.tsx)
+  const handleDependencyError = (
+    result: DependencyResult,
+    setError: (error: string) => void
+  ) => {
+    const dependencyText = formatDependencyText(result);
 
-    if (dependencyMessages.length > 0) {
-      const dependencyText = dependencyMessages.join(', ');
-      setError(`Cannot delete this client because it has associated ${dependencyText}. You can mark the client as inactive instead.`);
-    } else {
-      setError('Cannot delete this client because it has associated data. You can mark the client as inactive instead.');
-    }
+    setError(
+      `Unable to delete this client.\n\n` +
+      `This client has the following associated records:\n• ${dependencyText.split(', ').join('\n• ')}\n\n` +
+      `Please remove or reassign these items before deleting the client.`
+    );
   };
 
   // 1. Implement refreshClientData function
@@ -987,8 +973,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContactsList
+            key={`${client.client_id}-${editedClient.is_inactive}`}
             clientId={client.client_id}
-            clients={[client]}
+            clients={[editedClient]}
           />
         </div>
       )
@@ -1258,52 +1245,71 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
-          id="delete-client-dialog"
+        {/* Delete Confirmation Dialog (matching Clients.tsx format) */}
+        <Dialog
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          onConfirm={confirmDelete}
-          title={wantsArchive ? "Archive Client" : "Delete Client"}
-          message={
-            deleteError ? (
-              <div className="space-y-4">
-                <p>{deleteError}</p>
-                {showArchiveOption && (
-                  <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id={`archive-toggle-${editedClient.client_id}`}
-                        checked={wantsArchive}
-                        onChange={(e) => setWantsArchive(e.target.checked)}
-                      />
-                      <label
-                        htmlFor={`archive-toggle-${editedClient.client_id}`}
-                        className="text-sm font-medium text-blue-900 cursor-pointer"
-                      >
-                        Archive instead of delete (preserves all data)
-                      </label>
-                    </div>
-                    {wantsArchive && (
-                      <p className="text-sm text-blue-700 mt-2">
-                        ✓ This will hide the client from active lists while preserving all business records for reporting and compliance.
-                      </p>
-                    )}
+          id="client-delete-dialog"
+          title="Delete Client"
+        >
+          <DialogContent>
+            <div className="space-y-4">
+              {deleteError ? (
+                <>
+                  <div className="text-gray-600 whitespace-pre-line">
+                    {deleteError}
                   </div>
+                  {showArchiveOption && (
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md">
+                      <p className="text-sm font-medium text-gray-900 mb-2">
+                        Alternative Option:
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be reactivated later.
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-600">
+                  Are you sure you want to delete {editedClient.client_name}? This action cannot be undone.
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <div className="mt-4 flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={resetDeleteState}
+                  id="delete-cancel"
+                >
+                  Cancel
+                </Button>
+
+                {deleteError && showArchiveOption ? (
+                  <Button
+                    onClick={handleMarkClientInactive}
+                    id="mark-inactive"
+                    variant="default"
+                  >
+                    Mark as Inactive
+                  </Button>
+                ) : (
+                  !deleteError && (
+                    <Button
+                      onClick={() => void confirmDelete()}
+                      id="delete-confirm"
+                      variant="destructive"
+                    >
+                      Delete
+                    </Button>
+                  )
                 )}
               </div>
-            ) : (
-              "Are you sure you want to delete this client? This action cannot be undone."
-            )
-          }
-          confirmLabel={
-            deleteError
-              ? (wantsArchive ? "Archive" : "Delete")
-              : "Delete"
-          }
-          cancelLabel={deleteError ? "Close" : "Cancel"}
-          isConfirming={false}
-        />
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Deactivate Warning Dialog */}
         <ConfirmationDialog

@@ -41,8 +41,14 @@ export const TagManager: React.FC<TagManagerProps> = ({
   useInlineInput = false,
   permissions: passedPermissions
 }) => {
-  // Always call useTags to avoid conditional hooks
-  const tagContext = useTags();
+  // Try to get tag context, but handle gracefully if not available
+  let tagContext = null;
+  try {
+    tagContext = useTags();
+  } catch (error) {
+    // TagProvider not available, which is fine - component will work without it
+    tagContext = null;
+  }
   const [tags, setTags] = useState<ITag[]>(initialTags);
   const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
   const [permissions, setPermissions] = useState(
@@ -82,7 +88,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
     if (tagContext?.tags && tags.length > 0) {
       // Create a map of all global tags by their original text (before any local changes)
       const globalTagsByText = new Map<string, ITag>();
-      tagContext.tags
+      (tagContext?.tags || [])
         .filter(globalT => globalT.tagged_type === entityType)
         .forEach(globalT => {
           const key = `${globalT.tag_text}_${globalT.tagged_type}`;
@@ -93,7 +99,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       
       const updatedTags = tags.map(localTag => {
         // First try to find by exact tag_id match (for the tag that was just edited)
-        const exactMatch = tagContext.tags.find(globalT => globalT.tag_id === localTag.tag_id);
+        const exactMatch = tagContext?.tags?.find(globalT => globalT.tag_id === localTag.tag_id);
         if (exactMatch) {
           return {
             ...localTag,
@@ -263,7 +269,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       if ((updates.backgroundColor !== undefined || updates.textColor !== undefined) && tagContext?.updateTagColor) {
         const tag = originalTag;
         if (tag) {
-          await tagContext.updateTagColor(
+          await tagContext?.updateTagColor?.(
             tagId, 
             updates.backgroundColor !== undefined ? updates.backgroundColor : (tag.background_color ?? null),
             updates.textColor !== undefined ? updates.textColor : (tag.text_color ?? null)

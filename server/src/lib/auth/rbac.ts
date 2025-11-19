@@ -69,7 +69,37 @@ function canonicalizeResource(resource: string): string {
   return RESOURCE_CANONICAL_MAP[resource] ?? resource;
 }
 
-export async function hasPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean> {
+// Overloaded signatures for hasPermission
+export async function hasPermission(userId: string, tenantId: string, resourceAction: string): Promise<boolean>;
+export async function hasPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean>;
+export async function hasPermission(userOrId: IUser | string, resourceOrTenant: string, actionOrResourceAction: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean> {
+  // Handle new signature: hasPermission(userId, tenantId, 'resource.action')
+  if (typeof userOrId === 'string') {
+    const userId = userOrId;
+    const tenantId = resourceOrTenant;
+    const resourceAction = actionOrResourceAction;
+
+    // Parse resource.action format
+    const parts = resourceAction.split('.');
+    if (parts.length !== 2) {
+      throw new Error(`Invalid resource.action format: ${resourceAction}. Expected format: 'resource.action'`);
+    }
+    const [resource, action] = parts;
+
+    // Get user by ID and call original function
+    const { knex } = await createTenantKnex();
+    const user = await knex('users').where({ user_id: userId, tenant: tenantId }).first();
+    if (!user) {
+      throw new Error(`User not found: ${userId}`);
+    }
+
+    return hasPermission(user as IUser, resource, action, knex);
+  }
+
+  // Handle original signature: hasPermission(user, resource, action, knexConnection?)
+  const user = userOrId as IUser;
+  const resource = resourceOrTenant;
+  const action = actionOrResourceAction;
   const normalizedResource = canonicalizeResource(resource);
   let rolesWithPermissions: IRoleWithPermissions[];
   
