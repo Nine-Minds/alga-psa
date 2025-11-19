@@ -54,8 +54,10 @@ export interface MicrosoftEmailProviderConfig {
   access_token?: string;
   refresh_token?: string;
   token_expires_at?: string;
-  webhook_subscription_id?: string; // Added to match EmailProviderConfig
-  webhook_expires_at?: string; // Added to match EmailProviderConfig
+  webhook_subscription_id?: string;
+  webhook_verification_token?: string; // Added to match database
+  webhook_expires_at?: string;
+  last_subscription_renewal?: string; // Added to match database
   created_at: string;
   updated_at: string;
 }

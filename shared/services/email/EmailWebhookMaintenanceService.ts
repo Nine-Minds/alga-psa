@@ -95,6 +95,7 @@ export class EmailWebhookMaintenanceService {
       'ep.id',
       'ep.tenant',
       'ep.provider_name',
+      'ep.provider_type',
       'ep.mailbox',
       'ep.is_active',
       'ep.status',
@@ -102,7 +103,6 @@ export class EmailWebhookMaintenanceService {
       'ep.error_message',
       'ep.created_at',
       'ep.updated_at',
-      'mpc.webhook_notification_url',
       'mpc.webhook_subscription_id',
       'mpc.webhook_verification_token',
       'mpc.webhook_expires_at',
@@ -262,16 +262,28 @@ export class EmailWebhookMaintenanceService {
     }
   }
 
+  private getBaseUrl(): string {
+    return process.env.APPLICATION_URL || 
+           process.env.NEXTAUTH_URL || 
+           process.env.NEXT_PUBLIC_BASE_URL || 
+           'http://localhost:3000';
+  }
+
   private mapRowToConfig(row: any): EmailProviderConfig {
+    const baseUrl = this.getBaseUrl();
+    const webhookPath = row.provider_type === 'microsoft'
+      ? '/api/email/webhooks/microsoft'
+      : '/api/email/webhooks/google';
+
     return {
       id: row.id,
       tenant: row.tenant,
       name: row.provider_name,
-      provider_type: 'microsoft',
+      provider_type: row.provider_type || 'microsoft',
       mailbox: row.mailbox,
       folder_to_monitor: 'Inbox', // Default
       active: row.is_active,
-      webhook_notification_url: row.webhook_notification_url,
+      webhook_notification_url: `${baseUrl}${webhookPath}`,
       webhook_subscription_id: row.webhook_subscription_id,
       webhook_verification_token: row.webhook_verification_token,
       webhook_expires_at: row.webhook_expires_at,
