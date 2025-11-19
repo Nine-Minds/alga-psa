@@ -263,10 +263,20 @@ export class EmailWebhookMaintenanceService {
   }
 
   private getBaseUrl(): string {
-    return process.env.APPLICATION_URL || 
-           process.env.NEXTAUTH_URL || 
-           process.env.NEXT_PUBLIC_BASE_URL || 
-           'http://localhost:3000';
+    const envApplicationUrl = process.env.APPLICATION_URL || 
+                              process.env.NEXTAUTH_URL || 
+                              process.env.NEXT_PUBLIC_BASE_URL;
+
+    if (!envApplicationUrl || envApplicationUrl === 'www.algapsa.com') {
+      return 'https://algapsa.com';
+    }
+
+    // Ensure it starts with https:// if it's a non-localhost URL, or return as is if already a valid URL
+    if (envApplicationUrl.startsWith('http://localhost') || envApplicationUrl.startsWith('https://')) {
+        return envApplicationUrl;
+    } else {
+        return `https://${envApplicationUrl}`;
+    }
   }
 
   private mapRowToConfig(row: any): EmailProviderConfig {
