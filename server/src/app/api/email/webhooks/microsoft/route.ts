@@ -3,8 +3,8 @@ import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { withTransaction } from '@alga-psa/shared/db';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { randomBytes } from 'crypto';
-import { MicrosoftGraphAdapter } from '@/services/email/providers/MicrosoftGraphAdapter';
-import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 interface MicrosoftNotification {
   changeType: string;

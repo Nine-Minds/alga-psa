@@ -1,7 +1,7 @@
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { EmailProviderConfig } from '../../interfaces/email.interfaces';
+import { getAdminConnection } from '../../db/admin';
+import { EmailProviderConfig } from '../../interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
-import logger from '@shared/core/logger';
+import logger from '../../core/logger';
 
 interface RenewalOptions {
   tenantId?: string;
@@ -292,4 +292,3 @@ export class EmailWebhookMaintenanceService {
     };
   }
 }
-
