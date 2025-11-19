@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleEmailWebhookMaintenanceJob } from './index';
 import logger from '@shared/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -122,7 +122,25 @@ export async function initializeScheduledJobs(): Promise<void> {
       } catch (error) {
         logger.error(`Failed to schedule Google Pub/Sub verification job for tenant ${tenantId}`, error);
       }
+
+      // Schedule Email Webhook Maintenance (daily at 4:00 AM)
+      try {
+        const cron = '0 4 * * *';
+        const maintenanceJobId = await scheduleEmailWebhookMaintenanceJob(tenantId, cron);
+        if (maintenanceJobId) {
+          logger.info(`Scheduled email webhook maintenance job for tenant ${tenantId} with job ID ${maintenanceJobId}`);
+        } else {
+          logger.info('Email webhook maintenance job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: maintenanceJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule email webhook maintenance job for tenant ${tenantId}`, error);
+      }
    }
+   
    
    // Schedule temporary forms cleanup job (system-wide)
    try {
