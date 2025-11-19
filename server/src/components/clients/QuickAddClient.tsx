@@ -418,19 +418,25 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         }
       }
 
-      // Create contact if contact data is provided
+      // Create contact if contact data is provided (both name and email are required)
       if (contactData.full_name.trim() || contactData.email.trim()) {
-        try {
-          await createClientContact({
-            clientId: newClient.client_id,
-            fullName: contactData.full_name,
-            email: contactData.email,
-            phone: contactData.phone_number,
-            jobTitle: contactData.role,
-          });
-        } catch (contactError) {
-          console.error("Error creating client contact:", contactError);
-          toast.error("Client created but failed to add contact.");
+        if (contactData.full_name.trim() && contactData.email.trim()) {
+          try {
+            await createClientContact({
+              clientId: newClient.client_id,
+              fullName: contactData.full_name.trim(),
+              email: contactData.email.trim(),
+              phone: contactData.phone_number?.trim() || '',
+              jobTitle: contactData.role?.trim() || ''
+            });
+          } catch (contactError) {
+            console.error("Error creating client contact:", contactError);
+            toast.error("Client created but failed to add contact.");
+          }
+        } else {
+          // Show validation message when contact info is partially filled
+          const missingField = !contactData.full_name.trim() ? 'name' : 'email';
+          toast.warning(`Client created without contact. Both name and email are required to create a contact (missing ${missingField}).`);
         }
       }
 

@@ -12,6 +12,7 @@ import { createTag } from 'server/src/lib/actions/tagActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
+import { deleteEntityTags } from '../../utils/tagCleanup';
 
 // Shared column mapping for contact sorting
 const CONTACT_SORT_COLUMNS = {
@@ -87,7 +88,14 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
   // Remove closing bracket for runWithTenant
 }
 
-export async function deleteContact(contactId: string) {
+export async function deleteContact(contactId: string): Promise<{
+  success: boolean;
+  code?: string;
+  message?: string;
+  dependencies?: string[];
+  counts?: Record<string, number>;
+  dependencyText?: string;
+}> {
   console.log('🔍 Starting deleteContact function with contactId:', contactId);
 
   const { knex: db, tenant } = await createTenantKnex();
@@ -121,9 +129,41 @@ export async function deleteContact(contactId: string) {
     const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
-    // Check for dependencies
+    // Check contracts first (outside main transaction to avoid abort issues)
+    try {
+      const contractResult = await db('contracts')
+        .where({ tenant })
+        .where(function() {
+          this.where('contact_id', contactId)
+            .orWhere('client_id', contact.client_id);
+        })
+        .count('* as count')
+        .first();
+
+      if (contractResult && Number(contractResult.count) > 0) {
+        dependencies.push('contract');
+        counts['contract'] = Number(contractResult.count);
+      }
+    } catch (contractError) {
+      console.log('Skipping contract check due to schema differences:', contractError.message);
+      // Skip contract dependency check if table schema is different
+    }
+
+    // Check other dependencies
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check for tickets
+      // Check if this is the primary contact for their client (PSA best practice)
+      if (contact.client_id) {
+        const clientInfo = await trx('clients')
+          .where({ client_id: contact.client_id, tenant })
+          .first();
+
+        if (clientInfo && clientInfo.primary_contact_id === contactId) {
+          dependencies.push('primary_contact');
+          counts['primary_contact'] = 1;
+        }
+      }
+
+      // Check for tickets (including closed tickets per PSA best practice)
       const ticketCount = await trx('tickets')
         .where({
           contact_name_id: contactId,
@@ -136,7 +176,7 @@ export async function deleteContact(contactId: string) {
         counts['ticket'] = Number(ticketCount.count);
       }
 
-      // Check for interactions
+      // Check for interactions (communication history)
       const interactionCount = await trx('interactions')
         .where({
           contact_name_id: contactId,
@@ -148,6 +188,8 @@ export async function deleteContact(contactId: string) {
         dependencies.push('interaction');
         counts['interaction'] = Number(interactionCount.count);
       }
+
+      // Note: Contract dependency check moved outside transaction to avoid abort issues
 
       // Check for document associations
       const documentCount = await trx('document_associations')
@@ -183,19 +225,43 @@ export async function deleteContact(contactId: string) {
       // The comments table doesn't have a contact_name_id column (removed by migration 20250217202553_drop_contact_columns.cjs)
     });
 
-    // If there are dependencies, throw a detailed error
+    // If there are dependencies, return error with details (similar to client deletion)
     if (dependencies.length > 0) {
-      const dependencyList = dependencies.map(dep => `${counts[dep]} ${dep}${counts[dep] > 1 ? 's' : ''}`).join(', ');
-      throw new Error(`VALIDATION_ERROR: Cannot delete contact because it has associated records: ${dependencyList}. Please remove or reassign these records first.`);
+      const readableTypes: Record<string, string> = {
+        'primary_contact': 'primary contact assignment',
+        'ticket': 'tickets',
+        'interaction': 'interactions',
+        'contract': 'contracts',
+        'document': 'documents',
+        'project': 'projects'
+      };
+
+      const dependencyText = dependencies.map(dep => {
+        const readableName = readableTypes[dep] || dep;
+        const count = counts[dep];
+        return count === 1 ? readableName : `${count} ${readableName}`;
+      }).join(', ');
+
+      return {
+        success: false,
+        code: 'CONTACT_HAS_DEPENDENCIES',
+        message: 'Cannot delete contact with active business records. Consider marking as inactive instead to preserve data integrity.',
+        dependencies: dependencies.map((dep: string): string => readableTypes[dep] || dep),
+        counts,
+        dependencyText
+      };
     }
 
-    // If no dependencies, proceed with simple deletion (only the contact record)
+    // If no dependencies, proceed with contact deletion
     console.log('🔍 Proceeding with contact deletion...');
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
         console.log('🔍 Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
 
-        // Only delete the contact record itself - no associated data
+        // Clean up any tags associated with this contact
+        await deleteEntityTags(trx, contactId, 'contact');
+
+        // Delete the contact record itself
         const deleted = await trx('contacts')
           .where({ contact_name_id: contactId, tenant })
           .delete();
@@ -259,34 +325,163 @@ export async function deleteContact(contactId: string) {
     if (err instanceof Error) {
       const message = err.message;
 
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
-        console.error('Rethrowing formatted error:', message);
-        throw err;
-      }
-
       // Handle database-specific errors
       if (message.includes('violates foreign key constraint')) {
         console.error('Foreign key constraint violation detected');
-        throw new Error('VALIDATION_ERROR: Cannot delete contact because it has associated records');
+        return {
+          success: false,
+          message: 'Cannot delete contact because it has associated records'
+        };
       }
 
       // Handle connection/timeout issues
       if (message.includes('connection') || message.includes('timeout')) {
         console.error('Database connection issue detected:', message);
-        throw new Error(`SYSTEM_ERROR: Database connection issue - ${message}`);
+        return {
+          success: false,
+          message: `Database connection issue - ${message}`
+        };
       }
 
-      // Log and preserve the actual error for better debugging
-      console.error('Unhandled error type:', message);
+      // Log and return error info for better debugging
+      console.error('Contact deletion failed:', message);
       console.error('Error stack:', err.stack);
-      throw new Error(`SYSTEM_ERROR: Contact deletion failed - ${message}`);
+      return {
+        success: false,
+        message: `Contact deletion failed - ${message}`
+      };
     }
 
     // For non-Error objects, provide more debugging info
     console.error('Non-Error object thrown:', typeof err, err);
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while deleting the contact');
+    return {
+      success: false,
+      message: 'An unexpected error occurred while deleting the contact'
+    };
+  }
+}
+
+export async function archiveContact(contactId: string): Promise<{
+  success: boolean;
+  message?: string;
+}> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // Check permission for contact updating (archiving is an update operation)
+    if (!await hasPermission(currentUser.user_id, tenant, 'contacts.update')) {
+      throw new Error('Permission denied: Cannot archive contacts');
+    }
+
+    // First verify the contact exists and belongs to this tenant
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({ contact_name_id: contactId, tenant })
+        .first();
+    });
+
+    if (!contact) {
+      return {
+        success: false,
+        message: 'Contact not found'
+      };
+    }
+
+    // Archive the contact and associated user
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Archive the contact
+      await trx('contacts')
+        .where({ contact_name_id: contactId, tenant })
+        .update({
+          is_inactive: true,
+          updated_at: new Date().toISOString()
+        });
+
+      // Archive the associated user if it exists
+      await trx('users')
+        .where({ contact_id: contactId, tenant, user_type: 'client' })
+        .update({
+          is_inactive: true,
+          updated_at: new Date().toISOString()
+        });
+    });
+
+    return { success: true, message: 'Contact has been archived successfully.' };
+  } catch (error) {
+    console.error('Error archiving contact:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to archive contact'
+    };
+  }
+}
+
+export async function reactivateContact(contactId: string): Promise<{
+  success: boolean;
+  message?: string;
+}> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // Check permission for contact updating (reactivating is an update operation)
+    if (!await hasPermission(currentUser.user_id, tenant, 'contacts.update')) {
+      throw new Error('Permission denied: Cannot reactivate contacts');
+    }
+
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({ contact_name_id: contactId, tenant })
+        .first();
+    });
+
+    if (!contact) {
+      return {
+        success: false,
+        message: 'Contact not found'
+      };
+    }
+
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Reactivate the contact
+      await trx('contacts')
+        .where({ contact_name_id: contactId, tenant })
+        .update({
+          is_inactive: false,
+          updated_at: new Date().toISOString()
+        });
+
+      // Reactivate the associated user if it exists
+      await trx('users')
+        .where({ contact_id: contactId, tenant, user_type: 'client' })
+        .update({
+          is_inactive: false,
+          updated_at: new Date().toISOString()
+        });
+    });
+
+    return { success: true, message: 'Contact has been reactivated successfully.' };
+  } catch (error) {
+    console.error('Error reactivating contact:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to reactivate contact'
+    };
   }
 }
 
@@ -656,9 +851,9 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     full_name: contactData.full_name || '',
     email: contactData.email,
     phone_number: contactData.phone_number,
-    client_id: contactData.client_id || undefined,
+    client_id: contactData.client_id || null,
     role: contactData.role,
-    notes: contactData.notes || undefined,
+    notes: contactData.notes || null,
     is_inactive: contactData.is_inactive
   };
 
@@ -1576,15 +1771,15 @@ export async function updateContactPortalAdminStatus(
       throw new Error('Unauthorized');
     }
 
-    // Check permissions
-    const hasUpdatePermission = await hasPermission(currentUser, 'client', 'update');
-    if (!hasUpdatePermission) {
-      throw new Error('You do not have permission to update client settings');
-    }
-
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permissions
+    const hasUpdatePermission = await hasPermission(currentUser.user_id, tenant, 'clients.update');
+    if (!hasUpdatePermission) {
+      throw new Error('You do not have permission to update client settings');
     }
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
