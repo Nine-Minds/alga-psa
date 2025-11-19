@@ -193,6 +193,18 @@ export class EmailWebhookMaintenanceService {
         throw new Error('Cannot recreate subscription: webhook_notification_url is missing in config');
     }
 
+    // Validate URL before attempting registration
+    if (config.webhook_notification_url.includes('localhost') || !config.webhook_notification_url.startsWith('https://')) {
+      const msg = `Invalid webhook URL detected: ${config.webhook_notification_url}. Microsoft requires a public HTTPS endpoint. Check APPLICATION_URL env var.`;
+      logger.error(msg, { providerId: config.id, tenant: config.tenant });
+      throw new Error(msg);
+    }
+
+    logger.info(`Attempting to recreate subscription with URL: ${config.webhook_notification_url}`, { 
+      providerId: config.id, 
+      tenant: config.tenant 
+    });
+
     const result = await adapter.initializeWebhook(config.webhook_notification_url);
     
     if (!result.success) {
@@ -249,7 +261,7 @@ export class EmailWebhookMaintenanceService {
         await knex('email_provider_health')
           .insert({
             provider_id: providerId,
-            tenant_id: tenant,
+            tenant: tenant, // Fixed: column name is 'tenant', not 'tenant_id'
             provider_type: 'microsoft', // We know it's microsoft here
             ...status,
             last_renewal_attempt_at: now,
