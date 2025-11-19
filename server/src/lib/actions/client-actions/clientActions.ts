@@ -847,10 +847,20 @@ export async function archiveClient(clientId: string): Promise<{
   success: boolean;
   message?: string;
 }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permission for client updating (archiving is an update operation)
+    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+      throw new Error('Permission denied: Cannot archive clients');
     }
 
 
@@ -937,10 +947,20 @@ export async function reactivateClient(clientId: string): Promise<{
   success: boolean;
   message?: string;
 }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permission for client updating (reactivating is an update operation)
+    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+      throw new Error('Permission denied: Cannot reactivate clients');
     }
 
 

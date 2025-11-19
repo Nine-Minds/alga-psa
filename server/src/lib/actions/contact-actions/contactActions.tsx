@@ -365,10 +365,20 @@ export async function archiveContact(contactId: string): Promise<{
   success: boolean;
   message?: string;
 }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permission for contact updating (archiving is an update operation)
+    if (!await hasPermission(currentUser.user_id, tenant, 'contacts.update')) {
+      throw new Error('Permission denied: Cannot archive contacts');
     }
 
     // First verify the contact exists and belongs to this tenant
@@ -418,10 +428,20 @@ export async function reactivateContact(contactId: string): Promise<{
   success: boolean;
   message?: string;
 }> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permission for contact updating (reactivating is an update operation)
+    if (!await hasPermission(currentUser.user_id, tenant, 'contacts.update')) {
+      throw new Error('Permission denied: Cannot reactivate contacts');
     }
 
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {

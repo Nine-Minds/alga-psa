@@ -19,7 +19,6 @@ import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validat
 import ClientContactsList from 'server/src/components/contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
 import BillingConfiguration from './BillingConfiguration';
 import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, archiveClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -60,6 +59,14 @@ import { useTranslation } from 'server/src/lib/i18n/client';
 import ClientSurveySummaryCard from 'server/src/components/surveys/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
+// Type for client deletion dependency errors
+interface DependencyResult {
+  success: false;
+  code: string;
+  message: string;
+  dependencies: string[];
+  counts: Record<string, number>;
+}
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -206,7 +213,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showArchiveOption, setShowArchiveOption] = useState(false);
-  const [wantsArchive, setWantsArchive] = useState(false);
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
@@ -281,21 +287,28 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleMarkClientInactive = async () => {
     try {
-      await updateClient(editedClient.client_id, { is_inactive: true });
+      const result = await archiveClient(editedClient.client_id);
 
-      setIsDeleteDialogOpen(false);
+      if (result.success) {
+        setIsDeleteDialogOpen(false);
+        toast.success(result.message || "Client has been archived successfully.");
 
-      toast.success("Client has been marked as inactive successfully.");
+        // Update local state immediately
+        setEditedClient(prev => ({ ...prev, is_inactive: true }));
+        setHasUnsavedChanges(false);
 
-      // Navigate back or close drawer depending on context
-      if (isInDrawer && drawer) {
-        drawer.closeDrawer();
+        // Navigate back or close drawer depending on context
+        if (isInDrawer && drawer) {
+          drawer.closeDrawer();
+        } else {
+          router.push('/msp/clients');
+        }
       } else {
-        router.push('/msp/clients');
+        setDeleteError(result.message || 'Failed to archive client. Please try again.');
       }
     } catch (error: any) {
-      console.error('Error marking client as inactive:', error);
-      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      console.error('Error archiving client:', error);
+      setDeleteError('An error occurred while archiving the client. Please try again.');
     }
   };
 
@@ -376,7 +389,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setIsDeleteDialogOpen(false);
     setDeleteError(null);
     setShowArchiveOption(false);
-    setWantsArchive(false);
   };
 
   // Helper function to format dependency text (matching Clients.tsx)
