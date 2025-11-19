@@ -1,12 +1,12 @@
 'use server';
 
 import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { withTransaction } from '@shared/db';
-import { convertBlockNoteToMarkdown } from '@/lib/utils/blocknoteUtils';
-import { publishEvent } from '@/lib/eventBus/publishers';
-import { IProjectTaskComment, IProjectTaskCommentWithUser } from '@/interfaces/projectTaskComment.interface';
-import { getEntityImageUrlsBatch } from '@/lib/utils/avatarUtils';
+import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { IProjectTaskComment, IProjectTaskCommentWithUser } from 'server/src/interfaces/projectTaskComment.interface';
+import { getEntityImageUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import { Knex } from 'knex';
 
 /**
@@ -109,7 +109,7 @@ export async function getTaskComments(
 
   // Get avatar URLs for all users
   const userIds = [...new Set(comments.map((c: any) => c.user_id).filter(Boolean))];
-  const avatarUrls = await getEntityImageUrlsBatch('user', userIds, tenant);
+  const avatarUrls = tenant ? await getEntityImageUrlsBatch('user', userIds, tenant) : new Map<string, string | null>();
 
   // Map snake_case to camelCase
   return comments.map((comment: any) => ({
