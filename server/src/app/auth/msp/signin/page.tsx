@@ -13,9 +13,11 @@ export default async function MspSignInPage({
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/msp/dashboard';
   const error = typeof params?.error === 'string' ? params.error : undefined;
 
-  // If there's a SessionRevoked error, clear the cookie
+  // If there's a SessionRevoked error, clear the cookie and redirect to remove error param
   if (error === 'SessionRevoked') {
     await clearSessionCookie();
+    // Redirect to signin without error param to prevent loops
+    redirect('/auth/msp/signin');
   }
 
   const session = await getSession();

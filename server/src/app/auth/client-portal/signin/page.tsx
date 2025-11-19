@@ -17,9 +17,11 @@ export default async function ClientSignInPage({
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/client-portal/dashboard';
   const error = typeof params?.error === 'string' ? params.error : undefined;
 
-  // If there's a SessionRevoked error, clear the cookie
+  // If there's a SessionRevoked error, clear the cookie and redirect to remove error param
   if (error === 'SessionRevoked') {
     await clearSessionCookie();
+    // Redirect to signin without error param to prevent loops
+    redirect('/auth/client-portal/signin');
   }
 
   // Get portalDomain from query parameter (set by middleware for vanity domains)

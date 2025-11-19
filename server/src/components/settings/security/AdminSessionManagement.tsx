@@ -7,7 +7,6 @@ import { Badge } from 'server/src/components/ui/Badge';
 import { Input } from 'server/src/components/ui/Input';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { useTranslation } from 'server/src/lib/i18n/client';
 import {
   getAllSessionsAction,
   revokeSessionAction,
@@ -28,7 +27,6 @@ import {
 } from 'lucide-react';
 
 export default function AdminSessionManagement() {
-  const { t } = useTranslation('common');
   const [sessions, setSessions] = useState<SessionWithUser[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<SessionWithUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +41,7 @@ export default function AdminSessionManagement() {
       setFilteredSessions(data.sessions);
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
-      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.loadFailed'));
+      toast.error(error instanceof Error ? error.message : 'Failed to load sessions');
     } finally {
       setLoading(false);
     }
@@ -73,7 +71,7 @@ export default function AdminSessionManagement() {
   const revokeSession = async (sessionId: string, isCurrent: boolean) => {
     if (isCurrent) {
       const confirmed = confirm(
-        t('sessionManagement.confirmations.logoutCurrent')
+        'Are you sure you want to logout from this device?'
       );
       if (!confirmed) return;
     }
@@ -83,18 +81,18 @@ export default function AdminSessionManagement() {
       const result = await revokeSessionAction(sessionId);
 
       if (result.is_current) {
-        toast.success(t('sessionManagement.messages.loggingOut'));
+        toast.success('Logging out...');
         // Redirect to login after a short delay
         setTimeout(() => {
           window.location.href = '/auth/msp/signin';
         }, 1000);
       } else {
-        toast.success(t('sessionManagement.messages.sessionRevoked'));
+        toast.success('Session revoked successfully');
         await fetchSessions();
       }
     } catch (error) {
       console.error('Failed to revoke session:', error);
-      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.revokeFailed'));
+      toast.error(error instanceof Error ? error.message : 'Failed to revoke session');
     } finally {
       setRevoking(null);
     }
@@ -115,10 +113,10 @@ export default function AdminSessionManagement() {
     if (!method) return null;
 
     const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-      credentials: { label: t('sessionManagement.loginMethods.password'), variant: 'default' },
-      google: { label: t('sessionManagement.loginMethods.googleOAuth'), variant: 'secondary' },
-      microsoft: { label: t('sessionManagement.loginMethods.microsoftOAuth'), variant: 'secondary' },
-      keycloak: { label: t('sessionManagement.loginMethods.keycloak'), variant: 'outline' },
+      credentials: { label: 'Password', variant: 'default' },
+      google: { label: 'Google OAuth', variant: 'secondary' },
+      microsoft: { label: 'Microsoft OAuth', variant: 'secondary' },
+      keycloak: { label: 'Keycloak', variant: 'outline' },
     };
 
     const config = variants[method] || { label: method, variant: 'outline' as const };
@@ -134,7 +132,7 @@ export default function AdminSessionManagement() {
     const isInternal = userType === 'internal';
     return (
       <Badge variant={isInternal ? 'default' : 'secondary'} className="text-xs">
-        {isInternal ? t('sessionManagement.userTypes.internal') : t('sessionManagement.userTypes.client')}
+        {isInternal ? 'Internal' : 'Client'}
       </Badge>
     );
   };
@@ -143,11 +141,11 @@ export default function AdminSessionManagement() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{t('sessionManagement.admin.title')}</CardTitle>
+          <CardTitle>All User Sessions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            {t('sessionManagement.states.loading')}
+            Loading sessions...
           </div>
         </CardContent>
       </Card>
@@ -161,12 +159,9 @@ export default function AdminSessionManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{t('sessionManagement.admin.title')}</CardTitle>
+            <CardTitle>All User Sessions</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('sessionManagement.admin.description', {
-                sessionCount: sessions.length,
-                userCount: totalUsers
-              })}
+              {sessions.length} active session{sessions.length !== 1 ? 's' : ''} across {totalUsers} user{totalUsers !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
@@ -179,7 +174,7 @@ export default function AdminSessionManagement() {
             <Input
               id="session-search"
               type="text"
-              placeholder={t('sessionManagement.admin.searchPlaceholder')}
+              placeholder="Search by user name, email, device, or IP address..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -189,7 +184,7 @@ export default function AdminSessionManagement() {
 
         {filteredSessions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {searchTerm ? t('sessionManagement.admin.noResults') : t('sessionManagement.states.noSessions')}
+            {searchTerm ? 'No sessions match your search' : 'No active sessions found'}
           </div>
         ) : (
           <div className="space-y-4">
@@ -214,7 +209,7 @@ export default function AdminSessionManagement() {
                           {getUserTypeBadge(session.user_type)}
                           {session.is_current && (
                             <Badge variant="default" className="text-xs">
-                              {t('sessionManagement.labels.yourSession')}
+                              Your Session
                             </Badge>
                           )}
                         </div>
@@ -227,7 +222,7 @@ export default function AdminSessionManagement() {
                       {/* Device information */}
                       <div className="flex items-center gap-2 flex-wrap mb-2">
                         <h4 className="font-medium">
-                          {session.device_name || t('sessionManagement.labels.unknownDevice')}
+                          {session.device_name || 'Unknown Device'}
                         </h4>
                         {getLoginMethodBadge(session.login_method)}
                       </div>
@@ -254,7 +249,7 @@ export default function AdminSessionManagement() {
                         <div className="flex items-center gap-2">
                           <Clock className="h-3.5 w-3.5" />
                           <span>
-                            {t('sessionManagement.labels.lastActive')}{' '}
+                            Last active{' '}
                             {formatDistanceToNow(new Date(session.last_activity_at), {
                               addSuffix: true,
                             })}
@@ -266,7 +261,7 @@ export default function AdminSessionManagement() {
                         <div className="mt-2 flex items-start gap-2 text-xs text-amber-600 dark:text-amber-500">
                           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                           <span>
-                            {t('sessionManagement.warnings.oauthLogout', { provider: session.login_method === 'google' ? 'Google' : 'Microsoft' })}
+                            Revoking this session will not revoke {session.login_method === 'google' ? 'Google' : 'Microsoft'} OAuth access. Revoke access from your {session.login_method === 'google' ? 'Google' : 'Microsoft'} account settings.
                           </span>
                         </div>
                       )}
@@ -282,10 +277,10 @@ export default function AdminSessionManagement() {
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     {revoking === session.session_id
-                      ? t('sessionManagement.actions.revoking')
+                      ? 'Revoking...'
                       : session.is_current
-                      ? t('sessionManagement.actions.logout')
-                      : t('sessionManagement.actions.revoke')}
+                      ? 'Logout'
+                      : 'Revoke'}
                   </Button>
                 </div>
               </div>
