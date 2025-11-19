@@ -73,12 +73,15 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for client updating
-  if (!await hasPermission(currentUser, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
+  // Check permission for client updating
+  if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+    throw new Error('Permission denied: Cannot update clients');
+  }
   if (!tenant) {
     throw new Error('Tenant not found');
   }
@@ -856,15 +859,15 @@ export async function archiveClient(clientId: string): Promise<{
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for client updating (archiving is an update operation)
-  if (!await hasPermission(currentUser, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot archive clients');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permission for client updating (archiving is an update operation)
+    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+      throw new Error('Permission denied: Cannot archive clients');
     }
 
     // First verify the client exists and belongs to this tenant
@@ -955,15 +958,15 @@ export async function reactivateClient(clientId: string): Promise<{
     throw new Error('No authenticated user found');
   }
 
-  // Check permission for client updating
-  if (!await hasPermission(currentUser, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot reactivate clients');
-  }
-
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
+    }
+
+    // Check permission for client updating
+    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+      throw new Error('Permission denied: Cannot reactivate clients');
     }
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1270,20 +1273,20 @@ export async function importClientsFromCSV(
     throw new Error('No authenticated user found');
   }
 
-  // Check permissions for both create and update operations since import can do both
-  if (!await hasPermission(currentUser, 'client', 'create')) {
-    throw new Error('Permission denied: Cannot create clients');
-  }
-  
-  if (updateExisting && !await hasPermission(currentUser, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
-  }
-
   const results: ImportClientResult[] = [];
   const {knex: db, tenant} = await createTenantKnex();
-  
+
   if (!tenant) {
     throw new Error('Tenant not found');
+  }
+
+  // Check permissions for both create and update operations since import can do both
+  if (!await hasPermission(currentUser.user_id, tenant, 'clients.create')) {
+    throw new Error('Permission denied: Cannot create clients');
+  }
+
+  if (updateExisting && !await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+    throw new Error('Permission denied: Cannot update clients');
   }
 
   // Start a transaction to ensure all operations succeed or fail together
@@ -1462,7 +1465,7 @@ export async function uploadClientLogo(
   }
 
   // Check permission for client updating (logo upload is an update operation)
-  if (!await hasPermission(currentUser, 'client', 'update')) {
+  if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
     return { success: false, message: 'Permission denied: Cannot update client logo' };
   }
 
