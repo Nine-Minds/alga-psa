@@ -27,3 +27,4 @@ export * from './contractLineServiceConfiguration.interfaces';
 export * from './contract.interfaces';
 export * from './contractTemplate.interfaces';
 export * from './scheduling.interfaces';
+export * from './projectTemplate.interfaces';
