@@ -6,6 +6,8 @@ import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -13,6 +15,8 @@ import {
   revokeSessionAction,
   type SessionWithUser,
 } from 'server/src/lib/actions/session-actions/sessionActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import {
   Monitor,
   Smartphone,
@@ -35,20 +39,25 @@ export default function AdminSessionManagement() {
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState<IUserWithRoles[]>([]);
 
   // Filter states
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedLoginMethod, setSelectedLoginMethod] = useState<string>('');
   const [selectedUserType, setSelectedUserType] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const data = await getAllSessionsAction();
-      setSessions(data.sessions);
-      setFilteredSessions(data.sessions);
+      const [sessionsData, usersData] = await Promise.all([
+        getAllSessionsAction(),
+        getAllUsers(true, undefined) // Include inactive users, all types
+      ]);
+      setSessions(sessionsData.sessions);
+      setFilteredSessions(sessionsData.sessions);
+      setUsers(usersData);
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to load sessions');
@@ -93,9 +102,8 @@ export default function AdminSessionManagement() {
 
     // Date range filter (last activity)
     if (dateFrom) {
-      const fromDate = new Date(dateFrom);
       filtered = filtered.filter(session =>
-        new Date(session.last_activity_at) >= fromDate
+        new Date(session.last_activity_at) >= dateFrom
       );
     }
 
@@ -110,12 +118,6 @@ export default function AdminSessionManagement() {
     setFilteredSessions(filtered);
   }, [searchTerm, selectedUser, selectedLoginMethod, selectedUserType, dateFrom, dateTo, sessions]);
 
-  // Get unique users for filter dropdown
-  const uniqueUsers = Array.from(
-    new Map(sessions.map(s => [s.user_id, { id: s.user_id, name: s.user_name, email: s.user_email }]))
-      .values()
-  ).sort((a, b) => a.name.localeCompare(b.name));
-
   // Get unique login methods
   const uniqueLoginMethods: string[] = Array.from(
     new Set(sessions.map(s => s.login_method).filter((method): method is string => Boolean(method)))
@@ -127,8 +129,8 @@ export default function AdminSessionManagement() {
     setSelectedUser('');
     setSelectedLoginMethod('');
     setSelectedUserType('');
-    setDateFrom('');
-    setDateTo('');
+    setDateFrom(undefined);
+    setDateTo(undefined);
   };
 
   const hasActiveFilters = searchTerm || selectedUser || selectedLoginMethod || selectedUserType || dateFrom || dateTo;
@@ -232,30 +234,44 @@ export default function AdminSessionManagement() {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Filters */}
-        <div className="mb-4 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* User Filter */}
-            <div>
-              <label htmlFor="user-filter" className="text-sm font-medium mb-1 block">
-                User
+        {/* Filters - All in one line */}
+        <div className="mb-4">
+          <div className="flex flex-wrap items-end gap-3">
+            {/* Search Input - First */}
+            <div className="flex-1 min-w-[200px]">
+              <label htmlFor="session-search" className="text-sm font-medium mb-1 block">
+                Search
               </label>
-              <CustomSelect
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="session-search"
+                  type="text"
+                  placeholder="Search by name, email, device, or IP..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* User Filter with UserPicker */}
+            <div className="w-auto">
+              <UserPicker
                 id="user-filter"
+                label="User"
                 value={selectedUser}
                 onValueChange={setSelectedUser}
-                options={[
-                  { value: '', label: 'All Users' },
-                  ...uniqueUsers.map(u => ({
-                    value: u.id,
-                    label: `${u.name}${u.email ? ` (${u.email})` : ''}`
-                  }))
-                ]}
+                users={users}
+                buttonWidth="fit"
+                placeholder="All Users"
+                userTypeFilter={null}
+                labelStyle="medium"
               />
             </div>
 
             {/* Login Method Filter */}
-            <div>
+            <div className="w-auto min-w-[180px]">
               <label htmlFor="login-method-filter" className="text-sm font-medium mb-1 block">
                 Login Method
               </label>
@@ -277,7 +293,7 @@ export default function AdminSessionManagement() {
             </div>
 
             {/* User Type Filter */}
-            <div>
+            <div className="w-auto min-w-[140px]">
               <label htmlFor="user-type-filter" className="text-sm font-medium mb-1 block">
                 User Type
               </label>
@@ -293,61 +309,49 @@ export default function AdminSessionManagement() {
               />
             </div>
 
-            {/* Date Range Filters */}
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label htmlFor="date-from" className="text-sm font-medium mb-1 block">
-                  From
-                </label>
-                <Input
-                  id="date-from"
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                />
-              </div>
-              <div className="flex-1">
-                <label htmlFor="date-to" className="text-sm font-medium mb-1 block">
-                  To
-                </label>
-                <Input
-                  id="date-to"
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                />
-              </div>
+            {/* Date From Filter */}
+            <div className="w-auto min-w-[140px]">
+              <label className="text-sm font-medium mb-1 block">
+                From
+              </label>
+              <DatePicker
+                id="date-from"
+                value={dateFrom}
+                onChange={setDateFrom}
+                placeholder="Select date"
+                clearable
+              />
             </div>
-          </div>
 
-          {/* Clear Filters Button */}
-          {hasActiveFilters && (
-            <div className="flex justify-end">
-              <Button
-                id="clear-filters"
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear Filters
-              </Button>
+            {/* Date To Filter */}
+            <div className="w-auto min-w-[140px]">
+              <label className="text-sm font-medium mb-1 block">
+                To
+              </label>
+              <DatePicker
+                id="date-to"
+                value={dateTo}
+                onChange={setDateTo}
+                placeholder="Select date"
+                clearable
+              />
             </div>
-          )}
-        </div>
 
-        {/* Search bar */}
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="session-search"
-              type="text"
-              placeholder="Search by user name, email, device, or IP address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <div className="w-auto">
+                <Button
+                  id="clear-filters"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-10"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

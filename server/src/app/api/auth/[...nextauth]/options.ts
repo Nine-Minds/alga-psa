@@ -1360,22 +1360,31 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 }
             }
 
-            // NEW: Check if session was revoked
+            // NEW: Check if session was revoked (throttled to reduce DB load)
+            // PERFORMANCE: Only check revocation every 30 seconds instead of every request
+            // This dramatically improves performance while still catching revocations reasonably quickly
             if (token.session_id) {
                 try {
-                    const isRevoked = await UserSession.isRevoked(
-                        token.tenant as string,
-                        token.session_id as string
-                    );
+                    const lastRevocationCheck = token.last_revocation_check as number || 0;
+                    const now = Date.now();
+                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
 
-                    if (isRevoked) {
-                        console.log('[auth] Session revoked, forcing logout:', token.session_id);
-                        return null; // This will force a logout
+                    if (shouldCheckRevocation) {
+                        const isRevoked = await UserSession.isRevoked(
+                            token.tenant as string,
+                            token.session_id as string
+                        );
+
+                        if (isRevoked) {
+                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
+                            return null; // This will force a logout
+                        }
+
+                        token.last_revocation_check = now;
                     }
 
                     // Update last activity (throttle to once per minute to reduce DB writes)
                     const lastActivity = token.last_activity_check as number || 0;
-                    const now = Date.now();
                     if (now - lastActivity > 60000) { // 1 minute
                         await UserSession.updateActivity(
                             token.tenant as string,
@@ -2113,22 +2122,31 @@ export const options: NextAuthConfig = {
                 }
             }
 
-            // NEW: Check if session was revoked
+            // NEW: Check if session was revoked (throttled to reduce DB load)
+            // PERFORMANCE: Only check revocation every 30 seconds instead of every request
+            // This dramatically improves performance while still catching revocations reasonably quickly
             if (token.session_id) {
                 try {
-                    const isRevoked = await UserSession.isRevoked(
-                        token.tenant as string,
-                        token.session_id as string
-                    );
+                    const lastRevocationCheck = token.last_revocation_check as number || 0;
+                    const now = Date.now();
+                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
 
-                    if (isRevoked) {
-                        console.log('[auth] Session revoked, forcing logout:', token.session_id);
-                        return null; // This will force a logout
+                    if (shouldCheckRevocation) {
+                        const isRevoked = await UserSession.isRevoked(
+                            token.tenant as string,
+                            token.session_id as string
+                        );
+
+                        if (isRevoked) {
+                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
+                            return null; // This will force a logout
+                        }
+
+                        token.last_revocation_check = now;
                     }
 
                     // Update last activity (throttle to once per minute to reduce DB writes)
                     const lastActivity = token.last_activity_check as number || 0;
-                    const now = Date.now();
                     if (now - lastActivity > 60000) { // 1 minute
                         await UserSession.updateActivity(
                             token.tenant as string,

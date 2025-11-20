@@ -55,5 +55,6 @@ declare module "next-auth" {
         session_id?: string;
         login_method?: string;
         last_activity_check?: number;
+        last_revocation_check?: number;
     }
 }

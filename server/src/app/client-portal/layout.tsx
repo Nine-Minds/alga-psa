@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
+import { getSession } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { getHierarchicalLocaleAction } from "server/src/lib/actions/locale-actions/getHierarchicalLocale";
@@ -9,9 +9,9 @@ export default async function Layout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Use the full auth with revocation checks in the layout
-  // This ensures revoked sessions are caught on every page navigation
-  const session = await getSessionWithRevocationCheck();
+  // Use fast edge auth - revocation is checked in JWT callback on token refresh
+  // This avoids DB queries on every page load (performance optimization)
+  const session = await getSession();
 
   // If session is null, redirect to signin
   // Don't include error parameter to avoid redirect loops
