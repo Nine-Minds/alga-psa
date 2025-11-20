@@ -6,13 +6,14 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 type Props = {
   src: string;
+  extensionId?: string;
 };
 
 /**
  * Extension iframe component for Docker backend mode.
  * Uses same-origin path-based URLs instead of custom domains.
  */
-export default function DockerExtensionIframe({ src }: Props) {
+export default function DockerExtensionIframe({ src, extensionId }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -50,12 +51,12 @@ export default function DockerExtensionIframe({ src }: Props) {
     window.addEventListener('message', handleMessage);
 
     // Bootstrap iframe communication
-    bootstrapIframe({ iframe, allowedOrigin });
+    bootstrapIframe({ iframe, allowedOrigin, extensionId });
 
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [src]);
+  }, [src, extensionId]);
 
   useEffect(() => {
     // Reset state whenever the src changes so we show the loading state again.

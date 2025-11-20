@@ -16,6 +16,19 @@ let capabilities = [];
 if (existsSync(manifestPath)) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   capabilities = manifest.capabilities ?? [];
+  cpSync(manifestPath, resolve(dist, 'manifest.json'));
+  console.log('[postbuild] copied manifest.json to dist/');
+}
+
+const uiSrc = resolve(root, 'ui');
+if (existsSync(uiSrc)) {
+  const uiDest = resolve(dist, 'ui');
+  ensureDir(uiDest);
+  // Only copy files from ui/ (like index.html), don't overwrite the directory if it exists
+  // cpSync will copy files into the destination directory.
+  // We want to copy 'ui/*' to 'dist/ui/*'
+  cpSync(uiSrc, uiDest, { recursive: true }); 
+  console.log('[postbuild] copied ui assets to dist/ui/');
 }
 
 const metadata = {

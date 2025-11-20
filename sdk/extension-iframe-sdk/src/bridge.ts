@@ -123,5 +123,68 @@ export class IframeBridge {
   setExpectedParentOrigin(origin: string) {
     this.expectedParentOrigin = origin;
   }
+
+  /**
+   * Call a proxy route via postMessage.
+   */
+  async callProxy(route: string, payload?: Uint8Array | null): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      const requestId = typeof crypto !== 'undefined' ? crypto.randomUUID() : String(Math.random());
+      console.log(`[SDK] Starting callProxy for route: ${route}, requestId: ${requestId}`);
+
+      // Prepare listener for response
+      const cleanup = this.on((msg) => {
+        if (msg.type === 'apiproxy_response' && msg.request_id === requestId) {
+          console.log(`[SDK] Received apiproxy_response for requestId: ${requestId}`);
+          cleanup();
+          if (msg.payload.error) {
+            console.warn(`[SDK] Proxy response error for requestId: ${requestId}, error: ${msg.payload.error}`);
+            reject(new Error(msg.payload.error));
+          } else {
+            const bodyBase64 = msg.payload.body || '';
+            try {
+              const binaryString = atob(bodyBase64);
+              const len = binaryString.length;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              resolve(bytes);
+            } catch (e) {
+              console.error(`[SDK] Failed to decode proxy response for requestId: ${requestId}`, e);
+              reject(new Error('Failed to decode proxy response'));
+            }
+          }
+        }
+      });
+
+      // Encode request
+      let bodyBase64: string | undefined;
+      if (payload) {
+        let binaryString = '';
+        for (let i = 0; i < payload.length; i++) {
+          binaryString += String.fromCharCode(payload[i]);
+        }
+        bodyBase64 = btoa(binaryString);
+      }
+
+      console.log(`[SDK] Emitting 'apiproxy' message to host. requestId: ${requestId}`);
+      this.emitToHost('apiproxy', { route, body: bodyBase64 }, requestId);
+
+      // Timeout
+      setTimeout(() => {
+        console.warn(`[SDK] Timeout reached for requestId: ${requestId}`);
+        cleanup();
+        reject(new Error('Proxy request timed out'));
+      }, 15000);
+    });
+  }
+
+  get uiProxy() {
+    return {
+      callRoute: this.callProxy.bind(this),
+      call: this.callProxy.bind(this), // backward compat
+    };
+  }
 }
 
