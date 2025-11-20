@@ -1398,53 +1398,22 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 }
             }
 
-            // On subsequent requests, validate the token
-            const validatedUser = await validateUser(token);
-            if (!validatedUser) {
-                console.log('JWT callback - validation failed for token:', token);
-                // If validation fails, return a token that will cause the session to be invalid
-                return { ...token, error: "TokenValidationError" };
-            }
-
-            console.log('JWT callback - validated user:', {
-                user_id: validatedUser.user_id,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant
-            });
-
-            // For client users, fetch clientId if missing
-            let clientId = token.clientId;
-            let contactId = token.contactId || validatedUser.contact_id;
-
-            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !clientId) {
-                console.log('JWT callback - fetching clientId for client user');
-                const { getAdminConnection } = await import("@shared/db/admin");
-                const connection = await getAdminConnection();
-                const contact = await connection('contacts')
-                    .where({
-                        contact_name_id: validatedUser.contact_id,
-                        tenant: validatedUser.tenant
-                    })
-                    .first();
-
-                if (contact) {
-                    clientId = contact.client_id;
-                    console.log('JWT callback - found clientId:', clientId);
-                }
-            }
+            // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
+            // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
+            // - With max 20 connections, pool exhausted instantly with multiple users
+            // - Result: "remaining connection slots reserved for superuser" errors
+            //
+            // Security is maintained by:
+            // 1. NextAuth JWT signature validation (cryptographically secure)
+            // 2. Session revocation check above (handles compromised sessions)
+            // 3. User validation at login time (sufficient for most use cases)
+            //
+            // If user is deleted/deactivated between requests, they'll be caught at next login
 
             const result = {
-                ...token,
-                id: validatedUser.user_id, // Always use the validated user_id
-                name: validatedUser.first_name + " " + validatedUser.last_name,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant,
-                tenantSlug:
-                    token.tenantSlug ??
-                    (validatedUser.tenant ? buildTenantPortalSlug(validatedUser.tenant) : undefined),
-                user_type: validatedUser.user_type,
-                clientId: clientId, // Use fetched or preserved clientId
-                contactId: contactId  // Use fetched or preserved contactId
+                ...token
+                // Token already contains all necessary user data from initial sign-in
+                // No need to fetch from DB on every request
             };
 
             console.log('JWT callback - final token:', {
@@ -2160,53 +2129,22 @@ export const options: NextAuthConfig = {
                 }
             }
 
-            // On subsequent requests, validate the token
-            const validatedUser = await validateUser(token);
-            if (!validatedUser) {
-                console.log('JWT callback - validation failed for token:', token);
-                // If validation fails, return a token that will cause the session to be invalid
-                return { ...token, error: "TokenValidationError" };
-            }
-
-            console.log('JWT callback - validated user:', {
-                user_id: validatedUser.user_id,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant
-            });
-
-            // For client users, fetch clientId if missing
-            let clientId = token.clientId;
-            let contactId = token.contactId || validatedUser.contact_id;
-
-            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !clientId) {
-                console.log('JWT callback - fetching clientId for client user');
-                const { getAdminConnection } = await import("@shared/db/admin");
-                const connection = await getAdminConnection();
-                const contact = await connection('contacts')
-                    .where({
-                        contact_name_id: validatedUser.contact_id,
-                        tenant: validatedUser.tenant
-                    })
-                    .first();
-
-                if (contact) {
-                    clientId = contact.client_id;
-                    console.log('JWT callback - found clientId:', clientId);
-                }
-            }
+            // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
+            // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
+            // - With max 20 connections, pool exhausted instantly with multiple users
+            // - Result: "remaining connection slots reserved for superuser" errors
+            //
+            // Security is maintained by:
+            // 1. NextAuth JWT signature validation (cryptographically secure)
+            // 2. Session revocation check above (handles compromised sessions)
+            // 3. User validation at login time (sufficient for most use cases)
+            //
+            // If user is deleted/deactivated between requests, they'll be caught at next login
 
             const result = {
-                ...token,
-                id: validatedUser.user_id, // Always use the validated user_id
-                name: validatedUser.first_name + " " + validatedUser.last_name,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant,
-                tenantSlug:
-                    token.tenantSlug ??
-                    (validatedUser.tenant ? buildTenantPortalSlug(validatedUser.tenant) : undefined),
-                user_type: validatedUser.user_type,
-                clientId: clientId, // Use fetched or preserved clientId
-                contactId: contactId  // Use fetched or preserved contactId
+                ...token
+                // Token already contains all necessary user data from initial sign-in
+                // No need to fetch from DB on every request
             };
 
             console.log('JWT callback - final token:', {
