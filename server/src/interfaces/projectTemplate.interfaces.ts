@@ -61,6 +61,10 @@ export interface IProjectTemplateStatusMapping extends TenantEntity {
   status_id?: string;
   custom_status_name?: string;
   display_order: number;
+  // Enriched fields from join
+  status_name?: string;
+  color?: string;
+  is_closed?: boolean;
 }
 
 export interface IProjectTemplateWithDetails extends IProjectTemplate {

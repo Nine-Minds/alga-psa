@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
     const templates = await getTemplates({ category, search });
     return NextResponse.json(templates);
   } catch (error) {
+    console.error('Error fetching templates:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch templates' },
+      { error: 'Failed to fetch templates', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -37,8 +38,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ template_id: templateId }, { status: 201 });
   } catch (error) {
+    console.error('Error creating template:', error);
     return NextResponse.json(
-      { error: 'Failed to create template' },
+      { error: 'Failed to create template', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

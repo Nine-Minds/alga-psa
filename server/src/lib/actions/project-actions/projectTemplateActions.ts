@@ -44,12 +44,26 @@ export async function createTemplateFromProject(
     template_name: string;
     description?: string;
     category?: string;
+  },
+  options?: {
+    copyPhases?: boolean;
+    copyStatuses?: boolean;
+    copyTasks?: boolean;
+    copyAssignments?: boolean;
   }
 ): Promise<string> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
   }
+
+  // Default all options to true if not specified
+  const copyOptions = {
+    copyPhases: options?.copyPhases ?? true,
+    copyStatuses: options?.copyStatuses ?? true,
+    copyTasks: options?.copyTasks ?? true,
+    copyAssignments: options?.copyAssignments ?? false
+  };
 
   const { knex, tenant } = await createTenantKnex();
 
@@ -77,14 +91,16 @@ export async function createTemplateFromProject(
       })
       .returning('*');
 
-    // Copy phases
-    const phases = await trx('project_phases')
-      .where({ project_id: projectId, tenant })
-      .orderBy('order_key');
+    // Copy phases (if enabled)
+    let phaseMap = new Map<string, string>(); // old_phase_id → template_phase_id
+    let phases: any[] = [];
 
-    const phaseMap = new Map<string, string>(); // old_phase_id → template_phase_id
+    if (copyOptions.copyPhases) {
+      phases = await trx('project_phases')
+        .where({ project_id: projectId, tenant })
+        .orderBy('order_key');
 
-    for (const phase of phases) {
+      for (const phase of phases) {
       // Calculate duration_days from phase dates if available
       let duration_days: number | null = null;
       if (phase.start_date && phase.end_date) {
@@ -116,6 +132,7 @@ export async function createTemplateFromProject(
         .returning('*');
 
       phaseMap.set(phase.phase_id, templatePhase.template_phase_id);
+      }
     }
 
     // Copy tasks
@@ -585,7 +602,7 @@ export async function getTemplateWithDetails(
   }
 
   // Load all related data
-  const [phases, dependencies, statusMappings] = await Promise.all([
+  const [phases, dependencies, rawStatusMappings] = await Promise.all([
     knex('project_template_phases')
       .where({ template_id: templateId, tenant })
       .orderBy('order_key'),
@@ -595,6 +612,49 @@ export async function getTemplateWithDetails(
       .where({ template_id: templateId, tenant })
       .orderBy('display_order')
   ]);
+
+  // Enrich status mappings with actual status information
+  const statusMappings = await Promise.all(
+    rawStatusMappings.map(async (mapping: any) => {
+      if (mapping.status_id) {
+        // First, try standard_statuses (for standard statuses)
+        const standardStatus = await knex('standard_statuses')
+          .where({ standard_status_id: mapping.status_id, tenant })
+          .first();
+
+        if (standardStatus) {
+          return {
+            ...mapping,
+            status_name: standardStatus.name,
+            color: standardStatus.color || '#6B7280',
+            is_closed: standardStatus.is_closed
+          };
+        }
+
+        // If not found, try statuses table (for custom statuses)
+        const customStatus = await knex('statuses')
+          .where({ status_id: mapping.status_id, tenant })
+          .first();
+
+        if (customStatus) {
+          return {
+            ...mapping,
+            status_name: customStatus.name,
+            color: customStatus.color || '#6B7280',
+            is_closed: customStatus.is_closed
+          };
+        }
+      }
+
+      // If no status_id or status not found, use custom_status_name
+      return {
+        ...mapping,
+        status_name: mapping.custom_status_name || 'Status',
+        color: '#6B7280', // Default gray color
+        is_closed: false
+      };
+    })
+  );
 
   const phaseIds = phases.map(p => p.template_phase_id);
   let tasks: IProjectTemplateTask[] = [];

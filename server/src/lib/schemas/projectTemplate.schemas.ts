@@ -78,6 +78,12 @@ export const applyTemplateSchema = z.object({
   template_id: z.string().uuid(),
   project_name: z.string().min(1).max(255),
   client_id: z.string().uuid(),
-  start_date: z.string().datetime().nullable().optional(),
-  assigned_to: z.string().uuid().nullable().optional()
+  start_date: z.preprocess(
+    (val) => val === '' || val === null || val === undefined ? undefined : val,
+    z.string().datetime().optional()
+  ),
+  assigned_to: z.preprocess(
+    (val) => val === '' || val === null || val === undefined ? undefined : val,
+    z.string().uuid().optional()
+  )
 });
