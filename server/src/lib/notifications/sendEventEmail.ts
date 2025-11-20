@@ -76,13 +76,15 @@ function applyReplyMarkers(
     .filter(Boolean)
     .join(' ');
 
-  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">ALGA-REPLY-TOKEN</div>`;
+  const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
+  const tokenString = footerLines[0];
+
+  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">${tokenString}</div>`;
   const hiddenBoundary = `<div data-alga-reply-boundary="true" style="display:none;max-height:0;overflow:hidden;">${REPLY_BANNER_TEXT}</div>`;
   const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
 
   const augmentedHtml = `${hiddenToken}${hiddenBoundary}${visibleBanner}${html}`;
 
-  const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
   if (payload.ticketId) {
     footerLines.push(`ALGA-TICKET-ID:${payload.ticketId}`);
   }
@@ -405,6 +407,38 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         subject,
         recipient: params.to,
       });
+    }
+
+    // Store the outbound Message-ID in the ticket's email_metadata references
+    // This enables In-Reply-To threading even if the token is stripped
+    if (result.success && result.messageId && params.replyContext?.ticketId) {
+      try {
+        // We use a raw query to append to the JSONB array safely
+        await knex('tickets')
+          .where({ tenant: params.tenantId, ticket_id: params.replyContext.ticketId })
+          .update({
+            email_metadata: knex.raw(
+              `jsonb_set(
+                COALESCE(email_metadata, '{}'::jsonb), 
+                '{references}', 
+                (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
+              )`,
+              [result.messageId]
+            ),
+            updated_at: new Date() // Good practice to touch updated_at
+          });
+          
+        logger.debug('[SendEventEmail] Linked outbound Message-ID to ticket:', {
+          ticketId: params.replyContext.ticketId,
+          messageId: result.messageId
+        });
+      } catch (error) {
+        logger.warn('[SendEventEmail] Failed to link outbound Message-ID to ticket:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          ticketId: params.replyContext.ticketId,
+          messageId: result.messageId
+        });
+      }
     }
 
     logger.info('[SendEventEmail] Email sent successfully via TenantEmailService:', {
