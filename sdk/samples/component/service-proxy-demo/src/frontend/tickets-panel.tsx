@@ -34,8 +34,10 @@ export function TicketsPanel({ uiProxy, limit = 10 }: TicketsPanelProps) {
   useEffect(() => {
     let cancelled = false;
     setState((prev) => ({ ...prev, loading: true, error: null }));
+    console.log(`[Frontend] Calling fetchTicketsViaProxy with limit: ${limit}`);
     fetchTicketsViaProxy(uiProxy, limit)
       .then((result) => {
+        console.log(`[Frontend] Received response from fetchTicketsViaProxy. OK: ${result.ok}, Tickets: ${result.tickets.length}, Error: ${result.error}`);
         if (cancelled) return;
         if (result.ok) {
           setState({ loading: false, tickets: result.tickets ?? [], error: null });

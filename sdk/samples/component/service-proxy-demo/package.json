@@ -3,13 +3,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "build:backend": "tsup src/backend/index.ts --format esm --out-dir dist/js --clean --external alga:extension/secrets --external alga:extension/http --external alga:extension/storage --external alga:extension/logging --external alga:extension/ui-proxy --external alga:extension/context",
+    "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
+    "build:ui": "esbuild src/frontend/main.tsx --bundle --outfile=dist/ui/index.js --format=esm --platform=browser --target=es2020 --minify",
+    "build": "npm run clean && npm run build:backend && npm run build:component && npm run build:ui && npm run postbuild && npm run pack",
+    "postbuild": "node ./scripts/postbuild.mjs",
+    "pack": "node ../../../alga-cli/dist/cli.js pack dist bundle.tar.zst",
     "test": "vitest"
   },
   "dependencies": {
-    "@alga/extension-runtime": "^0.1.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@alga/extension-iframe-sdk": "file:../../../../sdk/extension-iframe-sdk"
   },
   "devDependencies": {
+    "@alga/extension-runtime": "file:../../../../sdk/extension-runtime",
+    "@bytecodealliance/componentize-js": "^0.19.3",
+    "esbuild": "^0.20.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "rimraf": "^5.0.0",
+    "tsup": "^7.2.0",
     "typescript": "^5.4.0",
     "vitest": "^3.0.7"
   }
