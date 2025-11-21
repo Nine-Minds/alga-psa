@@ -6,9 +6,10 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 type Props = {
   domain: string;
+  extensionId: string;
 };
 
-export default function ExtensionIframe({ domain }: Props) {
+export default function ExtensionIframe({ domain, extensionId }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -44,12 +45,12 @@ export default function ExtensionIframe({ domain }: Props) {
 
     window.addEventListener('message', handleMessage);
 
-    bootstrapIframe({ iframe, allowedOrigin });
+    bootstrapIframe({ iframe, allowedOrigin, extensionId });
 
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [src, domain]);
+  }, [src, domain, extensionId]);
 
   useEffect(() => {
     // Reset state whenever the domain changes so we show the loading state again.

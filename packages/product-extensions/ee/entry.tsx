@@ -106,7 +106,7 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
 
   return (
     <div className="h-full w-full">
-      <ExtensionIframe domain={info.runner_domain} />
+      <ExtensionIframe domain={info.runner_domain} extensionId={id} />
     </div>
   );
 }
