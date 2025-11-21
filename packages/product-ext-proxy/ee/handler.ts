@@ -209,6 +209,7 @@ async function handle(
     if (installConfig.secretsVersion) {
       runnerHeaders['x-ext-secrets-version'] = installConfig.secretsVersion;
     }
+
     const runnerResp = await backend.execute(execReq, {
       requestId,
       timeoutMs,
@@ -231,7 +232,8 @@ async function handle(
     }
     if (error instanceof RunnerRequestError) {
       console.error('[ext-proxy] Runner request error:', error.message, { backend: error.backend, status: error.status });
-      return applyCorsHeaders(json(502, { error: 'Runner error' }), corsOrigin);
+      const status = error.status || 502;
+      return applyCorsHeaders(json(status, { error: 'Runner error', details: error.message }), corsOrigin);
     }
     if (error?.name === 'AbortError') {
       return applyCorsHeaders(json(504, { error: 'Gateway timeout' }), corsOrigin);

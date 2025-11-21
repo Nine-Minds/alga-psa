@@ -19,7 +19,7 @@ export interface IframeBootstrapOptions {
   maxHeight?: number;
 }
 
-export function bootstrapIframe(opts: IframeBootstrapOptions): void {
+export function bootstrapIframe(opts: IframeBootstrapOptions): () => void {
   const { iframe, extensionId, allowedOrigin, minHeight = MIN_IFRAME_HEIGHT, maxHeight = MAX_IFRAME_HEIGHT } = opts;
 
   if (!iframe || !(iframe instanceof HTMLIFrameElement)) {
@@ -61,6 +61,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
   };
 
   window.addEventListener('message', onMessage);
+  return () => window.removeEventListener('message', onMessage);
 }
 
 function safeParseUrl(href: string, base: string): URL | null {

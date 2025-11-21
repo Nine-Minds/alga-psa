@@ -51,10 +51,11 @@ export default function DockerExtensionIframe({ src, extensionId }: Props) {
     window.addEventListener('message', handleMessage);
 
     // Bootstrap iframe communication
-    bootstrapIframe({ iframe, allowedOrigin, extensionId });
+    const cleanupBridge = bootstrapIframe({ iframe, allowedOrigin, extensionId });
 
     return () => {
       window.removeEventListener('message', handleMessage);
+      cleanupBridge();
     };
   }, [src, extensionId]);
 

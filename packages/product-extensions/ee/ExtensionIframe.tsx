@@ -13,11 +13,13 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [src, setSrc] = useState<string | undefined>(undefined);
 
-  const src = useMemo(() => {
-    if (typeof window === 'undefined') return `https://${domain}`;
-    const parentOrigin = window.location.origin;
-    return `https://${domain}?parentOrigin=${encodeURIComponent(parentOrigin)}`;
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const parentOrigin = window.location.origin;
+      setSrc(`https://${domain}?parentOrigin=${encodeURIComponent(parentOrigin)}`);
+    }
   }, [domain]);
 
   useEffect(() => {
@@ -49,10 +51,11 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
 
     window.addEventListener('message', handleMessage);
 
-    bootstrapIframe({ iframe, allowedOrigin, extensionId });
+    const cleanupBridge = bootstrapIframe({ iframe, allowedOrigin, extensionId });
 
     return () => {
       window.removeEventListener('message', handleMessage);
+      cleanupBridge();
     };
   }, [src, domain, extensionId]);
 
