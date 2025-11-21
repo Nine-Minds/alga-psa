@@ -14,7 +14,11 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const src = useMemo(() => `https://${domain}` as const, [domain]);
+  const src = useMemo(() => {
+    if (typeof window === 'undefined') return `https://${domain}`;
+    const parentOrigin = window.location.origin;
+    return `https://${domain}?parentOrigin=${encodeURIComponent(parentOrigin)}`;
+  }, [domain]);
 
   useEffect(() => {
     const iframe = iframeRef.current;

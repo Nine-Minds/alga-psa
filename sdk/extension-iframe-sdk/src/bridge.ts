@@ -24,8 +24,15 @@ export class IframeBridge {
   private themeTokens: Record<string, string> = {};
 
   constructor(opts?: { expectedParentOrigin?: string; devAllowWildcard?: boolean }) {
-    this.expectedParentOrigin =
-      opts?.expectedParentOrigin ?? (typeof window !== 'undefined' ? window.location.origin : '');
+    if (opts?.expectedParentOrigin) {
+      this.expectedParentOrigin = opts.expectedParentOrigin;
+    } else if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      this.expectedParentOrigin = params.get('parentOrigin') || window.location.origin;
+    } else {
+      this.expectedParentOrigin = '';
+    }
+
     // Allow explicit dev wildcard only if requested; default off.
     const envDev =
       typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production';
@@ -36,7 +43,7 @@ export class IframeBridge {
     if (typeof window !== 'undefined') {
       window.addEventListener('message', (ev: MessageEvent) => {
         // Origin validation
-        if (this.expectedParentOrigin && ev.origin !== this.expectedParentOrigin) {
+        if (!this.devWildcard && this.expectedParentOrigin && ev.origin !== this.expectedParentOrigin) {
           // Ignore unexpected origins
           return;
         }

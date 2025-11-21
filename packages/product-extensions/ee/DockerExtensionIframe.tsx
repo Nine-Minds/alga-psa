@@ -58,11 +58,23 @@ export default function DockerExtensionIframe({ src, extensionId }: Props) {
     };
   }, [src, extensionId]);
 
+  // Ensure src includes parentOrigin
+  const finalSrc = React.useMemo(() => {
+    if (!src) return src;
+    try {
+      const url = new URL(src, window.location.href);
+      url.searchParams.set('parentOrigin', window.location.origin);
+      return url.toString();
+    } catch {
+      return src;
+    }
+  }, [src]);
+
   useEffect(() => {
     // Reset state whenever the src changes so we show the loading state again.
     setIsLoading(true);
     setHasError(false);
-  }, [src]);
+  }, [finalSrc]);
 
   useEffect(() => {
     if (!isLoading) return;
@@ -96,8 +108,8 @@ export default function DockerExtensionIframe({ src, extensionId }: Props) {
 
       <iframe
         ref={iframeRef}
-        key={src}
-        src={src}
+        key={finalSrc}
+        src={finalSrc}
         title="Extension App"
         className={`h-full w-full border-0 transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
