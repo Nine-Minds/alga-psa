@@ -1,4 +1,5 @@
 /* eslint-disable no-undef */
+require('dotenv').config({ path: '.env.local' });
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
