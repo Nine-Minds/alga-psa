@@ -115,7 +115,7 @@ async function handleApiProxy(
       headers: {
         'content-type': 'application/octet-stream',
       },
-      body: bodyBytes ? new Blob([bodyBytes]) : undefined,
+      body: bodyBytes ? new Blob([bodyBytes as any]) : undefined,
     });
     console.log('iframeBridge: fetch completed', { status: res.status, ok: res.ok, url });
 

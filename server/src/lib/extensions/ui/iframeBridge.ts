@@ -297,7 +297,7 @@ async function handleApiProxy(
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/octet-stream' },
-      body: bodyBytes ? new Blob([bodyBytes]) : undefined,
+      body: bodyBytes ? new Blob([bodyBytes as any]) : undefined,
     });
 
     if (!res.ok) {
