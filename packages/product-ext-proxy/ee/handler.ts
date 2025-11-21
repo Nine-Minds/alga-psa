@@ -218,7 +218,10 @@ async function handle(
       publicBase: backend.getPublicBase()
     });
 
-    const runnerHeaders: Record<string, string> = {};
+    const runnerHeaders: Record<string, string> = {
+      'x-alga-tenant': tenantId,
+      'x-alga-extension': extensionId,
+    };
     if (installConfig.configVersion) {
       runnerHeaders['x-ext-config-version'] = installConfig.configVersion;
     }

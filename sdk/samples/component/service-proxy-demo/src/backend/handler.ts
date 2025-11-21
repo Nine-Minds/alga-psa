@@ -121,7 +121,11 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await host.logging.error(`[service-proxy-demo] missing ALGA_API_KEY secret: ${message}`);
-    return jsonResponse({ ok: false, error: 'missing_alga_api_key' }, { status: 500 });
+    // Return a 200 so proxy layers don’t retry/timeout; surface a clear error to the iframe.
+    return jsonResponse(
+      { ok: false, error: 'missing_alga_api_key', fromProxy: isProxy, limit, fetchedAt: new Date().toISOString() },
+      { status: 200 },
+    );
   }
 
   const baseUrl = request.context.config?.algaApiBase ?? 'https://api.alga-psa.local';
@@ -140,6 +144,7 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
   }
   await host.logging.info(`[Backend] Handler finished for request_id: ${request.context.request_id}. Result OK: ${fetchResult.ok}`);
 
+  // Always return 200 so upstream proxies deliver the payload instead of treating it as a transport error.
   return jsonResponse(
     {
       ok: fetchResult.ok,
@@ -152,7 +157,7 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
       fromProxy: isProxy,
       fetchedAt: new Date().toISOString(),
     },
-    { status: fetchResult.ok ? 200 : 502 },
+    { status: 200 },
   );
 }
 
