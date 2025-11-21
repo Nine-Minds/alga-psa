@@ -1,10 +1,10 @@
 # DataTable Integration Guide (Iframe UI + UI Kit)
 
-This guide shows how to use the Alga UI Kit DataTable inside an extension’s iframe app, fetching data via the gateway (`/api/ext/[extensionId]/[...path]`) and following best practices for performance, security, and UX. In the v2 architecture:
+This guide shows how to use the Alga UI Kit DataTable inside an extension’s iframe app, fetching data via the gateway (`/api/ext/[extensionId]/[[...path]]`) and following best practices for performance, security, and UX. In the v2 architecture:
 - All server calls go through the API Gateway and are executed by the Runner (`POST /v1/execute`).
 - UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`.
-- The host constructs the iframe URL via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes with [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45).
-- Reference gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- The host constructs the iframe URL via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes with [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45).
+- Reference gateway scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 ## Overview
 
@@ -171,7 +171,7 @@ export async function list_agreements(ctx) {
 
 ## Related References
 
-- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- Iframe bootstrap and src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Gateway route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- Iframe bootstrap and src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
 - Runner overview: [runner.md](runner.md)
 - Manifest and signing: [manifest_schema.md](manifest_schema.md), [security_signing.md](security_signing.md)

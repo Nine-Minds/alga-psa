@@ -31,6 +31,12 @@
 - Control-plane services already depend on `shared/core/secretProvider.ts` to source secrets from env/filesystem/Vault (documented in `docs/secrets_management.md`); Runner has no integration.
 - `./sdk` contains CLI tooling and iframe helpers but no generated runtime bindings or component build pipeline.
 
+Status update (2025-11-21):
+- Gateway now forwards `config`, `providers`, and `secretEnvelope` in execute payloads (`server/src/app/api/ext/[extensionId]/[[...path]]/route.ts`).
+- Runner host implements secrets and storage capability providers and calls `POST /api/internal/ext-storage/install/{installId}` with `RUNNER_STORAGE_API_TOKEN` (`ee/runner/src/engine/host_api.rs`).
+- Runtime uses Wasmtime Component Model; `wasm-js@1` is the enforced runtime and manifests are validated via `manifest-v2.schema.ts`.
+- Componentized SDK template exists (`sdk/alga-client-sdk/templates/component-basic`) and buildExtUiSrc/iframe bootstrap are stable; still need generated bindings packaging and schema/docs alignment (JSON vs zod).
+
 ## Tooling Status Snapshot (Oct 2025)
 
 - `componentize-js` latest tag `v0.19.3` (2025-10-27) fixes duplicate export naming, updates dependencies (`orca_wasm` → `wirm`), and keeps StarlingMonkey aligned—ensuring the `jco` toolchain is active and maintained.

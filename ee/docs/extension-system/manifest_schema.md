@@ -67,7 +67,6 @@ interface ManifestV2 {
       { "method": "POST", "path": "/agreements/sync", "handler": "dist/handlers/http/sync" }
     ]
   },
-  "entry": "dist/main.wasm",
   "precompiled": {
     "x86_64-linux-gnu": "artifacts/cwasm/x86_64-linux-gnu/main.cwasm",
     "aarch64-linux-gnu": "artifacts/cwasm/aarch64-linux-gnu/main.cwasm"
@@ -82,10 +81,10 @@ interface ManifestV2 {
 - name: reverse‑domain, lowercase alphanumeric, dots, hyphens; unique per registry
 - version: semver
 - runtime: currently `wasm-js@1` (componentized handlers)
-- api.endpoints: unique method+path pairs; paths must start with `/`
-- handler paths, entry, precompiled artifacts, and `ui.entry` must exist in the bundle
+- api.endpoints: optional; when present use unique method+path pairs; paths must start with `/`; currently advisory (not enforced by gateway)
+- `ui.entry` must exist in the bundle; manifest-level `entry` field is not used by the current runtime
 - `ui.hooks.appMenu.label` must be a non-empty string when present
-- capabilities: must be recognized by the platform; least‑privilege encouraged
+- capabilities: optional array (defaults to empty); must be recognized by the platform; least‑privilege encouraged
 - assets: glob patterns limited to static files; no hidden files by default
 
 ## Signing & Provenance
@@ -98,7 +97,7 @@ See [Security & Signing](security_signing.md).
 
 ## Routing & Execution
 
-- Gateway maps `/api/ext/[extensionId]/[[...path]]` requests to tenant installs. Endpoint metadata from the manifest is surfaced to operators today; strict enforcement is tracked in the [2025-11-12 plan](../plans/2025-11-12-extension-system-alignment-plan.md#workstream-a-%E2%80%94-gateway--registry).
+- Gateway maps `/api/ext/[extensionId]/[[...path]]` requests to tenant installs. Endpoint metadata from the manifest is surfaced to operators today; strict enforcement is **not enabled** (see [2025-11-12 plan](../plans/2025-11-12-extension-system-alignment-plan.md#workstream-a-%E2%80%94-gateway--registry)).
 - Gateway normalizes the request and calls Runner `POST /v1/execute` with `{context, http, limits, config, providers, secret_envelope}`.
 - Runner executes the handler under isolation and returns `{status, headers, body_b64}` to the Gateway.
 
@@ -116,6 +115,6 @@ Plan dependencies and outstanding gaps are documented in [2025-11-12-extension-s
 
 ## UI Delivery
 
-- UI is served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (immutable).
-- The host constructs iframe URLs via [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38) and performs secure bootstrap via [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45).
+- UI is served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (immutable). The Next.js `ext-ui` route is a gate/redirect when rust-host mode is enabled.
+- The host constructs iframe URLs via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and performs secure bootstrap via [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45).
 - No in-process UI rendering and no dynamic import of tenant code in the host.

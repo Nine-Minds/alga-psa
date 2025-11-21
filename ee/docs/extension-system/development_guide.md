@@ -171,8 +171,8 @@ CI should output `dist/main.wasm` plus optional `precompiled/` artifacts referen
   - `@alga/extension-iframe-sdk` for host communication (auth, theme, navigation)
   - `@alga/ui-kit` for accessible, consistent components
 - Iframe bootstrap and URL construction are handled by the host via:
-  - [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
-  - [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45)
+  - [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+  - [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 - UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` with immutable caching
 
 Fetching via the Gateway from your UI:
@@ -233,4 +233,4 @@ Reference route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/rout
 - [Security & Signing](security_signing.md)
 - [Runner](runner.md)
 - [Sample Extension](sample_template.md)
-- Iframe bootstrap and src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Iframe bootstrap and src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
