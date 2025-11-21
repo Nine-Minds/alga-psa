@@ -3,8 +3,9 @@ import type { NextRequest } from 'next/server';
 import { appendFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
-import * as handler from '@product/ext-proxy/handler';
-export { dynamic } from '@product/ext-proxy/handler';
+// Force EE handler for extension proxy to fix 404s in dev environment
+import * as handler from '@product/ext-proxy/ee/handler';
+export { dynamic } from '@product/ext-proxy/ee/handler';
 
 const LOG_PATH = path.resolve('/tmp/ext-proxy.log');
 
