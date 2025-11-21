@@ -24,14 +24,14 @@ This document specifies the Enterprise Edition (EE) extension architecture. It i
 
 3) API Gateway (Next.js)
 - Route: `/api/ext/[extensionId]/[[...path]]`
-- Resolves tenant install via [@ee/lib/extensions/installConfig](../../server/src/lib/extensions/installConfig.ts) → version/content hash → config + provider grants → secret envelope
+- Resolves tenant install via [installConfig](../../../server/src/lib/extensions/installConfig.ts) → version/content hash → config + provider grants → secret envelope
 - Proxies requests to Runner `POST /v1/execute` with strict header/size/time policies and quotas, attaching `config`, `providers`, and `secret_envelope` in the body
 - Reference scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
-- Manifest endpoint matching is currently **advisory**; see [2025-11-12 plan](../plans/2025-11-12-extension-system-alignment-plan.md#workstream-a-%E2%80%94-gateway--registry) for the decision log.
+- Manifest endpoint matching is **not enforced** today; it is advisory. Enforcement decision is tracked in [2025-11-12 plan](../plans/2025-11-12-extension-system-alignment-plan.md#workstream-a-%E2%80%94-gateway--registry).
 
 4) UI Delivery (Iframe-Only, served by Runner)
-- Static UI assets are served by the Runner at ${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]
-- The host constructs the iframe src via [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45)
+- Static UI assets are served by the Runner at ${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]; the Next.js `ext-ui` route only gates/redirects when rust-host mode is enabled.
+- The host constructs the iframe src via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 - Client SDK (@alga/extension-iframe-sdk) provides auth, navigation bridge, and theme token integration
 - UI kit (@alga/ui-kit) offers accessible, themed components
 

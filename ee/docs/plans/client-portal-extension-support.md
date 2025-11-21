@@ -3,6 +3,11 @@
 ## Objective
 Extend the existing extension system to support the Client Portal. This involves adding a new hook for the client portal menu, implementing the discovery logic, adding the navigation UI, and creating the runtime page for client portal extensions.
 
+Status update (2025-11-21):
+- Manifest schema includes `ui.hooks.clientPortalMenu`; backend discovery and client portal menu rendering are implemented (`server/src/app/client-portal/extensions/[id]/page.tsx`, `ClientPortalLayout`, menu component).
+- Runtime iframe uses `buildExtUiSrc` and `bootstrapIframe` to load Runner-hosted UI; client portal page exists and matches MSP flow.
+- Follow-up: add automated verification/tests and doc links from client portal docs.
+
 ## Context
 The current extension system works for the MSP portal (`/msp/*`). We need to replicate/adapt this for the Client Portal (`/client-portal/*`).
 - **Manifest:** Extensions declare `ui.hooks.appMenu` for MSP. We will add `ui.hooks.clientPortalMenu` for Client Portal.
@@ -65,4 +70,3 @@ The current extension system works for the MSP portal (`/msp/*`). We need to rep
     - `manifest-v2.schema.ts`
     - `ClientPortalLayout.tsx`
     - `DockerExtensionIframe.tsx`
-
