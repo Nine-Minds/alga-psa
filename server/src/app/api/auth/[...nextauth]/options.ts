@@ -1361,8 +1361,9 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             }
 
             // NEW: Check if session was revoked (throttled to reduce DB load)
-            // PERFORMANCE: Only check revocation every 30 seconds instead of every request
-            // This dramatically improves performance while still catching revocations reasonably quickly
+            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
+            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
+            // Activity tracking is not critical and can be updated less frequently via background job
             if (token.session_id) {
                 try {
                     const lastRevocationCheck = token.last_revocation_check as number || 0;
@@ -1381,16 +1382,6 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         }
 
                         token.last_revocation_check = now;
-                    }
-
-                    // Update last activity (throttle to once per minute to reduce DB writes)
-                    const lastActivity = token.last_activity_check as number || 0;
-                    if (now - lastActivity > 60000) { // 1 minute
-                        await UserSession.updateActivity(
-                            token.tenant as string,
-                            token.session_id as string
-                        );
-                        token.last_activity_check = now;
                     }
                 } catch (error) {
                     console.error('[auth] Session revocation check error:', error);
@@ -2092,8 +2083,9 @@ export const options: NextAuthConfig = {
             }
 
             // NEW: Check if session was revoked (throttled to reduce DB load)
-            // PERFORMANCE: Only check revocation every 30 seconds instead of every request
-            // This dramatically improves performance while still catching revocations reasonably quickly
+            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
+            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
+            // Activity tracking is not critical and can be updated less frequently via background job
             if (token.session_id) {
                 try {
                     const lastRevocationCheck = token.last_revocation_check as number || 0;
@@ -2112,16 +2104,6 @@ export const options: NextAuthConfig = {
                         }
 
                         token.last_revocation_check = now;
-                    }
-
-                    // Update last activity (throttle to once per minute to reduce DB writes)
-                    const lastActivity = token.last_activity_check as number || 0;
-                    if (now - lastActivity > 60000) { // 1 minute
-                        await UserSession.updateActivity(
-                            token.tenant as string,
-                            token.session_id as string
-                        );
-                        token.last_activity_check = now;
                     }
                 } catch (error) {
                     console.error('[auth] Session revocation check error:', error);
