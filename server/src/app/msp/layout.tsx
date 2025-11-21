@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSession } from "server/src/lib/auth/getSession";
+import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
 import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
 import { MspLayoutClient } from "./MspLayoutClient";
 
@@ -9,9 +9,8 @@ export default async function MspLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Use fast edge auth - revocation is checked in JWT callback on token refresh
-  // This avoids DB queries on every page load (performance optimization)
-  const session = await getSession();
+  // Use full auth with revocation check so terminated sessions cannot keep browsing
+  const session = await getSessionWithRevocationCheck();
 
   // If session is null, redirect to signin
   // Don't include error parameter to avoid redirect loops
