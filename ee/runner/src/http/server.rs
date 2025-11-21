@@ -173,7 +173,7 @@ async fn execute(
     tracing::info!("VIDEO_GAME_DEBUG: Request Headers: {:?}", headers);
     tracing::info!("VIDEO_GAME_DEBUG: Request Context: {:?}", req.context);
     tracing::info!("VIDEO_GAME_DEBUG: Request Providers: {:?}", req.providers);
-    tracing::info!("VIDEO_GAME_DEBUG: Request Endpoint: {:?}", req.endpoint);
+    // tracing::info!("VIDEO_GAME_DEBUG: Request Endpoint: {:?}", req.endpoint); // endpoint field not in ExecuteRequest struct
 
     let idem = headers
         .get("x-idempotency-key")

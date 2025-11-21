@@ -177,6 +177,18 @@ async function handle(
     const timeoutMs = getTimeoutMs();
     const bodyBuf = method === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
 
+    console.log('[ext-proxy] Preparing execution request', {
+      requestId,
+      tenantId,
+      extensionId,
+      path: pathname,
+      installId: installConfig.installId,
+      versionId: installConfig.versionId,
+      contentHash: installConfig.contentHash,
+      timeoutMs,
+      hasBody: !!bodyBuf,
+    });
+
     const execReq = {
       context: {
         request_id: requestId,
@@ -201,6 +213,10 @@ async function handle(
     };
 
     const backend = getRunnerBackend();
+    console.log('[ext-proxy] Using runner backend', {
+      kind: backend.kind,
+      publicBase: backend.getPublicBase()
+    });
 
     const runnerHeaders: Record<string, string> = {};
     if (installConfig.configVersion) {
@@ -210,10 +226,15 @@ async function handle(
       runnerHeaders['x-ext-secrets-version'] = installConfig.secretsVersion;
     }
 
+    console.log('[ext-proxy] Executing request via runner backend...');
     const runnerResp = await backend.execute(execReq, {
       requestId,
       timeoutMs,
       headers: runnerHeaders,
+    });
+    console.log('[ext-proxy] Execution completed', {
+      status: runnerResp.status,
+      bodyLength: runnerResp.body?.length
     });
 
     const proxyResponse = new NextResponse(runnerResp.body as any, {
@@ -222,6 +243,12 @@ async function handle(
     });
     return applyCorsHeaders(proxyResponse, corsOrigin);
   } catch (error: any) {
+    console.error('[ext-proxy] Handler exception', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      request_id: getRequestId(req)
+    });
     logDebug('ext-proxy:error', { message: error?.message, name: error?.name, stack: error?.stack });
     if (error instanceof AccessError) {
       return applyCorsHeaders(json(error.status, { error: error.message }), corsOrigin);
