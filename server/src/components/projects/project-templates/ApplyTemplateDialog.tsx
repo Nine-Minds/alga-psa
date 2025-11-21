@@ -5,6 +5,9 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Input } from '@/components/ui/Input';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { Label } from '@/components/ui/Label';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { IProjectTemplate } from '@/interfaces/projectTemplate.interfaces';
 import { IClient } from '@/interfaces/client.interfaces';
 import { useToast } from 'server/src/hooks/use-toast';
@@ -14,9 +17,12 @@ interface ApplyTemplateDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: (projectId: string) => void;
+  initialTemplateId?: string;
 }
 
-export function ApplyTemplateDialog({ open, onClose, onSuccess }: ApplyTemplateDialogProps) {
+type AssignmentOption = 'none' | 'primary' | 'all';
+
+export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateId }: ApplyTemplateDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [templates, setTemplates] = useState<IProjectTemplate[]>([]);
@@ -24,11 +30,20 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess }: ApplyTemplateD
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    template_id: '',
+    template_id: initialTemplateId || '',
     project_name: '',
     client_id: '',
-    start_date: '',
     assigned_to: ''
+  });
+  const [startDate, setStartDate] = useState<Date | undefined>();
+
+  const [options, setOptions] = useState({
+    copyPhases: true,
+    copyStatuses: true,
+    copyTasks: true,
+    copyDependencies: true,
+    copyChecklists: true,
+    assignmentOption: 'primary' as AssignmentOption
   });
 
   useEffect(() => {
@@ -85,8 +100,16 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess }: ApplyTemplateD
         body: JSON.stringify({
           project_name: formData.project_name,
           client_id: formData.client_id,
-          start_date: formData.start_date || undefined,
-          assigned_to: formData.assigned_to || undefined
+          start_date: startDate?.toISOString(),
+          assigned_to: formData.assigned_to || undefined,
+          options: {
+            copyPhases: options.copyPhases,
+            copyStatuses: options.copyStatuses,
+            copyTasks: options.copyTasks,
+            copyDependencies: options.copyDependencies,
+            copyChecklists: options.copyChecklists,
+            assignmentOption: options.assignmentOption
+          }
         })
       });
 
@@ -119,7 +142,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess }: ApplyTemplateD
   }
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Create Project from Template" className="max-w-2xl">
+    <Dialog isOpen={open} onClose={onClose} title="Create Project from Template" className="max-w-3xl">
       <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -169,15 +192,103 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess }: ApplyTemplateD
             <label className="block text-sm font-medium mb-2">
               Start Date (Optional)
             </label>
-            <Input
+            <DatePicker
               id="apply-template-start-date"
-              type="date"
-              value={formData.start_date}
-              onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              value={startDate}
+              onChange={setStartDate}
+              placeholder="Select start date"
+              clearable
             />
           </div>
 
-          <div className="flex gap-4 justify-end">
+          {/* Customization Options Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Customization Options</h3>
+
+            <div className="space-y-4">
+              {/* Copy Options */}
+              <div>
+                <Label className="block text-sm font-medium mb-3">Template Elements to Copy</Label>
+                <div className="space-y-2 ml-2">
+                  <Checkbox
+                    id="copy-phases-checkbox"
+                    label="Copy Phases"
+                    checked={options.copyPhases}
+                    onChange={(e) => setOptions({ ...options, copyPhases: e.target.checked })}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="copy-statuses-checkbox"
+                    label="Copy Statuses"
+                    checked={options.copyStatuses}
+                    onChange={(e) => setOptions({ ...options, copyStatuses: e.target.checked })}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="copy-tasks-checkbox"
+                    label="Copy Tasks"
+                    checked={options.copyTasks}
+                    onChange={(e) => {
+                      setOptions({
+                        ...options,
+                        copyTasks: e.target.checked,
+                        // Disable dependencies and checklists if tasks are disabled
+                        copyDependencies: e.target.checked ? options.copyDependencies : false,
+                        copyChecklists: e.target.checked ? options.copyChecklists : false
+                      });
+                    }}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="copy-dependencies-checkbox"
+                    label="Copy Dependencies"
+                    checked={options.copyDependencies}
+                    disabled={!options.copyTasks}
+                    onChange={(e) => setOptions({ ...options, copyDependencies: e.target.checked })}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="copy-checklists-checkbox"
+                    label="Copy Checklists"
+                    checked={options.copyChecklists}
+                    disabled={!options.copyTasks}
+                    onChange={(e) => setOptions({ ...options, copyChecklists: e.target.checked })}
+                    containerClassName="mb-2"
+                  />
+                </div>
+              </div>
+
+              {/* Assignment Options */}
+              <div>
+                <Label className="block text-sm font-medium mb-3">Task Assignments</Label>
+                <div className="space-y-2 ml-2">
+                  <Checkbox
+                    id="assignment-none-checkbox"
+                    label="Don't copy assignments"
+                    checked={options.assignmentOption === 'none'}
+                    onChange={() => setOptions({ ...options, assignmentOption: 'none' })}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="assignment-primary-checkbox"
+                    label="Copy primary agent only"
+                    checked={options.assignmentOption === 'primary'}
+                    onChange={() => setOptions({ ...options, assignmentOption: 'primary' })}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="assignment-all-checkbox"
+                    label="Copy all agents (primary + additional)"
+                    checked={options.assignmentOption === 'all'}
+                    onChange={() => setOptions({ ...options, assignmentOption: 'all' })}
+                    containerClassName="mb-2"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-4 justify-end pt-4 border-t">
             <Button
               id="apply-template-cancel"
               type="button"

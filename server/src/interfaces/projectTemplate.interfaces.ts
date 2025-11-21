@@ -67,10 +67,20 @@ export interface IProjectTemplateStatusMapping extends TenantEntity {
   is_closed?: boolean;
 }
 
+export interface IProjectTemplateTaskAssignment extends TenantEntity {
+  template_assignment_id: string;
+  template_task_id: string;
+  user_id: string;
+  is_primary: boolean;
+}
+
+export type AssignmentCopyMode = 'none' | 'primary_only' | 'all_agents';
+
 export interface IProjectTemplateWithDetails extends IProjectTemplate {
   phases?: IProjectTemplatePhase[];
   tasks?: IProjectTemplateTask[];
   dependencies?: IProjectTemplateDependency[];
   checklist_items?: IProjectTemplateChecklistItem[];
   status_mappings?: IProjectTemplateStatusMapping[];
+  task_assignments?: IProjectTemplateTaskAssignment[];
 }

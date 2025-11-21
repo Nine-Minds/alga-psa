@@ -15,16 +15,17 @@ import { getProjects } from 'server/src/lib/actions/project-actions/projectActio
 interface CreateTemplateDialogProps {
   onClose: () => void;
   onTemplateCreated?: (templateId: string) => void;
+  initialProjectId?: string;
 }
 
-const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, onTemplateCreated }) => {
+const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, onTemplateCreated, initialProjectId }) => {
   const [projects, setProjects] = useState<IProject[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   const [formData, setFormData] = useState({
-    project_id: '',
+    project_id: initialProjectId || '',
     template_name: '',
     description: '',
     category: ''

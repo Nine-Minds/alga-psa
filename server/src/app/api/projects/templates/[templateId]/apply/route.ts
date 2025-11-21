@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { project_name, client_id, start_date, assigned_to } = body;
+    const { project_name, client_id, start_date, assigned_to, options } = body;
 
     if (!project_name || !client_id) {
       return NextResponse.json(
@@ -20,7 +20,8 @@ export async function POST(
       project_name,
       client_id,
       start_date,
-      assigned_to
+      assigned_to,
+      options
     });
 
     return NextResponse.json({ project_id: projectId }, { status: 201 });

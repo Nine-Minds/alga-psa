@@ -17,7 +17,7 @@ import { TagFilter, TagManager } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
@@ -33,6 +33,7 @@ import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactAc
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -47,6 +48,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
@@ -445,7 +447,15 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Projects</h1>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3">
+          <Button
+            id='create-from-template-button'
+            onClick={() => setShowApplyTemplate(true)}
+            variant="outline"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Create from Template
+          </Button>
           <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
             Add Project
           </Button>
@@ -580,6 +590,18 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           onClose={() => setShowQuickAdd(false)}
           onProjectAdded={handleProjectAdded}
           clients={clients}
+        />
+      )}
+
+      {showApplyTemplate && (
+        <ApplyTemplateDialog
+          open={showApplyTemplate}
+          onClose={() => setShowApplyTemplate(false)}
+          onSuccess={(projectId) => {
+            setShowApplyTemplate(false);
+            // Refresh the page or add the new project to the list
+            window.location.reload();
+          }}
         />
       )}
 

@@ -59,6 +59,7 @@ exports.up = async function(knex) {
     table.integer('duration_days');
     table.string('task_type_key', 50);
     table.uuid('priority_id');
+    table.uuid('template_status_mapping_id'); // Which status column this task should start in
     table.string('order_key', 255);
 
     table.primary(['template_task_id', 'tenant']);

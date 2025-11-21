@@ -167,6 +167,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
           setShowApplyDialog(false);
           router.push(`/msp/projects/${projectId}`);
         }}
+        initialTemplateId={template.template_id}
       />
 
       <div className={styles.pageContainer}>
