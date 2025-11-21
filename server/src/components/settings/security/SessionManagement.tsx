@@ -186,7 +186,7 @@ export default function SessionManagement() {
               <LogOut className="h-4 w-4 mr-2" />
               {revokingAll
                 ? t('sessionManagement.actions.loggingOut', 'Logging out...')
-                : t('sessionManagement.actions.logoutFromOther', `Logout from {{count}} other device${otherSessionsCount === 1 ? '' : 's'}`, { count: otherSessionsCount })
+                : t('sessionManagement.actions.logoutFromOther', `Logout from ${otherSessionsCount} other device${otherSessionsCount === 1 ? '' : 's'}`, { count: otherSessionsCount })
               }
             </Button>
           )}

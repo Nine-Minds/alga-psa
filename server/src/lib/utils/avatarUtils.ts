@@ -236,6 +236,16 @@ export async function getClientLogoUrlsBatch(
 }
 
 /**
+ * Convenience function to get multiple contact avatar URLs at once
+ */
+export async function getContactAvatarUrlsBatch(
+  contactIds: string[],
+  tenant: string
+): Promise<Map<string, string | null>> {
+  return getEntityImageUrlsBatch('contact', contactIds, tenant);
+}
+
+/**
  * Example usage:
  *
  * // Using the general function:

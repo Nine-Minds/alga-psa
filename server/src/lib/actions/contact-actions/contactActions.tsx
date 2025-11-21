@@ -7,7 +7,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrl, getContactAvatarUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import { createTag } from 'server/src/lib/actions/tagActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -343,13 +343,15 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
     });
 
-    // Fetch avatar URLs for each contact
-    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
-      return {
-        ...contact,
-        avatarUrl: avatarUrl || null,
-      };
+    // PERFORMANCE FIX: Fetch avatar URLs in batch to avoid N+1 query problem
+    // Before: 142 contacts = 142 separate getContactAvatarUrl() calls = 142 DB queries
+    // After: 1 batch call = 2 DB queries (associations + documents)
+    const contactIds = contacts.map(c => c.contact_name_id);
+    const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+
+    const contactsWithAvatars = contacts.map((contact: IContact) => ({
+      ...contact,
+      avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
     // Return contacts with avatar URLs
@@ -431,10 +433,14 @@ export async function getContactsEligibleForInvitation(
       return q;
     });
 
-    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
-      return { ...contact, avatarUrl: avatarUrl || null } as IContact;
-    }));
+    // PERFORMANCE FIX: Batch fetch avatar URLs to avoid N+1
+    const contactIds = contacts.map(c => c.contact_name_id);
+    const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+
+    const contactsWithAvatars = contacts.map((contact: IContact) => ({
+      ...contact,
+      avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
+    } as IContact));
 
     return contactsWithAvatars;
   } catch (err) {
@@ -600,19 +606,21 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
       throw dbErr;
     }
 
-    // Fetch avatar URLs for each contact
-    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      let avatarUrl: string | null = null;
-      try {
-        avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
-      } catch (avatarErr) {
-        console.warn('[getAllContacts] Failed to fetch avatar for contact:', contact.contact_name_id, avatarErr);
-        // Continue without avatar
-      }
-      return {
-        ...contact,
-        avatarUrl: avatarUrl || null,
-      };
+    // PERFORMANCE FIX: Batch fetch avatar URLs to avoid N+1 problem
+    // Before: Each contact triggered individual getContactAvatarUrl() call
+    // After: Single batch call for all contacts
+    let avatarUrlsMap: Map<string, string | null> = new Map();
+    try {
+      const contactIds = contacts.map(c => c.contact_name_id);
+      avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+    } catch (avatarErr) {
+      console.warn('[getAllContacts] Failed to fetch avatars in batch:', avatarErr);
+      // Continue without avatars
+    }
+
+    const contactsWithAvatars = contacts.map((contact: IContact) => ({
+      ...contact,
+      avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
     return contactsWithAvatars;
