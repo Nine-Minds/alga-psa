@@ -4,6 +4,7 @@ import { IPriority } from 'server/src/interfaces';
 import Priority from 'server/src/lib/models/priority';
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Knex } from 'knex';
 
 export async function getAllPriorities(itemType?: 'ticket' | 'project_task') {
@@ -41,11 +42,21 @@ export async function findPriorityById(id: string) {
   });
 }
 
-export async function createPriority(priorityData: Omit<IPriority, 'priority_id' | 'tenant'>): Promise<IPriority> {
+export async function createPriority(priorityData: Omit<IPriority, 'priority_id' | 'tenant' | 'created_by' | 'created_at'>): Promise<IPriority> {
   const { knex: db, tenant } = await createTenantKnex();
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      const newPriority = await Priority.insert(trx, priorityData);
+      const newPriority = await Priority.insert(trx, {
+        ...priorityData,
+        created_by: currentUser.user_id,
+        created_at: new Date()
+      });
       return newPriority;
     } catch (error) {
       console.error(`Error creating priority for tenant ${tenant}:`, error);

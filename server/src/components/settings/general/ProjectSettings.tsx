@@ -6,6 +6,7 @@ import CustomTabs from 'server/src/components/ui/CustomTabs';
 import NumberingSettings from './NumberingSettings';
 import { TenantProjectTaskStatusSettings } from 'server/src/components/settings/projects/TenantProjectTaskStatusSettings';
 import { ProjectStatusSettings } from 'server/src/components/settings/projects/ProjectStatusSettings';
+import TaskPrioritySettings from 'server/src/components/settings/projects/TaskPrioritySettings';
 
 const ProjectSettings = (): JSX.Element => {
   const searchParams = useSearchParams();
@@ -15,7 +16,8 @@ const ProjectSettings = (): JSX.Element => {
   const sectionToLabelMap: Record<string, string> = {
     'project-numbering': 'Project Numbering',
     'project-statuses': 'Project Statuses',
-    'task-statuses': 'Task Statuses'
+    'task-statuses': 'Task Statuses',
+    'task-priorities': 'Task Priorities'
   };
 
   // Determine initial active tab based on URL parameter
@@ -45,6 +47,10 @@ const ProjectSettings = (): JSX.Element => {
     {
       label: "Task Statuses",
       content: <TenantProjectTaskStatusSettings />
+    },
+    {
+      label: "Task Priorities",
+      content: <TaskPrioritySettings />
     }
   ];
 

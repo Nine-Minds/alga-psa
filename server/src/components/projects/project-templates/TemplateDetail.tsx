@@ -108,11 +108,10 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
               {statusMappings
                 .sort((a, b) => a.display_order - b.display_order)
                 .map((statusMapping, index) => {
-                  // Distribute tasks across status columns
-                  const tasksPerColumn = Math.ceil(phaseTasks.length / statusMappings.length);
-                  const startIndex = index * tasksPerColumn;
-                  const endIndex = startIndex + tasksPerColumn;
-                  const statusTasks = phaseTasks.slice(startIndex, endIndex);
+                  // Filter tasks that belong to this status column
+                  const statusTasks = phaseTasks.filter(
+                    task => task.template_status_mapping_id === statusMapping.template_status_mapping_id
+                  );
 
                   const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
                   const statusColor = statusMapping.color || '#6B7280';

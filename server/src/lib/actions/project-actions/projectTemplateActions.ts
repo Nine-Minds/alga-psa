@@ -21,7 +21,6 @@ import {
   applyTemplateSchema
 } from 'server/src/lib/schemas/projectTemplate.schemas';
 import { OrderingService } from 'server/src/lib/services/orderingService';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 async function checkPermission(
   user: IUser,
@@ -286,18 +285,6 @@ export async function createTemplateFromProject(
       }
     }
 
-    // Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.created',
-      event_data: {
-        template_id: template.template_id,
-        template_name: template.template_name,
-        created_by: currentUser.user_id,
-        source_project_id: projectId
-      }
-    });
-
     return template.template_id;
   });
 }
@@ -442,6 +429,7 @@ export async function applyTemplate(
         .delete();
 
       // Add template status mappings and build mapping
+      console.log(`[applyTemplate] Creating ${templateStatuses.length} status mappings from template`);
       for (const templateStatus of templateStatuses) {
         const [newMapping] = await trx('project_status_mappings')
           .insert({
@@ -456,6 +444,7 @@ export async function applyTemplate(
           .returning('*');
 
         // Map template status to project status
+        console.log(`[applyTemplate] Mapping: template_status_mapping_id=${templateStatus.template_status_mapping_id} → project_status_mapping_id=${newMapping.project_status_mapping_id} (display_order=${templateStatus.display_order})`);
         templateStatusToProjectStatusMap.set(
           templateStatus.template_status_mapping_id,
           newMapping.project_status_mapping_id
@@ -531,9 +520,12 @@ export async function applyTemplate(
       if (templateTask.template_status_mapping_id) {
         // Try to map the template status to the project status
         const mappedStatusId = templateStatusToProjectStatusMap.get(templateTask.template_status_mapping_id);
+        console.log(`[applyTemplate] Task "${templateTask.task_name}": template_status_mapping_id=${templateTask.template_status_mapping_id}, mapped to project_status_mapping_id=${mappedStatusId || 'NOT FOUND'}, using ${mappedStatusId || firstStatusMappingId}`);
         if (mappedStatusId) {
           taskStatusMappingId = mappedStatusId;
         }
+      } else {
+        console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${firstStatusMappingId}`);
       }
 
       const [newTask] = await trx('project_tasks')
@@ -676,17 +668,6 @@ export async function applyTemplate(
 
     // 8. Update template usage stats
     await updateTemplateUsage(trx, templateId, tenant);
-
-    // Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.applied',
-      event_data: {
-        template_id: templateId,
-        project_id: newProjectId,
-        applied_by: currentUser.user_id
-      }
-    });
 
     return newProjectId;
   });
@@ -888,16 +869,6 @@ export async function updateTemplate(
       throw new Error('Template not found');
     }
 
-    // Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.updated',
-      event_data: {
-        template_id: templateId,
-        updated_by: currentUser.user_id
-      }
-    });
-
     return updated;
   });
 }
@@ -924,16 +895,6 @@ export async function deleteTemplate(templateId: string): Promise<void> {
     if (deleted === 0) {
       throw new Error('Template not found');
     }
-
-    // Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.deleted',
-      event_data: {
-        template_id: templateId,
-        deleted_by: currentUser.user_id
-      }
-    });
   });
 }
 
@@ -1085,17 +1046,6 @@ export async function duplicateTemplate(templateId: string): Promise<string> {
           display_order: mapping.display_order
         });
     }
-
-    // Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.duplicated',
-      event_data: {
-        original_template_id: templateId,
-        new_template_id: newTemplate.template_id,
-        created_by: currentUser.user_id
-      }
-    });
 
     return newTemplate.template_id;
   });

@@ -7,7 +7,6 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { OrderingService } from 'server/src/lib/services/orderingService';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import {
   TemplateWizardData,
   TemplateStatusMapping,
@@ -61,6 +60,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
 
     // 2. Create status mappings
     const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
+    console.log(`[createTemplateFromWizard] Creating ${data.status_mappings?.length || 0} status mappings`);
     if (data.status_mappings && data.status_mappings.length > 0) {
       for (const mapping of data.status_mappings) {
         const [newMapping] = await trx('project_template_status_mappings')
@@ -73,6 +73,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
           })
           .returning('*');
 
+        console.log(`[createTemplateFromWizard] Status mapping: temp_id="${mapping.temp_id}" → template_status_mapping_id="${newMapping.template_status_mapping_id}" (display_order=${mapping.display_order})`);
         statusMappingMap.set(mapping.temp_id, newMapping.template_status_mapping_id);
       }
     }
@@ -128,6 +129,8 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
             ? statusMappingMap.get(task.template_status_mapping_id)
             : null;
 
+          console.log(`[createTemplateFromWizard] Task "${task.task_name}": temp_status_id="${task.template_status_mapping_id}" → template_status_mapping_id="${templateStatusMappingId || 'NULL'}"`);
+
           const [newTask] = await trx('project_template_tasks')
             .insert({
               tenant,
@@ -167,19 +170,6 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
         await trx('project_template_checklist_items').insert(checklistInserts);
       }
     }
-
-    // 6. Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.created',
-      event_data: {
-        template_id: template.template_id,
-        template_name: template.template_name,
-        created_by: currentUser.user_id,
-        phases_count: data.phases.length,
-        tasks_count: data.tasks.length,
-      },
-    });
 
     return template.template_id;
   });
@@ -231,16 +221,21 @@ export async function updateTemplateFromEditor(
       .where({ template_id: templateId, tenant })
       .delete();
 
+    const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
     if (data.status_mappings && data.status_mappings.length > 0) {
-      const statusInserts = data.status_mappings.map((mapping) => ({
-        tenant,
-        template_id: templateId,
-        status_id: mapping.status_id || null,
-        custom_status_name: mapping.custom_status_name || null,
-        display_order: mapping.display_order,
-      }));
+      for (const mapping of data.status_mappings) {
+        const [newMapping] = await trx('project_template_status_mappings')
+          .insert({
+            tenant,
+            template_id: templateId,
+            status_id: mapping.status_id || null,
+            custom_status_name: mapping.custom_status_name || null,
+            display_order: mapping.display_order,
+          })
+          .returning('*');
 
-      await trx('project_template_status_mappings').insert(statusInserts);
+        statusMappingMap.set(mapping.temp_id, newMapping.template_status_mapping_id);
+      }
     }
 
     // 3. Delete existing phases, tasks, dependencies, and checklists
@@ -290,6 +285,12 @@ export async function updateTemplateFromEditor(
 
         for (let i = 0; i < sortedTasks.length; i++) {
           const task = sortedTasks[i];
+
+          // Map temp status mapping ID to actual template status mapping ID
+          const templateStatusMappingId = task.template_status_mapping_id
+            ? statusMappingMap.get(task.template_status_mapping_id)
+            : null;
+
           const [newTask] = await trx('project_template_tasks')
             .insert({
               tenant,
@@ -300,6 +301,7 @@ export async function updateTemplateFromEditor(
               duration_days: task.duration_days || null,
               task_type_key: task.task_type_key || 'task',
               priority_id: task.priority_id || null,
+              template_status_mapping_id: templateStatusMappingId || null,
               order_key: orderKeys[i],
             })
             .returning('*');
@@ -329,15 +331,6 @@ export async function updateTemplateFromEditor(
       }
     }
 
-    // 7. Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.updated',
-      event_data: {
-        template_id: templateId,
-        updated_by: currentUser.user_id,
-      },
-    });
   });
 }
 
@@ -499,17 +492,6 @@ export async function saveTemplateAsNew(
     }
 
     // Publish event
-    await publishEvent({
-      tenant_id: tenant,
-      event_type: 'project_template.duplicated',
-      event_data: {
-        original_template_id: sourceTemplateId,
-        new_template_id: newTemplate.template_id,
-        new_template_name: newTemplateName,
-        created_by: currentUser.user_id,
-      },
-    });
-
     return newTemplate.template_id;
   });
 }
