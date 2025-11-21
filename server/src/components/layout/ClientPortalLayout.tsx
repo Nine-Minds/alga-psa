@@ -15,6 +15,7 @@ import { checkClientPortalPermissions } from 'server/src/lib/actions/client-port
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
 import { getTenantSlugForTenant } from 'server/src/lib/actions/tenant-actions/tenantSlugActions';
+import { ClientExtensionsMenu } from 'server/src/components/client-portal/ClientExtensionsMenu';
 import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
 import { ActivityDrawerProvider } from 'server/src/components/user-activities/ActivityDrawerProvider';
 import { DrawerProvider } from 'server/src/context/DrawerContext';
@@ -182,6 +183,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                     {t('nav.clientSettings')}
                   </Link>
                 )}
+                <ClientExtensionsMenu />
               </div>
             </div>
 
