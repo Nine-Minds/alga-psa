@@ -4,6 +4,7 @@ import { getCurrentUser } from '../user-actions/userActions';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { hasPermission } from '../../auth/rbac';
 import { createTenantKnex, runWithTenant } from '../../db';
+import { withTransaction } from '@shared/db';
 import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce, encodeCalendarState } from '@/utils/calendar/oauthHelpers';
 import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
 import { storeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
@@ -38,9 +39,11 @@ export async function initiateCalendarOAuth(params: {
     // If calendarProviderId is specified, ensure it belongs to the caller's tenant
     if (params.calendarProviderId) {
       const { knex, tenant } = await createTenantKnex();
-      const exists = await knex('calendar_providers')
-        .where({ id: params.calendarProviderId, tenant })
-        .first();
+      const exists = await withTransaction(knex, async (trx) => {
+        return await trx('calendar_providers')
+          .where({ id: params.calendarProviderId, tenant })
+          .first();
+      });
       if (!exists) {
         return { success: false, error: 'Invalid calendarProviderId for tenant' };
       }
@@ -427,12 +430,14 @@ export async function getScheduleEntrySyncStatus(
     if (!tenant) {
       return { success: false, error: 'Tenant context unavailable' };
     }
-    
+
     // Get all mappings for this entry
-    const mappings = await knex('calendar_event_mappings')
-      .where('schedule_entry_id', entryId)
-      .andWhere('tenant', tenant)
-      .select('*');
+    const mappings = await withTransaction(knex, async (trx) => {
+      return await trx('calendar_event_mappings')
+        .where('schedule_entry_id', entryId)
+        .andWhere('tenant', tenant)
+        .select('*');
+    });
 
     // Get providers for each mapping
     const providerService = new CalendarProviderService();
@@ -506,10 +511,12 @@ export async function syncCalendarProvider(
     await runWithTenant(user.tenant, async () => {
       const { knex } = await createTenantKnex();
 
-      const mappings = await knex('calendar_event_mappings')
-        .where('tenant', user.tenant)
-        .andWhere('calendar_provider_id', calendarProviderId)
-        .select('schedule_entry_id', 'external_event_id');
+      const mappings = await withTransaction(knex, async (trx) => {
+        return await trx('calendar_event_mappings')
+          .where('tenant', user.tenant)
+          .andWhere('calendar_provider_id', calendarProviderId)
+          .select('schedule_entry_id', 'external_event_id');
+      });
 
       const knownExternalIds = new Set<string>(
         mappings
@@ -544,23 +551,23 @@ export async function syncCalendarProvider(
       }
 
       if (allowPush) {
-        const recentEntriesQuery = knex('schedule_entries')
-          .where('schedule_entries.tenant', user.tenant)
-          .modify((builder) => {
-            if (provider.last_sync_at) {
-              builder.andWhere('schedule_entries.updated_at', '>', provider.last_sync_at);
-            }
-          })
-          .leftJoin('calendar_event_mappings as cem', function () {
-            this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
-              .andOn('cem.tenant', '=', 'schedule_entries.tenant')
-              .andOn('cem.calendar_provider_id', '=', knex.raw('?', [calendarProviderId]));
-          })
-          .whereNull('cem.id')
-          .limit(50)
-          .select('schedule_entries.entry_id as entry_id');
-
-        const recentEntries = await recentEntriesQuery;
+        const recentEntries = await withTransaction(knex, async (trx) => {
+          return await trx('schedule_entries')
+            .where('schedule_entries.tenant', user.tenant)
+            .modify((builder) => {
+              if (provider.last_sync_at) {
+                builder.andWhere('schedule_entries.updated_at', '>', provider.last_sync_at);
+              }
+            })
+            .leftJoin('calendar_event_mappings as cem', function () {
+              this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
+                .andOn('cem.tenant', '=', 'schedule_entries.tenant')
+                .andOn('cem.calendar_provider_id', '=', trx.raw('?', [calendarProviderId]));
+            })
+            .whereNull('cem.id')
+            .limit(50)
+            .select('schedule_entries.entry_id as entry_id');
+        });
 
         for (const entry of recentEntries) {
           const result = await syncService.syncScheduleEntryToExternal(entry.entry_id, calendarProviderId, true);

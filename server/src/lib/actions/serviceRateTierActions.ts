@@ -13,7 +13,9 @@ import { Knex } from 'knex'
 export async function getServiceRateTiers(serviceId: string): Promise<IServiceRateTier[]> {
   try {
     const { knex } = await createTenantKnex()
-    const tiers = await ServiceRateTier.getByServiceId(knex, serviceId)
+    const tiers = await withTransaction(knex, async (trx) => {
+      return await ServiceRateTier.getByServiceId(trx, serviceId)
+    })
     return tiers
   } catch (error) {
     console.error(`Error fetching rate tiers for service ${serviceId}:`, error)
@@ -27,7 +29,9 @@ export async function getServiceRateTiers(serviceId: string): Promise<IServiceRa
 export async function getServiceRateTierById(tierId: string): Promise<IServiceRateTier | null> {
   try {
     const { knex } = await createTenantKnex()
-    const tier = await ServiceRateTier.getById(knex, tierId)
+    const tier = await withTransaction(knex, async (trx) => {
+      return await ServiceRateTier.getById(trx, tierId)
+    })
     return tier
   } catch (error) {
     console.error(`Error fetching rate tier with id ${tierId}:`, error)
