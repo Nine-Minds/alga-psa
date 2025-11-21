@@ -44,6 +44,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): () => void {
 
     const data: any = ev.data;
     if (!data || typeof data !== 'object') return;
+    console.log('iframeBridge: received message', { type: data.type, origin: ev.origin });
 
     // Expect shape: { type: 'resize', payload: { height } }
     if (data.type === 'resize') {
@@ -56,7 +57,8 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): () => void {
 
     // Expect shape: { type: 'apiproxy', payload: { route, body? }, request_id }
     if (data.type === 'apiproxy') {
-      handleApiProxy(iframe, extensionId, data);
+      console.log('iframeBridge: handling apiproxy', { requestId: data.request_id, route: data.payload?.route });
+      handleApiProxy(iframe, extensionId, data, acceptedOrigin);
     }
   };
 
@@ -73,7 +75,12 @@ function safeParseUrl(href: string, base: string): URL | null {
   }
 }
 
-async function handleApiProxy(iframe: HTMLIFrameElement, extensionId: string | undefined, data: any) {
+async function handleApiProxy(
+  iframe: HTMLIFrameElement,
+  extensionId: string | undefined,
+  data: any,
+  targetOrigin?: string,
+) {
   const { request_id, payload } = data;
   if (!request_id || !extensionId) return; // Cannot handle without ID
 
@@ -110,10 +117,12 @@ async function handleApiProxy(iframe: HTMLIFrameElement, extensionId: string | u
       },
       body: bodyBytes,
     });
+    console.log('iframeBridge: fetch completed', { status: res.status, ok: res.ok, url });
 
     if (!res.ok) {
       // Try to read error text
       const errText = await res.text().catch(() => res.statusText);
+      console.warn('iframeBridge: proxy error', { status: res.status, errText });
       responseMsg.payload = { error: `Proxy error ${res.status}: ${errText}` };
     } else {
       // Read success body as blob -> base64
@@ -122,7 +131,8 @@ async function handleApiProxy(iframe: HTMLIFrameElement, extensionId: string | u
       reader.onloadend = () => {
         const base64data = (reader.result as string).split(',')[1];
         responseMsg.payload = { body: base64data };
-        iframe.contentWindow?.postMessage(responseMsg, '*'); // Target origin validated by handshake usually, or use src origin
+        console.log('iframeBridge: posting apiproxy_response (reader)', { requestId: request_id, targetOrigin: '*' });
+        iframe.contentWindow?.postMessage(responseMsg, '*');
       };
       reader.onerror = () => {
         responseMsg.payload = { error: 'Failed to read response blob' };
@@ -132,9 +142,11 @@ async function handleApiProxy(iframe: HTMLIFrameElement, extensionId: string | u
       return; // Deferred send in callback
     }
   } catch (err: any) {
+    console.error('iframeBridge: proxy fetch failed', err);
     responseMsg.payload = { error: String(err?.message || err) };
   }
 
   // Send (if not deferred by FileReader)
+  console.log('iframeBridge: posting apiproxy_response', { requestId: request_id, targetOrigin: '*' });
   iframe.contentWindow?.postMessage(responseMsg, '*');
 }

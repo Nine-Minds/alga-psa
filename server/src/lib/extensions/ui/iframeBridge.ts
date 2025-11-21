@@ -152,6 +152,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
     const data = ev.data as any;
     if (!data || typeof data !== 'object') return;
     if (data.alga !== true || data.version !== ENVELOPE_VERSION || typeof data.type !== 'string') return;
+    console.log('iframeBridge: received message', { type: data.type, origin: ev.origin });
 
     switch (data.type) {
       case 'ready': {
@@ -171,6 +172,14 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
         if (path) {
           tryUpdateIframePath(iframe, path);
         }
+        break;
+      }
+      case 'apiproxy': {
+        console.log('iframeBridge: received apiproxy request', {
+          requestId: data.request_id,
+          route: data.payload?.route,
+        });
+        handleApiProxy(iframe, extensionId, data, allowedOrigin || srcUrl?.origin);
         break;
       }
       default:
@@ -236,6 +245,80 @@ function deriveTargetOrigin(params: {
 function postToIframe(iframe: HTMLIFrameElement, message: any, targetOrigin: string): void {
   if (!iframe.contentWindow) return;
   iframe.contentWindow.postMessage(message, targetOrigin);
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) {
+    out[i] = bin.charCodeAt(i);
+  }
+  return out;
+}
+
+function bytesToBase64(buf: ArrayBuffer): string {
+  const view = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < view.length; i++) {
+    bin += String.fromCharCode(view[i]);
+  }
+  return btoa(bin);
+}
+
+async function handleApiProxy(
+  iframe: HTMLIFrameElement,
+  extensionId: string,
+  data: any,
+  targetOrigin?: string | null,
+) {
+  const { request_id, payload } = data;
+  if (!request_id || !extensionId) return;
+
+  const cleanRoute = (payload?.route as string | undefined) || '';
+  const route = cleanRoute.startsWith('/') ? cleanRoute : `/${cleanRoute}`;
+  const url = `/api/ext-proxy/${extensionId}${route}`;
+  const bodyB64 = payload?.body as string | undefined;
+
+  const response = {
+    alga: true,
+    version: ENVELOPE_VERSION,
+    type: 'apiproxy_response',
+    request_id,
+    payload: {} as any,
+  };
+
+  try {
+    const bodyBytes = bodyB64 ? base64ToBytes(bodyB64) : undefined;
+    console.log('iframeBridge: forwarding apiproxy to ext-proxy', {
+      url,
+      hasBody: !!bodyBytes,
+      requestId: request_id,
+    });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/octet-stream' },
+      body: bodyBytes,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      console.warn('iframeBridge: proxy error response', { status: res.status, errText });
+      response.payload = { error: `Proxy error ${res.status}: ${errText}` };
+    } else {
+      const buf = await res.arrayBuffer();
+      response.payload = { body: bytesToBase64(buf) };
+    }
+  } catch (err: any) {
+    console.error('iframeBridge: proxy fetch failed', err);
+    response.payload = { error: String(err?.message || err) };
+  }
+
+  try {
+    console.log('iframeBridge: posting apiproxy_response', { requestId: request_id, targetOrigin: targetOrigin || '*' });
+    iframe.contentWindow?.postMessage(response, targetOrigin || '*');
+  } catch {
+    // ignore postMessage errors
+  }
 }
 
 function tryUpdateIframePath(iframe: HTMLIFrameElement, clientPath: string): void {

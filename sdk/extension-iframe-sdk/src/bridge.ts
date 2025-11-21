@@ -50,7 +50,17 @@ export class IframeBridge {
         const data = ev.data as Envelope | undefined;
         if (!data || typeof data !== 'object') return;
         if (data.alga !== true || data.version !== ENVELOPE_VERSION || typeof data.type !== 'string') {
+          console.warn('[SDK] Ignoring message with invalid envelope', { origin: ev.origin, data });
           return;
+        }
+        console.log('[SDK] Received host message', { type: data.type, origin: ev.origin, requestId: (data as any).request_id });
+        if (data.type === 'apiproxy_response') {
+          console.log('[SDK] Received apiproxy_response', {
+            requestId: (data as any).request_id,
+            hasBody: !!(data as any).payload?.body,
+            error: (data as any).payload?.error,
+            origin: ev.origin,
+          });
         }
 
         // Known Host -> Client message types
@@ -194,4 +204,3 @@ export class IframeBridge {
     };
   }
 }
-
