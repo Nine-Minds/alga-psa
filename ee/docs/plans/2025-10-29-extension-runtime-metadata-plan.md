@@ -95,12 +95,19 @@
 - Expose extension install automation via `POST /api/v1/extensions/install` so CLI workflows can bypass the admin UI once API keys are provisioned.
 - Provide smoke tests that run components against mocked capability providers to catch ABI drift before upload.
 
-### 6. SDK Distribution & Samples
+### 7. UI & Configuration Experience
 
-- Publish `@alga/extension-runtime` (JS/TS) wrapping generated bindings with helpers (`createHandler`, `ctx.secrets.get`, `ctx.uiProxy.call`).
-- Ship UI-side helpers (`@alga/extension-ui`) that call gateway proxy endpoints with tenant/install context.
-- Document workflows in `sdk/docs`: local dev loop, invoking provider APIs, using UI proxy without handling secrets.
-- Provide runnable samples mirroring wasmCloud’s language examples (TypeScript initially, add Rust/TinyGo later via `wit-bindgen`).
+- **Extension Settings Page**: A dedicated configuration UI at `/msp/settings/extensions/[id]/settings` reachable from the extension management list.
+- **Dynamic Form Generation**: Render configuration inputs (text, number, boolean, select) based on the extension's manifest `settings` schema.
+- **Secret Management**:
+  - Distinct UI section for encrypted values (secrets) separate from plain configuration.
+  - Write-only inputs for secrets (never echo back values).
+  - Version tracking (`secretsVersion`) to indicate if a secret is set and when it was last updated.
+- **Actions**:
+  - "Save Changes": Persist both config (to `tenant_extension_install_config`) and secrets (to Vault via `tenant_extension_install_secrets`).
+  - "Reset to Defaults": Revert configuration to manifest defaults and clear secrets.
+- **RBAC**: Ensure only admins with appropriate permissions can view/edit these settings.
+- **Entry Point**: Connect the "Settings" button in the Extension Management table (`SettingsPage.tsx` -> `Extensions.tsx`) to this new page.
 
 ## Implementation Phases
 
@@ -153,6 +160,14 @@
 - [ ] Ship an internal extension end-to-end (control plane → gateway → runner → component) to validate secrets delivery.
 - [ ] Open beta to selected partners once SDK and tooling stabilize; iterate on developer feedback.
 - [ ] Track follow-up work for observability, telemetry, and runbooks separately.
+
+### Phase 5 — UI Delivery
+
+- [ ] Activate the "Settings" button in the Extension Management UI.
+- [ ] Implement/Connect the `ExtensionSettings` component to the `/msp/settings/extensions/[id]/settings` route.
+- [ ] Ensure proper loading of Enterprise vs. OSS components (graceful degradation or feature stub).
+- [ ] Verify "Save Changes" correctly persists to the new configuration and secrets tables.
+- [ ] Verify "Reset to Defaults" clears overrides.
 
 ## Dependencies & Coordination
 

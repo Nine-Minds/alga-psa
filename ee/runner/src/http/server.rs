@@ -163,11 +163,18 @@ async fn execute(
     headers: HeaderMap,
     Json(req): Json<ExecuteRequest>,
 ) -> Json<ExecuteResponse> {
+    tracing::info!("VIDEO_GAME_DEBUG: execute handler ENTERED");
     let started = Instant::now();
     let req_id = headers
         .get("x-request-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
+    
+    tracing::info!("VIDEO_GAME_DEBUG: Request Headers: {:?}", headers);
+    tracing::info!("VIDEO_GAME_DEBUG: Request Context: {:?}", req.context);
+    tracing::info!("VIDEO_GAME_DEBUG: Request Providers: {:?}", req.providers);
+    // tracing::info!("VIDEO_GAME_DEBUG: Request Endpoint: {:?}", req.endpoint); // endpoint field not in ExecuteRequest struct
+
     let idem = headers
         .get("x-idempotency-key")
         .and_then(|v| v.to_str().ok())

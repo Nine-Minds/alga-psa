@@ -65,6 +65,7 @@ async function fetchTickets(
   limit: number,
   requestId: string | null | undefined,
 ): Promise<{ ok: boolean; tickets: TicketSummary[]; status: number; error?: string }> {
+  await host.logging.info(`[Backend] Entering fetchTickets for requestId: ${requestId}, baseUrl: ${baseUrl}, limit: ${limit}`);
   const url = new URL('/api/tickets', baseUrl);
   url.searchParams.set('limit', limit.toString());
 
@@ -76,45 +77,59 @@ async function fetchTickets(
     headers.push({ name: 'x-request-id', value: requestId });
   }
 
+  await host.logging.info(`[Backend] Making HTTP fetch to: ${url.toString()}`);
   const response = await host.http.fetch({
     method: 'GET',
     url: url.toString(),
     headers,
   });
+  await host.logging.info(`[Backend] Received HTTP fetch response with status: ${response.status}`);
 
   const text = decodeBody(response.body);
   if (response.status >= 200 && response.status < 300) {
     try {
       const json = text ? (JSON.parse(text) as TicketApiResponse) : {};
       const tickets = selectTickets(json);
+      await host.logging.info(`[Backend] Successfully parsed tickets: ${tickets.length} items`);
       return { ok: true, tickets, status: response.status };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      await host.logging.error(`[Backend] Failed to parse ticket payload: ${message}`);
       return { ok: false, tickets: [], status: response.status, error: `failed_to_parse_ticket_payload: ${message}` };
     }
   }
 
   const errorMessage = text || `upstream returned status ${response.status}`;
+  await host.logging.warn(`[Backend] Upstream HTTP fetch failed: ${errorMessage}`);
   return { ok: false, tickets: [], status: response.status, error: errorMessage };
 }
 
 export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+  await host.logging.info(`[Backend] Entering handler for request_id: ${request.context.request_id}, path: ${request.http.path}`);
   const url = request.http.url ?? request.http.path ?? '/';
   const isProxy = url.startsWith('/proxy/');
   const queryLimit = isProxy ? undefined : request.http.query?.limit;
   const { limit: proxyLimit } = isProxy ? parseProxyPayload(request.http.body) : { limit: undefined };
   const limit = proxyLimit ?? parseLimit(queryLimit, 10);
+  await host.logging.info(`[Backend] Determined limit: ${limit}, isProxy: ${isProxy}`);
 
   let apiKey: string;
   try {
+    await host.logging.info(`[Backend] Attempting to retrieve ALGA_API_KEY secret.`);
     apiKey = await host.secrets.get('ALGA_API_KEY');
+    await host.logging.info(`[Backend] Successfully retrieved ALGA_API_KEY secret.`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await host.logging.error(`[service-proxy-demo] missing ALGA_API_KEY secret: ${message}`);
-    return jsonResponse({ ok: false, error: 'missing_alga_api_key' }, { status: 500 });
+    // Return a 200 so proxy layers don’t retry/timeout; surface a clear error to the iframe.
+    return jsonResponse(
+      { ok: false, error: 'missing_alga_api_key', fromProxy: isProxy, limit, fetchedAt: new Date().toISOString() },
+      { status: 200 },
+    );
   }
 
   const baseUrl = request.context.config?.algaApiBase ?? 'https://api.alga-psa.local';
+  await host.logging.info(`[Backend] Using base URL for API calls: ${baseUrl}`);
   const fetchResult = await fetchTickets(host, baseUrl, apiKey, limit, request.context.requestId)
     .catch(async (err) => {
       const message = err instanceof Error ? err.message : String(err);
@@ -127,7 +142,9 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
       `[service-proxy-demo] ticket lookup failed: status=${fetchResult.status} error=${fetchResult.error ?? 'unknown'}`,
     );
   }
+  await host.logging.info(`[Backend] Handler finished for request_id: ${request.context.request_id}. Result OK: ${fetchResult.ok}`);
 
+  // Always return 200 so upstream proxies deliver the payload instead of treating it as a transport error.
   return jsonResponse(
     {
       ok: fetchResult.ok,
@@ -140,7 +157,7 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
       fromProxy: isProxy,
       fetchedAt: new Date().toISOString(),
     },
-    { status: fetchResult.ok ? 200 : 502 },
+    { status: 200 },
   );
 }
 

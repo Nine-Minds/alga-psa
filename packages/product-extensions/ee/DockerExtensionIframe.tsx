@@ -6,13 +6,14 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 type Props = {
   src: string;
+  extensionId?: string;
 };
 
 /**
  * Extension iframe component for Docker backend mode.
  * Uses same-origin path-based URLs instead of custom domains.
  */
-export default function DockerExtensionIframe({ src }: Props) {
+export default function DockerExtensionIframe({ src, extensionId }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -50,18 +51,31 @@ export default function DockerExtensionIframe({ src }: Props) {
     window.addEventListener('message', handleMessage);
 
     // Bootstrap iframe communication
-    bootstrapIframe({ iframe, allowedOrigin });
+    const cleanupBridge = bootstrapIframe({ iframe, allowedOrigin, extensionId });
 
     return () => {
       window.removeEventListener('message', handleMessage);
+      cleanupBridge();
     };
+  }, [src, extensionId]);
+
+  // Ensure src includes parentOrigin
+  const finalSrc = React.useMemo(() => {
+    if (!src) return src;
+    try {
+      const url = new URL(src, window.location.href);
+      url.searchParams.set('parentOrigin', window.location.origin);
+      return url.toString();
+    } catch {
+      return src;
+    }
   }, [src]);
 
   useEffect(() => {
     // Reset state whenever the src changes so we show the loading state again.
     setIsLoading(true);
     setHasError(false);
-  }, [src]);
+  }, [finalSrc]);
 
   useEffect(() => {
     if (!isLoading) return;
@@ -95,8 +109,8 @@ export default function DockerExtensionIframe({ src }: Props) {
 
       <iframe
         ref={iframeRef}
-        key={src}
-        src={src}
+        key={finalSrc}
+        src={finalSrc}
         title="Extension App"
         className={`h-full w-full border-0 transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
