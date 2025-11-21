@@ -521,9 +521,11 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
     // Start with basic clients query and fallback gracefully
     let clients: any[] = [];
     try {
-      clients = await db('clients')
-        .select('*')
-        .where('tenant', tenant);
+      clients = await withTransaction(db, async (trx) => {
+        return await trx('clients')
+          .select('*')
+          .where('tenant', tenant);
+      });
 
       console.log('[getAllClients] Found', clients.length, 'clients');
     } catch (dbErr: any) {
@@ -537,9 +539,11 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
         // Try fallback to companies table for company→client migration
         console.log('[getAllClients] Clients table not found, trying companies table fallback...');
         try {
-          const companies = await db('companies')
-            .select('*')
-            .where('tenant', tenant);
+          const companies = await withTransaction(db, async (trx) => {
+            return await trx('companies')
+              .select('*')
+              .where('tenant', tenant);
+          });
 
           console.log('[getAllClients] Found', companies.length, 'companies, mapping to client structure');
 
