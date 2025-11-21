@@ -17,7 +17,15 @@ export interface TicketProxyResponse {
 }
 
 export async function fetchTicketsViaProxy(uiProxy: UiProxyHost, limit = 10): Promise<TicketProxyResponse> {
-  return callProxyJson<TicketProxyResponse>(uiProxy, '/tickets/list', { limit });
+  const raw = (await callProxyJson<Partial<TicketProxyResponse>>(uiProxy, '/tickets/list', { limit })) ?? {};
+  const tickets = Array.isArray(raw.tickets) ? raw.tickets : [];
+  return {
+    ok: !!raw.ok,
+    tickets,
+    error: typeof raw.error === 'string' ? raw.error : null,
+    upstreamStatus: raw.upstreamStatus,
+    fetchedAt: raw.fetchedAt,
+  };
 }
 
 export interface TicketsPanelProps {
@@ -37,7 +45,10 @@ export function TicketsPanel({ uiProxy, limit = 10 }: TicketsPanelProps) {
     console.log(`[Frontend] Calling fetchTicketsViaProxy with limit: ${limit}`);
     fetchTicketsViaProxy(uiProxy, limit)
       .then((result) => {
-        console.log(`[Frontend] Received response from fetchTicketsViaProxy. OK: ${result.ok}, Tickets: ${result.tickets.length}, Error: ${result.error}`);
+        const ticketCount = Array.isArray(result.tickets) ? result.tickets.length : 0;
+        console.log(
+          `[Frontend] Received response from fetchTicketsViaProxy. OK: ${result.ok}, Tickets: ${ticketCount}, Error: ${result.error}`,
+        );
         if (cancelled) return;
         if (result.ok) {
           setState({ loading: false, tickets: result.tickets ?? [], error: null });
