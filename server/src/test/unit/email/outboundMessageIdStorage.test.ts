@@ -1,14 +1,37 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
+import { Knex } from 'knex';
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 
 describe('Outbound Message-ID Storage', () => {
-  let knex: any;
-  const testTenant = `test-tenant-${uuidv4()}`;
+  let knex: Knex;
+  let testTenant: string;
+  let testClientId: string;
   const cleanup: (() => Promise<void>)[] = [];
 
-  beforeEach(async () => {
-    knex = await getAdminConnection();
+  beforeAll(async () => {
+    // Create test database with migrations and seeds
+    knex = await createTestDbConnection();
+
+    // Get the tenant that was created by seeds
+    const tenant = await knex('tenants').first('tenant');
+    if (!tenant) {
+      throw new Error('No tenant found in database after seeds');
+    }
+    testTenant = tenant.tenant;
+
+    // Get or create a test client
+    const client = await knex('clients').where({ tenant: testTenant }).first('client_id');
+    if (!client) {
+      throw new Error('No client found in database after seeds');
+    }
+    testClientId = client.client_id;
+  });
+
+  afterAll(async () => {
+    if (knex) {
+      await knex.destroy();
+    }
   });
 
   afterEach(async () => {
@@ -21,16 +44,15 @@ describe('Outbound Message-ID Storage', () => {
   describe('Message-ID References Storage', () => {
     it('should store outbound Message-ID in ticket email_metadata references array', async () => {
       // Create a test ticket
-      const ticketId = `TICKET-${Date.now()}`;
+      const ticketId = uuidv4();
       await knex('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
+        client_id: testClientId,
         title: 'Test Ticket for Message-ID',
-        status_id: 'open',
-        board_id: 'default',
-        email_metadata: JSON.stringify({ references: [] }),
-        created_at: new Date(),
+        email_metadata: { references: [] },
+        entered_at: new Date(),
         updated_at: new Date()
       });
       cleanup.push(async () => {
@@ -69,16 +91,15 @@ describe('Outbound Message-ID Storage', () => {
     });
 
     it('should append multiple Message-IDs to references array', async () => {
-      const ticketId = `TICKET-${Date.now()}`;
+      const ticketId = uuidv4();
       await knex('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
+        client_id: testClientId,
         title: 'Multi Message-ID Test',
-        status_id: 'open',
-        board_id: 'default',
-        email_metadata: JSON.stringify({ references: [] }),
-        created_at: new Date(),
+        email_metadata: { references: [] },
+        entered_at: new Date(),
         updated_at: new Date()
       });
       cleanup.push(async () => {
@@ -145,16 +166,15 @@ describe('Outbound Message-ID Storage', () => {
     });
 
     it('should initialize empty references array if email_metadata is null', async () => {
-      const ticketId = `TICKET-${Date.now()}`;
+      const ticketId = uuidv4();
       await knex('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
+        client_id: testClientId,
         title: 'Null Metadata Test',
-        status_id: 'open',
-        board_id: 'default',
         email_metadata: null, // Start with null
-        created_at: new Date(),
+        entered_at: new Date(),
         updated_at: new Date()
       });
       cleanup.push(async () => {
@@ -186,7 +206,7 @@ describe('Outbound Message-ID Storage', () => {
     });
 
     it('should preserve existing email_metadata fields when adding references', async () => {
-      const ticketId = `TICKET-${Date.now()}`;
+      const ticketId = uuidv4();
       const originalMessageId = `<original-${Date.now()}@customer.com>`;
       const threadId = `thread-${uuidv4()}`;
 
@@ -194,17 +214,16 @@ describe('Outbound Message-ID Storage', () => {
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
+        client_id: testClientId,
         title: 'Preserve Metadata Test',
-        status_id: 'open',
-        board_id: 'default',
-        email_metadata: JSON.stringify({
+        email_metadata: {
           messageId: originalMessageId,
           threadId: threadId,
           from: 'customer@example.com',
           subject: 'Original Subject',
           references: []
-        }),
-        created_at: new Date(),
+        },
+        entered_at: new Date(),
         updated_at: new Date()
       });
       cleanup.push(async () => {
@@ -240,16 +259,15 @@ describe('Outbound Message-ID Storage', () => {
     });
 
     it('should handle Message-ID format variations correctly', async () => {
-      const ticketId = `TICKET-${Date.now()}`;
+      const ticketId = uuidv4();
       await knex('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
+        client_id: testClientId,
         title: 'Message-ID Format Test',
-        status_id: 'open',
-        board_id: 'default',
-        email_metadata: JSON.stringify({ references: [] }),
-        created_at: new Date(),
+        email_metadata: { references: [] },
+        entered_at: new Date(),
         updated_at: new Date()
       });
       cleanup.push(async () => {
@@ -298,7 +316,7 @@ describe('Outbound Message-ID Storage', () => {
       // 3. Customer replies -> Can be threaded via In-Reply-To matching references
       // 4. Agent replies again -> Adds another Message-ID to references
 
-      const ticketId = `TICKET-${Date.now()}`;
+      const ticketId = uuidv4();
       const inboundMessageId = `<customer-initial-${Date.now()}@customer.com>`;
 
       // Step 1: Ticket created from inbound email
@@ -306,15 +324,14 @@ describe('Outbound Message-ID Storage', () => {
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
+        client_id: testClientId,
         title: 'Customer Question',
-        status_id: 'open',
-        board_id: 'support',
-        email_metadata: JSON.stringify({
+        email_metadata: {
           messageId: inboundMessageId,
           from: 'customer@example.com',
           references: []
-        }),
-        created_at: new Date(),
+        },
+        entered_at: new Date(),
         updated_at: new Date()
       });
       cleanup.push(async () => {

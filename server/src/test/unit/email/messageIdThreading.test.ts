@@ -58,12 +58,10 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Original Customer Email',
-        attributes: {
-          email_metadata: {
-            messageId: originalMessageId,
-            from: 'customer@example.com',
-            subject: 'Help needed'
-          }
+        email_metadata: {
+          messageId: originalMessageId,
+          from: 'customer@example.com',
+          subject: 'Help needed'
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -95,11 +93,9 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Ticket with Outbound Reply',
-        attributes: {
-          email_metadata: {
-            messageId: `<initial-${Date.now()}@customer.com>`,
-            references: [outboundMessageId] // Agent sent a reply
-          }
+        email_metadata: {
+          messageId: `<initial-${Date.now()}@customer.com>`,
+          references: [outboundMessageId] // Agent sent a reply
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -131,10 +127,8 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Threading Test',
-        attributes: {
-          email_metadata: {
-            messageId: originalMessageId
-          }
+        email_metadata: {
+          messageId: originalMessageId
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -168,12 +162,9 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Multi-Reply Ticket',
-        attributes: {
-          email_metadata: {
-          
-            messageId: `<initial-${Date.now()}@customer.com>`,
-            references: [outboundMsg1, outboundMsg2]
-          }
+        email_metadata: {
+          messageId: `<initial-${Date.now()}@customer.com>`,
+          references: [outboundMsg1, outboundMsg2]
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -208,12 +199,9 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Gmail Thread Test',
-        attributes: {
-          email_metadata: {
-          
-            threadId: threadId,
-            messageId: `<msg-${Date.now()}@mail.gmail.com>`
-          }
+        email_metadata: {
+          threadId: threadId,
+          messageId: `<msg-${Date.now()}@mail.gmail.com>`
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -243,13 +231,11 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Nested Thread Test',
-        attributes: {
-          email_metadata: {
-            threadInfo: {
-              threadId: threadId
-            },
-            messageId: `<msg-${Date.now()}@example.com>`
-          }
+        email_metadata: {
+          threadInfo: {
+            threadId: threadId
+          },
+          messageId: `<msg-${Date.now()}@example.com>`
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -281,12 +267,9 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Priority Test',
-        attributes: {
-          email_metadata: {
-          
-            threadId: threadId,
-            messageId: messageId
-          }
+        email_metadata: {
+          threadId: threadId,
+          messageId: messageId
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -319,10 +302,8 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Fallback Test',
-        attributes: {
-          email_metadata: {
-            messageId: messageId
-          }
+        email_metadata: {
+          messageId: messageId
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -352,10 +333,8 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'References Fallback',
-        attributes: {
-          email_metadata: {
-            messageId: messageId
-          }
+        email_metadata: {
+          messageId: messageId
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -393,26 +372,46 @@ describe('Message-ID Based Email Threading', () => {
 
   describe('findTicketByEmailThread - Tenant Isolation', () => {
     it('should not find tickets from different tenant', async () => {
-      const otherTenant = `other-tenant-${uuidv4()}`;
+      const otherTenant = uuidv4();
       const ticketId = uuidv4();
       const messageId = `<isolated-${Date.now()}@example.com>`;
+      const otherClientId = uuidv4();
+
+      // Create other tenant
+      await knex('tenants').insert({
+        tenant: otherTenant,
+        client_name: 'Other Tenant',
+        email: 'other-tenant@example.com',
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+
+      // Create client for other tenant
+      await knex('clients').insert({
+        client_id: otherClientId,
+        tenant: otherTenant,
+        client_name: 'Other Tenant Client',
+        created_at: new Date(),
+        updated_at: new Date()
+      });
 
       // Create ticket in different tenant
       await knex('tickets').insert({
         tenant: otherTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
+        client_id: otherClientId,
         title: 'Other Tenant Ticket',
-        attributes: {
-          email_metadata: {
-            messageId: messageId
-          }
+        email_metadata: {
+          messageId: messageId
         },
         entered_at: new Date(),
         updated_at: new Date()
       });
       cleanup.push(async () => {
         await knex('tickets').where({ tenant: otherTenant, ticket_id: ticketId }).del();
+        await knex('clients').where({ tenant: otherTenant, client_id: otherClientId }).del();
+        await knex('tenants').where({ tenant: otherTenant }).del();
       });
 
       // Try to find from our test tenant
@@ -445,13 +444,10 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'Complex Threading Test',
-        attributes: {
-          email_metadata: {
-          
-            messageId: messageA,
-            from: 'customer@example.com',
-            references: []
-          }
+        email_metadata: {
+          messageId: messageA,
+          from: 'customer@example.com',
+          references: []
         },
         entered_at: new Date(),
         updated_at: new Date()
@@ -517,10 +513,8 @@ describe('Message-ID Based Email Threading', () => {
         ticket_number: `#${Date.now()}`,
         client_id: testClientId,
         title: 'No Duplicates Test',
-        attributes: {
-          email_metadata: {
-            messageId: originalMessageId
-          }
+        email_metadata: {
+          messageId: originalMessageId
         },
         entered_at: new Date(),
         updated_at: new Date()

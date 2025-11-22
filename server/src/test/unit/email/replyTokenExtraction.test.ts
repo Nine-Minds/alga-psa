@@ -23,13 +23,12 @@ ALGA-TICKET-ID:TICKET-456
 
       const result = parseEmailReply({ text, html });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed).toBeDefined();
-      expect(result.parsed.tokens).toBeDefined();
-      expect(result.parsed.tokens.conversationToken).toBe('test-token-123');
-      expect(result.parsed.tokens.ticketId).toBe('TICKET-456');
-      expect(result.parsed.sanitizedText).toContain('This is the user\'s actual reply content');
-      expect(result.parsed.sanitizedText).not.toContain('ALGA-REPLY-TOKEN');
+      expect(result).toBeDefined();
+      expect(result.tokens).toBeDefined();
+      expect(result.tokens?.conversationToken).toBe('test-token-123');
+      expect(result.tokens?.ticketId).toBe('TICKET-456');
+      expect(result.sanitizedText).toContain('This is the user\'s actual reply content');
+      expect(result.sanitizedText).not.toContain('ALGA-REPLY-TOKEN');
     });
 
     it('should extract token with comment ID', () => {
@@ -50,10 +49,10 @@ ALGA-COMMENT-ID:COMMENT-200`;
 
       const result = parseEmailReply({ text, html });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed.tokens.conversationToken).toBe('token-789');
-      expect(result.parsed.tokens.ticketId).toBe('TICKET-100');
-      expect(result.parsed.tokens.commentId).toBe('COMMENT-200');
+      expect(result).toBeDefined();
+      expect(result.tokens?.conversationToken).toBe('token-789');
+      expect(result.tokens?.ticketId).toBe('TICKET-100');
+      expect(result.tokens?.commentId).toBe('COMMENT-200');
     });
 
     it('should extract token with thread ID', () => {
@@ -69,9 +68,9 @@ ALGA-THREAD-ID:THREAD-999`;
 
       const result = parseEmailReply({ text, html });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed.tokens.conversationToken).toBe('thread-token');
-      expect(result.parsed.tokens.threadId).toBe('THREAD-999');
+      expect(result).toBeDefined();
+      expect(result.tokens?.conversationToken).toBe('thread-token');
+      expect(result.tokens?.threadId).toBe('THREAD-999');
     });
 
     it('should extract token with project ID', () => {
@@ -87,9 +86,9 @@ ALGA-PROJECT-ID:PROJECT-777`;
 
       const result = parseEmailReply({ text, html });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed.tokens.conversationToken).toBe('proj-token');
-      expect(result.parsed.tokens.projectId).toBe('PROJECT-777');
+      expect(result).toBeDefined();
+      expect(result.tokens?.conversationToken).toBe('proj-token');
+      expect(result.tokens?.projectId).toBe('PROJECT-777');
     });
   });
 
@@ -106,34 +105,39 @@ Original message below...`;
 
       const result = parseEmailReply({ text });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed.tokens).toBeDefined();
-      expect(result.parsed.tokens.conversationToken).toBe('plain-text-token');
-      expect(result.parsed.tokens.ticketId).toBe('TICKET-999');
-      expect(result.parsed.sanitizedText).toContain('This is the user\'s reply');
-      expect(result.parsed.sanitizedText).not.toContain('ALGA-REPLY-TOKEN');
-      expect(result.parsed.sanitizedText).not.toContain('ALGA-TICKET-ID');
+      expect(result).toBeDefined();
+      expect(result.tokens).toBeDefined();
+      expect(result.tokens?.conversationToken).toBe('plain-text-token');
+      expect(result.tokens?.ticketId).toBe('TICKET-999');
+      expect(result.sanitizedText).toContain('This is the user\'s reply');
+      expect(result.sanitizedText).not.toContain('ALGA-REPLY-TOKEN');
+      expect(result.sanitizedText).not.toContain('ALGA-TICKET-ID');
     });
 
     it('should handle token with all metadata fields in text', () => {
+      const ticketId = '00000000-0000-0000-0000-000000000001';
+      const commentId = '00000000-0000-0000-0000-000000000002';
+      const threadId = '00000000-0000-0000-0000-000000000003';
+      const projectId = '00000000-0000-0000-0000-000000000004';
+
       const text = `Complete reply
 
 --- Please reply above this line ---
 
-[ALGA-REPLY-TOKEN full-token ticketId=TKT-1 commentId=CMT-2 threadId=THD-3 projectId=PRJ-4]
-ALGA-TICKET-ID:TKT-1
-ALGA-COMMENT-ID:CMT-2
-ALGA-THREAD-ID:THD-3
-ALGA-PROJECT-ID:PRJ-4`;
+[ALGA-REPLY-TOKEN full-token ticketId=${ticketId} projectId=${projectId} commentId=${commentId} threadId=${threadId}]
+ALGA-TICKET-ID:${ticketId}
+ALGA-COMMENT-ID:${commentId}
+ALGA-THREAD-ID:${threadId}
+ALGA-PROJECT-ID:${projectId}`;
 
       const result = parseEmailReply({ text });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed.tokens.conversationToken).toBe('full-token');
-      expect(result.parsed.tokens.ticketId).toBe('TKT-1');
-      expect(result.parsed.tokens.commentId).toBe('CMT-2');
-      expect(result.parsed.tokens.threadId).toBe('THD-3');
-      expect(result.parsed.tokens.projectId).toBe('PRJ-4');
+      expect(result).toBeDefined();
+      expect(result.tokens?.conversationToken).toBe('full-token');
+      expect(result.tokens?.ticketId).toBe(ticketId);
+      expect(result.tokens?.commentId).toBe(commentId);
+      expect(result.tokens?.threadId).toBe(threadId);
+      expect(result.tokens?.projectId).toBe(projectId);
     });
   });
 
@@ -150,8 +154,8 @@ Old conversation...`;
 
       const result = parseEmailReply({ text });
 
-      expect(result.success).toBe(true);
-      const sanitized = result.parsed.sanitizedText;
+      expect(result).toBeDefined();
+      const sanitized = result.sanitizedText;
 
       // Should contain the actual reply
       expect(sanitized).toContain('User\'s actual message here');
@@ -173,9 +177,9 @@ Old conversation...`;
 
       const result = parseEmailReply({ text });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed.tokens).toBeNull();
-      expect(result.parsed.sanitizedText).toBe(text);
+      expect(result).toBeDefined();
+      expect(result.tokens).toBeNull();
+      expect(result.sanitizedText).toBe(text);
     });
 
     it('should handle malformed token gracefully', () => {
@@ -187,9 +191,9 @@ Old content`;
 
       const result = parseEmailReply({ text });
 
-      expect(result.success).toBe(true);
+      expect(result).toBeDefined();
       // Should still parse but may not extract token
-      expect(result.parsed.sanitizedText).toBeDefined();
+      expect(result.sanitizedText).toBeDefined();
     });
 
     it('should handle Gmail-style top posting with token', () => {
@@ -206,13 +210,13 @@ Original message`;
 
       const result = parseEmailReply({ text, html });
 
-      expect(result.success).toBe(true);
-      expect(result.parsed.tokens).toBeDefined();
-      expect(result.parsed.tokens.conversationToken).toBe('gmail-token');
-      expect(result.parsed.tokens.ticketId).toBe('TICKET-GMAIL');
-      expect(result.parsed.sanitizedText).toContain('This is my reply at the top');
+      expect(result).toBeDefined();
+      expect(result.tokens).toBeDefined();
+      expect(result.tokens?.conversationToken).toBe('gmail-token');
+      expect(result.tokens?.ticketId).toBe('TICKET-GMAIL');
+      expect(result.sanitizedText).toContain('This is my reply at the top');
       // Gmail quote should be removed by the quoted-block strategy
-      expect(result.parsed.confidence).toBeTruthy();
+      expect(result.confidence).toBeTruthy();
     });
   });
 });
