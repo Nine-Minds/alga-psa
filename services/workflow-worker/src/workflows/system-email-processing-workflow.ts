@@ -332,22 +332,8 @@ export async function systemEmailProcessingWorkflow(context) {
     let matchedClient = await findExactEmailMatch(emailData.from.email, actions);
     
     if (!matchedClient) {
-      // No exact match found - create human task for manual matching
-      console.log('No exact email match found, creating human task for manual client selection');
-      
-      const taskResult = await actions.createTaskAndWaitForResult({
-        taskType: 'match_email_to_client' as any,
-        title: `Match Email to Client: ${emailData.subject}`,
-        description: `Please match this email from ${emailData.from.email} (${emailData.from.name || 'No name'}) to a client. Email snippet: ${(parsedEmailBody.sanitizedText || emailData.body.text || '').substring(0, 200)}...`
-      } as any);
-      
-      if (taskResult.success && taskResult.resolutionData) {
-        matchedClient = await processClientMatchingResult(taskResult.resolutionData, emailData, actions);
-        data.set('matchedClient', matchedClient);
-      } else {
-        console.warn('Manual client matching was not completed successfully');
-        // Continue without client match - ticket will be created without client association
-      }
+      // No exact match found - log and continue to ticket creation (will use catch-all defaults)
+      console.log('No exact email match found; creating ticket using defaults (no client association)');
     } else {
       console.log(`Found exact email match: ${matchedClient.clientName}`);
       data.set('matchedClient', matchedClient);
