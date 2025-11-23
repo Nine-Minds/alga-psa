@@ -32,7 +32,7 @@ function sanitizeUrl(url: string): string {
   return url;
 }
 
-function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
+export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
   const lines = markdown.split('\n');
   const blocks: BlockNoteBlock[] = [];
   
@@ -141,6 +141,39 @@ function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
         });
       }
       continue;
+    }
+
+    // Handle split image syntax (e.g. wrapped by email client):
+    // Line 1: ![alt]
+    // Line 2: (url)
+    const splitImageStart = line.match(/^!\[(.*?)\]$/);
+    if (splitImageStart && i + 1 < lines.length) {
+      const nextLine = lines[i+1].trim();
+      // Check if next line is (url)
+      // Note: nextLine might contain parens inside, so just check start/end
+      if (nextLine.startsWith('(') && nextLine.endsWith(')')) {
+        const alt = splitImageStart[1];
+        const url = nextLine.slice(1, -1); // remove outer parens
+        
+        const safeUrl = sanitizeUrl(url);
+        if (safeUrl) {
+          blocks.push({
+            type: 'image',
+            props: {
+              url: safeUrl,
+              name: alt,
+              caption: alt
+            }
+          });
+        } else {
+           blocks.push({
+            type: 'paragraph',
+            content: parseInlineStyles(`![${alt}](${url})`)
+          });
+        }
+        i++; // Skip next line
+        continue;
+      }
     }
 
     // Paragraph (default)
