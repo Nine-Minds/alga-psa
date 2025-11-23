@@ -131,15 +131,29 @@ export async function systemEmailProcessingWorkflow(context) {
    */
   const handleEmailReply = async (emailData, existingTicket, actions, parsedBody) => {
     const commentContent = parsedBody.sanitizedHtml || parsedBody.sanitizedText || emailData.body.html || emailData.body.text;
-    const commentFormat = parsedBody.sanitizedHtml
-      ? 'html'
-      : (parsedBody.sanitizedText ? 'text' : (emailData.body.html ? 'html' : 'text'));
+    
+    // Convert HTML to BlockNote blocks
+    let blockContent = commentContent;
+    if (parsedBody.sanitizedHtml || emailData.body.html) {
+      try {
+        const conversionResult = await actions.convert_html_to_blocks({
+          html: parsedBody.sanitizedHtml || emailData.body.html
+        });
+        if (conversionResult.success && conversionResult.blocks) {
+          blockContent = JSON.stringify(conversionResult.blocks);
+        }
+      } catch (error) {
+        console.warn('Failed to convert HTML to blocks for reply, falling back to raw content');
+      }
+    }
 
     // Add email as comment to existing ticket
     await actions.create_comment_from_email({
       ticket_id: existingTicket.ticketId,
-      content: commentContent,
-      format: commentFormat,
+      content: blockContent,
+      // format is optional, but if we send BlockNote JSON, the system likely detects it or we can omit format
+      // If it's blocks, we can set format to 'blocknote' if supported, or just let the system handle it.
+      // Looking at blocknoteUtils, it tries to parse JSON.
       source: 'email',
       author_type: 'contact', // Reply from the client
       metadata: parsedBody.metadata
@@ -426,12 +440,25 @@ export async function systemEmailProcessingWorkflow(context) {
     }
     
     // Step 6: Create initial comment with original email content
+    const initialCommentContent = parsedEmailBody.sanitizedHtml || parsedEmailBody.sanitizedText || emailData.body.html || emailData.body.text;
+    let initialBlockContent = initialCommentContent;
+    
+    if (parsedEmailBody.sanitizedHtml || emailData.body.html) {
+      try {
+        const conversionResult = await actions.convert_html_to_blocks({
+          html: parsedEmailBody.sanitizedHtml || emailData.body.html
+        });
+        if (conversionResult.success && conversionResult.blocks) {
+          initialBlockContent = JSON.stringify(conversionResult.blocks);
+        }
+      } catch (error) {
+        console.warn('Failed to convert HTML to blocks for new ticket, falling back to raw content');
+      }
+    }
+
     await actions.create_comment_from_email({
       ticket_id: ticketResult.ticket_id,
-      content: parsedEmailBody.sanitizedHtml || parsedEmailBody.sanitizedText || emailData.body.html || emailData.body.text,
-      format: parsedEmailBody.sanitizedHtml
-        ? 'html'
-        : (parsedEmailBody.sanitizedText ? 'text' : (emailData.body.html ? 'html' : 'text')),
+      content: initialBlockContent,
       source: 'email',
       author_type: 'internal',
       metadata: parsedEmailBody.metadata
