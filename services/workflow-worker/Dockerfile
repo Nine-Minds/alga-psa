@@ -28,6 +28,7 @@ RUN PUPPETEER_SKIP_DOWNLOAD=true npm install --workspace=shared --workspace=serv
 # Copy source code for shared + server workspaces
 COPY shared/ ./shared/
 COPY server/ ./server/
+COPY packages/ ./packages/
 
 # Build shared workspace first (server is only referenced for type imports)
 WORKDIR /app/shared
