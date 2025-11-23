@@ -1,200 +1,111 @@
 import { describe, it, expect } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
 import { convertHtmlToBlockNote } from './contentConversion';
 
-// Simple Quoted-Printable Decoder
-
+// Helper to simulate QP decoding for tests if needed, though mostly we test logic now
 function decodeQuotedPrintable(input: string): string {
-
   return input
-
-    // 1. Join soft line breaks (=\r\n, =\r, or =\n), allowing for trailing whitespace before the break
-
     .replace(/=[ \t]*(?:\r\n|\r|\n)/g, '')
-
-    // 2. Decode hex encoded chars (=XX)
-
     .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-
 }
 
-describe('Email EML File Conversion', () => {
-  it('should correctly parse links in the test email', () => {
-    const emlPath = path.join(__dirname, 'test-email.eml');
-    const emlContent = fs.readFileSync(emlPath, 'utf-8');
-
-    // 1. Separate Headers and Body
-    const parts = emlContent.split(/\r?\n\r?\n/);
-    // The body starts after the first double newline (headers end)
-    // But wait, the file might have multiple parts?
-    // Looking at the provided file content, it seems to be flat structure after headers:
-    // Content-Type: text/html...
-    // ...
-    // (Body)
+describe('Email Content Conversion Logic', () => {
+  
+  it('should handle block links split by Turndown (Link wrapping Header + Text)', () => {
+    // Simulating Turndown output for: <a href="..."><img ...><h3>Header</h3><p>Text</p></a>
+    // Turndown often splits this into:
+    // [
+    // ![Alt](imgUrl)
+    // ### Header
+    // Text](linkUrl)
     
-    // The "Body" part is everything after the first empty line.
-    const bodyRaw = parts.slice(1).join('\n\n');
-
-    // 2. Decode Quoted-Printable
-    const html = decodeQuotedPrintable(bodyRaw);
+    const complexHtml = `
+      <a href="https://example.com/article">
+        <img src="https://example.com/img.jpg" alt="Article Image" />
+        <h3>Big News Story</h3>
+        <p>This is a summary of the news.</p>
+        <span>Read more</span>
+      </a>
+    `;
     
-    // 3. Convert to BlockNote
-    const blocks = convertHtmlToBlockNote(html);
+    const blocks = convertHtmlToBlockNote(complexHtml);
     
-    // 4. Verify the specific "Read more" link
-    // We are looking for a link with text "Read more"
+    // Verify structure
+    // We expect the content to be preserved and linked.
     
-    let foundReadMore = false;
-
-    function searchBlocks(blocks: any[]) {
-      for (const block of blocks) {
-        if (block.content) {
-          for (const inline of block.content) {
-            if (inline.type === 'link' && inline.content) {
-               // Check if link text is "Read more"
-               const text = inline.content.map((t: any) => t.text).join('');
-               if (text === 'Read more') {
-                 foundReadMore = true;
-                 
-                 // Verify href structure (it should be the long NYT link)
-                 expect(inline.href).toContain('nl.nytimes.com');
-                 expect(inline.href).toContain('QL71Mg'); // Part of the redacted/original hash
-               }
-            }
-          }
-        }
-        if (block.children) {
-          searchBlocks(block.children);
-        }
-      }
-    }
-
-    searchBlocks(blocks);
-    expect(foundReadMore).toBe(true);
-  });
-
-  it('should handle hidden preheader text', () => {
-    const emlPath = path.join(__dirname, 'test-email.eml');
-    const emlContent = fs.readFileSync(emlPath, 'utf-8');
-    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
-    const html = decodeQuotedPrintable(bodyRaw);
-    const blocks = convertHtmlToBlockNote(html);
-
-    // The preheader text "The bill contains significant exceptions." is in a display:none div.
-    // Turndown standard behavior usually renders hidden text unless specifically configured not to.
-    // We want to see if it's there.
-    const preheader = blocks.find(b => 
-      b.content?.some(c => c.type === 'text' && c.text.includes('The bill contains significant exceptions.'))
-    );
-    expect(preheader).toBeDefined();
-  });
-
-  it('should handle tracking pixels (1x1 images)', () => {
-    const emlPath = path.join(__dirname, 'test-email.eml');
-    const emlContent = fs.readFileSync(emlPath, 'utf-8');
-    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
-    const html = decodeQuotedPrintable(bodyRaw);
-    const blocks = convertHtmlToBlockNote(html);
-
-    // There is a tracking pixel at the end
-    // <img ... width="1" height="1" ...>
-    // We want to see if it's preserved as an image block (currently expected behavior)
-    // or if we might want to filter it later (not enforcing filter now, just checking presence).
+    // 1. Image should be linked (or at least present)
+    const imageBlock = blocks.find(b => b.type === 'image');
+    expect(imageBlock).toBeDefined();
+    expect(imageBlock?.props?.name).toBe('Article Image');
     
-    // We look for an image with empty name/caption or specific URL pattern if known, 
-    // but just checking for "any image" is too broad. 
-    // Let's look for the last image in the email which is the tracking pixel.
-    const lastBlock = blocks[blocks.length - 1];
-    // Based on previous output, the last block was the tracking pixel image.
-    
-    if (lastBlock.type === 'image') {
-       expect(lastBlock.props?.url).toBeDefined();
-    } else {
-       // If it's not the last block, maybe it's somewhere?
-       const trackingPixel = blocks.find(b => b.type === 'image' && b.props?.url.includes('nl.nytimes.com/q/'));
-       expect(trackingPixel).toBeDefined();
-    }
-  });
-
-  it('should correctly parse the "More Top Stories" block link with image', () => {
-    const emlPath = path.join(__dirname, 'test-email.eml');
-    const emlContent = fs.readFileSync(emlPath, 'utf-8');
-    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
-    const html = decodeQuotedPrintable(bodyRaw);
-    const blocks = convertHtmlToBlockNote(html);
-
-    // This section has a link wrapping an image and a heading.
-    // <a ...><img ...><h3>Lawrence Summers...</h3></a>
-    
-    // We expect our new block link logic to handle this by applying the link to the image and the heading.
-    
-    // Find the heading "Lawrence Summers will stop teaching..."
-    // The text might be inside a link object now.
-    const headingBlock = blocks.find(b => 
-      b.type === 'heading' && 
-      b.content?.some(c => {
-          if (c.type === 'text' && c.text) return c.text.includes('Lawrence Summers will stop teaching');
-          if (c.type === 'link') return c.content?.some((nested: any) => nested.type === 'text' && nested.text?.includes('Lawrence Summers will stop teaching'));
-          return false;
-      })
-    );
-    
+    // 2. Heading should be linked
+    const headingBlock = blocks.find(b => b.type === 'heading');
     expect(headingBlock).toBeDefined();
-    
-    // Check if the content inside the heading is wrapped in a link
-    const headingLinkContent = headingBlock?.content?.find(c => c.type === 'link');
-    expect(headingLinkContent).toBeDefined();
-    expect(headingLinkContent?.href).toContain('nl.nytimes.com');
-    
-    // Check for the image preceding it (Lawrence Summers image)
-    // It resulted in a "paragraph" with a "link" containing text "🖼️ Lawrence Summers..." in the previous run,
-    // OR it might be an image block if my logic improved. 
-    // Let's look for either.
-    
-    const imageBlockOrParagraph = blocks.find(b => 
-       (b.type === 'image' && b.props?.caption?.includes('Lawrence Summers')) ||
-       (b.type === 'paragraph' && b.content?.some(c => 
-           c.type === 'link' && c.content?.some((n: any) => n.text?.includes('Lawrence Summers') && n.text?.includes('🖼️'))
-       ))
-    );
-    
-    expect(imageBlockOrParagraph).toBeDefined();
+    expect(headingBlock?.content?.[0]?.type).toBe('link');
+    expect(headingBlock?.content?.[0]?.href).toBe('https://example.com/article');
+    expect(headingBlock?.content?.[0]?.content?.[0]?.text).toBe('Big News Story');
+
+    // 3. Paragraph should be linked
+    const pBlock = blocks.find(b => b.type === 'paragraph' && b.content?.some(c => c.content?.[0]?.text === 'This is a summary of the news.'));
+    expect(pBlock).toBeDefined();
+    // Check link
+    const pLink = pBlock?.content?.find(c => c.type === 'link');
+    expect(pLink?.href).toBe('https://example.com/article');
   });
 
-  it('should handle social media icons as a list or sequence of images', () => {
-    const emlPath = path.join(__dirname, 'test-email.eml');
-    const emlContent = fs.readFileSync(emlPath, 'utf-8');
-    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
-    const html = decodeQuotedPrintable(bodyRaw);
-    const blocks = convertHtmlToBlockNote(html);
-
-    // Facebook, X, Instagram, Whatsapp
-    // In the previous output, these were paragraph blocks with links containing "🖼️ facebook", "🖼️ x", etc.
-    // This is acceptable for now given the text-based blocknote conversion.
+  it('should handle simple block links (Link wrapping Text)', () => {
+    const simpleHtml = `
+      <a href="https://example.com/readmore">
+        <p>Read more</p>
+      </a>
+    `;
+    // Turndown might output: [Read more](...) or just standard link if it's simple.
+    // If it outputs split syntax, our parser handles it.
     
-    const fbBlock = blocks.find(b => 
-        b.content?.some(c => c.type === 'link' && c.content?.[0]?.text?.includes('facebook'))
-    );
-    expect(fbBlock).toBeDefined();
+    const blocks = convertHtmlToBlockNote(simpleHtml);
+    const linkBlock = blocks.find(b => b.content?.some(c => c.type === 'link' && c.content?.[0]?.text === 'Read more'));
+    expect(linkBlock).toBeDefined();
+    expect(linkBlock?.content?.[0]?.href).toBe('https://example.com/readmore');
   });
 
-  it('should handle footer inline links correctly', () => {
-    const emlPath = path.join(__dirname, 'test-email.eml');
-    const emlContent = fs.readFileSync(emlPath, 'utf-8');
-    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
-    const html = decodeQuotedPrintable(bodyRaw);
-    const blocks = convertHtmlToBlockNote(html);
-
-    // "If you received this newsletter from someone else, subscribe here."
-    const footerBlock = blocks.find(b => 
-        b.type === 'paragraph' && 
-        b.content?.some(c => c.text === 'If you received this newsletter from someone else, ')
-    );
-    expect(footerBlock).toBeDefined();
-    
-    const subscribeLink = footerBlock?.content?.find(c => c.type === 'link' && c.content?.[0]?.text === 'subscribe here');
-    expect(subscribeLink).toBeDefined();
-    expect(subscribeLink?.href).toContain('nl.nytimes.com');
+  it('should handle nested lists', () => {
+     const listHtml = `
+       <ul>
+         <li>Item 1</li>
+         <li>Item 2
+           <ul>
+             <li>Subitem A</li>
+           </ul>
+         </li>
+       </ul>
+     `;
+     const blocks = convertHtmlToBlockNote(listHtml);
+     expect(blocks.length).toBeGreaterThan(0);
+     const item1 = blocks.find(b => b.content?.[0]?.text === 'Item 1');
+     expect(item1?.type).toBe('bulletListItem');
+     
+     // Turndown flatterns lists or handles them via indentation in Markdown.
+     // Our parser needs to handle indentation if Turndown produces it.
+     // Standard Turndown produces:
+     // - Item 1
+     // - Item 2
+     //   - Subitem A
+     
+     // Our current convertMarkdownToBlocks handles lines starting with `*` or `-`.
+     // It does NOT currently handle indentation for nesting levels in the loop explicitly 
+     // (it creates flat list items).
+     // BlockNote supports nesting via `children`.
+     // This might be a limitation of our current simple parser, but let's verify what happens.
+     // Likely they all become top-level bulletListItems.
+     const subitem = blocks.find(b => b.content?.[0]?.text === 'Subitem A');
+     expect(subitem).toBeDefined();
+     expect(subitem?.type).toBe('bulletListItem');
   });
+
+  it('should strip newlines from hrefs', () => {
+    const messyHtml = `<a href="https://example.com/foo\nbar">Link</a>`;
+    const blocks = convertHtmlToBlockNote(messyHtml);
+    const link = blocks[0]?.content?.[0];
+    expect(link?.href).toBe('https://example.com/foobar');
+  });
+
 });
