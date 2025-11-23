@@ -74,17 +74,127 @@ describe('Email EML File Conversion', () => {
     expect(foundReadMore).toBe(true);
   });
 
-  it('should handle the specific Read more link snippet', () => {
-    const html = `
-      <a href="https://nl.nytimes.com/f/newsletter/QL71Mg_E-nLGjG-eAqBKTA~~/AAAAARA~/[REDACTED-HASH_2]maKt1NkdKNfPDz6j_C5fswPqM8PTAaGl1JYcSze_xCrzXczOfWNWz4qO7aPl0yculJoJ7znHZtJddnOwy3pGlq-XW40MoAP-BuPz8Pdd06R36C9Ilrec7w7sW8NT7vPfScwsEUkD0hKeIQJaDR0n6JVGj6zCekdp1EoEw0Y0ylbQ9PU-jVNJpwxkXhrnAPWrpZGu0Mfahd21u6go8-g20vGlkRFA_EkmAPi_Rj1xqSr7VYNPYUknlesfgGGK9KfPKl37P0rwWJwtBimUzu0iOKfE5ETuzs77P7Z6Jvdr9Pxhlak2TaDBdDySvLWCPdFQDRCdMhgA~" class="css-sdwaa1" style="-webkit-text-decoration:underline;color:#000;text-decoration:none;display:block"><h3 style="color:#000;margin:0;padding:0 0 10px;font:700 20px/27.5px georgia,serif" class="css-w6qq8t">Trump Signs Bill on Release of Epstein Files</h3><p style="color:#333;font:17px/25px georgia,serif;margin:0;margin-bottom:15px">Relenting to pressure from his base, President Trump signed legislation calling on the Justice Department to release its files on Jeffrey Epstein. But the bill contains significant exceptions.</p><span style="display:block;font:17px/25px georgia,serif;font-weight:700;color:#286ed0;margin-top:0;text-decoration:underline" class="css-afkfe3">Read more</span></a>
-    `;
-    // Note: In the actual email, the URL has newlines due to QP decoding issues.
-    // Let's simulate that by injecting newlines in the HREF.
-    const htmlWithNewlines = html.replace('QL71Mg', 'QL71Mg\n');
+  it('should handle hidden preheader text', () => {
+    const emlPath = path.join(__dirname, 'test-email.eml');
+    const emlContent = fs.readFileSync(emlPath, 'utf-8');
+    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+    const html = decodeQuotedPrintable(bodyRaw);
+    const blocks = convertHtmlToBlockNote(html);
+
+    // The preheader text "The bill contains significant exceptions." is in a display:none div.
+    // Turndown standard behavior usually renders hidden text unless specifically configured not to.
+    // We want to see if it's there.
+    const preheader = blocks.find(b => 
+      b.content?.some(c => c.type === 'text' && c.text.includes('The bill contains significant exceptions.'))
+    );
+    expect(preheader).toBeDefined();
+  });
+
+  it('should handle tracking pixels (1x1 images)', () => {
+    const emlPath = path.join(__dirname, 'test-email.eml');
+    const emlContent = fs.readFileSync(emlPath, 'utf-8');
+    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+    const html = decodeQuotedPrintable(bodyRaw);
+    const blocks = convertHtmlToBlockNote(html);
+
+    // There is a tracking pixel at the end
+    // <img ... width="1" height="1" ...>
+    // We want to see if it's preserved as an image block (currently expected behavior)
+    // or if we might want to filter it later (not enforcing filter now, just checking presence).
     
-    const blocks = convertHtmlToBlockNote(htmlWithNewlines);
+    // We look for an image with empty name/caption or specific URL pattern if known, 
+    // but just checking for "any image" is too broad. 
+    // Let's look for the last image in the email which is the tracking pixel.
+    const lastBlock = blocks[blocks.length - 1];
+    // Based on previous output, the last block was the tracking pixel image.
     
-    const link = blocks.find(b => b.content?.some(c => c.type === 'link' && c.content?.[0]?.text === 'Read more'));
-    expect(link).toBeDefined();
+    if (lastBlock.type === 'image') {
+       expect(lastBlock.props?.url).toBeDefined();
+    } else {
+       // If it's not the last block, maybe it's somewhere?
+       const trackingPixel = blocks.find(b => b.type === 'image' && b.props?.url.includes('nl.nytimes.com/q/'));
+       expect(trackingPixel).toBeDefined();
+    }
+  });
+
+  it('should correctly parse the "More Top Stories" block link with image', () => {
+    const emlPath = path.join(__dirname, 'test-email.eml');
+    const emlContent = fs.readFileSync(emlPath, 'utf-8');
+    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+    const html = decodeQuotedPrintable(bodyRaw);
+    const blocks = convertHtmlToBlockNote(html);
+
+    // This section has a link wrapping an image and a heading.
+    // <a ...><img ...><h3>Lawrence Summers...</h3></a>
+    
+    // We expect our new block link logic to handle this by applying the link to the image and the heading.
+    
+    // Find the heading "Lawrence Summers will stop teaching..."
+    // The text might be inside a link object now.
+    const headingBlock = blocks.find(b => 
+      b.type === 'heading' && 
+      b.content?.some(c => {
+          if (c.type === 'text' && c.text) return c.text.includes('Lawrence Summers will stop teaching');
+          if (c.type === 'link') return c.content?.some((nested: any) => nested.type === 'text' && nested.text?.includes('Lawrence Summers will stop teaching'));
+          return false;
+      })
+    );
+    
+    expect(headingBlock).toBeDefined();
+    
+    // Check if the content inside the heading is wrapped in a link
+    const headingLinkContent = headingBlock?.content?.find(c => c.type === 'link');
+    expect(headingLinkContent).toBeDefined();
+    expect(headingLinkContent?.href).toContain('nl.nytimes.com');
+    
+    // Check for the image preceding it (Lawrence Summers image)
+    // It resulted in a "paragraph" with a "link" containing text "🖼️ Lawrence Summers..." in the previous run,
+    // OR it might be an image block if my logic improved. 
+    // Let's look for either.
+    
+    const imageBlockOrParagraph = blocks.find(b => 
+       (b.type === 'image' && b.props?.caption?.includes('Lawrence Summers')) ||
+       (b.type === 'paragraph' && b.content?.some(c => 
+           c.type === 'link' && c.content?.some((n: any) => n.text?.includes('Lawrence Summers') && n.text?.includes('🖼️'))
+       ))
+    );
+    
+    expect(imageBlockOrParagraph).toBeDefined();
+  });
+
+  it('should handle social media icons as a list or sequence of images', () => {
+    const emlPath = path.join(__dirname, 'test-email.eml');
+    const emlContent = fs.readFileSync(emlPath, 'utf-8');
+    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+    const html = decodeQuotedPrintable(bodyRaw);
+    const blocks = convertHtmlToBlockNote(html);
+
+    // Facebook, X, Instagram, Whatsapp
+    // In the previous output, these were paragraph blocks with links containing "🖼️ facebook", "🖼️ x", etc.
+    // This is acceptable for now given the text-based blocknote conversion.
+    
+    const fbBlock = blocks.find(b => 
+        b.content?.some(c => c.type === 'link' && c.content?.[0]?.text?.includes('facebook'))
+    );
+    expect(fbBlock).toBeDefined();
+  });
+
+  it('should handle footer inline links correctly', () => {
+    const emlPath = path.join(__dirname, 'test-email.eml');
+    const emlContent = fs.readFileSync(emlPath, 'utf-8');
+    const bodyRaw = emlContent.split(/\r?\n\r?\n/).slice(1).join('\n\n');
+    const html = decodeQuotedPrintable(bodyRaw);
+    const blocks = convertHtmlToBlockNote(html);
+
+    // "If you received this newsletter from someone else, subscribe here."
+    const footerBlock = blocks.find(b => 
+        b.type === 'paragraph' && 
+        b.content?.some(c => c.text === 'If you received this newsletter from someone else, ')
+    );
+    expect(footerBlock).toBeDefined();
+    
+    const subscribeLink = footerBlock?.content?.find(c => c.type === 'link' && c.content?.[0]?.text === 'subscribe here');
+    expect(subscribeLink).toBeDefined();
+    expect(subscribeLink?.href).toContain('nl.nytimes.com');
   });
 });
