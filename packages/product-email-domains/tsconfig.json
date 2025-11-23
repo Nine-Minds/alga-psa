@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "module": "ESNext",
+    "target": "es2022",
+    "moduleResolution": "bundler",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@shared/*": ["shared/*"],
+      "@alga-psa/shared/*": ["shared/*"],
+      "@product/email-domains/*": ["packages/product-email-domains/*"]
+    }
+  },
+  "include": ["**/*.ts", "../../shared/types/**/*.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

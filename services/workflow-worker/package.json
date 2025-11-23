@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@alga-psa/shared": "^1.0.0",
+    "@product/email-domains": "^1.0.0",
     "@eslint/plugin-kit": "0.3.5",
     "@js-temporal/polyfill": "^0.4.4",
     "ajv": "^8.12.0",

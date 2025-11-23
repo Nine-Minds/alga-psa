@@ -20,14 +20,16 @@ COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
+COPY packages/product-email-domains/package.json ./packages/product-email-domains/
 
 # Install dependencies for required workspaces (shared, worker, server)
 # Skip puppeteer Chrome download to save disk space
-RUN PUPPETEER_SKIP_DOWNLOAD=true npm install --workspace=shared --workspace=services/workflow-worker --workspace=server
+RUN PUPPETEER_SKIP_DOWNLOAD=true npm install --workspace=shared --workspace=services/workflow-worker --workspace=server --workspace=packages/product-email-domains
 
 # Copy source code for shared + server workspaces
 COPY shared/ ./shared/
 COPY server/ ./server/
+COPY packages/product-email-domains/ ./packages/product-email-domains/
 
 # Build shared workspace first (server is only referenced for type imports)
 WORKDIR /app/shared

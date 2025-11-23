@@ -13,6 +13,7 @@
       "@shared": ["shared"],
       "@alga-psa/shared": ["shared"],
       "@alga-psa/shared/*": ["shared/*"],
+      "@product/email-domains/*": ["packages/product-email-domains/*"],
       "@/*": ["server/src/*"],
       "@": ["server/src"]
     },
