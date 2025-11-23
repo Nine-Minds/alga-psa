@@ -116,10 +116,7 @@ function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
   return blocks;
 }
 
-function parseInlineStyles(text: string): any[] {
-  // Simple inline style parser: bold (**), italic (*), link ([text](url))
-  // This is a simplified parser and won't handle nested styles perfectly.
-  
+function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean> = {}): any[] {
   const content: any[] = [];
   let remaining = text;
 
@@ -131,7 +128,13 @@ function parseInlineStyles(text: string): any[] {
     const match = remaining.match(tokenRegex);
     
     if (!match) {
-      content.push({ type: 'text', text: remaining, styles: {} });
+      if (remaining) {
+        content.push({ 
+          type: 'text', 
+          text: remaining, 
+          styles: { ...inheritedStyles } 
+        });
+      }
       break;
     }
 
@@ -139,18 +142,33 @@ function parseInlineStyles(text: string): any[] {
     
     // Add text before match
     if (index > 0) {
-      content.push({ type: 'text', text: remaining.substring(0, index), styles: {} });
+      content.push({ 
+        type: 'text', 
+        text: remaining.substring(0, index), 
+        styles: { ...inheritedStyles } 
+      });
     }
 
     // Process match
     const [fullMatch, boldGroup, boldText, italicGroup, italicText, linkGroup, linkText, linkUrl] = match;
 
     if (boldGroup) {
-      content.push({ type: 'text', text: boldText, styles: { bold: true } });
+      // Recurse with 'bold' added to inherited styles
+      const innerContent = parseInlineStyles(boldText, { ...inheritedStyles, bold: true });
+      content.push(...innerContent);
     } else if (italicGroup) {
-      content.push({ type: 'text', text: italicText, styles: { italic: true } });
+      // Recurse with 'italic' added to inherited styles
+      const innerContent = parseInlineStyles(italicText, { ...inheritedStyles, italic: true });
+      content.push(...innerContent);
     } else if (linkGroup) {
-      content.push({ type: 'link', href: linkUrl, content: [{ type: 'text', text: linkText, styles: {} }] });
+      // Link is a container. We parse its text content with inherited styles.
+      // BlockNote Link.content expects StyledText[], so we parse the link text.
+      const innerContent = parseInlineStyles(linkText, { ...inheritedStyles });
+      content.push({ 
+        type: 'link', 
+        href: linkUrl, 
+        content: innerContent 
+      });
     }
 
     remaining = remaining.substring(index + fullMatch.length);
