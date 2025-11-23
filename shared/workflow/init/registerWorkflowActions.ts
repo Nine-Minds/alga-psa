@@ -2002,6 +2002,32 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     }
   );
 
+  // Convert HTML to BlockNote Blocks Action
+  actionRegistry.registerSimpleAction(
+    'convert_html_to_blocks',
+    'Convert HTML content to BlockNote blocks',
+    [{ name: 'html', type: 'string', required: true }],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { convertHtmlToBlockNote } = await import('@alga-psa/shared/lib/utils/contentConversion');
+        const blocks = convertHtmlToBlockNote(params.html);
+
+        return {
+          success: true,
+          blocks: blocks
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] convert_html_to_blocks: Error converting HTML to blocks`, error);
+        // Return empty paragraph as fallback
+        return {
+          success: false,
+          blocks: [{ type: 'paragraph', content: [] }],
+          message: error.message
+        };
+      }
+    }
+  );
+
   logger.info('[WorkflowInit] Email workflow actions registered successfully');
 }
 
