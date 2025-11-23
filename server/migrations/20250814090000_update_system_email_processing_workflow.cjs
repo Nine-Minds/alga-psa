@@ -1,5 +1,5 @@
 // Updates the DB-stored System Email Processing workflow code to the latest
-// implementation from shared/workflow/workflows/system-email-processing-workflow.ts
+// implementation from services/workflow-worker/src/workflows/system-email-processing-workflow.ts
 // by embedding the function body into a DB-executable wrapper.
 
 const fs = require('fs');
@@ -20,7 +20,7 @@ function sanitizeTsToJs(source) {
 // Helper: build DB-ready code from the shared workflow source
 function buildDbWorkflowCode() {
   // Prefer pre-generated JS file if present (compiled and sanitized)
-  const generatedPath = path.join(__dirname, '../../shared/workflow/workflows/system-email-processing-workflow.generated.js');
+  const generatedPath = path.join(__dirname, '../../services/workflow-worker/src/workflows/system-email-processing-workflow.generated.js');
   if (fs.existsSync(generatedPath)) {
     const code = fs.readFileSync(generatedPath, 'utf8');
     if (code && code.includes('function execute(')) {
@@ -29,7 +29,7 @@ function buildDbWorkflowCode() {
     console.warn('[workflow-migration] Generated file found but does not contain execute() — falling back to TS extraction');
   }
 
-  const workflowPath = path.join(__dirname, '../../shared/workflow/workflows/system-email-processing-workflow.ts');
+  const workflowPath = path.join(__dirname, '../../services/workflow-worker/src/workflows/system-email-processing-workflow.ts');
   if (!fs.existsSync(workflowPath)) {
     console.warn(`[workflow-migration] Shared workflow file not found at ${workflowPath}`);
     return null;
