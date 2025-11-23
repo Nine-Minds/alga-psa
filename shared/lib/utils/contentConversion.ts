@@ -98,7 +98,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
         // However, if the text content inside the block link starts with [, it might be tricky.
         // But Turndown escapes [ in text.
         
-        const endMatch = line.match(/^(.*)\]\((.*?)\)$/);
+        const endMatch = line.match(/^\s*(.*)\]\((.*?)\)\s*$/);
         if (endMatch) {
              const text = endMatch[1];
              const url = endMatch[2];
@@ -146,8 +146,9 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
     }
 
     // Unordered List
-    if (line.match(/^[\*\-]\s/)) {
-      const text = line.substring(2).trim();
+    if (line.match(/^\s*[\*\-]\s/)) {
+      const text = line.replace(/^\s*[\*\-]\s/, '').trim();
+      const targetBlocks = currentBlockLink ? currentBlockLink.blocks : blocks;
       targetBlocks.push({
         type: 'bulletListItem',
         content: parseInlineStyles(text)
@@ -156,8 +157,9 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
     }
 
     // Ordered List
-    if (line.match(/^\d+\.\s/)) {
-      const text = line.replace(/^\d+\.\s/, '').trim();
+    if (line.match(/^\s*\d+\.\s/)) {
+      const text = line.replace(/^\s*\d+\.\s/, '').trim();
+      const targetBlocks = currentBlockLink ? currentBlockLink.blocks : blocks;
       targetBlocks.push({
         type: 'numberedListItem',
         content: parseInlineStyles(text)
@@ -177,7 +179,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
 
     // Image (on its own line)
     // Regex: ![alt](url)
-    const imageMatch = line.match(/^!\[(.*?)\]\((.*?)\)$/);
+    const imageMatch = line.match(/^\s*!\[(.*?)\]\((.*?)\)\s*$/);
     if (imageMatch) {
       const [_, alt, url] = imageMatch;
       const safeUrl = sanitizeUrl(url);
@@ -203,7 +205,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
     // Handle split image syntax (e.g. wrapped by email client):
     // Line 1: ![alt]
     // Line 2: (url)
-    const splitImageStart = line.match(/^!\[(.*?)\]$/);
+    const splitImageStart = line.match(/^\s*!\[(.*?)\]\s*$/);
     if (splitImageStart && i + 1 < lines.length) {
       const nextLine = lines[i+1].trim();
       // Check if next line is (url)
