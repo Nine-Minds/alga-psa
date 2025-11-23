@@ -13,11 +13,23 @@ export function convertHtmlToBlockNote(html: string): BlockNoteBlock[] {
   const turndownService = new TurndownService({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced',
-    bulletListMarker: '-'
+    bulletListMarker: '-',
+    emDelimiter: '_',
+    strongDelimiter: '**'
   });
 
   const markdown = turndownService.turndown(html);
   return convertMarkdownToBlocks(markdown);
+}
+
+function sanitizeUrl(url: string): string {
+  if (!url) return '';
+  // Allow http, https, mailto, and relative paths (though emails usually have absolute)
+  // Block javascript:, data:, vbscript:
+  if (/^(javascript:|data:|vbscript:)/i.test(url)) {
+    return '';
+  }
+  return url;
 }
 
 function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
@@ -53,7 +65,7 @@ function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
       // Looking at the server utils, it seems to map content array to text. 
       // Let's accumulate text.
       const currentText = currentCodeBlock.content?.[0]?.text || '';
-      currentCodeBlock.content = [{ 
+      currentCodeBlock.content = [{
         type: 'text', 
         text: currentText ? currentText + '\n' + line : line,
         styles: {}
@@ -106,6 +118,31 @@ function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
       continue;
     }
 
+    // Image (on its own line)
+    // Regex: ![alt](url)
+    const imageMatch = line.match(/^!\[(.*?)\]\((.*?)\)$/);
+    if (imageMatch) {
+      const [_, alt, url] = imageMatch;
+      const safeUrl = sanitizeUrl(url);
+      if (safeUrl) {
+        blocks.push({
+          type: 'image',
+          props: {
+            url: safeUrl,
+            name: alt,
+            caption: alt // Optional, but good for accessibility/display
+          }
+        });
+      } else {
+        // If invalid URL, render as text
+        blocks.push({
+          type: 'paragraph',
+          content: parseInlineStyles(`![${alt}](${url})`)
+        });
+      }
+      continue;
+    }
+
     // Paragraph (default)
     blocks.push({
       type: 'paragraph',
@@ -120,16 +157,15 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
   const content: any[] = [];
   let remaining = text;
 
-  // Regex for tokens: **bold**, *italic*, [link](url)
-  // Note: Non-greedy matching
-  const tokenRegex = /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(\[(.*?)\]\((.*?)\))/;
+  // Regex for tokens: **bold**, *italic*, _italic_, [link](url), ![image](url)
+  const tokenRegex = /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(_(.*?)_)|(!?\[(.*?)\]\((.*?)\))/;
 
   while (remaining) {
     const match = remaining.match(tokenRegex);
     
     if (!match) {
       if (remaining) {
-        content.push({ 
+        content.push({
           type: 'text', 
           text: remaining, 
           styles: { ...inheritedStyles } 
@@ -142,7 +178,7 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
     
     // Add text before match
     if (index > 0) {
-      content.push({ 
+      content.push({
         type: 'text', 
         text: remaining.substring(0, index), 
         styles: { ...inheritedStyles } 
@@ -150,25 +186,54 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
     }
 
     // Process match
-    const [fullMatch, boldGroup, boldText, italicGroup, italicText, linkGroup, linkText, linkUrl] = match;
+    // Groups:
+    // 1: **bold** (2: content)
+    // 3: *italic* (4: content)
+    // 5: _italic_ (6: content)
+    // 7: Link/Image (8: text/alt, 9: url)
+    const [fullMatch, _bold, boldText, _italicStar, italicStarText, _italicUnderscore, italicUnderscoreText, linkOrImageGroup, linkText, linkUrl] = match;
 
-    if (boldGroup) {
-      // Recurse with 'bold' added to inherited styles
+    if (boldText !== undefined) {
       const innerContent = parseInlineStyles(boldText, { ...inheritedStyles, bold: true });
       content.push(...innerContent);
-    } else if (italicGroup) {
-      // Recurse with 'italic' added to inherited styles
-      const innerContent = parseInlineStyles(italicText, { ...inheritedStyles, italic: true });
+    } else if (italicStarText !== undefined) {
+      const innerContent = parseInlineStyles(italicStarText, { ...inheritedStyles, italic: true });
       content.push(...innerContent);
-    } else if (linkGroup) {
-      // Link is a container. We parse its text content with inherited styles.
-      // BlockNote Link.content expects StyledText[], so we parse the link text.
-      const innerContent = parseInlineStyles(linkText, { ...inheritedStyles });
-      content.push({ 
-        type: 'link', 
-        href: linkUrl, 
-        content: innerContent 
-      });
+    } else if (italicUnderscoreText !== undefined) {
+      const innerContent = parseInlineStyles(italicUnderscoreText, { ...inheritedStyles, italic: true });
+      content.push(...innerContent);
+    } else if (linkOrImageGroup) {
+      const safeUrl = sanitizeUrl(linkUrl);
+      
+      if (linkOrImageGroup.startsWith('!')) {
+        if (safeUrl) {
+          content.push({
+            type: 'link', 
+            href: safeUrl, 
+            content: [{ type: 'text', text: `🖼️ ${linkText || 'Image'}`, styles: { ...inheritedStyles } }]
+          });
+        } else {
+          // Invalid URL, render as text
+          content.push({
+            type: 'text', 
+            text: fullMatch, 
+            styles: { ...inheritedStyles } 
+          });
+        }
+      } else {
+        if (safeUrl) {
+          const innerContent = parseInlineStyles(linkText, { ...inheritedStyles });
+          content.push({
+            type: 'link', 
+            href: safeUrl, 
+            content: innerContent 
+          });
+        } else {
+          // Invalid URL, render link text without link
+          const innerContent = parseInlineStyles(linkText, { ...inheritedStyles });
+          content.push(...innerContent);
+        }
+      }
     }
 
     remaining = remaining.substring(index + fullMatch.length);
