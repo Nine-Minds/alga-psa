@@ -118,4 +118,29 @@ describe('convertHtmlToBlockNote', () => {
     expect(link?.content?.[0]?.text).toContain('🖼️');
     expect(link?.content?.[0]?.text).toContain('icon');
   });
+
+  it('should handle images with mid-string parentheses in URL', () => {
+    const html = '<p><img src="https://example.com/folder(1)/image.png" alt="Complex Image" /></p>';
+    const result = convertHtmlToBlockNote(html);
+    
+    const imageBlock = result.find(b => b.type === 'image');
+    expect(imageBlock).toBeDefined();
+    expect(imageBlock?.props?.url).toBe('https://example.com/folder(1)/image.png');
+  });
+
+  it('should handle complex nested styles', () => {
+    // **bold *and italic*** -> Bold + (Bold & Italic)
+    const html = '<p><strong>bold <em>and italic</em></strong></p>';
+    const result = convertHtmlToBlockNote(html);
+    
+    const paragraph = result[0];
+    const content = paragraph.content || [];
+    
+    const boldSegment = content.find(c => c.text === 'bold ');
+    expect(boldSegment?.styles).toMatchObject({ bold: true });
+    expect(boldSegment?.styles?.italic).toBeUndefined();
+
+    const mixedSegment = content.find(c => c.text === 'and italic');
+    expect(mixedSegment?.styles).toMatchObject({ bold: true, italic: true });
+  });
 });
