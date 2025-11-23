@@ -10,6 +10,11 @@ export interface BlockNoteBlock {
 export function convertHtmlToBlockNote(html: string): BlockNoteBlock[] {
   if (!html) return [];
 
+  // Preprocess HTML to strip newlines from href attributes which break markdown generation
+  const cleanHtml = html.replace(/href="([^"]*)"/g, (match, url) => {
+    return `href="${url.replace(/[\r\n]+/g, '')}"`;
+  });
+
   const turndownService = new TurndownService({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced',
@@ -18,7 +23,7 @@ export function convertHtmlToBlockNote(html: string): BlockNoteBlock[] {
     strongDelimiter: '**'
   });
 
-  const markdown = turndownService.turndown(html);
+  const markdown = turndownService.turndown(cleanHtml);
   return convertMarkdownToBlocks(markdown);
 }
 
@@ -37,6 +42,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
   const blocks: BlockNoteBlock[] = [];
   
   let currentCodeBlock: BlockNoteBlock | null = null;
+  let currentBlockLink: { blocks: BlockNoteBlock[] } | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -45,7 +51,10 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
     if (line.trim().startsWith('```')) {
       if (currentCodeBlock) {
         // End of code block
-        blocks.push(currentCodeBlock);
+        // Code blocks cannot be inside block links in this simple parser, 
+        // or we just push to target
+        const target = currentBlockLink ? currentBlockLink.blocks : blocks;
+        target.push(currentCodeBlock);
         currentCodeBlock = null;
       } else {
         // Start of code block
@@ -61,9 +70,6 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
 
     if (currentCodeBlock) {
       // Add line to code block content
-      // Code blocks in BlockNote usually have one text item with newlines, or multiple?
-      // Looking at the server utils, it seems to map content array to text. 
-      // Let's accumulate text.
       const currentText = currentCodeBlock.content?.[0]?.text || '';
       currentCodeBlock.content = [{
         type: 'text', 
@@ -73,14 +79,65 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
       continue;
     }
 
+    // START Block Link Detection
+    // Turndown produces block links like:
+    // [
+    // ### Header
+    // Description
+    // Last line](url)
+    if (line.trim() === '[') {
+        currentBlockLink = { blocks: [] };
+        continue;
+    }
+
+    if (currentBlockLink) {
+        // Check for end of block link: text](url)
+        // We use a regex that looks for the closing pattern.
+        // Note: we need to be careful not to match [text](url) which is a self-contained link,
+        // but in the block link case, the line usually does NOT start with [.
+        // However, if the text content inside the block link starts with [, it might be tricky.
+        // But Turndown escapes [ in text.
+        
+        const endMatch = line.match(/^(.*)\]\((.*?)\)$/);
+        if (endMatch) {
+             const text = endMatch[1];
+             const url = endMatch[2];
+             
+             // Process the last line content if it exists
+             if (text.trim()) {
+                 // We can use recursion to parse this last line as it might contain inline styles
+                 const tempBlocks = convertMarkdownToBlocks(text);
+                 currentBlockLink.blocks.push(...tempBlocks);
+             }
+             
+             const safeUrl = sanitizeUrl(url);
+             if (safeUrl) {
+                 for (const b of currentBlockLink.blocks) {
+                     applyLinkToBlock(b, safeUrl);
+                     blocks.push(b);
+                 }
+             } else {
+                 // Invalid URL, just push blocks as is
+                 blocks.push(...currentBlockLink.blocks);
+             }
+             
+             currentBlockLink = null;
+             continue;
+        }
+    }
+    // END Block Link Detection
+
     // Skip empty lines (except potentially as spacers, but BlockNote handles spacing)
     if (!line.trim()) continue;
+
+    // Define target for new blocks
+    const targetBlocks = currentBlockLink ? currentBlockLink.blocks : blocks;
 
     // Headings
     if (line.startsWith('#')) {
       const level = line.match(/^#+/)?.[0].length || 1;
       const text = line.substring(level).trim();
-      blocks.push({
+      targetBlocks.push({
         type: 'heading',
         props: { level: Math.min(level, 3) }, // BlockNote supports h1-h3
         content: parseInlineStyles(text)
@@ -91,7 +148,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
     // Unordered List
     if (line.match(/^[\*\-]\s/)) {
       const text = line.substring(2).trim();
-      blocks.push({
+      targetBlocks.push({
         type: 'bulletListItem',
         content: parseInlineStyles(text)
       });
@@ -101,7 +158,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
     // Ordered List
     if (line.match(/^\d+\.\s/)) {
       const text = line.replace(/^\d+\.\s/, '').trim();
-      blocks.push({
+      targetBlocks.push({
         type: 'numberedListItem',
         content: parseInlineStyles(text)
       });
@@ -111,7 +168,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
     // Blockquote (map to paragraph for now, or check if 'blockquote' type exists - usually not in standard BN schema)
     if (line.startsWith('>')) {
       const text = line.substring(1).trim();
-      blocks.push({
+      targetBlocks.push({
         type: 'paragraph',
         content: parseInlineStyles(text) // Could add italic style to represent quote
       });
@@ -125,7 +182,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
       const [_, alt, url] = imageMatch;
       const safeUrl = sanitizeUrl(url);
       if (safeUrl) {
-        blocks.push({
+        targetBlocks.push({
           type: 'image',
           props: {
             url: safeUrl,
@@ -135,7 +192,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
         });
       } else {
         // If invalid URL, render as text
-        blocks.push({
+        targetBlocks.push({
           type: 'paragraph',
           content: parseInlineStyles(`![${alt}](${url})`)
         });
@@ -157,7 +214,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
         
         const safeUrl = sanitizeUrl(url);
         if (safeUrl) {
-          blocks.push({
+          targetBlocks.push({
             type: 'image',
             props: {
               url: safeUrl,
@@ -166,7 +223,7 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
             }
           });
         } else {
-           blocks.push({
+           targetBlocks.push({
             type: 'paragraph',
             content: parseInlineStyles(`![${alt}](${url})`)
           });
@@ -176,14 +233,68 @@ export function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
       }
     }
 
+    // Handle split link syntax (e.g. wrapped by email client or long URLs):
+    // Line 1: ... [text](part_of_url
+    // Line 2: part_of_url
+    // Line 3: rest_of_url)
+    const splitLinkMatch = line.match(/(!?\[.*?\]\([^\)]+)$/);
+    if (splitLinkMatch) {
+        let merged = false;
+        
+        // Attempt to merge subsequent lines until we find the closing parenthesis
+        while (i + 1 < lines.length) {
+            const nextLine = lines[i+1].trim();
+            
+            // Safety check: don't merge if next line looks like a new image/link start
+            if (nextLine.match(/^!?\[/)) {
+              break;
+            }
+
+            lines[i] = lines[i].trimEnd() + nextLine; // Merge
+            lines.splice(i + 1, 1); // Remove next line from array
+            
+            if (nextLine.includes(')')) {
+                merged = true;
+                break;
+            }
+        }
+        
+        if (merged) {
+             i--; 
+             continue;
+        }
+    }
+
     // Paragraph (default)
-    blocks.push({
+    targetBlocks.push({
       type: 'paragraph',
       content: parseInlineStyles(line)
     });
   }
 
   return blocks;
+}
+
+function applyLinkToBlock(block: BlockNoteBlock, url: string) {
+  if (block.content && Array.isArray(block.content)) {
+      // If content already has a link, we generally shouldn't wrap it again.
+      // But for simplicity, we wrap the whole content in a link if no link exists,
+      // or if a link exists, we might just skip or try to wrap non-linked parts (too complex).
+      // Let's assume no nested links for now.
+      
+      const hasLink = block.content.some((c: any) => c.type === 'link');
+      if (!hasLink) {
+         block.content = [{
+             type: 'link',
+             href: url,
+             content: block.content
+         }];
+      }
+  }
+  
+  if (block.children) {
+      block.children.forEach(child => applyLinkToBlock(child, url));
+  }
 }
 
 function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean> = {}): any[] {
