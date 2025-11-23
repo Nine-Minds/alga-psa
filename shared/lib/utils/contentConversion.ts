@@ -106,6 +106,22 @@ function convertMarkdownToBlocks(markdown: string): BlockNoteBlock[] {
       continue;
     }
 
+    // Image (on its own line)
+    // Regex: ![alt](url)
+    const imageMatch = line.match(/^!\[(.*?)\]\((.*?)\)$/);
+    if (imageMatch) {
+      const [_, alt, url] = imageMatch;
+      blocks.push({
+        type: 'image',
+        props: {
+          url: url,
+          name: alt,
+          caption: alt // Optional, but good for accessibility/display
+        }
+      });
+      continue;
+    }
+
     // Paragraph (default)
     blocks.push({
       type: 'paragraph',
@@ -120,9 +136,10 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
   const content: any[] = [];
   let remaining = text;
 
-  // Regex for tokens: **bold**, *italic*, [link](url)
-  // Note: Non-greedy matching
-  const tokenRegex = /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(\[(.*?)\]\((.*?)\))/;
+  // Regex for tokens: **bold**, *italic*, [link](url), ![image](url)
+  // Added image detection to avoid parsing ![alt](url) as a link [alt](url) with a preceding !
+  // Note: BlockNote doesn't support inline images well in text blocks, so we'll convert inline images to links for now.
+  const tokenRegex = /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(!?\[(.*?)\]\((.*?)\))/;
 
   while (remaining) {
     const match = remaining.match(tokenRegex);
@@ -150,25 +167,36 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
     }
 
     // Process match
-    const [fullMatch, boldGroup, boldText, italicGroup, italicText, linkGroup, linkText, linkUrl] = match;
+    // Groups:
+    // 1: **bold** (2: content)
+    // 3: *italic* (4: content)
+    // 5: [link](url) OR ![image](url) (6: text/alt, 7: url)
+    const [fullMatch, _bold, boldText, _italic, italicText, linkOrImageGroup, linkText, linkUrl] = match;
 
-    if (boldGroup) {
-      // Recurse with 'bold' added to inherited styles
+    if (boldText !== undefined) {
       const innerContent = parseInlineStyles(boldText, { ...inheritedStyles, bold: true });
       content.push(...innerContent);
-    } else if (italicGroup) {
-      // Recurse with 'italic' added to inherited styles
+    } else if (italicText !== undefined) {
       const innerContent = parseInlineStyles(italicText, { ...inheritedStyles, italic: true });
       content.push(...innerContent);
-    } else if (linkGroup) {
-      // Link is a container. We parse its text content with inherited styles.
-      // BlockNote Link.content expects StyledText[], so we parse the link text.
-      const innerContent = parseInlineStyles(linkText, { ...inheritedStyles });
-      content.push({ 
-        type: 'link', 
-        href: linkUrl, 
-        content: innerContent 
-      });
+    } else if (linkOrImageGroup) {
+      // Check if it's an image (starts with !)
+      if (linkOrImageGroup.startsWith('!')) {
+        // Convert inline image to a link with an image icon/indicator in text
+        content.push({ 
+          type: 'link', 
+          href: linkUrl, 
+          content: [{ type: 'text', text: `🖼️ ${linkText || 'Image'}`, styles: { ...inheritedStyles } }] 
+        });
+      } else {
+        // Regular link
+        const innerContent = parseInlineStyles(linkText, { ...inheritedStyles });
+        content.push({ 
+          type: 'link', 
+          href: linkUrl, 
+          content: innerContent 
+        });
+      }
     }
 
     remaining = remaining.substring(index + fullMatch.length);
