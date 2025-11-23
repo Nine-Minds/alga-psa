@@ -190,15 +190,20 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
   const content: any[] = [];
   let remaining = text;
 
-  // Regex for tokens: **bold**, *italic*, _italic_, [link](url), ![image](url)
-  const tokenRegex = /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(_(.*?)_)|(!?\[(.*?)\]\((.*?)\))/;
+  // Regex for tokens:
+  // 1. **bold**
+  // 2. *italic*
+  // 3. _italic_
+  // 4. Linked Image: [![alt](src)](href)
+  // 5. Regular Link or Image: [text](url) or ![alt](url)
+  const tokenRegex = /(\*\*(.*?)\*\*)|(\*(.*?)\*)|(_(.*?)_)|(\[!\[(.*?)\]\((.*?)\)\]\((.*?)\))|(!?\[(.*?)\]\((.*?)\))/;
 
   while (remaining) {
     const match = remaining.match(tokenRegex);
     
     if (!match) {
       if (remaining) {
-        content.push({
+        content.push({ 
           type: 'text', 
           text: remaining, 
           styles: { ...inheritedStyles } 
@@ -211,7 +216,7 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
     
     // Add text before match
     if (index > 0) {
-      content.push({
+      content.push({ 
         type: 'text', 
         text: remaining.substring(0, index), 
         styles: { ...inheritedStyles } 
@@ -223,8 +228,16 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
     // 1: **bold** (2: content)
     // 3: *italic* (4: content)
     // 5: _italic_ (6: content)
-    // 7: Link/Image (8: text/alt, 9: url)
-    const [fullMatch, _bold, boldText, _italicStar, italicStarText, _italicUnderscore, italicUnderscoreText, linkOrImageGroup, linkText, linkUrl] = match;
+    // 7: Linked Image (8: alt, 9: image url, 10: link url)
+    // 11: Link/Image (12: text/alt, 13: url)
+    const [
+      fullMatch, 
+      _bold, boldText, 
+      _italicStar, italicStarText, 
+      _italicUnderscore, italicUnderscoreText, 
+      linkedImageGroup, linkedImageAlt, linkedImageUrl, linkedLinkUrl,
+      linkOrImageGroup, linkText, linkUrl
+    ] = match;
 
     if (boldText !== undefined) {
       const innerContent = parseInlineStyles(boldText, { ...inheritedStyles, bold: true });
@@ -235,19 +248,43 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
     } else if (italicUnderscoreText !== undefined) {
       const innerContent = parseInlineStyles(italicUnderscoreText, { ...inheritedStyles, italic: true });
       content.push(...innerContent);
+    } else if (linkedImageGroup) {
+       const safeLinkUrl = sanitizeUrl(linkedLinkUrl);
+       const safeImageUrl = sanitizeUrl(linkedImageUrl);
+
+       if (safeLinkUrl) {
+         // Link containing an image representation
+         content.push({
+           type: 'link',
+           href: safeLinkUrl,
+           content: [{ 
+             type: 'text', 
+             text: `🖼️ ${linkedImageAlt || 'Image'}`, 
+             styles: { ...inheritedStyles } 
+            }]
+         });
+       } else {
+         // Invalid link URL, maybe just show the image representation or text?
+         // Let's fallback to text
+         content.push({
+           type: 'text',
+           text: fullMatch,
+           styles: { ...inheritedStyles }
+         });
+       }
     } else if (linkOrImageGroup) {
       const safeUrl = sanitizeUrl(linkUrl);
       
       if (linkOrImageGroup.startsWith('!')) {
         if (safeUrl) {
-          content.push({
+          content.push({ 
             type: 'link', 
             href: safeUrl, 
-            content: [{ type: 'text', text: `🖼️ ${linkText || 'Image'}`, styles: { ...inheritedStyles } }]
+            content: [{ type: 'text', text: `🖼️ ${linkText || 'Image'}`, styles: { ...inheritedStyles } }] 
           });
         } else {
           // Invalid URL, render as text
-          content.push({
+          content.push({ 
             type: 'text', 
             text: fullMatch, 
             styles: { ...inheritedStyles } 
@@ -256,7 +293,7 @@ function parseInlineStyles(text: string, inheritedStyles: Record<string, boolean
       } else {
         if (safeUrl) {
           const innerContent = parseInlineStyles(linkText, { ...inheritedStyles });
-          content.push({
+          content.push({ 
             type: 'link', 
             href: safeUrl, 
             content: innerContent 
