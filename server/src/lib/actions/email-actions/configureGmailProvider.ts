@@ -183,6 +183,15 @@ export async function configureGmailProvider({
           webhookUrl: pubsubNames.webhookUrl
         });
         
+        // Update the main provider's last_sync_at to reflect successful configuration
+        await knex('email_providers')
+          .where('id', providerId)
+          .andWhere('tenant', tenant)
+          .update({
+            last_sync_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          });
+
         console.log(`✅ Successfully registered Gmail watch subscription for provider ${providerId}`);
       } catch (watchError) {
         console.error(`❌ Failed to register Gmail watch subscription for provider ${providerId}:`, {

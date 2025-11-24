@@ -499,6 +499,16 @@ export async function upsertEmailProvider(data: {
       }
     }
     
+    if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
+      try {
+        const service = new EmailProviderService();
+        await service.initializeProviderWebhook(provider.id);
+      } catch (error) {
+        console.error('Failed to initialize Microsoft webhook:', error);
+        // Don't throw here - provider is saved, but webhook failed
+      }
+    }
+    
     return { provider };
   } catch (error) {
     console.error('Failed to upsert email provider:', error);
@@ -565,6 +575,16 @@ export async function updateEmailProvider(
       }
     }
     
+    if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
+      try {
+        const service = new EmailProviderService();
+        await service.initializeProviderWebhook(provider.id);
+      } catch (error) {
+        console.error('Failed to initialize Microsoft webhook:', error);
+        // Don't throw here - provider is saved, but webhook failed
+      }
+    }
+    
     return { provider };
   } catch (error) {
     console.error('Failed to update email provider:', error);
@@ -609,6 +629,7 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
       .where({ id: providerId })
       .update({
         status: 'connected',
+        last_sync_at: knex.fn.now(),
         updated_at: knex.fn.now()
       });
 
