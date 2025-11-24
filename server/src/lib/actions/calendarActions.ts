@@ -116,14 +116,9 @@ export async function initiateCalendarOAuth(params: {
     };
     const encodedState = encodeCalendarState(state);
 
-    // Determine Microsoft tenant authority
-    let msTenantAuthority: string | undefined;
-    if (provider === 'microsoft') {
-      msTenantAuthority = process.env.MICROSOFT_TENANT_ID
-        || (await secretProvider.getAppSecret('MICROSOFT_TENANT_ID'))
-        || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_tenant_id'))
-        || 'common';
-    }
+    // For multi-tenant Azure AD apps, always use 'common' for the authorization URL
+    // This allows users from any Azure AD tenant to authenticate
+    const msTenantAuthority = 'common';
 
     const authUrl = provider === 'microsoft'
       ? await generateMicrosoftCalendarAuthUrl({

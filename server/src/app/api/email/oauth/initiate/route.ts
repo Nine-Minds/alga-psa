@@ -65,14 +65,9 @@ export async function POST(request: NextRequest) {
     };
 
     // Generate authorization URL
-    // Determine Microsoft tenant authority (single-tenant support)
-    let msTenantAuthority: string | undefined;
-    if (provider === 'microsoft') {
-      msTenantAuthority = process.env.MICROSOFT_TENANT_ID
-        || (await secretProvider.getAppSecret('MICROSOFT_TENANT_ID'))
-        || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_tenant_id'))
-        || 'common';
-    }
+    // For multi-tenant Azure AD apps, always use 'common' for the authorization URL
+    // This allows users from any Azure AD tenant to authenticate
+    const msTenantAuthority = 'common';
 
     const authUrl = provider === 'microsoft'
       ? generateMicrosoftAuthUrl(
