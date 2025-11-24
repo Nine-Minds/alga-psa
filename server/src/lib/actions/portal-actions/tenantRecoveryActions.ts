@@ -5,13 +5,33 @@ import { getAdminConnection } from '@shared/db/admin';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { getTenantSlugForTenant } from '../tenant-actions/tenantSlugActions';
-import { sendTenantRecoveryEmail, sendNoAccountFoundEmail } from 'server/src/lib/email/clientPortalTenantRecoveryEmail';
+import { sendTenantRecoveryEmail } from 'server/src/lib/email/clientPortalTenantRecoveryEmail';
 
 export interface TenantLoginInfo {
   tenantId: string;
   tenantName: string;
   loginUrl: string;
   source: 'vanity' | 'canonical';
+}
+
+/**
+ * Checks if an email exists as a contact across all tenants
+ */
+async function isEmailAContact(email: string): Promise<boolean> {
+  const db = await getAdminConnection();
+  try {
+    const contact = await db('contacts')
+      .where({
+        'contacts.email': email.toLowerCase(),
+        'contacts.is_inactive': false
+      })
+      .first();
+
+    return !!contact;
+  } catch (error) {
+    logger.error(`Error checking if email is a contact ${email}:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -104,20 +124,26 @@ export async function requestTenantLoginLinksAction(
   try {
     logger.info('[requestTenantLoginLinksAction] Request received', { email: email.toLowerCase() });
 
+    // First, check if the email exists as a contact in the system
+    const isContact = await isEmailAContact(email);
+    
+    if (!isContact) {
+      // Don't send any email if they're not a contact in the system
+      logger.info('[requestTenantLoginLinksAction] Email is not a contact, not sending email', { email: email.toLowerCase() });
+      
+      return {
+        success: true,
+        message: 'If an account exists with that email, login links have been sent.',
+      };
+    }
+
     // Find all client users with this email
     const users = await findClientUsersByEmail(email);
 
     if (users.length === 0) {
-      // Send a generic email to prevent account enumeration
-      logger.info('[requestTenantLoginLinksAction] No users found for email', { email: email.toLowerCase() });
-
-      try {
-        await sendNoAccountFoundEmail(email);
-        logger.info('[requestTenantLoginLinksAction] No-account email sent', { email: email.toLowerCase() });
-      } catch (emailError) {
-        logger.error('[requestTenantLoginLinksAction] Failed to send no-account email:', emailError);
-        // Continue anyway to prevent enumeration
-      }
+      // User is a contact but has no client portal account
+      // Don't send email since they're not a client user
+      logger.info('[requestTenantLoginLinksAction] Contact found but no client users found for email', { email: email.toLowerCase() });
 
       return {
         success: true,
