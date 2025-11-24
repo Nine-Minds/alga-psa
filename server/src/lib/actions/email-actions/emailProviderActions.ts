@@ -496,6 +496,22 @@ export async function upsertEmailProvider(data: {
           providerId: provider.id,
           projectId: effectiveProjectId
         });
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      }
+    }
+    
+    if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
+      try {
+        const service = new EmailProviderService();
+        await service.initializeProviderWebhook(provider.id);
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      } catch (error) {
+        console.error('Failed to initialize Microsoft webhook:', error);
+        // Don't throw here - provider is saved, but webhook failed
       }
     }
     
@@ -562,6 +578,22 @@ export async function updateEmailProvider(
           providerId: provider.id,
           projectId: effectiveProjectId
         });
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      }
+    }
+    
+    if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
+      try {
+        const service = new EmailProviderService();
+        await service.initializeProviderWebhook(provider.id);
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      } catch (error) {
+        console.error('Failed to initialize Microsoft webhook:', error);
+        // Don't throw here - provider is saved, but webhook failed
       }
     }
     
@@ -609,6 +641,7 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
       .where({ id: providerId })
       .update({
         status: 'connected',
+        last_sync_at: knex.fn.now(),
         updated_at: knex.fn.now()
       });
 

@@ -222,6 +222,15 @@ export async function POST(request: NextRequest) {
                 emailData: details,
               },
             });
+
+            // Update last_sync_at after successful email processing
+            await trx('email_providers')
+              .where('id', row.id)
+              .update({
+                last_sync_at: trx.fn.now(),
+                updated_at: trx.fn.now()
+              });
+
             processedNotifications.push(messageId);
             console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
           } catch (detailErr: any) {

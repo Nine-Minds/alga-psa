@@ -419,7 +419,8 @@ export class EmailProviderService {
       // Update status to connected
       await this.updateProviderStatus(providerId, {
         status: 'connected',
-        errorMessage: null
+        errorMessage: null,
+        lastSyncAt: new Date().toISOString()
       });
 
       console.log(`✅ Webhook initialized for provider: ${provider.name}`);
