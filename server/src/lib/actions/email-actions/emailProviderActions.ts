@@ -496,6 +496,9 @@ export async function upsertEmailProvider(data: {
           providerId: provider.id,
           projectId: effectiveProjectId
         });
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
       }
     }
     
@@ -503,6 +506,9 @@ export async function upsertEmailProvider(data: {
       try {
         const service = new EmailProviderService();
         await service.initializeProviderWebhook(provider.id);
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
       } catch (error) {
         console.error('Failed to initialize Microsoft webhook:', error);
         // Don't throw here - provider is saved, but webhook failed
@@ -572,6 +578,9 @@ export async function updateEmailProvider(
           providerId: provider.id,
           projectId: effectiveProjectId
         });
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
       }
     }
     
@@ -579,6 +588,9 @@ export async function updateEmailProvider(
       try {
         const service = new EmailProviderService();
         await service.initializeProviderWebhook(provider.id);
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
       } catch (error) {
         console.error('Failed to initialize Microsoft webhook:', error);
         // Don't throw here - provider is saved, but webhook failed
