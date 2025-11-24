@@ -412,9 +412,9 @@ This indicates a problem with the OAuth token saving process.`;
       do {
         const historyResp: any = await this.gmail.users.history.list({
           userId: 'me',
-          startHistoryId: lastHistoryId,
+          startHistoryId: startHistoryId, // Use original startHistoryId for pagination consistency
           historyTypes: ['messageAdded'],
-          labelId: 'INBOX',
+          // labelId: 'INBOX', // Removed to allow processing of all incoming messages (even if archived/filtered)
           pageToken,
         });
 
@@ -427,7 +427,7 @@ This indicates a problem with the OAuth token saving process.`;
                 }
               }
             }
-            // Track the most recent historyId seen
+            // Track the most recent historyId seen to update our cursor
             if (record.id) {
               lastHistoryId = record.id;
             }
@@ -512,6 +512,12 @@ This indicates a problem with the OAuth token saving process.`;
         id: messageId,
         format: 'full'
       });
+
+      // Skip Drafts and Sent messages
+      const labelIds = message.data.labelIds || [];
+      if (labelIds.includes('DRAFT') || labelIds.includes('SENT')) {
+        throw new Error('Message is a DRAFT/SENT type, skipping');
+      }
 
       const headers = message.data.payload?.headers || [];
       const getHeader = (name: string) => 
