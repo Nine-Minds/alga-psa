@@ -264,6 +264,16 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Update last_sync_at after successful email processing
+        if (processed) {
+          await trx('email_providers')
+            .where('id', provider.id)
+            .update({
+              last_sync_at: trx.fn.now(),
+              updated_at: trx.fn.now()
+            });
+        }
+
         // Advance our stored history cursor to the latest notification's historyId
         try {
           await trx('google_email_provider_config')
