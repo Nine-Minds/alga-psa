@@ -238,7 +238,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Try to get drawer context, but handle gracefully if not available
-  let drawer = null;
+  let drawer: any = null;
   try {
     drawer = useDrawer();
   } catch (error) {
