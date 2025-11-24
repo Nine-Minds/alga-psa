@@ -138,4 +138,53 @@ describe('convertHtmlToBlockNote', () => {
     expect(imageBlock?.props?.url).toBe('https://example.com/long-url');
     expect(imageBlock?.props?.name).toBe('Ad');
   });
+
+  it('should distinguish between links and images', () => {
+    const html = '<p><a href="https://google.com">Google</a> vs <img src="google.png" alt="Google" /></p>';
+    const result = convertHtmlToBlockNote(html);
+    
+    const paragraph = result[0];
+    const content = paragraph.content || [];
+    
+    // Should find a link
+    const link = content.find(c => c.type === 'link' && c.href === 'https://google.com');
+    expect(link).toBeDefined();
+    expect(link?.content?.[0]?.text).toBe('Google');
+    // Link should NOT start with emoji (unless it's an inline image)
+    expect(link?.content?.[0]?.text).not.toContain('🖼️');
+
+    // Should find an image (inline image converted to link with emoji)
+    const imgLink = content.find(c => c.type === 'link' && c.href === 'google.png');
+    expect(imgLink).toBeDefined();
+    expect(imgLink?.content?.[0]?.text).toContain('🖼️');
+  });
+
+  it('should handle linked images (image inside anchor)', () => {
+    const html = '<p><a href="https://google.com"><img src="logo.png" alt="Logo" /></a></p>';
+    const result = convertHtmlToBlockNote(html);
+    
+    // Turndown usually converts this to [![Logo](logo.png)](https://google.com)
+    // Our parser needs to handle this nested structure or at least not break gracefully.
+    
+    const paragraph = result[0];
+    const content = paragraph.content || [];
+    
+    // Ideally, this should be a Link to google.com containing an Image (or text repr of image)
+    // BlockNote doesn't support Block inside Inline.
+    // So it should be a Link to google.com, containing text "🖼️ Logo"
+    
+    const link = content.find(c => c.type === 'link');
+    
+    // If our parser is greedy/broken, it might match ![Logo](logo.png) as an image first
+    // and leave ](https://google.com) as text.
+    
+    if (link) {
+      console.log('Linked Image Result:', JSON.stringify(link, null, 2));
+    }
+    
+    // We expect one link
+    expect(content.length).toBe(1); 
+    expect(link).toBeDefined();
+    expect(link?.href).toBe('https://google.com');
+  });
 });
