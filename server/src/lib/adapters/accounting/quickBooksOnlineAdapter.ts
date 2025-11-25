@@ -6,7 +6,11 @@ import {
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
-  AccountingExportDocument
+  AccountingExportDocument,
+  ExternalInvoiceFetchResult,
+  ExternalInvoiceData,
+  ExternalInvoiceChargeTax,
+  PendingTaxImportRecord
 } from './accountingExportAdapter';
 import { createTenantKnex } from '../../db';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
@@ -98,7 +102,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     return {
       deliveryMode: 'api',
       supportsPartialRetry: true,
-      supportsInvoiceUpdates: true
+      supportsInvoiceUpdates: true,
+      supportsTaxDelegation: true,
+      supportsInvoiceFetch: true,
+      supportsTaxComponentImport: false // QBO doesn't expose detailed tax component breakdown
     };
   }
 
@@ -225,22 +232,29 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           }
         }
 
-        const taxRegion = charge.tax_region;
-        if (taxRegion) {
-          let taxCodeRef = taxCodeCache.get(taxRegion);
-          if (taxCodeRef === undefined) {
-            const taxMapping = await resolver.resolveTaxCodeMapping({
-              adapterType: this.type,
-              taxRegionId: taxRegion,
-              targetRealm: context.batch.target_realm
-            });
-            taxCodeRef = taxMapping?.external_entity_id ?? null;
-            taxCodeCache.set(taxRegion, taxCodeRef);
-          }
-          if (taxCodeRef) {
-            salesDetail.TaxCodeRef = { value: taxCodeRef };
+        // Handle tax based on delegation mode
+        const shouldExcludeTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
+
+        if (!shouldExcludeTax) {
+          const taxRegion = charge.tax_region;
+          if (taxRegion) {
+            let taxCodeRef = taxCodeCache.get(taxRegion);
+            if (taxCodeRef === undefined) {
+              const taxMapping = await resolver.resolveTaxCodeMapping({
+                adapterType: this.type,
+                taxRegionId: taxRegion,
+                targetRealm: context.batch.target_realm
+              });
+              taxCodeRef = taxMapping?.external_entity_id ?? null;
+              taxCodeCache.set(taxRegion, taxCodeRef);
+            }
+            if (taxCodeRef) {
+              salesDetail.TaxCodeRef = { value: taxCodeRef };
+            }
           }
         }
+        // Note: When shouldExcludeTax is true, we don't set TaxCodeRef
+        // QBO will apply default tax behavior or NON depending on settings
 
         qboLines.push({
           Amount: centsToAmount(line.amount_cents),
@@ -326,7 +340,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       metadata: {
         adapter: this.type,
         invoices: documents.length,
-        lines: context.lines.length
+        lines: context.lines.length,
+        taxDelegationMode: context.taxDelegationMode ?? 'none',
+        taxExcluded: context.excludeTaxFromExport || context.taxDelegationMode === 'delegate'
       }
     };
   }
@@ -542,10 +558,182 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
     return { clients: clientMap, mappings: mappingMap };
   }
+
+  /**
+   * Fetch invoice data including tax amounts from QuickBooks Online.
+   * Used to import externally calculated tax back into Alga PSA.
+   */
+  async fetchExternalInvoice(
+    externalInvoiceRef: string,
+    targetRealm?: string
+  ): Promise<ExternalInvoiceFetchResult> {
+    try {
+      const { knex } = await createTenantKnex();
+      const tenantId = await this.getTenantFromContext(knex);
+
+      if (!targetRealm) {
+        return {
+          success: false,
+          error: 'QuickBooks adapter requires targetRealm to fetch invoices'
+        };
+      }
+
+      const qboClient = await QboClientService.create(tenantId, targetRealm);
+      const qboInvoice = await qboClient.read<QboInvoice>('Invoice', externalInvoiceRef);
+
+      if (!qboInvoice) {
+        return {
+          success: false,
+          error: `Invoice ${externalInvoiceRef} not found in QuickBooks`
+        };
+      }
+
+      // Extract tax information from QBO invoice
+      const charges: ExternalInvoiceChargeTax[] = [];
+      let lineIndex = 0;
+
+      for (const line of qboInvoice.Line ?? []) {
+        if (line.DetailType === 'SalesItemLineDetail' && line.SalesItemLineDetail) {
+          const detail = line.SalesItemLineDetail;
+          // QBO doesn't provide per-line tax breakdown directly
+          // We calculate proportionally if there's an overall tax amount
+          charges.push({
+            lineId: `line-${lineIndex}`,
+            externalLineId: line.Id ?? undefined,
+            taxAmount: 0, // Will be calculated proportionally below
+            taxCode: detail.TaxCodeRef?.value,
+            taxRate: undefined // QBO doesn't expose per-line rate
+          });
+          lineIndex++;
+        }
+      }
+
+      // Calculate total tax from QBO invoice
+      const totalTax = amountToCents(qboInvoice.TxnTaxDetail?.TotalTax ?? 0);
+      const totalAmount = amountToCents(qboInvoice.TotalAmt ?? 0);
+
+      // Distribute tax proportionally across lines if there are charges
+      if (charges.length > 0 && totalTax > 0) {
+        const subtotal = totalAmount - totalTax;
+        for (const charge of charges) {
+          // For now, use equal distribution; a more accurate method would
+          // use the line amounts if available
+          charge.taxAmount = Math.round(totalTax / charges.length);
+        }
+      }
+
+      const externalInvoice: ExternalInvoiceData = {
+        externalInvoiceId: qboInvoice.Id ?? externalInvoiceRef,
+        externalInvoiceRef: qboInvoice.DocNumber ?? undefined,
+        status: 'synced', // QBO invoice was fetched successfully
+        totalTax,
+        totalAmount,
+        currency: qboInvoice.CurrencyRef?.value,
+        charges,
+        metadata: {
+          syncToken: qboInvoice.SyncToken,
+          txnDate: qboInvoice.TxnDate,
+          dueDate: qboInvoice.DueDate,
+          customerId: qboInvoice.CustomerRef?.value
+        }
+      };
+
+      return {
+        success: true,
+        invoice: externalInvoice
+      };
+    } catch (error: any) {
+      logger.error('QuickBooks adapter: failed to fetch external invoice', {
+        externalInvoiceRef,
+        targetRealm,
+        error: error.message
+      });
+      return {
+        success: false,
+        error: error.message ?? 'Failed to fetch invoice from QuickBooks'
+      };
+    }
+  }
+
+  /**
+   * Called after export when tax delegation is enabled.
+   * Records pending tax imports for invoices exported without tax.
+   */
+  async onTaxDelegationExport(
+    deliveryResult: AccountingExportDeliveryResult,
+    context: AccountingExportAdapterContext
+  ): Promise<PendingTaxImportRecord[]> {
+    // Only create pending records if tax delegation is active
+    if (context.taxDelegationMode !== 'delegate') {
+      return [];
+    }
+
+    const pendingRecords: PendingTaxImportRecord[] = [];
+    const now = new Date().toISOString();
+
+    // Group by document to get unique invoice refs
+    const invoiceRefs = new Map<string, string>();
+    for (const line of deliveryResult.deliveredLines) {
+      if (line.externalDocumentRef) {
+        // We need to correlate back to the invoice ID
+        // The lineId format should help us map back
+        const invoiceId = this.extractInvoiceIdFromLine(context, line.lineId);
+        if (invoiceId && !invoiceRefs.has(invoiceId)) {
+          invoiceRefs.set(invoiceId, line.externalDocumentRef);
+        }
+      }
+    }
+
+    for (const [invoiceId, externalRef] of invoiceRefs.entries()) {
+      pendingRecords.push({
+        invoiceId,
+        externalInvoiceRef: externalRef,
+        adapterType: this.type,
+        targetRealm: context.batch.target_realm ?? undefined,
+        exportedAt: now
+      });
+    }
+
+    logger.info('QuickBooks adapter: created pending tax import records', {
+      count: pendingRecords.length,
+      batchId: context.batch.batch_id
+    });
+
+    return pendingRecords;
+  }
+
+  /**
+   * Helper to get tenant ID from knex context
+   */
+  private async getTenantFromContext(knex: Knex): Promise<string> {
+    // The tenant is typically set in the knex context via RLS
+    // This is a workaround to extract it
+    const result = await knex.raw('SELECT current_setting(\'app.current_tenant\', true) as tenant');
+    const tenant = result.rows?.[0]?.tenant;
+    if (!tenant) {
+      throw new Error('QuickBooks adapter: unable to determine tenant from context');
+    }
+    return tenant;
+  }
+
+  /**
+   * Helper to extract invoice ID from a delivery line
+   */
+  private extractInvoiceIdFromLine(
+    context: AccountingExportAdapterContext,
+    lineId: string
+  ): string | undefined {
+    const line = context.lines.find(l => l.line_id === lineId);
+    return line?.invoice_id;
+  }
 }
 
 function centsToAmount(value: number): number {
   return Math.round(value) / 100;
+}
+
+function amountToCents(value: number): number {
+  return Math.round(value * 100);
 }
 
 function formatDate(value?: string | Date | null): string | undefined {

@@ -16,7 +16,8 @@ import {
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
-  AccountingExportDocument
+  AccountingExportDocument,
+  TaxDelegationMode
 } from '../adapters/accounting/accountingExportAdapter';
 import { AccountingExportValidation } from '../validation/accountingExportValidation';
 import { publishEvent } from '../eventBus/publishers';
@@ -169,9 +170,15 @@ export class AccountingExportService {
       validated_at: now
     };
 
+    // Determine tax delegation mode from invoice tax_source values
+    const taxDelegationMode = await this.determineTaxDelegationMode(refreshed.lines);
+    const excludeTaxFromExport = taxDelegationMode === 'delegate';
+
     const context: AccountingExportAdapterContext = {
       batch: normalizedBatch,
-      lines: refreshed.lines
+      lines: refreshed.lines,
+      taxDelegationMode,
+      excludeTaxFromExport
     };
 
     let transformResult: AccountingExportTransformResult | null = null;
@@ -239,6 +246,44 @@ export class AccountingExportService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Determine tax delegation mode based on invoice tax_source values in the batch.
+   * If any invoice has pending_external tax source, we delegate tax calculation.
+   */
+  private async determineTaxDelegationMode(lines: AccountingExportLine[]): Promise<TaxDelegationMode> {
+    // Extract invoice IDs from the export lines
+    const invoiceIds = lines
+      .filter(line => line.invoice_id)
+      .map(line => line.invoice_id)
+      .filter((id): id is string => Boolean(id));
+
+    if (invoiceIds.length === 0) {
+      return 'none';
+    }
+
+    // Check invoice tax_source values
+    const invoicesWithTaxSource = await this.repository.getInvoicesTaxSource(invoiceIds);
+
+    const hasPendingExternalTax = invoicesWithTaxSource.some(
+      inv => inv.tax_source === 'pending_external'
+    );
+
+    if (hasPendingExternalTax) {
+      return 'delegate';
+    }
+
+    // Check if any invoices have external tax source (already imported)
+    const hasExternalTax = invoicesWithTaxSource.some(
+      inv => inv.tax_source === 'external'
+    );
+
+    if (hasExternalTax) {
+      return 'import_pending';
+    }
+
+    return 'none';
   }
 
   private async persistAdapterFailure(params: {

@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings } from '../lib/actions/taxSettingsActions';
+import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings, updateClientTaxExemptStatus, getClientTaxExemptStatus } from '../lib/actions/taxSettingsActions';
 import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Input } from 'server/src/components/ui/Input';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { ShieldOff, ShieldCheck, Info } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface TaxSettingsFormProps {
   clientId: string;
@@ -18,15 +24,35 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Tax exempt state
+  const [isTaxExempt, setIsTaxExempt] = useState(false);
+  const [taxExemptionCertificate, setTaxExemptionCertificate] = useState('');
+  const [originalTaxExempt, setOriginalTaxExempt] = useState(false);
+  const [originalCertificate, setOriginalCertificate] = useState('');
+  const [isUpdatingExemptStatus, setIsUpdatingExemptStatus] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const settings = await getClientTaxSettings(clientId);
-        const rates = await getTaxRates();
+        const [settings, rates, taxExemptStatus] = await Promise.all([
+          getClientTaxSettings(clientId),
+          getTaxRates(),
+          getClientTaxExemptStatus(clientId)
+        ]);
+
         setTaxSettings(settings);
         // Store original settings for reverting on error
         setOriginalSettings(JSON.parse(JSON.stringify(settings)));
         setTaxRates(rates);
+
+        // Set tax exempt status
+        if (taxExemptStatus) {
+          setIsTaxExempt(taxExemptStatus.is_tax_exempt);
+          setTaxExemptionCertificate(taxExemptStatus.tax_exemption_certificate || '');
+          setOriginalTaxExempt(taxExemptStatus.is_tax_exempt);
+          setOriginalCertificate(taxExemptStatus.tax_exemption_certificate || '');
+        }
+
         setLoading(false);
       } catch (err) {
         if (err instanceof Error && err.message === 'No tax settings found') {
@@ -101,6 +127,38 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
   const dismissSuccess = () => {
     setSuccessMessage(null);
   };
+
+  // Handle tax exempt status update
+  const handleTaxExemptUpdate = async () => {
+    setIsUpdatingExemptStatus(true);
+    setError(null);
+
+    try {
+      await updateClientTaxExemptStatus(
+        clientId,
+        isTaxExempt,
+        taxExemptionCertificate || undefined
+      );
+
+      // Update original values after successful save
+      setOriginalTaxExempt(isTaxExempt);
+      setOriginalCertificate(taxExemptionCertificate);
+      setSuccessMessage(isTaxExempt
+        ? 'Client marked as tax exempt.'
+        : 'Tax exempt status removed from client.');
+    } catch (err) {
+      // Revert on error
+      setIsTaxExempt(originalTaxExempt);
+      setTaxExemptionCertificate(originalCertificate);
+      setError(err instanceof Error ? err.message : 'Failed to update tax exempt status');
+    } finally {
+      setIsUpdatingExemptStatus(false);
+    }
+  };
+
+  // Check if tax exempt settings have changed
+  const hasTaxExemptChanges = isTaxExempt !== originalTaxExempt ||
+    taxExemptionCertificate !== originalCertificate;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,49 +259,157 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
  // Removed taxRateOptions as the select dropdown is removed
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       <h2 className="text-2xl font-bold">Client Tax Settings</h2>
       <ErrorMessage />
       <SuccessMessage />
-     {/* Removed Tax Rate selection dropdown as tax_rate_id is no longer on client_tax_settings */}
-      <div>
-        <Checkbox
-          id="reverseCharge"
-          label="Apply Reverse Charge"
-          checked={taxSettings.is_reverse_charge_applicable}
-          onChange={(e) =>
-            setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: (e.target as HTMLInputElement).checked })
-          }
-        />
-      </div>
 
-     {/* Removed UI sections for Tax Components, Thresholds, and Holidays */}
+      {/* Tax Exempt Status Card */}
+      <Card id="tax-exempt-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {isTaxExempt ? (
+              <ShieldOff className="h-5 w-5 text-amber-500" />
+            ) : (
+              <ShieldCheck className="h-5 w-5 text-green-500" />
+            )}
+            Tax Exempt Status
+          </CardTitle>
+          <CardDescription>
+            Tax exempt clients will not have taxes applied to their invoices.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Tax Exempt</span>
+              <Tooltip content="When enabled, no taxes will be calculated for this client's invoices. Changes are logged for audit purposes.">
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+              </Tooltip>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {isTaxExempt ? 'Exempt' : 'Not Exempt'}
+              </span>
+              <Switch
+                checked={isTaxExempt}
+                onCheckedChange={setIsTaxExempt}
+                disabled={isUpdatingExemptStatus}
+              />
+            </div>
+          </div>
 
-      <div className="flex justify-between">
-        <Button
-          id="reset-tax-settings-button"
-          type="button"
-          onClick={() => {
-            if (originalSettings) {
-              setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
-              setError(null);
-            }
-          }}
-          variant="outline"
-          disabled={isSubmitting}
-        >
-          Reset Changes
-        </Button>
-        <Button
-          id="update-tax-settings-button"
-          type="submit"
-          variant="default"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Updating...' : 'Update Tax Settings'}
-        </Button>
-      </div>
-    </form>
+          {isTaxExempt && (
+            <div className="space-y-2">
+              <label htmlFor="tax-exemption-certificate" className="text-sm font-medium">
+                Tax Exemption Certificate Number
+              </label>
+              <Input
+                id="tax-exemption-certificate"
+                type="text"
+                placeholder="Enter certificate number (optional)"
+                value={taxExemptionCertificate}
+                onChange={(e) => setTaxExemptionCertificate(e.target.value)}
+                disabled={isUpdatingExemptStatus}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional: Store the client's tax exemption certificate number for reference.
+              </p>
+            </div>
+          )}
+
+          {isTaxExempt && (
+            <Alert variant="info" showIcon>
+              <AlertDescription>
+                <p className="font-medium">Tax Exempt Client</p>
+                <p className="text-sm mt-1">
+                  This client will not be charged any taxes on invoices. Make sure to keep their exemption certificate on file.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {hasTaxExemptChanges && (
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                id="cancel-tax-exempt-changes-button"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsTaxExempt(originalTaxExempt);
+                  setTaxExemptionCertificate(originalCertificate);
+                }}
+                disabled={isUpdatingExemptStatus}
+              >
+                Cancel
+              </Button>
+              <Button
+                id="save-tax-exempt-status-button"
+                type="button"
+                size="sm"
+                onClick={handleTaxExemptUpdate}
+                disabled={isUpdatingExemptStatus}
+              >
+                {isUpdatingExemptStatus ? 'Saving...' : 'Save Tax Exempt Status'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Existing Tax Settings Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card id="reverse-charge-card">
+          <CardHeader>
+            <CardTitle>Advanced Tax Options</CardTitle>
+            <CardDescription>
+              Configure special tax handling for this client.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="reverseCharge"
+                label="Apply Reverse Charge"
+                checked={taxSettings.is_reverse_charge_applicable}
+                onChange={(e) =>
+                  setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: (e.target as HTMLInputElement).checked })
+                }
+              />
+              <Tooltip content="Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.">
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+              </Tooltip>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-between">
+          <Button
+            id="reset-tax-settings-button"
+            type="button"
+            onClick={() => {
+              if (originalSettings) {
+                setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
+                setError(null);
+              }
+            }}
+            variant="outline"
+            disabled={isSubmitting}
+          >
+            Reset Changes
+          </Button>
+          <Button
+            id="update-tax-settings-button"
+            type="submit"
+            variant="default"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Updating...' : 'Update Tax Settings'}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
 

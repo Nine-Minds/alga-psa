@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'serve
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
+import { TaxSourceSettings } from 'server/src/components/settings/tax/TaxSourceSettings';
 
 const BillingSettings: React.FC = () => {
   return (
@@ -24,6 +25,7 @@ const BillingSettings: React.FC = () => {
 
       <ZeroDollarInvoiceSettings />
       <CreditExpirationSettings />
+      <TaxSourceSettings />
     </div>
   );
 };

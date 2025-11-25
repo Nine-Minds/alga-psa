@@ -6,7 +6,9 @@ import {
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
-  AccountingExportDocument
+  AccountingExportDocument,
+  ExternalInvoiceFetchResult,
+  PendingTaxImportRecord
 } from './accountingExportAdapter';
 import {
   XeroClientService,
@@ -98,7 +100,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     return {
       deliveryMode: 'api',
       supportsPartialRetry: true,
-      supportsInvoiceUpdates: true
+      supportsInvoiceUpdates: true,
+      supportsTaxDelegation: true,
+      supportsInvoiceFetch: true,
+      supportsTaxComponentImport: true // Xero provides detailed tax component breakdown
     };
   }
 
@@ -205,6 +210,10 @@ export class XeroAdapter implements AccountingExportAdapter {
         const serviceMetadata = serviceMapping.metadata ?? {};
         const lineResolution = (line.mapping_resolution ?? {}) as Record<string, any>;
 
+        // Handle tax based on delegation mode
+        const shouldExcludeTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
+
+        // Resolve tax mapping - needed for both delegation and non-delegation
         const taxMapping = charge.tax_region
           ? await resolver.resolveTaxCodeMapping({
               adapterType: this.type,
@@ -213,16 +222,29 @@ export class XeroAdapter implements AccountingExportAdapter {
             })
           : null;
 
-        const taxType =
+        let taxType: string | undefined = undefined;
+        let taxComponents: XeroTaxComponentPayload[] | undefined = undefined;
+        let taxAmountCents: number | null = null;
+
+        // Always resolve tax type (needed so external system knows which tax to apply)
+        taxType =
           safeString(lineResolution.taxType) ??
           safeString(taxMapping?.external_entity_id) ??
           safeString(serviceMetadata.taxType);
 
-        const taxComponents = normalizeTaxComponents(
-          lineResolution.taxComponents ??
-            serviceMetadata.taxComponents ??
-            (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null)
-        );
+        if (!shouldExcludeTax) {
+          // Include pre-calculated tax amounts and components
+          taxComponents = normalizeTaxComponents(
+            lineResolution.taxComponents ??
+              serviceMetadata.taxComponents ??
+              (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null)
+          );
+
+          taxAmountCents =
+            typeof charge.tax_amount === 'number' ? Math.round(charge.tax_amount) : null;
+        }
+        // When shouldExcludeTax is true, taxComponents and taxAmountCents remain undefined/null
+        // This allows the external system to calculate tax based on the taxType
 
         const tracking = mergeTrackingOptions(
           normalizeTrackingOptions(lineResolution.tracking),
@@ -235,9 +257,6 @@ export class XeroAdapter implements AccountingExportAdapter {
         if (lineAmountTypeHint && !detectedLineAmountType) {
           detectedLineAmountType = lineAmountTypeHint;
         }
-
-        const taxAmountCents =
-          typeof charge.tax_amount === 'number' ? Math.round(charge.tax_amount) : null;
 
         const description =
           line.notes ??
@@ -318,7 +337,9 @@ export class XeroAdapter implements AccountingExportAdapter {
       metadata: {
         adapter: this.type,
         invoices: documents.length,
-        lines: context.lines.length
+        lines: context.lines.length,
+        taxDelegationMode: context.taxDelegationMode ?? 'none',
+        taxExcluded: context.excludeTaxFromExport || context.taxDelegationMode === 'delegate'
       }
     };
   }
@@ -492,6 +513,99 @@ export class XeroAdapter implements AccountingExportAdapter {
     });
 
     return { clients: clientMap, mappings: mappingMap };
+  }
+
+  /**
+   * Fetch invoice data including tax amounts from Xero.
+   * Used to import externally calculated tax back into Alga PSA.
+   * Xero provides detailed tax component breakdown per line.
+   *
+   * TODO: Implement in B.4 (External Tax Import Service) task.
+   * This requires adding a getInvoice method to XeroClientService.
+   */
+  async fetchExternalInvoice(
+    externalInvoiceRef: string,
+    targetRealm?: string
+  ): Promise<ExternalInvoiceFetchResult> {
+    // Note: Full implementation pending B.4 task which will add
+    // the getInvoice capability to XeroClientService.
+    // For now, return not implemented error.
+    logger.warn('[XeroAdapter] fetchExternalInvoice not yet implemented', {
+      externalInvoiceRef,
+      targetRealm
+    });
+    return {
+      success: false,
+      error: 'Xero invoice fetch not yet implemented - pending B.4 External Tax Import Service'
+    };
+  }
+
+  /**
+   * Called after export when tax delegation is enabled.
+   * Records pending tax imports for invoices exported without tax.
+   */
+  async onTaxDelegationExport(
+    deliveryResult: AccountingExportDeliveryResult,
+    context: AccountingExportAdapterContext
+  ): Promise<PendingTaxImportRecord[]> {
+    // Only create pending records if tax delegation is active
+    if (context.taxDelegationMode !== 'delegate') {
+      return [];
+    }
+
+    const pendingRecords: PendingTaxImportRecord[] = [];
+    const now = new Date().toISOString();
+
+    // Group by document to get unique invoice refs
+    const invoiceRefs = new Map<string, string>();
+    for (const line of deliveryResult.deliveredLines) {
+      if (line.externalDocumentRef) {
+        const invoiceId = this.extractInvoiceIdFromLine(context, line.lineId);
+        if (invoiceId && !invoiceRefs.has(invoiceId)) {
+          invoiceRefs.set(invoiceId, line.externalDocumentRef);
+        }
+      }
+    }
+
+    for (const [invoiceId, externalRef] of invoiceRefs.entries()) {
+      pendingRecords.push({
+        invoiceId,
+        externalInvoiceRef: externalRef,
+        adapterType: this.type,
+        targetRealm: context.batch.target_realm ?? undefined,
+        exportedAt: now
+      });
+    }
+
+    logger.info('[XeroAdapter] created pending tax import records', {
+      count: pendingRecords.length,
+      batchId: context.batch.batch_id
+    });
+
+    return pendingRecords;
+  }
+
+  /**
+   * Helper to get tenant ID from knex context
+   */
+  private async getTenantFromContext(knex: Knex): Promise<string> {
+    const result = await knex.raw('SELECT current_setting(\'app.current_tenant\', true) as tenant');
+    const tenant = result.rows?.[0]?.tenant;
+    if (!tenant) {
+      throw new AppError('XERO_TENANT_REQUIRED', 'Unable to determine tenant from context');
+    }
+    return tenant;
+  }
+
+  /**
+   * Helper to extract invoice ID from a delivery line
+   */
+  private extractInvoiceIdFromLine(
+    context: AccountingExportAdapterContext,
+    lineId: string
+  ): string | undefined {
+    const line = context.lines.find(l => l.line_id === lineId);
+    return line?.invoice_id;
   }
 }
 

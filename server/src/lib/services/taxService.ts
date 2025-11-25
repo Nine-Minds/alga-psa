@@ -281,7 +281,8 @@ export class TaxService {
   }
 
   private async calculateComponentTax(component: ITaxComponent, amount: number, date: ISO8601String): Promise<number> {
-    const holiday = await this.getApplicableTaxHoliday(component.tax_component_id, date);
+    // Check for tax holidays - currently at tax_rate level (per-component holidays planned for future)
+    const holiday = await this.getApplicableTaxHoliday(component.tax_rate_id, date);
     if (holiday) {
       return 0; // No tax during holiday
     }
@@ -296,12 +297,11 @@ export class TaxService {
     return true;
   }
 
-  private async getApplicableTaxHoliday(taxComponentId: string, date: ISO8601String): Promise<ITaxHoliday | undefined> {
-    const { knex } = await createTenantKnex();
-    const holidays = await ClientTaxSettings.getTaxHolidays(taxComponentId);
+  private async getApplicableTaxHoliday(taxRateId: string, date: ISO8601String): Promise<ITaxHoliday | undefined> {
+    const holidays = await ClientTaxSettings.getTaxHolidays(taxRateId);
     const currentDate = new Date(date);
 
-    return holidays.find(holiday => 
+    return holidays.find(holiday =>
       new Date(holiday.start_date) <= currentDate && new Date(holiday.end_date) >= currentDate
     );
   }
