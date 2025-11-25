@@ -23,11 +23,13 @@ import {
   Monitor,
 } from 'lucide-react';
 import NinjaOneComplianceDashboard from './NinjaOneComplianceDashboard';
+import OrganizationMappingManager from './ninjaone/OrganizationMappingManager';
 import {
   getNinjaOneConnectionStatus,
   disconnectNinjaOneIntegration,
   testNinjaOneConnection,
   syncNinjaOneOrganizations,
+  triggerNinjaOneFullSync,
   getNinjaOneConnectUrl,
 } from '../../../lib/actions/integrations/ninjaoneActions';
 import { RmmConnectionStatus } from '../../../interfaces/rmm.interfaces';
@@ -42,6 +44,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
   const [isRefreshing, startRefresh] = useTransition();
   const [isDisconnecting, startDisconnectTransition] = useTransition();
   const [isSyncing, startSyncTransition] = useTransition();
+  const [isSyncingDevices, startDeviceSyncTransition] = useTransition();
   const [isTesting, startTestTransition] = useTransition();
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
@@ -160,6 +163,31 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Organization sync failed.';
+        setError(message);
+      } finally {
+        refreshStatus();
+      }
+    });
+  };
+
+  const handleSyncDevices = () => {
+    startDeviceSyncTransition(async () => {
+      setError(null);
+      setSuccessMessage(null);
+      try {
+        const result = await triggerNinjaOneFullSync();
+        if (result.success) {
+          setSuccessMessage(
+            `Device sync completed. Processed: ${result.items_processed}, ` +
+            `Created: ${result.items_created}, Updated: ${result.items_updated}`
+          );
+        } else {
+          setError(
+            result.errors?.join('; ') ?? 'Device sync failed.'
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Device sync failed.';
         setError(message);
       } finally {
         refreshStatus();
@@ -330,6 +358,24 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   )}
                 </Button>
                 <Button
+                  id="ninjaone-sync-devices"
+                  variant="secondary"
+                  onClick={handleSyncDevices}
+                  disabled={isSyncingDevices}
+                >
+                  {isSyncingDevices ? (
+                    <>
+                      <Monitor className="mr-2 h-4 w-4 animate-spin" />
+                      Syncing Devices...
+                    </>
+                  ) : (
+                    <>
+                      <Monitor className="mr-2 h-4 w-4" />
+                      Sync Devices
+                    </>
+                  )}
+                </Button>
+                <Button
                   id="ninjaone-disconnect-button"
                   variant="destructive"
                   onClick={() => setShowDisconnectConfirm(true)}
@@ -376,6 +422,13 @@ const NinjaOneIntegrationSettings: React.FC = () => {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Organization Mappings - shown when connected */}
+      {isConnected && isActive && (
+        <div className="mt-6">
+          <OrganizationMappingManager onMappingChanged={refreshStatus} />
         </div>
       )}
 

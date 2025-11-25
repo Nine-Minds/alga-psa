@@ -6,9 +6,28 @@
  */
 
 import logger from '@shared/core/logger';
+import axios from 'axios';
 import { createTenantKnex } from '../../../../../../../server/src/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneDevicePatchStatus } from '../../../../interfaces/ninjaone.interfaces';
+
+/**
+ * Extract safe error info for logging (avoids circular reference issues with axios errors)
+ */
+function extractErrorInfo(error: unknown): object {
+  if (axios.isAxiosError(error)) {
+    return {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      data: error.response?.data,
+    };
+  }
+  if (error instanceof Error) {
+    return { message: error.message, name: error.name };
+  }
+  return { message: String(error) };
+}
 
 export interface PatchSyncOptions {
   /** Only sync patches for specific asset IDs */
@@ -95,8 +114,8 @@ export async function syncPatchStatus(
 
             // Determine the extension table based on asset type
             const extensionTable = asset.asset_type === 'workstation'
-              ? 'asset_workstations'
-              : 'asset_servers';
+              ? 'workstation_assets'
+              : 'server_assets';
 
             // Calculate OS vs software patches (NinjaOne groups them)
             // For now, we'll estimate based on typical ratios
@@ -166,7 +185,7 @@ export async function syncPatchStatus(
     result.success = false;
     result.errors.push(error instanceof Error ? error.message : String(error));
 
-    logger.error('[PatchSync] Patch status sync failed', { tenantId, error });
+    logger.error('[PatchSync] Patch status sync failed', { tenantId, error: extractErrorInfo(error) });
 
     return result;
   }
@@ -218,8 +237,8 @@ export async function syncDevicePatchStatus(
 
     // Determine extension table
     const extensionTable = asset.asset_type === 'workstation'
-      ? 'asset_workstations'
-      : 'asset_servers';
+      ? 'workstation_assets'
+      : 'server_assets';
 
     // Update extension table
     await knex(extensionTable)
@@ -250,7 +269,7 @@ export async function syncDevicePatchStatus(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[PatchSync] Failed to sync device patch status', { assetId, error });
+    logger.error('[PatchSync] Failed to sync device patch status', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 }

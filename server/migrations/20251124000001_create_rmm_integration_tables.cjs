@@ -23,6 +23,8 @@ exports.up = async function(knex) {
         table.boolean('is_active').notNullable().defaultTo(false);
         table.timestamp('connected_at', { useTz: true }).nullable();
         table.timestamp('last_sync_at', { useTz: true }).nullable();
+        table.timestamp('last_full_sync_at', { useTz: true }).nullable();
+        table.timestamp('last_incremental_sync_at', { useTz: true }).nullable();
         table.string('sync_status', 20).nullable().defaultTo('pending'); // 'pending', 'syncing', 'completed', 'error'
         table.text('sync_error').nullable();
         table.jsonb('settings').defaultTo('{}'); // Provider-specific settings (sync intervals, webhook config, etc.)
@@ -45,6 +47,7 @@ exports.up = async function(knex) {
         table.boolean('auto_sync_assets').notNullable().defaultTo(true);
         table.boolean('auto_create_tickets').notNullable().defaultTo(false);
         table.jsonb('metadata').defaultTo('{}'); // Additional org data from RMM
+        table.timestamp('last_synced_at', { useTz: true }).nullable();
         table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
         table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
 
@@ -161,37 +164,9 @@ exports.up = async function(knex) {
         table.decimal('memory_usage_percent', 5, 2).nullable();
     });
 
-    // Enable RLS on new tables
-    await knex.raw(`
-        ALTER TABLE rmm_integrations ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE rmm_organization_mappings ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE rmm_alerts ENABLE ROW LEVEL SECURITY;
-        ALTER TABLE rmm_alert_rules ENABLE ROW LEVEL SECURITY;
-
-        CREATE POLICY tenant_isolation_policy ON rmm_integrations
-            USING (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-
-        CREATE POLICY tenant_isolation_insert_policy ON rmm_integrations
-            FOR INSERT WITH CHECK (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-
-        CREATE POLICY tenant_isolation_policy ON rmm_organization_mappings
-            USING (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-
-        CREATE POLICY tenant_isolation_insert_policy ON rmm_organization_mappings
-            FOR INSERT WITH CHECK (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-
-        CREATE POLICY tenant_isolation_policy ON rmm_alerts
-            USING (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-
-        CREATE POLICY tenant_isolation_insert_policy ON rmm_alerts
-            FOR INSERT WITH CHECK (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-
-        CREATE POLICY tenant_isolation_policy ON rmm_alert_rules
-            USING (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-
-        CREATE POLICY tenant_isolation_insert_policy ON rmm_alert_rules
-            FOR INSERT WITH CHECK (tenant::TEXT = current_setting('app.current_tenant')::TEXT);
-    `);
+    // Note: RLS is not used in this codebase. Tenant isolation is enforced
+    // at the application layer via explicit tenant filtering in queries.
+    // See docs/AI_coding_standards.md for the createTenantKnex() pattern.
 
     // Create updated_at triggers
     await knex.raw(`
@@ -222,18 +197,6 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
-    // Drop RLS policies
-    await knex.raw(`
-        DROP POLICY IF EXISTS tenant_isolation_policy ON rmm_alert_rules;
-        DROP POLICY IF EXISTS tenant_isolation_insert_policy ON rmm_alert_rules;
-        DROP POLICY IF EXISTS tenant_isolation_policy ON rmm_alerts;
-        DROP POLICY IF EXISTS tenant_isolation_insert_policy ON rmm_alerts;
-        DROP POLICY IF EXISTS tenant_isolation_policy ON rmm_organization_mappings;
-        DROP POLICY IF EXISTS tenant_isolation_insert_policy ON rmm_organization_mappings;
-        DROP POLICY IF EXISTS tenant_isolation_policy ON rmm_integrations;
-        DROP POLICY IF EXISTS tenant_isolation_insert_policy ON rmm_integrations;
-    `);
-
     // Drop triggers
     await knex.raw(`
         DROP TRIGGER IF EXISTS set_timestamp_rmm_alert_rules ON rmm_alert_rules;

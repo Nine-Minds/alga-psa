@@ -6,9 +6,28 @@
  */
 
 import logger from '@shared/core/logger';
+import axios from 'axios';
 import { createTenantKnex } from '../../../../../../../server/src/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneSoftware } from '../../../../interfaces/ninjaone.interfaces';
+
+/**
+ * Extract safe error info for logging (avoids circular reference issues with axios errors)
+ */
+function extractErrorInfo(error: unknown): object {
+  if (axios.isAxiosError(error)) {
+    return {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      data: error.response?.data,
+    };
+  }
+  if (error instanceof Error) {
+    return { message: error.message, name: error.name };
+  }
+  return { message: String(error) };
+}
 
 export interface SoftwareSyncOptions {
   /** Only sync software for specific asset IDs */
@@ -128,8 +147,8 @@ export async function syncSoftwareInventory(
 
             // Determine the extension table based on asset type
             const extensionTable = asset.asset_type === 'workstation'
-              ? 'asset_workstations'
-              : 'asset_servers';
+              ? 'workstation_assets'
+              : 'server_assets';
 
             // Get existing software for change tracking
             let previousSoftware: SoftwareItem[] = [];
@@ -224,7 +243,7 @@ export async function syncSoftwareInventory(
     result.success = false;
     result.errors.push(error instanceof Error ? error.message : String(error));
 
-    logger.error('[SoftwareSync] Software inventory sync failed', { tenantId, error });
+    logger.error('[SoftwareSync] Software inventory sync failed', { tenantId, error: extractErrorInfo(error) });
 
     return result;
   }
@@ -268,8 +287,8 @@ export async function syncDeviceSoftware(
 
     // Determine extension table
     const extensionTable = asset.asset_type === 'workstation'
-      ? 'asset_workstations'
-      : 'asset_servers';
+      ? 'workstation_assets'
+      : 'server_assets';
 
     // Update extension table
     await knex(extensionTable)
@@ -291,7 +310,7 @@ export async function syncDeviceSoftware(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[SoftwareSync] Failed to sync device software', { assetId, error });
+    logger.error('[SoftwareSync] Failed to sync device software', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 }
@@ -351,7 +370,7 @@ export async function searchSoftwareAcrossAssets(
 
     // Query workstations
     let workstationsQuery = knex('assets as a')
-      .join('asset_workstations as aw', function() {
+      .join('workstation_assets as aw', function() {
         this.on('a.tenant', '=', 'aw.tenant')
           .andOn('a.asset_id', '=', 'aw.asset_id');
       })
@@ -366,7 +385,7 @@ export async function searchSoftwareAcrossAssets(
 
     // Query servers
     let serversQuery = knex('assets as a')
-      .join('asset_servers as asrv', function() {
+      .join('server_assets as asrv', function() {
         this.on('a.tenant', '=', 'asrv.tenant')
           .andOn('a.asset_id', '=', 'asrv.asset_id');
       })
@@ -445,7 +464,7 @@ export async function searchSoftwareAcrossAssets(
 
     return results;
   } catch (error) {
-    logger.error('[SoftwareSync] Failed to search software across assets', { error });
+    logger.error('[SoftwareSync] Failed to search software across assets', { error: extractErrorInfo(error) });
     throw error;
   }
 }

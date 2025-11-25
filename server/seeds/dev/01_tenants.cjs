@@ -1,6 +1,6 @@
 exports.seed = function(knex) {
-    // Deletes ALL existing entries
-    return knex('tenants').del()
+    // Truncate with CASCADE to handle foreign key constraints
+    return knex.raw('TRUNCATE TABLE tenants CASCADE')
       .then(function () {
         // Inserts seed entries
         return knex('tenants').insert([

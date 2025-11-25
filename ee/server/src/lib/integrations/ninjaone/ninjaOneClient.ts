@@ -38,6 +38,29 @@ const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
 
+/**
+ * Extract safe error info for logging (avoids circular reference issues with axios errors)
+ */
+function extractErrorInfo(error: unknown): object {
+  if (axios.isAxiosError(error)) {
+    return {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url,
+    };
+  }
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+    };
+  }
+  return { message: String(error) };
+}
+
 export interface NinjaOneClientConfig {
   tenantId: string;
   region?: NinjaOneRegion;
@@ -56,7 +79,7 @@ export class NinjaOneClient {
     this.instanceUrl = config.instanceUrl || NINJAONE_REGIONS[config.region || 'US'];
 
     this.axiosInstance = axios.create({
-      baseURL: `${this.instanceUrl}/api/v2`,
+      baseURL: `${this.instanceUrl}/v2`,
       timeout: DEFAULT_TIMEOUT,
       headers: {
         'Accept': 'application/json',
@@ -94,7 +117,7 @@ export class NinjaOneClient {
             }
             return this.axiosInstance(originalRequest);
           } catch (refreshError) {
-            logger.error('[NinjaOneClient] Token refresh failed:', refreshError);
+            logger.error('[NinjaOneClient] Token refresh failed:', extractErrorInfo(refreshError));
             throw refreshError;
           }
         }
@@ -132,7 +155,7 @@ export class NinjaOneClient {
       this.credentials = credentials;
       return credentials;
     } catch (error) {
-      logger.error('[NinjaOneClient] Failed to load credentials:', error);
+      logger.error('[NinjaOneClient] Failed to load credentials:', extractErrorInfo(error));
       return null;
     }
   }
@@ -150,7 +173,7 @@ export class NinjaOneClient {
       );
       this.credentials = credentials;
     } catch (error) {
-      logger.error('[NinjaOneClient] Failed to save credentials:', error);
+      logger.error('[NinjaOneClient] Failed to save credentials:', extractErrorInfo(error));
       throw error;
     }
   }
@@ -235,7 +258,7 @@ export class NinjaOneClient {
           tenantId: this.tenantId,
         });
       } catch (error) {
-        logger.error('[NinjaOneClient] Failed to refresh access token:', error);
+        logger.error('[NinjaOneClient] Failed to refresh access token:', extractErrorInfo(error));
         throw error;
       } finally {
         this.refreshPromise = null;
@@ -442,7 +465,7 @@ export class NinjaOneClient {
       await this.axiosInstance.get('/organizations', { params: { pageSize: 1 } });
       return true;
     } catch (error) {
-      logger.error('[NinjaOneClient] Connection test failed:', error);
+      logger.error('[NinjaOneClient] Connection test failed:', extractErrorInfo(error));
       return false;
     }
   }
@@ -450,12 +473,32 @@ export class NinjaOneClient {
 
 /**
  * Factory function to create a NinjaOne client for a tenant
+ * Reads stored credentials to get the correct instance URL
  */
 export async function createNinjaOneClient(
   tenantId: string,
   region?: NinjaOneRegion
 ): Promise<NinjaOneClient> {
-  return new NinjaOneClient({ tenantId, region });
+  // Try to load stored credentials to get the correct instance URL
+  let instanceUrl: string | undefined;
+
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    const credentialsJson = await secretProvider.getTenantSecret(
+      tenantId,
+      NINJAONE_CREDENTIALS_SECRET
+    );
+
+    if (credentialsJson) {
+      const credentials = JSON.parse(credentialsJson) as NinjaOneOAuthCredentials;
+      instanceUrl = credentials.instance_url;
+    }
+  } catch (error) {
+    // If we can't load credentials, fall back to region-based URL
+    logger.warn('[NinjaOneClient] Could not load stored credentials for instance URL', extractErrorInfo(error));
+  }
+
+  return new NinjaOneClient({ tenantId, region, instanceUrl });
 }
 
 /**

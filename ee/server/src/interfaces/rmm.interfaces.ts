@@ -45,10 +45,10 @@ export interface RmmOrganizationMapping {
   tenant: string;
   mapping_id: string;
   integration_id: string;
-  external_org_id: string;
-  external_org_name?: string;
+  external_organization_id: string;
+  external_organization_name?: string;
   client_id?: string;
-  auto_sync_devices: boolean;
+  auto_sync_assets: boolean;
   auto_create_tickets?: boolean;
   last_synced_at?: string;
   metadata?: Record<string, unknown>;

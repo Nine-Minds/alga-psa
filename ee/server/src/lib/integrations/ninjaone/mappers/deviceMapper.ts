@@ -62,6 +62,25 @@ export function mapAgentStatus(offline: boolean): RmmAgentStatus {
 }
 
 /**
+ * Convert Unix timestamp (seconds) to ISO date string
+ * NinjaOne sends timestamps as Unix seconds (with optional decimal milliseconds)
+ */
+export function unixTimestampToIso(timestamp?: number): string | undefined {
+  if (timestamp === undefined || timestamp === null) return undefined;
+  try {
+    // NinjaOne timestamps are in seconds (not milliseconds)
+    const date = new Date(timestamp * 1000);
+    // Validate the date is reasonable (between 2000 and 2100)
+    if (date.getFullYear() < 2000 || date.getFullYear() > 2100) {
+      return undefined;
+    }
+    return date.toISOString();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Calculate total storage capacity from volumes
  */
 export function calculateTotalStorage(volumes?: NinjaOneVolume[]): number {
@@ -219,7 +238,7 @@ export function mapDeviceToAssetBase(
     rmm_device_id: String(device.id),
     rmm_organization_id: String(device.organizationId),
     agent_status: mapAgentStatus(device.offline),
-    last_seen_at: device.lastContact,
+    last_seen_at: unixTimestampToIso(device.lastContact),
     last_rmm_sync_at: new Date().toISOString(),
   };
 }
@@ -248,7 +267,7 @@ export function mapToWorkstationExtension(
     agent_version: undefined, // Would need to fetch from agent info
     antivirus_status: antivirus.status,
     antivirus_product: antivirus.product,
-    last_reboot_at: device.os?.lastBootTime,
+    last_reboot_at: unixTimestampToIso(device.os?.lastBootTime),
     pending_patches: undefined, // Fetched separately via patch API
     failed_patches: undefined,
     last_patch_scan_at: undefined,
@@ -298,7 +317,7 @@ export function mapToServerExtension(
     agent_version: undefined,
     antivirus_status: antivirus.status,
     antivirus_product: antivirus.product,
-    last_reboot_at: device.os?.lastBootTime,
+    last_reboot_at: unixTimestampToIso(device.os?.lastBootTime),
     pending_patches: undefined,
     failed_patches: undefined,
     last_patch_scan_at: undefined,

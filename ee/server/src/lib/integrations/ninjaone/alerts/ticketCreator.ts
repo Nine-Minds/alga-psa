@@ -73,7 +73,7 @@ export async function createTicketFromAlert(
     if (!clientId && alert.external_device_id) {
       const mapping = await trx('tenant_external_entity_mappings as teem')
         .join('rmm_organization_mappings as rom', function() {
-          this.on('teem.external_realm_id', '=', 'rom.external_org_id')
+          this.on('teem.external_realm_id', '=', 'rom.external_organization_id')
             .andOn('teem.tenant', '=', 'rom.tenant');
         })
         .where('teem.tenant', tenantId)

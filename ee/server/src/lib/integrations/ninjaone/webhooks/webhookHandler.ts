@@ -122,7 +122,7 @@ export async function findIntegrationForWebhook(
       this.on('rom.integration_id', '=', 'ri.integration_id')
         .andOn('rom.tenant', '=', 'ri.tenant');
     })
-    .where('rom.external_org_id', String(organizationId))
+    .where('rom.external_organization_id', String(organizationId))
     .where('ri.provider', 'ninjaone')
     .where('ri.is_active', true)
     .first<{
@@ -133,10 +133,10 @@ export async function findIntegrationForWebhook(
       instance_url: string | null;
       webhook_secret: string | null;
       mapping_id: string;
-      external_org_id: string;
-      external_org_name: string | null;
+      external_organization_id: string;
+      external_organization_name: string | null;
       client_id: string | null;
-      auto_sync_devices: boolean;
+      auto_sync_assets: boolean;
     }>(
       'rom.tenant',
       'ri.integration_id',
@@ -145,10 +145,10 @@ export async function findIntegrationForWebhook(
       'ri.instance_url',
       'ri.webhook_secret',
       'rom.mapping_id',
-      'rom.external_org_id',
-      'rom.external_org_name',
+      'rom.external_organization_id',
+      'rom.external_organization_name',
       'rom.client_id',
-      'rom.auto_sync_devices'
+      'rom.auto_sync_assets'
     );
 
   if (!result) {
@@ -169,10 +169,10 @@ export async function findIntegrationForWebhook(
       tenant: result.tenant,
       mapping_id: result.mapping_id,
       integration_id: result.integration_id,
-      external_org_id: result.external_org_id,
-      external_org_name: result.external_org_name || undefined,
+      external_organization_id: result.external_organization_id,
+      external_organization_name: result.external_organization_name || undefined,
       client_id: result.client_id || undefined,
-      auto_sync_devices: result.auto_sync_devices,
+      auto_sync_assets: result.auto_sync_assets,
     } as RmmOrganizationMapping,
   };
 }
@@ -276,7 +276,7 @@ async function handleDeviceLifecycleEvent(
   const activityType = payload.activityType as NinjaOneActivityType;
 
   // Skip if auto-sync is disabled
-  if (!mapping.auto_sync_devices) {
+  if (!mapping.auto_sync_assets) {
     return {
       success: true,
       processed: false,
@@ -407,7 +407,7 @@ async function handleDeviceStatusEvent(
 
     if (!assetMapping) {
       // Device not synced yet, trigger a sync
-      if (mapping.auto_sync_devices && mapping.client_id) {
+      if (mapping.auto_sync_assets && mapping.client_id) {
         const syncEngine = new NinjaOneSyncEngine(tenantId, integration.integration_id);
         await syncEngine.syncDevice(payload.deviceId);
         return {
@@ -488,7 +488,7 @@ async function handleHardwareChangeEvent(
   }
 
   // Hardware changes require a full device sync to get updated hardware info
-  if (!mapping.auto_sync_devices || !mapping.client_id) {
+  if (!mapping.auto_sync_assets || !mapping.client_id) {
     return { success: true, processed: false, action: 'auto_sync_disabled' };
   }
 

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse, NextRequest } from 'next/server';
 import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
-import { createTenantKnex } from '../../../../../../lib/db';
+import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import {
   NINJAONE_REGIONS,
   NinjaOneRegion,
@@ -23,12 +23,16 @@ const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
 const NINJAONE_CLIENT_SECRET_SECRET = 'ninjaone_client_secret';
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
 
-// Redirect URI - should match the connect endpoint
-const NINJAONE_REDIRECT_URI = process.env.NINJAONE_REDIRECT_URI ||
-  'http://localhost:3000/api/integrations/ninjaone/callback';
+// App base URL for redirects - uses NEXTAUTH_URL
+const APP_BASE_URL = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
 
-// App base URL for redirects
-const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
+// Redirect URI - should match the connect endpoint
+const getRedirectUri = () => {
+  if (process.env.NINJAONE_REDIRECT_URI) {
+    return process.env.NINJAONE_REDIRECT_URI;
+  }
+  return `${APP_BASE_URL}/api/integrations/ninjaone/callback`;
+};
 
 // UI redirect URLs
 const SUCCESS_REDIRECT_URL = '/msp/settings?tab=integrations&ninjaone_status=success';
@@ -45,7 +49,7 @@ interface StatePayload {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+  const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const ninjaError = searchParams.get('error');
@@ -131,7 +135,7 @@ export async function GET(request: NextRequest) {
     const tokenParams = new URLSearchParams({
       grant_type: 'authorization_code',
       code: code,
-      redirect_uri: NINJAONE_REDIRECT_URI,
+      redirect_uri: getRedirectUri(),
       client_id: clientId,
       client_secret: clientSecret,
     });
@@ -183,43 +187,46 @@ export async function GET(request: NextRequest) {
     console.log(`[NinjaOne Callback] Successfully stored NinjaOne credentials for tenant ${tenantId}, region ${region}.`);
 
     // 6. Create or update the rmm_integrations record
-    const { knex } = await createTenantKnex();
+    // Use runWithTenant since this is an OAuth callback without a session
+    await runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
 
-    // Check if integration already exists
-    const existingIntegration = await knex('rmm_integrations')
-      .where({ tenant: tenantId, provider: 'ninjaone' })
-      .first();
-
-    if (existingIntegration) {
-      // Update existing integration
-      await knex('rmm_integrations')
+      // Check if integration already exists
+      const existingIntegration = await knex('rmm_integrations')
         .where({ tenant: tenantId, provider: 'ninjaone' })
-        .update({
+        .first();
+
+      if (existingIntegration) {
+        // Update existing integration
+        await knex('rmm_integrations')
+          .where({ tenant: tenantId, provider: 'ninjaone' })
+          .update({
+            instance_url: instanceUrl,
+            is_active: true,
+            connected_at: knex.fn.now(),
+            sync_status: 'pending',
+            sync_error: null,
+            settings: JSON.stringify({
+              region,
+              ...JSON.parse(existingIntegration.settings || '{}'),
+            }),
+            updated_at: knex.fn.now(),
+          });
+        console.log(`[NinjaOne Callback] Updated existing integration for tenant ${tenantId}.`);
+      } else {
+        // Create new integration record
+        await knex('rmm_integrations').insert({
+          tenant: tenantId,
+          provider: 'ninjaone',
           instance_url: instanceUrl,
           is_active: true,
           connected_at: knex.fn.now(),
           sync_status: 'pending',
-          sync_error: null,
-          settings: JSON.stringify({
-            region,
-            ...JSON.parse(existingIntegration.settings || '{}'),
-          }),
-          updated_at: knex.fn.now(),
+          settings: JSON.stringify({ region }),
         });
-      console.log(`[NinjaOne Callback] Updated existing integration for tenant ${tenantId}.`);
-    } else {
-      // Create new integration record
-      await knex('rmm_integrations').insert({
-        tenant: tenantId,
-        provider: 'ninjaone',
-        instance_url: instanceUrl,
-        is_active: true,
-        connected_at: knex.fn.now(),
-        sync_status: 'pending',
-        settings: JSON.stringify({ region }),
-      });
-      console.log(`[NinjaOne Callback] Created new integration for tenant ${tenantId}.`);
-    }
+        console.log(`[NinjaOne Callback] Created new integration for tenant ${tenantId}.`);
+      }
+    });
 
     // 7. Redirect to success page
     return successRedirect();
@@ -227,13 +234,18 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     console.error(`[NinjaOne Callback] Error during processing for tenant ${tenantId || 'UNKNOWN'}:`, error);
 
-    // Log detailed axios errors
+    // Log detailed error info
     if (axios.isAxiosError(error)) {
       console.error('[NinjaOne Callback] Axios error details:', {
         message: error.message,
         code: error.code,
         status: error.response?.status,
         data: error.response?.data,
+      });
+    } else if (error instanceof Error) {
+      console.error('[NinjaOne Callback] Error details:', {
+        message: error.message,
+        stack: error.stack,
       });
     }
 
@@ -242,7 +254,9 @@ export async function GET(request: NextRequest) {
       : 'callback_processing_error';
     const errorMessage = axios.isAxiosError(error) && error.response?.data?.error_description
       ? error.response.data.error_description
-      : 'An unexpected error occurred during the callback process.';
+      : error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred during the callback process.';
 
     return failureRedirect(errorCode, errorMessage);
   }

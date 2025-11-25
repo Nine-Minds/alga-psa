@@ -10,15 +10,20 @@ export const dynamic = 'force-dynamic';
 import { NextResponse, NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
-import { createTenantKnex } from '../../../../../../lib/db';
+import { createTenantKnex } from '../../../../../lib/db';
 import { NINJAONE_REGIONS, NinjaOneRegion } from '../../../../../interfaces/ninjaone.interfaces';
 
 // Secret name for NinjaOne client ID
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
 
-// Redirect URI - should be configured in environment
-const NINJAONE_REDIRECT_URI = process.env.NINJAONE_REDIRECT_URI ||
-  'http://localhost:3000/api/integrations/ninjaone/callback';
+// Redirect URI - uses NEXTAUTH_URL to determine the base URL
+const getRedirectUri = () => {
+  if (process.env.NINJAONE_REDIRECT_URI) {
+    return process.env.NINJAONE_REDIRECT_URI;
+  }
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+  return `${baseUrl}/api/integrations/ninjaone/callback`;
+};
 
 // OAuth scopes required for full RMM integration
 const NINJAONE_SCOPES = 'monitoring management control offline_access';
@@ -81,7 +86,7 @@ export async function GET(request: NextRequest) {
       client_id: clientId,
       response_type: 'code',
       scope: NINJAONE_SCOPES,
-      redirect_uri: NINJAONE_REDIRECT_URI,
+      redirect_uri: getRedirectUri(),
       state: state,
     });
 

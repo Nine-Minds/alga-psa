@@ -8,6 +8,7 @@
  */
 
 import logger from '@shared/core/logger';
+import axios from 'axios';
 import { getCurrentUser } from '../../../../../../server/src/lib/actions/user-actions/userActions';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
@@ -38,6 +39,29 @@ import {
 
 // Secret name for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
+
+/**
+ * Extract safe error info for logging (avoids circular reference issues with axios errors)
+ */
+function extractErrorInfo(error: unknown): object {
+  if (axios.isAxiosError(error)) {
+    return {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url,
+    };
+  }
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+    };
+  }
+  return { message: String(error) };
+}
 
 /**
  * Get the current NinjaOne connection status
@@ -100,7 +124,7 @@ export async function getNinjaOneConnectionStatus(): Promise<RmmConnectionStatus
       active_alert_count: Number(alertCount?.count) || 0,
     };
   } catch (error) {
-    logger.error('[NinjaOneActions] Error getting connection status:', error);
+    logger.error('[NinjaOneActions] Error getting connection status:', extractErrorInfo(error));
     return {
       provider: 'ninjaone',
       is_connected: false,
@@ -146,7 +170,7 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error disconnecting NinjaOne:', error);
+    logger.error('[NinjaOneActions] Error disconnecting NinjaOne:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
 }
@@ -180,7 +204,7 @@ export async function testNinjaOneConnection(): Promise<{ success: boolean; erro
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error testing NinjaOne connection:', error);
+    logger.error('[NinjaOneActions] Error testing NinjaOne connection:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
 }
@@ -300,7 +324,7 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error syncing organizations:', error);
+    logger.error('[NinjaOneActions] Error syncing organizations:', extractErrorInfo(error));
 
     // Try to update sync status to error
     try {
@@ -360,15 +384,15 @@ export async function getNinjaOneOrganizationMappings(): Promise<RmmOrganization
 
     // Get mappings with company names
     const mappings = await knex('rmm_organization_mappings as rom')
-      .leftJoin('companies as c', function() {
+      .leftJoin('clients as c', function() {
         this.on('rom.tenant', '=', 'c.tenant')
-          .andOn('rom.company_id', '=', 'c.company_id');
+          .andOn('rom.client_id', '=', 'c.client_id');
       })
       .where('rom.tenant', tenant)
       .where('rom.integration_id', integration.integration_id)
       .select(
         'rom.*',
-        'c.company_name'
+        'c.client_name as company_name'
       )
       .orderBy('rom.external_organization_name');
 
@@ -377,7 +401,7 @@ export async function getNinjaOneOrganizationMappings(): Promise<RmmOrganization
       metadata: typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata || {},
     }));
   } catch (error) {
-    logger.error('[NinjaOneActions] Error getting organization mappings:', error);
+    logger.error('[NinjaOneActions] Error getting organization mappings:', extractErrorInfo(error));
     return [];
   }
 }
@@ -407,10 +431,22 @@ export async function updateNinjaOneOrganizationMapping(
 
     const { knex, tenant } = await createTenantKnex();
 
+    // Map company_id to client_id (database column name)
+    const dbUpdates: Record<string, unknown> = {};
+    if ('company_id' in updates) {
+      dbUpdates.client_id = updates.company_id;
+    }
+    if ('auto_sync_assets' in updates) {
+      dbUpdates.auto_sync_assets = updates.auto_sync_assets;
+    }
+    if ('auto_create_tickets' in updates) {
+      dbUpdates.auto_create_tickets = updates.auto_create_tickets;
+    }
+
     await knex('rmm_organization_mappings')
       .where({ tenant, mapping_id: mappingId })
       .update({
-        ...updates,
+        ...dbUpdates,
         updated_at: knex.fn.now(),
       });
 
@@ -419,7 +455,7 @@ export async function updateNinjaOneOrganizationMapping(
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error updating organization mapping:', error);
+    logger.error('[NinjaOneActions] Error updating organization mapping:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
 }
@@ -434,7 +470,7 @@ export async function getNinjaOneConnectUrl(region: NinjaOneRegion = 'US'): Prom
   }
 
   // Return the connect endpoint URL with region parameter
-  const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
   return `${baseUrl}/api/integrations/ninjaone/connect?region=${region}`;
 }
 
@@ -479,7 +515,7 @@ export async function triggerNinjaOneFullSync(
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error triggering full sync:', error);
+    logger.error('[NinjaOneActions] Error triggering full sync:', extractErrorInfo(error));
     return {
       success: false,
       sync_type: 'full',
@@ -541,7 +577,7 @@ export async function triggerNinjaOneIncrementalSync(): Promise<RmmSyncResult> {
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error triggering incremental sync:', error);
+    logger.error('[NinjaOneActions] Error triggering incremental sync:', extractErrorInfo(error));
     return {
       success: false,
       sync_type: 'incremental',
@@ -964,7 +1000,7 @@ export async function triggerPatchStatusSync(options?: {
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error triggering patch sync:', error);
+    logger.error('[NinjaOneActions] Error triggering patch sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
 }
@@ -1030,7 +1066,7 @@ export async function triggerSoftwareInventorySync(options?: {
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error triggering software sync:', error);
+    logger.error('[NinjaOneActions] Error triggering software sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
 }
@@ -1083,7 +1119,7 @@ export async function searchSoftware(
     return { success: true, results };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error searching software:', error);
+    logger.error('[NinjaOneActions] Error searching software:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
 }
@@ -1148,7 +1184,7 @@ export async function getRmmComplianceSummary(): Promise<{
       .first();
 
     // Get patch statistics from workstations
-    const workstationPatches = await knex('asset_workstations as aw')
+    const workstationPatches = await knex('workstation_assets as aw')
       .join('assets as a', function() {
         this.on('aw.tenant', '=', 'a.tenant')
           .andOn('aw.asset_id', '=', 'a.asset_id');
@@ -1163,7 +1199,7 @@ export async function getRmmComplianceSummary(): Promise<{
       .first();
 
     // Get patch statistics from servers
-    const serverPatches = await knex('asset_servers as asrv')
+    const serverPatches = await knex('server_assets as asrv')
       .join('assets as a', function() {
         this.on('asrv.tenant', '=', 'a.tenant')
           .andOn('asrv.asset_id', '=', 'a.asset_id');
@@ -1202,7 +1238,7 @@ export async function getRmmComplianceSummary(): Promise<{
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error getting compliance summary:', error);
+    logger.error('[NinjaOneActions] Error getting compliance summary:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
 }

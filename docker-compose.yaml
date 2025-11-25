@@ -101,6 +101,10 @@ secrets:
     file: ./secrets/google_oauth_client_secret
   alga_auth_key:
     file: ./secrets/alga_auth_key
+  ninjaone_client_id:
+    file: ./secrets/ninjaone_client_id
+  ninjaone_client_secret:
+    file: ./secrets/ninjaone_client_secret
 
 services:
   server:

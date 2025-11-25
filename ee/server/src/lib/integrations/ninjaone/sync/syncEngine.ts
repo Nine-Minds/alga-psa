@@ -6,9 +6,28 @@
  */
 
 import { Knex } from 'knex';
+import axios from 'axios';
 import { createTenantKnex } from '../../../../../../server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import logger from '@shared/core/logger';
+
+/**
+ * Extract safe error info for logging (avoids circular reference issues with axios errors)
+ */
+function extractErrorInfo(error: unknown): object {
+  if (axios.isAxiosError(error)) {
+    return {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      data: error.response?.data,
+    };
+  }
+  if (error instanceof Error) {
+    return { message: error.message, name: error.name };
+  }
+  return { message: String(error) };
+}
 import { createNinjaOneClient, NinjaOneClient } from '../ninjaOneClient';
 import {
   mapDevice,
@@ -19,6 +38,7 @@ import {
   determineAssetType,
   calculateAssetChanges,
   DeviceMappingResult,
+  unixTimestampToIso,
 } from '../mappers/deviceMapper';
 import {
   NinjaOneDevice,
@@ -86,6 +106,7 @@ export class NinjaOneSyncEngine {
   private knex: Knex | null = null;
   private isRunning = false;
   private abortController: AbortController | null = null;
+  private auditUserId: string | null = null;
 
   constructor(tenantId: string, integrationId: string) {
     this.tenantId = tenantId;
@@ -103,6 +124,31 @@ export class NinjaOneSyncEngine {
       const { knex } = await createTenantKnex();
       this.knex = knex;
     }
+    // Get a default user ID for audit trail (required for asset_history)
+    if (!this.auditUserId) {
+      this.auditUserId = await this.getDefaultAuditUserId();
+    }
+  }
+
+  /**
+   * Get a default user ID for audit purposes.
+   * Used when sync is triggered by the system rather than a specific user.
+   */
+  private async getDefaultAuditUserId(): Promise<string | null> {
+    if (!this.knex) return null;
+
+    // Query for any user in the tenant to use for audit trail
+    const user = await this.knex('users')
+      .where({ tenant: this.tenantId })
+      .select('user_id')
+      .first();
+
+    if (user) {
+      return user.user_id;
+    }
+
+    logger.warn('No user found in tenant for audit trail', { tenantId: this.tenantId });
+    return null;
   }
 
   /**
@@ -192,13 +238,13 @@ export class NinjaOneSyncEngine {
           phase: 'organizations',
           current: i + 1,
           total: mappings.length,
-          message: `Syncing organization: ${mapping.external_org_name || mapping.external_org_id}`,
+          message: `Syncing organization: ${mapping.external_organization_name || mapping.external_organization_id}`,
         });
 
         try {
           // Get all devices for this organization
           const devices = await this.client!.getDevices({
-            organizationId: parseInt(mapping.external_org_id, 10),
+            organizationId: parseInt(mapping.external_organization_id, 10),
           });
 
           totalDevices += devices.length;
@@ -247,10 +293,10 @@ export class NinjaOneSyncEngine {
           logger.error('Failed to sync organization', {
             tenantId: this.tenantId,
             integrationId: this.integrationId,
-            organizationId: mapping.external_org_id,
+            organizationId: mapping.external_organization_id,
             error: message,
           });
-          result.errors?.push(`Organization ${mapping.external_org_name}: ${message}`);
+          result.errors?.push(`Organization ${mapping.external_organization_name}: ${message}`);
         }
       }
 
@@ -366,7 +412,7 @@ export class NinjaOneSyncEngine {
 
         try {
           const devices = await this.client!.getDevices({
-            organizationId: parseInt(mapping.external_org_id, 10),
+            organizationId: parseInt(mapping.external_organization_id, 10),
           });
 
           // Filter devices that have been contacted since the last sync
@@ -379,7 +425,7 @@ export class NinjaOneSyncEngine {
             phase: 'devices',
             current: 0,
             total: changedDevices.length,
-            message: `Found ${changedDevices.length} changed devices in ${mapping.external_org_name}`,
+            message: `Found ${changedDevices.length} changed devices in ${mapping.external_organization_name}`,
           });
 
           for (let j = 0; j < changedDevices.length; j += batchSize) {
@@ -411,7 +457,7 @@ export class NinjaOneSyncEngine {
 
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          result.errors?.push(`Organization ${mapping.external_org_name}: ${message}`);
+          result.errors?.push(`Organization ${mapping.external_organization_name}: ${message}`);
         }
       }
 
@@ -467,7 +513,7 @@ export class NinjaOneSyncEngine {
       .where({
         tenant: this.tenantId,
         integration_id: this.integrationId,
-        external_org_id: String(device.organizationId),
+        external_organization_id: String(device.organizationId),
       })
       .first<RmmOrganizationMapping>();
 
@@ -611,7 +657,7 @@ export class NinjaOneSyncEngine {
           rmm_device_id: String(device.id),
           rmm_organization_id: String(device.organizationId),
           agent_status: device.offline ? 'offline' : 'online',
-          last_seen_at: device.lastContact,
+          last_seen_at: unixTimestampToIso(device.lastContact),
           last_rmm_sync_at: now,
           created_at: now,
           updated_at: now,
@@ -648,19 +694,21 @@ export class NinjaOneSyncEngine {
         updated_at: now,
       });
 
-      // Create asset history record
-      await trx('asset_history').insert({
-        tenant: this.tenantId,
-        asset_id: asset.asset_id,
-        changed_by: null, // System sync
-        change_type: 'created',
-        changes: {
-          source: 'ninjaone_sync',
-          device_id: device.id,
-          integration_id: this.integrationId,
-        },
-        changed_at: now,
-      });
+      // Create asset history record (only if we have an audit user)
+      if (this.auditUserId) {
+        await trx('asset_history').insert({
+          tenant: this.tenantId,
+          asset_id: asset.asset_id,
+          changed_by: this.auditUserId,
+          change_type: 'created',
+          changes: {
+            source: 'ninjaone_sync',
+            device_id: device.id,
+            integration_id: this.integrationId,
+          },
+          changed_at: now,
+        });
+      }
 
       logger.debug('Created asset from NinjaOne device', {
         tenantId: this.tenantId,
@@ -754,19 +802,21 @@ export class NinjaOneSyncEngine {
           updated_at: now,
         });
 
-      // Create asset history record
-      await trx('asset_history').insert({
-        tenant: this.tenantId,
-        asset_id: assetId,
-        changed_by: null,
-        change_type: 'updated',
-        changes: {
-          source: 'ninjaone_sync',
-          device_id: device.id,
-          integration_id: this.integrationId,
-        },
-        changed_at: now,
-      });
+      // Create asset history record (only if we have an audit user)
+      if (this.auditUserId) {
+        await trx('asset_history').insert({
+          tenant: this.tenantId,
+          asset_id: assetId,
+          changed_by: this.auditUserId,
+          change_type: 'updated',
+          changes: {
+            source: 'ninjaone_sync',
+            device_id: device.id,
+            integration_id: this.integrationId,
+          },
+          changed_at: now,
+        });
+      }
 
       // Emit device updated event
       await this.emitDeviceUpdatedEvent(asset as Asset, device);
@@ -794,7 +844,7 @@ export class NinjaOneSyncEngine {
       .where({ tenant: this.tenantId, asset_id: assetId })
       .update({
         agent_status: device.offline ? 'offline' : 'online',
-        last_seen_at: device.lastContact,
+        last_seen_at: unixTimestampToIso(device.lastContact),
         last_rmm_sync_at: now,
         updated_at: now,
       });
@@ -811,7 +861,7 @@ export class NinjaOneSyncEngine {
     for (const mapping of mappings) {
       // Get all NinjaOne device IDs for this org
       const devices = await this.client!.getDevices({
-        organizationId: parseInt(mapping.external_org_id, 10),
+        organizationId: parseInt(mapping.external_organization_id, 10),
       });
       const ninjaDeviceIds = new Set(devices.map(d => String(d.id)));
 
@@ -821,7 +871,7 @@ export class NinjaOneSyncEngine {
           tenant: this.tenantId,
           integration_type: 'ninjaone',
           alga_entity_type: 'asset',
-          external_realm_id: mapping.external_org_id,
+          external_realm_id: mapping.external_organization_id,
         })
         .select('alga_entity_id', 'external_entity_id');
 
@@ -869,19 +919,21 @@ export class NinjaOneSyncEngine {
           updated_at: now,
         });
 
-      // Create history record
-      await trx('asset_history').insert({
-        tenant: this.tenantId,
-        asset_id: assetId,
-        changed_by: null,
-        change_type: 'updated',
-        changes: {
-          source: 'ninjaone_sync',
-          reason: 'device_deleted_in_rmm',
-          integration_id: this.integrationId,
-        },
-        changed_at: now,
-      });
+      // Create history record (only if we have an audit user)
+      if (this.auditUserId) {
+        await trx('asset_history').insert({
+          tenant: this.tenantId,
+          asset_id: assetId,
+          changed_by: this.auditUserId,
+          change_type: 'updated',
+          changes: {
+            source: 'ninjaone_sync',
+            reason: 'device_deleted_in_rmm',
+            integration_id: this.integrationId,
+          },
+          changed_at: now,
+        });
+      }
     });
 
     logger.info('Marked asset as deleted (device removed from NinjaOne)', {
@@ -929,12 +981,12 @@ export class NinjaOneSyncEngine {
       .where({
         tenant: this.tenantId,
         integration_id: this.integrationId,
-        auto_sync_devices: true,
+        auto_sync_assets: true,
       })
       .whereNotNull('client_id');
 
     if (organizationIds && organizationIds.length > 0) {
-      query.whereIn('external_org_id', organizationIds.map(String));
+      query.whereIn('external_organization_id', organizationIds.map(String));
     }
 
     return await query;
@@ -1017,7 +1069,7 @@ export class NinjaOneSyncEngine {
         },
       });
     } catch (error) {
-      logger.warn('Failed to emit sync started event', { error });
+      logger.warn('Failed to emit sync started event', { error: extractErrorInfo(error) });
     }
   }
 
@@ -1043,7 +1095,7 @@ export class NinjaOneSyncEngine {
         },
       });
     } catch (error) {
-      logger.warn('Failed to emit sync completed event', { error });
+      logger.warn('Failed to emit sync completed event', { error: extractErrorInfo(error) });
     }
   }
 
@@ -1064,7 +1116,7 @@ export class NinjaOneSyncEngine {
         },
       });
     } catch (error) {
-      logger.warn('Failed to emit sync failed event', { error });
+      logger.warn('Failed to emit sync failed event', { error: extractErrorInfo(error) });
     }
   }
 
@@ -1086,7 +1138,7 @@ export class NinjaOneSyncEngine {
         },
       });
     } catch (error) {
-      logger.warn('Failed to emit device created event', { error });
+      logger.warn('Failed to emit device created event', { error: extractErrorInfo(error) });
     }
   }
 
@@ -1108,7 +1160,7 @@ export class NinjaOneSyncEngine {
         },
       });
     } catch (error) {
-      logger.warn('Failed to emit device updated event', { error });
+      logger.warn('Failed to emit device updated event', { error: extractErrorInfo(error) });
     }
   }
 
@@ -1129,7 +1181,7 @@ export class NinjaOneSyncEngine {
         },
       });
     } catch (error) {
-      logger.warn('Failed to emit device deleted event', { error });
+      logger.warn('Failed to emit device deleted event', { error: extractErrorInfo(error) });
     }
   }
 }
