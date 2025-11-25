@@ -13,6 +13,8 @@ import { createTemplateFromWizard } from 'server/src/lib/actions/project-actions
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 const STEPS = [
   'Template Basics',
@@ -28,6 +30,7 @@ export interface TemplateStatusMapping {
   temp_id: string;
   status_id?: string;
   custom_status_name?: string;
+  custom_status_color?: string;
   display_order: number;
 }
 
@@ -49,6 +52,8 @@ export interface TemplateTask {
   duration_days?: number;
   task_type_key?: string;
   priority_id?: string;
+  assigned_to?: string; // Primary user ID to assign task to
+  additional_agents?: string[]; // Additional user IDs
   template_status_mapping_id?: string; // Which status column this task should start in
   order_number: number;
 }
@@ -98,6 +103,7 @@ export function TemplateCreationWizard({
   const [priorities, setPriorities] = useState<
     Array<{ priority_id: string; priority_name: string }>
   >([]);
+  const [users, setUsers] = useState<IUserWithRoles[]>([]);
 
   const [wizardData, setWizardData] = useState<TemplateWizardData>({
     template_name: '',
@@ -115,14 +121,15 @@ export function TemplateCreationWizard({
       return;
     }
 
-    // Load task statuses (for Kanban board), task types, and priorities
+    // Load task statuses (for Kanban board), task types, priorities, and users
     const loadData = async () => {
       try {
         setIsLoadingStatuses(true);
-        const [statuses, types, priorities] = await Promise.all([
+        const [statuses, types, priorities, allUsers] = await Promise.all([
           getTenantProjectStatuses(), // Project task statuses for Kanban board
           getTaskTypes(),
           getAllPriorities('project_task'),
+          getAllUsers(true, 'internal'), // Load internal users only
         ]);
         setAvailableStatuses(
           statuses.map((s) => ({
@@ -145,6 +152,7 @@ export function TemplateCreationWizard({
         }));
         console.log('Loaded priorities for project_task:', mappedPriorities);
         setPriorities(mappedPriorities);
+        setUsers(allUsers);
       } catch (error) {
         console.error('Failed to load wizard data', error);
         setErrors({ [currentStep]: 'Failed to load required data' });
@@ -173,6 +181,8 @@ export function TemplateCreationWizard({
 
   const updateData = (data: Partial<TemplateWizardData>) => {
     setWizardData((prev) => ({ ...prev, ...data }));
+    // Clear error for current step when data changes
+    setErrors((prev) => ({ ...prev, [currentStep]: '' }));
   };
 
   const validateStep = (stepIndex: number): boolean => {
@@ -191,31 +201,11 @@ export function TemplateCreationWizard({
         return true;
 
       case 2: // Phases
-        // Optional step, but validate phase names if any exist
-        if (wizardData.phases.length > 0) {
-          const invalidPhases = wizardData.phases.filter((p) => !p.phase_name.trim());
-          if (invalidPhases.length > 0) {
-            setErrors((prev) => ({
-              ...prev,
-              [stepIndex]: 'All phases must have a name',
-            }));
-            return false;
-          }
-        }
+        // Optional step - validation happens at save time (Done button)
         return true;
 
       case 3: // Tasks
-        // Optional step, but validate task names if any exist
-        if (wizardData.tasks.length > 0) {
-          const invalidTasks = wizardData.tasks.filter((t) => !t.task_name.trim());
-          if (invalidTasks.length > 0) {
-            setErrors((prev) => ({
-              ...prev,
-              [stepIndex]: 'All tasks must have a name',
-            }));
-            return false;
-          }
-        }
+        // Optional step - validation happens at save time (Done button)
         return true;
 
       case 4: // Review
@@ -308,6 +298,7 @@ export function TemplateCreationWizard({
             taskTypes={taskTypes}
             priorities={priorities}
             availableStatuses={availableStatuses}
+            users={users}
           />
         );
       case 4:

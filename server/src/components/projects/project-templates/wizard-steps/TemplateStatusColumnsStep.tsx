@@ -7,6 +7,7 @@ import { Plus, Trash2, GripVertical, Circle } from 'lucide-react';
 import { TemplateWizardData, TemplateStatusMapping } from '../TemplateCreationWizard';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
+import ColorPicker from 'server/src/components/ui/ColorPicker';
 
 interface TemplateStatusColumnsStepProps {
   data: TemplateWizardData;
@@ -28,6 +29,7 @@ export function TemplateStatusColumnsStep({
       temp_id: `temp_${Date.now()}`,
       status_id: '',
       custom_status_name: '',
+      custom_status_color: '#6B7280',
       display_order: data.status_mappings.length,
     };
     updateData({
@@ -81,7 +83,7 @@ export function TemplateStatusColumnsStep({
       const status = availableStatuses.find(s => s.status_id === mapping.status_id);
       return status?.color || '#6B7280';
     }
-    return '#6B7280';
+    return mapping.custom_status_color || '#6B7280';
   };
 
   const getStatusName = (mapping: TemplateStatusMapping): string => {
@@ -132,10 +134,28 @@ export function TemplateStatusColumnsStep({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Circle
-                      className="w-6 h-6"
-                      fill={getStatusColor(mapping)}
-                      stroke={getStatusColor(mapping)}
+                    <ColorPicker
+                      currentBackgroundColor={getStatusColor(mapping)}
+                      currentTextColor={null}
+                      onSave={(backgroundColor) =>
+                        updateStatusMapping(index, { custom_status_color: backgroundColor || '#6B7280' })
+                      }
+                      showTextColor={false}
+                      previewType="circle"
+                      trigger={
+                        <button
+                          type="button"
+                          disabled={!!mapping.status_id}
+                          className="disabled:cursor-not-allowed disabled:opacity-50"
+                          title={mapping.status_id ? "Color from standard status" : "Click to change color"}
+                        >
+                          <Circle
+                            className="w-6 h-6"
+                            fill={getStatusColor(mapping)}
+                            stroke={getStatusColor(mapping)}
+                          />
+                        </button>
+                      }
                     />
                     <span className="font-medium">{index + 1}.</span>
                   </div>

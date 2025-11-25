@@ -199,6 +199,7 @@ export async function createTemplateFromProject(
           estimated_hours: task.estimated_hours,
           task_type_key: task.task_type_key,
           priority_id: task.priority_id,
+          assigned_to: copyOptions.copyAssignments ? task.assigned_to : null,
           template_status_mapping_id: templateStatusMappingId || null,
           order_key: task.order_key,
           duration_days
@@ -207,18 +208,9 @@ export async function createTemplateFromProject(
 
       taskMap.set(task.task_id, templateTask.template_task_id);
 
-      // Copy task assignments if enabled
+      // Copy additional agents from task_resources if enabled
       if (copyOptions.copyAssignments) {
-        // Copy primary assignment (assigned_to)
-        if (task.assigned_to) {
-          await trx('project_template_task_assignments')
-            .insert({
-              tenant,
-              template_task_id: templateTask.template_task_id,
-              user_id: task.assigned_to,
-              is_primary: true
-            });
-        }
+        // Note: Primary assignment (assigned_to) is already copied via the task insert above
 
         // Copy additional agents from task_resources
         const additionalAgents = await trx('task_resources')
@@ -227,12 +219,11 @@ export async function createTemplateFromProject(
 
         for (const resource of additionalAgents) {
           if (resource.additional_user_id) {
-            await trx('project_template_task_assignments')
+            await trx('project_template_task_resources')
               .insert({
                 tenant,
                 template_task_id: templateTask.template_task_id,
-                user_id: resource.additional_user_id,
-                is_primary: false
+                user_id: resource.additional_user_id
               });
           }
         }
@@ -431,11 +422,30 @@ export async function applyTemplate(
       // Add template status mappings and build mapping
       console.log(`[applyTemplate] Creating ${templateStatuses.length} status mappings from template`);
       for (const templateStatus of templateStatuses) {
+        let statusIdToUse = templateStatus.status_id;
+
+        // If it's a custom status (no status_id), create a new status first
+        if (!templateStatus.status_id && templateStatus.custom_status_name) {
+          const [newStatus] = await trx('project_task_statuses')
+            .insert({
+              tenant,
+              name: templateStatus.custom_status_name,
+              color: templateStatus.custom_status_color || '#6B7280',
+              is_closed: false,
+              is_standard: false,
+              created_by: currentUser.user_id
+            })
+            .returning('*');
+
+          statusIdToUse = newStatus.status_id;
+          console.log(`[applyTemplate] Created custom status: "${newStatus.name}" (${newStatus.color}) → status_id=${newStatus.status_id}`);
+        }
+
         const [newMapping] = await trx('project_status_mappings')
           .insert({
             tenant,
             project_id: newProjectId,
-            status_id: templateStatus.status_id,
+            status_id: statusIdToUse,
             custom_name: templateStatus.custom_status_name,
             display_order: templateStatus.display_order,
             is_visible: true,
@@ -540,7 +550,7 @@ export async function applyTemplate(
           order_key: templateTask.order_key,
           wbs_code: newWbsCode,
           project_status_mapping_id: taskStatusMappingId,
-          assigned_to: null,  // Leave blank for user to assign
+          assigned_to: templateTask.assigned_to || null,
           due_date: dueDate
         })
         .returning('*');
@@ -548,26 +558,30 @@ export async function applyTemplate(
       taskMap.set(templateTask.template_task_id, newTask.task_id);
       }
 
-      // Copy task assignments based on assignmentOption
-      if (options.assignmentOption !== 'none' && templatePhaseIds.length > 0) {
+      // Copy additional agent assignments
+      if (templatePhaseIds.length > 0) {
         const templateTaskIds = Array.from(taskMap.keys());
 
         if (templateTaskIds.length > 0) {
-          // Fetch all template assignments
-          const templateAssignments = await trx('project_template_task_assignments')
+          // Fetch all template task resources (additional agents)
+          const templateResources = await trx('project_template_task_resources')
             .where('tenant', tenant)
             .whereIn('template_task_id', templateTaskIds);
 
-          // Group assignments by task
-          const assignmentsByTask = new Map<string, { primary?: string, additional: string[] }>();
-
-          for (const assignment of templateAssignments) {
-            const newTaskId = taskMap.get(assignment.template_task_id);
+          for (const resource of templateResources) {
+            const newTaskId = taskMap.get(resource.template_task_id);
             if (!newTaskId) continue;
+
+            // Get the task to find its assigned_to (primary agent)
+            const task = await trx('project_tasks')
+              .where({ task_id: newTaskId, tenant })
+              .first();
+
+            if (!task || !task.assigned_to) continue;
 
             // Check if user exists and is active
             const user = await trx('users')
-              .where({ user_id: assignment.user_id, tenant })
+              .where({ user_id: resource.user_id, tenant })
               .first();
 
             if (!user || user.is_inactive) {
@@ -575,42 +589,15 @@ export async function applyTemplate(
               continue;
             }
 
-            if (!assignmentsByTask.has(newTaskId)) {
-              assignmentsByTask.set(newTaskId, { additional: [] });
-            }
-
-            const taskAssignments = assignmentsByTask.get(newTaskId)!;
-
-            if (assignment.is_primary) {
-              taskAssignments.primary = assignment.user_id;
-            } else {
-              taskAssignments.additional.push(assignment.user_id);
-            }
-          }
-
-          // Apply assignments to tasks
-          for (const [newTaskId, assignments] of assignmentsByTask.entries()) {
-            // Set primary assignment
-            if (assignments.primary && (options.assignmentOption === 'primary' || options.assignmentOption === 'all')) {
-              await trx('project_tasks')
-                .where({ task_id: newTaskId, tenant })
-                .update({ assigned_to: assignments.primary });
-            }
-
-            // Set additional assignments
-            if (options.assignmentOption === 'all' && assignments.primary) {
-              for (const additionalUserId of assignments.additional) {
-                // task_resources requires assigned_to (primary) to be different from additional_user_id
-                if (additionalUserId !== assignments.primary) {
-                  await trx('task_resources')
-                    .insert({
-                      tenant,
-                      task_id: newTaskId,
-                      assigned_to: assignments.primary,
-                      additional_user_id: additionalUserId
-                    });
-                }
-              }
+            // Only add if additional user is different from primary
+            if (resource.user_id !== task.assigned_to) {
+              await trx('task_resources')
+                .insert({
+                  tenant,
+                  task_id: newTaskId,
+                  assigned_to: task.assigned_to,
+                  additional_user_id: resource.user_id
+                });
             }
           }
         }
@@ -810,11 +797,18 @@ export async function getTemplateWithDetails(
   let tasks: IProjectTemplateTask[] = [];
   let checklistItems: any[] = [];
 
+  console.log(`[getTemplateWithDetails] Template: ${template.template_name}, phaseIds:`, phaseIds);
+
   if (phaseIds.length > 0) {
     tasks = await knex('project_template_tasks')
       .where('tenant', tenant)
       .whereIn('template_phase_id', phaseIds)
       .orderBy('order_key');
+
+    console.log(`[getTemplateWithDetails] Found ${tasks.length} tasks for template ${template.template_name}`);
+    if (tasks.length > 0) {
+      console.log('[getTemplateWithDetails] First task:', tasks[0]);
+    }
 
     const taskIds = tasks.map(t => t.template_task_id);
     if (taskIds.length > 0) {

@@ -8,6 +8,9 @@ import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Plus, Trash2, Edit2, Check, X, CheckSquare, ListTodo } from 'lucide-react';
 import { TemplateWizardData, TemplateTask, TemplateChecklistItem } from '../TemplateCreationWizard';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 interface TemplateTasksStepProps {
   data: TemplateWizardData;
@@ -15,6 +18,7 @@ interface TemplateTasksStepProps {
   taskTypes: Array<{ type_key: string; type_name: string; color?: string }>;
   priorities: Array<{ priority_id: string; priority_name: string }>;
   availableStatuses: Array<{ status_id: string; name: string; color?: string; is_closed?: boolean }>;
+  users: IUserWithRoles[];
 }
 
 export function TemplateTasksStep({
@@ -23,12 +27,14 @@ export function TemplateTasksStep({
   taskTypes,
   priorities,
   availableStatuses,
+  users,
 }: TemplateTasksStepProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(
     data.phases[0]?.temp_id || null
   );
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [saveAttempted, setSaveAttempted] = useState<Set<string>>(new Set());
 
   // Debug priorities
   React.useEffect(() => {
@@ -41,6 +47,11 @@ export function TemplateTasksStep({
   const addTask = () => {
     if (!selectedPhaseId) return;
 
+    // Default to first status mapping if available
+    const defaultStatusMappingId = data.status_mappings.length > 0
+      ? data.status_mappings[0].temp_id
+      : undefined;
+
     const newTask: TemplateTask = {
       temp_id: `temp_${Date.now()}`,
       phase_temp_id: selectedPhaseId,
@@ -50,6 +61,7 @@ export function TemplateTasksStep({
       duration_days: undefined,
       task_type_key: 'task',
       priority_id: undefined,
+      template_status_mapping_id: defaultStatusMappingId,
       order_number: phaseTasks.length,
     };
     updateData({
@@ -256,8 +268,40 @@ export function TemplateTasksStep({
                           </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>Assigned To</Label>
+                            <UserPicker
+                              label=""
+                              value={task.assigned_to || ''}
+                              onValueChange={(value) =>
+                                updateTask(task.temp_id, { assigned_to: value || undefined })
+                              }
+                              users={users}
+                              placeholder="Not assigned"
+                            />
+                          </div>
+
+                          <div>
+                            <Label>Additional Agents</Label>
+                            {!task.assigned_to ? (
+                              <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+                                Please assign a primary agent first.
+                              </div>
+                            ) : (
+                              <MultiUserPicker
+                                values={task.additional_agents || []}
+                                onValuesChange={(values) =>
+                                  updateTask(task.temp_id, { additional_agents: values })
+                                }
+                                users={users.filter(u => u.user_id !== task.assigned_to)}
+                              />
+                            )}
+                          </div>
+                        </div>
+
                         <div>
-                          <Label>Status Column (Optional)</Label>
+                          <Label>Status Column</Label>
                           <CustomSelect
                             value={task.template_status_mapping_id || ''}
                             onValueChange={(value) =>
@@ -265,47 +309,66 @@ export function TemplateTasksStep({
                                 template_status_mapping_id: value || undefined
                               })
                             }
-                            options={[
-                              { value: '', label: 'No specific status (use first)' },
-                              ...data.status_mappings.map((s, i) => {
-                                const statusName = s.status_id
-                                  ? availableStatuses.find(st => st.status_id === s.status_id)?.name
-                                  : s.custom_status_name;
-                                return {
-                                  value: s.temp_id,
-                                  label: statusName || `Status ${i + 1}`
-                                };
-                              })
-                            ]}
-                            placeholder="Select initial status"
+                            options={data.status_mappings.map((s, i) => {
+                              const statusName = s.status_id
+                                ? availableStatuses.find(st => st.status_id === s.status_id)?.name
+                                : s.custom_status_name;
+                              return {
+                                value: s.temp_id,
+                                label: statusName || `Status ${i + 1}`
+                              };
+                            })}
+                            placeholder="Select status column"
                           />
                         </div>
 
-                        <div className="flex gap-2">
-                          <Button
-                            id={`save-task-${task.temp_id}`}
-                            size="sm"
-                            onClick={() => setEditingTaskId(null)}
-                            disabled={!task.task_name.trim()}
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            Done
-                          </Button>
-                          <Button
-                            id={`cancel-task-${task.temp_id}`}
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              if (!task.task_name.trim()) {
-                                removeTask(task.temp_id);
-                              } else {
-                                setEditingTaskId(null);
-                              }
-                            }}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Cancel
-                          </Button>
+                        <div>
+                          {!task.task_name.trim() && saveAttempted.has(task.temp_id) && (
+                            <p className="text-sm text-red-600 mb-2">
+                              Task name is required
+                            </p>
+                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              id={`save-task-${task.temp_id}`}
+                              size="sm"
+                              onClick={() => {
+                                if (!task.task_name.trim()) {
+                                  setSaveAttempted(prev => new Set([...prev, task.temp_id]));
+                                } else {
+                                  setSaveAttempted(prev => {
+                                    const next = new Set(prev);
+                                    next.delete(task.temp_id);
+                                    return next;
+                                  });
+                                  setEditingTaskId(null);
+                                }
+                              }}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Done
+                            </Button>
+                            <Button
+                              id={`cancel-task-${task.temp_id}`}
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setSaveAttempted(prev => {
+                                  const next = new Set(prev);
+                                  next.delete(task.temp_id);
+                                  return next;
+                                });
+                                if (!task.task_name.trim()) {
+                                  removeTask(task.temp_id);
+                                } else {
+                                  setEditingTaskId(null);
+                                }
+                              }}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ) : (

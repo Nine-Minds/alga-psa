@@ -69,6 +69,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
             template_id: template.template_id,
             status_id: mapping.status_id || null,
             custom_status_name: mapping.custom_status_name || null,
+            custom_status_color: mapping.custom_status_color || null,
             display_order: mapping.display_order,
           })
           .returning('*');
@@ -141,6 +142,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
               duration_days: task.duration_days || null,
               task_type_key: task.task_type_key || 'task',
               priority_id: task.priority_id || null,
+              assigned_to: task.assigned_to || null,
               template_status_mapping_id: templateStatusMappingId || null,
               order_key: orderKeys[i],
             })
@@ -151,7 +153,24 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
       }
     }
 
-    // 5. Create checklist items
+    // 5. Create additional agents for tasks
+    if (data.tasks && data.tasks.length > 0) {
+      for (const task of data.tasks) {
+        if (task.additional_agents && task.additional_agents.length > 0) {
+          const templateTaskId = taskMap.get(task.temp_id);
+          if (templateTaskId) {
+            const agentInserts = task.additional_agents.map((userId) => ({
+              tenant,
+              template_task_id: templateTaskId,
+              user_id: userId,
+            }));
+            await trx('project_template_task_resources').insert(agentInserts);
+          }
+        }
+      }
+    }
+
+    // 6. Create checklist items
     if (data.checklist_items && data.checklist_items.length > 0) {
       const checklistInserts = data.checklist_items
         .filter((item) => {
@@ -230,6 +249,7 @@ export async function updateTemplateFromEditor(
             template_id: templateId,
             status_id: mapping.status_id || null,
             custom_status_name: mapping.custom_status_name || null,
+            custom_status_color: mapping.custom_status_color || null,
             display_order: mapping.display_order,
           })
           .returning('*');
@@ -301,6 +321,7 @@ export async function updateTemplateFromEditor(
               duration_days: task.duration_days || null,
               task_type_key: task.task_type_key || 'task',
               priority_id: task.priority_id || null,
+              assigned_to: task.assigned_to || null,
               template_status_mapping_id: templateStatusMappingId || null,
               order_key: orderKeys[i],
             })
@@ -311,7 +332,24 @@ export async function updateTemplateFromEditor(
       }
     }
 
-    // 6. Recreate checklist items
+    // 6. Recreate additional agents for tasks
+    if (data.tasks && data.tasks.length > 0) {
+      for (const task of data.tasks) {
+        if (task.additional_agents && task.additional_agents.length > 0) {
+          const templateTaskId = taskMap.get(task.temp_id);
+          if (templateTaskId) {
+            const agentInserts = task.additional_agents.map((userId) => ({
+              tenant,
+              template_task_id: templateTaskId,
+              user_id: userId,
+            }));
+            await trx('project_template_task_resources').insert(agentInserts);
+          }
+        }
+      }
+    }
+
+    // 7. Recreate checklist items
     if (data.checklist_items && data.checklist_items.length > 0) {
       const checklistInserts = data.checklist_items
         .filter((item) => {

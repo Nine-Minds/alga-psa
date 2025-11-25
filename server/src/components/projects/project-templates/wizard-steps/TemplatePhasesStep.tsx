@@ -19,6 +19,7 @@ export function TemplatePhasesStep({
 }: TemplatePhasesStepProps) {
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [saveAttempted, setSaveAttempted] = useState<Set<string>>(new Set());
 
   const addPhase = () => {
     const newPhase: TemplatePhase = {
@@ -176,31 +177,53 @@ export function TemplatePhasesStep({
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
-                        <Button
-                          id={`save-phase-${phase.temp_id}`}
-                          size="sm"
-                          onClick={() => setEditingPhaseId(null)}
-                          disabled={!phase.phase_name.trim()}
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Done
-                        </Button>
-                        <Button
-                          id={`cancel-phase-${phase.temp_id}`}
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            if (!phase.phase_name.trim()) {
-                              removePhase(phase.temp_id);
-                            } else {
-                              setEditingPhaseId(null);
-                            }
-                          }}
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          Cancel
-                        </Button>
+                      <div>
+                        {!phase.phase_name.trim() && saveAttempted.has(phase.temp_id) && (
+                          <p className="text-sm text-red-600 mb-2">
+                            Phase name is required
+                          </p>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            id={`save-phase-${phase.temp_id}`}
+                            size="sm"
+                            onClick={() => {
+                              if (!phase.phase_name.trim()) {
+                                setSaveAttempted(prev => new Set([...prev, phase.temp_id]));
+                              } else {
+                                setSaveAttempted(prev => {
+                                  const next = new Set(prev);
+                                  next.delete(phase.temp_id);
+                                  return next;
+                                });
+                                setEditingPhaseId(null);
+                              }
+                            }}
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Done
+                          </Button>
+                          <Button
+                            id={`cancel-phase-${phase.temp_id}`}
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSaveAttempted(prev => {
+                                const next = new Set(prev);
+                                next.delete(phase.temp_id);
+                                return next;
+                              });
+                              if (!phase.phase_name.trim()) {
+                                removePhase(phase.temp_id);
+                              } else {
+                                setEditingPhaseId(null);
+                              }
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ) : (

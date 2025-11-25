@@ -59,6 +59,7 @@ exports.up = async function(knex) {
     table.integer('duration_days');
     table.string('task_type_key', 50);
     table.uuid('priority_id');
+    table.uuid('assigned_to'); // User ID to assign task to
     table.uuid('template_status_mapping_id'); // Which status column this task should start in
     table.string('order_key', 255);
 
@@ -112,12 +113,27 @@ exports.up = async function(knex) {
 
     table.uuid('status_id');
     table.string('custom_status_name', 100);
+    table.string('custom_status_color', 7); // e.g., #FF5733
     table.integer('display_order').notNullable();
 
     table.primary(['template_status_mapping_id', 'tenant']);
     table.foreign(['tenant', 'template_id']).references(['tenant', 'template_id']).inTable('project_templates').onDelete('CASCADE');
 
     table.index(['tenant', 'template_id']);
+  });
+
+  // Template task resources (additional agents)
+  await knex.schema.createTable('project_template_task_resources', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('template_assignment_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+    table.uuid('template_task_id').notNullable();
+    table.uuid('user_id').notNullable();
+
+    table.primary(['template_assignment_id', 'tenant']);
+    table.foreign(['tenant', 'template_task_id']).references(['tenant', 'template_task_id']).inTable('project_template_tasks').onDelete('CASCADE');
+    table.foreign(['tenant', 'user_id']).references(['tenant', 'user_id']).inTable('users');
+
+    table.index(['tenant', 'template_task_id']);
   });
 
   // Distribute tables for Citus
@@ -136,7 +152,8 @@ exports.up = async function(knex) {
       'project_template_tasks',
       'project_template_dependencies',
       'project_template_checklist_items',
-      'project_template_status_mappings'
+      'project_template_status_mappings',
+      'project_template_task_resources'
     ];
 
     for (const table of tables) {
@@ -151,6 +168,7 @@ exports.up = async function(knex) {
 exports.down = async function(knex) {
   console.log('Dropping project template tables...');
 
+  await knex.schema.dropTableIfExists('project_template_task_resources');
   await knex.schema.dropTableIfExists('project_template_status_mappings');
   await knex.schema.dropTableIfExists('project_template_checklist_items');
   await knex.schema.dropTableIfExists('project_template_dependencies');

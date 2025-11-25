@@ -109,8 +109,11 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 .sort((a, b) => a.display_order - b.display_order)
                 .map((statusMapping, index) => {
                   // Filter tasks that belong to this status column
+                  // Tasks without a status mapping go to the first column
+                  const isFirstColumn = index === 0;
                   const statusTasks = phaseTasks.filter(
-                    task => task.template_status_mapping_id === statusMapping.template_status_mapping_id
+                    task => task.template_status_mapping_id === statusMapping.template_status_mapping_id ||
+                      (isFirstColumn && !task.template_status_mapping_id)
                   );
 
                   const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
