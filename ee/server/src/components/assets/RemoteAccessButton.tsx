@@ -8,14 +8,14 @@
  */
 
 import React, { useState, useTransition } from 'react';
-import { Button } from '../../../../../../server/src/components/ui/Button';
-import { Alert, AlertDescription } from '../../../../../../server/src/components/ui/Alert';
+import { Button } from '../../../../../server/src/components/ui/Button';
+import { Alert, AlertDescription } from '../../../../../server/src/components/ui/Alert';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../../../../../../server/src/components/ui/DropdownMenu';
+} from '../../../../../server/src/components/ui/DropdownMenu';
 import {
   Monitor,
   Terminal,
@@ -23,8 +23,8 @@ import {
   AlertCircle,
   ExternalLink,
 } from 'lucide-react';
-import { getNinjaOneRemoteAccessUrl } from '../../../lib/actions/integrations/ninjaoneActions';
-import type { Asset } from '../../../../../../server/src/interfaces/asset.interfaces';
+import { getNinjaOneRemoteAccessUrl } from '../../lib/actions/integrations/ninjaoneActions';
+import type { Asset } from '../../../../../server/src/interfaces/asset.interfaces';
 
 interface RemoteAccessButtonProps {
   asset: Asset;

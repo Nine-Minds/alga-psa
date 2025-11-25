@@ -41,7 +41,7 @@ exports.up = async function(knex) {
         table.uuid('integration_id').notNullable();
         table.string('external_organization_id', 255).notNullable(); // NinjaOne organization ID
         table.string('external_organization_name', 255).nullable();
-        table.uuid('company_id').nullable(); // NULL if not yet mapped to an Alga company
+        table.uuid('client_id').nullable(); // NULL if not yet mapped to an Alga client
         table.boolean('auto_sync_assets').notNullable().defaultTo(true);
         table.boolean('auto_create_tickets').notNullable().defaultTo(false);
         table.jsonb('metadata').defaultTo('{}'); // Additional org data from RMM
@@ -50,9 +50,9 @@ exports.up = async function(knex) {
 
         table.primary(['tenant', 'mapping_id']);
         table.foreign(['tenant', 'integration_id']).references(['tenant', 'integration_id']).inTable('rmm_integrations').onDelete('CASCADE');
-        table.foreign(['tenant', 'company_id']).references(['tenant', 'company_id']).inTable('companies').onDelete('SET NULL');
+        table.foreign(['tenant', 'client_id']).references(['tenant', 'client_id']).inTable('clients').onDelete('SET NULL');
         table.unique(['tenant', 'integration_id', 'external_organization_id'], { indexName: 'idx_rmm_org_mappings_unique_external' });
-        table.index(['tenant', 'company_id'], 'idx_rmm_org_mappings_company');
+        table.index(['tenant', 'client_id'], 'idx_rmm_org_mappings_client');
     });
 
     // Create rmm_alerts table

@@ -6,7 +6,7 @@
  */
 
 import logger from '@shared/core/logger';
-import { createTenantKnex } from '../../../../../../../lib/db';
+import { createTenantKnex } from '../../../../../../../server/src/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneDevicePatchStatus } from '../../../../interfaces/ninjaone.interfaces';
 

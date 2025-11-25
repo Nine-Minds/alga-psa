@@ -11,8 +11,8 @@
  */
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../../components/ui/Card';
-import { Button } from '../../../../../../components/ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../../server/src/components/ui/Card';
+import { Button } from '../../../../../../server/src/components/ui/Button';
 import {
   Monitor,
   MonitorOff,

@@ -35,7 +35,8 @@ import {
   Asset,
   CreateAssetRequest,
 } from '../../../../../../server/src/interfaces/asset.interfaces';
-import { publishEvent } from '@shared/workflow/streams/eventPublisher';
+import { getRedisStreamClient } from '@shared/workflow/streams';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Sync operation options
@@ -1001,10 +1002,14 @@ export class NinjaOneSyncEngine {
   // Event emission methods
   private async emitSyncStartedEvent(syncType: 'full' | 'incremental'): Promise<void> {
     try {
-      await publishEvent({
-        event_type: 'RMM_SYNC_STARTED',
+      const eventType = 'RMM_SYNC_STARTED';
+      await getRedisStreamClient().publishEvent({
+        event_id: uuidv4(),
+        event_name: eventType,
+        event_type: eventType,
+        tenant: this.tenantId,
+        timestamp: new Date().toISOString(),
         payload: {
-          tenant: this.tenantId,
           integration_id: this.integrationId,
           provider: 'ninjaone',
           sync_type: syncType,
@@ -1018,10 +1023,14 @@ export class NinjaOneSyncEngine {
 
   private async emitSyncCompletedEvent(result: RmmSyncResult): Promise<void> {
     try {
-      await publishEvent({
-        event_type: 'RMM_SYNC_COMPLETED',
+      const eventType = 'RMM_SYNC_COMPLETED';
+      await getRedisStreamClient().publishEvent({
+        event_id: uuidv4(),
+        event_name: eventType,
+        event_type: eventType,
+        tenant: this.tenantId,
+        timestamp: new Date().toISOString(),
         payload: {
-          tenant: this.tenantId,
           integration_id: this.integrationId,
           provider: 'ninjaone',
           sync_type: result.sync_type,
@@ -1040,10 +1049,14 @@ export class NinjaOneSyncEngine {
 
   private async emitSyncFailedEvent(errorMessage: string): Promise<void> {
     try {
-      await publishEvent({
-        event_type: 'RMM_SYNC_FAILED',
+      const eventType = 'RMM_SYNC_FAILED';
+      await getRedisStreamClient().publishEvent({
+        event_id: uuidv4(),
+        event_name: eventType,
+        event_type: eventType,
+        tenant: this.tenantId,
+        timestamp: new Date().toISOString(),
         payload: {
-          tenant: this.tenantId,
           integration_id: this.integrationId,
           provider: 'ninjaone',
           error: errorMessage,
@@ -1057,10 +1070,14 @@ export class NinjaOneSyncEngine {
 
   private async emitDeviceCreatedEvent(asset: Asset, device: NinjaOneDeviceDetail): Promise<void> {
     try {
-      await publishEvent({
-        event_type: 'RMM_DEVICE_CREATED',
+      const eventType = 'RMM_DEVICE_CREATED';
+      await getRedisStreamClient().publishEvent({
+        event_id: uuidv4(),
+        event_name: eventType,
+        event_type: eventType,
+        tenant: this.tenantId,
+        timestamp: new Date().toISOString(),
         payload: {
-          tenant: this.tenantId,
           asset_id: asset.asset_id,
           device_id: String(device.id),
           device_name: device.displayName || device.systemName,
@@ -1075,10 +1092,14 @@ export class NinjaOneSyncEngine {
 
   private async emitDeviceUpdatedEvent(asset: Asset, device: NinjaOneDeviceDetail): Promise<void> {
     try {
-      await publishEvent({
-        event_type: 'RMM_DEVICE_UPDATED',
+      const eventType = 'RMM_DEVICE_UPDATED';
+      await getRedisStreamClient().publishEvent({
+        event_id: uuidv4(),
+        event_name: eventType,
+        event_type: eventType,
+        tenant: this.tenantId,
+        timestamp: new Date().toISOString(),
         payload: {
-          tenant: this.tenantId,
           asset_id: asset.asset_id,
           device_id: String(device.id),
           device_name: device.displayName || device.systemName,
@@ -1093,10 +1114,14 @@ export class NinjaOneSyncEngine {
 
   private async emitDeviceDeletedEvent(assetId: string, deviceId: string): Promise<void> {
     try {
-      await publishEvent({
-        event_type: 'RMM_DEVICE_DELETED',
+      const eventType = 'RMM_DEVICE_DELETED';
+      await getRedisStreamClient().publishEvent({
+        event_id: uuidv4(),
+        event_name: eventType,
+        event_type: eventType,
+        tenant: this.tenantId,
+        timestamp: new Date().toISOString(),
         payload: {
-          tenant: this.tenantId,
           asset_id: assetId,
           device_id: deviceId,
           provider: 'ninjaone',

@@ -8,12 +8,12 @@
  */
 
 import logger from '@shared/core/logger';
-import { getCurrentUser } from '../../../../../../lib/actions/user-actions/userActions';
+import { getCurrentUser } from '../../../../../../server/src/lib/actions/user-actions/userActions';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
-import { hasPermission } from '../../../../../../lib/auth/rbac';
-import { createTenantKnex } from '../../../../../../lib/db';
-import { auditLog } from '../../../../../../lib/logging/auditLog';
+import { hasPermission } from '../../../../../../server/src/lib/auth/rbac';
+import { createTenantKnex } from '../../../../../../server/src/db';
+import { auditLog } from '../../../../../../server/src/lib/logging/auditLog';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import {
   NinjaOneSyncEngine,
