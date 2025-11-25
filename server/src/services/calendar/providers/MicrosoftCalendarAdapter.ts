@@ -132,11 +132,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // Determine tenant authority
-      const vendorTenantId = vendorConfig.tenantId;
-      let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID || 'common';
-
-      const tokenUrl = `https://login.microsoftonline.com/${tenantAuthority}/oauth2/v2.0/token`;
+      // Always use 'common' for multi-tenant Azure AD apps
+      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
 
       const params = new URLSearchParams({
         client_id: clientId,
