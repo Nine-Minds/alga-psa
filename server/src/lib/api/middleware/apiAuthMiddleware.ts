@@ -3,7 +3,7 @@
  * Handles API key authentication with proper tenant context
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
 import { findUserByIdForApi } from '../../actions/user-actions/findUserByIdForApi';
 import { runWithTenant } from '../../db';
@@ -19,7 +19,7 @@ import {
 export async function withApiKeyAuth(
   handler: (req: ApiRequest) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest): Promise<NextResponse> => {
+  return async (req: Request): Promise<NextResponse> => {
     try {
       const apiKey = req.headers.get('x-api-key');
       

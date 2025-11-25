@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getInstallConfig } from '@ee/lib/extensions/installConfig';
@@ -10,7 +10,7 @@ const requestSchema = z.object({
   extensionId: z.string().min(1),
 });
 
-function ensureRunnerAuth(req: NextRequest) {
+function ensureRunnerAuth(req: Request) {
   const token = process.env.RUNNER_CONFIG_API_TOKEN || process.env.RUNNER_STORAGE_API_TOKEN;
   if (!token) {
     throw new Error('runner auth token not configured');
@@ -23,7 +23,7 @@ function ensureRunnerAuth(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     ensureRunnerAuth(req);
     const body = requestSchema.parse(await req.json());

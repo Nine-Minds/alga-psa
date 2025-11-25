@@ -127,19 +127,19 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
     throw new Error('Invalid or expired survey token.');
   }
 
-  const tokenExpiresAt = toDate(invitationRow.token_expires_at);
+  const tokenExpiresAt = toDate((invitationRow as any).token_expires_at);
 
   if (Number.isNaN(tokenExpiresAt.getTime()) || tokenExpiresAt.getTime() <= Date.now()) {
     throw new Error('Survey token has expired.');
   }
 
-  if (invitationRow.responded) {
+  if ((invitationRow as any).responded) {
     throw new Error('Survey already completed.');
   }
 
   return {
     tenant: tenantId,
-    invitation: mapInvitation(invitationRow),
+    invitation: mapInvitation(invitationRow as any),
   };
 }
 

@@ -185,7 +185,7 @@ export default function DocumentUpload({
                     idx === index ? {
                         ...item,
                         status: 'error' as const,
-                        error: result.error || t('documents.uploadSection.error', 'Failed to upload document')
+                        error: (result as any).error || t('documents.uploadSection.error', 'Failed to upload document')
                     } : item
                 ));
             }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 // Lightweight cache for the NM Store key to avoid repeated secret lookups
@@ -21,9 +21,9 @@ async function getNmStoreKey(): Promise<string | null> {
 }
 
 export function withNmStoreApiKey(
-  handler: (req: NextRequest) => Promise<NextResponse>
+  handler: (req: Request) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest): Promise<NextResponse> => {
+  return async (req: Request): Promise<NextResponse> => {
     const apiKey = req.headers.get('x-api-key');
     if (!apiKey) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });

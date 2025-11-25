@@ -99,9 +99,20 @@ async function fetchTickets(
 }
 
 export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  const url = request.http.url ?? request.http.path ?? '/';
+  const url = request.http.url ?? '/';
   const isProxy = url.startsWith('/proxy/');
-  const queryLimit = isProxy ? undefined : request.http.query?.limit;
+
+  // Parse query parameters from URL
+  let queryLimit: string | undefined;
+  if (!isProxy) {
+    try {
+      const urlObj = new URL(url, 'http://localhost');
+      queryLimit = urlObj.searchParams.get('limit') ?? undefined;
+    } catch {
+      // URL parsing failed, ignore
+    }
+  }
+
   const { limit: proxyLimit } = isProxy ? parseProxyPayload(request.http.body) : { limit: undefined };
   const limit = proxyLimit ?? parseLimit(queryLimit, 10);
 

@@ -6,7 +6,7 @@ const encoder = new TextEncoder();
 
 function createUiProxy(response: TicketProxyResponse): UiProxyHost {
   return {
-    async call(route: string, payload?: Uint8Array | null) {
+    async callRoute(route: string, payload?: Uint8Array | null) {
       expect(route).toBe('/tickets/list');
       if (payload) {
         const decoded = JSON.parse(new TextDecoder().decode(payload));

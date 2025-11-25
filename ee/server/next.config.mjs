@@ -22,6 +22,7 @@ const nextConfig = {
   transpilePackages: [
     '@product/extensions',
     '@product/extensions-pages',
+    '@alga-psa/product-extension-actions',
   ],
   // Turbopack-specific aliases
   turbopack: {
@@ -29,22 +30,26 @@ const nextConfig = {
       '@': './src',
       // EE source alias
       '@ee/*': './src/*',
-      // Feature swap: product pages and entries
+      // Feature swap: product pages and entries (../../packages from ee/server)
       '@product/extensions/entry': isEE
-        ? '../packages/product-extensions/ee/entry'
-        : '../packages/product-extensions/oss/entry',
+        ? '../../packages/product-extensions/ee/entry'
+        : '../../packages/product-extensions/oss/entry',
       '@product/extensions/pages/list': isEE
-        ? '../packages/product-extensions-pages/ee/list'
-        : '../packages/product-extensions-pages/oss/list',
+        ? '../../packages/product-extensions-pages/ee/list'
+        : '../../packages/product-extensions-pages/oss/list',
       '@product/extensions/pages/details': isEE
-        ? '../packages/product-extensions-pages/ee/details'
-        : '../packages/product-extensions-pages/oss/details',
+        ? '../../packages/product-extensions-pages/ee/details'
+        : '../../packages/product-extensions-pages/oss/details',
       '@product/extensions/pages/settings': isEE
-        ? '../packages/product-extensions-pages/ee/settings'
-        : '../packages/product-extensions-pages/oss/settings',
+        ? '../../packages/product-extensions-pages/ee/settings'
+        : '../../packages/product-extensions-pages/oss/settings',
       '@product/ext-proxy/handler': isEE
-        ? '../packages/product-ext-proxy/ee/handler'
-        : '../packages/product-ext-proxy/oss/handler',
+        ? '../../packages/product-ext-proxy/ee/handler'
+        : '../../packages/product-ext-proxy/oss/handler',
+      // Product extension actions
+      '@alga-psa/product-extension-actions': isEE
+        ? '../../packages/product-extension-actions/ee/entry'
+        : '../../packages/product-extension-actions/oss/entry',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -77,9 +82,13 @@ const nextConfig = {
     // Helpful aliases and module resolution
     config.resolve = {
       ...config.resolve,
+      // Ensure extensions are resolved in correct order (TypeScript first)
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.json', '...'],
       // Allow .js imports to resolve to TS sources in the monorepo
       extensionAlias: {
-        '.js': ['.js', '.ts', '.tsx'],
+        '.js': ['.ts', '.tsx', '.js', '.jsx'],
+        '.mjs': ['.mts', '.mjs'],
+        '.jsx': ['.tsx', '.jsx']
       },
       alias: {
         ...config.resolve?.alias,
@@ -89,22 +98,26 @@ const nextConfig = {
         // Hard-pin common EE import paths used by CE SettingsPage
         '@ee/lib/extensions/ExtensionComponentLoader': path.join(__dirname, 'src/lib/extensions/ExtensionComponentLoader.tsx'),
         '@ee/components': path.join(__dirname, 'src/components'),
-        // Feature swap aliases (Webpack)
+        // Feature swap aliases (Webpack) - using ../../packages from ee/server
         '@product/extensions/entry': isEE
-          ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions/ee/entry.tsx')
+          : path.join(__dirname, '../../packages/product-extensions/oss/entry.tsx'),
         '@product/extensions/pages/list': isEE
-          ? path.join(__dirname, '../packages/product-extensions-pages/ee/list.tsx')
-          : path.join(__dirname, '../packages/product-extensions-pages/oss/list.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions-pages/ee/list.tsx')
+          : path.join(__dirname, '../../packages/product-extensions-pages/oss/list.tsx'),
         '@product/extensions/pages/details': isEE
-          ? path.join(__dirname, '../packages/product-extensions-pages/ee/details.tsx')
-          : path.join(__dirname, '../packages/product-extensions-pages/oss/details.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions-pages/ee/details.tsx')
+          : path.join(__dirname, '../../packages/product-extensions-pages/oss/details.tsx'),
         '@product/extensions/pages/settings': isEE
-          ? path.join(__dirname, '../packages/product-extensions-pages/ee/settings.tsx')
-          : path.join(__dirname, '../packages/product-extensions-pages/oss/settings.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions-pages/ee/settings.tsx')
+          : path.join(__dirname, '../../packages/product-extensions-pages/oss/settings.tsx'),
         '@product/ext-proxy/handler': isEE
-          ? path.join(__dirname, '../packages/product-ext-proxy/ee/handler.ts')
-          : path.join(__dirname, '../packages/product-ext-proxy/oss/handler.ts'),
+          ? path.join(__dirname, '../../packages/product-ext-proxy/ee/handler.ts')
+          : path.join(__dirname, '../../packages/product-ext-proxy/oss/handler.ts'),
+        // Product extension actions
+        '@alga-psa/product-extension-actions': isEE
+          ? path.join(__dirname, '../../packages/product-extension-actions/ee/entry.ts')
+          : path.join(__dirname, '../../packages/product-extension-actions/oss/entry.ts'),
         // Stub native sharp during local dev to avoid platform build issues
         sharp: path.join(__dirname, 'src/empty/sharp.ts'),
       },

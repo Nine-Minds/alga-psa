@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { StorageServiceError, StorageValidationError } from '@/lib/extensions/storage/v2/errors';
 import { getStorageServiceForInstall } from '@/lib/extensions/storage/v2/factory';
@@ -82,7 +82,7 @@ function mapError(error: unknown): NextResponse {
   );
 }
 
-async function getTenantIdFromAuth(req: NextRequest): Promise<string | null> {
+async function getTenantIdFromAuth(req: Request): Promise<string | null> {
   const headerTenant = req.headers.get('x-tenant-id') ?? req.headers.get('x-tenant');
   if (headerTenant && headerTenant.trim().length > 0) {
     return headerTenant;
@@ -94,7 +94,7 @@ async function getTenantIdFromAuth(req: NextRequest): Promise<string | null> {
   return null;
 }
 
-async function ensureTenantAccess(req: NextRequest, tenantId: string): Promise<void> {
+async function ensureTenantAccess(req: Request, tenantId: string): Promise<void> {
   const callerTenant = await getTenantIdFromAuth(req);
   if (!callerTenant) {
     throw new StorageServiceError('UNAUTHORIZED', 'Authentication required');
@@ -119,10 +119,11 @@ async function ensureExtensionPermission(requiredAction: 'read' | 'write', tenan
 }
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { installId: string; namespace: string; key: string } },
+  req: Request,
+  segmentData: { params: Promise<{ installId: string; namespace: string; key: string }> },
 ) {
   try {
+    const params = await segmentData.params;
     const ifRevisionHeader = req.headers.get('if-revision-match');
     const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
@@ -142,10 +143,11 @@ export async function GET(
 }
 
 export async function PUT(
-  req: NextRequest,
-  { params }: { params: { installId: string; namespace: string; key: string } },
+  req: Request,
+  segmentData: { params: Promise<{ installId: string; namespace: string; key: string }> },
 ) {
   try {
+    const params = await segmentData.params;
     const body = putSchema.parse(await req.json());
     const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
@@ -169,10 +171,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { installId: string; namespace: string; key: string } },
+  req: Request,
+  segmentData: { params: Promise<{ installId: string; namespace: string; key: string }> },
 ) {
   try {
+    const params = await segmentData.params;
     const search = deleteQuerySchema.parse(
       Object.fromEntries(new URL(req.url).searchParams.entries()),
     );

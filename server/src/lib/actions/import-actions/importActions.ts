@@ -20,7 +20,7 @@ import type {
   PreviewComputationResult,
   PreviewGenerationOptions,
   DuplicateDetectionStrategy
-} from '@/types/imports.types';
+} from 'server/src/types/imports.types';
 import { getCurrentUser } from '../user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 

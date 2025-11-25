@@ -466,9 +466,9 @@ export class AssetModel extends BaseModel {
             .select(
                 knexOrTrx.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
                 knexOrTrx.raw(`
-                    COUNT(DISTINCT CASE 
-                        WHEN asset_maintenance_schedules.asset_id IS NOT NULL 
-                        THEN assets.asset_id 
+                    COUNT(DISTINCT CASE
+                        WHEN asset_maintenance_schedules.asset_id IS NOT NULL
+                        THEN assets.asset_id
                     END) as assets_with_maintenance
                 `)
             )
@@ -476,7 +476,7 @@ export class AssetModel extends BaseModel {
                 this.on('assets.asset_id', '=', 'asset_maintenance_schedules.asset_id')
                     .andOn('asset_maintenance_schedules.tenant', '=', knexOrTrx.raw('?', [tenant]));
             })
-            .first();
+            .first() as unknown as { total_assets: number; assets_with_maintenance: number } | undefined;
 
         // Get maintenance statistics
         const maintenanceStats = await knexOrTrx('asset_maintenance_schedules')
@@ -485,19 +485,19 @@ export class AssetModel extends BaseModel {
             .select(
                 knexOrTrx.raw('COUNT(*) as total_schedules'),
                 knexOrTrx.raw(`
-                    COUNT(CASE 
-                        WHEN next_maintenance < NOW() AND is_active 
-                        THEN 1 
+                    COUNT(CASE
+                        WHEN next_maintenance < NOW() AND is_active
+                        THEN 1
                     END) as overdue_maintenances
                 `),
                 knexOrTrx.raw(`
-                    COUNT(CASE 
-                        WHEN next_maintenance > NOW() AND is_active 
-                        THEN 1 
+                    COUNT(CASE
+                        WHEN next_maintenance > NOW() AND is_active
+                        THEN 1
                     END) as upcoming_maintenances
                 `)
             )
-            .first();
+            .first() as unknown as { total_schedules: number; overdue_maintenances: number; upcoming_maintenances: number } | undefined;
 
         // Get maintenance type breakdown
         const typeBreakdown = await knexOrTrx('asset_maintenance_schedules')

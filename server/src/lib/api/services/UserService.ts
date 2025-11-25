@@ -1096,22 +1096,22 @@ export class UserService extends BaseService<IUser> {
     ]);
 
     // Calculate users who never logged in - stub for now
-    const neverLoggedIn = parseInt(totalStats.total_users) - (activityStats?.recent_logins || 0);
+    const neverLoggedIn = parseInt((totalStats as any).total_users) - (activityStats?.recent_logins || 0);
 
     return {
-      total_users: parseInt(totalStats.total_users as string),
-      active_users: parseInt(totalStats.active_users as string),
-      inactive_users: parseInt(totalStats.inactive_users as string),
-      users_by_type: typeStats.reduce((acc: any, row: any) => {
+      total_users: parseInt((totalStats as any).total_users as string),
+      active_users: parseInt((totalStats as any).active_users as string),
+      inactive_users: parseInt((totalStats as any).inactive_users as string),
+      users_by_type: (typeStats as any[]).reduce((acc: any, row: any) => {
         acc[row.user_type] = parseInt(row.count);
         return acc;
       }, {}),
-      users_by_role: roleStats.reduce((acc: any, row: any) => {
+      users_by_role: (roleStats as any[]).reduce((acc: any, row: any) => {
         acc[row.role_name] = parseInt(row.count);
         return acc;
       }, {}),
-      users_with_2fa: parseInt(securityStats.users_with_2fa as string),
-      users_without_avatar: parseInt(securityStats.users_without_avatar as string),
+      users_with_2fa: parseInt((securityStats as any).users_with_2fa as string),
+      users_without_avatar: parseInt((securityStats as any).users_without_avatar as string),
       recent_logins: typeof activityStats?.recent_logins === 'number' ? activityStats.recent_logins : parseInt(activityStats?.recent_logins as string || '0'),
       never_logged_in: neverLoggedIn
     };

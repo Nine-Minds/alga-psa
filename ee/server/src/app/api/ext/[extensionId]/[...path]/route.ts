@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-import { matchEndpoint, pathnameFromParts, filterRequestHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils';
-import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-registry';
-import { loadInstallConfigCached } from '../../../../../lib/extensions/lib/install-config-cache';
+import { matchEndpoint, pathnameFromParts, filterRequestHeaders, getTimeoutMs } from '../../../../../lib/extensions/lib/gateway-utils.js';
+import { getRegistryFacade } from '../../../../../lib/extensions/lib/gateway-registry.js';
+import { loadInstallConfigCached } from '../../../../../lib/extensions/lib/install-config-cache.js';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
-import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from '../../../../../lib/extensions/runner/backend';
+import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from '../../../../../lib/extensions/runner/backend.js';
 export const dynamic = 'force-dynamic';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -16,7 +16,7 @@ interface GatewayContext {
   pathParts: string[];
 }
 
-function getRequestId(req: NextRequest): string {
+function getRequestId(req: Request): string {
   return req.headers.get('x-request-id') || crypto.randomUUID();
 }
 
@@ -52,7 +52,7 @@ function extraAllowedOrigins(): string[] {
     .filter(Boolean);
 }
 
-function pickCorsOrigin(req: NextRequest): string | null {
+function pickCorsOrigin(req: Request): string | null {
   const originHeader = req.headers.get('origin');
   if (!originHeader) return null;
   const normalized = normalizeOrigin(originHeader);
@@ -145,7 +145,8 @@ async function resolveEndpoint(
 }
 
 
-async function handle(req: NextRequest, { params }: { params: { extensionId: string; path: string[] } }) {
+async function handle(req: Request, segmentData: { params: Promise<{ extensionId: string; path: string[] }> }) {
+  const params = await segmentData.params;
   const method = req.method as Method;
   const requestId = getRequestId(req);
   const corsOrigin = pickCorsOrigin(req);
@@ -243,4 +244,4 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
   }
 }
 
-export { handle, handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE, handle as OPTIONS };
+export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE, handle as OPTIONS };

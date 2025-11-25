@@ -1,4 +1,4 @@
-import type { FieldMapping, DuplicateDetectionStrategy } from '@/types/imports.types';
+import type { FieldMapping, DuplicateDetectionStrategy } from 'server/src/types/imports.types';
 
 export interface AssetImportJobContext {
   storageFileId: string;

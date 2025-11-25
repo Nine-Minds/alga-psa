@@ -71,24 +71,60 @@
       "@/pages/*": [
         "server/src/pages/*"
       ],
-      "@product/chat/entry": ["server/src/services/chatStreamService"],
-      "@product/workflows/entry": ["server/src/empty/components/flow/DnDFlow"],
-      "@product/extensions/entry": ["packages/product-extensions/oss/entry"],
-      "@product/extensions/*": ["packages/product-extensions/*"],
-      "@product/ext-proxy/handler": ["../packages/product-ext-proxy/ee/handler"],
-      "@product/ext-proxy/*": ["../packages/product-ext-proxy/*"],
-      "@product/settings-extensions/entry": ["packages/product-settings-extensions/oss/entry"],
-      "@product/settings-extensions/*": ["packages/product-settings-extensions/*"],
-      "@product/email-providers/entry": ["packages/product-email-providers/oss/entry"],
-      "@product/email-providers/*": ["packages/product-email-providers/*"],
-      "@product/email-domains/entry": ["packages/product-email-domains/oss/entry"],
-      "@product/email-domains/*": ["packages/product-email-domains/*"],
-      "@product/email-settings/entry": ["packages/product-email-settings/oss/entry"],
-      "@product/email-settings/*": ["packages/product-email-settings/*"],
-      "@product/client-portal-domain/entry": ["packages/product-client-portal-domain/oss/entry"],
-      "@product/client-portal-domain/*": ["packages/product-client-portal-domain/*"],
-      "@product/billing/entry": ["packages/product-billing/oss/entry"],
-      "@product/billing/*": ["packages/product-billing/*"]
+      "@product/chat/entry": [
+        "server/src/services/chatStreamService"
+      ],
+      "@product/workflows/entry": [
+        "server/src/empty/components/flow/DnDFlow"
+      ],
+      "@product/extensions/entry": [
+        "packages/product-extensions/oss/entry"
+      ],
+      "@product/extensions/*": [
+        "packages/product-extensions/*"
+      ],
+      "@product/ext-proxy/handler": [
+        "../packages/product-ext-proxy/ee/handler"
+      ],
+      "@product/ext-proxy/*": [
+        "../packages/product-ext-proxy/*"
+      ],
+      "@product/settings-extensions/entry": [
+        "packages/product-settings-extensions/oss/entry"
+      ],
+      "@product/settings-extensions/*": [
+        "packages/product-settings-extensions/*"
+      ],
+      "@product/email-providers/entry": [
+        "packages/product-email-providers/oss/entry"
+      ],
+      "@product/email-providers/*": [
+        "packages/product-email-providers/*"
+      ],
+      "@product/email-domains/entry": [
+        "packages/product-email-domains/oss/entry"
+      ],
+      "@product/email-domains/*": [
+        "packages/product-email-domains/*"
+      ],
+      "@product/email-settings/entry": [
+        "packages/product-email-settings/oss/entry"
+      ],
+      "@product/email-settings/*": [
+        "packages/product-email-settings/*"
+      ],
+      "@product/client-portal-domain/entry": [
+        "packages/product-client-portal-domain/oss/entry"
+      ],
+      "@product/client-portal-domain/*": [
+        "packages/product-client-portal-domain/*"
+      ],
+      "@product/billing/entry": [
+        "packages/product-billing/oss/entry"
+      ],
+      "@product/billing/*": [
+        "packages/product-billing/*"
+      ]
     },
     "lib": [
       "dom",
@@ -113,19 +149,17 @@
     ]
   },
   "include": [
+    "../../server/src/types/**/*.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "../../server/src/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "src/components/flow",
-    
     "../../server/src/test/**",
-    "../../server/test-utils/**",
+    "../../server/test-utils/**"
     // Skip unit tests/specs but keep Playwright (handled via include paths)
-    
-    ".next/types/**"
   ]
 }

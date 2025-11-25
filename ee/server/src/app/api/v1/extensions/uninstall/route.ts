@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { uninstallExtensionV2 } from '@ee/lib/actions/extRegistryV2Actions';
@@ -32,7 +32,7 @@ const uninstallHandler = withPermission('extension', 'write')(
   }),
 );
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
     const handler = await withApiKeyAuth(uninstallHandler);
     return await handler(request);

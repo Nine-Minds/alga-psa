@@ -3,7 +3,7 @@
  * Provides authentication, authorization, validation, and error handling for REST API endpoints
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ZodSchema, ZodError } from 'zod';
 import { ApiKeyService } from '../../services/apiKeyService';
 import { hasPermission } from '../../auth/rbac';
@@ -18,12 +18,12 @@ export interface ApiContext {
   kind?: 'system' | 'user';
 }
 
-export interface ApiRequest extends NextRequest {
+export interface ApiRequest extends Request {
   context?: ApiContext;
   params?: any;
 }
 
-export interface AuthenticatedApiRequest extends NextRequest {
+export interface AuthenticatedApiRequest extends Request {
   context: ApiContext;
   params?: any;
 }

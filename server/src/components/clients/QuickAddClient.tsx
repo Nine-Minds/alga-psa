@@ -394,7 +394,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       const result = await createClient(dataToSend);
 
       if (!result.success) {
-        setError(result.error);
+        setError((result as any).error);
         setIsSubmitting(false);
         return;
       }

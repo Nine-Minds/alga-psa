@@ -10,7 +10,7 @@ import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import Drawer from 'server/src/components/ui/Drawer';
 import Spinner from 'server/src/components/ui/Spinner';
-import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/types/imports.types';
+import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from 'server/src/types/imports.types';
 import { useImportActions } from './hooks/useImportActions';
 
 const ImportExportSettings = (): JSX.Element => {

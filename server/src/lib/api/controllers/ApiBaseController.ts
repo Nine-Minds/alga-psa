@@ -77,7 +77,7 @@ export abstract class ApiBaseController {
     }
 
     // Create extended request with context
-    const apiRequest = req as AuthenticatedApiRequest;
+    const apiRequest = req as unknown as AuthenticatedApiRequest;
     apiRequest.context = {
       userId: keyRecord.user_id,
       tenant: keyRecord.tenant,

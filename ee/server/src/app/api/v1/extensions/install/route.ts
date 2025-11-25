@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { installExtensionForCurrentTenantV2 } from '@ee/lib/actions/extRegistryV2Actions';
@@ -20,7 +20,10 @@ type InstallRequestBody = z.infer<typeof installRequestSchema>;
 
 const installHandler = withPermission('extension', 'write')(
   withValidation(installRequestSchema)(async (req: ApiRequest, body: InstallRequestBody) => {
-    const result = await installExtensionForCurrentTenantV2(body);
+    const result = await installExtensionForCurrentTenantV2({
+      registryId: body.registryId!,
+      version: body.version!,
+    });
 
     return createSuccessResponse(
       {
@@ -35,7 +38,7 @@ const installHandler = withPermission('extension', 'write')(
   }),
 );
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
     const handler = await withApiKeyAuth(installHandler);
     return await handler(request);

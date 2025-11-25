@@ -197,7 +197,7 @@ export function MicrosoftProviderForm({
         providerId: providerId,
       });
       if (!oauthInit.success) {
-        throw new Error(oauthInit.error || 'Failed to initiate OAuth');
+        throw new Error((oauthInit as any).error || 'Failed to initiate OAuth');
       }
       const { authUrl } = oauthInit;
 

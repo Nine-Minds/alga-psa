@@ -101,7 +101,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Create request with context
-        const apiRequest = req as AuthenticatedApiRequest;
+        const apiRequest = req as unknown as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -183,7 +183,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Create request with context
-        const apiRequest = req as AuthenticatedApiRequest;
+        const apiRequest = req as unknown as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -246,7 +246,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Create request with context
-        const apiRequest = req as AuthenticatedApiRequest;
+        const apiRequest = req as unknown as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -313,7 +313,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Create request with context
-        const apiRequest = req as AuthenticatedApiRequest;
+        const apiRequest = req as unknown as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -393,7 +393,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Create request with context
-        const apiRequest = req as AuthenticatedApiRequest;
+        const apiRequest = req as unknown as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -477,7 +477,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Create request with context
-        const apiRequest = req as AuthenticatedApiRequest;
+        const apiRequest = req as unknown as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
@@ -561,7 +561,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         // Create request with context
-        const apiRequest = req as AuthenticatedApiRequest;
+        const apiRequest = req as unknown as AuthenticatedApiRequest;
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,

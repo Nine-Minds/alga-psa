@@ -3,7 +3,7 @@ import type {
   DuplicateCheckResult,
   DuplicateDetectionStrategy,
   ParsedRecord
-} from '@/types/imports.types';
+} from 'server/src/types/imports.types';
 import type { Knex } from 'knex';
 
 const MAX_FUZZY_CANDIDATES = 25;

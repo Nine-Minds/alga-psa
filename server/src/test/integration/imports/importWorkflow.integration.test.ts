@@ -8,7 +8,7 @@ import { ImportManager } from '@/lib/imports/ImportManager';
 import { getAssetFieldDefinitions } from '@/lib/imports/assetFieldDefinitions';
 import { DuplicateDetector } from '@/lib/imports/DuplicateDetector';
 import { NableExportImporter } from '@/lib/imports/NableExportImporter';
-import type { ParsedRecord } from '@/types/imports.types';
+import type { ParsedRecord } from 'server/src/types/imports.types';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;

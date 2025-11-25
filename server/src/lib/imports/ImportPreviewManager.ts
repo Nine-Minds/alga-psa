@@ -11,7 +11,7 @@ import type {
   PreviewRow,
   ParsedRecord,
   DuplicateCheckResult
-} from '@/types/imports.types';
+} from 'server/src/types/imports.types';
 
 const PREVIEW_DEFAULT_LIMIT = 10;
 

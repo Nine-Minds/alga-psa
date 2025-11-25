@@ -1,7 +1,6 @@
-import { NextRequest } from 'next/server';
 import { getSession } from 'server/src/lib/auth/getSession';
 
-export async function getTenantFromAuth(req: NextRequest): Promise<string> {
+export async function getTenantFromAuth(req: Request): Promise<string> {
   // Minimal scaffolding:
   // - Prefer internal header `x-alga-tenant` (e.g., set by edge/auth middleware)
   // - Fallback to DEV_TENANT_ID for local development

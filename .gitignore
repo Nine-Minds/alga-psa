@@ -29,6 +29,9 @@ scripts/stop-playwright-minio.sh
 build/
 dist/
 
+# Turborepo
+.turbo/
+
 # Enterprise Edition - copied files (generated during build)
 # /server/src/app/msp/extensions/
 # /server/src/lib/extensions/

@@ -135,7 +135,7 @@ export default function InstallerPanel() {
         });
 
         if (!finalizeResponse.success) {
-          const { code, message, details } = finalizeResponse.error;
+          const { code, message, details } = (finalizeResponse as any).error;
           const manifestIssue = code === 'MANIFEST_REQUIRED' || code === 'INVALID_MANIFEST';
           if (manifestIssue) {
             setNeedsManifest(true);
@@ -192,7 +192,7 @@ export default function InstallerPanel() {
       });
 
       if (!finalizeResponse.success) {
-        const { message, code, details } = finalizeResponse.error;
+        const { message, code, details } = (finalizeResponse as any).error;
         setError({
           error: message || 'Failed to finalize with provided manifest',
           code,

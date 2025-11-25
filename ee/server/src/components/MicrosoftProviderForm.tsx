@@ -141,9 +141,9 @@ export function MicrosoftProviderForm({
       };
 
       // For normal saves (not OAuth), skip automation to prevent duplicate setup
-      const result = isEditing 
-        ? await updateEmailProvider(provider.id, payload, true) // skipAutomation: true
-        : await createEmailProvider(payload, true); // skipAutomation: true
+      const result = isEditing
+        ? await updateEmailProvider(provider.id, payload as any, true) // skipAutomation: true
+        : await createEmailProvider(payload as any, true); // skipAutomation: true
 
       onSuccess(result.provider);
 
@@ -210,7 +210,7 @@ export function MicrosoftProviderForm({
         providerId,
       });
       if (!oauthInit.success) {
-        throw new Error(oauthInit.error || 'Failed to initiate OAuth');
+        throw new Error((oauthInit as any).error || 'Failed to initiate OAuth');
       }
       const { authUrl } = oauthInit;
 

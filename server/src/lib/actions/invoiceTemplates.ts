@@ -227,13 +227,13 @@ export async function saveInvoiceTemplate(
             // Return the successful result including the saved template
             return { success: true, template: compileResult.template };
         } else {
-            console.error('Failed to compile AssemblyScript source:', compileResult.error, compileResult.details);
+            console.error('Failed to compile AssemblyScript source:', (compileResult as any).error, (compileResult as any).details);
             // Return the compilation error directly
             return {
                 success: false,
                 compilationError: {
-                    error: compileResult.error,
-                    details: compileResult.details
+                    error: (compileResult as any).error,
+                    details: (compileResult as any).details
                 }
             };
         }

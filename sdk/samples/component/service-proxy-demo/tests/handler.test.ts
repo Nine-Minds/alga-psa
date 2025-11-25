@@ -16,7 +16,6 @@ const baseRequest: ExecuteRequest = {
     method: 'GET',
     url: '/dynamic/tickets',
     headers: [],
-    query: {},
   },
 };
 
@@ -165,7 +164,6 @@ describe('service proxy handler', () => {
         url: '/proxy/tickets/list',
         headers: [],
         body: encoder.encode(JSON.stringify({ limit: 5 })),
-        query: {},
       },
     };
 

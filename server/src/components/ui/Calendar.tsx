@@ -166,7 +166,7 @@ function Calendar({
             </button>
           </div>
         }
-        {...props}
+        {...(props as any)}
       />
     </div>
   );

@@ -29,7 +29,7 @@ export async function getLatestTimePeriod(): Promise<ITimePeriod | null> {
   try {
     const { knex } = await createTenantKnex();
     const latestPeriod = await TimePeriod.getLatest(knex);
-    return latestPeriod ? validateData(timePeriodSchema, latestPeriod) : null;
+    return latestPeriod ? validateData(timePeriodSchema, latestPeriod) as ITimePeriod : null;
   } catch (error) {
     console.error('Error fetching latest time period:', error)
     throw new Error('Failed to fetch latest time period')
@@ -40,7 +40,7 @@ export async function getTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
   try {
     const { knex } = await createTenantKnex();
     const settings = await TimePeriodSettings.getActiveSettings(knex);
-    return validateArray(timePeriodSettingsSchema, settings);
+    return validateArray(timePeriodSettingsSchema, settings) as ITimePeriodSettings[];
   } catch (error) {
     console.error('Error fetching time period settings:', error);
     throw new Error('Failed to fetch time period settings');
@@ -63,7 +63,7 @@ export async function createTimePeriod(
     try {
       console.log('Fetching active time period settings...');
       const settings = await TimePeriodSettings.getActiveSettings(trx);
-      const validatedSettings = validateArray(timePeriodSettingsSchema, settings);
+      const validatedSettings = validateArray(timePeriodSettingsSchema, settings) as ITimePeriodSettings[];
       console.log('Active settings fetched:', validatedSettings);
 
       const activeSetting = validatedSettings[0];
@@ -91,7 +91,7 @@ export async function createTimePeriod(
       console.log('Time period start_date constructor:', timePeriod.start_date?.constructor?.name);
       console.log('Time period end_date constructor:', timePeriod.end_date?.constructor?.name);
 
-      const validatedPeriod = validateData(timePeriodSchema, timePeriod);
+      const validatedPeriod = validateData(timePeriodSchema, timePeriod) as ITimePeriod;
       console.log('Time period after validation:', validatedPeriod);
       console.log('Revalidating path: /msp/time-entry');
       revalidatePath('/msp/time-entry');
@@ -122,8 +122,8 @@ export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
     console.log('periods', periods);
 
     // Validate as model type first
-    const validatedPeriods = validateArray(timePeriodSchema, timePeriods);
-    
+    const validatedPeriods = validateArray(timePeriodSchema, timePeriods) as ITimePeriod[];
+
     // Then convert to view type
     return validatedPeriods.map((period): ITimePeriodView => ({
       ...period,
@@ -362,7 +362,7 @@ export async function updateTimePeriod(
 
       try {
         const updatedPeriod = await TimePeriod.update(trx, periodId, updates);
-        const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
+        const validatedPeriod = validateData(timePeriodSchema, updatedPeriod) as ITimePeriod;
 
         revalidatePath('/msp/time-entry');
         return validatedPeriod;
@@ -385,7 +385,7 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const settings = await getTimePeriodSettings();
-      const validatedSettings = validateArray(timePeriodSettingsSchema, settings);
+      const validatedSettings = validateArray(timePeriodSettingsSchema, settings) as ITimePeriodSettings[];
       const generatedPeriods = await generateTimePeriods(validatedSettings, startDate, endDate);
 
       // Check for overlapping periods before saving
@@ -409,7 +409,7 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
           end_date: toPlainDate(period.end_date)
         });
       }));
-      const validatedPeriods = validateArray(timePeriodSchema, savedPeriods);
+      const validatedPeriods = validateArray(timePeriodSchema, savedPeriods) as ITimePeriod[];
 
       revalidatePath('/msp/time-entry');
       return validatedPeriods;

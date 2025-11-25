@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { 
   checkAuthVerificationLimit, 
   formatRateLimitError,
@@ -114,9 +114,9 @@ async function verifyTenantCredentials(email: string, password: string) {
   );
 }
 
-export const POST = withNmStoreApiKey(async (req: NextRequest) => {
+export const POST = withNmStoreApiKey(async (req: Request) => {
   const startTime = Date.now();
-  const clientIp = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+  const clientIp = req.headers.get('x-forwarded-for') || 'unknown';
   
   // Use observability.timeOperation for automatic tracing, metrics, and logging
   return await observability.timeOperation(

@@ -1,5 +1,5 @@
 import { ImportValidationError } from '@/lib/imports/errors';
-import type { ValidationResult } from '@/types/imports.types';
+import type { ValidationResult } from 'server/src/types/imports.types';
 
 /**
  * Utility to collect validation errors without failing fast.

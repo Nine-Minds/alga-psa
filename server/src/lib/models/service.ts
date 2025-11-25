@@ -128,7 +128,7 @@ const Service = {
       });
 
       log.info(`[Service.getAll] Services data validated successfully`);
-      return validatedServices;
+      return validatedServices as IService[];
     } catch (error) {
       log.error(`[Service.getAll] Error fetching services:`, error);
       throw error;
@@ -186,7 +186,7 @@ const Service = {
       const validatedService = serviceSchema.parse(serviceData);
       log.info(`[Service.getById] Service data validated successfully`);
 
-      return validatedService;
+      return validatedService as IService;
     } catch (error) {
       log.error(`[Service.getById] Error fetching service ${service_id}:`, error);
       throw error;
@@ -284,13 +284,13 @@ const Service = {
 
       if (!completeService) {
         log.info(`[Service.create] Failed to fetch complete service after creation: ${createdService.service_id}`);
-        return serviceSchema.parse(createdService); // Fall back to the original service data
+        return serviceSchema.parse(createdService) as IService; // Fall back to the original service data
       }
 
       // Validate the returned data against the main serviceSchema before returning
       // Validate the returned data against the schema (which transforms to match IService)
       // Validate and transform the DB result using the final schema's parse method
-      return serviceSchema.parse(completeService);
+      return serviceSchema.parse(completeService) as IService;
     } catch (error) {
       log.error('[Service.create] Database error:', error);
       throw error;
@@ -375,7 +375,7 @@ const Service = {
       // Validate the result against the updated schema
       // Validate the result against the schema (which transforms to match IService)
       // Validate and transform the DB result using the final schema's parse method
-      return serviceSchema.parse(completeService);
+      return serviceSchema.parse(completeService) as IService;
     } catch (error) {
       log.error(`[Service.update] Error updating service ${service_id}:`, error);
       throw error;
@@ -489,7 +489,7 @@ const Service = {
       // Validate and transform using the final schema's parse method
       return servicesData.map(service => {
         return serviceSchema.parse(service);
-      });
+      }) as IService[];
     } catch (error) {
       log.error(`[Service.getByCategoryId] Error fetching services for category ${category_id}:`, error);
       throw error;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FieldMappingTemplate, ImportJobDetails, ImportJobRecord } from '@/types/imports.types';
+import type { FieldMappingTemplate, ImportJobDetails, ImportJobRecord } from 'server/src/types/imports.types';
 
 interface ImportSourceDTO {
   import_source_id: string;

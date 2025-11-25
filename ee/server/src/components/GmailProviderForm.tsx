@@ -125,9 +125,9 @@ export function GmailProviderForm({
       };
 
       // After OAuth, run automation once to set up Pub/Sub + watch
-      const result = isEditing 
-        ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
-        : await createEmailProvider(payload, false); // skipAutomation: false
+      const result = isEditing
+        ? await updateEmailProvider(provider.id, payload as any, false) // skipAutomation: false
+        : await createEmailProvider(payload as any, false); // skipAutomation: false
 
       onSuccess(result.provider);
 
@@ -193,7 +193,7 @@ export function GmailProviderForm({
         providerId,
       });
       if (!oauthResult.success) {
-        throw new Error(oauthResult.error || 'Failed to initiate OAuth');
+        throw new Error((oauthResult as any).error || 'Failed to initiate OAuth');
       }
       const { authUrl } = oauthResult;
 

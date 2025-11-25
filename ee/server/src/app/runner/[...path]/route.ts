@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-import { getRunnerBackend, RunnerConfigError, RunnerRequestError, filterHopByHopHeaders } from '../../../../lib/extensions/runner/backend';
+import { getRunnerBackend, RunnerConfigError, RunnerRequestError, filterHopByHopHeaders } from '../../../lib/extensions/runner/backend.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,7 @@ function normalizePath(segments: string[] | string | undefined): string {
 
 const ALLOW_METHODS = new Set(['GET', 'HEAD']);
 
-async function proxy(req: NextRequest, params: { path?: string[] }) {
+async function proxy(req: Request, params: { path?: string[] }) {
   if (!ALLOW_METHODS.has(req.method)) {
     return new NextResponse('Method Not Allowed', {
       status: 405,
@@ -34,7 +34,7 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
   try {
     const upstream = await backend.fetchStaticAsset({
       path,
-      search: req.nextUrl.search,
+      search: new URL(req.url).search,
       method: req.method,
       headers: req.headers,
     });
@@ -69,10 +69,12 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
   }
 }
 
-export async function GET(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params);
+export async function GET(req: Request, segmentData: { params: Promise<{ path?: string[] }> }) {
+  const params = await segmentData.params;
+  return proxy(req, params);
 }
 
-export async function HEAD(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params);
+export async function HEAD(req: Request, segmentData: { params: Promise<{ path?: string[] }> }) {
+  const params = await segmentData.params;
+  return proxy(req, params);
 }

@@ -4,7 +4,7 @@ import type {
   MapToAssetContext,
   ParsedRecord,
   ValidationResult
-} from '@/types/imports.types';
+} from 'server/src/types/imports.types';
 import { ImportValidationError } from '@/lib/imports/errors';
 import Papa, { ParseResult, ParseMeta, ParseError } from 'papaparse';
 import * as XLSX from 'xlsx';

@@ -92,7 +92,7 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
           trx.raw('COUNT(*) as entry_count'),
           trx.raw('SUM(billable_duration) / 60 as total_hours')
         )
-        .first();
+        .first() as unknown as { entry_count: number; total_hours: string } | undefined;
 
       // Get period info
       const periodInfo = await trx('time_periods')
@@ -100,7 +100,7 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
           period_id: timeSheetInfo.period_id,
           tenant
         })
-        .first();
+        .first() as unknown as { start_date: string; end_date: string } | undefined;
 
       // Update the time sheet status
       const [updatedTimeSheet] = await trx('time_sheets')

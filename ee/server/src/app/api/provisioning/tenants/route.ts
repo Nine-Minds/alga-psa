@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { TenantService, TenantProvisioningError } from '../../../../services/provisioning';
 import { CreateTenantSchema } from '../../../../services/provisioning/types/tenant.schema';
 import { ZodError } from 'zod';
@@ -6,7 +6,7 @@ import { getServerSession } from '@/lib/auth-compat';
 import { hasPermission } from '@/lib/auth/rbac';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     // Check authentication
     const session = await getServerSession();

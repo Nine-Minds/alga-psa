@@ -299,7 +299,7 @@ export function ActivityDetailViewerDrawer({
                 event={{
                   entry_id: scheduleEntry.entry_id,
                   work_item_id: scheduleEntry.work_item_id || '',
-                  work_item_type: scheduleEntry.work_item_type || '',
+                  work_item_type: (scheduleEntry.work_item_type || '') as any,
                   title: scheduleEntry.title,
                   notes: scheduleEntry.notes || '',
                   scheduled_start: scheduleEntry.scheduled_start,

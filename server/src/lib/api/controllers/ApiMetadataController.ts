@@ -323,7 +323,7 @@ export class ApiMetadataController extends ApiBaseController {
             });
           } else {
             // Redirect to OpenAPI spec for other formats
-            return NextResponse.redirect(new URL('/api/v1/meta/openapi', apiRequest.nextUrl.origin));
+            return NextResponse.redirect(new URL('/api/v1/meta/openapi', new URL(apiRequest.url).origin));
           }
         });
       } catch (error) {

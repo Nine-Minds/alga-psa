@@ -324,7 +324,7 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
                 order_key: orderKey,
             };
 
-            return await ProjectModel.addPhase(trx, phaseWithDefaults);
+            return await ProjectModel.addPhase(trx, phaseWithDefaults as any);
         });
     } catch (error) {
         console.error('Error adding project phase:', error);
@@ -578,7 +578,7 @@ export async function createProject(
                 ...projectDataWithStatus,
                 assigned_to: validatedData.assigned_to || null,
                 contact_name_id: validatedData.contact_name_id || null
-            });
+            } as any);
 
             // Create project status mappings - handle both standard and regular statuses
             const isUsingStandardStatuses = projectTaskStatuses.length === 0;

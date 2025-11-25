@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ImportPreviewManager } from '@/lib/imports/ImportPreviewManager';
-import type { DuplicateCheckResult, ParsedRecord } from '@/types/imports.types';
+import type { DuplicateCheckResult, ParsedRecord } from 'server/src/types/imports.types';
 import { ImportValidationError } from '@/lib/imports/errors';
 
 const tenantId = '00000000-0000-0000-0000-000000000000';

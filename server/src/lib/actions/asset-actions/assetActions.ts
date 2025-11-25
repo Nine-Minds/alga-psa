@@ -484,7 +484,7 @@ export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
 
         // Validate the formatted output
         try {
-            return validateData(assetSchema, result);
+            return validateData(assetSchema, result) as Asset;
         } catch (error) {
             console.error('Output validation error:', error);
             throw new Error('Server error: Invalid output data format');
@@ -602,7 +602,7 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
         revalidatePath(`/assets/${asset_id}`);
         revalidatePath('/msp/assets');
         revalidatePath(`/msp/assets/${asset_id}`);
-        return validateData(assetSchema, result);
+        return validateData(assetSchema, result) as Asset;
     } catch (error) {
         console.error('Error updating asset:', error);
         throw new Error('Failed to update asset');
@@ -857,7 +857,7 @@ export async function createMaintenanceSchedule(data: CreateMaintenanceScheduleR
         revalidatePath('/assets');
         revalidatePath(`/assets/${data.asset_id}`);
 
-        return validateData(assetMaintenanceScheduleSchema, schedule);
+        return validateData(assetMaintenanceScheduleSchema, schedule) as AssetMaintenanceSchedule;
     } catch (error) {
         console.error('Error creating maintenance schedule:', error);
         throw new Error('Failed to create maintenance schedule');
@@ -919,7 +919,7 @@ export async function updateMaintenanceSchedule(
         revalidatePath('/assets');
         revalidatePath(`/assets/${schedule.asset_id}`);
 
-        return validateData(assetMaintenanceScheduleSchema, schedule);
+        return validateData(assetMaintenanceScheduleSchema, schedule) as AssetMaintenanceSchedule;
     } catch (error) {
         console.error('Error updating maintenance schedule:', error);
         throw new Error('Failed to update maintenance schedule');
@@ -1027,7 +1027,7 @@ export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryReq
         revalidatePath('/assets');
         revalidatePath(`/assets/${data.asset_id}`);
 
-        return validateData(assetMaintenanceHistorySchema, history);
+        return validateData(assetMaintenanceHistorySchema, history) as AssetMaintenanceHistory;
     } catch (error) {
         console.error('Error recording maintenance history:', error);
         throw new Error('Failed to record maintenance history');
@@ -1169,7 +1169,7 @@ async function fetchAssetMaintenanceReport(
             db.raw(`TO_CHAR(MAX(last_maintenance), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as last_maintenance`),
             db.raw(`TO_CHAR(MIN(next_maintenance), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as next_maintenance`)
         )
-        .first();
+        .first() as unknown as { total_schedules: number; active_schedules: number; last_maintenance: string | null; next_maintenance: string | null } | undefined;
 
     const history = await db('asset_maintenance_history')
         .where({ tenant, asset_id })
@@ -1213,7 +1213,7 @@ async function fetchAssetMaintenanceReport(
         }))
     };
 
-    return validateData(assetMaintenanceReportSchema, report);
+    return validateData(assetMaintenanceReportSchema, report) as AssetMaintenanceReport;
 }
 
 async function fetchAssetHistory(
@@ -1380,7 +1380,7 @@ async function getClientMaintenanceSummaryForTenant(
             this.on('assets.asset_id', '=', 'asset_maintenance_schedules.asset_id')
                 .andOn('asset_maintenance_schedules.tenant', '=', db.raw('?', [tenant]));
         })
-        .first();
+        .first() as unknown as { total_assets: number; assets_with_maintenance: number } | undefined;
 
     const assetIdsSubquery = db('assets')
         .where({ 'assets.tenant': tenant, client_id })
@@ -1398,13 +1398,13 @@ async function getClientMaintenanceSummaryForTenant(
                 END) as overdue_maintenances
             `),
             db.raw(`
-                COUNT(CASE 
-                    WHEN next_maintenance > NOW() AND is_active 
-                    THEN 1 
+                COUNT(CASE
+                    WHEN next_maintenance > NOW() AND is_active
+                    THEN 1
                 END) as upcoming_maintenances
             `)
         )
-        .first();
+        .first() as unknown as { total_schedules: number; overdue_maintenances: number; upcoming_maintenances: number } | undefined;
 
     const typeBreakdown = await db('asset_maintenance_schedules')
         .where({ 'asset_maintenance_schedules.tenant': tenant })
@@ -1447,7 +1447,7 @@ async function getClientMaintenanceSummaryForTenant(
         maintenance_by_type: typeBreakdown || {}
     };
 
-    return validateData(clientMaintenanceSummarySchema, summary);
+    return validateData(clientMaintenanceSummarySchema, summary) as ClientMaintenanceSummary;
 }
 
 export async function getClientMaintenanceSummaries(client_ids: string[]): Promise<Record<string, ClientMaintenanceSummary>> {
@@ -1575,7 +1575,7 @@ export async function createAssetAssociation(data: CreateAssetAssociationRequest
             revalidatePath(`/projects/${data.entity_id}`);
         }
 
-        return validateData(assetAssociationSchema, association);
+        return validateData(assetAssociationSchema, association) as AssetAssociation;
     } catch (error) {
         console.error('Error creating asset association:', error);
         throw new Error('Failed to create asset association');

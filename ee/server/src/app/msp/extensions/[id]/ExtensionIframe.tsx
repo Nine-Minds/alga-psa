@@ -70,7 +70,7 @@ export default function ExtensionIframe({ domain }: Props) {
             className="extension-loading-indicator"
             text="Starting extension"
             textClassName="extension-loading-text"
-            spinnerProps={{ size: 'sm', color: 'border-primary-400' }}
+            spinnerProps={{ size: 'sm' }}
           />
           <p className="extension-loading-subtext">Connecting to the runtime workspace&hellip;</p>
         </div>

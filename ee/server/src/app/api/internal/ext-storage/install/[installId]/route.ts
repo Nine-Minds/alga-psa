@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getStorageServiceForInstall } from '@/lib/extensions/storage/v2/factory';
@@ -95,7 +95,7 @@ function mapError(error: unknown): NextResponse {
   return NextResponse.json({ error: 'Internal error', code: 'INTERNAL_ERROR' }, { status: 500 });
 }
 
-function ensureRunnerAuth(req: NextRequest): void {
+function ensureRunnerAuth(req: Request): void {
   const expected = process.env.RUNNER_STORAGE_API_TOKEN;
   if (!expected) {
     throw new StorageServiceError('UNAUTHORIZED', 'Runner token not configured');
@@ -107,10 +107,11 @@ function ensureRunnerAuth(req: NextRequest): void {
 }
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { installId: string } }
+  req: Request,
+  segmentData: { params: Promise<{ installId: string }> }
 ) {
   try {
+    const params = await segmentData.params;
     ensureRunnerAuth(req);
 
     const raw = await req.json();
@@ -165,7 +166,7 @@ export async function POST(
         const input = bulkPutSchema.parse(raw);
         const result = await service.bulkPut({
           namespace: input.namespace,
-          items: input.items,
+          items: input.items as Parameters<typeof service.bulkPut>[0]['items'],
         });
         return NextResponse.json(result, { status: 200 });
       }

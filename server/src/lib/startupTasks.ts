@@ -71,7 +71,7 @@ export async function syncStandardTemplates(): Promise<void> {
                         if (compileResult.success) {
                             console.log(`[Startup Task] Successfully recompiled and updated standard template: ${standard_invoice_template_code}. New SHA: ${compileResult.sha}`);
                         } else {
-                            console.error(`[Startup Task] Failed to recompile standard template ${standard_invoice_template_code}: ${compileResult.error}`, compileResult.details || '');
+                            console.error(`[Startup Task] Failed to recompile standard template ${standard_invoice_template_code}: ${(compileResult as any).error}`, (compileResult as any).details || '');
                             // Decide if failure should halt startup or just log error
                         }
                     } else {
