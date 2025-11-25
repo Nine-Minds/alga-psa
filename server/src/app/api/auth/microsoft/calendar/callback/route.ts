@@ -220,8 +220,8 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     try {
-      const authority = tenantId || 'common';
-      const tokenUrl = `https://login.microsoftonline.com/${authority}/oauth2/v2.0/token`;
+      // Always use 'common' for multi-tenant Azure AD apps
+      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
