@@ -23,6 +23,7 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetActionRail } from './AssetActionRail';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
+import { RmmStatusIndicator } from './RmmStatusIndicator';
 import {
   ASSET_DRAWER_TABS,
   type AssetDrawerTab,
@@ -57,12 +58,22 @@ type ColumnKey =
   | 'asset_type'
   | 'details'
   | 'status'
+  | 'agent_status'
   | 'client_name'
   | 'location'
   | 'actions';
 
 const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
+const AGENT_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'online', label: 'Online' },
+  { value: 'offline', label: 'Offline' },
+  { value: 'unknown', label: 'Unknown' },
+];
+const RMM_MANAGED_OPTIONS: { value: string; label: string }[] = [
+  { value: 'managed', label: 'RMM Managed' },
+  { value: 'unmanaged', label: 'Not Managed' },
+];
 
 export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
   useRegisterUIComponent({
@@ -79,6 +90,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [clientFilters, setClientFilters] = useState<string[]>([]);
+  const [agentStatusFilters, setAgentStatusFilters] = useState<string[]>([]);
+  const [rmmManagedFilter, setRmmManagedFilter] = useState<string[]>([]);
   const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>([
     'select',
     'name',
@@ -278,16 +291,30 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       const matchesType = typeFilters.length === 0 || typeFilters.includes(asset.asset_type);
       const matchesClient = clientFilters.length === 0 || (asset.client_id && clientFilters.includes(asset.client_id));
 
-      return matchesSearch && matchesStatus && matchesType && matchesClient;
+      // RMM Agent Status filter
+      const matchesAgentStatus = agentStatusFilters.length === 0 || (
+        asset.rmm_provider && asset.agent_status && agentStatusFilters.includes(asset.agent_status)
+      );
+
+      // RMM Managed filter
+      const matchesRmmManaged = rmmManagedFilter.length === 0 || (
+        rmmManagedFilter.includes('managed') && asset.rmm_provider && asset.rmm_device_id
+      ) || (
+        rmmManagedFilter.includes('unmanaged') && (!asset.rmm_provider || !asset.rmm_device_id)
+      );
+
+      return matchesSearch && matchesStatus && matchesType && matchesClient && matchesAgentStatus && matchesRmmManaged;
     });
-  }, [assets, searchTerm, statusFilters, typeFilters, clientFilters]);
+  }, [assets, searchTerm, statusFilters, typeFilters, clientFilters, agentStatusFilters, rmmManagedFilter]);
 
   const filteredCount = filteredAssets.length;
   const hasActiveFilters = Boolean(
     searchTerm ||
     statusFilters.length > 0 ||
     typeFilters.length > 0 ||
-    clientFilters.length > 0
+    clientFilters.length > 0 ||
+    agentStatusFilters.length > 0 ||
+    rmmManagedFilter.length > 0
   );
 
   const isAllSelected = filteredCount > 0 && filteredAssets.every(asset => selectedAssetIds.includes(asset.asset_id));
@@ -323,6 +350,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setStatusFilters([]);
     setTypeFilters([]);
     setClientFilters([]);
+    setAgentStatusFilters([]);
+    setRmmManagedFilter([]);
   };
 
   const getAssetTypeIcon = useCallback((type: string) => {
@@ -494,6 +523,17 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </span>
         );
+      }
+    },
+    agent_status: {
+      dataIndex: 'agent_status',
+      title: 'Agent',
+      render: (_: unknown, record: Asset) => {
+        // Only show for RMM-managed assets
+        if (!record.rmm_provider || !record.rmm_device_id) {
+          return <span className="text-xs text-gray-400">—</span>;
+        }
+        return <RmmStatusIndicator asset={record} size="sm" />;
       }
     },
     client_name: {
@@ -727,6 +767,42 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
+                    <Button id="agent-status-filter-button" variant="ghost" size="sm" className="gap-1">
+                      <Monitor className="h-4 w-4" /> Agent
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {AGENT_STATUS_OPTIONS.map(({ value, label }) => (
+                      <DropdownMenuItem key={value} id={`filter-agent-${value}`} onSelect={(event) => event.preventDefault()}>
+                        <Checkbox
+                          id={`agent-checkbox-${value}`}
+                          checked={agentStatusFilters.includes(value)}
+                          onChange={() => toggleFilterValue(agentStatusFilters, value, setAgentStatusFilters)}
+                          className="mr-2"
+                          containerClassName="m-0"
+                        />
+                        <span>{label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    {RMM_MANAGED_OPTIONS.map(({ value, label }) => (
+                      <DropdownMenuItem key={value} id={`filter-rmm-${value}`} onSelect={(event) => event.preventDefault()}>
+                        <Checkbox
+                          id={`rmm-checkbox-${value}`}
+                          checked={rmmManagedFilter.includes(value)}
+                          onChange={() => toggleFilterValue(rmmManagedFilter, value, setRmmManagedFilter)}
+                          className="mr-2"
+                          containerClassName="m-0"
+                        />
+                        <span>{label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button id="column-chooser-button" variant="ghost" size="sm" className="gap-1">
                       Columns
                       <ChevronDown className="h-4 w-4" />
@@ -750,7 +826,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               </div>
             </div>
 
-            {(statusFilters.length > 0 || typeFilters.length > 0 || clientFilters.length > 0) && (
+            {(statusFilters.length > 0 || typeFilters.length > 0 || clientFilters.length > 0 || agentStatusFilters.length > 0 || rmmManagedFilter.length > 0) && (
               <div className="flex flex-wrap gap-2" {...withDataAutomationId({ id: 'active-filters-bar' })}>
                 {statusFilters.map((status) => (
                   <Badge key={`status-pill-${status}`} variant="outline" className="flex items-center gap-2">
@@ -791,6 +867,40 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                         size="icon"
                         className="h-6 w-6"
                         onClick={() => toggleFilterValue(clientFilters, clientId, setClientFilters)}
+                      >
+                        ×
+                      </Button>
+                    </Badge>
+                  );
+                })}
+                {agentStatusFilters.map((status) => {
+                  const label = AGENT_STATUS_OPTIONS.find(opt => opt.value === status)?.label || status;
+                  return (
+                    <Badge key={`agent-pill-${status}`} variant="outline" className="flex items-center gap-2">
+                      Agent: {label}
+                      <Button
+                        id={`remove-agent-${status}`}
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => toggleFilterValue(agentStatusFilters, status, setAgentStatusFilters)}
+                      >
+                        ×
+                      </Button>
+                    </Badge>
+                  );
+                })}
+                {rmmManagedFilter.map((filter) => {
+                  const label = RMM_MANAGED_OPTIONS.find(opt => opt.value === filter)?.label || filter;
+                  return (
+                    <Badge key={`rmm-pill-${filter}`} variant="outline" className="flex items-center gap-2">
+                      {label}
+                      <Button
+                        id={`remove-rmm-${filter}`}
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => toggleFilterValue(rmmManagedFilter, filter, setRmmManagedFilter)}
                       >
                         ×
                       </Button>

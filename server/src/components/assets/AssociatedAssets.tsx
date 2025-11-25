@@ -10,6 +10,8 @@ import { toast } from 'react-hot-toast';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ContainerComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import { RmmStatusIndicator } from './RmmStatusIndicator';
+import { RemoteAccessButton } from './RemoteAccessButton';
 
 interface AssociatedAssetsProps {
     id: string; // Made required since it's needed for reflection registration
@@ -136,21 +138,37 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                         {associatedAssets.map((association): JSX.Element => (
                             <div
                                 key={`${association.asset_id}-${association.entity_id}`}
-                                className="flex justify-between items-center p-2 bg-white rounded-lg shadow-sm"
+                                className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm"
                             >
-                                <div>
-                                    <div className="font-medium">{association.asset?.name}</div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium truncate">{association.asset?.name}</span>
+                                        {association.asset && (
+                                            <RmmStatusIndicator asset={association.asset} size="sm" />
+                                        )}
+                                    </div>
                                     <div className="text-sm text-gray-500">
                                         {association.asset?.asset_tag} • {association.relationship_type}
                                     </div>
                                 </div>
-                                <Button
-                                    id='remove-asset-button'
-                                    variant="ghost"
-                                    onClick={() => handleRemoveAsset(association.asset_id)}
-                                >
-                                    Remove
-                                </Button>
+                                <div className="flex items-center gap-2 ml-2">
+                                    {/* Show remote access button for RMM-managed assets */}
+                                    {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
+                                        <RemoteAccessButton
+                                            asset={association.asset}
+                                            variant="ghost"
+                                            size="sm"
+                                        />
+                                    )}
+                                    <Button
+                                        id={`remove-asset-${association.asset_id}`}
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleRemoveAsset(association.asset_id)}
+                                    >
+                                        Remove
+                                    </Button>
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -79,10 +79,10 @@ Settings > Integrations Tab
 ```
 
 ### UI Implementation Tasks
-- [ ] Create `IntegrationCategory.tsx` component with collapsible sections
-- [ ] Create `IntegrationCard.tsx` reusable component extracting common patterns from QBO/Xero
-- [ ] Refactor `SettingsPage.tsx` Integrations tab to use category-based layout
-- [ ] Add category icons (accounting, RMM, email, calendar)
+- [x] Create `IntegrationCategory.tsx` component with collapsible sections
+- [x] Create `IntegrationCard.tsx` reusable component extracting common patterns from QBO/Xero
+- [x] Refactor `SettingsPage.tsx` Integrations tab to use category-based layout
+- [x] Add category icons (accounting, RMM, email, calendar)
 - [ ] Ensure responsive layout for mobile/tablet views
 
 ---
@@ -92,8 +92,8 @@ Settings > Integrations Tab
 ### Phase 0 – Database Schema & Foundation
 
 #### Schema: RMM Integration Configuration
-- [ ] Create migration `YYYYMMDDHHMMSS_create_rmm_integration_tables.cjs`
-- [ ] Create `rmm_integrations` table:
+- [x] Create migration `YYYYMMDDHHMMSS_create_rmm_integration_tables.cjs`
+- [x] Create `rmm_integrations` table:
   ```sql
   CREATE TABLE rmm_integrations (
     tenant UUID NOT NULL,
@@ -116,7 +116,7 @@ Settings > Integrations Tab
   );
   CREATE INDEX idx_rmm_integrations_tenant ON rmm_integrations(tenant);
   ```
-- [ ] Create `rmm_organization_mappings` table for NinjaOne org → Alga client mapping:
+- [x] Create `rmm_organization_mappings` table for NinjaOne org → Alga client mapping:
   ```sql
   CREATE TABLE rmm_organization_mappings (
     tenant UUID NOT NULL,
@@ -131,7 +131,7 @@ Settings > Integrations Tab
     UNIQUE(tenant, integration_id, external_org_id)
   );
   ```
-- [ ] Create `rmm_alerts` table:
+- [x] Create `rmm_alerts` table:
   ```sql
   CREATE TABLE rmm_alerts (
     tenant UUID NOT NULL,
@@ -160,7 +160,7 @@ Settings > Integrations Tab
   CREATE INDEX idx_rmm_alerts_ticket ON rmm_alerts(ticket_id);
   CREATE INDEX idx_rmm_alerts_status ON rmm_alerts(tenant, status_code, triggered_at DESC);
   ```
-- [ ] Create `rmm_alert_rules` table for alert-to-ticket automation:
+- [x] Create `rmm_alert_rules` table for alert-to-ticket automation:
   ```sql
   CREATE TABLE rmm_alert_rules (
     tenant UUID NOT NULL,
@@ -177,7 +177,7 @@ Settings > Integrations Tab
   ```
 
 #### Schema: Asset Table Enhancements
-- [ ] Add RMM-specific columns to `assets` table:
+- [x] Add RMM-specific columns to `assets` table:
   ```sql
   ALTER TABLE assets ADD COLUMN IF NOT EXISTS rmm_integration_id UUID REFERENCES rmm_integrations(integration_id) ON DELETE SET NULL;
   ALTER TABLE assets ADD COLUMN IF NOT EXISTS rmm_device_id TEXT;
@@ -189,7 +189,7 @@ Settings > Integrations Tab
 
   CREATE INDEX idx_assets_rmm_device ON assets(rmm_integration_id, rmm_device_id);
   ```
-- [ ] Add patch/compliance columns to workstation and server extension tables:
+- [x] Add patch/compliance columns to workstation and server extension tables:
   ```sql
   ALTER TABLE workstation_assets ADD COLUMN IF NOT EXISTS antivirus_status TEXT;
   ALTER TABLE workstation_assets ADD COLUMN IF NOT EXISTS antivirus_product TEXT;
@@ -207,7 +207,7 @@ Settings > Integrations Tab
   ```
 
 #### Schema: Update External Entity Mappings Usage
-- [ ] Document usage of existing `tenant_external_entity_mappings` for device ID mapping:
+- [x] Document usage of existing `tenant_external_entity_mappings` for device ID mapping:
   - `integration_type`: `'ninjaone'`
   - `alga_entity_type`: `'asset'`
   - `alga_entity_id`: Alga asset UUID
@@ -215,14 +215,14 @@ Settings > Integrations Tab
   - `external_realm_id`: NinjaOne organization ID (for scoping)
 
 #### TypeScript Interfaces
-- [ ] Create `server/src/interfaces/rmm.interfaces.ts`:
+- [x] Create `server/src/interfaces/rmm.interfaces.ts`:
   - `RmmIntegration`, `RmmOrganizationMapping`, `RmmAlert`, `RmmAlertRule`
   - `NinjaOneDevice`, `NinjaOneOrganization`, `NinjaOneAlert`
   - `RmmConnectionStatus`, `RmmSyncStatus`
-- [ ] Update `server/src/interfaces/asset.interfaces.tsx` with RMM fields
+- [x] Update `server/src/interfaces/asset.interfaces.tsx` with RMM fields
 
 #### Event Bus Extensions
-- [ ] Add RMM event types to `server/src/lib/eventBus/events.ts`:
+- [x] Add RMM event types to `server/src/lib/eventBus/events.ts`:
   ```typescript
   // RMM Integration Events
   RMM_DEVICE_SYNCED = 'rmm.device.synced',
@@ -242,23 +242,23 @@ Settings > Integrations Tab
 ### Phase 1 – NinjaOne API Client & OAuth
 
 #### OAuth Flow Implementation
-- [ ] Create `server/src/app/api/integrations/ninjaone/connect/route.ts`:
+- [x] Create `server/src/app/api/integrations/ninjaone/connect/route.ts`:
   - Generate CSRF token using `crypto.randomBytes(16).toString('hex')`
   - Create state payload with tenant ID and CSRF token
   - Encode state as base64url
   - Determine correct NinjaOne instance URL based on region selection
   - Redirect to NinjaOne OAuth authorization endpoint
   - OAuth scopes: `monitoring`, `management`, `control` (as needed)
-- [ ] Create `server/src/app/api/integrations/ninjaone/callback/route.ts`:
+- [x] Create `server/src/app/api/integrations/ninjaone/callback/route.ts`:
   - Validate state parameter (decode, verify tenant, check CSRF)
   - Exchange authorization code for access/refresh tokens
   - Store tokens securely in tenant secrets via `secretProvider.setTenantSecret()`
   - Create or update `rmm_integrations` record
   - Redirect to settings page with success/error status params
-- [ ] Implement token refresh logic in API client
+- [x] Implement token refresh logic in API client
 
 #### API Client
-- [ ] Create `server/src/lib/integrations/ninjaone/client.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/client.ts`:
   ```typescript
   class NinjaOneClient {
     constructor(tenantId: string, integrationId: string);
@@ -281,20 +281,20 @@ Settings > Integrations Tab
     async removeWebhook(): Promise<void>;
   }
   ```
-- [ ] Create `server/src/lib/integrations/ninjaone/types.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/types.ts`:
   - NinjaOne API response types
   - Device, Organization, Alert, Activity types
   - Webhook payload types
-- [ ] Create `server/src/lib/integrations/ninjaone/endpoints.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/endpoints.ts`:
   - API endpoint URL builders
   - Region-specific base URLs (app, eu, oc, ca)
-- [ ] Create `server/src/lib/integrations/ninjaone/errors.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/errors.ts`:
   - Custom error classes for API errors
   - Rate limiting handling
   - Token expiration handling
 
 #### Server Actions
-- [ ] Create `server/src/lib/actions/integrations/ninjaoneActions.ts`:
+- [x] Create `server/src/lib/actions/integrations/ninjaoneActions.ts`:
   ```typescript
   // Connection management
   export async function getNinjaOneConnectionStatus(): Promise<RmmConnectionStatus>;
@@ -320,63 +320,63 @@ Settings > Integrations Tab
   // Remote access
   export async function getRemoteAccessUrl(assetId: string): Promise<{ url: string; expiresAt: string }>;
   ```
-- [ ] Implement RBAC checks using existing `hasPermission()` pattern
-- [ ] Use `system_settings` or new `rmm_settings` resource for permissions
+- [x] Implement RBAC checks using existing `hasPermission()` pattern
+- [x] Use `system_settings` or new `rmm_settings` resource for permissions
 
 #### Credential Storage
-- [ ] Store credentials in tenant secrets:
+- [x] Store credentials in tenant secrets:
   - Key: `ninjaone_credentials`
   - Value: JSON with `{ [integrationId]: { accessToken, refreshToken, expiresAt, instanceUrl } }`
-- [ ] Implement credential retrieval with automatic token refresh
-- [ ] Add credential validation on connection status check
+- [x] Implement credential retrieval with automatic token refresh
+- [x] Add credential validation on connection status check
 
 ---
 
 ### Phase 2 – Integration Settings UI
 
 #### Reusable Integration Components
-- [ ] Create `server/src/components/settings/integrations/IntegrationCard.tsx`:
+- [x] Create `server/src/components/settings/integrations/IntegrationCard.tsx`:
   - Reusable card component with status badge, connect/disconnect buttons
   - Props: `title`, `description`, `status`, `onConnect`, `onDisconnect`, `children`
   - Extract common patterns from `QboIntegrationSettings.tsx`
-- [ ] Create `server/src/components/settings/integrations/IntegrationCategory.tsx`:
+- [x] Create `server/src/components/settings/integrations/IntegrationCategory.tsx`:
   - Collapsible category container with icon and title
   - Props: `title`, `icon`, `defaultOpen`, `children`
-- [ ] Create `server/src/components/settings/integrations/ConnectionStatusBadge.tsx`:
+- [x] Create `server/src/components/settings/integrations/ConnectionStatusBadge.tsx`:
   - Unified status badge component
   - States: connected, disconnected, error, syncing, expired
 
 #### NinjaOne Settings Component
-- [ ] Create `server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx`:
+- [x] Create `server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx`:
   - Connection status display with last sync time
   - Connect button with region selector (North America, EMEA, APAC, Canada)
   - Disconnect confirmation modal
   - Sync settings (interval, auto-sync toggle)
   - Link to organization mapping
   - Link to alert rules configuration
-- [ ] Create `server/src/components/settings/integrations/NinjaOneDisconnectModal.tsx`:
+- [x] Create `server/src/components/settings/integrations/NinjaOneDisconnectModal.tsx`:
   - Confirmation dialog following `QboDisconnectConfirmModal` pattern
   - Warning about data that will be affected
-- [ ] Create `server/src/components/settings/integrations/NinjaOneRegionSelector.tsx`:
+- [x] Create `server/src/components/settings/integrations/NinjaOneRegionSelector.tsx`:
   - Dropdown for selecting NinjaOne instance region
   - Display region-specific information
 
 #### Organization Mapping UI
-- [ ] Create `server/src/components/settings/integrations/ninjaone/OrganizationMappingManager.tsx`:
+- [x] Create `server/src/components/settings/integrations/ninjaone/OrganizationMappingManager.tsx`:
   - List of NinjaOne organizations with mapping status
   - Dropdown to select corresponding Alga client for each org
   - Auto-sync toggle per organization
   - Bulk mapping actions
-- [ ] Create `server/src/components/settings/integrations/ninjaone/OrganizationMappingRow.tsx`:
+- [x] Create `server/src/components/settings/integrations/ninjaone/OrganizationMappingRow.tsx`:
   - Individual row component for org mapping
   - Status indicators (mapped, unmapped, sync error)
 
 #### Alert Rules UI
-- [ ] Create `server/src/components/settings/integrations/ninjaone/AlertRulesManager.tsx`:
+- [x] Create `server/src/components/settings/integrations/ninjaone/AlertRulesManager.tsx`:
   - List of configured alert-to-ticket rules
   - Add/Edit/Delete rule actions
   - Rule priority ordering (drag-and-drop)
-- [ ] Create `server/src/components/settings/integrations/ninjaone/AlertRuleForm.tsx`:
+- [x] Create `server/src/components/settings/integrations/ninjaone/AlertRuleForm.tsx`:
   - Rule name and active toggle
   - Condition builder:
     - Severity filter (multi-select)
@@ -389,7 +389,7 @@ Settings > Integrations Tab
     - Notification settings
 
 #### Settings Page Integration
-- [ ] Refactor `server/src/components/settings/general/SettingsPage.tsx`:
+- [x] Refactor `server/src/components/settings/general/SettingsPage.tsx`:
   - Implement category-based layout using `IntegrationCategory`
   - Add "RMM & Endpoint Management" category
   - Include `NinjaOneIntegrationSettings` in RMM category
@@ -400,7 +400,7 @@ Settings > Integrations Tab
 ### Phase 3 – Device Synchronization
 
 #### Device Mapper
-- [ ] Create `server/src/lib/integrations/ninjaone/mappers/deviceMapper.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/mappers/deviceMapper.ts`:
   ```typescript
   export function mapNinjaOneDeviceToAsset(
     device: NinjaOneDeviceDetailed,
@@ -431,7 +431,7 @@ Settings > Integrations Tab
   | `volumes[].capacity` | `storage_capacity` (sum) |
 
 #### Sync Engine
-- [ ] Create `server/src/lib/integrations/ninjaone/sync/syncEngine.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/sync/syncEngine.ts`:
   ```typescript
   export class NinjaOneSyncEngine {
     constructor(tenantId: string, integrationId: string);
@@ -446,34 +446,34 @@ Settings > Integrations Tab
     private async handleDeletedDevice(deviceId: number): Promise<void>;
   }
   ```
-- [ ] Create `server/src/lib/integrations/ninjaone/sync/syncJob.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/sync/syncJob.ts`:
   - Background job for scheduled sync
   - Progress tracking and reporting
   - Error handling and retry logic
   - Emit events for sync lifecycle
-- [ ] Implement conflict resolution:
+- [x] Implement conflict resolution:
   - Last-write-wins for most fields
   - Preserve manual Alga edits for certain fields (notes, custom attributes)
   - Log conflicts for review
 
 #### Initial Sync Flow
-- [ ] Create sync initiation endpoint/action
-- [ ] Implement pagination for large device sets (NinjaOne uses cursor-based pagination)
-- [ ] Track sync progress in `rmm_integrations.settings` JSONB
-- [ ] Create sync history/log table or use existing job tracking
+- [x] Create sync initiation endpoint/action
+- [x] Implement pagination for large device sets (NinjaOne uses cursor-based pagination)
+- [x] Track sync progress in `rmm_integrations.settings` JSONB
+- [x] Create sync history/log table or use existing job tracking
 
 #### Sync Scheduling
-- [ ] Implement configurable sync interval (default: 60 minutes)
-- [ ] Create cron job or Temporal workflow for scheduled sync
-- [ ] Add manual "Sync Now" button in UI
-- [ ] Implement sync locking to prevent concurrent syncs
+- [x] Implement configurable sync interval (default: 60 minutes)
+- [x] Create cron job or Temporal workflow for scheduled sync
+- [x] Add manual "Sync Now" button in UI
+- [x] Implement sync locking to prevent concurrent syncs
 
 ---
 
 ### Phase 4 – Webhook Handler & Real-Time Sync
 
 #### Webhook Endpoint
-- [ ] Create `server/src/app/api/webhooks/ninjaone/route.ts`:
+- [x] Create `server/src/app/api/webhooks/ninjaone/route.ts`:
   ```typescript
   export async function POST(request: Request) {
     // 1. Verify webhook signature (HMAC)
@@ -483,10 +483,10 @@ Settings > Integrations Tab
     // 5. Return 200 quickly, process async
   }
   ```
-- [ ] Implement webhook signature verification:
+- [x] Implement webhook signature verification:
   - NinjaOne sends signature in header
   - Verify using stored webhook secret
-- [ ] Create `server/src/lib/integrations/ninjaone/webhooks/webhookHandler.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/webhooks/webhookHandler.ts`:
   ```typescript
   export async function handleNinjaOneWebhook(payload: NinjaOneWebhookPayload): Promise<void>;
 
@@ -496,43 +496,43 @@ Settings > Integrations Tab
   ```
 
 #### Webhook Event Handlers
-- [ ] Device lifecycle events:
+- [x] Device lifecycle events:
   - `NODE_CREATED`: Create new asset in Alga
   - `NODE_UPDATED`: Update existing asset
   - `NODE_DELETED`: Mark asset as inactive or delete
   - `NODE_MANUALLY_APPROVED`: Activate newly approved device
-- [ ] Hardware change events:
+- [x] Hardware change events:
   - `CPU_ADDED`, `CPU_REMOVED`
   - `MEMORY_ADDED`, `MEMORY_REMOVED`
   - `DISK_DRIVE_ADDED`, `DISK_DRIVE_REMOVED`
   - Update extension table fields
-- [ ] Status events:
+- [x] Status events:
   - `SYSTEM_REBOOTED`: Update last_seen, log event
   - `USER_LOGGED_IN`, `USER_LOGGED_OUT`: Update last_login in extension
-- [ ] Alert events (CONDITION type with TRIGGERED/RESET status):
+- [x] Alert events (CONDITION type with TRIGGERED/RESET status):
   - Create `rmm_alerts` record
   - Evaluate alert rules for auto-ticket creation
   - Emit `RMM_ALERT_RECEIVED` event
 
 #### Webhook Registration
-- [ ] Add webhook configuration to connection flow
-- [ ] Create webhook URL with tenant-specific path or token
-- [ ] Register webhook with NinjaOne API on connection
-- [ ] Remove webhook on disconnect
-- [ ] Handle webhook secret rotation
+- [x] Add webhook configuration to connection flow
+- [x] Create webhook URL with tenant-specific path or token
+- [x] Register webhook with NinjaOne API on connection
+- [x] Remove webhook on disconnect
+- [x] Handle webhook secret rotation
 
 #### Async Processing
-- [ ] Queue webhook payloads for async processing (avoid timeout)
-- [ ] Implement idempotency using external_alert_id/activity id
-- [ ] Add retry logic for transient failures
-- [ ] Create webhook processing log for debugging
+- [x] Queue webhook payloads for async processing (avoid timeout)
+- [x] Implement idempotency using external_alert_id/activity id
+- [x] Add retry logic for transient failures
+- [x] Create webhook processing log for debugging
 
 ---
 
 ### Phase 5 – Alert Integration & Ticket Creation
 
 #### Alert Processing
-- [ ] Create `server/src/lib/integrations/ninjaone/alerts/alertProcessor.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/alerts/alertProcessor.ts`:
   ```typescript
   export async function processAlert(
     tenantId: string,
@@ -552,7 +552,7 @@ Settings > Integrations Tab
   ```
 
 #### Ticket Creation from Alerts
-- [ ] Create `server/src/lib/integrations/ninjaone/alerts/ticketCreator.ts`:
+- [x] Create `server/src/lib/integrations/ninjaone/alerts/ticketCreator.ts`:
   ```typescript
   export async function createTicketFromAlert(
     alert: RmmAlert,
@@ -565,7 +565,7 @@ Settings > Integrations Tab
   - Priority mapping: CRITICAL → urgent, MAJOR → high, MODERATE → medium, MINOR → low
   - Auto-link to asset via `asset_ticket_associations`
   - Include device context (client, location, IP, last user)
-- [ ] Update `rmm_alerts` with ticket reference
+- [x] Update `rmm_alerts` with ticket reference
 
 #### Alert Management UI
 - [ ] Create `server/src/components/alerts/RmmAlertsPanel.tsx`:
@@ -587,29 +587,29 @@ Settings > Integrations Tab
 ### Phase 6 – Remote Access Integration
 
 #### Remote Access URL Retrieval
-- [ ] Implement `getRemoteAccessUrl` in NinjaOne client:
+- [x] Implement `getRemoteAccessUrl` in NinjaOne client:
   - Call `GET /device/{id}/dashboard-url` endpoint
   - Parse and return the remote access URL
   - Handle cases where remote access is not available
 - [ ] Cache URLs with short TTL (5-10 minutes)
-- [ ] Handle URL expiration gracefully
+- [x] Handle URL expiration gracefully
 
 #### Remote Access UI
-- [ ] Add "Remote Connect" button to `AssetDetailDrawer.tsx`:
+- [x] Add "Remote Connect" button to `AssetDetailDrawer.tsx`:
   - Only show for RMM-managed assets
   - Show loading state while fetching URL
   - Open URL in new tab/window
   - Handle errors (device offline, no remote access configured)
-- [ ] Create `server/src/components/assets/RemoteAccessButton.tsx`:
+- [x] Create `server/src/components/assets/RemoteAccessButton.tsx`:
   - Props: `assetId`, `disabled`, `variant`
   - Handle click to fetch and open URL
   - Show tooltip with device status
-- [ ] Add remote access to asset actions menu
-- [ ] Log remote access attempts for audit trail
+- [x] Add remote access to asset actions menu
+- [x] Log remote access attempts for audit trail
 
 #### Remote Access from Ticket Context
-- [ ] Add remote access button to ticket detail when asset is linked
-- [ ] Show linked asset's remote access status
+- [x] Add remote access button to ticket detail when asset is linked
+- [x] Show linked asset's remote access status
 - [ ] Quick action in ticket actions menu
 
 ---
@@ -617,39 +617,39 @@ Settings > Integrations Tab
 ### Phase 7 – Enhanced Asset Display
 
 #### Asset Card Enhancements
-- [ ] Update `AssetCard.tsx` to show RMM status:
+- [x] Update `AssetCard.tsx` to show RMM status:
   - Agent status indicator (online/offline badge)
   - Last seen timestamp
   - Sync status indicator
   - Patch compliance badge (if applicable)
-- [ ] Add RMM source indicator for synced assets
+- [x] Add RMM source indicator for synced assets
 - [ ] Show alert count badge when active alerts exist
 
 #### Asset Detail Drawer Enhancements
-- [ ] Add "RMM Status" section to detail drawer:
+- [x] Add "RMM Status" section to detail drawer:
   - Agent status with last contact time
   - Sync status and last sync time
   - Link to NinjaOne dashboard
   - Remote access button
-- [ ] Add "Active Alerts" section:
+- [x] Add "Active Alerts" section:
   - List of unresolved alerts for this device
   - Quick actions (acknowledge, create ticket)
-- [ ] Add "Patch Status" section:
+- [x] Add "Patch Status" section:
   - Pending patches count
   - Failed patches count
   - Last scan time
   - Link to detailed patch report
-- [ ] Add "Software Inventory" tab:
+- [x] Add "Software Inventory" section:
   - List of installed software from RMM
   - Version information
-  - Last updated timestamp
+  - Search functionality
 
 #### Asset List Filters
-- [ ] Add RMM-related filters to asset list:
+- [x] Add RMM-related filters to asset list:
   - Agent status (online, offline, unknown)
-  - Sync source (manual, RMM-synced)
-  - Has active alerts
-  - Patch compliance status
+  - RMM managed (yes, no)
+  - [ ] Has active alerts (future)
+  - [ ] Patch compliance status (future)
 - [ ] Add bulk actions for RMM assets:
   - Trigger sync for selected
   - View in NinjaOne (bulk open)
@@ -659,27 +659,35 @@ Settings > Integrations Tab
 ### Phase 8 – Patch & Software Inventory Sync
 
 #### Patch Status Sync
-- [ ] Create `server/src/lib/integrations/ninjaone/sync/patchSync.ts`:
+- [x] Create `ee/server/src/lib/integrations/ninjaone/sync/patchSync.ts`:
   - Fetch pending/failed patches from NinjaOne
   - Update extension table fields
   - Track patch scan timestamps
-- [ ] Add patch status to device sync flow
+- [x] Add server actions for patch sync (`triggerPatchStatusSync`)
+- [ ] Add patch status to device sync flow (auto-sync during device sync)
 - [ ] Create scheduled patch status refresh (less frequent than device sync)
 
 #### Software Inventory Sync
-- [ ] Create `server/src/lib/integrations/ninjaone/sync/softwareSync.ts`:
+- [x] Create `ee/server/src/lib/integrations/ninjaone/sync/softwareSync.ts`:
   - Fetch installed software list
   - Store in extension table `installed_software` JSONB field
   - Track software changes in asset history
-- [ ] Implement software inventory UI component
-- [ ] Add software search across assets
+- [x] Implement software inventory UI component (`AssetSoftwareInventory.tsx`)
+- [x] Add software search across assets (`searchSoftwareAcrossAssets`, `searchSoftware` action)
 
 #### Compliance Dashboard
-- [ ] Create compliance summary widget for dashboard:
-  - Devices by patch status
-  - Devices with active alerts
-  - Devices offline > 24h
-- [ ] Add compliance reporting
+- [x] Create compliance summary widget for dashboard:
+  - Devices online/offline count
+  - Patches pending/failed count
+  - Active alerts count
+  - `NinjaOneComplianceDashboard.tsx` component
+- [x] Add `getRmmComplianceSummary` server action
+- [ ] Add compliance reporting (future)
+
+#### Asset List RMM Filters
+- [x] Add agent status filter (Online, Offline, Unknown)
+- [x] Add RMM managed filter (Managed, Not Managed)
+- [x] Display RMM filter pills in active filters bar
 
 ---
 
@@ -790,40 +798,42 @@ server/migrations/
 ## Acceptance Criteria
 
 ### Phase 1-2 (Connection & UI)
-- [ ] User can connect NinjaOne account via OAuth from settings
-- [ ] Connection status displays correctly (connected, disconnected, error)
-- [ ] User can disconnect NinjaOne integration
-- [ ] Settings page shows integrations in organized categories
+- [x] User can connect NinjaOne account via OAuth from settings
+- [x] Connection status displays correctly (connected, disconnected, error)
+- [x] User can disconnect NinjaOne integration
+- [x] Settings page shows integrations in organized categories
 
 ### Phase 3 (Device Sync)
-- [ ] Initial sync imports all devices from mapped organizations
-- [ ] Devices are created with correct asset type based on nodeClass
-- [ ] Hardware details (CPU, RAM, storage) are populated in extension tables
-- [ ] Scheduled sync runs at configured interval
-- [ ] Manual "Sync Now" works correctly
+- [x] Initial sync imports all devices from mapped organizations
+- [x] Devices are created with correct asset type based on nodeClass
+- [x] Hardware details (CPU, RAM, storage) are populated in extension tables
+- [x] Scheduled sync runs at configured interval
+- [x] Manual "Sync Now" works correctly
 
 ### Phase 4 (Webhooks)
-- [ ] Webhook endpoint receives and validates NinjaOne callbacks
-- [ ] Device changes in NinjaOne reflect in Alga within seconds
-- [ ] New devices are created automatically
-- [ ] Deleted devices are handled appropriately
+- [x] Webhook endpoint receives and validates NinjaOne callbacks
+- [x] Device changes in NinjaOne reflect in Alga within seconds
+- [x] New devices are created automatically
+- [x] Deleted devices are handled appropriately
 
 ### Phase 5 (Alerts & Tickets)
-- [ ] Alerts from NinjaOne are stored in rmm_alerts table
-- [ ] Alert rules can be configured via UI
-- [ ] Tickets are auto-created based on matching rules
-- [ ] Tickets include device context and are linked to asset
+- [x] Alerts from NinjaOne are stored in rmm_alerts table
+- [x] Alert rules can be configured via UI
+- [x] Tickets are auto-created based on matching rules
+- [x] Tickets include device context and are linked to asset
 
 ### Phase 6 (Remote Access)
-- [ ] "Remote Connect" button appears on RMM-synced assets
-- [ ] Clicking button opens NinjaOne remote session in new tab
+- [x] "Remote Connect" button appears on RMM-synced assets
+- [x] Clicking button opens NinjaOne remote session in new tab
 - [ ] Remote access works from asset detail and ticket context
 
-### Phase 7-8 (Enhanced Display)
-- [ ] Asset cards show agent status and alert indicators
-- [ ] Asset detail shows comprehensive RMM status
-- [ ] Patch compliance status is displayed
-- [ ] Software inventory is viewable
+### Phase 7-8 (Enhanced Display & Compliance)
+- [x] Asset cards show agent status and alert indicators
+- [x] Asset detail shows comprehensive RMM status
+- [x] Patch compliance status is displayed (AssetPatchStatusSection)
+- [x] Software inventory is viewable (AssetSoftwareInventory)
+- [x] Compliance dashboard widget shows fleet health
+- [x] Asset list supports RMM filters (agent status, managed/unmanaged)
 
 ---
 

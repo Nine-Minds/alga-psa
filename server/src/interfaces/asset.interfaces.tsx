@@ -19,6 +19,10 @@ export interface AssetRelationship {
   name: string; // Name of the related asset
 }
 
+// RMM Provider types
+export type RmmProvider = 'ninjaone' | 'datto' | 'connectwise_automate';
+export type RmmAgentStatus = 'online' | 'offline' | 'unknown';
+
 export interface Asset {
   asset_id: string;
   asset_type: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
@@ -33,6 +37,14 @@ export interface Asset {
   created_at: string;
   updated_at: string;
   tenant: string;
+  // RMM Integration fields
+  rmm_provider?: RmmProvider;
+  rmm_device_id?: string;
+  rmm_organization_id?: string;
+  agent_status?: RmmAgentStatus;
+  last_seen_at?: string;
+  last_rmm_sync_at?: string;
+  // Related data
   client?: AssetClientInfo;
   relationships?: AssetRelationship[];
   workstation?: WorkstationAsset;
@@ -61,6 +73,17 @@ export interface WorkstationAsset {
   gpu_model?: string;
   last_login?: string;
   installed_software: unknown[];
+  // RMM Integration fields
+  agent_version?: string;
+  antivirus_status?: string;
+  antivirus_product?: string;
+  last_reboot_at?: string;
+  pending_patches?: number;
+  pending_os_patches?: number;
+  pending_software_patches?: number;
+  failed_patches?: number;
+  last_patch_scan_at?: string;
+  system_info?: Record<string, unknown>;
 }
 
 export interface NetworkDeviceAsset {
@@ -91,6 +114,28 @@ export interface ServerAsset {
   network_interfaces: unknown[];
   primary_ip?: string;
   installed_services: unknown[];
+  // RMM Integration fields
+  agent_version?: string;
+  antivirus_status?: string;
+  antivirus_product?: string;
+  last_reboot_at?: string;
+  pending_patches?: number;
+  pending_os_patches?: number;
+  pending_software_patches?: number;
+  failed_patches?: number;
+  last_patch_scan_at?: string;
+  system_info?: Record<string, unknown>;
+  disk_usage?: DiskUsageInfo[];
+  cpu_usage_percent?: number;
+  memory_usage_percent?: number;
+}
+
+export interface DiskUsageInfo {
+  drive: string;
+  total_gb: number;
+  used_gb: number;
+  free_gb: number;
+  percent_used: number;
 }
 
 export interface MobileDeviceAsset {

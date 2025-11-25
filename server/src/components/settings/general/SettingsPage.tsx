@@ -33,14 +33,11 @@ import NumberingSettings from 'server/src/components/settings/general/NumberingS
 import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
 import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
-import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
-import XeroIntegrationSettings from '../integrations/XeroIntegrationSettings';
+import IntegrationsSettingsPage from '../integrations/IntegrationsSettingsPage';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@product/email-settings/entry';
-import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
-import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -262,49 +259,9 @@ const SettingsPage = (): JSX.Element =>  {
         </Card>
       ),
     },
-    { // Add the new Integrations tab definition
+    { // Integrations tab with category-based organization
       label: "Integrations",
-      content: (
-        <div className="space-y-6">
-          <Alert variant="info">
-            <AlertDescription>
-              QuickBooks Online and Xero integrations are available to testers only. Expect missing pieces while we iterate, and please work in a sandbox environment when evaluating. We appreciate your feedback as we move toward general availability.
-            </AlertDescription>
-          </Alert>
-
-          {/* QuickBooks Online Integration */}
-          <QboIntegrationSettings />
-
-          {/* Xero Integration */}
-          <XeroIntegrationSettings />
-
-          {/* Inbound Email Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Inbound Email Integration</CardTitle>
-              <CardDescription>
-                Configure email providers to automatically process incoming emails into tickets
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EmailProviderConfiguration />
-            </CardContent>
-          </Card>
-
-          {/* Calendar Integrations */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar Integrations</CardTitle>
-              <CardDescription>
-                Connect Google Calendar or Microsoft Outlook Calendar to sync schedule entries
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CalendarIntegrationsSettings />
-            </CardContent>
-          </Card>
-        </div>
-      ),
+      content: <IntegrationsSettingsPage />,
     }
   ];
 
