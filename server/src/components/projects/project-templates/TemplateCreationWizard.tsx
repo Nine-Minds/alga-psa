@@ -15,6 +15,7 @@ import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTask
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IStatus } from 'server/src/interfaces/status.interface';
 
 const STEPS = [
   'Template Basics',
@@ -185,6 +186,19 @@ export function TemplateCreationWizard({
     setErrors((prev) => ({ ...prev, [currentStep]: '' }));
   };
 
+  // Handle when a new status is created in the Status Columns step
+  const handleStatusCreated = (newStatus: IStatus) => {
+    setAvailableStatuses((prev) => [
+      ...prev,
+      {
+        status_id: newStatus.status_id,
+        name: newStatus.name,
+        color: newStatus.color || undefined,
+        is_closed: newStatus.is_closed,
+      },
+    ]);
+  };
+
   const validateStep = (stepIndex: number): boolean => {
     setErrors((prev) => ({ ...prev, [stepIndex]: '' }));
 
@@ -286,6 +300,7 @@ export function TemplateCreationWizard({
             updateData={updateData}
             availableStatuses={availableStatuses}
             isLoadingStatuses={isLoadingStatuses}
+            onStatusCreated={handleStatusCreated}
           />
         );
       case 2:
@@ -341,7 +356,7 @@ export function TemplateCreationWizard({
           )}
         </div>
 
-        <div className="flex-shrink-0 px-6 pb-6 border-t bg-white">
+        <div className="flex-shrink-0 px-6 pb-6 bg-white">
           <WizardNavigation
             currentStep={currentStep}
             totalSteps={STEPS.length}
