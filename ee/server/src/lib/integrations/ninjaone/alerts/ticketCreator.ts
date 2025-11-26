@@ -39,6 +39,8 @@ export interface CreateTicketFromAlertOptions {
   addToBoard?: string;
   customFields?: Record<string, unknown>;
   titlePrefix?: string;
+  /** User who performed the action (for audit trail) */
+  performedBy?: string;
 }
 
 /**

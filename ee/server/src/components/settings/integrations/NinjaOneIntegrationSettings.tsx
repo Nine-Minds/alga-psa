@@ -414,10 +414,10 @@ const NinjaOneIntegrationSettings: React.FC = () => {
               Organization mappings will be preserved.
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowDisconnectConfirm(false)}>
+              <Button id="ninjaone-disconnect-cancel-btn" variant="outline" onClick={() => setShowDisconnectConfirm(false)}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDisconnect}>
+              <Button id="ninjaone-disconnect-confirm-btn" variant="destructive" onClick={handleDisconnect}>
                 Disconnect
               </Button>
             </div>

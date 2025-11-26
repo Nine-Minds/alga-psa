@@ -16,6 +16,7 @@ import { hasPermission } from '../../../../../../server/src/lib/auth/rbac';
 import { createTenantKnex } from '../../../../../../server/src/db';
 import { auditLog } from '../../../../../../server/src/lib/logging/auditLog';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
+import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
 import {
   NinjaOneSyncEngine,
   runFullSync as runFullSyncEngine,
@@ -80,6 +81,9 @@ export async function getNinjaOneConnectionStatus(): Promise<RmmConnectionStatus
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration record
     const integration = await knex('rmm_integrations')
@@ -150,19 +154,55 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
-    // Remove credentials from secret storage
+    // 1. Try to remove webhook from NinjaOne before clearing credentials
+    // This is best-effort - we proceed even if it fails
+    try {
+      const client = await createNinjaOneClient(tenant);
+      const webhookResult = await removeNinjaOneWebhook(client, tenant);
+      if (webhookResult.success) {
+        logger.info('[NinjaOneActions] Successfully removed webhook from NinjaOne', { tenant });
+      } else {
+        logger.warn('[NinjaOneActions] Failed to remove webhook (may not exist)', {
+          tenant,
+          error: webhookResult.error
+        });
+      }
+    } catch (webhookError) {
+      // Log but don't fail - webhook may already be removed or credentials may be invalid
+      logger.warn('[NinjaOneActions] Error removing webhook during disconnect', {
+        tenant,
+        error: extractErrorInfo(webhookError),
+      });
+    }
+
+    // 2. Remove credentials from secret storage
     await disconnectNinjaOne(tenant);
 
-    // Update integration record
-    await knex('rmm_integrations')
+    // 3. Update integration record (clear webhook-related settings)
+    const existingIntegration = await knex('rmm_integrations')
       .where({ tenant, provider: 'ninjaone' })
-      .update({
-        is_active: false,
-        sync_status: 'pending',
-        sync_error: null,
-        updated_at: knex.fn.now(),
-      });
+      .first();
+
+    if (existingIntegration) {
+      const settings = JSON.parse(existingIntegration.settings || '{}');
+      // Remove webhook-related settings
+      delete settings.webhookSecret;
+      delete settings.webhookRegisteredAt;
+
+      await knex('rmm_integrations')
+        .where({ tenant, provider: 'ninjaone' })
+        .update({
+          is_active: false,
+          sync_status: 'pending',
+          sync_error: null,
+          settings: JSON.stringify(settings),
+          updated_at: knex.fn.now(),
+        });
+    }
 
     logger.info('[NinjaOneActions] Successfully disconnected NinjaOne', { tenant });
     revalidatePath('/msp/settings');
@@ -192,6 +232,9 @@ export async function testNinjaOneConnection(): Promise<{ success: boolean; erro
     }
 
     const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Create client and test connection
     const client = await createNinjaOneClient(tenant);
@@ -232,6 +275,9 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -372,6 +418,9 @@ export async function getNinjaOneOrganizationMappings(): Promise<RmmOrganization
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -430,6 +479,9 @@ export async function updateNinjaOneOrganizationMapping(
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Map company_id to client_id (database column name)
     const dbUpdates: Record<string, unknown> = {};
@@ -493,6 +545,9 @@ export async function triggerNinjaOneFullSync(
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -548,6 +603,9 @@ export async function triggerNinjaOneIncrementalSync(): Promise<RmmSyncResult> {
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -614,6 +672,9 @@ export async function syncNinjaOneDevice(deviceId: number): Promise<{
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -659,6 +720,9 @@ export async function getNinjaOneRemoteAccessUrl(assetId: string): Promise<{
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get the asset to find the RMM device ID
     const asset = await knex('assets')
@@ -675,7 +739,8 @@ export async function getNinjaOneRemoteAccessUrl(assetId: string): Promise<{
 
     // Create client and get remote access URL
     const client = await createNinjaOneClient(tenant);
-    const url = await client.getDeviceLink(parseInt(asset.rmm_device_id, 10));
+    const linkInfo = await client.getDeviceLink(parseInt(asset.rmm_device_id, 10));
+    const url = linkInfo.url;
 
     // Log remote access for audit trail
     logger.info('[NinjaOneActions] Remote access URL requested', {
@@ -737,6 +802,9 @@ export async function getAssetAlerts(assetId: string): Promise<{
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get the asset to verify RMM management
     const asset = await knex('assets')
@@ -792,6 +860,9 @@ export async function acknowledgeRmmAlert(alertId: string): Promise<{
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Update the alert
     const updated = await knex('rmm_alerts')
@@ -838,6 +909,9 @@ export async function createTicketFromRmmAlert(alertId: string): Promise<{
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get the alert with asset info
     const alert = await knex('rmm_alerts as a')
@@ -861,19 +935,7 @@ export async function createTicketFromRmmAlert(alertId: string): Promise<{
     // Import ticket creator dynamically to avoid circular dependencies
     const { createTicketFromAlert } = await import('../../integrations/ninjaone/alerts/ticketCreator');
 
-    const ticket = await createTicketFromAlert(tenant, {
-      alert_id: alert.alert_id,
-      external_alert_id: alert.external_alert_id,
-      external_device_id: alert.external_device_id,
-      asset_id: alert.asset_id,
-      severity: alert.severity,
-      priority: alert.priority,
-      activity_type: alert.activity_type,
-      status_code: alert.status_code,
-      message: alert.message,
-      source_data: alert.source_data,
-      triggered_at: alert.triggered_at,
-    }, {
+    const ticket = await createTicketFromAlert(tenant, alert as RmmAlert, {
       performedBy: user.user_id,
     });
 
@@ -917,6 +979,9 @@ export async function getNinjaOneDeviceDetails(assetId: string): Promise<{
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get the asset to find the RMM device ID
     const asset = await knex('assets')
@@ -970,6 +1035,9 @@ export async function triggerPatchStatusSync(options?: {
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -1034,6 +1102,9 @@ export async function triggerSoftwareInventorySync(options?: {
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get integration
     const integration = await knex('rmm_integrations')
@@ -1107,6 +1178,9 @@ export async function searchSoftware(
     }
 
     const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Import software sync dynamically
     const { searchSoftwareAcrossAssets } = await import('../../integrations/ninjaone/sync/softwareSync');
@@ -1154,6 +1228,9 @@ export async function getRmmComplianceSummary(): Promise<{
     }
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
 
     // Get total RMM-managed devices
     const totalDevicesResult = await knex('assets')
@@ -1196,7 +1273,7 @@ export async function getRmmComplianceSummary(): Promise<{
         knex.raw('COALESCE(SUM(COALESCE(aw.failed_patches, 0)), 0) as failed'),
         knex.raw('COUNT(CASE WHEN COALESCE(aw.pending_patches, 0) > 0 THEN 1 END) as needing_patches')
       )
-      .first();
+      .first<{ pending: string | number; failed: string | number; needing_patches: string | number }>();
 
     // Get patch statistics from servers
     const serverPatches = await knex('server_assets as asrv')
@@ -1211,7 +1288,7 @@ export async function getRmmComplianceSummary(): Promise<{
         knex.raw('COALESCE(SUM(COALESCE(asrv.failed_patches, 0)), 0) as failed'),
         knex.raw('COUNT(CASE WHEN COALESCE(asrv.pending_patches, 0) > 0 THEN 1 END) as needing_patches')
       )
-      .first();
+      .first<{ pending: string | number; failed: string | number; needing_patches: string | number }>();
 
     // Get last sync time
     const integration = await knex('rmm_integrations')

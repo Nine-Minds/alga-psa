@@ -11,7 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Check, ExternalLink, Ticket, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { Button } from '../../../../../server/src/components/ui/Button';
 import type { Asset } from '../../../../../server/src/interfaces/asset.interfaces';
-import type { RmmAlert } from '../../../interfaces/rmm.interfaces';
+import type { RmmAlert } from '../../interfaces/rmm.interfaces';
 import { getAssetAlerts, acknowledgeRmmAlert, createTicketFromRmmAlert } from '../../lib/actions/integrations/ninjaoneActions';
 import { toast } from 'react-hot-toast';
 
@@ -160,6 +160,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
         </div>
         <div className="flex items-center gap-2">
           <Button
+            id="refresh-alerts-btn"
             variant="ghost"
             size="sm"
             onClick={(e) => {
@@ -228,6 +229,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
                     <div className="flex items-center gap-1">
                       {alert.status !== 'acknowledged' && (
                         <Button
+                          id={`acknowledge-alert-${alert.alert_id}`}
                           variant="ghost"
                           size="sm"
                           onClick={() => handleAcknowledge(alert.alert_id)}
@@ -239,6 +241,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
                       )}
                       {!alert.ticket_id && (
                         <Button
+                          id={`create-ticket-from-alert-${alert.alert_id}`}
                           variant="ghost"
                           size="sm"
                           onClick={() => handleCreateTicket(alert.alert_id)}

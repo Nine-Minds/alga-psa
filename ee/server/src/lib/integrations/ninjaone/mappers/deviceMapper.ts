@@ -62,16 +62,22 @@ export function mapAgentStatus(offline: boolean): RmmAgentStatus {
 }
 
 /**
- * Convert Unix timestamp (seconds) to ISO date string
- * NinjaOne sends timestamps as Unix seconds (with optional decimal milliseconds)
+ * Convert timestamp to ISO date string
+ * NinjaOne sends timestamps as either Unix seconds (number) or ISO strings
  */
-export function unixTimestampToIso(timestamp?: number): string | undefined {
+export function unixTimestampToIso(timestamp?: number | string): string | undefined {
   if (timestamp === undefined || timestamp === null) return undefined;
   try {
-    // NinjaOne timestamps are in seconds (not milliseconds)
-    const date = new Date(timestamp * 1000);
+    let date: Date;
+    if (typeof timestamp === 'string') {
+      // Already an ISO string or parseable date string
+      date = new Date(timestamp);
+    } else {
+      // NinjaOne timestamps are in seconds (not milliseconds)
+      date = new Date(timestamp * 1000);
+    }
     // Validate the date is reasonable (between 2000 and 2100)
-    if (date.getFullYear() < 2000 || date.getFullYear() > 2100) {
+    if (isNaN(date.getTime()) || date.getFullYear() < 2000 || date.getFullYear() > 2100) {
       return undefined;
     }
     return date.toISOString();

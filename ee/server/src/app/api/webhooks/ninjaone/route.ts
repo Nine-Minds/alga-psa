@@ -12,6 +12,7 @@ import {
   verifyWebhookSignature,
   findIntegrationForWebhook,
 } from '../../../../lib/integrations/ninjaone/webhooks/webhookHandler';
+import { verifyWebhookRequest, getWebhookAuthHeaderName } from '../../../../lib/integrations/ninjaone/webhooks/webhookRegistration';
 import { NinjaOneWebhookPayload } from '../../../../interfaces/ninjaone.interfaces';
 
 // Disable body parsing - we need the raw body for signature verification
@@ -72,15 +73,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Verify webhook signature if secret is configured
-    const signature = request.headers.get('X-Ninja-Signature') || '';
-    if (context.integration.webhook_secret) {
-      if (!verifyWebhookSignature(rawBody, signature, context.integration.webhook_secret)) {
-        logger.warn('[NinjaOne Webhook] Invalid signature', {
+    // Verify webhook authentication if secret is configured
+    // We support two verification methods:
+    // 1. Custom header (X-Alga-Webhook-Secret) - registered via NinjaOne webhook API
+    // 2. HMAC signature (X-Ninja-Signature) - standard NinjaOne signature verification
+    const webhookSecret = context.integration.settings?.webhook_secret;
+    if (webhookSecret) {
+      const customSecret = request.headers.get(getWebhookAuthHeaderName()) || '';
+      const ninjaSignature = request.headers.get('X-Ninja-Signature') || '';
+
+      // Try custom header first (our programmatic registration)
+      const customHeaderValid = customSecret && verifyWebhookRequest(
+        request.headers,
+        webhookSecret
+      );
+
+      // Fall back to HMAC signature verification
+      const signatureValid = ninjaSignature && verifyWebhookSignature(
+        rawBody,
+        ninjaSignature,
+        webhookSecret
+      );
+
+      if (!customHeaderValid && !signatureValid) {
+        logger.warn('[NinjaOne Webhook] Invalid authentication', {
           organizationId: payload.organizationId,
+          hasCustomHeader: !!customSecret,
+          hasSignature: !!ninjaSignature,
         });
         return NextResponse.json(
-          { success: false, error: 'Invalid signature' },
+          { success: false, error: 'Invalid authentication' },
           { status: 401 }
         );
       }

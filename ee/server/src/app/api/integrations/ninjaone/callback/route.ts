@@ -17,6 +17,11 @@ import {
   NinjaOneOAuthTokenResponse,
   NinjaOneOAuthCredentials,
 } from '../../../../../interfaces/ninjaone.interfaces';
+import { NinjaOneClient } from '../../../../../lib/integrations/ninjaone/ninjaOneClient';
+import {
+  registerNinjaOneWebhook,
+  generateWebhookSecret,
+} from '../../../../../lib/integrations/ninjaone/webhooks/webhookRegistration';
 
 // Secret names
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
@@ -186,7 +191,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`[NinjaOne Callback] Successfully stored NinjaOne credentials for tenant ${tenantId}, region ${region}.`);
 
-    // 6. Create or update the rmm_integrations record
+    // 6. Generate webhook secret for this integration
+    const webhookSecret = generateWebhookSecret();
+
+    // 7. Create or update the rmm_integrations record
     // Use runWithTenant since this is an OAuth callback without a session
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
@@ -208,6 +216,7 @@ export async function GET(request: NextRequest) {
             sync_error: null,
             settings: JSON.stringify({
               region,
+              webhookSecret,
               ...JSON.parse(existingIntegration.settings || '{}'),
             }),
             updated_at: knex.fn.now(),
@@ -222,13 +231,52 @@ export async function GET(request: NextRequest) {
           is_active: true,
           connected_at: knex.fn.now(),
           sync_status: 'pending',
-          settings: JSON.stringify({ region }),
+          settings: JSON.stringify({ region, webhookSecret }),
         });
         console.log(`[NinjaOne Callback] Created new integration for tenant ${tenantId}.`);
       }
     });
 
-    // 7. Redirect to success page
+    // 8. Register webhook with NinjaOne
+    // This is done after storing credentials so the client can authenticate
+    try {
+      const client = new NinjaOneClient({ tenantId, instanceUrl });
+      const webhookResult = await registerNinjaOneWebhook(client, tenantId, webhookSecret);
+
+      if (webhookResult.success) {
+        console.log(`[NinjaOne Callback] Webhook registered successfully for tenant ${tenantId}.`);
+
+        // Update integration settings with webhook registration timestamp
+        await runWithTenant(tenantId, async () => {
+          const { knex } = await createTenantKnex();
+          const integration = await knex('rmm_integrations')
+            .where({ tenant: tenantId, provider: 'ninjaone' })
+            .first();
+
+          if (integration) {
+            const settings = JSON.parse(integration.settings || '{}');
+            settings.webhookRegisteredAt = new Date().toISOString();
+            settings.webhookSecret = webhookSecret;
+
+            await knex('rmm_integrations')
+              .where({ tenant: tenantId, provider: 'ninjaone' })
+              .update({
+                settings: JSON.stringify(settings),
+                updated_at: knex.fn.now(),
+              });
+          }
+        });
+      } else {
+        // Log warning but don't fail the connection
+        // Webhook can be registered later manually
+        console.warn(`[NinjaOne Callback] Failed to register webhook for tenant ${tenantId}: ${webhookResult.error}`);
+      }
+    } catch (webhookError) {
+      // Log error but don't fail the connection
+      console.error(`[NinjaOne Callback] Error registering webhook for tenant ${tenantId}:`, webhookError);
+    }
+
+    // 9. Redirect to success page
     return successRedirect();
 
   } catch (error: unknown) {

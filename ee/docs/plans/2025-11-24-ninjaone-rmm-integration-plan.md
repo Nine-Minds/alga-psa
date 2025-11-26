@@ -529,6 +529,88 @@ Settings > Integrations Tab
 
 ---
 
+### Phase 4.5 – Webhook Auto-Registration
+
+NinjaOne supports programmatic webhook configuration via the API. This allows us to automatically register the Alga webhook endpoint after OAuth authentication, eliminating manual configuration in the NinjaOne UI.
+
+#### API Reference
+- **`PUT /v2/webhook`** - Configure webhook endpoint and activity filters
+- **`DELETE /v2/webhook`** - Remove webhook configuration
+
+#### Webhook Registration Service
+- [ ] Create `ee/server/src/lib/integrations/ninjaone/webhooks/webhookRegistration.ts`:
+  ```typescript
+  export interface WebhookConfig {
+    url: string;
+    activities: {
+      statusCode?: string[];  // Filter by status codes
+      activityType?: string[];  // Filter by activity types
+    };
+    expand?: string[];  // References to expand in payloads (device, organization)
+    headers?: Array<{ name: string; value: string }>;  // Custom auth headers
+    organizationIds?: number[];  // Optional org filter
+  }
+
+  export async function registerWebhook(
+    client: NinjaOneClient,
+    config: WebhookConfig
+  ): Promise<void>;
+
+  export async function removeWebhook(
+    client: NinjaOneClient
+  ): Promise<void>;
+
+  export function getDefaultWebhookConfig(
+    baseUrl: string,
+    webhookSecret: string
+  ): WebhookConfig;
+  ```
+
+#### Default Activity Subscriptions
+Configure webhook to receive the most useful events:
+- **Device Lifecycle**: `NODE_CREATED`, `NODE_UPDATED`, `NODE_DELETED`, `NODE_MANUALLY_APPROVED`, `NODE_AUTOMATICALLY_APPROVED`
+- **Alerts/Conditions**: `TRIGGERED`, `RESET`, `ACKNOWLEDGED`
+- **System Events**: `SYSTEM_REBOOTED`, `USER_LOGGED_IN`, `USER_LOGGED_OUT`
+- **Hardware Changes**: `CPU_ADDED`, `CPU_REMOVED`, `MEMORY_ADDED`, `MEMORY_REMOVED`, `DISK_DRIVE_ADDED`, `DISK_DRIVE_REMOVED`, `ADAPTER_ADDED`, `ADAPTER_REMOVED`
+- **Patch Management**: `PATCH_MANAGEMENT_SCAN_STARTED`, `PATCH_MANAGEMENT_SCAN_COMPLETED`, `PATCH_MANAGEMENT_INSTALLED`, `PATCH_MANAGEMENT_INSTALL_FAILED`
+- **Software Changes**: `SOFTWARE_ADDED`, `SOFTWARE_REMOVED`
+- **Antivirus**: Severity-based alerts from supported AV products
+
+#### Integration with OAuth Flow
+- [ ] Update `ee/server/src/app/api/integrations/ninjaone/callback/route.ts`:
+  - After successful token exchange and storage
+  - Generate webhook secret using `crypto.randomBytes(32).toString('hex')`
+  - Store webhook secret in rmm_integrations settings
+  - Call `registerWebhook()` with tenant-specific callback URL
+  - Handle registration failures gracefully (log, retry later)
+  - Update `rmm_integrations.settings` with `webhookRegisteredAt` timestamp
+
+#### Integration with Disconnect Flow
+- [ ] Update `disconnectNinjaOneIntegration` action:
+  - Call `removeWebhook()` before clearing credentials
+  - Handle removal failures gracefully (webhook may already be removed)
+  - Clear webhook secret from settings
+
+#### Webhook URL Configuration
+- [ ] Add environment variable `NINJAONE_WEBHOOK_BASE_URL` for production URL
+- [ ] Generate tenant-scoped webhook URL:
+  - Format: `{baseUrl}/api/webhooks/ninjaone?tenant={tenantId}`
+  - Or use signed token approach for security
+- [ ] Update webhook handler to validate custom auth header
+
+#### Error Handling & Retry
+- [ ] Handle rate limiting (429 responses)
+- [ ] Implement retry with exponential backoff
+- [ ] Log registration failures for admin visibility
+- [ ] Add "Re-register Webhook" button in settings UI for manual recovery
+
+#### Testing
+- [ ] Unit test webhook config generation
+- [ ] Integration test webhook registration flow
+- [ ] Test disconnect cleans up webhook
+
+---
+
 ### Phase 5 – Alert Integration & Ticket Creation
 
 #### Alert Processing

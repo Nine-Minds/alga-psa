@@ -521,6 +521,84 @@ export function mapAlertPriority(priority: NinjaOneAlertPriority): string {
   }
 }
 
+/**
+ * Derive priority from severity when priority is not provided
+ * Maps NinjaOne severity levels to priority levels
+ */
+export function derivePriorityFromSeverity(severity: NinjaOneAlertSeverity): string {
+  switch (severity) {
+    case 'CRITICAL':
+      return 'critical';
+    case 'MAJOR':
+      return 'high';
+    case 'MODERATE':
+      return 'medium';
+    case 'MINOR':
+      return 'low';
+    case 'NONE':
+    default:
+      return 'none';
+  }
+}
+
+// Webhook Configuration (for PUT /v2/webhook)
+export interface WebhookConfiguration {
+  /** The URL to receive webhook notifications */
+  url: string;
+  /** Activity filters to control which events are sent */
+  activities?: {
+    /** Filter by specific status codes (e.g., TRIGGERED, RESET, NODE_CREATED) */
+    statusCode?: string[];
+    /** Filter by activity types (e.g., CONDITION, SYSTEM, PATCH_MANAGEMENT) */
+    activityType?: string[];
+  };
+  /** References to expand in webhook payloads */
+  expand?: ('device' | 'organization')[];
+  /** Custom HTTP headers to include with webhook requests (e.g., for authentication) */
+  headers?: Array<{ name: string; value: string }>;
+  /** Filter by specific organization IDs */
+  organizationIds?: number[];
+}
+
+// Default status codes for webhook subscription
+export const NINJAONE_WEBHOOK_STATUS_CODES = [
+  // Device lifecycle
+  'NODE_CREATED',
+  'NODE_UPDATED',
+  'NODE_DELETED',
+  'NODE_MANUALLY_APPROVED',
+  'NODE_AUTOMATICALLY_APPROVED',
+  'NODE_REGISTRATION_REJECTED',
+  // Alert conditions
+  'TRIGGERED',
+  'RESET',
+  'ACKNOWLEDGED',
+  // System events
+  'SYSTEM_REBOOTED',
+  'USER_LOGGED_IN',
+  'USER_LOGGED_OUT',
+  // Hardware changes
+  'CPU_ADDED',
+  'CPU_REMOVED',
+  'MEMORY_ADDED',
+  'MEMORY_REMOVED',
+  'DISK_DRIVE_ADDED',
+  'DISK_DRIVE_REMOVED',
+  'DISK_VOLUME_ADDED',
+  'DISK_VOLUME_REMOVED',
+  'ADAPTER_ADDED',
+  'ADAPTER_REMOVED',
+  'ADAPTER_CONFIG_CHANGED',
+  // Patch management
+  'PATCH_MANAGEMENT_SCAN_STARTED',
+  'PATCH_MANAGEMENT_SCAN_COMPLETED',
+  'PATCH_MANAGEMENT_INSTALLED',
+  'PATCH_MANAGEMENT_INSTALL_FAILED',
+  // Software changes
+  'SOFTWARE_ADDED',
+  'SOFTWARE_REMOVED',
+] as const;
+
 // NinjaOne regional instance URLs
 export const NINJAONE_REGIONS = {
   US: 'https://app.ninjarmm.com',

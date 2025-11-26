@@ -54,7 +54,7 @@ import {
 import {
   Asset,
   CreateAssetRequest,
-} from '../../../../../../server/src/interfaces/asset.interfaces';
+} from '@/interfaces/asset.interfaces';
 import { getRedisStreamClient } from '@shared/workflow/streams';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -118,7 +118,7 @@ export class NinjaOneSyncEngine {
    */
   private async initialize(): Promise<void> {
     if (!this.client) {
-      this.client = await createNinjaOneClient(this.tenantId, this.integrationId);
+      this.client = await createNinjaOneClient(this.tenantId);
     }
     if (!this.knex) {
       const { knex } = await createTenantKnex();
@@ -244,7 +244,7 @@ export class NinjaOneSyncEngine {
         try {
           // Get all devices for this organization
           const devices = await this.client!.getDevices({
-            organizationId: parseInt(mapping.external_organization_id, 10),
+            org: parseInt(mapping.external_organization_id, 10),
           });
 
           totalDevices += devices.length;
@@ -412,7 +412,7 @@ export class NinjaOneSyncEngine {
 
         try {
           const devices = await this.client!.getDevices({
-            organizationId: parseInt(mapping.external_organization_id, 10),
+            org: parseInt(mapping.external_organization_id, 10),
           });
 
           // Filter devices that have been contacted since the last sync
@@ -861,7 +861,7 @@ export class NinjaOneSyncEngine {
     for (const mapping of mappings) {
       // Get all NinjaOne device IDs for this org
       const devices = await this.client!.getDevices({
-        organizationId: parseInt(mapping.external_organization_id, 10),
+        org: parseInt(mapping.external_organization_id, 10),
       });
       const ninjaDeviceIds = new Set(devices.map(d => String(d.id)));
 
@@ -1012,7 +1012,7 @@ export class NinjaOneSyncEngine {
 
     if (errorMessage) {
       updateData.sync_error = errorMessage;
-    } else if (status === 'synced' || status === 'syncing') {
+    } else if (status === 'completed' || status === 'syncing') {
       updateData.sync_error = undefined;
     }
 
@@ -1030,7 +1030,7 @@ export class NinjaOneSyncEngine {
   ): Promise<void> {
     const now = new Date().toISOString();
     const updateData: Partial<RmmIntegration> = {
-      sync_status: result.success ? 'synced' : 'error',
+      sync_status: result.success ? 'completed' : 'error',
       updated_at: now,
     };
 

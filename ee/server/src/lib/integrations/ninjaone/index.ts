@@ -6,9 +6,9 @@
 
 export {
   NinjaOneClient,
-  NinjaOneClientConfig,
   createNinjaOneClient,
   getNinjaOneAuthUrl,
   exchangeNinjaOneCode,
   disconnectNinjaOne,
 } from './ninjaOneClient';
+export type { NinjaOneClientConfig } from './ninjaOneClient';

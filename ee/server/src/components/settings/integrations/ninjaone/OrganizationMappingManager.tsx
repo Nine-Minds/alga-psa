@@ -170,6 +170,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
             </CardDescription>
           </div>
           <Button
+            id="ninjaone-sync-organizations-btn"
             variant="outline"
             size="sm"
             onClick={handleSyncOrganizations}

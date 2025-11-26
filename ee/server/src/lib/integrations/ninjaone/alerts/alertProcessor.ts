@@ -9,7 +9,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '../../../../../../../server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import logger from '@shared/core/logger';
-import { publishEvent } from '@shared/workflow/streams/eventPublisher';
+import { publishEvent } from '@shared/events/publisher';
 import {
   RmmAlert,
   RmmAlertRule,
@@ -306,9 +306,9 @@ async function sendAlertNotifications(
   for (const userId of userIds) {
     try {
       await publishEvent({
-        event_type: 'NOTIFICATION_CREATED',
+        eventType: 'NOTIFICATION_CREATED',
+        tenant: tenantId,
         payload: {
-          tenant: tenantId,
           user_id: userId,
           notification_type: 'rmm_alert',
           title: `RMM Alert: ${alert.activity_type}`,
@@ -472,9 +472,9 @@ export async function resolveAlert(
 
   // Emit resolved event
   await publishEvent({
-    event_type: 'RMM_ALERT_RESOLVED',
+    eventType: 'RMM_ALERT_RESOLVED',
+    tenant: tenantId,
     payload: {
-      tenant: tenantId,
       alert_id: alertId,
       asset_id: alert.asset_id,
       resolved_by: userId,

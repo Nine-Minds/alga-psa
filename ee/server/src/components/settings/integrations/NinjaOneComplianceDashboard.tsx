@@ -33,9 +33,11 @@ interface ComplianceSummary {
   totalDevices: number;
   devicesOnline: number;
   devicesOffline: number;
+  devicesWithAlerts: number;
+  devicesNeedingPatches: number;
   patchesPending: number;
   patchesFailed: number;
-  activeAlerts: number;
+  lastSyncAt?: string;
 }
 
 interface MetricCardProps {
@@ -99,11 +101,13 @@ const NinjaOneComplianceDashboard: React.FC = () => {
     setError(null);
     try {
       const result = await getRmmComplianceSummary();
-      if ('error' in result) {
-        setError(result.error);
+      if (!result.success || result.error) {
+        setError(result.error ?? 'Failed to load compliance summary');
         setSummary(null);
+      } else if (result.summary) {
+        setSummary(result.summary);
       } else {
-        setSummary(result);
+        setSummary(null);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load compliance summary';
@@ -166,6 +170,7 @@ const NinjaOneComplianceDashboard: React.FC = () => {
             {error || 'No compliance data available'}
           </div>
           <Button
+            id="ninjaone-compliance-retry-btn"
             variant="outline"
             size="sm"
             className="mt-3"
@@ -184,7 +189,7 @@ const NinjaOneComplianceDashboard: React.FC = () => {
     : 0;
 
   const patchCompliant = summary.totalDevices - (summary.patchesPending > 0 ? 1 : 0) - (summary.patchesFailed > 0 ? 1 : 0);
-  const isHealthy = summary.devicesOffline === 0 && summary.patchesFailed === 0 && summary.activeAlerts === 0;
+  const isHealthy = summary.devicesOffline === 0 && summary.patchesFailed === 0 && summary.devicesWithAlerts === 0;
 
   return (
     <Card>
@@ -202,6 +207,7 @@ const NinjaOneComplianceDashboard: React.FC = () => {
             </CardDescription>
           </div>
           <Button
+            id="ninjaone-compliance-refresh-btn"
             variant="ghost"
             size="sm"
             onClick={fetchSummary}
@@ -248,14 +254,15 @@ const NinjaOneComplianceDashboard: React.FC = () => {
         {/* Alerts */}
         <MetricCard
           icon={AlertTriangle}
-          label="Active Alerts"
-          value={summary.activeAlerts}
-          variant={summary.activeAlerts === 0 ? 'success' : summary.activeAlerts < 5 ? 'warning' : 'danger'}
+          label="Devices With Alerts"
+          value={summary.devicesWithAlerts}
+          variant={summary.devicesWithAlerts === 0 ? 'success' : summary.devicesWithAlerts < 5 ? 'warning' : 'danger'}
         />
 
         {/* Sync Actions */}
         <div className="flex gap-2 pt-2 border-t">
           <Button
+            id="ninjaone-sync-patches-btn"
             variant="outline"
             size="sm"
             onClick={handleSyncPatches}
@@ -272,6 +279,7 @@ const NinjaOneComplianceDashboard: React.FC = () => {
             )}
           </Button>
           <Button
+            id="ninjaone-sync-software-btn"
             variant="outline"
             size="sm"
             onClick={handleSyncSoftware}

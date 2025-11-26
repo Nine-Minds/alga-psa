@@ -21,6 +21,8 @@ export interface RmmIntegration {
   is_active: boolean;
   connected_at?: string;
   last_sync_at?: string;
+  last_full_sync_at?: string;
+  last_incremental_sync_at?: string;
   sync_status?: RmmSyncStatus;
   sync_error?: string;
   settings: RmmIntegrationSettings;
@@ -69,6 +71,7 @@ export interface RmmAlert {
   severity: string;
   priority?: string;
   activity_type: string;
+  status_code?: string; // NinjaOne status code
   status: string;
   message?: string;
   source_data?: string | Record<string, unknown>;

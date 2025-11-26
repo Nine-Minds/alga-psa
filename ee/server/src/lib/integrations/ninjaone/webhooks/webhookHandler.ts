@@ -10,17 +10,18 @@ import crypto from 'crypto';
 import { createTenantKnex } from '../../../../../../../server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import logger from '@shared/core/logger';
-import { publishEvent } from '@shared/workflow/streams/eventPublisher';
+import { publishEvent } from '@shared/events/publisher';
 import { NinjaOneSyncEngine } from '../sync/syncEngine';
 import {
   NinjaOneWebhookPayload,
   NinjaOneActivityType,
   NinjaOneAlertSeverity,
   mapAlertSeverity,
-  mapAlertPriority,
+  derivePriorityFromSeverity,
 } from '../../../../interfaces/ninjaone.interfaces';
 import {
   RmmIntegration,
+  RmmIntegrationSettings,
   RmmOrganizationMapping,
   RmmAlert,
 } from '../../../../interfaces/rmm.interfaces';
@@ -132,6 +133,7 @@ export async function findIntegrationForWebhook(
       is_active: boolean;
       instance_url: string | null;
       webhook_secret: string | null;
+      settings: string | null;
       mapping_id: string;
       external_organization_id: string;
       external_organization_name: string | null;
@@ -144,6 +146,7 @@ export async function findIntegrationForWebhook(
       'ri.is_active',
       'ri.instance_url',
       'ri.webhook_secret',
+      'ri.settings',
       'rom.mapping_id',
       'rom.external_organization_id',
       'rom.external_organization_name',
@@ -155,6 +158,25 @@ export async function findIntegrationForWebhook(
     return null;
   }
 
+  // Parse settings to extract webhook secret
+  let parsedSettings: Record<string, unknown> = {};
+  if (result.settings) {
+    try {
+      parsedSettings = JSON.parse(result.settings);
+    } catch {
+      parsedSettings = {};
+    }
+  }
+
+  // Get webhook secret from settings (preferred) or legacy column
+  const webhookSecret = (parsedSettings.webhookSecret as string) || result.webhook_secret || undefined;
+
+  // Merge webhook secret into settings for consistent access
+  const settings = {
+    ...parsedSettings,
+    webhook_secret: webhookSecret,
+  } as RmmIntegrationSettings;
+
   return {
     tenantId: result.tenant,
     integration: {
@@ -163,7 +185,9 @@ export async function findIntegrationForWebhook(
       provider: 'ninjaone',
       is_active: result.is_active,
       instance_url: result.instance_url || undefined,
-      webhook_secret: result.webhook_secret || undefined,
+      settings,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     } as RmmIntegration,
     mapping: {
       tenant: result.tenant,
@@ -208,9 +232,9 @@ export async function handleNinjaOneWebhook(
   // Emit webhook received event
   try {
     await publishEvent({
-      event_type: 'RMM_WEBHOOK_RECEIVED',
+      eventType: 'RMM_WEBHOOK_RECEIVED',
+      tenant: tenantId,
       payload: {
-        tenant: tenantId,
         integration_id: integration.integration_id,
         provider: 'ninjaone',
         activity_type: payload.activityType,
@@ -303,9 +327,9 @@ async function handleDeviceLifecycleEvent(
         if (payload.deviceId) {
           const asset = await syncEngine.syncDevice(payload.deviceId);
           await publishEvent({
-            event_type: 'RMM_DEVICE_CREATED',
+            eventType: 'RMM_DEVICE_CREATED',
+            tenant: tenantId,
             payload: {
-              tenant: tenantId,
               asset_id: asset.asset_id,
               device_id: String(payload.deviceId),
               device_name: payload.device?.displayName || payload.device?.systemName,
@@ -326,9 +350,9 @@ async function handleDeviceLifecycleEvent(
         if (payload.deviceId) {
           const asset = await syncEngine.syncDevice(payload.deviceId);
           await publishEvent({
-            event_type: 'RMM_DEVICE_UPDATED',
+            eventType: 'RMM_DEVICE_UPDATED',
+            tenant: tenantId,
             payload: {
-              tenant: tenantId,
               asset_id: asset.asset_id,
               device_id: String(payload.deviceId),
               provider: 'ninjaone',
@@ -447,9 +471,9 @@ async function handleDeviceStatusEvent(
 
     // Emit online event if coming back online
     await publishEvent({
-      event_type: 'RMM_DEVICE_ONLINE',
+      eventType: 'RMM_DEVICE_ONLINE',
+      tenant: tenantId,
       payload: {
-        tenant: tenantId,
         asset_id: assetMapping.alga_entity_id,
         device_id: String(payload.deviceId),
         provider: 'ninjaone',
@@ -542,7 +566,7 @@ async function handleAlertEvent(
 
     // Determine severity and priority
     const severity = payload.severity || 'NONE';
-    const priority = payload.priority || mapAlertPriority(severity as NinjaOneAlertSeverity);
+    const priority = payload.priority || derivePriorityFromSeverity(severity as NinjaOneAlertSeverity);
 
     // Create or update alert record
     const existingAlert = await knex('rmm_alerts')
@@ -590,9 +614,9 @@ async function handleAlertEvent(
 
     // Emit alert triggered event
     await publishEvent({
-      event_type: 'RMM_ALERT_TRIGGERED',
+      eventType: 'RMM_ALERT_TRIGGERED',
+      tenant: tenantId,
       payload: {
-        tenant: tenantId,
         alert_id: alertId,
         asset_id: assetId,
         device_id: payload.deviceId?.toString(),
@@ -655,9 +679,9 @@ async function handleAlertResetEvent(
 
       // Emit alert resolved event
       await publishEvent({
-        event_type: 'RMM_ALERT_RESOLVED',
+        eventType: 'RMM_ALERT_RESOLVED',
+        tenant: tenantId,
         payload: {
-          tenant: tenantId,
           alert_id: alert.alert_id,
           asset_id: alert.asset_id,
           device_id: payload.deviceId?.toString(),
@@ -751,9 +775,9 @@ async function handleDeviceDeleted(
 
     // Emit device deleted event
     await publishEvent({
-      event_type: 'RMM_DEVICE_DELETED',
+      eventType: 'RMM_DEVICE_DELETED',
+      tenant: tenantId,
       payload: {
-        tenant: tenantId,
         asset_id: mapping.alga_entity_id,
         device_id: String(deviceId),
         provider: 'ninjaone',

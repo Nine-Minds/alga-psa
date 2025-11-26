@@ -27,6 +27,7 @@ import {
   NinjaOneApiError,
   NINJAONE_REGIONS,
   NinjaOneRegion,
+  WebhookConfiguration,
 } from '../../../interfaces/ninjaone.interfaces';
 
 // Secret names for NinjaOne credentials
@@ -441,6 +442,31 @@ export class NinjaOneClient {
       `/device/${deviceId}/software`
     );
     return response.data;
+  }
+
+  // ============ Webhook API ============
+
+  /**
+   * Configure webhook endpoint for receiving activity notifications
+   * NinjaOne API: PUT /v2/webhook
+   */
+  async configureWebhook(config: WebhookConfiguration): Promise<void> {
+    await this.axiosInstance.put('/webhook', config);
+    logger.info('[NinjaOneClient] Webhook configured successfully', {
+      tenantId: this.tenantId,
+      url: config.url,
+    });
+  }
+
+  /**
+   * Remove webhook configuration
+   * NinjaOne API: DELETE /v2/webhook
+   */
+  async removeWebhook(): Promise<void> {
+    await this.axiosInstance.delete('/webhook');
+    logger.info('[NinjaOneClient] Webhook removed successfully', {
+      tenantId: this.tenantId,
+    });
   }
 
   // ============ Utility Methods ============
