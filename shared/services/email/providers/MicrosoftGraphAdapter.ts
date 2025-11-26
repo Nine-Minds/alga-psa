@@ -406,6 +406,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.log('error', 'Subscription creation failed', {
         message: enriched.message,
         context: 'registerWebhookSubscription',
+        status: (enriched as any).status,
+        code: (enriched as any).code,
+        requestId: (enriched as any).requestId,
+        responseBody: (enriched as any).responseBody,
       });
       throw enriched;
     }
@@ -446,7 +450,17 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       this.log('info', `Webhook subscription renewed until ${newExpiry}`);
     } catch (error) {
-      throw this.handleError(error, 'renewWebhookSubscription');
+      const enriched = this.handleError(error, 'renewWebhookSubscription');
+      this.log('error', 'Subscription renewal failed', {
+        message: enriched.message,
+        context: 'renewWebhookSubscription',
+        subscriptionId: this.config.webhook_subscription_id,
+        status: (enriched as any).status,
+        code: (enriched as any).code,
+        requestId: (enriched as any).requestId,
+        responseBody: (enriched as any).responseBody,
+      });
+      throw enriched;
     }
   }
 
@@ -623,10 +637,14 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       return { success: true, subscriptionId: response.data.id };
     } catch (error) {
       // Enrich/log details (status, request-id, body) before throwing
-      const enriched = this.handleError(error, 'registerWebhookSubscription');
-      this.log('error', 'Subscription creation failed', {
+      const enriched = this.handleError(error, 'initializeWebhook');
+      this.log('error', 'Subscription creation failed (initializeWebhook)', {
         message: enriched.message,
-        context: 'registerWebhookSubscription',
+        context: 'initializeWebhook',
+        status: (enriched as any).status,
+        code: (enriched as any).code,
+        requestId: (enriched as any).requestId,
+        responseBody: (enriched as any).responseBody,
       });
       // Return error info instead of throwing to satisfy return type
       return { success: false, error: enriched.message };
