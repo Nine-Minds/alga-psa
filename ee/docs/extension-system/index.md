@@ -39,10 +39,17 @@
    - Iframe UI with SDK and UI kit (served by the Runner)
    - Packaging, signing, and publishing bundles
 
-2. [DataTable Integration Guide](datatable-integration-guide.md)
+2. [Local Development Guide](local-development.md)
+   - Running the Docker-based Extension Runner locally
+   - Setting up the development environment
+   - Building, installing, and testing extensions
+   - Debugging and troubleshooting
+   - Workflow tips and advanced configuration
+
+3. [DataTable Integration Guide](datatable-integration-guide.md)
    - Using the UI kit DataTable in iframe apps
 
-3. [Sample Extension](sample_template.md)
+4. [Sample Extension](sample_template.md)
    - Project structure
    - Gateway usage
    - End‑to‑end example
