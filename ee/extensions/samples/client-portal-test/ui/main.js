@@ -1,4 +1,5 @@
-// Client Portal Test Extension UI
+// Dual Portal Demo Extension UI
+// Demonstrates how a single extension can work in both MSP and Client portals
 // Uses the postMessage proxy pattern to call the WASM handler via the host bridge
 
 (function () {
@@ -9,27 +10,104 @@
   const path = params.get("path") || "/";
   const parentOrigin = params.get("parentOrigin") || window.location.origin;
 
+  // Detect which portal we're running in based on the parent URL
+  // The iframe URL contains information about the parent context
+  const referrer = document.referrer || '';
+  const isClientPortal = referrer.includes('/client-portal/') ||
+                         window.location.href.includes('/client-portal/');
+  const portalType = isClientPortal ? 'client' : 'msp';
+
   const ctxEl = document.getElementById("ctx");
   const handlerEl = document.getElementById("handler-result");
+  const badgeEl = document.getElementById("badge");
+  const portalIndicatorEl = document.getElementById("portal-indicator");
+  const featuresEl = document.getElementById("features");
 
   // Pending proxy requests keyed by request_id
   const pendingRequests = new Map();
 
-  if (ctxEl) {
-    ctxEl.innerHTML = `
-      <div class="info-row">
-        <span class="info-label">Extension ID</span>
-        <span class="info-value">${extensionId}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Tenant</span>
-        <span class="info-value">${tenant}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Path</span>
-        <span class="info-value">${path}</span>
-      </div>
-    `;
+  /**
+   * Apply portal-specific styling and content
+   */
+  function applyPortalContext() {
+    // Add portal class to body for CSS styling
+    document.body.classList.add(isClientPortal ? 'client-portal' : 'msp-portal');
+
+    // Update badge
+    if (badgeEl) {
+      badgeEl.textContent = isClientPortal ? 'Client Portal' : 'MSP Portal';
+    }
+
+    // Update portal indicator with icon and message
+    if (portalIndicatorEl) {
+      const icon = isClientPortal
+        ? `<svg viewBox="0 0 20 20" fill="currentColor">
+             <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+           </svg>`
+        : `<svg viewBox="0 0 20 20" fill="currentColor">
+             <path fill-rule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+           </svg>`;
+
+      const message = isClientPortal
+        ? 'Running in <strong>Client Portal</strong> context'
+        : 'Running in <strong>MSP Portal</strong> context';
+
+      portalIndicatorEl.innerHTML = `${icon}<span>${message}</span>`;
+    }
+
+    // Update features list based on portal
+    if (featuresEl) {
+      const checkIcon = `<svg viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+      </svg>`;
+
+      const mspFeatures = [
+        'View and manage all client data',
+        'Access administrative settings',
+        'Configure extension for all tenants',
+        'View usage analytics and reports',
+        'Manage user permissions'
+      ];
+
+      const clientFeatures = [
+        'View your own data only',
+        'Submit support requests',
+        'Access self-service portal',
+        'View your billing information',
+        'Update account preferences'
+      ];
+
+      const features = isClientPortal ? clientFeatures : mspFeatures;
+      featuresEl.innerHTML = features
+        .map(f => `<li>${checkIcon}<span>${f}</span></li>`)
+        .join('');
+    }
+  }
+
+  /**
+   * Update context display
+   */
+  function updateContextDisplay() {
+    if (ctxEl) {
+      ctxEl.innerHTML = `
+        <div class="info-row">
+          <span class="info-label">Portal</span>
+          <span class="info-value">${isClientPortal ? 'Client Portal' : 'MSP Portal'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Extension ID</span>
+          <span class="info-value">${extensionId}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Tenant</span>
+          <span class="info-value">${tenant}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Path</span>
+          <span class="info-value">${path}</span>
+        </div>
+      `;
+    }
   }
 
   /**
@@ -37,7 +115,7 @@
    */
   function signalReady() {
     if (window.parent && window.parent !== window) {
-      console.log('[client-portal-test] Signaling ready to host');
+      console.log('[dual-portal-demo] Signaling ready to host');
       window.parent.postMessage(
         {
           alga: true,
@@ -59,7 +137,7 @@
       if (!data || typeof data !== 'object') return;
       if (data.alga !== true || data.version !== ENVELOPE_VERSION) return;
 
-      console.log('[client-portal-test] Received message from host:', data.type);
+      console.log('[dual-portal-demo] Received message from host:', data.type);
 
       if (data.type === 'apiproxy_response') {
         const requestId = data.request_id;
@@ -91,12 +169,12 @@
    * Call a proxy route via postMessage to the host
    * @param {string} route - The route to call (e.g., '/')
    * @param {object} [payload] - Optional JSON payload to send
-   * @returns {Promise<object>} - The JSON response from the handler
+   * @returns {Promise<Uint8Array>} - The raw response bytes from the handler
    */
   async function callProxy(route, payload) {
     return new Promise((resolve, reject) => {
       const requestId = crypto.randomUUID();
-      console.log(`[client-portal-test] Calling proxy route: ${route}, requestId: ${requestId}`);
+      console.log(`[dual-portal-demo] Calling proxy route: ${route}, requestId: ${requestId}`);
 
       // Store pending request
       pendingRequests.set(requestId, { resolve, reject });
@@ -155,8 +233,9 @@
     }
 
     try {
-      console.log('[client-portal-test] Calling handler via proxy');
-      const data = await callProxyJson('/');
+      console.log('[dual-portal-demo] Calling handler via proxy');
+      // Pass the portal type to the handler so it can customize response
+      const data = await callProxyJson('/', { portalType });
 
       if (!data) {
         if (handlerEl) {
@@ -180,6 +259,10 @@
               <span class="result-value">${data.message || 'N/A'}</span>
             </div>
             <div class="result-row">
+              <span class="result-label">Portal Type</span>
+              <span class="result-value"><code>${data.portalType || portalType}</code></span>
+            </div>
+            <div class="result-row">
               <span class="result-label">Tenant ID</span>
               <span class="result-value"><code>${data.context?.tenantId || 'N/A'}</code></span>
             </div>
@@ -192,10 +275,6 @@
               <span class="result-value"><code>${data.context?.requestId || 'N/A'}</code></span>
             </div>
             <div class="result-row">
-              <span class="result-label">Build</span>
-              <span class="result-value"><code>${data.build || 'N/A'}</code></span>
-            </div>
-            <div class="result-row">
               <span class="result-label">Timestamp</span>
               <span class="result-value"><code>${data.timestamp || 'N/A'}</code></span>
             </div>
@@ -203,19 +282,22 @@
         `;
       }
 
-      console.log('[client-portal-test] handler success via proxy', data);
+      console.log('[dual-portal-demo] handler success via proxy', data);
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (handlerEl) {
         handlerEl.innerHTML = `<div class="error">Error: ${message}</div>`;
       }
-      console.error('[client-portal-test] handler call failed', err);
+      console.error('[dual-portal-demo] handler call failed', err);
     }
   }
 
   // Initialize
   window.addEventListener('load', () => {
+    console.log(`[dual-portal-demo] Initializing in ${portalType} portal context`);
+    applyPortalContext();
+    updateContextDisplay();
     setupMessageListener();
     signalReady();
     callHandler();

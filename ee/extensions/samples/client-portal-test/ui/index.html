@@ -7,7 +7,7 @@
       content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self' https:;"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Client Portal Test Extension</title>
+    <title>Dual Portal Demo Extension</title>
     <style>
       :root {
         --bg: #f8fafc;
@@ -21,6 +21,11 @@
         --success-bg: #ecfdf5;
         --success-border: #a7f3d0;
         --code-bg: #f1f5f9;
+        /* Portal-specific colors */
+        --msp-accent: #8b5cf6;
+        --msp-accent-light: #f5f3ff;
+        --client-accent: #0891b2;
+        --client-accent-light: #ecfeff;
       }
       * {
         box-sizing: border-box;
@@ -29,22 +34,29 @@
         margin: 0;
         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
         background: var(--bg);
-        background-image:
-          radial-gradient(at 20% 30%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-          radial-gradient(at 80% 70%, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
         color: var(--fg);
         min-height: 100vh;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         padding: 24px;
+      }
+      body.msp-portal {
+        background-image:
+          radial-gradient(at 20% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+          radial-gradient(at 80% 70%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+      }
+      body.client-portal {
+        background-image:
+          radial-gradient(at 20% 30%, rgba(8, 145, 178, 0.08) 0%, transparent 50%),
+          radial-gradient(at 80% 70%, rgba(8, 145, 178, 0.04) 0%, transparent 50%);
       }
       .card {
         background: var(--card-bg);
         border: 1px solid var(--border);
         border-radius: 16px;
         padding: 32px 40px;
-        max-width: 560px;
+        max-width: 640px;
         width: 100%;
         box-shadow:
           0 1px 3px rgba(0, 0, 0, 0.04),
@@ -56,7 +68,6 @@
       }
       .badge {
         display: inline-block;
-        background: var(--accent);
         color: white;
         padding: 5px 14px;
         border-radius: 20px;
@@ -66,6 +77,8 @@
         text-transform: uppercase;
         margin-bottom: 16px;
       }
+      .msp-portal .badge { background: var(--msp-accent); }
+      .client-portal .badge { background: var(--client-accent); }
       h1 {
         margin: 0 0 8px;
         font-size: 26px;
@@ -78,12 +91,45 @@
         color: var(--fg-muted);
         line-height: 1.5;
       }
+      .portal-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin: 20px 0;
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .msp-portal .portal-indicator {
+        background: var(--msp-accent-light);
+        color: var(--msp-accent);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+      }
+      .client-portal .portal-indicator {
+        background: var(--client-accent-light);
+        color: var(--client-accent);
+        border: 1px solid rgba(8, 145, 178, 0.2);
+      }
+      .portal-indicator svg {
+        width: 20px;
+        height: 20px;
+      }
       .info-box {
         background: var(--accent-light);
         border: 1px solid rgba(99, 102, 241, 0.2);
         padding: 16px;
         border-radius: 10px;
         margin: 20px 0;
+      }
+      .msp-portal .info-box {
+        background: var(--msp-accent-light);
+        border-color: rgba(139, 92, 246, 0.2);
+      }
+      .client-portal .info-box {
+        background: var(--client-accent-light);
+        border-color: rgba(8, 145, 178, 0.2);
       }
       .info-row {
         display: flex;
@@ -116,6 +162,30 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 16px 0;
+      }
+      .feature-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+      }
+      .feature-list li:last-child {
+        border-bottom: none;
+      }
+      .feature-list svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .msp-portal .feature-list svg { color: var(--msp-accent); }
+      .client-portal .feature-list svg { color: var(--client-accent); }
       .handler-result {
         min-height: 60px;
       }
@@ -178,18 +248,24 @@
         background: var(--code-bg);
         padding: 2px 6px;
         border-radius: 4px;
-        color: var(--accent);
       }
+      .msp-portal code { color: var(--msp-accent); }
+      .client-portal code { color: var(--client-accent); }
     </style>
   </head>
   <body>
     <div class="card">
       <div class="header">
-        <div class="badge">Client Portal Extension</div>
-        <h1>Test Extension</h1>
+        <div class="badge" id="badge">Loading...</div>
+        <h1>Dual Portal Demo</h1>
         <p class="subtitle">
-          Loaded via the <code>clientPortalMenu</code> hook. Uses the postMessage proxy pattern to call the WASM handler.
+          This extension works in both the <strong>MSP Portal</strong> and <strong>Client Portal</strong>.
+          It detects the context and renders a different UI for each.
         </p>
+      </div>
+
+      <div class="portal-indicator" id="portal-indicator">
+        <!-- Filled by JS based on detected portal -->
       </div>
 
       <div class="info-box" id="ctx">
@@ -198,6 +274,11 @@
           <span class="info-value">Loading...</span>
         </div>
       </div>
+
+      <div class="section-title" id="features-title">Features Available</div>
+      <ul class="feature-list" id="features">
+        <!-- Filled by JS based on detected portal -->
+      </ul>
 
       <div class="section-title">WASM Handler Response (via Proxy)</div>
       <div class="handler-result" id="handler-result">
