@@ -7,7 +7,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@alga-psa/extension-runtime": "^0.1.0"
+    "@alga-psa/extension-runtime": "^0.2.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
