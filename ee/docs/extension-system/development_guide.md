@@ -17,6 +17,39 @@ This guide describes how to build Enterprise Edition (v2) extensions for Alga PS
   - TypeScript, React (for UI)
   - Security best practices and least-privilege design
 
+## SDK and CLI Tools
+
+The Alga SDK provides CLI tools and libraries to streamline extension development:
+
+### Installation
+
+```bash
+npm install -g @alga-psa/cli
+# Or use npx: npx @alga-psa/cli <command>
+```
+
+### CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `alga create extension <name>` | Scaffold a new extension project |
+| `alga create component <name>` | Scaffold a WASM component project |
+| `alga build` | Build the extension (compile TS → WASM if needed) |
+| `alga pack` | Create `bundle.tar.zst` from built extension |
+| `alga extension publish <dir>` | Build, pack, and publish to an Alga instance |
+| `alga extension install <id>` | Install an extension from the registry |
+| `alga extension uninstall <id>` | Uninstall an extension |
+| `alga sign <bundle>` | Sign a bundle with cosign, x509, or pgp |
+
+### SDK Packages
+
+| Package | Purpose |
+|---------|---------|
+| `@alga-psa/cli` | Command-line tools for building and publishing |
+| `@alga-psa/client-sdk` | Programmatic APIs for build/pack/publish |
+| `@alga/extension-runtime` | TypeScript types and helpers for WASM handlers |
+| `@alga/extension-iframe-sdk` | Host communication APIs for iframe UIs |
+
 ## Project Layout (Example)
 
 ```
@@ -40,6 +73,28 @@ my-extension/
 ```
 
 ## Step-by-step: Build + Package an Extension
+
+### Quick Start with CLI
+
+The fastest way to create and build an extension:
+
+```bash
+# Create a new extension project
+alga create extension my-extension
+cd my-extension
+
+# Build (compiles TypeScript and creates WASM if needed)
+alga build
+
+# Create the bundle archive
+alga pack
+# Output: dist/bundle.tar.zst
+
+# Publish to your Alga instance
+alga extension publish . --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
+```
+
+### Manual Setup
 
 1. **Scaffold directories**
    - Create `component/` for your handler sources (e.g., `component/src/handler.ts`) and copy the platform WIT definitions into `component/wit/extension-runner.wit`.
@@ -86,6 +141,14 @@ my-extension/
      ```
 
 5. **Package the bundle**
+
+   **Using the CLI (recommended):**
+   ```bash
+   alga pack --project .
+   # Creates dist/bundle.tar.zst with proper structure
+   ```
+
+   **Manual packaging:**
    - Layout your release directory:
      ```
      dist/main.wasm
@@ -93,7 +156,7 @@ my-extension/
      manifest.json
      precompiled/ (optional cwasm artifacts)
      ```
-   - Create the canonical tarball (zstd recommended):  
+   - Create the canonical tarball (zstd recommended):
      `tar --zstd -cf bundle.tar.zst manifest.json dist/main.wasm ui/dist`
    - Compute the content hash: `shasum -a 256 bundle.tar.zst` → `sha256:...`
    - Produce `SIGNATURE` (detached) with your publisher key per [security_signing.md](security_signing.md).
@@ -155,6 +218,15 @@ export const handler: Handler = async (request, host) => {
 ```
 
 Build example:
+
+**Using the CLI:**
+```bash
+alga build --project .
+# Automatically detects if WASM build is needed based on manifest
+# Outputs: dist/main.wasm
+```
+
+**Using npm scripts:**
 ```bash
 npm run build          # compiles TS → JS
 npm run build:component
@@ -211,12 +283,16 @@ Reference route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/rout
 
 ## Local Development Tips
 
-- Use the new pluggable runner backend to switch between Knative (`RUNNER_BACKEND=knative`) and the local Docker runner (`RUNNER_BACKEND=docker`).
-  - Start the runner container: `npm run runner:up` (stops with `npm run runner:down`).
+For a detailed walkthrough of local development setup, build, install, and debugging workflows, see [Local Development Guide](local-development.md).
+
+Quick reference:
+- Use the pluggable runner backend to switch between Knative (`RUNNER_BACKEND=knative`) and the local Docker runner (`RUNNER_BACKEND=docker`).
+  - Start the runner container: `npm run runner:up` or `docker compose -f docker-compose.runner-dev.yml up` (stops with `npm run runner:down`).
   - Launch the app with Docker backend defaults: `npm run dev:runner` (sets `RUNNER_DOCKER_HOST=http://localhost:${RUNNER_DOCKER_PORT:-8085}` and proxies UI assets through `/runner/*`).
+  - Install your extension locally: `node scripts/dev-install-extension.mjs ./path/to/extension`.
   - Override runner URLs via `.env.runner` (see `.env.runner.example`) if you are using alternative S3 or registry endpoints.
 - Keep UI bundles small; leverage code splitting where appropriate
-- Use the iframe SDK’s theme APIs to adapt to host styling
+- Use the iframe SDK's theme APIs to adapt to host styling
 - Validate endpoint inputs/outputs and include clear error responses
 
 ## Best Practices
@@ -228,6 +304,7 @@ Reference route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/rout
 
 ## References
 
+- [Local Development Guide](local-development.md) — Complete setup and workflow for developing locally with Docker Runner
 - [Manifest Schema](manifest_schema.md)
 - [API Routing Guide](api-routing-guide.md)
 - [Security & Signing](security_signing.md)
