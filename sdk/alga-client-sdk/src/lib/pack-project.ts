@@ -1,4 +1,4 @@
-import { mkdtempSync, cpSync, existsSync } from 'node:fs';
+import { mkdtempSync, cpSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { ensureDir } from './fs.js';
@@ -10,7 +10,14 @@ export interface PackProjectOptions {
   /** Explicit output file path. Defaults to `<project>/dist/bundle.tar.zst` */
   outFile?: string;
   force?: boolean;
-  logger?: { info: Function };
+  logger?: { info: (...args: unknown[]) => void };
+}
+
+interface ManifestJson {
+  runtime?: string;
+  api?: {
+    endpoints?: Array<{ handler?: string }>;
+  };
 }
 
 export async function packProject(opts: PackProjectOptions = {}): Promise<string> {
@@ -18,6 +25,18 @@ export async function packProject(opts: PackProjectOptions = {}): Promise<string
   const outFile = resolve(opts.outFile || join(project, 'dist', 'bundle.tar.zst'));
   const manifestPath = join(project, 'manifest.json');
   if (!existsSync(manifestPath)) throw new Error(`manifest.json not found in project: ${project}`);
+
+  // Read manifest to determine if WASM is required
+  let manifest: ManifestJson;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch (err) {
+    throw new Error(`Failed to parse manifest.json: ${err}`);
+  }
+
+  const hasApiEndpoints = manifest.api?.endpoints && manifest.api.endpoints.length > 0;
+  const isWasmRuntime = manifest.runtime?.startsWith('wasm');
+  const needsWasm = hasApiEndpoints || isWasmRuntime;
 
   const stage = mkdtempSync(join(tmpdir(), 'alga-ext-stage-'));
   const entries = ['manifest.json', 'ui', 'artifacts', 'precompiled', 'SIGNATURE', 'sbom.spdx.json'];
@@ -37,23 +56,35 @@ export async function packProject(opts: PackProjectOptions = {}): Promise<string
     }
   }
 
+  // Look for WASM in multiple locations (support both naming conventions)
+  const mainWasm = join(project, 'dist', 'main.wasm');
   const componentWasm = join(project, 'dist', 'component.wasm');
-  if (!existsSync(componentWasm)) {
-    throw new Error(`dist/component.wasm not found in project: ${project}`);
-  }
-  const componentMeta = join(project, 'dist', 'component.json');
-  const componentDestDir = join(stage, 'artifacts', 'component');
-  ensureDir(componentDestDir);
-  cpSync(componentWasm, join(componentDestDir, 'component.wasm'));
-  if (existsSync(componentMeta)) {
-    cpSync(componentMeta, join(componentDestDir, 'component.json'));
+  const wasmPath = existsSync(mainWasm) ? mainWasm : existsSync(componentWasm) ? componentWasm : null;
+
+  if (needsWasm && !wasmPath) {
+    throw new Error(`WASM file not found (expected dist/main.wasm or dist/component.wasm) in project: ${project}`);
   }
 
-  const distDir = join(stage, 'dist');
-  ensureDir(distDir);
-  cpSync(componentWasm, join(distDir, 'main.wasm'));
-  if (existsSync(componentMeta)) {
-    cpSync(componentMeta, join(distDir, 'component.json'));
+  if (wasmPath) {
+    const componentMeta = join(project, 'dist', 'component.json');
+
+    // Stage to artifacts/component for backwards compatibility
+    const componentDestDir = join(stage, 'artifacts', 'component');
+    ensureDir(componentDestDir);
+    cpSync(wasmPath, join(componentDestDir, 'component.wasm'));
+    if (existsSync(componentMeta)) {
+      cpSync(componentMeta, join(componentDestDir, 'component.json'));
+    }
+
+    // Stage to dist/main.wasm (runner's expected location)
+    const distDir = join(stage, 'dist');
+    ensureDir(distDir);
+    cpSync(wasmPath, join(distDir, 'main.wasm'));
+    if (existsSync(componentMeta)) {
+      cpSync(componentMeta, join(distDir, 'component.json'));
+    }
+
+    opts.logger?.info?.('[pack-project] staged: dist/main.wasm');
   }
 
   const witDir = join(project, 'wit');

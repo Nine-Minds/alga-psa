@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {
+  buildProject,
   createComponentProject,
   createNewProject,
   installExtension,
@@ -21,15 +22,28 @@ Usage:
   alga create extension <name> [--template basic|ui-gallery] [--dir <path>]
   alga create component <name> [--dir <path>] [--template component-basic]
   alga component create <name> [--dir <path>] [--template component-basic]
+  alga build [--project <path>] [--skip-install]
+  alga pack [--project <path>] [--out <file>] [--force]
   alga extension publish <dir> [--api-key <key>] [--tenant <tenantId>] [--base-url <url>] [--no-install]
   alga extension install <registryId> --version <version> [--api-key <key>] [--tenant <tenantId>] [--base-url <url>]
   alga extension uninstall <registryId> [--api-key <key>] [--tenant <tenantId>] [--base-url <url>]
-  alga pack [options]
   alga sign <bundlePath> --algorithm cosign|x509|pgp
+
+Commands:
+  create extension    Scaffold a new extension project
+  create component    Scaffold a new WASM component project
+  build               Build the extension (compile TS to WASM if needed)
+  pack                Create a bundle.tar.zst from the built extension
+  extension publish   Build, pack, and publish extension to Alga instance
+  extension install   Install an extension from the registry
+  extension uninstall Uninstall an extension
+  sign                Sign a bundle with cosign, x509, or pgp
 
 Examples:
   alga create extension my-ext
   alga create extension my-ui --template ui-gallery --dir ./apps
+  alga build --project ./my-extension
+  alga pack --project ./my-extension
   alga extension publish ./my-extension --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
   alga extension install awesome-extension --version 1.2.3 --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
   alga extension uninstall awesome-extension --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
@@ -116,6 +130,47 @@ export async function runCLI(argv: string[]) {
 
     const projectPath = resolve(targetDir ?? (projectName ? projectName : '.'));
     runComponentDev(projectPath);
+    return;
+  }
+
+  // build command
+  if (cmd === 'build') {
+    const rem = args.slice(1);
+    let projectPath: string | undefined;
+    let skipInstall = false;
+
+    for (let i = 0; i < rem.length; i++) {
+      const v = rem[i];
+      if (v === '--project' || v === '--dir' || v === '--cwd') {
+        projectPath = rem[i + 1];
+        i++;
+      } else if (v === '--skip-install') {
+        skipInstall = true;
+      }
+    }
+
+    try {
+      const result = await buildProject({
+        projectPath,
+        skipInstall,
+        logger: console,
+      });
+
+      if (!result.success) {
+        console.error('[build] failed:', result.error);
+        process.exitCode = 1;
+        return;
+      }
+
+      if (result.wasmPath) {
+        console.log(`[build] success: ${result.wasmPath}`);
+      } else {
+        console.log('[build] success (UI-only extension, no WASM build required)');
+      }
+    } catch (error: any) {
+      console.error('[build] error:', error?.message ?? error);
+      process.exitCode = 1;
+    }
     return;
   }
 
