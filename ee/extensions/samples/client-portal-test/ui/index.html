@@ -188,7 +188,7 @@
         <div class="badge">Client Portal Extension</div>
         <h1>Test Extension</h1>
         <p class="subtitle">
-          Loaded via the <code>clientPortalMenu</code> hook with a WASM handler backend.
+          Loaded via the <code>clientPortalMenu</code> hook. Uses the postMessage proxy pattern to call the WASM handler.
         </p>
       </div>
 
@@ -199,7 +199,7 @@
         </div>
       </div>
 
-      <div class="section-title">WASM Handler Response</div>
+      <div class="section-title">WASM Handler Response (via Proxy)</div>
       <div class="handler-result" id="handler-result">
         <span class="loading">Calling handler...</span>
       </div>

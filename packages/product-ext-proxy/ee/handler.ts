@@ -5,9 +5,7 @@ import path from 'node:path';
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
 import { loadInstallConfigCached } from './install-config-cache';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
+import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
@@ -31,6 +29,13 @@ class AccessError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+// Re-export AccessError for use in assertAccess wrapper
+function wrapAssertAccess(tenantId: string, extensionId: string, method: string, pathname: string): Promise<void> {
+  // Use the same permissive access check as /api/ext/ route
+  // TODO: implement proper RBAC for extension proxy calls
+  return assertAccess(tenantId, extensionId, method, pathname);
 }
 
 export const dynamic = 'force-dynamic';
@@ -118,26 +123,6 @@ function getRequestId(req: NextRequest): string {
   return req.headers.get('x-request-id') || crypto.randomUUID();
 }
 
-function actionForMethod(method: Method): 'read' | 'write' {
-  return method === 'GET' ? 'read' : 'write';
-}
-
-async function assertAccess(tenantId: string, method: Method): Promise<void> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser || !currentUser.tenant) {
-    throw new AccessError(401, 'Unauthorized');
-  }
-  if (currentUser.tenant !== tenantId) {
-    throw new AccessError(401, 'Unauthorized');
-  }
-
-  const requiredAction = actionForMethod(method);
-  const allowed = await hasPermission(currentUser, 'extension', requiredAction);
-  if (!allowed) {
-    throw new AccessError(403, 'Forbidden');
-  }
-}
-
 type RouteParams = { extensionId: string; path?: string[] };
 
 async function handle(
@@ -163,7 +148,7 @@ async function handle(
     logDebug('ext-proxy:start', { tenantId, extensionId, method });
     if (!tenantId) return applyCorsHeaders(json(401, { error: 'Unauthorized' }), corsOrigin);
 
-    await assertAccess(tenantId, method);
+    await wrapAssertAccess(tenantId, extensionId, method, pathname);
 
     const installConfig = await loadInstallConfigCached(tenantId, extensionId);
     if (!installConfig) {

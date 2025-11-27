@@ -1,6 +1,6 @@
 # Client Portal Test Extension
 
-A sample extension demonstrating the `clientPortalMenu` hook with a WASM handler backend.
+A sample extension demonstrating the `clientPortalMenu` hook with a WASM handler backend using the **postMessage proxy pattern**.
 
 > **Note for external developers:** To create a new extension project from scratch, install the CLI globally and use the scaffolding command:
 > ```bash
@@ -12,8 +12,24 @@ A sample extension demonstrating the `clientPortalMenu` hook with a WASM handler
 
 - Registers a menu item in the Client Portal "Apps" dropdown
 - Displays extension context (extension ID, tenant ID, path)
-- Calls a WASM handler via the `/api/ext/{extensionId}/` proxy
+- Calls a WASM handler via the **postMessage proxy pattern** (not direct fetch)
 - Shows the handler response with request metadata
+
+## Proxy Pattern
+
+This sample demonstrates the recommended way for extension UIs to communicate with their WASM handlers:
+
+1. **Iframe sends `apiproxy` message** to the host via `window.parent.postMessage()`
+2. **Host bridge receives the message** and forwards to `/api/ext-proxy/{extensionId}/{route}`
+3. **Runner executes the WASM handler** and returns the response
+4. **Host sends `apiproxy_response` message** back to the iframe
+
+This pattern ensures:
+- The iframe never makes direct HTTP requests to extension APIs
+- Authentication is handled by the host
+- Secrets never reach the browser
+
+See `ui/main.js` for the implementation.
 
 ## Structure
 
@@ -26,7 +42,7 @@ client-portal-test/
 │   └── handler.ts     # WASM handler implementation
 ├── ui/
 │   ├── index.html     # Extension UI
-│   └── main.js        # UI JavaScript
+│   └── main.js        # UI JavaScript (proxy pattern implementation)
 └── wit/
     └── ext.wit        # WIT interface definition
 ```
@@ -65,26 +81,26 @@ tar --zstd -cf bundle.tar.zst manifest.json ui/ dist/main.wasm
 shasum -a 256 bundle.tar.zst
 ```
 
-## Manifest Hooks
+## Manifest
 
 ```json
 {
+  "name": "com.alga.sample.client-portal-test",
+  "version": "1.2.0",
+  "runtime": "wasm-js@1",
+  "capabilities": ["cap:context.read", "cap:log.emit", "cap:ui.proxy"],
   "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
     "hooks": {
-      "clientPortalMenu": {
-        "label": "Test Extension"
-      }
+      "clientPortalMenu": { "label": "Test Extension" }
     }
-  }
+  },
+  "assets": ["ui/**/*"]
 }
 ```
 
-## API Endpoints
-
-The extension defines two endpoints handled by the same WASM handler:
-
-- `GET /` - Returns handler info and context
-- `GET /info` - Same as above
+Note: The `cap:ui.proxy` capability is required for the proxy pattern.
 
 ## Handler Response
 

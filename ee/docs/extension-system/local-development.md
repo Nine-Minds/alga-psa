@@ -126,7 +126,7 @@ From your extension project root:
 **Using the Alga CLI (recommended):**
 ```bash
 alga build
-# Automatically compiles TypeScript and creates WASM if manifest has api.endpoints
+# Automatically compiles TypeScript and creates WASM component
 # Outputs: dist/main.wasm (for WASM extensions)
 ```
 
@@ -206,13 +206,15 @@ http://localhost:3004/msp/extensions/{extension-registry-id}/
 
 The extension should appear in the sidebar menu under "EXTENSIONS" and load in an iframe when clicked.
 
-**Call your handler via the gateway (for extensions with WASM handlers):**
+**Call your handler via the gateway (for server-to-server testing):**
 ```bash
 curl -X POST http://localhost:3004/api/ext/{extension-id}/path \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"data": "test"}'
 ```
+
+> **Note:** For UI→Handler communication, use the **postMessage proxy pattern** instead of direct `fetch()` calls. See the [Development Guide](development_guide.md#calling-your-wasm-handler-from-the-ui-postmessage-proxy-pattern) for details.
 
 ## Complete Example: Hello World Extension
 
