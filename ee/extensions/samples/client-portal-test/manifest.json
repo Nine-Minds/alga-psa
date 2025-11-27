@@ -1,21 +1,15 @@
 {
   "name": "com.alga.sample.client-portal-test",
   "publisher": "Alga",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "runtime": "wasm-js@1",
-  "capabilities": ["cap:context.read", "cap:log.emit"],
+  "capabilities": ["cap:context.read", "cap:log.emit", "cap:ui.proxy"],
   "ui": {
     "type": "iframe",
     "entry": "ui/index.html",
     "hooks": {
       "clientPortalMenu": { "label": "Test Extension" }
     }
-  },
-  "api": {
-    "endpoints": [
-      { "method": "GET", "path": "/", "handler": "dist/main" },
-      { "method": "GET", "path": "/info", "handler": "dist/main" }
-    ]
   },
   "assets": ["ui/**/*"]
 }
