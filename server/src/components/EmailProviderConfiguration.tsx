@@ -18,7 +18,8 @@ import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
 import {
   getEmailProviders,
   deleteEmailProvider,
-  testEmailProviderConnection
+  testEmailProviderConnection,
+  retryMicrosoftSubscriptionRenewal
 } from '../lib/actions/email-actions/emailProviderActions';
 import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 
@@ -53,6 +54,10 @@ export interface MicrosoftEmailProviderConfig {
   access_token?: string;
   refresh_token?: string;
   token_expires_at?: string;
+  webhook_subscription_id?: string;
+  webhook_verification_token?: string; // Added to match database
+  webhook_expires_at?: string;
+  last_subscription_renewal?: string; // Added to match database
   created_at: string;
   updated_at: string;
 }
@@ -204,6 +209,20 @@ function EmailProviderConfigurationContent({
     }
   };
 
+  const handleRetryRenewal = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      const result = await retryMicrosoftSubscriptionRenewal(provider.id);
+      if (result.success) {
+        await loadProviders();
+      } else {
+        setError(result.message || 'Renewal failed');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
@@ -283,6 +302,7 @@ function EmailProviderConfigurationContent({
           onTestConnection={handleTestConnection}
           onRefresh={loadProviders}
           onRefreshWatchSubscription={handleRefreshWatchSubscription}
+          onRetryRenewal={handleRetryRenewal}
           onAddClick={() => setWizardOpen(true)}
         />
 

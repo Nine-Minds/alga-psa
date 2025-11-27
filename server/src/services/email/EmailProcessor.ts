@@ -1,6 +1,5 @@
-import { EmailQueueJob } from '../../interfaces/email.interfaces';
-import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
-import { EmailProviderConfig } from '../../interfaces/email.interfaces';
+import { EmailQueueJob, EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 
 /**
  * Main email processor that coordinates email processing workflow

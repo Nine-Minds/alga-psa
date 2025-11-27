@@ -204,7 +204,7 @@ export async function fetchDefaultClientTaxRateInfoForWorkItem(workItemId: strin
   }
 }
 
-export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null }[]> { // Return tax_rate_id instead
+export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null; tax_percentage: number | null }[]> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
@@ -222,12 +222,17 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
       this.on('sc.custom_service_type_id', '=', 'st.id')
           .andOn('sc.tenant', '=', 'st.tenant');
     })
+    .leftJoin('tax_rates as tr', function() {
+      this.on('sc.tax_rate_id', '=', 'tr.tax_rate_id')
+          .andOn('sc.tenant', '=', 'tr.tenant');
+    })
     .where({ 'sc.tenant': tenant })
     .select(
       'sc.service_id as id',
       'sc.service_name as name',
-      'sc.billing_method as type', // Use billing_method as type
-      'sc.tax_rate_id' // Select tax_rate_id instead
+      'sc.billing_method as type',
+      'sc.tax_rate_id',
+      'tr.tax_percentage'
     );
 
   // For ad_hoc entries, only show Time-based services

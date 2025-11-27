@@ -3,7 +3,7 @@
  * Handles Gmail-specific webhook operations and Pub/Sub integration
  */
 
-import { EmailProviderConfig } from '../../interfaces/email.interfaces';
+import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { GmailAdapter } from './providers/GmailAdapter';
 
 export interface GmailPubSubSetupOptions {

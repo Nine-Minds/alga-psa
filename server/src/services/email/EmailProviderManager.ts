@@ -14,7 +14,8 @@ import {
 } from '@shared/types/email';
 
 export class EmailProviderManager implements IEmailProviderManager {
-  private providers: Map<string, IEmailProvider> = new Map();
+  private providers: Map<string, IEmailProvider> = new Map(); // Key: tenantId (Active provider)
+  private providerCache: Map<string, IEmailProvider> = new Map(); // Key: providerId (All initialized providers)
   private tenantSettings: Map<string, TenantEmailSettings> = new Map();
 
   constructor() {
@@ -27,6 +28,13 @@ export class EmailProviderManager implements IEmailProviderManager {
     
     this.tenantSettings.set(tenantId, tenantSettings);
     
+    // Clear cache for this tenant's providers to ensure fresh config
+    if (tenantSettings.providerConfigs) {
+      for (const config of tenantSettings.providerConfigs) {
+        this.providerCache.delete(config.providerId);
+      }
+    }
+    
     // Find the first enabled provider
     const enabledConfig = tenantSettings.providerConfigs.find(config => config.isEnabled);
     
@@ -37,6 +45,7 @@ export class EmailProviderManager implements IEmailProviderManager {
         const provider = await this.createProvider(enabledConfig);
         await provider.initialize(enabledConfig.config);
         this.providers.set(tenantId, provider);
+        this.providerCache.set(enabledConfig.providerId, provider);
         
         logger.info(`[EmailProviderManager] Initialized provider: ${provider.providerId} (${provider.providerType}) for tenant ${tenantId}`);
       } catch (error: any) {

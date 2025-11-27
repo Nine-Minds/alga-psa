@@ -3,8 +3,8 @@ import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { withTransaction } from '@alga-psa/shared/db';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { randomBytes } from 'crypto';
-import { MicrosoftGraphAdapter } from '@/services/email/providers/MicrosoftGraphAdapter';
-import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 interface MicrosoftNotification {
   changeType: string;
@@ -222,6 +222,15 @@ export async function POST(request: NextRequest) {
                 emailData: details,
               },
             });
+
+            // Update last_sync_at after successful email processing
+            await trx('email_providers')
+              .where('id', row.id)
+              .update({
+                last_sync_at: trx.fn.now(),
+                updated_at: trx.fn.now()
+              });
+
             processedNotifications.push(messageId);
             console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
           } catch (detailErr: any) {

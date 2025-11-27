@@ -64,7 +64,25 @@ export function RatingDisplay({ rating, type, scale, size = 'md', className }: R
   }
 
   if (type === 'emojis') {
-    const emoji = EMOJI_MAP[rating] ?? '😐';
+    // Map rating relative to scale, not absolutely
+    // For scale 3: 1→😞, 2→😐, 3→😀
+    // For scale 5: 1→😞, 2→😕, 3→😐, 4→🙂, 5→😀
+    // For scale 10: direct 1:1 mapping
+    let emojiIndex: number;
+    if (scale === 10) {
+      emojiIndex = rating;
+    } else if (scale === 5) {
+      emojiIndex = rating;
+    } else if (scale === 3) {
+      // Map 1→1 (😞), 2→3 (😐), 3→5 (😀)
+      emojiIndex = rating === 1 ? 1 : rating === 2 ? 3 : 5;
+    } else {
+      // Fallback: linear interpolation for any other scale
+      // Map from [1, scale] to [1, 10]
+      emojiIndex = Math.round(1 + ((rating - 1) * 9) / (scale - 1));
+      emojiIndex = Math.max(1, Math.min(10, emojiIndex)); // Clamp to valid range
+    }
+    const emoji = EMOJI_MAP[emojiIndex] ?? '😐';
     return <span className={cn(SIZE_CLASSES[size], className)}>{emoji}</span>;
   }
 

@@ -55,7 +55,7 @@ export default [
       ".ai/**/*",
       "**/build/**/*",
       "server/public/**/*",
-      "shared/workflow/workflows/system-email-processing-workflow.ts", // Plain JS for workflow runtime compatibility
+      "services/workflow-worker/src/workflows/system-email-processing-workflow.ts", // Plain JS for workflow runtime compatibility
       "server/src/invoice-templates/assemblyscript/**/*" // AssemblyScript files have different syntax
     ],
 

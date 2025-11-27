@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
-import { MicrosoftGraphAdapter } from '../../../../../services/email/providers/MicrosoftGraphAdapter';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import axios from 'axios';
 
 export const dynamic = 'force-dynamic';

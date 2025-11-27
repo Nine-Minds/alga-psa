@@ -9,7 +9,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
 
-type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
 const debugLogPath = path.resolve(process.env.EXT_PROXY_DEBUG_LOG || '/tmp/ext-proxy.log');
 
@@ -177,6 +177,18 @@ async function handle(
     const timeoutMs = getTimeoutMs();
     const bodyBuf = method === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
 
+    console.log('[ext-proxy] Preparing execution request', {
+      requestId,
+      tenantId,
+      extensionId,
+      path: pathname,
+      installId: installConfig.installId,
+      versionId: installConfig.versionId,
+      contentHash: installConfig.contentHash,
+      timeoutMs,
+      hasBody: !!bodyBuf,
+    });
+
     const execReq = {
       context: {
         request_id: requestId,
@@ -201,18 +213,31 @@ async function handle(
     };
 
     const backend = getRunnerBackend();
+    console.log('[ext-proxy] Using runner backend', {
+      kind: backend.kind,
+      publicBase: backend.getPublicBase()
+    });
 
-    const runnerHeaders: Record<string, string> = {};
+    const runnerHeaders: Record<string, string> = {
+      'x-alga-tenant': tenantId,
+      'x-alga-extension': extensionId,
+    };
     if (installConfig.configVersion) {
       runnerHeaders['x-ext-config-version'] = installConfig.configVersion;
     }
     if (installConfig.secretsVersion) {
       runnerHeaders['x-ext-secrets-version'] = installConfig.secretsVersion;
     }
+
+    console.log('[ext-proxy] Executing request via runner backend...');
     const runnerResp = await backend.execute(execReq, {
       requestId,
       timeoutMs,
       headers: runnerHeaders,
+    });
+    console.log('[ext-proxy] Execution completed', {
+      status: runnerResp.status,
+      bodyLength: runnerResp.body?.length
     });
 
     const proxyResponse = new NextResponse(runnerResp.body as any, {
@@ -221,6 +246,12 @@ async function handle(
     });
     return applyCorsHeaders(proxyResponse, corsOrigin);
   } catch (error: any) {
+    console.error('[ext-proxy] Handler exception', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      request_id: getRequestId(req)
+    });
     logDebug('ext-proxy:error', { message: error?.message, name: error?.name, stack: error?.stack });
     if (error instanceof AccessError) {
       return applyCorsHeaders(json(error.status, { error: error.message }), corsOrigin);
@@ -231,7 +262,8 @@ async function handle(
     }
     if (error instanceof RunnerRequestError) {
       console.error('[ext-proxy] Runner request error:', error.message, { backend: error.backend, status: error.status });
-      return applyCorsHeaders(json(502, { error: 'Runner error' }), corsOrigin);
+      const status = error.status || 502;
+      return applyCorsHeaders(json(status, { error: 'Runner error', details: error.message }), corsOrigin);
     }
     if (error?.name === 'AbortError') {
       return applyCorsHeaders(json(504, { error: 'Gateway timeout' }), corsOrigin);

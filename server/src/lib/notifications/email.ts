@@ -53,6 +53,7 @@ export class EmailNotificationService implements NotificationService {
       return {
         tenantId,
         defaultFromDomain: settings.default_from_domain,
+        ticketingFromEmail: settings.ticketing_from_email,
         customDomains: settings.custom_domains || [],
         emailProvider: settings.email_provider,
         providerConfigs: settings.provider_configs || [],
