@@ -89,8 +89,12 @@ export async function buildProject(opts: BuildProjectOptions = {}): Promise<Buil
     return { success: false, error: `Failed to parse package.json: ${err}` };
   }
 
-  // If there's a custom build script, use it
-  if (packageJson.scripts?.build) {
+  // If there's a custom build script that is NOT "alga build", use it
+  // (avoid infinite loop when the build script IS the CLI)
+  const buildScript = packageJson.scripts?.build;
+  const isAlgaBuildScript = buildScript?.includes('alga build');
+
+  if (buildScript && !isAlgaBuildScript) {
     log.info('[build] Running npm run build...');
     const buildResult = spawnSync('npm', ['run', 'build'], {
       cwd: project,
@@ -201,7 +205,8 @@ export async function buildProject(opts: BuildProjectOptions = {}): Promise<Buil
       'jco', 'componentize',
       jsPath,
       '--wit', witPath,
-      '--world', 'runner',
+      '--world-name', 'runner',
+      '--disable', 'all',
       '--out', wasmPath,
     ], {
       cwd: project,
