@@ -72,7 +72,7 @@ export default function DockerExtensionIframe({ src }: Props) {
   }, [isLoading]);
 
   return (
-    <div className="relative h-full w-full" aria-busy={isLoading}>
+    <div className="relative flex-1 w-full flex flex-col min-h-0" aria-busy={isLoading}>
       {isLoading && !hasError && (
         <div className="extension-loading-overlay" role="status">
           <LoadingIndicator
@@ -98,7 +98,7 @@ export default function DockerExtensionIframe({ src }: Props) {
         key={src}
         src={src}
         title="Extension App"
-        className={`h-full w-full border-0 transition-opacity duration-300 ${
+        className={`flex-1 w-full border-0 transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         sandbox="allow-scripts allow-forms allow-popups allow-same-origin"

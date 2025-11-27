@@ -68,27 +68,9 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
     });
     console.log('[extensions] iframeSrc', { iframeSrc, uiHostMode, runnerBackend });
 
-    const debugBanner = (
-      <pre className="text-xs text-gray-500 p-2 bg-gray-50 border border-gray-200 rounded">
-        docker-mode
-        {' '}
-        {JSON.stringify(
-          {
-            runnerBackend,
-            extUiHostMode: process.env.EXT_UI_HOST_MODE,
-            runnerPublicBase: process.env.RUNNER_PUBLIC_BASE,
-            runnerDockerPort: process.env.RUNNER_DOCKER_PORT,
-          },
-          null,
-          2,
-        )}
-      </pre>
-    );
-
     return (
-      <div className="h-full w-full">
+      <div className="flex-1 w-full flex flex-col min-h-0">
         <DockerExtensionIframe src={iframeSrc} />
-        {debugBanner}
       </div>
     );
   }
@@ -105,7 +87,7 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="flex-1 w-full flex flex-col min-h-0">
       <ExtensionIframe domain={info.runner_domain} />
     </div>
   );
