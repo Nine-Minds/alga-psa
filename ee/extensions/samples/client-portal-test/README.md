@@ -27,19 +27,35 @@ client-portal-test/
 
 ## Building
 
+**Using the Alga CLI (recommended):**
+
 ```bash
 npm install
-npm run build
+npm run build    # runs: alga build
+```
+
+Or directly with the CLI:
+
+```bash
+alga build
 ```
 
 This will:
-1. Compile `src/handler.ts` to JavaScript
+1. Compile `src/handler.ts` to JavaScript (via esbuild)
 2. Use `jco componentize` to create a WASM component at `dist/main.wasm`
 
 ## Bundling
 
+**Using the Alga CLI:**
+
 ```bash
-tar --zstd -cf bundle.tar.zst manifest.json ui/ dist/
+npm run pack     # runs: alga pack
+```
+
+**Manual bundling:**
+
+```bash
+tar --zstd -cf bundle.tar.zst manifest.json ui/ dist/main.wasm
 shasum -a 256 bundle.tar.zst
 ```
 
