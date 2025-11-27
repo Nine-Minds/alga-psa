@@ -60,8 +60,8 @@ export default async function ExtensionPage({ params }: { params: PageParams | P
     });
 
     return (
-      <div className="h-full w-full min-h-[calc(100vh-100px)]">
-        <DockerExtensionIframe src={iframeSrc} />
+      <div className="flex-1 w-full flex flex-col min-h-0">
+        <DockerExtensionIframe src={iframeSrc} extensionId={id} />
       </div>
     );
   }
@@ -77,7 +77,7 @@ export default async function ExtensionPage({ params }: { params: PageParams | P
   }
 
   return (
-    <div className="h-full w-full min-h-[calc(100vh-100px)]">
+    <div className="flex-1 w-full flex flex-col min-h-0">
       <ExtensionIframe domain={info.runner_domain} />
     </div>
   );
