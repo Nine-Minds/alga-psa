@@ -12,7 +12,7 @@ This guide describes how to build Enterprise Edition (v2) extensions for Alga PS
 - Node.js 18+
 - Component toolchain:
   - `@bytecodealliance/componentize-js` (`jco`) or another WIT-compatible pipeline
-  - `@alga/extension-runtime` helpers for handlers/tests
+  - `@alga-psa/extension-runtime` helpers for handlers/tests
 - Familiarity with:
   - TypeScript, React (for UI)
   - Security best practices and least-privilege design
@@ -47,7 +47,7 @@ npm install -g @alga-psa/cli
 |---------|---------|
 | `@alga-psa/cli` | Command-line tools for building and publishing |
 | `@alga-psa/client-sdk` | Programmatic APIs for build/pack/publish |
-| `@alga/extension-runtime` | TypeScript types and helpers for WASM handlers |
+| `@alga-psa/extension-runtime` | TypeScript types and helpers for WASM handlers |
 | `@alga/extension-iframe-sdk` | Host communication APIs for iframe UIs |
 
 ## Project Layout (Example)
@@ -55,7 +55,7 @@ npm install -g @alga-psa/cli
 ```
 my-extension/
 ├── src/
-│   ├── component/                # Component handler source (TS/JS + @alga/extension-runtime)
+│   ├── component/                # Component handler source (TS/JS + @alga-psa/extension-runtime)
 │   │   ├── handler.ts
 │   │   └── wit/                  # Generated WIT/world bindings
 │   ├── ui/                       # Iframe app (Vite + React)
@@ -102,11 +102,11 @@ alga extension publish . --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
    - Place `manifest.json` at the repo root alongside `package.json`.
 
 2. **Author the Wasmtime endpoint**
-   - Install the toolchain: `npm install @alga/extension-runtime @bytecodealliance/componentize-js`.
+   - Install the toolchain: `npm install @alga-psa/extension-runtime @bytecodealliance/componentize-js`.
    - Implement `handler` using the runtime helpers:
      ```ts
      // component/src/handler.ts
-     import { Handler, jsonResponse } from '@alga/extension-runtime';
+     import { Handler, jsonResponse } from '@alga-psa/extension-runtime';
 
      export const handler: Handler = async (req, host) => {
        const secret = await host.secrets.get('api_key');
@@ -196,14 +196,14 @@ Key points:
 
 ## Building Server Handlers (Componentized WASM)
 
-- Write handlers in TypeScript (or JS) using `@alga/extension-runtime`, then run `jco componentize` to produce `dist/main.wasm`.
+- Write handlers in TypeScript (or JS) using `@alga-psa/extension-runtime`, then run `jco componentize` to produce `dist/main.wasm`.
 - Optional: use other WIT-compatible languages (`wit-bindgen` for Rust/TinyGo) as long as the output conforms to the `alga:extension/runner` world.
 - Use host APIs (capability-scoped) exposed via the generated bindings:
   - `host.http.fetch`, `host.storage.*`, `host.secrets.get`, `host.uiProxy.callRoute`, `host.logging.*`.
 
 Conceptual handler shape:
 ```ts
-import { Handler, jsonResponse } from '@alga/extension-runtime';
+import { Handler, jsonResponse } from '@alga-psa/extension-runtime';
 
 export const handler: Handler = async (request, host) => {
   const items = await host.storage.list({

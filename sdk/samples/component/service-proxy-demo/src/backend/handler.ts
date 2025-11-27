@@ -4,7 +4,7 @@ import {
   HostBindings,
   HttpHeader,
   jsonResponse,
-} from '@alga/extension-runtime';
+} from '@alga-psa/extension-runtime';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

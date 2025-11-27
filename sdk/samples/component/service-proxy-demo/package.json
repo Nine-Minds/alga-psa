@@ -15,10 +15,11 @@
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@alga/extension-iframe-sdk": "file:../../../../sdk/extension-iframe-sdk"
+    "@alga/extension-iframe-sdk": "file:../../../../sdk/extension-iframe-sdk",
+    "@alga-psa/extension-runtime": "^0.2.0"
   },
   "devDependencies": {
-    "@alga/extension-runtime": "file:../../../../sdk/extension-runtime",
+    "@alga-psa/extension-runtime": "file:../../../../sdk/extension-runtime",
     "@bytecodealliance/componentize-js": "^0.19.3",
     "esbuild": "^0.20.0",
     "@types/react": "^18.2.0",

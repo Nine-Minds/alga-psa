@@ -10,7 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@alga/extension-runtime": "file:../../extension-runtime",
+    "@alga-psa/extension-runtime": "file:../../extension-runtime",
     "@mongodb-js/zstd": "^7.0.0"
   },
   "devDependencies": {

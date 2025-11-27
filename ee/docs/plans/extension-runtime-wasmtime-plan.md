@@ -101,7 +101,7 @@ We can now execute `componentize-js` artifacts in-process and inside the runner 
    - [ ] Capture proxy invocations (route, status) and extend structured logging so operators can audit service proxy usage without exposing payloads.
 
 5. **Developer experience**
-   - [x] Provide Vitest-friendly mock hosts in `@alga/extension-runtime` so SDK samples run without the runner.
+   - [x] Provide Vitest-friendly mock hosts in `@alga-psa/extension-runtime` so SDK samples run without the runner.
    - [ ] Update SDK docs/tutorials to reference the new service proxy sample and outline the end-to-end flow (component → runner → Alga API → UI proxy).
 
 Keep this checklist synchronized with the master metadata plan as we close the remaining gaps.

@@ -114,6 +114,10 @@ Status update (2025-11-21):
   - "Reset to Defaults": Revert configuration to manifest defaults and clear secrets.
 - **RBAC**: Ensure only admins with appropriate permissions can view/edit these settings.
 - **Entry Point**: Connect the "Settings" button in the Extension Management table (`SettingsPage.tsx` -> `Extensions.tsx`) to this new page.
+- Publish `@alga-psa/extension-runtime` (JS/TS) wrapping generated bindings with helpers (`createHandler`, `ctx.secrets.get`, `ctx.uiProxy.call`).
+- Ship UI-side helpers (`@alga/extension-ui`) that call gateway proxy endpoints with tenant/install context.
+- Document workflows in `sdk/docs`: local dev loop, invoking provider APIs, using UI proxy without handling secrets.
+- Provide runnable samples mirroring wasmCloud's language examples (TypeScript initially, add Rust/TinyGo later via `wit-bindgen`).
 
 ## Implementation Phases
 
@@ -155,10 +159,10 @@ Status update (2025-11-21):
 ### Phase 3 — SDK & Tooling (Componentize-JS Pipeline)
 
 - [x] Build the `componentize-js` project template and integrate it into `alga-cli`.
-- [x] Generate JS/TS bindings from WIT, publish `@alga/extension-runtime`, and document usage. *(Manual first-pass bindings plus proxy helpers shipped under `sdk/extension-runtime`.)*
+- [x] Generate JS/TS bindings from WIT, publish `@alga-psa/extension-runtime`, and document usage. *(Manual first-pass bindings plus proxy helpers shipped under `sdk/extension-runtime`.)*
 - [x] Provide sample extension + automated test to validate secrets retrieval through the new host interface. *(See `sdk/samples/component/secrets-demo` with Vitest example.)*
 - [x] Enforce component artifact validation in the publishing pipeline (reject raw Wasm uploads). *(Pack step now requires `dist/component.wasm` + metadata before producing bundles.)*
-- [x] Add UI SDK helpers demonstrating the proxy pattern (UI calling gateway endpoints backed by runner handlers). *(Available via `callProxyJson` in `@alga/extension-runtime`.)*
+- [x] Add UI SDK helpers demonstrating the proxy pattern (UI calling gateway endpoints backed by runner handlers). *(Available via `callProxyJson` in `@alga-psa/extension-runtime`.)*
 - [x] Deliver local dev commands (`alga-cli dev`) that spin up mocked capability providers to mirror wasmCloud’s `wash` workflow. *(New `alga component dev` task rebuilds components on file changes.)*
 
 ### Phase 4 — Rollout

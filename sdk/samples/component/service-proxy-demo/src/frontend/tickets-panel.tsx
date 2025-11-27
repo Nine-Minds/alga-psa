@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { callProxyJson, UiProxyHost } from '@alga/extension-runtime';
+import { callProxyJson, UiProxyHost } from '@alga-psa/extension-runtime';
 
 export interface TicketListItem {
   id: string;
@@ -113,4 +113,4 @@ export function renderTicketsPanel(root: HTMLElement, uiProxy: UiProxyHost, limi
   });
 }
 
-export type { UiProxyHost } from '@alga/extension-runtime';
+export type { UiProxyHost } from '@alga-psa/extension-runtime';

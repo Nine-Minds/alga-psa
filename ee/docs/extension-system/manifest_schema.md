@@ -19,7 +19,7 @@ interface ManifestV2 {
   name: string;                 // reverse‑domain ID, e.g., "com.acme.reports"
   publisher: string;            // organization name
   version: string;              // semver
-  runtime: 'wasm-js@1';         // componentize-js output (see @alga/extension-runtime)
+  runtime: 'wasm-js@1';         // componentize-js output (see @alga-psa/extension-runtime)
   capabilities?: string[];      // e.g., ["http.fetch","storage.kv","secrets.get"]
   ui?: {                        // iframe UI (served by Runner)
     type: 'iframe';

@@ -449,10 +449,10 @@ Look for:
 
 ### Structured Logging from Handlers
 
-Use `@alga/extension-runtime` logging to emit structured logs:
+Use `@alga-psa/extension-runtime` logging to emit structured logs:
 
 ```ts
-import { Handler, jsonResponse } from '@alga/extension-runtime';
+import { Handler, jsonResponse } from '@alga-psa/extension-runtime';
 
 export const handler: Handler = async (req, host) => {
   // Emit a log message
@@ -565,7 +565,7 @@ npm run dev:runner
 **Error:** `ERROR: Execution failed: Wasm trap` in runner logs
 
 **Check:**
-1. Are you using `@alga/extension-runtime` correctly? Review the [development_guide.md](development_guide.md#building-server-handlers-componentized-wasm).
+1. Are you using `@alga-psa/extension-runtime` correctly? Review the [development_guide.md](development_guide.md#building-server-handlers-componentized-wasm).
 2. Is the handler function exported as default? `export const handler: Handler = ...`
 3. Are you accessing capabilities that aren't granted? Check your manifest `capabilities`.
 
@@ -736,7 +736,7 @@ If you need to use different ports or credentials, update these values according
 
 Once you're comfortable with local development:
 
-1. **Write tests** — Use `@alga/extension-runtime` testing utilities
+1. **Write tests** — Use `@alga-psa/extension-runtime` testing utilities
 2. **Deploy to staging** — Publish your bundle and install on a staging Alga instance
 3. **Set up CI/CD** — Automate bundling, signing, and publishing (see [enterprise-build-workflow.md](enterprise-build-workflow.md))
 4. **Monitor in production** — Use structured logging and debug streams for observability
