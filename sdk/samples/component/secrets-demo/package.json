@@ -10,11 +10,11 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@alga-psa/extension-runtime": "file:../../extension-runtime",
+    "@alga-psa/extension-runtime": "^0.2.0",
     "@mongodb-js/zstd": "^7.0.0"
   },
   "devDependencies": {
-    "@alga-psa/cli": "file:../../alga-cli",
+    "@alga-psa/cli": "^0.2.0",
     "rimraf": "^5.0.0",
     "vitest": "^3.0.7"
   }
