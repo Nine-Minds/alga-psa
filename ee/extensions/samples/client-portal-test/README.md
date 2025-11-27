@@ -2,6 +2,12 @@
 
 A sample extension demonstrating the `clientPortalMenu` hook with a WASM handler backend.
 
+> **Note for external developers:** To create a new extension project from scratch, install the CLI globally and use the scaffolding command:
+> ```bash
+> npm install -g @alga-psa/cli
+> alga create extension my-extension
+> ```
+
 ## Features
 
 - Registers a menu item in the Client Portal "Apps" dropdown
