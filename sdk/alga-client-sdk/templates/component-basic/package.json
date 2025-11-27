@@ -10,7 +10,7 @@
     "pack": "alga pack"
   },
   "dependencies": {
-    "@alga/extension-runtime": "^0.1.0"
+    "@alga-psa/extension-runtime": "^0.1.0"
   },
   "devDependencies": {
     "@alga-psa/cli": "^0.1.0",

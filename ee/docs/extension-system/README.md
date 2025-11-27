@@ -35,14 +35,14 @@ Design goals:
 - Per-tenant isolation for compute, storage, and egress
 - Signed, content-addressed bundles with verified provenance (sha256:…)
 - Least-privilege host APIs with quotas and auditable execution
-- Component-model execution so extensions produced via `componentize-js` + `@alga/extension-runtime` behave consistently across languages
+- Component-model execution so extensions produced via `componentize-js` + `@alga-psa/extension-runtime` behave consistently across languages
 
 ## Architecture Snapshot
 
 - Runner (Rust + Wasmtime components): executes handlers produced by `componentize-js`, enforces capability-scoped host APIs, and serves static iframe UI assets at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`.
 - Registry + Bundle Store (S3-compatible): content-addressed artifacts, install-scoped config, provider grants, and sealed secret envelopes.
 - API Gateway (Next.js): `/api/ext/[extensionId]/[[...path]]` looks up the tenant install via `@ee/lib/extensions/installConfig`, forwards `{context, http, limits, config, providers, secret_envelope}` to Runner `POST /v1/execute`, and proxies the response. Manifest endpoint lists are advisory; enforcement is undecided (see alignment plan).
-- Client SDKs: `@alga/extension-iframe-sdk` (postMessage bridge) and `@alga/ui-kit` (components + theming), plus `@alga/extension-runtime` for component handlers.
+- Client SDKs: `@alga/extension-iframe-sdk` (postMessage bridge) and `@alga/ui-kit` (components + theming), plus `@alga-psa/extension-runtime` for component handlers.
 
 ## Correctness Rules
 

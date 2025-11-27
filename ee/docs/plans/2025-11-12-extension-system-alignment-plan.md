@@ -41,7 +41,7 @@ Recent upgrades (componentized runtime, install-scoped metadata, Redis-backed de
 | Item | Description | Owner | Status |
 | --- | --- | --- | --- |
 | C1 | **Canonical docs refresh.** Update `ee/docs/extension-system/{README,overview,serving-system}.md` to describe the component runtime, Redis debug stream, and correct file paths (`server/src/app/api/ext/[extensionId]/[[...path]]/route.ts`). | Docs | (in progress) |
-| C2 | **Manifest & dev guide rewrite.** Align `manifest_schema.md`, `development_guide.md`, and samples with `componentize-js` pipeline (`@alga/extension-runtime`). Remove instructions referencing `dist/handlers/...` entry points unless we reinstate them via A4. | Docs | (in progress) |
+| C2 | **Manifest & dev guide rewrite.** Align `manifest_schema.md`, `development_guide.md`, and samples with `componentize-js` pipeline (`@alga-psa/extension-runtime`). Remove instructions referencing `dist/handlers/...` entry points unless we reinstate them via A4. | Docs | (in progress) |
 | C3 | **API Routing Guide update.** Document the new gateway request structure (config, providers, secret envelopes, version headers) and note remaining TODOs (RBAC, install_id). | Docs | (in progress) |
 | C4 | **Runner reference update.** Refresh execute request examples, env vars (`RUNNER_DEBUG_REDIS_*`, `UI_PROXY_*`), and capability descriptions. | Docs | (in progress) |
 | C5 | **SDK messaging.** Ensure `sdk/extension-runtime` README and templates link back to the updated docs and clarify version requirements (`componentize-js >= 0.19.3`). | SDK | ☐ |

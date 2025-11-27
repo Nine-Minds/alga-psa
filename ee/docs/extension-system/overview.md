@@ -11,7 +11,7 @@ This document specifies the Enterprise Edition (EE) extension architecture. It i
 ## Architecture
 
 1) Runner Service (Rust + Wasmtime)
-- Executes extension handlers as Wasmtime **components** generated via `componentize-js` + `@alga/extension-runtime`
+- Executes extension handlers as Wasmtime **components** generated via `componentize-js` + `@alga-psa/extension-runtime`
 - Enforces memory/time/concurrency limits
 - Exposes a minimal set of namespaced host APIs (alga.*) for storage, http, secrets, logging, and metrics
 - Provides additional capability providers (e.g., ui proxy) based on install-scoped grants

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fetchTicketsViaProxy, TicketProxyResponse } from '../src/tickets-panel.js';
-import type { UiProxyHost } from '@alga/extension-runtime';
+import type { UiProxyHost } from '@alga-psa/extension-runtime';
 
 const encoder = new TextEncoder();
 

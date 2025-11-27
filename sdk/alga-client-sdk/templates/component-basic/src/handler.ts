@@ -1,4 +1,4 @@
-import { ExecuteRequest, ExecuteResponse, jsonResponse } from '@alga/extension-runtime';
+import { ExecuteRequest, ExecuteResponse, jsonResponse } from '@alga-psa/extension-runtime';
 
 export async function handler(request: ExecuteRequest): Promise<ExecuteResponse> {
   const { tenantId, extensionId } = request.context;
