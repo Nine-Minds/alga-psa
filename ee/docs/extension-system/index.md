@@ -58,6 +58,7 @@
 
 - All extension API requests use `/api/ext/[extensionId]/[[...path]]` and are proxied to the Runner `POST /v1/execute` (see [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)).
 - UI is iframe-only and served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`; the Next.js `ext-ui` route is a gate that returns 404 or redirects to the Runner when rust-host mode is enabled.
+- **UI→Handler communication uses the postMessage proxy pattern** (NOT direct `fetch()` calls). The iframe sends `apiproxy` messages to the host, which forwards to `/api/ext-proxy/{extensionId}/{route}`. Requires `cap:ui.proxy` capability.
 - The host constructs iframe src via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45).
 - Registry v2 is authoritative for extension versions and bundle metadata (see [ExtensionRegistryServiceV2](../../../server/src/lib/extensions/registry-v2.ts:48)).
 

@@ -126,19 +126,19 @@ alga extension publish . --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
    - Reference the entry file from the manifest via `"ui": { "type": "iframe", "entry": "ui/dist/index.html" }`.
 
 4. **Create or update `manifest.json`**
-   - Include metadata, capabilities, optional `api.endpoints` (for docs/UX), and `assets` globs:
+   - Include metadata, capabilities, and `assets` globs:
      ```json
      {
        "name": "com.example.basic",
        "publisher": "Example Inc.",
        "version": "1.0.0",
        "runtime": "wasm-js@1",
-       "capabilities": ["http.fetch", "secrets.get", "log.emit"],
+       "capabilities": ["cap:http.fetch", "cap:secrets.get", "cap:log.emit", "cap:ui.proxy"],
        "ui": { "type": "iframe", "entry": "ui/dist/index.html" },
-       "api": { "endpoints": [{ "method": "POST", "path": "/ping", "handler": "ping" }] },
        "assets": ["ui/dist/**/*"]
      }
      ```
+   - Note: `api.endpoints` is optional advisory metadata for documentation/tooling. It is NOT required for the proxy pattern to work.
 
 5. **Package the bundle**
 
@@ -177,22 +177,17 @@ See [Manifest Schema](manifest_schema.md) for full details.
   "publisher": "Acme Inc.",
   "version": "1.0.0",
   "runtime": "wasm-js@1",
-  "capabilities": ["http.fetch", "storage.kv", "secrets.get"],
+  "capabilities": ["cap:http.fetch", "cap:storage.kv", "cap:secrets.get", "cap:ui.proxy"],
   "ui": { "type": "iframe", "entry": "ui/index.html" },
-  "api": {
-    "endpoints": [
-      { "method": "GET", "path": "/agreements", "handler": "agreements/list" },
-      { "method": "POST", "path": "/agreements/sync", "handler": "agreements/sync" }
-    ]
-  },
   "assets": ["ui/**/*"]
 }
 ```
 
 Key points:
 - `ui.entry` points to your iframe HTML within the bundle.
-- `api.endpoints` describe your HTTP surface area for docs and telemetry. (Enforcement is currently advisory; see [manifest schema](manifest_schema.md) for details.)
+- `cap:ui.proxy` enables the postMessage proxy pattern for UI→WASM handler communication.
 - `capabilities` request access to host features (http, storage, secrets, ui proxy, logging) and are granted per tenant install.
+- `api.endpoints` is optional advisory metadata for documentation/tooling—not required for the extension to function.
 
 ## Building Server Handlers (Componentized WASM)
 
@@ -240,19 +235,52 @@ CI should output `dist/main.wasm` plus optional `precompiled/` artifacts referen
 ## Building the Iframe UI
 
 - Use the provided SDKs:
-  - `@alga/extension-iframe-sdk` for host communication (auth, theme, navigation)
+  - `@alga/extension-iframe-sdk` for host communication (auth, theme, navigation, **proxy calls**)
   - `@alga/ui-kit` for accessible, consistent components
 - Iframe bootstrap and URL construction are handled by the host via:
   - [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
   - [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 - UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` with immutable caching
 
-Fetching via the Gateway from your UI:
+### Calling Your WASM Handler from the UI (postMessage Proxy Pattern)
+
+**Important:** Extension UIs should NOT make direct `fetch()` calls to `/api/ext/` endpoints. Instead, use the **postMessage proxy pattern** which ensures:
+- Authentication is handled by the host
+- Secrets never reach the browser
+- Consistent error handling and timeouts
+
+Using the iframe SDK:
 ```ts
-const url = `/api/ext/${context.extensionId}/agreements`;
-const res = await fetch(url, { headers: context.authHeaders });
-const data = await res.json();
+import { IframeBridge } from '@alga/extension-iframe-sdk';
+
+const bridge = new IframeBridge();
+await bridge.ready();
+
+// Call your WASM handler via the proxy
+const response = await bridge.uiProxy.call('/agreements');
+const data = JSON.parse(new TextDecoder().decode(response));
 ```
+
+Or using the lower-level postMessage API (see [client-portal-test sample](../../../ee/extensions/samples/client-portal-test/ui/main.js)):
+```ts
+// Send request to host
+window.parent.postMessage({
+  alga: true,
+  version: '1',
+  type: 'apiproxy',
+  request_id: crypto.randomUUID(),
+  payload: { route: '/agreements' }
+}, '*');
+
+// Listen for response
+window.addEventListener('message', (ev) => {
+  if (ev.data?.type === 'apiproxy_response') {
+    // Handle response...
+  }
+});
+```
+
+The `cap:ui.proxy` capability is required in your manifest to use the proxy pattern.
 
 ## Signing and Packaging
 
