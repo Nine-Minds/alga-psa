@@ -10,9 +10,9 @@ import {
   sign as signBundle,
 } from '@alga-psa/client-sdk';
 import { spawn } from 'node:child_process';
-import { existsSync, watch } from 'node:fs';
+import { existsSync, watch, realpathSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
 function printHelp() {
   console.log(`
@@ -524,14 +524,28 @@ export async function runCLI(argv: string[]) {
   process.exitCode = 1;
 }
 
-const maybeMain = process.argv[1];
-if (maybeMain) {
-  const entryHref = pathToFileURL(maybeMain).href;
-  if (entryHref === import.meta.url) {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    runCLI(process.argv);
+async function main() {
+  const maybeMain = process.argv[1];
+  if (maybeMain) {
+    // Resolve symlinks to get the real path, so this works when called via node_modules/.bin symlink
+    const realPath = realpathSync(resolve(maybeMain));
+    const entryHref = pathToFileURL(realPath).href;
+    const thisModulePath = fileURLToPath(import.meta.url);
+    const thisModuleReal = realpathSync(thisModulePath);
+    const thisModuleHref = pathToFileURL(thisModuleReal).href;
+
+    if (entryHref === thisModuleHref) {
+      try {
+        await runCLI(process.argv);
+      } catch (err) {
+        console.error('CLI error:', err);
+        process.exitCode = 1;
+      }
+    }
   }
 }
+
+main();
 
 function runComponentDev(projectDir: string) {
   const normalized = resolve(projectDir);
