@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self' https:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Client Portal Test Extension</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --fg: #1e293b;
+        --fg-muted: #64748b;
+        --accent: #6366f1;
+        --accent-light: #eef2ff;
+        --border: #e2e8f0;
+        --success: #059669;
+        --success-bg: #ecfdf5;
+        --success-border: #a7f3d0;
+        --code-bg: #f1f5f9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+        background-image:
+          radial-gradient(at 20% 30%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+          radial-gradient(at 80% 70%, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
+        color: var(--fg);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 32px 40px;
+        max-width: 560px;
+        width: 100%;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          0 4px 12px rgba(0, 0, 0, 0.04);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+      .badge {
+        display: inline-block;
+        background: var(--accent);
+        color: white;
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--fg);
+      }
+      .subtitle {
+        margin: 0;
+        font-size: 15px;
+        color: var(--fg-muted);
+        line-height: 1.5;
+      }
+      .info-box {
+        background: var(--accent-light);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        padding: 16px;
+        border-radius: 10px;
+        margin: 20px 0;
+      }
+      .info-row {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+      .info-row:last-child {
+        margin-bottom: 0;
+      }
+      .info-label {
+        color: var(--fg-muted);
+        font-weight: 500;
+        min-width: 100px;
+      }
+      .info-value {
+        color: var(--fg);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+        background: var(--code-bg);
+        padding: 2px 8px;
+        border-radius: 4px;
+        word-break: break-all;
+      }
+      .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--fg);
+        margin: 24px 0 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .handler-result {
+        min-height: 60px;
+      }
+      .result-box {
+        background: var(--success-bg);
+        border: 1px solid var(--success-border);
+        padding: 16px;
+        border-radius: 10px;
+      }
+      .result-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: var(--success);
+      }
+      .result-header svg {
+        width: 18px;
+        height: 18px;
+      }
+      .result-row {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+      .result-row:last-child {
+        margin-bottom: 0;
+      }
+      .result-label {
+        color: var(--fg-muted);
+        min-width: 100px;
+      }
+      .result-value {
+        color: var(--fg);
+      }
+      .result-value code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        background: rgba(5, 150, 105, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .loading {
+        color: var(--fg-muted);
+        font-style: italic;
+      }
+      .error {
+        color: #dc2626;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 14px;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+        background: var(--code-bg);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <div class="badge">Client Portal Extension</div>
+        <h1>Test Extension</h1>
+        <p class="subtitle">
+          Loaded via the <code>clientPortalMenu</code> hook with a WASM handler backend.
+        </p>
+      </div>
+
+      <div class="info-box" id="ctx">
+        <div class="info-row">
+          <span class="info-label">Extension ID</span>
+          <span class="info-value">Loading...</span>
+        </div>
+      </div>
+
+      <div class="section-title">WASM Handler Response</div>
+      <div class="handler-result" id="handler-result">
+        <span class="loading">Calling handler...</span>
+      </div>
+    </div>
+    <script src="./main.js" type="module"></script>
+  </body>
+</html>

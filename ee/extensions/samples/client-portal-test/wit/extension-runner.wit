@@ -1,0 +1,123 @@
+package alga:extension;
+
+interface types {
+    record context-data {
+        request-id: option<string>,
+        tenant-id: string,
+        extension-id: string,
+        install-id: option<string>,
+        version-id: option<string>,
+    }
+
+    enum secret-error {
+        missing,
+        denied,
+        expired,
+        internal,
+    }
+
+    record http-header {
+        name: string,
+        value: string,
+    }
+
+    record http-request {
+        method: string,
+        url: string,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+
+    enum http-error {
+        invalid-url,
+        not-allowed,
+        transport,
+        internal,
+    }
+
+    enum storage-error {
+        missing,
+        conflict,
+        denied,
+        internal,
+    }
+
+    record storage-entry {
+        namespace: string,
+        key: string,
+        value: list<u8>,
+        revision: option<u64>,
+    }
+
+    enum proxy-error {
+        route-not-found,
+        denied,
+        bad-request,
+        internal,
+    }
+
+    record execute-request {
+        context: context-data,
+        http: http-request,
+    }
+
+    record execute-response {
+        status: u16,
+        headers: list<http-header>,
+        body: option<list<u8>>,
+    }
+}
+
+interface context {
+    use types.{context-data};
+    get-context: func() -> context-data;
+}
+
+interface secrets {
+    use types.{secret-error};
+    get: func(key: string) -> result<string, secret-error>;
+    list-keys: func() -> list<string>;
+}
+
+interface http {
+    use types.{http-request, http-response, http-error};
+    fetch: func(request: http-request) -> result<http-response, http-error>;
+}
+
+interface storage {
+    use types.{storage-entry, storage-error};
+    get: func(namespace: string, key: string) -> result<storage-entry, storage-error>;
+    put: func(entry: storage-entry) -> result<storage-entry, storage-error>;
+    delete: func(namespace: string, key: string) -> result<_, storage-error>;
+    list-entries: func(namespace: string, cursor: option<string>) -> result<list<storage-entry>, storage-error>;
+}
+
+interface logging {
+    log-info: func(message: string);
+    log-warn: func(message: string);
+    log-error: func(message: string);
+}
+
+interface ui-proxy {
+    use types.{proxy-error};
+    call-route: func(route: string, payload: option<list<u8>>) -> result<list<u8>, proxy-error>;
+}
+
+world runner {
+    use types.{execute-request, execute-response};
+
+    import context;
+    import secrets;
+    import http;
+    import storage;
+    import logging;
+    import ui-proxy;
+
+    export handler: func(request: execute-request) -> execute-response;
+}
