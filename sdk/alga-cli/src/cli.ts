@@ -484,7 +484,7 @@ export async function runCLI(argv: string[]) {
       }
     }
     const out = await packProject({ projectPath, outFile, force, logger: console });
-    console.log(`Packed → ${out}`);
+    console.log(`\n[pack] Bundle ready to install into Alga PSA: ${out}`);
     return;
   }
 
