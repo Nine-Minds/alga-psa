@@ -645,7 +645,7 @@ const Documents = ({
     }
 
     // For other files, trigger download
-    const downloadUrl = getDocumentDownloadUrl(document.file_id);
+    const downloadUrl = getDocumentDownloadUrl(document.document_id);
     const filename = document.document_name || 'download';
     try {
       await downloadDocument(downloadUrl, filename, true);

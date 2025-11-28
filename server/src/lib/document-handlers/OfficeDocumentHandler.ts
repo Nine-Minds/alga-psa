@@ -121,7 +121,7 @@ export class OfficeDocumentHandler extends BaseDocumentHandler {
           <p>Filename: ${document.document_name || 'Unknown'}</p>
           <p>Type: ${document.mime_type || 'Unknown'}</p>
           <p>Size: ${document.file_size ? Math.round(document.file_size / 1024) + ' KB' : 'Unknown'}</p>
-          <p><a href="/api/documents/download/${document.file_id}" target="_blank">Download Document</a></p>
+          <p><a href="/api/documents/download/${document.document_id}" target="_blank">Download Document</a></p>
           <p class="note">Preview not available for this document type. Please download to view.</p>
         </div>
       `;

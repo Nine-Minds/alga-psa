@@ -812,7 +812,7 @@ export async function getDocumentPreview(
 }
 
 // Get document download URL
-export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
+export async function getDocumentDownloadUrl(documentId: string): Promise<string> {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
       throw new Error('No authenticated user found');
@@ -823,7 +823,7 @@ export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
       throw new Error('Permission denied: Cannot read documents');
     }
 
-    return `/api/documents/download/${file_id}`;
+    return `/api/documents/download/${documentId}`;
 }
 
 /**

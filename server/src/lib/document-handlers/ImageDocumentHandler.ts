@@ -91,7 +91,7 @@ export class ImageDocumentHandler extends BaseDocumentHandler {
       }
 
       // Get image URL
-      const imageUrl = `/api/documents/download/${document.file_id}`;
+      const imageUrl = `/api/documents/download/${document.document_id}`;
 
       return `
         <div class="image-container">

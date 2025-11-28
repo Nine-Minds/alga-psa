@@ -1,6 +1,6 @@
-export function getDocumentDownloadUrl(file_id: string): string {
-    if (!file_id) return '#';
-    return `/api/documents/download/${file_id}`;
+export function getDocumentDownloadUrl(documentId: string): string {
+    if (!documentId) return '#';
+    return `/api/documents/download/${documentId}`;
 }
 
 /**

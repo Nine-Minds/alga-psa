@@ -159,7 +159,7 @@ export class PDFDocumentHandler extends BaseDocumentHandler {
           <p>Filename: ${document.document_name || 'Unknown'}</p>
           <p>Pages: ${pageCount}</p>
           <p>Size: ${document.file_size ? Math.round(document.file_size / 1024) + ' KB' : 'Unknown'}</p>
-          <p><a href="/api/documents/download/${document.file_id}" target="_blank">Download PDF</a></p>
+          <p><a href="/api/documents/download/${document.document_id}" target="_blank">Download PDF</a></p>
         </div>
       `;
     } catch (error) {

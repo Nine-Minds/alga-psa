@@ -480,7 +480,7 @@ function DocumentStorageCardComponent({
             setShowFullSizeModal(true);
         } else {
             // For other files, download
-            const downloadUrl = getDocumentDownloadUrl(document.file_id);
+            const downloadUrl = getDocumentDownloadUrl(document.document_id);
             const filename = document.document_name || 'download';
             try {
                 await downloadDocument(downloadUrl, filename, true);
@@ -809,7 +809,7 @@ function DocumentStorageCardComponent({
                                     <Button
                                         id={`${id}-download-modal-button`}
                                         onClick={async () => {
-                                            const downloadUrl = getDocumentDownloadUrl(document.file_id!);
+                                            const downloadUrl = getDocumentDownloadUrl(document.document_id);
                                             const filename = document.document_name || 'download';
                                             try {
                                                 await downloadDocument(downloadUrl, filename, true);
