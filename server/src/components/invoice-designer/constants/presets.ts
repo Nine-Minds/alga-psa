@@ -400,6 +400,212 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       { type: 'aspect-ratio', node: 'qr', ratio: 1, strength: 'strong' },
     ],
   },
+  {
+    id: 'modern-invoice-complete',
+    label: 'Modern Invoice Template',
+    description: 'Complete layout with Header, Billing Info, Items Table, and Footer.',
+    category: 'Body',
+    nodes: [
+      // --- Header Section ---
+      {
+        key: 'header-section',
+        type: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 750, height: 150 },
+        name: 'Header',
+        layout: { mode: 'flex', direction: 'row', gap: 20, padding: 20, justify: 'space-between', align: 'center', sizing: 'hug' }
+      },
+      {
+        key: 'header-left',
+        type: 'container',
+        parentKey: 'header-section',
+        offset: { x: 0, y: 0 },
+        size: { width: 300, height: 100 },
+        name: 'Brand Area',
+        layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'center', align: 'start', sizing: 'fixed' }
+      },
+      {
+        key: 'header-logo',
+        type: 'logo',
+        parentKey: 'header-left',
+        offset: { x: 0, y: 0 },
+        size: { width: 180, height: 80 },
+        name: 'Company Logo'
+      },
+      {
+        key: 'header-right',
+        type: 'container',
+        parentKey: 'header-section',
+        offset: { x: 0, y: 0 },
+        size: { width: 300, height: 100 },
+        name: 'Invoice Details',
+        layout: { mode: 'flex', direction: 'column', gap: 4, padding: 0, justify: 'center', align: 'end', sizing: 'fixed' }
+      },
+      {
+        key: 'lbl-invoice',
+        type: 'label',
+        parentKey: 'header-right',
+        offset: { x: 0, y: 0 },
+        size: { width: 150, height: 32 },
+        name: 'INVOICE Label'
+      },
+      {
+        key: 'field-inv-num',
+        type: 'field',
+        parentKey: 'header-right',
+        offset: { x: 0, y: 0 },
+        size: { width: 150, height: 32 },
+        name: 'Invoice #'
+      },
+      
+      // --- Billing Section ---
+      {
+        key: 'billing-section',
+        type: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 750, height: 180 },
+        name: 'Billing Info',
+        layout: { mode: 'flex', direction: 'row', gap: 40, padding: 20, justify: 'start', align: 'start', sizing: 'hug' }
+      },
+      {
+        key: 'col-from',
+        type: 'container',
+        parentKey: 'billing-section',
+        offset: { x: 0, y: 0 },
+        size: { width: 300, height: 140 },
+        name: 'From Column',
+        layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'start', align: 'start', sizing: 'fill' }
+      },
+      {
+        key: 'lbl-from',
+        type: 'label',
+        parentKey: 'col-from',
+        offset: { x: 0, y: 0 },
+        size: { width: 100, height: 24 },
+        name: 'From Label'
+      },
+      {
+        key: 'txt-from-addr',
+        type: 'text',
+        parentKey: 'col-from',
+        offset: { x: 0, y: 0 },
+        size: { width: 280, height: 80 },
+        name: 'From Address'
+      },
+      {
+        key: 'col-to',
+        type: 'container',
+        parentKey: 'billing-section',
+        offset: { x: 0, y: 0 },
+        size: { width: 300, height: 140 },
+        name: 'Bill To Column',
+        layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'start', align: 'start', sizing: 'fill' }
+      },
+      {
+        key: 'lbl-to',
+        type: 'label',
+        parentKey: 'col-to',
+        offset: { x: 0, y: 0 },
+        size: { width: 100, height: 24 },
+        name: 'Bill To Label'
+      },
+      {
+        key: 'txt-to-addr',
+        type: 'text',
+        parentKey: 'col-to',
+        offset: { x: 0, y: 0 },
+        size: { width: 280, height: 80 },
+        name: 'Client Address'
+      },
+
+      // --- Items Section ---
+      {
+        key: 'items-section',
+        type: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 750, height: 300 },
+        name: 'Items Area',
+        layout: { mode: 'flex', direction: 'column', gap: 0, padding: 20, justify: 'start', align: 'stretch', sizing: 'hug' }
+      },
+      {
+        key: 'items-table',
+        type: 'table',
+        parentKey: 'items-section',
+        offset: { x: 0, y: 0 },
+        size: { width: 710, height: 200 },
+        name: 'Line Items'
+      },
+
+      // --- Footer Section ---
+      {
+        key: 'footer-section',
+        type: 'section',
+        offset: { x: 0, y: 0 },
+        size: { width: 750, height: 200 },
+        name: 'Footer',
+        layout: { mode: 'flex', direction: 'row', gap: 20, padding: 20, justify: 'space-between', align: 'start', sizing: 'hug' }
+      },
+      {
+        key: 'footer-notes',
+        type: 'container',
+        parentKey: 'footer-section',
+        offset: { x: 0, y: 0 },
+        size: { width: 300, height: 150 },
+        name: 'Notes Area',
+        layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'start', align: 'start', sizing: 'fill' }
+      },
+      {
+        key: 'lbl-notes',
+        type: 'label',
+        parentKey: 'footer-notes',
+        offset: { x: 0, y: 0 },
+        size: { width: 100, height: 24 },
+        name: 'Notes Label'
+      },
+      {
+        key: 'txt-notes',
+        type: 'text',
+        parentKey: 'footer-notes',
+        offset: { x: 0, y: 0 },
+        size: { width: 280, height: 100 },
+        name: 'Terms Text'
+      },
+      {
+        key: 'footer-totals',
+        type: 'container',
+        parentKey: 'footer-section',
+        offset: { x: 0, y: 0 },
+        size: { width: 280, height: 150 },
+        name: 'Totals Area',
+        layout: { mode: 'flex', direction: 'column', gap: 8, padding: 0, justify: 'start', align: 'stretch', sizing: 'fixed' }
+      },
+      {
+        key: 'val-subtotal',
+        type: 'subtotal',
+        parentKey: 'footer-totals',
+        offset: { x: 0, y: 0 },
+        size: { width: 280, height: 32 },
+        name: 'Subtotal'
+      },
+      {
+        key: 'val-tax',
+        type: 'tax',
+        parentKey: 'footer-totals',
+        offset: { x: 0, y: 0 },
+        size: { width: 280, height: 32 },
+        name: 'Tax'
+      },
+      {
+        key: 'val-total',
+        type: 'custom-total',
+        parentKey: 'footer-totals',
+        offset: { x: 0, y: 0 },
+        size: { width: 280, height: 40 },
+        name: 'Grand Total'
+      }
+    ],
+    constraints: [],
+  },
 ];
 
 export const getPresetById = (id: string) => LAYOUT_PRESETS.find((preset) => preset.id === id);
