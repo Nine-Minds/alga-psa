@@ -1,4 +1,4 @@
-{{- if and (not .Values.devEnv.enabled) (not .Values.hostedEnv.enabled) }}
+{{- if and (not .Values.devEnv.enabled) (not (include "sebastian.hostedEnvEnabled" .)) }}
 apiVersion: v1
 kind: Service
 metadata:
