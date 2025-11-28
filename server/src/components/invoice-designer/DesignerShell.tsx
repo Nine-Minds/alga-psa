@@ -223,7 +223,7 @@ export const DesignerShell: React.FC = () => {
     if (!selectedNode) return null;
     
     // Show layout controls for containers (sections, columns, pages)
-    const isContainer = ['section', 'column', 'page'].includes(selectedNode.type);
+    const isContainer = ['section', 'column', 'page', 'container'].includes(selectedNode.type);
     // Also show sizing controls for children of flex containers
     const parent = nodes.find(n => n.id === selectedNode.parentId);
     const isFlexChild = parent?.layout?.mode === 'flex';

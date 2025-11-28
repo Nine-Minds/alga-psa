@@ -224,10 +224,10 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     >
       {isContainer ? (
         <div className="relative w-full h-full">
-          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none">
+          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none z-10">
             {node.name} · {node.type}
           </div>
-          <div className="relative w-full h-full pt-4">
+          <div className="relative w-full h-full">
             {renderChildren(node.id)}
           </div>
         </div>

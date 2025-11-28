@@ -592,8 +592,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         layout: {
             mode: 'flex', // Default to flex for new nodes if applicable
             direction: type === 'section' ? 'row' : 'column',
-            gap: 0,
-            padding: 0,
+            gap: type === 'section' || type === 'container' ? 16 : 0,
+            padding: type === 'section' || type === 'container' ? 16 : 0,
             justify: 'start',
             align: 'stretch',
             sizing: type === 'section' ? 'fill' : 'fixed',
@@ -726,8 +726,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
               : {
                   mode: 'flex',
                   direction: nodeDef.type === 'section' ? 'row' : 'column',
-                  gap: 0,
-                  padding: 0,
+                  gap: nodeDef.type === 'section' || nodeDef.type === 'container' ? 16 : 0,
+                  padding: nodeDef.type === 'section' || nodeDef.type === 'container' ? 16 : 0,
                   justify: 'start',
                   align: 'stretch',
                   sizing: nodeDef.type === 'section' ? 'fill' : 'fixed',
