@@ -27,6 +27,27 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     defaultSize: { width: 240, height: 200 },
   },
   {
+    type: 'container',
+    label: 'Box Container',
+    description: 'Styled container for grouping content (borders, backgrounds).',
+    category: 'Structure',
+    defaultSize: { width: 320, height: 120 },
+  },
+  {
+    type: 'divider',
+    label: 'Divider',
+    description: 'Horizontal line separator.',
+    category: 'Structure',
+    defaultSize: { width: 320, height: 2 },
+  },
+  {
+    type: 'spacer',
+    label: 'Spacer',
+    description: 'Empty space for layout adjustment.',
+    category: 'Structure',
+    defaultSize: { width: 320, height: 32 },
+  },
+  {
     type: 'text',
     label: 'Text Block',
     description: 'Static or data-bound text content.',

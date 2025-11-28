@@ -43,7 +43,7 @@ interface CanvasNodeProps {
   childExtents?: { maxRight: number; maxBottom: number };
 }
 
-const getPreviewContent = (node: DesignerNode) => {
+const getPreviewContent = (node: DesignerNode): React.ReactNode => {
   const metadata = (node.metadata ?? {}) as Record<string, unknown>;
   switch (node.type) {
     case 'field': {
@@ -58,7 +58,28 @@ const getPreviewContent = (node: DesignerNode) => {
       return `Label: ${metadata.text ?? node.name}`;
     case 'text': {
       const text = typeof metadata.text === 'string' ? metadata.text : node.name;
-      return text.length > 0 ? text.slice(0, 140) : node.name;
+      const content = text.length > 0 ? text.slice(0, 140) : node.name;
+      
+      // Check for interpolation variables {{var}}
+      const parts = content.split(/(\{\{.*?\}\})/g);
+      if (parts.length === 1) {
+        return content;
+      }
+      
+      return (
+        <span>
+          {parts.map((part, index) => {
+            if (part.startsWith('{{') && part.endsWith('}}')) {
+              return (
+                <span key={index} className="text-blue-600 bg-blue-50 px-1 rounded font-mono text-[10px] mx-0.5 border border-blue-100">
+                  {part}
+                </span>
+              );
+            }
+            return part;
+          })}
+        </span>
+      );
     }
     case 'subtotal':
     case 'tax':
@@ -87,6 +108,12 @@ const getPreviewContent = (node: DesignerNode) => {
       return metadata.title ? `Attachments: ${metadata.title}` : 'Attachments';
     case 'totals':
       return 'Totals Summary · Subtotal / Tax / Balance';
+    case 'divider':
+      return <div className="w-full h-px bg-slate-300 my-1" />;
+    case 'spacer':
+      return <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">Spacer</div>;
+    case 'container':
+      return null; // Container renders children directly
     default:
       return `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}`;
   }
@@ -211,7 +238,15 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
             <span className="truncate">{node.name}</span>
             <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
           </div>
-          <div className="p-2 text-[11px] text-slate-500 whitespace-pre-wrap">{previewContent}</div>
+          <div
+            className={clsx(
+              'text-[11px] text-slate-500',
+              node.type === 'divider' ? 'p-0 flex items-center justify-center h-[14px]' : 'p-2 whitespace-pre-wrap',
+              node.type === 'spacer' && 'h-full p-0'
+            )}
+          >
+            {previewContent}
+          </div>
         </>
       )}
       {node.allowResize !== false && (

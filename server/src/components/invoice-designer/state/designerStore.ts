@@ -28,7 +28,10 @@ export type DesignerComponentType =
   | 'dynamic-table'
   | 'signature'
   | 'action-button'
-  | 'attachment-list';
+  | 'attachment-list'
+  | 'divider'
+  | 'spacer'
+  | 'container';
 
 export interface Point {
   x: number;
