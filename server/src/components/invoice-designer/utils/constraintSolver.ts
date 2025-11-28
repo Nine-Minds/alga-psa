@@ -58,12 +58,17 @@ export const solveConstraints = (
       solver.addConstraint(new kiwi.Constraint(y, kiwi.Operator.Ge, 0, kiwi.Strength.required));
       solver.addConstraint(new kiwi.Constraint(width, kiwi.Operator.Ge, 1, kiwi.Strength.required));
       solver.addConstraint(new kiwi.Constraint(height, kiwi.Operator.Ge, 1, kiwi.Strength.required));
-      solver.addConstraint(
-        new kiwi.Constraint(new kiwi.Expression(x).plus(width), kiwi.Operator.Le, bounds.width, kiwi.Strength.required)
-      );
-      solver.addConstraint(
-        new kiwi.Constraint(new kiwi.Expression(y).plus(height), kiwi.Operator.Le, bounds.height, kiwi.Strength.required)
-      );
+
+      if (node.type !== 'document' && node.type !== 'page') {
+        solver.addConstraint(new kiwi.Constraint(x, kiwi.Operator.Ge, 0, kiwi.Strength.required));
+        solver.addConstraint(new kiwi.Constraint(y, kiwi.Operator.Ge, 0, kiwi.Strength.required));
+        solver.addConstraint(
+          new kiwi.Constraint(new kiwi.Expression(x).plus(width), kiwi.Operator.Le, bounds.width, kiwi.Strength.required)
+        );
+        solver.addConstraint(
+          new kiwi.Constraint(new kiwi.Expression(y).plus(height), kiwi.Operator.Le, bounds.height, kiwi.Strength.required)
+        );
+      }
 
       variableMap.set(node.id, { x, y, width, height });
     });
@@ -112,6 +117,21 @@ export const solveConstraints = (
     return nodes.map((node) => {
       const vars = variableMap.get(node.id);
       if (!vars) return node;
+      
+      if (node.type === 'document' || node.type === 'page') {
+        return {
+          ...node,
+          position: {
+            x: vars.x.value(),
+            y: vars.y.value(),
+          },
+          size: {
+            width: vars.width.value(),
+            height: vars.height.value(),
+          },
+        };
+      }
+
       const width = clamp(vars.width.value(), 1, bounds.width);
       const height = clamp(vars.height.value(), 1, bounds.height);
       const maxX = Math.max(0, bounds.width - width);

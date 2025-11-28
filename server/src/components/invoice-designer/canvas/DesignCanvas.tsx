@@ -348,6 +348,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 
   const rootParentId = (defaultPageNode ?? documentNode)?.id;
   const rootOrigin = defaultPageNode?.position ?? documentNode?.position ?? { x: 0, y: 0 };
+  const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
+  const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
 
   const handlePointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
     if (!artboardRef.current) {
@@ -372,12 +374,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       {showRulers && (
         <>
           <div className="absolute top-0 left-12 right-0 h-8 bg-white border-b border-slate-200 flex items-end text-[10px] text-slate-400 px-3 gap-3 z-10">
-            {Array.from({ length: 20 }).map((_, index) => (
+            {Array.from({ length: Math.ceil(canvasWidth / 50) + 2 }).map((_, index) => (
               <span key={`hr-${index}`}>{index * 50}</span>
             ))}
           </div>
           <div className="absolute top-8 bottom-0 left-0 w-12 bg-white border-r border-slate-200 flex flex-col items-end text-[10px] text-slate-400 py-4 pr-1 gap-6 z-10">
-            {Array.from({ length: 20 }).map((_, index) => (
+            {Array.from({ length: Math.ceil(canvasHeight / 50) + 2 }).map((_, index) => (
               <span key={`vr-${index}`}>{index * 50}</span>
             ))}
           </div>
@@ -391,7 +393,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             isOver && 'ring-2 ring-blue-400'
           )}
           data-designer-canvas="true"
-          style={{ width: DESIGNER_CANVAS_WIDTH, height: DESIGNER_CANVAS_HEIGHT, ...backgroundStyle }}
+          style={{ 
+            width: canvasWidth, 
+            height: canvasHeight, 
+            minHeight: DESIGNER_CANVAS_HEIGHT,
+            ...backgroundStyle 
+          }}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
         >

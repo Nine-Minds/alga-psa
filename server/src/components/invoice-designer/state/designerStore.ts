@@ -193,7 +193,7 @@ const createPageNode = (parentId: string, index = 1): DesignerNode => ({
     padding: 40, // Page margins
     justify: 'start',
     align: 'stretch',
-    sizing: 'fixed',
+    sizing: 'hug',
   },
 });
 
@@ -334,7 +334,7 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
       // Parent 'Hug' Logic: Resize parent to fit children
       if (node.layout.sizing === 'hug') {
         if (direction === 'column') {
-          node.size.height = currentY + padding - gap; // Remove trailing gap, add bottom padding
+          node.size.height = currentY + padding - gap; 
         } else {
           node.size.width = currentX + padding - gap;
         }
@@ -549,15 +549,26 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             parentId: parentKey,
             childIds: [],
             allowedChildren: getAllowedChildrenForType(nodeDef.type),
-            layout: {
-                mode: 'flex',
-                direction: 'column',
-                gap: 0,
-                padding: 0,
-                justify: 'start',
-                align: 'stretch',
-                sizing: 'fixed'
-            }
+            layout: nodeDef.layout
+              ? {
+                  mode: 'flex',
+                  direction: 'column',
+                  gap: 0,
+                  padding: 0,
+                  justify: 'start',
+                  align: 'stretch',
+                  sizing: 'fixed',
+                  ...nodeDef.layout,
+                }
+              : {
+                  mode: 'flex',
+                  direction: 'column',
+                  gap: 0,
+                  padding: 0,
+                  justify: 'start',
+                  align: 'stretch',
+                  sizing: 'fixed',
+                },
           };
 
           createdNodes.push(node);
