@@ -1942,17 +1942,6 @@ async function validateUser(token: any) {
             return null;
         }
 
-        // Check if session has been revoked
-        if (token.jti) {
-            const { UserSession } = await import('server/src/lib/models/UserSession');
-            const session = await UserSession.findBySessionId(user.tenant, token.jti);
-
-            if (!session || session.revoked_at) {
-                logger.warn(`Session revoked or not found for session_id: ${token.jti}`);
-                return null;
-            }
-        }
-
         // user_type already matched via lookup
 
         return user;

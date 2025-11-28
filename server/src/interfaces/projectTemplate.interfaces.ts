@@ -34,6 +34,8 @@ export interface IProjectTemplateTask extends TenantEntity {
   duration_days?: number;
   task_type_key?: string;
   priority_id?: string;
+  assigned_to?: string;
+  template_status_mapping_id?: string;
   order_key?: string;
 }
 

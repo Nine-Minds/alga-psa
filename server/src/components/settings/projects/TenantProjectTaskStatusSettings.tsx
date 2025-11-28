@@ -453,6 +453,7 @@ export function TenantProjectTaskStatusSettings() {
                     currentTextColor={null}
                     showTextColor={false}
                     previewType="circle"
+                    colorMode="solid"
                     onSave={(backgroundColor) => {
                       setFormData({ ...formData, color: backgroundColor || '#6B7280' });
                     }}

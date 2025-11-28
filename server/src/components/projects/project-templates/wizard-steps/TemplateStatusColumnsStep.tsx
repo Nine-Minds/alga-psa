@@ -206,6 +206,7 @@ export function TemplateStatusColumnsStep({
                         }
                         showTextColor={false}
                         previewType="circle"
+                        colorMode="solid"
                         trigger={
                           <button
                             type="button"

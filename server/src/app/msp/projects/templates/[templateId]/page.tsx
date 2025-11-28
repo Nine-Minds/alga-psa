@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { IProjectTemplateWithDetails } from 'server/src/interfaces/projectTemplate.interfaces';
 import { getTemplateWithDetails } from 'server/src/lib/actions/project-actions/projectTemplateActions';
-import TemplateDetail from 'server/src/components/projects/project-templates/TemplateDetail';
+import TemplateEditor from 'server/src/components/projects/project-templates/TemplateEditor';
 
 export default function TemplateDetailPage() {
   const params = useParams();
@@ -39,5 +39,5 @@ export default function TemplateDetailPage() {
     return <div className="p-6">Template not found</div>;
   }
 
-  return <TemplateDetail template={template} onTemplateUpdated={loadTemplate} />;
+  return <TemplateEditor template={template} onTemplateUpdated={loadTemplate} />;
 }

@@ -21,6 +21,7 @@ import {
   applyTemplateSchema
 } from 'server/src/lib/schemas/projectTemplate.schemas';
 import { OrderingService } from 'server/src/lib/services/orderingService';
+import { generateKeyBetween } from 'fractional-indexing';
 
 async function checkPermission(
   user: IUser,
@@ -796,6 +797,7 @@ export async function getTemplateWithDetails(
   const phaseIds = phases.map(p => p.template_phase_id);
   let tasks: IProjectTemplateTask[] = [];
   let checklistItems: any[] = [];
+  let taskAssignments: any[] = [];
 
   console.log(`[getTemplateWithDetails] Template: ${template.template_name}, phaseIds:`, phaseIds);
 
@@ -812,10 +814,15 @@ export async function getTemplateWithDetails(
 
     const taskIds = tasks.map(t => t.template_task_id);
     if (taskIds.length > 0) {
-      checklistItems = await knex('project_template_checklist_items')
-        .where('tenant', tenant)
-        .whereIn('template_task_id', taskIds)
-        .orderBy('order_number');
+      [checklistItems, taskAssignments] = await Promise.all([
+        knex('project_template_checklist_items')
+          .where('tenant', tenant)
+          .whereIn('template_task_id', taskIds)
+          .orderBy('order_number'),
+        knex('project_template_task_resources')
+          .where('tenant', tenant)
+          .whereIn('template_task_id', taskIds)
+      ]);
     }
   }
 
@@ -825,7 +832,8 @@ export async function getTemplateWithDetails(
     tasks,
     dependencies,
     checklist_items: checklistItems,
-    status_mappings: statusMappings
+    status_mappings: statusMappings,
+    task_assignments: taskAssignments
   };
 }
 
@@ -1056,6 +1064,8 @@ export async function getTemplateCategories(): Promise<string[]> {
 
   const { knex, tenant } = await createTenantKnex();
 
+  await checkPermission(currentUser, 'project', 'read', knex);
+
   const results = await knex('project_templates')
     .where({ tenant })
     .whereNotNull('category')
@@ -1063,4 +1073,826 @@ export async function getTemplateCategories(): Promise<string[]> {
     .orderBy('category');
 
   return results.map(r => r.category).filter(Boolean);
+}
+
+// ============================================================
+// GRANULAR UPDATE ACTIONS FOR TEMPLATE EDITOR
+// ============================================================
+
+/**
+ * Add a new phase to a template
+ */
+export async function addTemplatePhase(
+  templateId: string,
+  phaseData: {
+    phase_name: string;
+    description?: string;
+    duration_days?: number;
+    start_offset_days?: number;
+  },
+  afterPhaseId?: string | null
+): Promise<IProjectTemplatePhase> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Verify template exists
+    const template = await trx('project_templates')
+      .where({ template_id: templateId, tenant })
+      .first();
+
+    if (!template) {
+      throw new Error('Template not found');
+    }
+
+    // Get existing phases to determine order_key
+    const existingPhases = await trx('project_template_phases')
+      .where({ template_id: templateId, tenant })
+      .orderBy('order_key');
+
+    let orderKey: string;
+    if (afterPhaseId) {
+      const afterIndex = existingPhases.findIndex(p => p.template_phase_id === afterPhaseId);
+      const afterKey = existingPhases[afterIndex]?.order_key || null;
+      const beforeKey = existingPhases[afterIndex + 1]?.order_key || null;
+      orderKey = generateKeyBetween(afterKey, beforeKey);
+    } else {
+      // Add at end
+      const lastKey = existingPhases[existingPhases.length - 1]?.order_key || null;
+      orderKey = generateKeyBetween(lastKey, null);
+    }
+
+    const [newPhase] = await trx('project_template_phases')
+      .insert({
+        tenant,
+        template_id: templateId,
+        phase_name: phaseData.phase_name,
+        description: phaseData.description || null,
+        duration_days: phaseData.duration_days || null,
+        start_offset_days: phaseData.start_offset_days || 0,
+        order_key: orderKey
+      })
+      .returning('*');
+
+    // Update template timestamp
+    await trx('project_templates')
+      .where({ template_id: templateId, tenant })
+      .update({ updated_at: trx.fn.now() });
+
+    return newPhase;
+  });
+}
+
+/**
+ * Update a template phase
+ */
+export async function updateTemplatePhase(
+  phaseId: string,
+  data: {
+    phase_name?: string;
+    description?: string;
+    duration_days?: number;
+    start_offset_days?: number;
+  }
+): Promise<IProjectTemplatePhase> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const [updated] = await trx('project_template_phases')
+      .where({ template_phase_id: phaseId, tenant })
+      .update(data)
+      .returning('*');
+
+    if (!updated) {
+      throw new Error('Phase not found');
+    }
+
+    // Update template timestamp
+    await trx('project_templates')
+      .where({ template_id: updated.template_id, tenant })
+      .update({ updated_at: trx.fn.now() });
+
+    return updated;
+  });
+}
+
+/**
+ * Delete a template phase (and cascade delete tasks)
+ */
+export async function deleteTemplatePhase(phaseId: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: phaseId, tenant })
+      .first();
+
+    if (!phase) {
+      throw new Error('Phase not found');
+    }
+
+    // Delete phase (FK cascade handles tasks/checklists)
+    await trx('project_template_phases')
+      .where({ template_phase_id: phaseId, tenant })
+      .delete();
+
+    // Update template timestamp
+    await trx('project_templates')
+      .where({ template_id: phase.template_id, tenant })
+      .update({ updated_at: trx.fn.now() });
+  });
+}
+
+/**
+ * Reorder a template phase
+ */
+export async function reorderTemplatePhase(
+  phaseId: string,
+  beforePhaseId: string | null,
+  afterPhaseId: string | null
+): Promise<IProjectTemplatePhase> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: phaseId, tenant })
+      .first();
+
+    if (!phase) {
+      throw new Error('Phase not found');
+    }
+
+    // Get order keys
+    let beforeKey: string | null = null;
+    let afterKey: string | null = null;
+
+    if (beforePhaseId) {
+      const beforePhase = await trx('project_template_phases')
+        .where({ template_phase_id: beforePhaseId, tenant })
+        .first();
+      beforeKey = beforePhase?.order_key || null;
+    }
+
+    if (afterPhaseId) {
+      const afterPhase = await trx('project_template_phases')
+        .where({ template_phase_id: afterPhaseId, tenant })
+        .first();
+      afterKey = afterPhase?.order_key || null;
+    }
+
+    const newOrderKey = generateKeyBetween(beforeKey, afterKey);
+
+    const [updated] = await trx('project_template_phases')
+      .where({ template_phase_id: phaseId, tenant })
+      .update({ order_key: newOrderKey })
+      .returning('*');
+
+    // Update template timestamp
+    await trx('project_templates')
+      .where({ template_id: phase.template_id, tenant })
+      .update({ updated_at: trx.fn.now() });
+
+    return updated;
+  });
+}
+
+/**
+ * Add a new task to a template phase
+ */
+export async function addTemplateTask(
+  phaseId: string,
+  taskData: {
+    task_name: string;
+    description?: string;
+    estimated_hours?: number;
+    duration_days?: number;
+    task_type_key?: string;
+    priority_id?: string;
+    assigned_to?: string;
+    template_status_mapping_id?: string;
+  },
+  afterTaskId?: string | null
+): Promise<IProjectTemplateTask> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Verify phase exists
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: phaseId, tenant })
+      .first();
+
+    if (!phase) {
+      throw new Error('Phase not found');
+    }
+
+    // Get existing tasks to determine order_key
+    const existingTasks = await trx('project_template_tasks')
+      .where({ template_phase_id: phaseId, tenant })
+      .orderBy('order_key');
+
+    let orderKey: string;
+    if (afterTaskId) {
+      const afterIndex = existingTasks.findIndex(t => t.template_task_id === afterTaskId);
+      const afterKey = existingTasks[afterIndex]?.order_key || null;
+      const beforeKey = existingTasks[afterIndex + 1]?.order_key || null;
+      orderKey = generateKeyBetween(afterKey, beforeKey);
+    } else {
+      // Add at end
+      const lastKey = existingTasks[existingTasks.length - 1]?.order_key || null;
+      orderKey = generateKeyBetween(lastKey, null);
+    }
+
+    const [newTask] = await trx('project_template_tasks')
+      .insert({
+        tenant,
+        template_phase_id: phaseId,
+        task_name: taskData.task_name,
+        description: taskData.description || null,
+        estimated_hours: taskData.estimated_hours || null,
+        duration_days: taskData.duration_days || null,
+        task_type_key: taskData.task_type_key || null,
+        priority_id: taskData.priority_id || null,
+        assigned_to: taskData.assigned_to || null,
+        template_status_mapping_id: taskData.template_status_mapping_id || null,
+        order_key: orderKey
+      })
+      .returning('*');
+
+    // Update template timestamp
+    await trx('project_templates')
+      .where({ template_id: phase.template_id, tenant })
+      .update({ updated_at: trx.fn.now() });
+
+    return newTask;
+  });
+}
+
+/**
+ * Update a template task
+ */
+export async function updateTemplateTask(
+  taskId: string,
+  data: {
+    task_name?: string;
+    description?: string;
+    estimated_hours?: number;
+    duration_days?: number;
+    task_type_key?: string;
+    priority_id?: string;
+    assigned_to?: string | null;
+    template_status_mapping_id?: string | null;
+    template_phase_id?: string;
+    order_key?: string;
+  }
+): Promise<IProjectTemplateTask> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const [updated] = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .update(data)
+      .returning('*');
+
+    if (!updated) {
+      throw new Error('Task not found');
+    }
+
+    // Get phase to update template timestamp
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: updated.template_phase_id, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+
+    return updated;
+  });
+}
+
+/**
+ * Delete a template task
+ */
+export async function deleteTemplateTask(taskId: string): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Get phase for template update
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: task.template_phase_id, tenant })
+      .first();
+
+    // Delete task (FK cascade handles checklists)
+    await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .delete();
+
+    // Update template timestamp
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+  });
+}
+
+/**
+ * Move a task to a different phase or reorder within same phase
+ */
+export async function moveTemplateTask(
+  taskId: string,
+  targetPhaseId: string,
+  targetStatusMappingId?: string | null,
+  beforeTaskId?: string | null,
+  afterTaskId?: string | null
+): Promise<IProjectTemplateTask> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Get order keys
+    let beforeKey: string | null = null;
+    let afterKey: string | null = null;
+
+    if (beforeTaskId) {
+      const beforeTask = await trx('project_template_tasks')
+        .where({ template_task_id: beforeTaskId, tenant })
+        .first();
+      beforeKey = beforeTask?.order_key || null;
+    }
+
+    if (afterTaskId) {
+      const afterTask = await trx('project_template_tasks')
+        .where({ template_task_id: afterTaskId, tenant })
+        .first();
+      afterKey = afterTask?.order_key || null;
+    }
+
+    const newOrderKey = generateKeyBetween(beforeKey, afterKey);
+
+    const updateData: any = {
+      template_phase_id: targetPhaseId,
+      order_key: newOrderKey
+    };
+
+    // Update status mapping if provided
+    if (targetStatusMappingId !== undefined) {
+      updateData.template_status_mapping_id = targetStatusMappingId;
+    }
+
+    const [updated] = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .update(updateData)
+      .returning('*');
+
+    // Get phase for template update
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: targetPhaseId, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+
+    return updated;
+  });
+}
+
+/**
+ * Update task status (move between status columns)
+ */
+export async function updateTemplateTaskStatus(
+  taskId: string,
+  statusMappingId: string,
+  beforeTaskId?: string | null,
+  afterTaskId?: string | null
+): Promise<IProjectTemplateTask> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Calculate new order key
+    let beforeKey: string | null = null;
+    let afterKey: string | null = null;
+
+    if (beforeTaskId) {
+      const beforeTask = await trx('project_template_tasks')
+        .where({ template_task_id: beforeTaskId, tenant })
+        .first();
+      beforeKey = beforeTask?.order_key || null;
+    }
+
+    if (afterTaskId) {
+      const afterTask = await trx('project_template_tasks')
+        .where({ template_task_id: afterTaskId, tenant })
+        .first();
+      afterKey = afterTask?.order_key || null;
+    }
+
+    const newOrderKey = generateKeyBetween(beforeKey, afterKey);
+
+    const [updated] = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .update({
+        template_status_mapping_id: statusMappingId,
+        order_key: newOrderKey
+      })
+      .returning('*');
+
+    // Get phase for template update
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: task.template_phase_id, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+
+    return updated;
+  });
+}
+
+/**
+ * Add a status mapping to a template
+ */
+export async function addTemplateStatusMapping(
+  templateId: string,
+  data: {
+    status_id: string;
+  }
+): Promise<any> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Get existing mappings to determine display_order
+    const existingMappings = await trx('project_template_status_mappings')
+      .where({ template_id: templateId, tenant })
+      .orderBy('display_order');
+
+    const maxOrder = existingMappings.length > 0
+      ? Math.max(...existingMappings.map(m => m.display_order))
+      : 0;
+
+    const [newMapping] = await trx('project_template_status_mappings')
+      .insert({
+        tenant,
+        template_id: templateId,
+        status_id: data.status_id,
+        display_order: maxOrder + 1
+      })
+      .returning('*');
+
+    // Enrich with status info
+    const status = await trx('statuses')
+      .where({ status_id: data.status_id, tenant })
+      .first();
+
+    await trx('project_templates')
+      .where({ template_id: templateId, tenant })
+      .update({ updated_at: trx.fn.now() });
+
+    return {
+      ...newMapping,
+      status_name: status?.name,
+      color: status?.color || '#6B7280',
+      is_closed: status?.is_closed
+    };
+  });
+}
+
+/**
+ * Remove a status mapping from a template
+ */
+export async function removeTemplateStatusMapping(
+  mappingId: string
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const mapping = await trx('project_template_status_mappings')
+      .where({ template_status_mapping_id: mappingId, tenant })
+      .first();
+
+    if (!mapping) {
+      throw new Error('Status mapping not found');
+    }
+
+    // Clear template_status_mapping_id from tasks that use this status
+    await trx('project_template_tasks')
+      .where({ template_status_mapping_id: mappingId, tenant })
+      .update({ template_status_mapping_id: null });
+
+    // Delete the mapping
+    await trx('project_template_status_mappings')
+      .where({ template_status_mapping_id: mappingId, tenant })
+      .delete();
+
+    await trx('project_templates')
+      .where({ template_id: mapping.template_id, tenant })
+      .update({ updated_at: trx.fn.now() });
+  });
+}
+
+/**
+ * Reorder status mappings
+ */
+export async function reorderTemplateStatusMappings(
+  templateId: string,
+  orderedMappingIds: string[]
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Update display_order for each mapping
+    for (let i = 0; i < orderedMappingIds.length; i++) {
+      await trx('project_template_status_mappings')
+        .where({ template_status_mapping_id: orderedMappingIds[i], tenant })
+        .update({ display_order: i });
+    }
+
+    await trx('project_templates')
+      .where({ template_id: templateId, tenant })
+      .update({ updated_at: trx.fn.now() });
+  });
+}
+
+// ============================================================
+// TASK RESOURCE (ADDITIONAL AGENTS) ACTIONS
+// ============================================================
+
+/**
+ * Get additional agents for a task
+ */
+export async function getTaskAdditionalAgents(taskId: string): Promise<string[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await checkPermission(currentUser, 'project', 'read', knex);
+
+  const resources = await knex('project_template_task_resources')
+    .where({ template_task_id: taskId, tenant })
+    .select('user_id');
+
+  return resources.map((r: { user_id: string }) => r.user_id);
+}
+
+/**
+ * Set additional agents for a task (replaces all existing)
+ */
+export async function setTaskAdditionalAgents(
+  taskId: string,
+  userIds: string[]
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Verify task exists
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Delete existing resources
+    await trx('project_template_task_resources')
+      .where({ template_task_id: taskId, tenant })
+      .delete();
+
+    // Insert new resources
+    if (userIds.length > 0) {
+      const resources = userIds.map(userId => ({
+        tenant,
+        template_task_id: taskId,
+        user_id: userId
+      }));
+      await trx('project_template_task_resources').insert(resources);
+    }
+
+    // Update template timestamp via phase
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: task.template_phase_id, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+  });
+}
+
+/**
+ * Add an additional agent to a task
+ */
+export async function addTaskAdditionalAgent(
+  taskId: string,
+  userId: string
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Verify task exists
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Check if already exists
+    const existing = await trx('project_template_task_resources')
+      .where({ template_task_id: taskId, user_id: userId, tenant })
+      .first();
+
+    if (!existing) {
+      await trx('project_template_task_resources').insert({
+        tenant,
+        template_task_id: taskId,
+        user_id: userId
+      });
+    }
+
+    // Update template timestamp via phase
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: task.template_phase_id, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+  });
+}
+
+/**
+ * Remove an additional agent from a task
+ */
+export async function removeTaskAdditionalAgent(
+  taskId: string,
+  userId: string
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    await trx('project_template_task_resources')
+      .where({ template_task_id: taskId, user_id: userId, tenant })
+      .delete();
+
+    // Get task for template update
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (task) {
+      const phase = await trx('project_template_phases')
+        .where({ template_phase_id: task.template_phase_id, tenant })
+        .first();
+
+      if (phase) {
+        await trx('project_templates')
+          .where({ template_id: phase.template_id, tenant })
+          .update({ updated_at: trx.fn.now() });
+      }
+    }
+  });
 }

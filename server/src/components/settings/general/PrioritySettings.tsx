@@ -456,6 +456,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                     }}
                     showTextColor={false}
                     previewType="circle"
+                    colorMode="tag"
                     trigger={
                       <Button
                         id="priority-color-picker-btn"

@@ -6,24 +6,12 @@ import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
-import ColorPicker from 'server/src/components/ui/ColorPicker';
+import ColorPicker, { SOLID_COLORS } from 'server/src/components/ui/ColorPicker';
 import { Circle } from 'lucide-react';
 import { ItemType, IStatus } from 'server/src/interfaces/status.interface';
 import { createTenantProjectStatus } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';
-
-// Default colors for new statuses
-const DEFAULT_STATUS_COLORS = [
-  '#6B7280', // Gray
-  '#3B82F6', // Blue
-  '#10B981', // Green
-  '#F59E0B', // Amber
-  '#EF4444', // Red
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#06B6D4', // Cyan
-];
 
 export interface QuickAddStatusProps {
   open: boolean;
@@ -48,7 +36,7 @@ export function QuickAddStatus({
   trigger,
 }: QuickAddStatusProps) {
   const [statusName, setStatusName] = useState('');
-  const [statusColor, setStatusColor] = useState(DEFAULT_STATUS_COLORS[0]);
+  const [statusColor, setStatusColor] = useState(SOLID_COLORS[0]);
   const [isClosed, setIsClosed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,9 +45,9 @@ export function QuickAddStatus({
   useEffect(() => {
     if (open) {
       setStatusName('');
-      // Pick a random color that's not commonly used
-      const randomIndex = Math.floor(Math.random() * DEFAULT_STATUS_COLORS.length);
-      setStatusColor(DEFAULT_STATUS_COLORS[randomIndex]);
+      // Pick a random color from the solid color palette
+      const randomIndex = Math.floor(Math.random() * SOLID_COLORS.length);
+      setStatusColor(SOLID_COLORS[randomIndex]);
       setIsClosed(false);
       setError(null);
     }
@@ -162,9 +150,10 @@ export function QuickAddStatus({
                 <ColorPicker
                   currentBackgroundColor={statusColor}
                   currentTextColor={null}
-                  onSave={(backgroundColor) => setStatusColor(backgroundColor || DEFAULT_STATUS_COLORS[0])}
+                  onSave={(backgroundColor) => setStatusColor(backgroundColor || SOLID_COLORS[0])}
                   showTextColor={false}
                   previewType="circle"
+                  colorMode="solid"
                   trigger={
                     <button
                       type="button"
