@@ -26,6 +26,11 @@
 - Extension manifests can request `alga.storage`, but capability enforcement currently rejects all calls.
 - No shared schema or tables exist for extension-owned data.
 
+Status update (2025-11-21):
+- Runner now exposes `alga.storage` capability backed by the internal API `POST /api/internal/ext-storage/install/{installId}` (see `ee/runner/src/engine/host_api.rs` and `ee/server/src/app/api/internal/ext-storage/install/[installId]/route.ts`).
+- Manifest/runtime code paths accept `storage.kv` capability; gateway execute payload includes `install_id`? (still missing) but passes `config/providers/secretEnvelope` and uses install-scoped token headers.
+- Quotas/version headers and RBAC beyond token gating remain open; docs still refer to tenant storage service—needs reconciliation with the live capability implementation.
+
 ## Risks and Mitigations
 
 - **Unbounded growth / noisy neighbors** → enforce quotas, TTL, and cardinality limits per tenant+extension namespace; surface metrics.

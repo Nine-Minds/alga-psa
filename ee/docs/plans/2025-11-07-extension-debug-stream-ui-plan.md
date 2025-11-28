@@ -18,14 +18,16 @@ This plan builds on the Wasmtime/component-based runner and the existing extensi
 
 ## Goals
 
-- [ ] Provide a dedicated EE UI page for extension debugging with live log streaming.
-- [ ] Allow filtering by:
+- [x] Provide a dedicated EE UI page for extension debugging with live log streaming. *(UI at `server/src/app/msp/extensions/[id]/debug/page.tsx` consuming `/api/ext-debug/stream`.)*
+- [x] Allow filtering by:
   - Specific request flow (`request_id`),
   - Extension/install,
-  - Stream type (stdout, stderr, structured logs).
-- [ ] Implement a runner-side debug event pipeline that captures guest stdout/stderr and host logging events in a structured and correlatable way.
+  - Stream type (stdout, stderr, structured logs). *(Implemented via client-side filters in the debug page.)*
+- [x] Implement a runner-side debug event pipeline that captures guest stdout/stderr and host logging events in a structured and correlatable way. *(Runner emits Redis Stream events when `RUNNER_DEBUG_REDIS_URL` is set; proxied by `server/src/app/api/ext-debug/stream/route.ts`.)*
 - [ ] Enforce strong authorization and isolation: only appropriate users can see logs for a given tenant/extension.
 - [ ] Gate the feature with environment flags and capabilities to avoid accidental leakage or resource abuse.
+
+Status update (2025-11-21): Streaming path (Runner → Redis Streams → SSE endpoint → UI) works; authz/capability gating and production hardening remain to be delivered.
 
 ## Non-Goals
 

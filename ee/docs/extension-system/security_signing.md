@@ -4,8 +4,8 @@ This document specifies the v2-only signing, provenance, and isolation model for
 
 Key integration points:
 - Registry v2 for versions, manifests, content hashes, and signatures: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
-- Gateway route that proxies extension HTTP calls to Runner: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- UI delivery served by Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`, with iframe initialization via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- Gateway route that proxies extension HTTP calls to Runner: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- UI delivery served by Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`, with iframe initialization via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Principles
 - No tenant code runs inside the host app process
@@ -34,7 +34,7 @@ Key integration points:
 
 ## Gateway Policies
 
-- All extension HTTP calls go through `/api/ext/[extensionId]/[...path]`
+- All extension HTTP calls go through `/api/ext/[extensionId]/[[...path]]`
 - Gateway resolves tenant install/version and matches the manifest endpoint
 - Enforcement at the edge:
   - Request/response size caps (e.g., 5–10 MB)
@@ -43,7 +43,7 @@ Key integration points:
   - Per-tenant rate limits and request normalization
 - The Gateway proxies to Runner `POST /v1/execute` and maps responses using a safe header allowlist
 
-Reference route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+Reference route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 ## Runner Isolation
 
@@ -59,8 +59,8 @@ Reference route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/rou
 UI security:
 - Static UI served by Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
 - Iframe sandbox defaults and origin validation in host bootstrap:
-  - [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
-  - [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+  - [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+  - [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Quotas & Observability
 
@@ -100,6 +100,6 @@ UI security:
 - [Manifest v2](manifest_schema.md)
 - [API Routing Guide](api-routing-guide.md)
 - [Registry Implementation](registry_implementation.md)
-- Gateway route: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- Iframe bootstrap: [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38), [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- Gateway route: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- Iframe bootstrap: [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38), [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 - Registry service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)

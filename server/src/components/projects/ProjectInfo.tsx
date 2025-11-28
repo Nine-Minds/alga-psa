@@ -11,6 +11,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { TagManager } from 'server/src/components/tags';
+import { toast } from 'react-hot-toast';
 
 interface ProjectInfoProps {
   project: IProject;
@@ -97,10 +98,16 @@ export default function ProjectInfo({
 
   return (
     <div className="space-y-2 mb-4">
-      {/* First line: Back nav, title, tags, and edit button */}
+      {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
           <BackNav href="/msp/projects">Back to Projects</BackNav>
+
+          {/* Project number */}
+          <span className="text-sm font-medium text-gray-600">
+            {currentProject.project_number}
+          </span>
+
           <h1 className="text-xl font-bold">{currentProject.project_name}</h1>
           {/* Tags using TagManager for inline editing */}
           {onTagsChange && (

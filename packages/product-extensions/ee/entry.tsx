@@ -86,7 +86,7 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
     );
 
     return (
-      <div className="h-full w-full">
+      <div className="flex-1 w-full flex flex-col min-h-0">
         <DockerExtensionIframe src={iframeSrc} extensionId={id} />
         {debugBanner}
       </div>
@@ -105,7 +105,7 @@ export default async function Page({ params }: { params: PageParams | Promise<Pa
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="flex-1 w-full flex flex-col min-h-0">
       <ExtensionIframe domain={info.runner_domain} extensionId={id} />
     </div>
   );

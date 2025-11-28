@@ -13,16 +13,13 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@alga-psa/extension-runtime": "^0.2.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@alga/extension-iframe-sdk": "file:../../../../sdk/extension-iframe-sdk"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@alga/extension-runtime": "file:../../../../sdk/extension-runtime",
     "@bytecodealliance/componentize-js": "^0.19.3",
     "esbuild": "^0.20.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
     "rimraf": "^5.0.0",
     "tsup": "^7.2.0",
     "typescript": "^5.4.0",

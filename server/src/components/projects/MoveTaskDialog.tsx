@@ -14,7 +14,7 @@ interface MoveTaskDialogProps {
   task: IProjectTask;
   currentProjectId: string;
   projectTreeData: Array<TreeSelectOption<'project' | 'phase' | 'status'>>;
-  onConfirm: (targetPhaseId: string, targetStatusId: string | undefined) => void; 
+  onConfirm: (targetPhaseId: string, targetStatusId: string | undefined) => Promise<void>;
 }
 
 export default function MoveTaskDialog({
@@ -54,17 +54,24 @@ export default function MoveTaskDialog({
         toast.error("Please select a target phase.");
         return;
     }
-    if (selectedTargetPath['phase'] === task.phase_id) {
-        toast.error("Please select a different phase to move the task.");
-        return;
-    }
 
     const targetPhaseId = selectedTargetPath['phase'];
     const targetStatusId = selectedTargetPath['status'] || undefined;
 
-    onConfirmProp(targetPhaseId, targetStatusId);
+    // Check if moving to the same phase AND same status (or no status specified)
+    if (targetPhaseId === task.phase_id && (!targetStatusId || targetStatusId === task.project_status_mapping_id)) {
+        toast.error("Please select a different phase or status to move the task.");
+        return;
+    }
 
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onConfirmProp(targetPhaseId, targetStatusId);
+      // Parent component (ProjectDetail) will handle closing the dialog in finally block
+    } catch (error) {
+      // Error is already handled by parent, but we need to reset submitting state
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,8 +88,8 @@ export default function MoveTaskDialog({
 
           <div className="mb-6"> {/* Increased bottom margin */}
             <TreeSelect<'project' | 'phase' | 'status'>
-                // Use phase from selectedTargetPath for the value, default to empty string
-                value={selectedTargetPath?.['phase'] || ''}
+                // Use status if selected, otherwise phase, to show full path including status
+                value={selectedTargetPath?.['status'] || selectedTargetPath?.['phase'] || ''}
                 onValueChange={handleTreeSelect}
                 options={projectTreeData}
                 placeholder="Select target project/phase/status..."
@@ -103,9 +110,14 @@ export default function MoveTaskDialog({
           <Button
             id='confirm-move-button'
             onClick={handleConfirm}
-            disabled={!selectedTargetPath?.['phase'] || selectedTargetPath?.['phase'] === task.phase_id}
+            disabled={
+              !selectedTargetPath?.['phase'] ||
+              (selectedTargetPath?.['phase'] === task.phase_id &&
+                (!selectedTargetPath?.['status'] || selectedTargetPath?.['status'] === task.project_status_mapping_id)) ||
+              isSubmitting
+            }
           >
-            Confirm Move
+            {isSubmitting ? 'Moving...' : 'Confirm Move'}
           </Button>
         </div>
       </DialogContent>

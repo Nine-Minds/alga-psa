@@ -22,6 +22,7 @@ import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -285,46 +286,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
-              <DatePicker
-                id="start_date"
-                value={project.start_date ? new Date(project.start_date) : undefined}
-                onChange={(date) => {
-                  setProject(prev => ({
-                    ...prev,
-                    start_date: date || null,
-                  }));
-                  setHasChanges(true);
-                  clearErrorIfSubmitted();
-                }}
-                placeholder="Select start date"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
-              </label>
-              <DatePicker
-                id="end_date"
-                value={project.end_date ? new Date(project.end_date) : undefined}
-                onChange={(date) => {
-                  setProject(prev => ({
-                    ...prev,
-                    end_date: date || null,
-                  }));
-                  setHasChanges(true);
-                  clearErrorIfSubmitted();
-                }}
-                placeholder="Select end date"
-              />
-            </div>
-          </div>
-
           <div>
             <label htmlFor="budgeted_hours" className="block text-sm font-medium text-gray-700 mb-1">
               Budgeted Hours
@@ -378,6 +339,46 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
+                Start Date
+              </label>
+              <DatePicker
+                id="start_date"
+                value={project.start_date ? new Date(project.start_date) : undefined}
+                onChange={(date) => {
+                  setProject(prev => ({
+                    ...prev,
+                    start_date: date || null,
+                  }));
+                  setHasChanges(true);
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Select start date"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
+                End Date
+              </label>
+              <DatePicker
+                id="end_date"
+                value={project.end_date ? new Date(project.end_date) : undefined}
+                onChange={(date) => {
+                  setProject(prev => ({
+                    ...prev,
+                    end_date: date || null,
+                  }));
+                  setHasChanges(true);
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Select end date"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center space-x-2">
             <span className={`px-2 py-1 rounded text-sm ${project.is_inactive ? 'text-gray-800' : 'text-gray-800'}`}>
               {project.is_inactive ? 'Inactive' : 'Active'}
@@ -390,6 +391,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 setHasChanges(true);
                 clearErrorIfSubmitted();
               }}
+            />
+          </div>
+
+          <div>
+            <ProjectTaskStatusEditor
+              projectId={project.project_id}
+              onChange={() => setHasChanges(true)}
             />
           </div>
         </div>

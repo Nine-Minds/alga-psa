@@ -1,0 +1,16 @@
+{
+  "name": "@alga-samples/client-portal-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "alga build",
+    "pack": "alga pack"
+  },
+  "dependencies": {
+    "@alga-psa/extension-runtime": "^0.2.0"
+  },
+  "devDependencies": {
+    "@alga-psa/cli": "^0.2.0"
+  }
+}
