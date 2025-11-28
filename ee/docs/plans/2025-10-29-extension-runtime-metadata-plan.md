@@ -103,6 +103,13 @@ Status update (2025-11-21):
 
 ### 7. UI & Configuration Experience
 
+- Publish `@alga-psa/extension-runtime` (JS/TS) wrapping generated bindings with helpers (`createHandler`, `ctx.secrets.get`, `ctx.uiProxy.call`).
+- Ship UI-side helpers (`@alga/extension-ui`) that call gateway proxy endpoints with tenant/install context.
+- Document workflows in `sdk/docs`: local dev loop, invoking provider APIs, using UI proxy without handling secrets.
+- Provide runnable samples mirroring wasmCloud's language examples (TypeScript initially, add Rust/TinyGo later via `wit-bindgen`).
+
+### 8. Extension Settings UI
+
 - **Extension Settings Page**: A dedicated configuration UI at `/msp/settings/extensions/[id]/settings` reachable from the extension management list.
 - **Dynamic Form Generation**: Render configuration inputs (text, number, boolean, select) based on the extension's manifest `settings` schema.
 - **Secret Management**:
