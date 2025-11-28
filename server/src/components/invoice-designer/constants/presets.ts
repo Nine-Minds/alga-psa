@@ -1,4 +1,4 @@
-import { DesignerComponentType, DesignerConstraint, ConstraintStrength, Point, Size } from '../state/designerStore';
+import { DesignerComponentType, DesignerConstraint, ConstraintStrength, Point, Size, DesignerNode } from '../state/designerStore';
 
 export interface LayoutPresetNodeDefinition {
   key: string;
@@ -7,6 +7,7 @@ export interface LayoutPresetNodeDefinition {
   size?: Size;
   name?: string;
   parentKey?: string;
+  layout?: DesignerNode['layout'];
 }
 
 export type LayoutPresetConstraintDefinition =
@@ -38,7 +39,22 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Two-column header with locked logo ratio and address stack.',
     category: 'Header',
     nodes: [
-      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 640, height: 180 }, name: 'Header Section' },
+      { 
+        key: 'section', 
+        type: 'section', 
+        offset: { x: 0, y: 0 }, 
+        size: { width: 640, height: 180 }, 
+        name: 'Header Section',
+        layout: {
+          mode: 'flex',
+          direction: 'row',
+          gap: 20,
+          padding: 20,
+          justify: 'space-between',
+          align: 'start',
+          sizing: 'hug',
+        }
+      },
       {
         key: 'column-left',
         type: 'column',
@@ -46,14 +62,32 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 260, height: 160 },
         name: 'Logo Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'start',
+          sizing: 'fixed', // Logo column usually fixed width
+        }
       },
       {
         key: 'column-right',
         type: 'column',
         parentKey: 'section',
-        offset: { x: 260, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 320, height: 160 },
         name: 'Address Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'end', // Align address text to right
+          sizing: 'fill',
+        }
       },
       {
         key: 'logo',
@@ -67,14 +101,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         key: 'address',
         type: 'text',
         parentKey: 'column-right',
-        offset: { x: 260, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 260, height: 140 },
         name: 'Billing Address',
       },
     ],
     constraints: [
-      { type: 'align-top', nodes: ['logo', 'address'], strength: 'strong' },
-      { type: 'match-height', nodes: ['logo', 'address'], strength: 'medium' },
       { type: 'aspect-ratio', node: 'logo', ratio: 1.5, strength: 'strong' },
     ],
   },
@@ -84,7 +116,22 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Full-width items table with repeating rows.',
     category: 'Body',
     nodes: [
-      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 520, height: 320 }, name: 'Items Section' },
+      { 
+        key: 'section', 
+        type: 'section', 
+        offset: { x: 0, y: 0 }, 
+        size: { width: 520, height: 320 }, 
+        name: 'Items Section',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 0,
+          padding: 20,
+          justify: 'start',
+          align: 'stretch',
+          sizing: 'hug',
+        }
+      },
       {
         key: 'column',
         type: 'column',
@@ -92,6 +139,15 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 520, height: 320 },
         name: 'Items Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 0,
+          padding: 0,
+          justify: 'start',
+          align: 'stretch',
+          sizing: 'fill',
+        }
       },
       {
         key: 'table',
@@ -100,6 +156,15 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 520, height: 260 },
         name: 'Line Items',
+        layout: {
+          mode: 'flex', // Tables are leaves but can use flex props for self-sizing context
+          direction: 'column',
+          gap: 0,
+          padding: 0,
+          justify: 'start',
+          align: 'stretch',
+          sizing: 'fill',
+        }
       },
     ],
     constraints: [],
@@ -110,7 +175,22 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Totals summary with note block.',
     category: 'Footer',
     nodes: [
-      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 560, height: 200 }, name: 'Totals Section' },
+      { 
+        key: 'section', 
+        type: 'section', 
+        offset: { x: 0, y: 0 }, 
+        size: { width: 560, height: 200 }, 
+        name: 'Totals Section',
+        layout: {
+          mode: 'flex',
+          direction: 'row',
+          gap: 40,
+          padding: 20,
+          justify: 'space-between',
+          align: 'start',
+          sizing: 'hug',
+        }
+      },
       {
         key: 'column-note',
         type: 'column',
@@ -118,20 +198,38 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 260, height: 180 },
         name: 'Notes Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'stretch',
+          sizing: 'fill',
+        }
       },
       {
         key: 'column-totals',
         type: 'column',
         parentKey: 'section',
-        offset: { x: 280, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 280, height: 180 },
         name: 'Totals Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'end',
+          sizing: 'fixed',
+        }
       },
       {
         key: 'note',
         type: 'text',
         parentKey: 'column-note',
-        offset: { x: 0, y: 20 },
+        offset: { x: 0, y: 0 },
         size: { width: 240, height: 80 },
         name: 'Notes',
       },
@@ -139,14 +237,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         key: 'totals',
         type: 'totals',
         parentKey: 'column-totals',
-        offset: { x: 280, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 280, height: 160 },
         name: 'Totals',
       },
     ],
-    constraints: [
-      { type: 'align-top', nodes: ['totals', 'note'], strength: 'weak' },
-    ],
+    constraints: [],
   },
   {
     id: 'two-column-summary',
@@ -154,7 +250,22 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Equal columns for summary and contact info.',
     category: 'Body',
     nodes: [
-      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 560, height: 200 }, name: 'Summary Section' },
+      { 
+        key: 'section', 
+        type: 'section', 
+        offset: { x: 0, y: 0 }, 
+        size: { width: 560, height: 200 }, 
+        name: 'Summary Section',
+        layout: {
+          mode: 'flex',
+          direction: 'row',
+          gap: 20,
+          padding: 20,
+          justify: 'space-between',
+          align: 'start',
+          sizing: 'hug',
+        }
+      },
       {
         key: 'column-left',
         type: 'column',
@@ -162,14 +273,32 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 260, height: 180 },
         name: 'Summary Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'stretch',
+          sizing: 'fill',
+        }
       },
       {
         key: 'column-right',
         type: 'column',
         parentKey: 'section',
-        offset: { x: 280, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 260, height: 180 },
         name: 'Contact Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'stretch',
+          sizing: 'fill',
+        }
       },
       {
         key: 'summary',
@@ -183,15 +312,12 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         key: 'contact',
         type: 'text',
         parentKey: 'column-right',
-        offset: { x: 280, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 240, height: 160 },
         name: 'Contact Info',
       },
     ],
-    constraints: [
-      { type: 'match-width', nodes: ['summary', 'contact'], strength: 'required' },
-      { type: 'align-top', nodes: ['summary', 'contact'], strength: 'strong' },
-    ],
+    constraints: [],
   },
   {
     id: 'header-with-qr',
@@ -199,7 +325,22 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
     description: 'Logo + address stack with QR code payment block.',
     category: 'Header',
     nodes: [
-      { key: 'section', type: 'section', offset: { x: 0, y: 0 }, size: { width: 640, height: 200 }, name: 'Split Header' },
+      { 
+        key: 'section', 
+        type: 'section', 
+        offset: { x: 0, y: 0 }, 
+        size: { width: 640, height: 200 }, 
+        name: 'Split Header',
+        layout: {
+          mode: 'flex',
+          direction: 'row',
+          gap: 20,
+          padding: 20,
+          justify: 'space-between',
+          align: 'start',
+          sizing: 'hug',
+        }
+      },
       {
         key: 'column-logo',
         type: 'column',
@@ -207,30 +348,55 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
         offset: { x: 0, y: 0 },
         size: { width: 220, height: 180 },
         name: 'Logo Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'start',
+          sizing: 'fixed',
+        }
       },
       {
         key: 'column-address',
         type: 'column',
         parentKey: 'section',
-        offset: { x: 220, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 220, height: 180 },
         name: 'Address Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'start',
+          align: 'start',
+          sizing: 'fixed', // Fixed width for address middle col
+        }
       },
       {
         key: 'column-qr',
         type: 'column',
         parentKey: 'section',
-        offset: { x: 480, y: 0 },
+        offset: { x: 0, y: 0 },
         size: { width: 140, height: 180 },
         name: 'QR Column',
+        layout: {
+          mode: 'flex',
+          direction: 'column',
+          gap: 10,
+          padding: 0,
+          justify: 'center',
+          align: 'end',
+          sizing: 'fixed',
+        }
       },
       { key: 'logo', type: 'logo', parentKey: 'column-logo', offset: { x: 0, y: 0 }, size: { width: 200, height: 120 } },
-      { key: 'address', type: 'text', parentKey: 'column-address', offset: { x: 220, y: 0 }, size: { width: 220, height: 140 } },
-      { key: 'qr', type: 'qr', parentKey: 'column-qr', offset: { x: 480, y: 0 }, size: { width: 140, height: 140 } },
+      { key: 'address', type: 'text', parentKey: 'column-address', offset: { x: 0, y: 0 }, size: { width: 220, height: 140 } },
+      { key: 'qr', type: 'qr', parentKey: 'column-qr', offset: { x: 0, y: 0 }, size: { width: 140, height: 140 } },
     ],
     constraints: [
-      { type: 'align-top', nodes: ['logo', 'address'], strength: 'strong' },
-      { type: 'align-top', nodes: ['address', 'qr'], strength: 'strong' },
       { type: 'aspect-ratio', node: 'qr', ratio: 1, strength: 'strong' },
     ],
   },

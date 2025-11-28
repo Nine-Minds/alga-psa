@@ -54,6 +54,15 @@ export interface DesignerNode {
   parentId: string | null;
   childIds: string[];
   allowedChildren: DesignerComponentType[];
+  layout?: {
+    mode: 'canvas' | 'flex';
+    direction: 'row' | 'column';
+    gap: number;
+    padding: number;
+    justify: 'start' | 'center' | 'end' | 'space-between';
+    align: 'start' | 'center' | 'end' | 'stretch';
+    sizing: 'fixed' | 'hug' | 'fill';
+  };
 }
 
 export type ConstraintStrength = 'required' | 'strong' | 'medium' | 'weak';
@@ -122,6 +131,7 @@ interface DesignerState {
   resetWorkspace: () => void;
   loadNodes: (nodes: DesignerNode[]) => void;
   recordDropResult: (success: boolean) => void;
+  setLayoutMode: (nodeId: string, mode: 'canvas' | 'flex', options?: Partial<DesignerNode['layout']>) => void;
 }
 
 const MAX_HISTORY_LENGTH = 50;
@@ -148,6 +158,15 @@ const createDocumentNode = (): DesignerNode => ({
   parentId: null,
   childIds: [],
   allowedChildren: getAllowedChildrenForType('document'),
+  layout: {
+    mode: 'flex',
+    direction: 'column',
+    gap: 0,
+    padding: 0,
+    justify: 'start',
+    align: 'stretch',
+    sizing: 'fixed',
+  },
 });
 
 const createPageNode = (parentId: string, index = 1): DesignerNode => ({
@@ -164,6 +183,15 @@ const createPageNode = (parentId: string, index = 1): DesignerNode => ({
   parentId,
   childIds: [],
   allowedChildren: getAllowedChildrenForType('page'),
+  layout: {
+    mode: 'flex',
+    direction: 'column',
+    gap: 32,
+    padding: 40, // Page margins
+    justify: 'start',
+    align: 'stretch',
+    sizing: 'fixed',
+  },
 });
 
 const createInitialNodes = (): DesignerNode[] => {
@@ -208,6 +236,7 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
     size: { ...node.size },
     childIds: [...node.childIds],
     allowedChildren: [...node.allowedChildren],
+    layout: node.layout ? { ...node.layout } : undefined,
   }));
 
 const resolveWithConstraints = (nodes: DesignerNode[], constraints: DesignerConstraint[]) => {
@@ -224,6 +253,117 @@ const resolveWithConstraints = (nodes: DesignerNode[], constraints: DesignerCons
         error instanceof Error ? error.message : 'Constraint conflict detected. Try relaxing or removing constraints.',
     };
   }
+};
+
+// --- Auto-Layout Engine ---
+
+const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
+  const nodeMap = new Map(nodes.map((n) => [n.id, { ...n }]));
+
+  // Top-down pass (recursively layout children)
+  const layoutNode = (nodeId: string) => {
+    const node = nodeMap.get(nodeId);
+    if (!node) return;
+
+    // 1. Sizing Pass (if 'hug', calculate size based on content/children)
+    // For simplicity in this iteration, we assume 'hug' relies on children's aggregated size.
+    // In a real engine, this requires a bottom-up measurement pass first.
+    // We'll stick to a simpler model: Parents dictate available space, Children fill/hug.
+
+    if (node.layout?.mode === 'flex' && node.childIds.length > 0) {
+      const {
+        direction = 'column',
+        gap = 0,
+        padding = 0,
+        align = 'stretch',
+      } = node.layout;
+
+      let currentX = padding;
+      let currentY = padding;
+      let maxCrossSize = 0; // Track max width (col) or height (row) for container sizing
+
+      // We need to operate on fresh copies of children from the map
+      const children = node.childIds.map((id) => nodeMap.get(id)).filter((n): n is DesignerNode => !!n);
+
+      children.forEach((child) => {
+        // Apply Sizing Logic
+        const childLayout = child.layout ?? { sizing: 'fixed' }; // Default if missing
+        let newWidth = child.size.width;
+        let newHeight = child.size.height;
+
+        if (direction === 'column') {
+          // Cross axis: Width
+          if (childLayout.sizing === 'fill' || align === 'stretch') {
+            newWidth = Math.max(0, node.size.width - padding * 2);
+          }
+          // Main axis: Height (Fixed for now, unless we implement true 'hug' content measuring)
+        } else {
+          // Row
+          // Cross axis: Height
+          if (childLayout.sizing === 'fill' || align === 'stretch') {
+            newHeight = Math.max(0, node.size.height - padding * 2);
+          }
+        }
+        
+        // Update child size in map
+        child.size = { width: newWidth, height: newHeight };
+
+        // Recursively layout this child first (if it's also a container)
+        // This allows nested stack calculations to propagate
+        layoutNode(child.id);
+
+        // Update position relative to parent
+        child.position = {
+          x: node.position.x + currentX,
+          y: node.position.y + currentY,
+        };
+        
+        // Advance cursor
+        if (direction === 'column') {
+          currentY += child.size.height + gap;
+          maxCrossSize = Math.max(maxCrossSize, child.size.width);
+        } else {
+          currentX += child.size.width + gap;
+          maxCrossSize = Math.max(maxCrossSize, child.size.height);
+        }
+      });
+
+      // Parent 'Hug' Logic: Resize parent to fit children
+      if (node.layout.sizing === 'hug') {
+        if (direction === 'column') {
+          node.size.height = currentY + padding - gap; // Remove trailing gap, add bottom padding
+        } else {
+          node.size.width = currentX + padding - gap;
+        }
+        // If parent resized, we might need to re-layout siblings? 
+        // For this simple single-pass, we assume 'hug' parents are laid out *before* their parents read their size.
+        // But we are traversing Top-Down.
+        // Limitation: Top-Down is good for 'fill', Bad for 'hug'.
+        // Correct approach: Bottom-Up Measure -> Top-Down Arrange.
+        // Let's add a simple Bottom-Up size adjustment here.
+      }
+    } else {
+      // Canvas Mode: Children layout is manual, but we might still need to recurse
+      node.childIds.forEach((childId) => layoutNode(childId));
+    }
+  };
+
+  // Start from roots (Document)
+  const roots = Array.from(nodeMap.values()).filter((n) => !n.parentId);
+  roots.forEach((root) => layoutNode(root.id));
+
+  return Array.from(nodeMap.values());
+};
+
+// Wrapper to combine Constraint Solver + Auto Layout
+const resolveLayout = (nodes: DesignerNode[], constraints: DesignerConstraint[]) => {
+  // 1. Run Auto-Layout (Flex) to establish base positions
+  const layoutNodes = computeLayout(nodes);
+  
+  // 2. Run Constraint Solver (Cassowary) for any specific overrides or "Canvas" mode internal constraints
+  // Note: If everything is Flex, we might not need Cassowary as heavily.
+  // But let's keep it for specific alignments (e.g. "Match Width" across different sub-trees).
+  return resolveWithConstraints(layoutNodes, constraints);
 };
 
 const appendHistory = (state: DesignerState, nodes: DesignerNode[]) => {
@@ -304,12 +444,21 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         parentId: resolvedParentId,
         childIds: [],
         allowedChildren: getAllowedChildrenForType(type),
+        layout: {
+            mode: 'flex', // Default to flex for new nodes if applicable
+            direction: 'column',
+            gap: 0,
+            padding: 0,
+            justify: 'start',
+            align: 'stretch',
+            sizing: 'fixed',
+        }
       };
 
       set((state) => {
         const appendedNodes = [...state.nodes, node];
         const withParentLink = attachChild(appendedNodes, resolvedParentId, node.id);
-        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(withParentLink, state.constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(withParentLink, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
         return {
           nodes: resolvedNodes,
@@ -397,6 +546,15 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             parentId: parentKey,
             childIds: [],
             allowedChildren: getAllowedChildrenForType(nodeDef.type),
+            layout: {
+                mode: 'flex',
+                direction: 'column',
+                gap: 0,
+                padding: 0,
+                justify: 'start',
+                align: 'stretch',
+                sizing: 'fixed'
+            }
           };
 
           createdNodes.push(node);
@@ -434,7 +592,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           .filter((constraint): constraint is DesignerConstraint => Boolean(constraint));
 
         const constraints = [...state.constraints, ...presetConstraints];
-        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nodes, constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
 
         return {
@@ -454,6 +612,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     moveNode: (id, delta, commit = false) => {
       const { snapToGrid: shouldSnap, gridSize } = get();
       set((state) => {
+        // If in Auto-Layout, moving might mean REORDERING, not changing X/Y.
+        // For this iteration, we will stick to position updates, but the computeLayout
+        // will OVERWRITE them if the parent is flex.
+        // To support reordering, we would need to detect if delta crosses a sibling threshold.
+        
         const rootNode = state.nodes.find((node) => node.id === id);
         if (!rootNode) return state;
         const descendantIds = collectDescendants(state.nodes, id);
@@ -493,10 +656,13 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         });
 
         if (!commit) {
+            // During drag, we might want to disable auto-layout temporarily?
+            // Or we run it to show the "snap back"?
+            // For now, let's NOT run auto-layout during drag move, only on commit.
           return { nodes };
         }
 
-        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nodes, state.constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
         return {
           nodes: resolvedNodes,
@@ -546,7 +712,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (!commit) {
           return { nodes };
         }
-        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nodes, state.constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
         return {
           nodes: resolvedNodes,
@@ -562,7 +728,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (!commit) {
           return { nodes };
         }
-        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nodes, state.constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
         return {
           nodes: resolvedNodes,
@@ -625,7 +791,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const idsToRemove = collectDescendants(state.nodes, selected);
         let nodes = state.nodes.filter((node) => !idsToRemove.has(node.id));
         nodes = detachChild(nodes, nodeToDelete.parentId, nodeToDelete.id);
-        const { nodes: resolvedNodes, constraintError } = resolveWithConstraints(nodes, state.constraints);
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);
         return {
           nodes: resolvedNodes,
@@ -639,7 +805,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     addConstraint: (constraint) =>
       set((state) => {
         const constraints = [...state.constraints.filter((existing) => existing.id !== constraint.id), constraint];
-        const { nodes, constraintError } = resolveWithConstraints(state.nodes, constraints);
+        const { nodes, constraintError } = resolveLayout(state.nodes, constraints);
         const { history, historyIndex } = appendHistory(state, nodes);
         return {
           constraints,
@@ -652,7 +818,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     removeConstraint: (constraintId) =>
       set((state) => {
         const constraints = state.constraints.filter((constraint) => constraint.id !== constraintId);
-        const { nodes, constraintError } = resolveWithConstraints(state.nodes, constraints);
+        const { nodes, constraintError } = resolveLayout(state.nodes, constraints);
         const { history, historyIndex } = appendHistory(state, nodes);
         return {
           constraints,
@@ -685,7 +851,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             },
           ];
         }
-        const { nodes, constraintError } = resolveWithConstraints(state.nodes, constraints);
+        const { nodes, constraintError } = resolveLayout(state.nodes, constraints);
         const { history, historyIndex } = appendHistory(state, nodes);
         return {
           constraints,
@@ -760,6 +926,37 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           failedDrops: state.metrics.failedDrops + (success ? 0 : 1),
         },
       }), false, 'designer/recordDropResult');
+    },
+    setLayoutMode: (nodeId, mode, options = {}) => {
+      set((state) => {
+        const nodes = state.nodes.map((node) => {
+          if (node.id !== nodeId) return node;
+          const updated = {
+            ...node,
+            layout: {
+              direction: 'column',
+              gap: 0,
+              padding: 0,
+              justify: 'start',
+              align: 'stretch',
+              sizing: 'fixed',
+              ...node.layout,
+              ...options,
+              mode,
+            },
+          };
+          return updated;
+        });
+        
+        const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
+        const { history, historyIndex } = appendHistory(state, resolvedNodes);
+        return {
+          nodes: resolvedNodes,
+          history,
+          historyIndex,
+          constraintError,
+        };
+      }, false, 'designer/setLayoutMode');
     },
   }))
 );

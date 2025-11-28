@@ -137,6 +137,7 @@ export const DesignerShell: React.FC = () => {
       )
     : undefined;
   const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
+  const setLayoutMode = useInvoiceDesignerStore((state) => state.setLayoutMode);
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
 
   useDesignerShortcuts();
@@ -209,6 +210,131 @@ export const DesignerShell: React.FC = () => {
       return override ? { ...node, position: override } : node;
     });
   }, [nodes, previewPositions]);
+
+  const renderLayoutInspector = () => {
+    if (!selectedNode) return null;
+    
+    // Show layout controls for containers (sections, columns, pages)
+    const isContainer = ['section', 'column', 'page'].includes(selectedNode.type);
+    // Also show sizing controls for children of flex containers
+    const parent = nodes.find(n => n.id === selectedNode.parentId);
+    const isFlexChild = parent?.layout?.mode === 'flex';
+
+    if (!isContainer && !isFlexChild) return null;
+
+    const layout = selectedNode.layout ?? {
+      mode: 'canvas',
+      direction: 'column',
+      gap: 0,
+      padding: 0,
+      justify: 'start',
+      align: 'start',
+      sizing: 'fixed'
+    };
+
+    return (
+      <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-3">
+        <p className="text-xs font-semibold text-slate-700">Layout</p>
+        
+        {isContainer && (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">Mode</span>
+              <div className="flex bg-slate-100 rounded p-0.5">
+                <button
+                  className={`px-2 py-0.5 text-[10px] rounded ${layout.mode === 'canvas' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  onClick={() => setLayoutMode(selectedNode.id, 'canvas')}
+                >
+                  Canvas
+                </button>
+                <button
+                  className={`px-2 py-0.5 text-[10px] rounded ${layout.mode === 'flex' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  onClick={() => setLayoutMode(selectedNode.id, 'flex')}
+                >
+                  Stack
+                </button>
+              </div>
+            </div>
+
+            {layout.mode === 'flex' && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Direction</label>
+                    <select
+                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                      value={layout.direction}
+                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { direction: e.target.value as 'row' | 'column' })}
+                    >
+                      <option value="column">Vertical ↓</option>
+                      <option value="row">Horizontal →</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Gap (px)</label>
+                    <input
+                      type="number"
+                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                      value={layout.gap}
+                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { gap: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Padding</label>
+                    <input
+                      type="number"
+                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                      value={layout.padding}
+                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { padding: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Align Items</label>
+                    <select
+                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                      value={layout.align}
+                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { align: e.target.value as any })}
+                    >
+                      <option value="start">Start</option>
+                      <option value="center">Center</option>
+                      <option value="end">End</option>
+                      <option value="stretch">Stretch</option>
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        <div className="pt-2 border-t border-slate-100">
+          <label className="text-[10px] text-slate-500 block mb-1">Sizing</label>
+          <div className="flex gap-1">
+            {(['fixed', 'hug', 'fill'] as const).map((mode) => (
+              <button
+                key={mode}
+                className={`flex-1 py-1 text-[10px] border rounded ${
+                  layout.sizing === mode
+                    ? 'bg-blue-50 border-blue-200 text-blue-700 font-medium'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+                onClick={() => setLayoutMode(selectedNode.id, layout.mode ?? 'canvas', { sizing: mode })}
+                title={
+                  mode === 'fixed' ? 'Fixed dimensions' :
+                  mode === 'hug' ? 'Hug contents' :
+                  'Fill available space'
+                }
+              >
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderMetadataInspector = () => {
     if (!selectedNode) {
@@ -771,6 +897,7 @@ export const DesignerShell: React.FC = () => {
                   <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
                 </div>
               )}
+              {renderLayoutInspector()}
               <div className="pt-2 border-t border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500">Lock aspect ratio</span>
