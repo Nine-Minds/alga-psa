@@ -8,7 +8,7 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "next dev --turbo",
+    "dev": "NODE_OPTIONS='--max-old-space-size=8192' next dev",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:turbo": "next dev --turbo",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",

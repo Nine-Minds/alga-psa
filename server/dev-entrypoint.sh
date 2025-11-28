@@ -16,6 +16,7 @@ PG_HOST="${PGBOUNCER_HOST:-pgbouncer}"
 PG_PORT="${PGBOUNCER_PORT:-6432}"
 export DATABASE_URL="postgresql://app_user:${DB_PASSWORD}@${PG_HOST}:${PG_PORT}/server"
 export NODE_ENV="${NODE_ENV:-development}"
+export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=12288"
 
 cd /app
 exec npm run dev
