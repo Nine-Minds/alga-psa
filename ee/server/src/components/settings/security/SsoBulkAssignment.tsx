@@ -79,18 +79,18 @@ export default function SsoBulkAssignment() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Automatically support SSO for new internal users</CardTitle>
+          <CardTitle>Automatically set up SSO for new internal users</CardTitle>
           <CardDescription>
-            Enforce your corporate SSO provider whenever new staff accounts are created. Tenants that opt into
-            this policy will avoid password-based sign-ins altogether.
+            Turn this on to provision every new staff account with your corporate SSO provider right away, so they never
+            need a password-based sign-in.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-4">
             <div className="max-w-xl space-y-1">
               <p className="text-sm text-muted-foreground">
-                When enabled, staff whose email already exists in the directory can sign in with Google or Microsoft as
-                soon as their email matches—no manual linking required.
+                While enabled, any new staff and existing emails already in your directory can sign in with Google or
+                Microsoft as soon as their address matches—no “Connect SSO” flow or manual linking required.
               </p>
             </div>
             <Switch

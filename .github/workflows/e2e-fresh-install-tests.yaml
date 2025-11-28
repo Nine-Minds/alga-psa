@@ -15,7 +15,7 @@ on:
 jobs:
   fresh-install-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # Set a timeout for the job
+    timeout-minutes: 60 # Set a timeout for the job
 
     steps:
       - name: Checkout repository
@@ -160,6 +160,23 @@ jobs:
           sudo chmod +x "${DEST_PATH}"
           echo "Docker Compose version:"
           docker-compose --version # Verify installation
+        shell: bash
+
+      - name: Free up disk space
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Freeing up disk space before build..."
+          df -h
+          docker system prune -a -f --volumes
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          df -h
+        shell: bash
+
+      - name: Build server image with no cache
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Building server image with --no-cache to ensure fresh build"
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache server setup
         shell: bash
 
       - name: Start foundational services (postgres and redis)

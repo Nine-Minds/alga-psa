@@ -3,7 +3,7 @@
 import User from 'server/src/lib/models/user';
 import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from 'server/src/interfaces/auth.interfaces';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId, getTenantContext, runWithTenant } from 'server/src/lib/db';
 import { getAdminConnection } from '@shared/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
@@ -487,15 +487,29 @@ export async function updateUserRoles(userId: string, roleIds: string[]): Promis
 
 export async function getUserRoles(userId: string, knexConnection?: Knex | Knex.Transaction): Promise<IRole[]> {
   try {
-    let knex: Knex | Knex.Transaction;
-    if (knexConnection) {
-      knex = knexConnection;
-    } else {
+    let knex: Knex | Knex.Transaction | undefined = knexConnection;
+    let tenant = await getTenantContext();
+
+    if (!knex) {
       const result = await createTenantKnex();
       knex = result.knex;
+      tenant = tenant ?? result.tenant ?? undefined;
     }
-    const roles = await User.getUserRoles(knex, userId);
-    return roles;
+
+    if (!tenant) {
+      const currentTenantId = await getCurrentTenantId();
+      if (currentTenantId) {
+        tenant = currentTenantId;
+      }
+    }
+
+    if (!tenant) {
+      throw new Error('Tenant context is required to fetch user roles');
+    }
+
+    return await runWithTenant(tenant, async () => {
+      return User.getUserRoles(knex!, userId);
+    });
   } catch (error) {
     logger.error(`Failed to fetch roles for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles');
@@ -1259,3 +1273,22 @@ export async function getClientUsersForClient(clientId: string): Promise<IUser[]
 
 // Alias for compatibility
 export const getUserById = findUserById;
+
+/**
+ * Get the current user's avatar URL (server action for client components)
+ */
+export async function getCurrentUserAvatarUrl(): Promise<string | null> {
+  'use server';
+
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      return null;
+    }
+
+    return await getUserAvatarUrl(user.user_id, user.tenant);
+  } catch (error) {
+    logger.error('Error getting current user avatar URL:', error);
+    return null;
+  }
+}

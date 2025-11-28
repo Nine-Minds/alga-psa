@@ -18,7 +18,8 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
 }
 
 setTypeParser(20, parseFloat);
-setTypeParser(1114, (str: string) => new Date(str + 'Z'));
+setTypeParser(1114, (str: string) => new Date(str + 'Z')); // TIMESTAMP WITHOUT TIME ZONE - add Z to parse as UTC
+setTypeParser(1184, (str: string) => new Date(str)); // TIMESTAMP WITH TIME ZONE - already has timezone info, parse as-is
 
 import { getSecret } from '../core/getSecret';
 
@@ -66,6 +67,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       reapIntervalMillis: 500,
       createTimeoutMillis: 1000,
       destroyTimeoutMillis: 500
+    },
+    afterCreate: (conn: any, done: Function) => {
+      conn.query('SET TIME ZONE \'UTC\'', (err: Error) => {
+        done(err, conn);
+      });
     }
   },
   test: {
@@ -84,6 +90,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       reapIntervalMillis: 1000,
       createTimeoutMillis: 3000,
       destroyTimeoutMillis: 1000
+    },
+    afterCreate: (conn: any, done: Function) => {
+      conn.query('SET TIME ZONE \'UTC\'', (err: Error) => {
+        done(err, conn);
+      });
     }
   },
   production: {
@@ -102,6 +113,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       reapIntervalMillis: 500,
       createTimeoutMillis: 1000,
       destroyTimeoutMillis: 500
+    },
+    afterCreate: (conn: any, done: Function) => {
+      conn.query('SET TIME ZONE \'UTC\'', (err: Error) => {
+        done(err, conn);
+      });
     }
   }
 };
@@ -151,9 +167,17 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
       conn.on('error', (err: Error) => {
         console.error('Database connection error:', err);
       });
-      // With CitusDB, tenant isolation is handled automatically at the shard level
-      // No need to set app.current_tenant session variable
-      done(null, conn);
+      // Set timezone to UTC for all timestamps
+      conn.query('SET TIME ZONE \'UTC\'', (err: Error) => {
+        if (err) {
+          console.error('Error setting timezone to UTC:', err);
+          done(err, conn);
+          return;
+        }
+        // With CitusDB, tenant isolation is handled automatically at the shard level
+        // No need to set app.current_tenant session variable
+        done(null, conn);
+      });
     },
     afterRelease: (conn: any, done: Function) => {
       conn.query('SELECT 1', (err: Error) => {

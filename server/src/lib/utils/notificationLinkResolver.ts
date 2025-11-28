@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { getPortalDomain } from '../../models/PortalDomainModel';
-import { buildTenantPortalSlug } from './tenantSlug';
+import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import logger from '@alga-psa/shared/core/logger';
 
 /**
@@ -47,6 +47,7 @@ export interface ProjectTaskLinkInput {
   type: 'project_task';
   projectId: string;
   taskId: string;
+  taskCommentId?: string; // Optional for deep linking to specific task comment
 }
 
 /**
@@ -125,7 +126,8 @@ function resolveInternalUrl(input: EntityLinkInput): string {
       return `${baseUrl}/msp/projects/${input.projectId}`;
 
     case 'project_task':
-      return `${baseUrl}/msp/projects/${input.projectId}?taskId=${input.taskId}`;
+      const taskUrl = `${baseUrl}/msp/projects/${input.projectId}?taskId=${input.taskId}`;
+      return input.taskCommentId ? `${taskUrl}#comment-${input.taskCommentId}` : taskUrl;
 
     case 'invoice':
       return `${baseUrl}/msp/invoices/${input.invoiceId}`;

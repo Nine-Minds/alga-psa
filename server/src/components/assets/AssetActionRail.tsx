@@ -72,10 +72,6 @@ export function AssetActionRail() {
           })}
         </nav>
       </div>
-      <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
-        <p className="font-semibold text-slate-600 mb-1">Need another shortcut?</p>
-        <p>We&apos;ll extend the rail as additional modules go live.</p>
-      </div>
     </aside>
   );
 }

@@ -29,6 +29,7 @@ import {
     isMobileDeviceAsset,
     isPrinterAsset
 } from '../../../interfaces/asset.interfaces';
+import { IDocument } from '../../../interfaces/document.interface';
 import { validateData } from '../../utils/validation';
 import {
     assetSchema,
@@ -52,6 +53,87 @@ import { Knex } from 'knex';
 import { withTransaction } from '@shared/db';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
+
+export interface AssetDetailBundle {
+    asset: Asset;
+    maintenanceReport: AssetMaintenanceReport;
+    maintenanceHistory: AssetMaintenanceHistory[];
+    history: AssetHistory[];
+    tickets: AssetTicketSummary[];
+    documents: IDocument[];
+}
+
+const normalizeNullableString = (value: string | null | undefined) => (value ?? undefined);
+
+function pruneNullishValues(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => pruneNullishValues(item))
+            .filter((item) => item !== undefined);
+    }
+
+    if (value && typeof value === 'object') {
+        const entries = Object.entries(value as Record<string, unknown>).reduce<Record<string, unknown>>((acc, [key, val]) => {
+            const cleanedValue = pruneNullishValues(val);
+            if (cleanedValue !== undefined) {
+                acc[key] = cleanedValue;
+            }
+            return acc;
+        }, {});
+
+        return Object.keys(entries).length > 0 ? entries : undefined;
+    }
+
+    return value === null ? undefined : value;
+}
+
+function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
+    const sanitized = {
+        ...data,
+        workstation: data.workstation ? (({ installed_software, last_login, gpu_model, ...rest }) => ({
+            ...rest,
+            last_login: normalizeNullableString(last_login),
+            gpu_model: normalizeNullableString(gpu_model),
+            installed_software: Array.isArray(installed_software) ? installed_software : []
+        }))(data.workstation) : undefined,
+        network_device: data.network_device ? (({ vlan_config, port_config, ...rest }) => ({
+            ...rest,
+            vlan_config: vlan_config || {},
+            port_config: port_config || {}
+        }))(data.network_device) : undefined,
+        server: data.server ? (({
+            storage_config,
+            network_interfaces,
+            installed_services,
+            raid_config,
+            hypervisor,
+            primary_ip,
+            ...rest
+        }) => ({
+            ...rest,
+            raid_config: normalizeNullableString(raid_config),
+            hypervisor: normalizeNullableString(hypervisor),
+            primary_ip: normalizeNullableString(primary_ip),
+            storage_config: Array.isArray(storage_config) ? storage_config : [],
+            network_interfaces: Array.isArray(network_interfaces) ? network_interfaces : [],
+            installed_services: Array.isArray(installed_services) ? installed_services : []
+        }))(data.server) : undefined,
+        mobile_device: data.mobile_device ? (({ installed_apps, carrier, phone_number, ...rest }) => ({
+            ...rest,
+            carrier: normalizeNullableString(carrier),
+            phone_number: normalizeNullableString(phone_number),
+            installed_apps: Array.isArray(installed_apps) ? installed_apps : []
+        }))(data.mobile_device) : undefined,
+        printer: data.printer ? (({ supported_paper_types, ip_address, ...rest }) => ({
+            ...rest,
+            ip_address: normalizeNullableString(ip_address),
+            supported_paper_types: Array.isArray(supported_paper_types) ? supported_paper_types : [],
+            supply_levels: rest.supply_levels || {}
+        }))(data.printer) : undefined
+    };
+
+    return pruneNullishValues(sanitized) as UpdateAssetRequest;
+}
 
 // Helper function to get extension table data
 async function getExtensionData(knex: Knex, tenant: string, asset_id: string, asset_type: string | undefined): Promise<AssetExtensionType | null> {
@@ -139,6 +221,22 @@ async function upsertExtensionData(
     }
 }
 
+async function deleteExtensionData(
+    knex: Knex,
+    tenant: string,
+    asset_id: string,
+    asset_type: string | undefined
+): Promise<void> {
+    if (!asset_type) {
+        return;
+    }
+
+    const table = `${asset_type.toLowerCase()}_assets`;
+    await knex(table)
+        .where({ tenant, asset_id })
+        .delete();
+}
+
 // Export getAsset for external use
 export async function getAsset(asset_id: string): Promise<Asset> {
     const currentUser = await getCurrentUser();
@@ -156,6 +254,46 @@ export async function getAsset(asset_id: string): Promise<Asset> {
         throw new Error('No tenant found');
     }
     return getAssetWithExtensions(knex, tenant, asset_id);
+}
+
+export async function getAssetDetailBundle(asset_id: string): Promise<AssetDetailBundle> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('No tenant found');
+    }
+
+    if (!await hasPermission(currentUser, 'asset', 'read', knex)) {
+        throw new Error('Permission denied: Cannot read assets');
+    }
+
+    const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
+        getAssetWithExtensions(knex, tenant, asset_id),
+        hasPermission(currentUser, 'ticket', 'read', knex),
+        hasPermission(currentUser, 'document', 'read', knex)
+    ]);
+
+    const formattedAsset = formatAssetForOutput(assetRecord);
+
+    const [maintenanceReport, history, tickets, documents] = await Promise.all([
+        fetchAssetMaintenanceReport(knex, tenant, asset_id),
+        fetchAssetHistory(knex, tenant, asset_id),
+        canReadTickets ? fetchAssetLinkedTickets(knex, tenant, asset_id) : Promise.resolve([]),
+        canReadDocuments ? fetchAssetDocuments(knex, tenant, asset_id) : Promise.resolve([])
+    ]);
+
+    return {
+        asset: formattedAsset,
+        maintenanceReport,
+        maintenanceHistory: maintenanceReport?.maintenance_history ?? [],
+        history,
+        tickets,
+        documents
+    };
 }
 
 function formatAssetForOutput(asset: any): Asset {
@@ -379,8 +517,24 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
 
     try {
         const result = await knex.transaction(async (trx: Knex.Transaction) => {
-            // Validate the update data
-            const validatedData = validateData(updateAssetSchema, data);
+            const normalizedData = sanitizeUpdatePayload(data);
+            const validatedData = validateData(updateAssetSchema, normalizedData);
+            const {
+                workstation,
+                network_device,
+                server: serverExtension,
+                mobile_device,
+                printer,
+                ...baseCandidate
+            } = validatedData;
+
+            const extensionPayloads = {
+                workstation,
+                network_device,
+                server: serverExtension,
+                mobile_device,
+                printer
+            };
 
             // Get current asset
             const asset = await trx('assets')
@@ -391,21 +545,37 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
                 throw new Error('Asset not found');
             }
 
-            // Update base asset
-            const [updatedBaseAsset] = await trx('assets')
-                .where({ tenant, asset_id })
-                .update({
-                    ...validatedData,
-                    updated_at: knex.fn.now()
-                })
-                .returning('*');
-
-            // Handle extension table data
-            if (validatedData.asset_type) {
-                const extensionData = data[validatedData.asset_type as keyof UpdateAssetRequest];
-                if (extensionData) {
-                    await upsertExtensionData(trx, tenant, asset_id, validatedData.asset_type, extensionData);
+            // Update base asset fields (excluding extension payloads)
+            const baseUpdateData: Record<string, unknown> = {};
+            Object.entries(baseCandidate).forEach(([key, value]) => {
+                if (value !== undefined) {
+                    baseUpdateData[key] = value;
                 }
+            });
+
+            if (Object.keys(baseUpdateData).length > 0) {
+                baseUpdateData.updated_at = trx.fn.now();
+                await trx('assets')
+                    .where({ tenant, asset_id })
+                    .update(baseUpdateData);
+            } else {
+                await trx('assets')
+                    .where({ tenant, asset_id })
+                    .update({ updated_at: trx.fn.now() });
+            }
+
+            const nextAssetType = (baseCandidate.asset_type as string | undefined) ?? asset.asset_type;
+
+            if (baseCandidate.asset_type && baseCandidate.asset_type !== asset.asset_type) {
+                await deleteExtensionData(trx, tenant, asset_id, asset.asset_type);
+            }
+
+            const extensionData = nextAssetType
+                ? extensionPayloads[nextAssetType as keyof typeof extensionPayloads]
+                : undefined;
+
+            if (extensionData) {
+                await upsertExtensionData(trx, tenant, asset_id, nextAssetType, extensionData);
             }
 
             const currentUser = await getCurrentUser();
@@ -423,32 +593,73 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
                 changed_at: knex.fn.now()
             });
 
-            // Get complete asset data including extension table data
+            // Return normalized asset data for client consumption
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id);
-
-            // Format dates for validation
-            const formattedAsset = {
-                ...completeAsset,
-                created_at: typeof completeAsset.created_at === 'string'
-                    ? completeAsset.created_at
-                    : new Date(completeAsset.created_at).toISOString(),
-                updated_at: typeof completeAsset.updated_at === 'string'
-                    ? completeAsset.updated_at
-                    : new Date(completeAsset.updated_at).toISOString(),
-                purchase_date: completeAsset.purchase_date || '',
-                warranty_end_date: completeAsset.warranty_end_date || '',
-                relationships: completeAsset.relationships || []  // Ensure relationships is always an array
-            };
-
-            return formattedAsset;
+            return formatAssetForOutput(completeAsset);
         });
 
         revalidatePath('/assets');
         revalidatePath(`/assets/${asset_id}`);
+        revalidatePath('/msp/assets');
+        revalidatePath(`/msp/assets/${asset_id}`);
         return validateData(assetSchema, result);
     } catch (error) {
         console.error('Error updating asset:', error);
         throw new Error('Failed to update asset');
+    }
+}
+
+export async function deleteAsset(asset_id: string): Promise<void> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    if (!await hasPermission(currentUser, 'asset', 'delete')) {
+        throw new Error('Permission denied: Cannot delete assets');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('No tenant found');
+    }
+
+    try {
+        await knex.transaction(async (trx: Knex.Transaction) => {
+            const asset = await trx('assets')
+                .where({ tenant, asset_id })
+                .first();
+
+            if (!asset) {
+                throw new Error('Asset not found');
+            }
+
+            await deleteExtensionData(trx, tenant, asset_id, asset.asset_type);
+
+            await trx('asset_history').where({ tenant, asset_id }).delete();
+            await trx('asset_maintenance_history').where({ tenant, asset_id }).delete();
+            await trx('asset_maintenance_schedules').where({ tenant, asset_id }).delete();
+            await trx('asset_relationships')
+                .where({ tenant, parent_asset_id: asset_id })
+                .orWhere({ tenant, child_asset_id: asset_id })
+                .delete();
+            await trx('asset_associations').where({ tenant, asset_id }).delete();
+            await trx('document_associations')
+                .where({ tenant, entity_type: 'asset', entity_id: asset_id })
+                .delete();
+
+            await trx('assets')
+                .where({ tenant, asset_id })
+                .delete();
+        });
+
+        revalidatePath('/assets');
+        revalidatePath('/msp/assets');
+        revalidatePath(`/assets/${asset_id}`);
+        revalidatePath(`/msp/assets/${asset_id}`);
+    } catch (error) {
+        console.error('Error deleting asset:', error);
+        throw new Error('Failed to delete asset');
     }
 }
 
@@ -831,86 +1042,16 @@ export async function getAssetMaintenanceReport(asset_id: string): Promise<Asset
             throw new Error('No authenticated user found');
         }
 
-        // Check permission for asset reading
-        if (!await hasPermission(currentUser, 'asset', 'read')) {
-            throw new Error('Permission denied: Cannot read asset maintenance reports');
-        }
-
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('No tenant found');
         }
 
-        // Get asset details
-        const asset = await knex('assets')
-            .where({ tenant, asset_id })
-            .first();
-
-        if (!asset) {
-            throw new Error('Asset not found');
+        if (!await hasPermission(currentUser, 'asset', 'read', knex)) {
+            throw new Error('Permission denied: Cannot read asset maintenance reports');
         }
 
-        // Get maintenance statistics with proper date handling
-        const stats = await knex('asset_maintenance_schedules')
-            .where({ tenant, asset_id })
-            .select(
-                knex.raw('COUNT(*) as total_schedules'),
-                knex.raw('SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active_schedules'),
-                knex.raw(`
-                    TO_CHAR(MAX(last_maintenance), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as last_maintenance
-                `),
-                knex.raw(`
-                    TO_CHAR(MIN(next_maintenance), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as next_maintenance
-                `)
-            )
-            .first();
-
-        // Get maintenance history
-        const history = await knex('asset_maintenance_history')
-            .where({ tenant, asset_id })
-            .orderBy('performed_at', 'desc');
-
-        // Calculate compliance rate
-        const completed = await knex('asset_maintenance_history')
-            .where({ tenant, asset_id })
-            .count('* as count')
-            .first();
-
-        const scheduled = await knex('asset_maintenance_schedules')
-            .where({ tenant, asset_id })
-            .sum('frequency_interval as sum')
-            .first();
-
-        const completedCount = completed?.count ? Number(completed.count) : 0;
-        const scheduledSum = scheduled?.sum ? Number(scheduled.sum) : 0;
-        const compliance_rate = scheduledSum > 0 ? (completedCount / scheduledSum) * 100 : 100;
-
-        // Get upcoming maintenance count
-        const upcomingCount = await knex('asset_maintenance_notifications')
-            .where({ tenant, asset_id, is_sent: false })
-            .count('* as count')
-            .first()
-            .then(result => Number(result?.count || 0));
-
-        const report = {
-            asset_id,
-            asset_name: asset.name,
-            total_schedules: Number(stats?.total_schedules || 0),
-            active_schedules: Number(stats?.active_schedules || 0),
-            completed_maintenances: completedCount,
-            upcoming_maintenances: upcomingCount,
-            last_maintenance: stats?.last_maintenance || undefined,
-            next_maintenance: stats?.next_maintenance || undefined,
-            compliance_rate,
-            maintenance_history: history.map((record): AssetMaintenanceHistory => ({
-                ...record,
-                performed_at: typeof record.performed_at === 'string'
-                    ? record.performed_at
-                    : new Date(record.performed_at).toISOString()
-            }))
-        };
-
-        return validateData(assetMaintenanceReportSchema, report);
+        return await fetchAssetMaintenanceReport(knex, tenant, asset_id);
     } catch (error) {
         console.error('Error getting asset maintenance report:', error);
         throw new Error('Failed to get asset maintenance report');
@@ -934,16 +1075,7 @@ export async function getAssetHistory(asset_id: string): Promise<AssetHistory[]>
                 throw new Error('Permission denied: Cannot read asset history');
             }
 
-            const history = await trx('asset_history')
-                .where({ tenant, asset_id })
-                .orderBy('changed_at', 'desc');
-
-            return history.map((record): AssetHistory => ({
-                ...record,
-                changed_at: typeof record.changed_at === 'string'
-                    ? record.changed_at
-                    : new Date(record.changed_at).toISOString()
-            }));
+            return fetchAssetHistory(trx, tenant, asset_id);
         });
     } catch (error) {
         console.error('Error getting asset history:', error);
@@ -984,74 +1116,7 @@ export async function getAssetLinkedTickets(asset_id: string): Promise<AssetTick
                 throw new Error('Permission denied: Cannot read linked tickets');
             }
 
-            const rows = await trx('asset_associations as aa')
-                .leftJoin('tickets as t', function(this: Knex.JoinClause) {
-                    this.on('aa.entity_id', '=', 't.ticket_id')
-                        .andOn('aa.tenant', '=', 't.tenant');
-                })
-                .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-                    this.on('t.status_id', '=', 's.status_id')
-                        .andOn('t.tenant', '=', 's.tenant');
-                })
-                .leftJoin('priorities as p', function(this: Knex.JoinClause) {
-                    this.on('t.priority_id', '=', 'p.priority_id')
-                        .andOn('t.tenant', '=', 'p.tenant');
-                })
-                .leftJoin('users as u', function(this: Knex.JoinClause) {
-                    this.on('t.assigned_to', '=', 'u.user_id')
-                        .andOn('t.tenant', '=', 'u.tenant');
-                })
-                .leftJoin('clients as c', function(this: Knex.JoinClause) {
-                    this.on('t.client_id', '=', 'c.client_id')
-                        .andOn('t.tenant', '=', 'c.tenant');
-                })
-                .where({
-                    'aa.tenant': tenant,
-                    'aa.asset_id': asset_id,
-                    'aa.entity_type': 'ticket'
-                })
-                .orderBy('aa.created_at', 'desc')
-                .select<RawLinkedTicket[]>(
-                    'aa.entity_id',
-                    'aa.relationship_type',
-                    'aa.created_at as linked_at',
-                    't.ticket_id',
-                    't.title',
-                    't.status_id',
-                    's.name as status_name',
-                    't.priority_id',
-                    'p.priority_name',
-                    't.updated_at',
-                    'u.first_name as assigned_first_name',
-                    'u.last_name as assigned_last_name',
-                    'c.client_name'
-                );
-
-            return rows.map((row): AssetTicketSummary => {
-                const ticketId = row.ticket_id || row.entity_id;
-                const assigned_to_name = [row.assigned_first_name, row.assigned_last_name]
-                    .filter(Boolean)
-                    .join(' ')
-                    .trim();
-
-                return {
-                    ticket_id: ticketId,
-                    title: row.title || 'Linked ticket unavailable',
-                    status_id: row.status_id || 'unknown',
-                    status_name: row.status_name || 'Unknown',
-                    priority_id: row.priority_id || undefined,
-                    priority_name: row.priority_name || undefined,
-                    linked_at: typeof row.linked_at === 'string'
-                        ? row.linked_at
-                        : row.linked_at.toISOString(),
-                    updated_at: row.updated_at
-                        ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at)
-                        : undefined,
-                    client_name: row.client_name || undefined,
-                    assigned_to_name: assigned_to_name.length > 0 ? assigned_to_name : undefined,
-                    relationship_type: row.relationship_type || undefined
-                };
-            });
+            return fetchAssetLinkedTickets(trx, tenant, asset_id);
         });
     } catch (error) {
         console.error('Error getting asset linked tickets:', error);
@@ -1076,127 +1141,356 @@ export async function getClientMaintenanceSummary(client_id: string): Promise<Cl
             throw new Error('No tenant found');
         }
 
-        // Get client details
-        const client = await knex('clients')
-            .where({ tenant, client_id })
-            .first();
-
-        if (!client) {
-            throw new Error('Client not found');
-        }
-
-        // Get asset statistics with proper 'this' type annotation
-        const assetStats = await knex('assets')
-            .where({ 'assets.tenant': tenant, client_id })
-            .select(
-                knex.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
-                knex.raw(`
-                    COUNT(DISTINCT CASE 
-                        WHEN asset_maintenance_schedules.asset_id IS NOT NULL 
-                        THEN assets.asset_id 
-                    END) as assets_with_maintenance
-                `)
-            )
-            .leftJoin('asset_maintenance_schedules', function(this: Knex.JoinClause) {
-                this.on('assets.asset_id', '=', 'asset_maintenance_schedules.asset_id')
-                    .andOn('asset_maintenance_schedules.tenant', '=', knex.raw('?', [tenant]));
-            })
-            .first();
-
-        // Get maintenance statistics with date conversion
-        const maintenanceStats = await knex('asset_maintenance_schedules')
-            .where({ 'asset_maintenance_schedules.tenant': tenant })
-            .whereIn('asset_id',
-                knex('assets')
-                    .where({ 
-                        'assets.tenant': tenant, 
-                        client_id,
-                        tenant 
-                    })
-                    .select('asset_id')
-            )
-            .select(
-                knex.raw('COUNT(*) as total_schedules'),
-                knex.raw(`
-                    COUNT(CASE 
-                        WHEN next_maintenance < NOW() AND is_active 
-                        THEN 1 
-                    END) as overdue_maintenances
-                `),
-                knex.raw(`
-                    COUNT(CASE 
-                        WHEN next_maintenance > NOW() AND is_active 
-                        THEN 1 
-                    END) as upcoming_maintenances
-                `)
-            )
-            .first();
-
-        // Get maintenance type breakdown
-        const typeBreakdown = await knex('asset_maintenance_schedules')
-            .where({ 'asset_maintenance_schedules.tenant': tenant })
-            .whereIn('asset_id',
-                knex('assets')
-                    .where({ 
-                        'assets.tenant': tenant, 
-                        client_id,
-                        tenant 
-                    })
-                    .select('asset_id')
-            )
-            .select('maintenance_type')
-            .count('* as count')
-            .groupBy('maintenance_type')
-            .then(results =>
-                results.reduce((acc, { maintenance_type, count }) => ({
-                    ...acc,
-                    [maintenance_type]: Number(count)
-                }), {} as Record<string, number>)
-            );
-
-        // Calculate compliance rate
-        const completed = await knex('asset_maintenance_history')
-            .where({ 'asset_maintenance_history.tenant': tenant })
-            .whereIn('asset_id',
-                knex('assets')
-                    .where({ 'assets.tenant': tenant, client_id })
-                    .select('asset_id')
-            )
-            .count('* as count')
-            .first();
-
-        const scheduled = await knex('asset_maintenance_schedules')
-            .where({ 'asset_maintenance_schedules.tenant': tenant })
-            .whereIn('asset_id',
-                knex('assets')
-                    .where({ 'assets.tenant': tenant, client_id })
-                    .select('asset_id')
-            )
-            .sum('frequency_interval as sum')
-            .first();
-
-        const completedCount = completed?.count ? Number(completed.count) : 0;
-        const scheduledSum = scheduled?.sum ? Number(scheduled.sum) : 0;
-        const compliance_rate = scheduledSum > 0 ? (completedCount / scheduledSum) * 100 : 100;
-
-        // Create summary with proper date handling
-        const summary = {
-            client_id,
-            client_name: client.client_name,
-            total_assets: Number(assetStats?.total_assets || 0),
-            assets_with_maintenance: Number(assetStats?.assets_with_maintenance || 0),
-            total_schedules: Number(maintenanceStats?.total_schedules || 0),
-            overdue_maintenances: Number(maintenanceStats?.overdue_maintenances || 0),
-            upcoming_maintenances: Number(maintenanceStats?.upcoming_maintenances || 0),
-            compliance_rate,
-            maintenance_by_type: typeBreakdown || {}
-        };
-
-        // Validate and return the summary
-        return validateData(clientMaintenanceSummarySchema, summary);
+        return await getClientMaintenanceSummaryForTenant(knex, tenant, client_id);
     } catch (error) {
         console.error('Error getting client maintenance summary:', error);
         throw new Error('Failed to get client maintenance summary');
+    }
+}
+
+async function fetchAssetMaintenanceReport(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    asset_id: string
+): Promise<AssetMaintenanceReport> {
+    const asset = await db('assets')
+        .where({ tenant, asset_id })
+        .first();
+
+    if (!asset) {
+        throw new Error('Asset not found');
+    }
+
+    const stats = await db('asset_maintenance_schedules')
+        .where({ tenant, asset_id })
+        .select(
+            db.raw('COUNT(*) as total_schedules'),
+            db.raw('SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active_schedules'),
+            db.raw(`TO_CHAR(MAX(last_maintenance), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as last_maintenance`),
+            db.raw(`TO_CHAR(MIN(next_maintenance), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as next_maintenance`)
+        )
+        .first();
+
+    const history = await db('asset_maintenance_history')
+        .where({ tenant, asset_id })
+        .orderBy('performed_at', 'desc');
+
+    const completed = await db('asset_maintenance_history')
+        .where({ tenant, asset_id })
+        .count('* as count')
+        .first();
+
+    const scheduled = await db('asset_maintenance_schedules')
+        .where({ tenant, asset_id })
+        .sum('frequency_interval as sum')
+        .first();
+
+    const upcomingCount = await db('asset_maintenance_notifications')
+        .where({ tenant, asset_id, is_sent: false })
+        .count('* as count')
+        .first()
+        .then(result => Number(result?.count || 0));
+
+    const completedCount = completed?.count ? Number(completed.count) : 0;
+    const scheduledSum = scheduled?.sum ? Number(scheduled.sum) : 0;
+    const compliance_rate = scheduledSum > 0 ? (completedCount / scheduledSum) * 100 : 100;
+
+    const report = {
+        asset_id,
+        asset_name: asset.name,
+        total_schedules: Number(stats?.total_schedules || 0),
+        active_schedules: Number(stats?.active_schedules || 0),
+        completed_maintenances: completedCount,
+        upcoming_maintenances: upcomingCount,
+        last_maintenance: stats?.last_maintenance || undefined,
+        next_maintenance: stats?.next_maintenance || undefined,
+        compliance_rate,
+        maintenance_history: history.map((record): AssetMaintenanceHistory => ({
+            ...record,
+            performed_at: typeof record.performed_at === 'string'
+                ? record.performed_at
+                : new Date(record.performed_at).toISOString()
+        }))
+    };
+
+    return validateData(assetMaintenanceReportSchema, report);
+}
+
+async function fetchAssetHistory(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    asset_id: string
+): Promise<AssetHistory[]> {
+    const history = await db('asset_history')
+        .where({ tenant, asset_id })
+        .orderBy('changed_at', 'desc');
+
+    return history.map((record): AssetHistory => ({
+        ...record,
+        changed_at: typeof record.changed_at === 'string'
+            ? record.changed_at
+            : new Date(record.changed_at).toISOString()
+    }));
+}
+
+async function fetchAssetLinkedTickets(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    asset_id: string
+): Promise<AssetTicketSummary[]> {
+    const rows = await db('asset_associations as aa')
+        .leftJoin('tickets as t', function(this: Knex.JoinClause) {
+            this.on('aa.entity_id', '=', 't.ticket_id')
+                .andOn('aa.tenant', '=', 't.tenant');
+        })
+        .leftJoin('statuses as s', function(this: Knex.JoinClause) {
+            this.on('t.status_id', '=', 's.status_id')
+                .andOn('t.tenant', '=', 's.tenant');
+        })
+        .leftJoin('priorities as p', function(this: Knex.JoinClause) {
+            this.on('t.priority_id', '=', 'p.priority_id')
+                .andOn('t.tenant', '=', 'p.tenant');
+        })
+        .leftJoin('users as u', function(this: Knex.JoinClause) {
+            this.on('t.assigned_to', '=', 'u.user_id')
+                .andOn('t.tenant', '=', 'u.tenant');
+        })
+        .leftJoin('clients as c', function(this: Knex.JoinClause) {
+            this.on('t.client_id', '=', 'c.client_id')
+                .andOn('t.tenant', '=', 'c.tenant');
+        })
+        .where({
+            'aa.tenant': tenant,
+            'aa.asset_id': asset_id,
+            'aa.entity_type': 'ticket'
+        })
+        .orderBy('aa.created_at', 'desc')
+        .select<RawLinkedTicket[]>(
+            'aa.entity_id',
+            'aa.relationship_type',
+            'aa.created_at as linked_at',
+            't.ticket_id',
+            't.title',
+            't.status_id',
+            's.name as status_name',
+            't.priority_id',
+            'p.priority_name',
+            't.updated_at',
+            'u.first_name as assigned_first_name',
+            'u.last_name as assigned_last_name',
+            'c.client_name'
+        );
+
+    return rows.map((row): AssetTicketSummary => {
+        const ticketId = row.ticket_id || row.entity_id;
+        const assigned_to_name = [row.assigned_first_name, row.assigned_last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+
+        return {
+            ticket_id: ticketId,
+            title: row.title || 'Linked ticket unavailable',
+            status_id: row.status_id || 'unknown',
+            status_name: row.status_name || 'Unknown',
+            priority_id: row.priority_id || undefined,
+            priority_name: row.priority_name || undefined,
+            linked_at: typeof row.linked_at === 'string'
+                ? row.linked_at
+                : row.linked_at.toISOString(),
+            updated_at: row.updated_at
+                ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at)
+                : undefined,
+            client_name: row.client_name || undefined,
+            assigned_to_name: assigned_to_name.length > 0 ? assigned_to_name : undefined,
+            relationship_type: row.relationship_type || undefined
+        };
+    });
+}
+
+async function fetchAssetDocuments(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    asset_id: string,
+    limit = 15
+): Promise<IDocument[]> {
+    const records = await db('documents')
+        .join('document_associations', function() {
+            this.on('documents.document_id', '=', 'document_associations.document_id')
+                .andOn('document_associations.tenant', '=', db.raw('?', [tenant]));
+        })
+        .leftJoin('users', function() {
+            this.on('documents.created_by', '=', 'users.user_id')
+                .andOn('users.tenant', '=', db.raw('?', [tenant]));
+        })
+        .where('documents.tenant', tenant)
+        .where('document_associations.entity_id', asset_id)
+        .andWhere('document_associations.entity_type', 'asset')
+        .orderBy('documents.updated_at', 'desc')
+        .limit(limit)
+        .select(
+            'documents.*',
+            db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+        );
+
+    return records.map((record) => ({
+        document_id: record.document_id,
+        document_name: record.document_name,
+        type_id: record.type_id,
+        shared_type_id: record.shared_type_id,
+        user_id: record.created_by,
+        order_number: record.order_number || 0,
+        created_by: record.created_by,
+        tenant: record.tenant,
+        file_id: record.file_id,
+        storage_path: record.storage_path,
+        mime_type: record.mime_type,
+        file_size: record.file_size,
+        created_by_full_name: record.created_by_full_name,
+        entered_at: record.entered_at,
+        updated_at: record.updated_at
+    }));
+}
+
+async function getClientMaintenanceSummaryForTenant(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    client_id: string
+): Promise<ClientMaintenanceSummary> {
+    const client = await db('clients')
+        .where({ tenant, client_id })
+        .first();
+
+    if (!client) {
+        throw new Error('Client not found');
+    }
+
+    const assetStats = await db('assets')
+        .where({ 'assets.tenant': tenant, client_id })
+        .select(
+            db.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
+            db.raw(`
+                COUNT(DISTINCT CASE 
+                    WHEN asset_maintenance_schedules.asset_id IS NOT NULL 
+                    THEN assets.asset_id 
+                END) as assets_with_maintenance
+            `)
+        )
+        .leftJoin('asset_maintenance_schedules', function(this: Knex.JoinClause) {
+            this.on('assets.asset_id', '=', 'asset_maintenance_schedules.asset_id')
+                .andOn('asset_maintenance_schedules.tenant', '=', db.raw('?', [tenant]));
+        })
+        .first();
+
+    const assetIdsSubquery = db('assets')
+        .where({ 'assets.tenant': tenant, client_id })
+        .select('asset_id');
+
+    const maintenanceStats = await db('asset_maintenance_schedules')
+        .where({ 'asset_maintenance_schedules.tenant': tenant })
+        .whereIn('asset_id', assetIdsSubquery)
+        .select(
+            db.raw('COUNT(*) as total_schedules'),
+            db.raw(`
+                COUNT(CASE 
+                    WHEN next_maintenance < NOW() AND is_active 
+                    THEN 1 
+                END) as overdue_maintenances
+            `),
+            db.raw(`
+                COUNT(CASE 
+                    WHEN next_maintenance > NOW() AND is_active 
+                    THEN 1 
+                END) as upcoming_maintenances
+            `)
+        )
+        .first();
+
+    const typeBreakdown = await db('asset_maintenance_schedules')
+        .where({ 'asset_maintenance_schedules.tenant': tenant })
+        .whereIn('asset_id', assetIdsSubquery)
+        .select('maintenance_type')
+        .count('* as count')
+        .groupBy('maintenance_type')
+        .then(results =>
+            results.reduce((acc, { maintenance_type, count }) => ({
+                ...acc,
+                [maintenance_type]: Number(count)
+            }), {} as Record<string, number>)
+        );
+
+    const completed = await db('asset_maintenance_history')
+        .where({ 'asset_maintenance_history.tenant': tenant })
+        .whereIn('asset_id', assetIdsSubquery)
+        .count('* as count')
+        .first();
+
+    const scheduled = await db('asset_maintenance_schedules')
+        .where({ 'asset_maintenance_schedules.tenant': tenant })
+        .whereIn('asset_id', assetIdsSubquery)
+        .sum('frequency_interval as sum')
+        .first();
+
+    const completedCount = completed?.count ? Number(completed.count) : 0;
+    const scheduledSum = scheduled?.sum ? Number(scheduled.sum) : 0;
+    const compliance_rate = scheduledSum > 0 ? (completedCount / scheduledSum) * 100 : 100;
+
+    const summary = {
+        client_id,
+        client_name: client.client_name,
+        total_assets: Number(assetStats?.total_assets || 0),
+        assets_with_maintenance: Number(assetStats?.assets_with_maintenance || 0),
+        total_schedules: Number(maintenanceStats?.total_schedules || 0),
+        overdue_maintenances: Number(maintenanceStats?.overdue_maintenances || 0),
+        upcoming_maintenances: Number(maintenanceStats?.upcoming_maintenances || 0),
+        compliance_rate,
+        maintenance_by_type: typeBreakdown || {}
+    };
+
+    return validateData(clientMaintenanceSummarySchema, summary);
+}
+
+export async function getClientMaintenanceSummaries(client_ids: string[]): Promise<Record<string, ClientMaintenanceSummary>> {
+    try {
+        if (client_ids.length === 0) {
+            return {};
+        }
+
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        if (!await hasPermission(currentUser, 'asset', 'read')) {
+            throw new Error('Permission denied: Cannot read client maintenance summaries');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error('No tenant found');
+        }
+
+        const entries = await Promise.all(
+            client_ids.map(async (clientId) => {
+                try {
+                    const summary = await getClientMaintenanceSummaryForTenant(knex, tenant, clientId);
+                    return [clientId, summary] as const;
+                } catch (error) {
+                    console.error('Failed to load maintenance summary for client', clientId, error);
+                    return null;
+                }
+            })
+        );
+
+        return entries.reduce<Record<string, ClientMaintenanceSummary>>((acc, entry) => {
+            if (entry) {
+                acc[entry[0]] = entry[1];
+            }
+            return acc;
+        }, {});
+    } catch (error) {
+        console.error('Error getting client maintenance summaries:', error);
+        throw new Error('Failed to get client maintenance summaries');
     }
 }
 

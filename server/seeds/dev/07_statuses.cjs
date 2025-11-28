@@ -134,7 +134,9 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    status_type: 'project_task'
+                    status_type: 'project_task',
+                    color: '#6B7280', // Gray
+                    icon: 'Clipboard'
                 },
                 {
                     tenant: tenant.tenant,
@@ -146,7 +148,9 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    status_type: 'project_task'
+                    status_type: 'project_task',
+                    color: '#F59E0B', // Amber
+                    icon: 'Hourglass'
                 },
                 {
                     tenant: tenant.tenant,
@@ -158,7 +162,9 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    status_type: 'project_task'
+                    status_type: 'project_task',
+                    color: '#3B82F6', // Blue
+                    icon: 'PlayCircle'
                 },
                 {
                     tenant: tenant.tenant,
@@ -170,7 +176,9 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    status_type: 'project_task'
+                    status_type: 'project_task',
+                    color: '#8B5CF6', // Purple
+                    icon: 'Activity'
                 },
                 {
                     tenant: tenant.tenant,
@@ -182,7 +190,9 @@ exports.seed = function (knex) {
                             username: 'glinda'
                         })
                         .select('user_id'),
-                    status_type: 'project_task'
+                    status_type: 'project_task',
+                    color: '#10B981', // Green
+                    icon: 'CheckCircle'
                 },
                 {
                     tenant: tenant.tenant,

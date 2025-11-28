@@ -636,5 +636,306 @@
     "response": {
       "pageTitle": "Encuesta de satisfacción del cliente"
     }
+  },
+  "availability": {
+    "settings": {
+      "title": "Configuración de disponibilidad",
+      "description": "Configure reglas de disponibilidad y horarios para citas"
+    },
+    "tabs": {
+      "general": "Configuración general",
+      "userHours": "Horarios de usuarios",
+      "serviceRules": "Reglas de servicio",
+      "exceptions": "Excepciones"
+    },
+    "general": {
+      "advanceBookingDays": "Días de reserva anticipada",
+      "advanceBookingDaysHelper": "Con cuánta anticipación los clientes pueden reservar citas",
+      "minimumNoticeHours": "Horas mínimas de aviso",
+      "minimumNoticeHoursHelper": "Tiempo mínimo requerido antes de una cita",
+      "defaultBufferBefore": "Margen predeterminado antes (minutos)",
+      "defaultBufferAfter": "Margen predeterminado después (minutos)",
+      "bufferHelper": "Margen de tiempo entre citas"
+    },
+    "userHours": {
+      "selectUser": "Seleccionar usuario",
+      "dayOfWeek": "Día de la semana",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de finalización",
+      "available": "Disponible",
+      "cloneSettings": "Clonar a otros usuarios",
+      "maxAppointmentsPerDay": "Máximo de citas por día"
+    },
+    "serviceRules": {
+      "selectService": "Seleccionar servicio",
+      "allowWithoutContract": "Permitir sin contrato",
+      "advanceBooking": "Días de reserva anticipada",
+      "maxAppointments": "Máximo de citas por día"
+    },
+    "exceptions": {
+      "addException": "Agregar excepción",
+      "date": "Fecha",
+      "reason": "Motivo",
+      "userSpecific": "Específico del usuario",
+      "companyWide": "Para toda la empresa"
+    },
+    "messages": {
+      "saveSuccess": "Configuración de disponibilidad guardada correctamente",
+      "saveFailed": "Error al guardar la configuración de disponibilidad",
+      "loadFailed": "Error al cargar la configuración de disponibilidad"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Solicitudes de citas",
+      "approve": "Aprobar y programar",
+      "decline": "Rechazar",
+      "assignTech": "Asignar técnico",
+      "internalNotes": "Notas internas",
+      "viewAll": "Ver todas las solicitudes",
+      "pendingCount": "{{count}} solicitudes pendientes",
+      "filterByStatus": "Filtrar por estado",
+      "filterByService": "Filtrar por servicio",
+      "filterByDate": "Filtrar por fecha"
+    },
+    "panel": {
+      "title": "Solicitudes de citas",
+      "description": "Revisar y gestionar solicitudes de citas de clientes",
+      "noRequests": "No se encontraron solicitudes de citas",
+      "loadingRequests": "Cargando solicitudes..."
+    },
+    "card": {
+      "requesterName": "Solicitante",
+      "companyName": "Empresa",
+      "service": "Servicio",
+      "requestedDateTime": "Fecha y hora solicitadas",
+      "duration": "Duración",
+      "preferredTechnician": "Técnico preferido",
+      "linkedTicket": "Ticket vinculado",
+      "actions": "Acciones"
+    },
+    "approvalModal": {
+      "title": "Aprobar solicitud de cita",
+      "confirmDateTime": "Confirmar fecha y hora",
+      "modifyDateTime": "Modificar fecha y hora",
+      "assignedUser": "Técnico asignado",
+      "linkToTicket": "Vincular a ticket",
+      "internalNotes": "Notas internas",
+      "approve": "Aprobar y crear entrada de programación",
+      "approving": "Aprobando..."
+    },
+    "declineModal": {
+      "title": "Rechazar solicitud de cita",
+      "reason": "Motivo del rechazo",
+      "reasonRequired": "Por favor proporcione un motivo",
+      "reasonPlaceholder": "Explique por qué se rechaza esta solicitud...",
+      "decline": "Rechazar solicitud",
+      "declining": "Rechazando..."
+    },
+    "detailsModal": {
+      "title": "Detalles de la solicitud",
+      "requesterInfo": "Información del solicitante",
+      "requestInfo": "Información de la solicitud",
+      "status": "Estado",
+      "createdAt": "Solicitada el",
+      "approvedAt": "Aprobada el",
+      "approvedBy": "Aprobada por",
+      "declinedReason": "Motivo del rechazo"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "approved": "Aprobada",
+      "declined": "Rechazada",
+      "cancelled": "Cancelada"
+    },
+    "messages": {
+      "approveSuccess": "Solicitud de cita aprobada correctamente",
+      "approveFailed": "Error al aprobar la solicitud de cita",
+      "declineSuccess": "Solicitud de cita rechazada",
+      "declineFailed": "Error al rechazar la solicitud de cita",
+      "loadFailed": "Error al cargar solicitudes de citas",
+      "scheduleEntryCreated": "Entrada de programación creada correctamente"
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "Cargando..."
+    },
+    "settings": {
+      "tabLabel": "Encuestas",
+      "title": "Encuestas de satisfacción del cliente",
+      "subtitle": "Configura modelos, desencadenadores y envíos para recopilar comentarios tras el cierre de los tickets.",
+      "tabs": {
+        "templates": "Modelos",
+        "triggers": "Desencadenadores"
+      },
+      "templateList": {
+        "title": "Modelos de encuesta",
+        "description": "Gestiona los mensajes y las escalas que se envían a tus clientes.",
+        "createButton": "Nuevo modelo",
+        "emptyTitle": "Todavía no hay modelos de encuesta",
+        "emptyDescription": "Crea tu primer modelo para definir el texto y la escala de la encuesta.",
+        "table": {
+          "name": "Modelo",
+          "rating": "Escala",
+          "status": "Estado",
+          "updated": "Actualizado",
+          "actions": "Acciones"
+        },
+        "defaultBadge": "Predeterminado",
+        "status": {
+          "enabled": "Activo",
+          "disabled": "Inactivo"
+        },
+        "toasts": {
+          "created": "Modelo creado",
+          "updated": "Modelo actualizado",
+          "deleted": "Modelo eliminado",
+          "setDefault": "Modelo predeterminado actualizado",
+          "error": "No se pudo guardar el modelo",
+          "deleteError": "No se pudo eliminar el modelo"
+        },
+        "deleteConfirm": "¿Eliminar este modelo? Las invitaciones ya enviadas no se verán afectadas.",
+        "errors": {
+          "load": "No se pudieron cargar las plantillas de encuestas."
+        }
+      },
+      "templateForm": {
+        "titleCreate": "Crear modelo de encuesta",
+        "titleEdit": "Editar modelo de encuesta",
+        "labels": {
+          "name": "Nombre del modelo",
+          "ratingType": "Tipo de escala",
+          "ratingScale": "Escala de puntuación",
+          "ratingLabels": "Etiquetas de la escala",
+          "promptText": "Pregunta de la encuesta",
+          "commentPrompt": "Pregunta de comentarios",
+          "thankYouText": "Mensaje de agradecimiento",
+          "isDefault": "Definir como modelo predeterminado",
+          "enabled": "Modelo activo"
+        },
+        "placeholders": {
+          "ratingLabels": "Ejemplo:\n1 = Muy insatisfecho\n2 = Insatisfecho\n3 = Neutral\n4 = Satisfecho\n5 = Muy satisfecho"
+        },
+        "help": {
+          "ratingLabels": "Indica una etiqueta por puntuación usando «valor = etiqueta» en líneas separadas."
+        },
+        "ratingTypes": {
+          "stars": "Estrellas",
+          "numbers": "Números",
+          "emojis": "Emojis"
+        },
+        "actions": {
+          "create": "Crear modelo",
+          "save": "Guardar cambios",
+          "delete": "Eliminar modelo"
+        }
+      },
+      "triggerList": {
+        "title": "Desencadenadores de encuesta",
+        "description": "Envía invitaciones automáticamente cuando los tickets o proyectos finalicen.",
+        "createButton": "Nuevo desencadenador",
+        "emptyTitle": "No hay desencadenadores configurados",
+        "emptyDescription": "Crea un desencadenador para enviar encuestas al cerrar tickets o proyectos.",
+        "table": {
+          "template": "Modelo",
+          "type": "Desencadenador",
+          "conditions": "Condiciones",
+          "status": "Estado",
+          "updated": "Actualizado",
+          "actions": "Acciones"
+        },
+        "conditions": {
+          "boards": "Tableros",
+          "statuses": "Estados",
+          "priorities": "Prioridades",
+          "any": "Cualquiera"
+        },
+        "status": {
+          "enabled": "Activo",
+          "disabled": "Inactivo"
+        },
+        "toasts": {
+          "created": "Desencadenador creado",
+          "updated": "Desencadenador actualizado",
+          "deleted": "Desencadenador eliminado",
+          "error": "No se pudo guardar el desencadenador",
+          "deleteError": "No se pudo eliminar el desencadenador"
+        },
+        "deleteConfirm": "¿Eliminar este desencadenador? Las invitaciones ya programadas seguirán enviándose.",
+        "errors": {
+          "load": "No se pudieron cargar los desencadenadores de encuestas."
+        }
+      },
+      "triggerForm": {
+        "titleCreate": "Crear desencadenador de encuesta",
+        "titleEdit": "Editar desencadenador de encuesta",
+        "labels": {
+          "template": "Modelo de encuesta",
+          "triggerType": "Tipo de desencadenador",
+          "boardIds": "ID de tableros",
+          "statusIds": "ID de estados",
+          "priorities": "Prioridades",
+          "enabled": "Desencadenador activo"
+        },
+        "placeholders": {
+          "boardIds": "Seleccionar tablero",
+          "statusIds": "Agregar estado",
+          "priorities": "Agregar prioridad"
+        },
+        "help": {
+          "conditions": "Deja un campo vacío para aceptar cualquier valor."
+        },
+        "actions": {
+          "create": "Crear desencadenador",
+          "save": "Guardar cambios",
+          "delete": "Eliminar desencadenador"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Ticket cerrado",
+          "project_completed": "Proyecto finalizado"
+        },
+        "errors": {
+          "reference": "No se pudieron cargar las opciones del desencadenador. Vuelve a intentarlo."
+        },
+        "noTemplates": "Crea una plantilla de encuesta antes de agregar desencadenadores.",
+        "prioritiesMixed": "Los tableros seleccionados usan diferentes tipos de prioridad. Se muestran todas las prioridades."
+      },
+      "response": {
+        "invalidTitle": "Encuesta no disponible",
+        "invalidMessage": "Este enlace de comentarios ya no es válido o ya se ha utilizado.",
+        "ratingPrompt": "¿Cómo fue tu experiencia?",
+        "ratingAssistive": "Selecciona una puntuación del 1 al {{scale}}",
+        "commentLabel": "Comentarios adicionales (opcional)",
+        "submitButton": "Enviar comentarios",
+        "submitting": "Enviando comentarios…",
+        "submittedTitle": "¡Gracias por tu respuesta!",
+        "submittedMessage": "{{thankYouText}}",
+        "retryButton": "Intentar de nuevo",
+        "ratingSubmitted": "Comentarios enviados",
+        "errorMessage": "No pudimos registrar tus comentarios. Inténtalo de nuevo.",
+        "selectRatingError": "Selecciona una puntuación antes de enviar.",
+        "supportMessage": "Si tienes preguntas, ponte en contacto con tu técnico."
+      }
+    },
+    "response": {
+      "pageTitle": "Encuesta de satisfacción del cliente"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Comentarios",
+        "internal_only": "Solo Interno",
+        "placeholder": "Agregar un comentario... Usa @ para mencionar compañeros",
+        "add_comment": "Agregar Comentario",
+        "no_comments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
+        "edited": "Editado",
+        "error_creating": "No se pudo crear el comentario. Inténtalo de nuevo.",
+        "error_updating": "No se pudo actualizar el comentario. Inténtalo de nuevo.",
+        "error_deleting": "No se pudo eliminar el comentario. Inténtalo de nuevo.",
+        "confirm_delete": "¿Seguro que deseas eliminar este comentario?"
+      }
+    }
   }
 }

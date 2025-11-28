@@ -2,7 +2,7 @@
  * Add multi-language email templates with full styled HTML
  * Ensures visual consistency across all languages by using complete template definitions
  *
- * This seed adds authentication and ticket notification templates for:
+ * This seed adds authentication, ticket, and appointment notification templates for:
  * - French (fr)
  * - Spanish (es)
  * - German (de)
@@ -23,6 +23,12 @@
  * - ticket-updated
  * - ticket-closed
  * - ticket-comment-added
+ *
+ * Appointments:
+ * - appointment-request-received
+ * - appointment-request-approved
+ * - appointment-request-declined
+ * - new-appointment-request
  */
 
 exports.seed = async function(knex) {
@@ -41,7 +47,11 @@ exports.seed = async function(knex) {
       'Ticket Assigned',
       'Ticket Updated',
       'Ticket Closed',
-      'Ticket Comment Added'
+      'Ticket Comment Added',
+      'appointment-request-received',
+      'appointment-request-approved',
+      'appointment-request-declined',
+      'new-appointment-request'
     ]);
 
   const getSubtypeId = (name) => {
@@ -5514,7 +5524,7486 @@ Apri la fattura: {{invoice.url}}
   ];
 
   await insertTemplates(italianTemplates, 'Italian');
-  console.log('✓ Italian email templates added (auth + tickets + billing)');
+  console.log('✓ Italian email templates added (auth + tickets + billing + appointments)');
 
-  console.log('✓ All styled multi-language email templates added (French, Spanish, German, Dutch, Italian)');
+  
+  // ==================== APPOINTMENT REQUEST TEMPLATES ====================
+  console.log('Adding appointment request email templates...');
+
+  // French appointment templates
+  
+  console.log('Adding French templates...');
+  const frenchAppointmentTemplates = [
+    {
+      name: 'appointment-request-received',
+      language_code: 'fr',
+      subject: 'Demande de rendez-vous reçue - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-received'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demande de rendez-vous reçue</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Demande reçue</h1>
+      <p>Nous avons reçu votre demande de rendez-vous</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Merci d'avoir soumis votre demande de rendez-vous. Nous avons bien reçu votre demande et notre équipe l'examinera sous peu.
+      </p>
+
+      <div class="reference-number">
+        Référence : {{referenceNumber}}
+      </div>
+
+      <div class="details-box">
+        <h3>Détails de la demande</h3>
+        <div class="detail-row">
+          <span class="detail-label">Service :</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Date demandée :</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Heure demandée :</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Durée :</span>
+          <span class="detail-value">{{duration}} minutes</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Technicien préféré :</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      <div class="info-box">
+        <p><strong>Quelle est la prochaine étape ?</strong></p>
+        <p>Notre équipe examinera votre demande et confirmera la disponibilité. Vous recevrez une notification par e-mail une fois que votre rendez-vous aura été approuvé ou si des modifications sont nécessaires. Nous répondons généralement dans un délai de {{responseTime}}.</p>
+      </div>
+
+      <p class="message">
+        Si vous avez des questions ou si vous devez apporter des modifications à votre demande, veuillez nous contacter à {{contactEmail}}{{#if contactPhone}} ou appeler le {{contactPhone}}{{/if}}.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Merci d'avoir choisi {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Demande de rendez-vous reçue
+
+Bonjour{{#if requesterName}} {{requesterName}}{{/if}},
+
+Merci d'avoir soumis votre demande de rendez-vous. Nous avons bien reçu votre demande et notre équipe l'examinera sous peu.
+
+Numéro de référence : {{referenceNumber}}
+
+DÉTAILS DE LA DEMANDE :
+Service : {{serviceName}}
+Date demandée : {{requestedDate}}
+Heure demandée : {{requestedTime}}
+Durée : {{duration}} minutes
+{{#if preferredTechnician}}Technicien préféré : {{preferredTechnician}}{{/if}}
+
+QUELLE EST LA PROCHAINE ÉTAPE ?
+Notre équipe examinera votre demande et confirmera la disponibilité. Vous recevrez une notification par e-mail une fois que votre rendez-vous aura été approuvé ou si des modifications sont nécessaires. Nous répondons généralement dans un délai de {{responseTime}}.
+
+Si vous avez des questions ou si vous devez apporter des modifications à votre demande, veuillez nous contacter à {{contactEmail}}{{#if contactPhone}} ou appeler le {{contactPhone}}{{/if}}.
+
+Merci d'avoir choisi {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+    },
+    {
+      name: 'appointment-request-approved',
+      language_code: 'fr',
+      subject: 'Rendez-vous confirmé - {{serviceName}} le {{appointmentDate}}',
+      notification_subtype_id: getSubtypeId('appointment-request-approved'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rendez-vous confirmé</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="checkmark">✓</div>
+      <h1>Rendez-vous confirmé</h1>
+      <p>Votre rendez-vous a été approuvé</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Excellente nouvelle ! Votre demande de rendez-vous a été approuvée et confirmée. Nous sommes impatients de vous servir.
+      </p>
+
+      <div class="appointment-box">
+        <h3>Votre rendez-vous</h3>
+        <div class="appointment-detail">
+          <strong>Service</strong>
+          <span>{{serviceName}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Date</strong>
+          <span>{{appointmentDate}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Heure</strong>
+          <span>{{appointmentTime}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Durée</strong>
+          <span>{{duration}} minutes</span>
+        </div>
+      </div>
+
+      {{#if technicianName}}
+      <div class="technician-box">
+        <h4>Technicien assigné</h4>
+        <p class="technician-info">
+          <strong>{{technicianName}}</strong>{{#if technicianEmail}}<br>E-mail : {{technicianEmail}}{{/if}}{{#if technicianPhone}}<br>Téléphone : {{technicianPhone}}{{/if}}
+        </p>
+      </div>
+      {{/if}}
+
+      {{#if calendarLink}}
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{calendarLink}}" class="action-button">Ajouter au calendrier</a>
+      </div>
+      {{/if}}
+
+      {{#if cancellationPolicy}}
+      <div class="policy-box">
+        <h4>Politique d'annulation</h4>
+        <p>{{cancellationPolicy}}</p>
+      </div>
+      {{/if}}
+
+      <p class="message">
+        Si vous devez reporter ou annuler ce rendez-vous, veuillez nous contacter au moins {{minimumNoticeHours}} heures à l'avance à {{contactEmail}}{{#if contactPhone}} ou appeler le {{contactPhone}}{{/if}}.
+      </p>
+
+      <p class="message">
+        Nous vous enverrons un rappel avant votre rendez-vous. À bientôt !
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Merci d'avoir choisi {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Rendez-vous confirmé
+
+Bonjour{{#if requesterName}} {{requesterName}}{{/if}},
+
+Excellente nouvelle ! Votre demande de rendez-vous a été approuvée et confirmée. Nous sommes impatients de vous servir.
+
+VOTRE RENDEZ-VOUS :
+Service : {{serviceName}}
+Date : {{appointmentDate}}
+Heure : {{appointmentTime}}
+Durée : {{duration}} minutes
+
+{{#if technicianName}}
+TECHNICIEN ASSIGNÉ :
+{{technicianName}}
+{{#if technicianEmail}}E-mail : {{technicianEmail}}{{/if}}
+{{#if technicianPhone}}Téléphone : {{technicianPhone}}{{/if}}
+{{/if}}
+
+{{#if calendarLink}}
+Ajouter au calendrier : {{calendarLink}}
+{{/if}}
+
+{{#if cancellationPolicy}}
+POLITIQUE D'ANNULATION :
+{{cancellationPolicy}}
+{{/if}}
+
+Si vous devez reporter ou annuler ce rendez-vous, veuillez nous contacter au moins {{minimumNoticeHours}} heures à l'avance à {{contactEmail}}{{#if contactPhone}} ou appeler le {{contactPhone}}{{/if}}.
+
+Nous vous enverrons un rappel avant votre rendez-vous. À bientôt !
+
+Merci d'avoir choisi {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+    },
+    {
+      name: 'appointment-request-declined',
+      language_code: 'fr',
+      subject: 'Mise à jour de la demande de rendez-vous - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-declined'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mise à jour de la demande de rendez-vous</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Mise à jour de la demande</h1>
+      <p>Concernant votre demande de rendez-vous récente</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Merci de votre intérêt pour la prise de rendez-vous avec nous. Malheureusement, nous ne sommes pas en mesure de répondre à votre demande à l'heure demandée.
+      </p>
+
+      <div class="details-box">
+        <h3>Demande initiale</h3>
+        <div class="detail-row">
+          <span class="detail-label">Service :</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Date demandée :</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Heure demandée :</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Référence :</span>
+          <span class="detail-value">{{referenceNumber}}</span>
+        </div>
+      </div>
+
+      {{#if declineReason}}
+      <div class="reason-box">
+        <h4>Raison</h4>
+        <p>{{declineReason}}</p>
+      </div>
+      {{/if}}
+
+      <div class="action-box">
+        <h4>Nous serions ravis de vous aider</h4>
+        <p>Nous nous excusons pour tout désagrément. Nous vous encourageons à soumettre une nouvelle demande pour une date et une heure alternatives qui correspondent mieux à notre disponibilité.</p>
+        {{#if requestNewAppointmentLink}}
+        <a href="{{requestNewAppointmentLink}}" class="action-button">Demander un autre créneau</a>
+        {{/if}}
+      </div>
+
+      <p class="message">
+        Si vous avez des questions ou si vous souhaitez de l'aide pour trouver un créneau disponible, n'hésitez pas à nous contacter à {{contactEmail}}{{#if contactPhone}} ou à appeler le {{contactPhone}}{{/if}}. Notre équipe est là pour vous aider à trouver un horaire qui vous convient.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Merci d'avoir choisi {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Mise à jour de la demande de rendez-vous
+
+Bonjour{{#if requesterName}} {{requesterName}}{{/if}},
+
+Merci de votre intérêt pour la prise de rendez-vous avec nous. Malheureusement, nous ne sommes pas en mesure de répondre à votre demande à l'heure demandée.
+
+DEMANDE INITIALE :
+Service : {{serviceName}}
+Date demandée : {{requestedDate}}
+Heure demandée : {{requestedTime}}
+Référence : {{referenceNumber}}
+
+{{#if declineReason}}
+RAISON :
+{{declineReason}}
+{{/if}}
+
+NOUS SERIONS RAVIS DE VOUS AIDER
+Nous nous excusons pour tout désagrément. Nous vous encourageons à soumettre une nouvelle demande pour une date et une heure alternatives qui correspondent mieux à notre disponibilité.
+
+{{#if requestNewAppointmentLink}}
+Demander un autre créneau : {{requestNewAppointmentLink}}
+{{/if}}
+
+Si vous avez des questions ou si vous souhaitez de l'aide pour trouver un créneau disponible, n'hésitez pas à nous contacter à {{contactEmail}}{{#if contactPhone}} ou à appeler le {{contactPhone}}{{/if}}. Notre équipe est là pour vous aider à trouver un horaire qui vous convient.
+
+Merci d'avoir choisi {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+    },
+    {
+      name: 'new-appointment-request',
+      language_code: 'fr',
+      subject: 'Nouvelle demande de rendez-vous - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('new-appointment-request'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nouvelle demande de rendez-vous</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Nouvelle demande de rendez-vous</h1>
+      <p>Action requise</p>
+      {{#if isUrgent}}
+      <span class="badge">URGENT</span>
+      {{/if}}
+    </div>
+
+    <div class="content">
+      <p class="greeting">Bonjour,</p>
+
+      <p class="message">
+        Une nouvelle demande de rendez-vous a été soumise et nécessite votre examen.
+      </p>
+
+      <div class="details-box">
+        <h3>Détails de la demande</h3>
+        <div class="detail-row">
+          <span class="detail-label">Client :</span>
+          <span class="detail-value">{{clientName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Demandeur :</span>
+          <span class="detail-value">{{requesterName}}</span>
+        </div>
+        {{#if requesterEmail}}
+        <div class="detail-row">
+          <span class="detail-label">E-mail :</span>
+          <span class="detail-value">{{requesterEmail}}</span>
+        </div>
+        {{/if}}
+        {{#if requesterPhone}}
+        <div class="detail-row">
+          <span class="detail-label">Téléphone :</span>
+          <span class="detail-value">{{requesterPhone}}</span>
+        </div>
+        {{/if}}
+        <div class="detail-row">
+          <span class="detail-label">Service :</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Date demandée :</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Heure demandée :</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Durée :</span>
+          <span class="detail-value">{{duration}} minutes</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Technicien préféré :</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      {{#if notes}}
+      <div class="info-box">
+        <p><strong>Notes du client :</strong></p>
+        <p>{{notes}}</p>
+      </div>
+      {{/if}}
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{reviewLink}}" class="action-button">Examiner et répondre</a>
+      </div>
+
+      <p class="message" style="text-align: center; color: #64748b; font-size: 14px;">
+        Référence de la demande : {{referenceNumber}}
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>{{tenantName}} - Système de gestion des rendez-vous</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Nouvelle demande de rendez-vous
+
+Une nouvelle demande de rendez-vous a été soumise et nécessite votre examen.
+
+DÉTAILS DE LA DEMANDE :
+Client : {{clientName}}
+Demandeur : {{requesterName}}
+{{#if requesterEmail}}E-mail : {{requesterEmail}}{{/if}}
+{{#if requesterPhone}}Téléphone : {{requesterPhone}}{{/if}}
+Service : {{serviceName}}
+Date demandée : {{requestedDate}}
+Heure demandée : {{requestedTime}}
+Durée : {{duration}} minutes
+{{#if preferredTechnician}}Technicien préféré : {{preferredTechnician}}{{/if}}
+
+{{#if notes}}
+NOTES DU CLIENT :
+{{notes}}
+{{/if}}
+
+Référence de la demande : {{referenceNumber}}
+
+Examiner et répondre : {{reviewLink}}
+
+{{tenantName}} - Système de gestion des rendez-vous
+© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+    }
+  ];
+
+  await insertTemplates(frenchAppointmentTemplates, 'French');
+  console.log('✓ French appointment email templates added');
+
+  // Spanish appointment templates
+  
+  console.log('Adding Spanish templates...');
+  const spanishAppointmentTemplates = [
+    {
+      name: 'appointment-request-received',
+      language_code: 'es',
+      subject: 'Solicitud de cita recibida - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-received'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitud de cita recibida</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Solicitud recibida</h1>
+      <p>Hemos recibido su solicitud de cita</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hola{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Gracias por enviar su solicitud de cita. Hemos recibido su solicitud y nuestro equipo la revisará en breve.
+      </p>
+
+      <div class="reference-number">
+        Referencia: {{referenceNumber}}
+      </div>
+
+      <div class="details-box">
+        <h3>Detalles de la solicitud</h3>
+        <div class="detail-row">
+          <span class="detail-label">Servicio:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Fecha solicitada:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Hora solicitada:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Duración:</span>
+          <span class="detail-value">{{duration}} minutos</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Técnico preferido:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      <div class="info-box">
+        <p><strong>¿Qué sigue?</strong></p>
+        <p>Nuestro equipo revisará su solicitud y confirmará la disponibilidad. Recibirá una notificación por correo electrónico una vez que su cita haya sido aprobada o si se necesitan cambios. Normalmente respondemos dentro de {{responseTime}}.</p>
+      </div>
+
+      <p class="message">
+        Si tiene alguna pregunta o necesita realizar cambios en su solicitud, por favor contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Gracias por elegir {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Solicitud de cita recibida
+
+Hola{{#if requesterName}} {{requesterName}}{{/if}},
+
+Gracias por enviar su solicitud de cita. Hemos recibido su solicitud y nuestro equipo la revisará en breve.
+
+Número de referencia: {{referenceNumber}}
+
+DETALLES DE LA SOLICITUD:
+Servicio: {{serviceName}}
+Fecha solicitada: {{requestedDate}}
+Hora solicitada: {{requestedTime}}
+Duración: {{duration}} minutos
+{{#if preferredTechnician}}Técnico preferido: {{preferredTechnician}}{{/if}}
+
+¿QUÉ SIGUE?
+Nuestro equipo revisará su solicitud y confirmará la disponibilidad. Recibirá una notificación por correo electrónico una vez que su cita haya sido aprobada o si se necesitan cambios. Normalmente respondemos dentro de {{responseTime}}.
+
+Si tiene alguna pregunta o necesita realizar cambios en su solicitud, por favor contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
+
+Gracias por elegir {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+    },
+    {
+      name: 'appointment-request-approved',
+      language_code: 'es',
+      subject: 'Cita confirmada - {{serviceName}} el {{appointmentDate}}',
+      notification_subtype_id: getSubtypeId('appointment-request-approved'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cita confirmada</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="checkmark">✓</div>
+      <h1>Cita confirmada</h1>
+      <p>Su cita ha sido aprobada</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hola{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        ¡Excelentes noticias! Su solicitud de cita ha sido aprobada y confirmada. Esperamos poder servirle.
+      </p>
+
+      <div class="appointment-box">
+        <h3>Su cita</h3>
+        <div class="appointment-detail">
+          <strong>Servicio</strong>
+          <span>{{serviceName}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Fecha</strong>
+          <span>{{appointmentDate}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Hora</strong>
+          <span>{{appointmentTime}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Duración</strong>
+          <span>{{duration}} minutos</span>
+        </div>
+      </div>
+
+      {{#if technicianName}}
+      <div class="technician-box">
+        <h4>Técnico asignado</h4>
+        <p class="technician-info">
+          <strong>{{technicianName}}</strong>{{#if technicianEmail}}<br>Correo: {{technicianEmail}}{{/if}}{{#if technicianPhone}}<br>Teléfono: {{technicianPhone}}{{/if}}
+        </p>
+      </div>
+      {{/if}}
+
+      {{#if calendarLink}}
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{calendarLink}}" class="action-button">Agregar al calendario</a>
+      </div>
+      {{/if}}
+
+      {{#if cancellationPolicy}}
+      <div class="policy-box">
+        <h4>Política de cancelación</h4>
+        <p>{{cancellationPolicy}}</p>
+      </div>
+      {{/if}}
+
+      <p class="message">
+        Si necesita reprogramar o cancelar esta cita, por favor contáctenos con al menos {{minimumNoticeHours}} horas de anticipación en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
+      </p>
+
+      <p class="message">
+        Le enviaremos un recordatorio antes de su cita. ¡Hasta pronto!
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Gracias por elegir {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Cita confirmada
+
+Hola{{#if requesterName}} {{requesterName}}{{/if}},
+
+¡Excelentes noticias! Su solicitud de cita ha sido aprobada y confirmada. Esperamos poder servirle.
+
+SU CITA:
+Servicio: {{serviceName}}
+Fecha: {{appointmentDate}}
+Hora: {{appointmentTime}}
+Duración: {{duration}} minutos
+
+{{#if technicianName}}
+TÉCNICO ASIGNADO:
+{{technicianName}}
+{{#if technicianEmail}}Correo: {{technicianEmail}}{{/if}}
+{{#if technicianPhone}}Teléfono: {{technicianPhone}}{{/if}}
+{{/if}}
+
+{{#if calendarLink}}
+Agregar al calendario: {{calendarLink}}
+{{/if}}
+
+{{#if cancellationPolicy}}
+POLÍTICA DE CANCELACIÓN:
+{{cancellationPolicy}}
+{{/if}}
+
+Si necesita reprogramar o cancelar esta cita, por favor contáctenos con al menos {{minimumNoticeHours}} horas de anticipación en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
+
+Le enviaremos un recordatorio antes de su cita. ¡Hasta pronto!
+
+Gracias por elegir {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+    },
+    {
+      name: 'appointment-request-declined',
+      language_code: 'es',
+      subject: 'Actualización de solicitud de cita - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-declined'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actualización de solicitud de cita</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Actualización de solicitud</h1>
+      <p>Respecto a su solicitud de cita reciente</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hola{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Gracias por su interés en programar una cita con nosotros. Lamentablemente, no podemos acomodar su solicitud en el horario solicitado.
+      </p>
+
+      <div class="details-box">
+        <h3>Solicitud original</h3>
+        <div class="detail-row">
+          <span class="detail-label">Servicio:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Fecha solicitada:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Hora solicitada:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Referencia:</span>
+          <span class="detail-value">{{referenceNumber}}</span>
+        </div>
+      </div>
+
+      {{#if declineReason}}
+      <div class="reason-box">
+        <h4>Motivo</h4>
+        <p>{{declineReason}}</p>
+      </div>
+      {{/if}}
+
+      <div class="action-box">
+        <h4>Nos encantaría ayudarle</h4>
+        <p>Pedimos disculpas por cualquier inconveniente. Le animamos a enviar una nueva solicitud para una fecha y hora alternativa que funcione mejor con nuestra disponibilidad.</p>
+        {{#if requestNewAppointmentLink}}
+        <a href="{{requestNewAppointmentLink}}" class="action-button">Solicitar otro horario</a>
+        {{/if}}
+      </div>
+
+      <p class="message">
+        Si tiene alguna pregunta o desea ayuda para encontrar un horario disponible, no dude en contactarnos en {{contactEmail}}{{#if contactPhone}} o llamar al {{contactPhone}}{{/if}}. Nuestro equipo está aquí para ayudarle a encontrar un horario que le funcione.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Gracias por elegir {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Actualización de solicitud de cita
+
+Hola{{#if requesterName}} {{requesterName}}{{/if}},
+
+Gracias por su interés en programar una cita con nosotros. Lamentablemente, no podemos acomodar su solicitud en el horario solicitado.
+
+SOLICITUD ORIGINAL:
+Servicio: {{serviceName}}
+Fecha solicitada: {{requestedDate}}
+Hora solicitada: {{requestedTime}}
+Referencia: {{referenceNumber}}
+
+{{#if declineReason}}
+MOTIVO:
+{{declineReason}}
+{{/if}}
+
+NOS ENCANTARÍA AYUDARLE
+Pedimos disculpas por cualquier inconveniente. Le animamos a enviar una nueva solicitud para una fecha y hora alternativa que funcione mejor con nuestra disponibilidad.
+
+{{#if requestNewAppointmentLink}}
+Solicitar otro horario: {{requestNewAppointmentLink}}
+{{/if}}
+
+Si tiene alguna pregunta o desea ayuda para encontrar un horario disponible, no dude en contactarnos en {{contactEmail}}{{#if contactPhone}} o llamar al {{contactPhone}}{{/if}}. Nuestro equipo está aquí para ayudarle a encontrar un horario que le funcione.
+
+Gracias por elegir {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+    },
+    {
+      name: 'new-appointment-request',
+      language_code: 'es',
+      subject: 'Nueva solicitud de cita - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('new-appointment-request'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nueva solicitud de cita</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Nueva solicitud de cita</h1>
+      <p>Acción requerida</p>
+      {{#if isUrgent}}
+      <span class="badge">URGENTE</span>
+      {{/if}}
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hola,</p>
+
+      <p class="message">
+        Se ha enviado una nueva solicitud de cita y requiere su revisión.
+      </p>
+
+      <div class="details-box">
+        <h3>Detalles de la solicitud</h3>
+        <div class="detail-row">
+          <span class="detail-label">Cliente:</span>
+          <span class="detail-value">{{clientName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Solicitante:</span>
+          <span class="detail-value">{{requesterName}}</span>
+        </div>
+        {{#if requesterEmail}}
+        <div class="detail-row">
+          <span class="detail-label">Correo:</span>
+          <span class="detail-value">{{requesterEmail}}</span>
+        </div>
+        {{/if}}
+        {{#if requesterPhone}}
+        <div class="detail-row">
+          <span class="detail-label">Teléfono:</span>
+          <span class="detail-value">{{requesterPhone}}</span>
+        </div>
+        {{/if}}
+        <div class="detail-row">
+          <span class="detail-label">Servicio:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Fecha solicitada:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Hora solicitada:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Duración:</span>
+          <span class="detail-value">{{duration}} minutos</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Técnico preferido:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      {{#if notes}}
+      <div class="info-box">
+        <p><strong>Notas del cliente:</strong></p>
+        <p>{{notes}}</p>
+      </div>
+      {{/if}}
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{reviewLink}}" class="action-button">Revisar y responder</a>
+      </div>
+
+      <p class="message" style="text-align: center; color: #64748b; font-size: 14px;">
+        Referencia de la solicitud: {{referenceNumber}}
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>{{tenantName}} - Sistema de gestión de citas</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Nueva solicitud de cita
+
+Se ha enviado una nueva solicitud de cita y requiere su revisión.
+
+DETALLES DE LA SOLICITUD:
+Cliente: {{clientName}}
+Solicitante: {{requesterName}}
+{{#if requesterEmail}}Correo: {{requesterEmail}}{{/if}}
+{{#if requesterPhone}}Teléfono: {{requesterPhone}}{{/if}}
+Servicio: {{serviceName}}
+Fecha solicitada: {{requestedDate}}
+Hora solicitada: {{requestedTime}}
+Duración: {{duration}} minutos
+{{#if preferredTechnician}}Técnico preferido: {{preferredTechnician}}{{/if}}
+
+{{#if notes}}
+NOTAS DEL CLIENTE:
+{{notes}}
+{{/if}}
+
+Referencia de la solicitud: {{referenceNumber}}
+
+Revisar y responder: {{reviewLink}}
+
+{{tenantName}} - Sistema de gestión de citas
+© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+    }
+  ];
+
+  await insertTemplates(spanishAppointmentTemplates, 'Spanish');
+  console.log('✓ Spanish appointment email templates added');
+
+  // German appointment templates
+  
+  console.log('Adding German templates...');
+  const germanAppointmentTemplates = [
+    {
+      name: 'appointment-request-received',
+      language_code: 'de',
+      subject: 'Terminanfrage erhalten - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-received'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminanfrage erhalten</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Anfrage erhalten</h1>
+      <p>Wir haben Ihre Terminanfrage erhalten</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Vielen Dank für Ihre Terminanfrage. Wir haben Ihre Anfrage erhalten und unser Team wird sie in Kürze prüfen.
+      </p>
+
+      <div class="reference-number">
+        Referenz: {{referenceNumber}}
+      </div>
+
+      <div class="details-box">
+        <h3>Anfragedetails</h3>
+        <div class="detail-row">
+          <span class="detail-label">Service:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gewünschtes Datum:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gewünschte Zeit:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Dauer:</span>
+          <span class="detail-value">{{duration}} Minuten</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Bevorzugter Techniker:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      <div class="info-box">
+        <p><strong>Wie geht es weiter?</strong></p>
+        <p>Unser Team wird Ihre Anfrage prüfen und die Verfügbarkeit bestätigen. Sie erhalten eine E-Mail-Benachrichtigung, sobald Ihr Termin genehmigt wurde oder falls Änderungen erforderlich sind. Wir antworten in der Regel innerhalb von {{responseTime}}.</p>
+      </div>
+
+      <p class="message">
+        Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie {{contactPhone}} an{{/if}}.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Terminanfrage erhalten
+
+Hallo{{#if requesterName}} {{requesterName}}{{/if}},
+
+Vielen Dank für Ihre Terminanfrage. Wir haben Ihre Anfrage erhalten und unser Team wird sie in Kürze prüfen.
+
+Referenznummer: {{referenceNumber}}
+
+ANFRAGEDETAILS:
+Service: {{serviceName}}
+Gewünschtes Datum: {{requestedDate}}
+Gewünschte Zeit: {{requestedTime}}
+Dauer: {{duration}} Minuten
+{{#if preferredTechnician}}Bevorzugter Techniker: {{preferredTechnician}}{{/if}}
+
+WIE GEHT ES WEITER?
+Unser Team wird Ihre Anfrage prüfen und die Verfügbarkeit bestätigen. Sie erhalten eine E-Mail-Benachrichtigung, sobald Ihr Termin genehmigt wurde oder falls Änderungen erforderlich sind. Wir antworten in der Regel innerhalb von {{responseTime}}.
+
+Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie {{contactPhone}} an{{/if}}.
+
+Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
+
+© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+    },
+    {
+      name: 'appointment-request-approved',
+      language_code: 'de',
+      subject: 'Termin bestätigt - {{serviceName}} am {{appointmentDate}}',
+      notification_subtype_id: getSubtypeId('appointment-request-approved'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termin bestätigt</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="checkmark">✓</div>
+      <h1>Termin bestätigt</h1>
+      <p>Ihr Termin wurde genehmigt</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Großartige Neuigkeiten! Ihre Terminanfrage wurde genehmigt und bestätigt. Wir freuen uns darauf, Sie zu bedienen.
+      </p>
+
+      <div class="appointment-box">
+        <h3>Ihr Termin</h3>
+        <div class="appointment-detail">
+          <strong>Service</strong>
+          <span>{{serviceName}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Datum</strong>
+          <span>{{appointmentDate}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Zeit</strong>
+          <span>{{appointmentTime}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Dauer</strong>
+          <span>{{duration}} Minuten</span>
+        </div>
+      </div>
+
+      {{#if technicianName}}
+      <div class="technician-box">
+        <h4>Zugewiesener Techniker</h4>
+        <p class="technician-info">
+          <strong>{{technicianName}}</strong>{{#if technicianEmail}}<br>E-Mail: {{technicianEmail}}{{/if}}{{#if technicianPhone}}<br>Telefon: {{technicianPhone}}{{/if}}
+        </p>
+      </div>
+      {{/if}}
+
+      {{#if calendarLink}}
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{calendarLink}}" class="action-button">Zum Kalender hinzufügen</a>
+      </div>
+      {{/if}}
+
+      {{#if cancellationPolicy}}
+      <div class="policy-box">
+        <h4>Stornierungsbedingungen</h4>
+        <p>{{cancellationPolicy}}</p>
+      </div>
+      {{/if}}
+
+      <p class="message">
+        Wenn Sie diesen Termin verschieben oder stornieren müssen, kontaktieren Sie uns bitte mindestens {{minimumNoticeHours}} Stunden im Voraus unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie {{contactPhone}} an{{/if}}.
+      </p>
+
+      <p class="message">
+        Wir senden Ihnen vor Ihrem Termin eine Erinnerung. Bis bald!
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Termin bestätigt
+
+Hallo{{#if requesterName}} {{requesterName}}{{/if}},
+
+Großartige Neuigkeiten! Ihre Terminanfrage wurde genehmigt und bestätigt. Wir freuen uns darauf, Sie zu bedienen.
+
+IHR TERMIN:
+Service: {{serviceName}}
+Datum: {{appointmentDate}}
+Zeit: {{appointmentTime}}
+Dauer: {{duration}} Minuten
+
+{{#if technicianName}}
+ZUGEWIESENER TECHNIKER:
+{{technicianName}}
+{{#if technicianEmail}}E-Mail: {{technicianEmail}}{{/if}}
+{{#if technicianPhone}}Telefon: {{technicianPhone}}{{/if}}
+{{/if}}
+
+{{#if calendarLink}}
+Zum Kalender hinzufügen: {{calendarLink}}
+{{/if}}
+
+{{#if cancellationPolicy}}
+STORNIERUNGSBEDINGUNGEN:
+{{cancellationPolicy}}
+{{/if}}
+
+Wenn Sie diesen Termin verschieben oder stornieren müssen, kontaktieren Sie uns bitte mindestens {{minimumNoticeHours}} Stunden im Voraus unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie {{contactPhone}} an{{/if}}.
+
+Wir senden Ihnen vor Ihrem Termin eine Erinnerung. Bis bald!
+
+Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
+
+© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+    },
+    {
+      name: 'appointment-request-declined',
+      language_code: 'de',
+      subject: 'Aktualisierung Ihrer Terminanfrage - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-declined'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aktualisierung Ihrer Terminanfrage</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Aktualisierung der Anfrage</h1>
+      <p>Bezüglich Ihrer kürzlichen Terminanfrage</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Vielen Dank für Ihr Interesse, einen Termin mit uns zu vereinbaren. Leider können wir Ihrer Anfrage zum gewünschten Zeitpunkt nicht nachkommen.
+      </p>
+
+      <div class="details-box">
+        <h3>Ursprüngliche Anfrage</h3>
+        <div class="detail-row">
+          <span class="detail-label">Service:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gewünschtes Datum:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gewünschte Zeit:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Referenz:</span>
+          <span class="detail-value">{{referenceNumber}}</span>
+        </div>
+      </div>
+
+      {{#if declineReason}}
+      <div class="reason-box">
+        <h4>Grund</h4>
+        <p>{{declineReason}}</p>
+      </div>
+      {{/if}}
+
+      <div class="action-box">
+        <h4>Wir helfen Ihnen gerne weiter</h4>
+        <p>Wir entschuldigen uns für etwaige Unannehmlichkeiten. Wir ermutigen Sie, eine neue Anfrage für ein alternatives Datum und eine alternative Zeit einzureichen, die besser zu unserer Verfügbarkeit passen.</p>
+        {{#if requestNewAppointmentLink}}
+        <a href="{{requestNewAppointmentLink}}" class="action-button">Andere Zeit anfragen</a>
+        {{/if}}
+      </div>
+
+      <p class="message">
+        Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenster benötigen, zögern Sie bitte nicht, uns unter {{contactEmail}}{{#if contactPhone}} zu kontaktieren oder {{contactPhone}} anzurufen{{/if}}. Unser Team hilft Ihnen gerne, einen passenden Zeitpunkt zu finden.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Aktualisierung Ihrer Terminanfrage
+
+Hallo{{#if requesterName}} {{requesterName}}{{/if}},
+
+Vielen Dank für Ihr Interesse, einen Termin mit uns zu vereinbaren. Leider können wir Ihrer Anfrage zum gewünschten Zeitpunkt nicht nachkommen.
+
+URSPRÜNGLICHE ANFRAGE:
+Service: {{serviceName}}
+Gewünschtes Datum: {{requestedDate}}
+Gewünschte Zeit: {{requestedTime}}
+Referenz: {{referenceNumber}}
+
+{{#if declineReason}}
+GRUND:
+{{declineReason}}
+{{/if}}
+
+WIR HELFEN IHNEN GERNE WEITER
+Wir entschuldigen uns für etwaige Unannehmlichkeiten. Wir ermutigen Sie, eine neue Anfrage für ein alternatives Datum und eine alternative Zeit einzureichen, die besser zu unserer Verfügbarkeit passen.
+
+{{#if requestNewAppointmentLink}}
+Andere Zeit anfragen: {{requestNewAppointmentLink}}
+{{/if}}
+
+Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenster benötigen, zögern Sie bitte nicht, uns unter {{contactEmail}}{{#if contactPhone}} zu kontaktieren oder {{contactPhone}} anzurufen{{/if}}. Unser Team hilft Ihnen gerne, einen passenden Zeitpunkt zu finden.
+
+Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
+
+© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+    },
+    {
+      name: 'new-appointment-request',
+      language_code: 'de',
+      subject: 'Neue Terminanfrage - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('new-appointment-request'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neue Terminanfrage</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Neue Terminanfrage</h1>
+      <p>Aktion erforderlich</p>
+      {{#if isUrgent}}
+      <span class="badge">DRINGEND</span>
+      {{/if}}
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo,</p>
+
+      <p class="message">
+        Eine neue Terminanfrage wurde eingereicht und erfordert Ihre Prüfung.
+      </p>
+
+      <div class="details-box">
+        <h3>Anfragedetails</h3>
+        <div class="detail-row">
+          <span class="detail-label">Kunde:</span>
+          <span class="detail-value">{{clientName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Antragsteller:</span>
+          <span class="detail-value">{{requesterName}}</span>
+        </div>
+        {{#if requesterEmail}}
+        <div class="detail-row">
+          <span class="detail-label">E-Mail:</span>
+          <span class="detail-value">{{requesterEmail}}</span>
+        </div>
+        {{/if}}
+        {{#if requesterPhone}}
+        <div class="detail-row">
+          <span class="detail-label">Telefon:</span>
+          <span class="detail-value">{{requesterPhone}}</span>
+        </div>
+        {{/if}}
+        <div class="detail-row">
+          <span class="detail-label">Service:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gewünschtes Datum:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gewünschte Zeit:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Dauer:</span>
+          <span class="detail-value">{{duration}} Minuten</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Bevorzugter Techniker:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      {{#if notes}}
+      <div class="info-box">
+        <p><strong>Kundennotizen:</strong></p>
+        <p>{{notes}}</p>
+      </div>
+      {{/if}}
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{reviewLink}}" class="action-button">Prüfen und antworten</a>
+      </div>
+
+      <p class="message" style="text-align: center; color: #64748b; font-size: 14px;">
+        Anfragereferenz: {{referenceNumber}}
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>{{tenantName}} - Terminverwaltungssystem</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Neue Terminanfrage
+
+Eine neue Terminanfrage wurde eingereicht und erfordert Ihre Prüfung.
+
+ANFRAGEDETAILS:
+Kunde: {{clientName}}
+Antragsteller: {{requesterName}}
+{{#if requesterEmail}}E-Mail: {{requesterEmail}}{{/if}}
+{{#if requesterPhone}}Telefon: {{requesterPhone}}{{/if}}
+Service: {{serviceName}}
+Gewünschtes Datum: {{requestedDate}}
+Gewünschte Zeit: {{requestedTime}}
+Dauer: {{duration}} Minuten
+{{#if preferredTechnician}}Bevorzugter Techniker: {{preferredTechnician}}{{/if}}
+
+{{#if notes}}
+KUNDENNOTIZEN:
+{{notes}}
+{{/if}}
+
+Anfragereferenz: {{referenceNumber}}
+
+Prüfen und antworten: {{reviewLink}}
+
+{{tenantName}} - Terminverwaltungssystem
+© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+    }
+  ];
+
+  await insertTemplates(germanAppointmentTemplates, 'German');
+  console.log('✓ German appointment email templates added');
+
+  // Dutch appointment templates
+  
+  console.log('Adding Dutch templates...');
+  const dutchAppointmentTemplates = [
+    {
+      name: 'appointment-request-received',
+      language_code: 'nl',
+      subject: 'Afspraakverzoek ontvangen - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-received'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afspraakverzoek ontvangen</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Verzoek ontvangen</h1>
+      <p>We hebben uw afspraakverzoek ontvangen</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Bedankt voor het indienen van uw afspraakverzoek. We hebben uw verzoek ontvangen en ons team zal het binnenkort beoordelen.
+      </p>
+
+      <div class="reference-number">
+        Referentie: {{referenceNumber}}
+      </div>
+
+      <div class="details-box">
+        <h3>Verzoekdetails</h3>
+        <div class="detail-row">
+          <span class="detail-label">Dienst:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gevraagde datum:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gevraagde tijd:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Duur:</span>
+          <span class="detail-value">{{duration}} minuten</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Voorkeurstechnicus:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      <div class="info-box">
+        <p><strong>Wat gebeurt er nu?</strong></p>
+        <p>Ons team zal uw verzoek beoordelen en de beschikbaarheid bevestigen. U ontvangt een e-mailmelding zodra uw afspraak is goedgekeurd of als er wijzigingen nodig zijn. We reageren doorgaans binnen {{responseTime}}.</p>
+      </div>
+
+      <p class="message">
+        Als u vragen heeft of wijzigingen in uw verzoek wilt aanbrengen, neem dan contact met ons op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Bedankt voor het kiezen van {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Afspraakverzoek ontvangen
+
+Hallo{{#if requesterName}} {{requesterName}}{{/if}},
+
+Bedankt voor het indienen van uw afspraakverzoek. We hebben uw verzoek ontvangen en ons team zal het binnenkort beoordelen.
+
+Referentienummer: {{referenceNumber}}
+
+VERZOEKDETAILS:
+Dienst: {{serviceName}}
+Gevraagde datum: {{requestedDate}}
+Gevraagde tijd: {{requestedTime}}
+Duur: {{duration}} minuten
+{{#if preferredTechnician}}Voorkeurstechnicus: {{preferredTechnician}}{{/if}}
+
+WAT GEBEURT ER NU?
+Ons team zal uw verzoek beoordelen en de beschikbaarheid bevestigen. U ontvangt een e-mailmelding zodra uw afspraak is goedgekeurd of als er wijzigingen nodig zijn. We reageren doorgaans binnen {{responseTime}}.
+
+Als u vragen heeft of wijzigingen in uw verzoek wilt aanbrengen, neem dan contact met ons op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
+
+Bedankt voor het kiezen van {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+    },
+    {
+      name: 'appointment-request-approved',
+      language_code: 'nl',
+      subject: 'Afspraak bevestigd - {{serviceName}} op {{appointmentDate}}',
+      notification_subtype_id: getSubtypeId('appointment-request-approved'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afspraak bevestigd</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="checkmark">✓</div>
+      <h1>Afspraak bevestigd</h1>
+      <p>Uw afspraak is goedgekeurd</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Geweldig nieuws! Uw afspraakverzoek is goedgekeurd en bevestigd. We kijken ernaar uit u te bedienen.
+      </p>
+
+      <div class="appointment-box">
+        <h3>Uw afspraak</h3>
+        <div class="appointment-detail">
+          <strong>Dienst</strong>
+          <span>{{serviceName}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Datum</strong>
+          <span>{{appointmentDate}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Tijd</strong>
+          <span>{{appointmentTime}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Duur</strong>
+          <span>{{duration}} minuten</span>
+        </div>
+      </div>
+
+      {{#if technicianName}}
+      <div class="technician-box">
+        <h4>Toegewezen technicus</h4>
+        <p class="technician-info">
+          <strong>{{technicianName}}</strong>{{#if technicianEmail}}<br>E-mail: {{technicianEmail}}{{/if}}{{#if technicianPhone}}<br>Telefoon: {{technicianPhone}}{{/if}}
+        </p>
+      </div>
+      {{/if}}
+
+      {{#if calendarLink}}
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{calendarLink}}" class="action-button">Toevoegen aan agenda</a>
+      </div>
+      {{/if}}
+
+      {{#if cancellationPolicy}}
+      <div class="policy-box">
+        <h4>Annuleringsbeleid</h4>
+        <p>{{cancellationPolicy}}</p>
+      </div>
+      {{/if}}
+
+      <p class="message">
+        Als u deze afspraak moet verzetten of annuleren, neem dan minimaal {{minimumNoticeHours}} uur van tevoren contact met ons op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
+      </p>
+
+      <p class="message">
+        We sturen u een herinnering voordat uw afspraak plaatsvindt. Tot snel!
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Bedankt voor het kiezen van {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Afspraak bevestigd
+
+Hallo{{#if requesterName}} {{requesterName}}{{/if}},
+
+Geweldig nieuws! Uw afspraakverzoek is goedgekeurd en bevestigd. We kijken ernaar uit u te bedienen.
+
+UW AFSPRAAK:
+Dienst: {{serviceName}}
+Datum: {{appointmentDate}}
+Tijd: {{appointmentTime}}
+Duur: {{duration}} minuten
+
+{{#if technicianName}}
+TOEGEWEZEN TECHNICUS:
+{{technicianName}}
+{{#if technicianEmail}}E-mail: {{technicianEmail}}{{/if}}
+{{#if technicianPhone}}Telefoon: {{technicianPhone}}{{/if}}
+{{/if}}
+
+{{#if calendarLink}}
+Toevoegen aan agenda: {{calendarLink}}
+{{/if}}
+
+{{#if cancellationPolicy}}
+ANNULERINGSBELEID:
+{{cancellationPolicy}}
+{{/if}}
+
+Als u deze afspraak moet verzetten of annuleren, neem dan minimaal {{minimumNoticeHours}} uur van tevoren contact met ons op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
+
+We sturen u een herinnering voordat uw afspraak plaatsvindt. Tot snel!
+
+Bedankt voor het kiezen van {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+    },
+    {
+      name: 'appointment-request-declined',
+      language_code: 'nl',
+      subject: 'Update afspraakverzoek - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-declined'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Update afspraakverzoek</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Verzoek update</h1>
+      <p>Met betrekking tot uw recente afspraakverzoek</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Bedankt voor uw interesse om een afspraak met ons te maken. Helaas kunnen we uw verzoek niet op de gevraagde tijd accommoderen.
+      </p>
+
+      <div class="details-box">
+        <h3>Oorspronkelijk verzoek</h3>
+        <div class="detail-row">
+          <span class="detail-label">Dienst:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gevraagde datum:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gevraagde tijd:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Referentie:</span>
+          <span class="detail-value">{{referenceNumber}}</span>
+        </div>
+      </div>
+
+      {{#if declineReason}}
+      <div class="reason-box">
+        <h4>Reden</h4>
+        <p>{{declineReason}}</p>
+      </div>
+      {{/if}}
+
+      <div class="action-box">
+        <h4>We helpen u graag verder</h4>
+        <p>Onze excuses voor het ongemak. We moedigen u aan om een nieuw verzoek in te dienen voor een alternatieve datum en tijd die beter past bij onze beschikbaarheid.</p>
+        {{#if requestNewAppointmentLink}}
+        <a href="{{requestNewAppointmentLink}}" class="action-button">Andere tijd aanvragen</a>
+        {{/if}}
+      </div>
+
+      <p class="message">
+        Als u vragen heeft of hulp nodig heeft bij het vinden van een beschikbaar tijdslot, aarzel dan niet om contact met ons op te nemen via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}. Ons team helpt u graag bij het vinden van een geschikte tijd.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Bedankt voor het kiezen van {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Update afspraakverzoek
+
+Hallo{{#if requesterName}} {{requesterName}}{{/if}},
+
+Bedankt voor uw interesse om een afspraak met ons te maken. Helaas kunnen we uw verzoek niet op de gevraagde tijd accommoderen.
+
+OORSPRONKELIJK VERZOEK:
+Dienst: {{serviceName}}
+Gevraagde datum: {{requestedDate}}
+Gevraagde tijd: {{requestedTime}}
+Referentie: {{referenceNumber}}
+
+{{#if declineReason}}
+REDEN:
+{{declineReason}}
+{{/if}}
+
+WE HELPEN U GRAAG VERDER
+Onze excuses voor het ongemak. We moedigen u aan om een nieuw verzoek in te dienen voor een alternatieve datum en tijd die beter past bij onze beschikbaarheid.
+
+{{#if requestNewAppointmentLink}}
+Andere tijd aanvragen: {{requestNewAppointmentLink}}
+{{/if}}
+
+Als u vragen heeft of hulp nodig heeft bij het vinden van een beschikbaar tijdslot, aarzel dan niet om contact met ons op te nemen via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}. Ons team helpt u graag bij het vinden van een geschikte tijd.
+
+Bedankt voor het kiezen van {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+    },
+    {
+      name: 'new-appointment-request',
+      language_code: 'nl',
+      subject: 'Nieuw afspraakverzoek - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('new-appointment-request'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nieuw afspraakverzoek</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Nieuw afspraakverzoek</h1>
+      <p>Actie vereist</p>
+      {{#if isUrgent}}
+      <span class="badge">URGENT</span>
+      {{/if}}
+    </div>
+
+    <div class="content">
+      <p class="greeting">Hallo,</p>
+
+      <p class="message">
+        Er is een nieuw afspraakverzoek ingediend dat uw beoordeling vereist.
+      </p>
+
+      <div class="details-box">
+        <h3>Verzoekdetails</h3>
+        <div class="detail-row">
+          <span class="detail-label">Klant:</span>
+          <span class="detail-value">{{clientName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Aanvrager:</span>
+          <span class="detail-value">{{requesterName}}</span>
+        </div>
+        {{#if requesterEmail}}
+        <div class="detail-row">
+          <span class="detail-label">E-mail:</span>
+          <span class="detail-value">{{requesterEmail}}</span>
+        </div>
+        {{/if}}
+        {{#if requesterPhone}}
+        <div class="detail-row">
+          <span class="detail-label">Telefoon:</span>
+          <span class="detail-value">{{requesterPhone}}</span>
+        </div>
+        {{/if}}
+        <div class="detail-row">
+          <span class="detail-label">Dienst:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gevraagde datum:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Gevraagde tijd:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Duur:</span>
+          <span class="detail-value">{{duration}} minuten</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Voorkeurstechnicus:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      {{#if notes}}
+      <div class="info-box">
+        <p><strong>Klantnotities:</strong></p>
+        <p>{{notes}}</p>
+      </div>
+      {{/if}}
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{reviewLink}}" class="action-button">Beoordelen en reageren</a>
+      </div>
+
+      <p class="message" style="text-align: center; color: #64748b; font-size: 14px;">
+        Verzoekreferentie: {{referenceNumber}}
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>{{tenantName}} - Afspraakbeheersysteem</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Nieuw afspraakverzoek
+
+Er is een nieuw afspraakverzoek ingediend dat uw beoordeling vereist.
+
+VERZOEKDETAILS:
+Klant: {{clientName}}
+Aanvrager: {{requesterName}}
+{{#if requesterEmail}}E-mail: {{requesterEmail}}{{/if}}
+{{#if requesterPhone}}Telefoon: {{requesterPhone}}{{/if}}
+Dienst: {{serviceName}}
+Gevraagde datum: {{requestedDate}}
+Gevraagde tijd: {{requestedTime}}
+Duur: {{duration}} minuten
+{{#if preferredTechnician}}Voorkeurstechnicus: {{preferredTechnician}}{{/if}}
+
+{{#if notes}}
+KLANTNOTITIES:
+{{notes}}
+{{/if}}
+
+Verzoekreferentie: {{referenceNumber}}
+
+Beoordelen en reageren: {{reviewLink}}
+
+{{tenantName}} - Afspraakbeheersysteem
+© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+    }
+  ];
+
+  await insertTemplates(dutchAppointmentTemplates, 'Dutch');
+  console.log('✓ Dutch appointment email templates added');
+
+  // Italian appointment templates
+  
+  console.log('Adding Italian templates...');
+  const italianAppointmentTemplates = [
+    {
+      name: 'appointment-request-received',
+      language_code: 'it',
+      subject: 'Richiesta di appuntamento ricevuta - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-received'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Richiesta di appuntamento ricevuta</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Richiesta ricevuta</h1>
+      <p>Abbiamo ricevuto la tua richiesta di appuntamento</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Grazie per aver inviato la tua richiesta di appuntamento. Abbiamo ricevuto la tua richiesta e il nostro team la esaminerà a breve.
+      </p>
+
+      <div class="reference-number">
+        Riferimento: {{referenceNumber}}
+      </div>
+
+      <div class="details-box">
+        <h3>Dettagli della richiesta</h3>
+        <div class="detail-row">
+          <span class="detail-label">Servizio:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Data richiesta:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Ora richiesta:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Durata:</span>
+          <span class="detail-value">{{duration}} minuti</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Tecnico preferito:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      <div class="info-box">
+        <p><strong>Cosa succede ora?</strong></p>
+        <p>Il nostro team esaminerà la tua richiesta e confermerà la disponibilità. Riceverai una notifica via email una volta che il tuo appuntamento sarà stato approvato o se sono necessarie modifiche. Di solito rispondiamo entro {{responseTime}}.</p>
+      </div>
+
+      <p class="message">
+        Se hai domande o desideri apportare modifiche alla tua richiesta, contattaci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Grazie per aver scelto {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Richiesta di appuntamento ricevuta
+
+Ciao{{#if requesterName}} {{requesterName}}{{/if}},
+
+Grazie per aver inviato la tua richiesta di appuntamento. Abbiamo ricevuto la tua richiesta e il nostro team la esaminerà a breve.
+
+Numero di riferimento: {{referenceNumber}}
+
+DETTAGLI DELLA RICHIESTA:
+Servizio: {{serviceName}}
+Data richiesta: {{requestedDate}}
+Ora richiesta: {{requestedTime}}
+Durata: {{duration}} minuti
+{{#if preferredTechnician}}Tecnico preferito: {{preferredTechnician}}{{/if}}
+
+COSA SUCCEDE ORA?
+Il nostro team esaminerà la tua richiesta e confermerà la disponibilità. Riceverai una notifica via email una volta che il tuo appuntamento sarà stato approvato o se sono necessarie modifiche. Di solito rispondiamo entro {{responseTime}}.
+
+Se hai domande o desideri apportare modifiche alla tua richiesta, contattaci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}.
+
+Grazie per aver scelto {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+    },
+    {
+      name: 'appointment-request-approved',
+      language_code: 'it',
+      subject: 'Appuntamento confermato - {{serviceName}} il {{appointmentDate}}',
+      notification_subtype_id: getSubtypeId('appointment-request-approved'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appuntamento confermato</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="checkmark">✓</div>
+      <h1>Appuntamento confermato</h1>
+      <p>Il tuo appuntamento è stato approvato</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Ottime notizie! La tua richiesta di appuntamento è stata approvata e confermata. Non vediamo l'ora di servirti.
+      </p>
+
+      <div class="appointment-box">
+        <h3>Il tuo appuntamento</h3>
+        <div class="appointment-detail">
+          <strong>Servizio</strong>
+          <span>{{serviceName}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Data</strong>
+          <span>{{appointmentDate}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Ora</strong>
+          <span>{{appointmentTime}}</span>
+        </div>
+        <div class="appointment-detail">
+          <strong>Durata</strong>
+          <span>{{duration}} minuti</span>
+        </div>
+      </div>
+
+      {{#if technicianName}}
+      <div class="technician-box">
+        <h4>Tecnico assegnato</h4>
+        <p class="technician-info">
+          <strong>{{technicianName}}</strong>{{#if technicianEmail}}<br>Email: {{technicianEmail}}{{/if}}{{#if technicianPhone}}<br>Telefono: {{technicianPhone}}{{/if}}
+        </p>
+      </div>
+      {{/if}}
+
+      {{#if calendarLink}}
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{calendarLink}}" class="action-button">Aggiungi al calendario</a>
+      </div>
+      {{/if}}
+
+      {{#if cancellationPolicy}}
+      <div class="policy-box">
+        <h4>Politica di cancellazione</h4>
+        <p>{{cancellationPolicy}}</p>
+      </div>
+      {{/if}}
+
+      <p class="message">
+        Se devi riprogrammare o annullare questo appuntamento, ti preghiamo di contattarci con almeno {{minimumNoticeHours}} ore di anticipo all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}.
+      </p>
+
+      <p class="message">
+        Ti invieremo un promemoria prima del tuo appuntamento. A presto!
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Grazie per aver scelto {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Appuntamento confermato
+
+Ciao{{#if requesterName}} {{requesterName}}{{/if}},
+
+Ottime notizie! La tua richiesta di appuntamento è stata approvata e confermata. Non vediamo l'ora di servirti.
+
+IL TUO APPUNTAMENTO:
+Servizio: {{serviceName}}
+Data: {{appointmentDate}}
+Ora: {{appointmentTime}}
+Durata: {{duration}} minuti
+
+{{#if technicianName}}
+TECNICO ASSEGNATO:
+{{technicianName}}
+{{#if technicianEmail}}Email: {{technicianEmail}}{{/if}}
+{{#if technicianPhone}}Telefono: {{technicianPhone}}{{/if}}
+{{/if}}
+
+{{#if calendarLink}}
+Aggiungi al calendario: {{calendarLink}}
+{{/if}}
+
+{{#if cancellationPolicy}}
+POLITICA DI CANCELLAZIONE:
+{{cancellationPolicy}}
+{{/if}}
+
+Se devi riprogrammare o annullare questo appuntamento, ti preghiamo di contattarci con almeno {{minimumNoticeHours}} ore di anticipo all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}.
+
+Ti invieremo un promemoria prima del tuo appuntamento. A presto!
+
+Grazie per aver scelto {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+    },
+    {
+      name: 'appointment-request-declined',
+      language_code: 'it',
+      subject: 'Aggiornamento richiesta di appuntamento - {{serviceName}}',
+      notification_subtype_id: getSubtypeId('appointment-request-declined'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aggiornamento richiesta di appuntamento</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Aggiornamento richiesta</h1>
+      <p>Riguardo alla tua recente richiesta di appuntamento</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p>
+
+      <p class="message">
+        Grazie per il tuo interesse nel fissare un appuntamento con noi. Sfortunatamente, non siamo in grado di accogliere la tua richiesta all'orario richiesto.
+      </p>
+
+      <div class="details-box">
+        <h3>Richiesta originale</h3>
+        <div class="detail-row">
+          <span class="detail-label">Servizio:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Data richiesta:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Ora richiesta:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Riferimento:</span>
+          <span class="detail-value">{{referenceNumber}}</span>
+        </div>
+      </div>
+
+      {{#if declineReason}}
+      <div class="reason-box">
+        <h4>Motivo</h4>
+        <p>{{declineReason}}</p>
+      </div>
+      {{/if}}
+
+      <div class="action-box">
+        <h4>Saremo felici di aiutarti</h4>
+        <p>Ci scusiamo per l'inconveniente. Ti invitiamo a inviare una nuova richiesta per una data e un'ora alternative che si adattino meglio alla nostra disponibilità.</p>
+        {{#if requestNewAppointmentLink}}
+        <a href="{{requestNewAppointmentLink}}" class="action-button">Richiedi altro orario</a>
+        {{/if}}
+      </div>
+
+      <p class="message">
+        Se hai domande o desideri assistenza per trovare una fascia oraria disponibile, non esitare a contattarci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}. Il nostro team è qui per aiutarti a trovare un orario che funzioni per te.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>Grazie per aver scelto {{tenantName}}</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Aggiornamento richiesta di appuntamento
+
+Ciao{{#if requesterName}} {{requesterName}}{{/if}},
+
+Grazie per il tuo interesse nel fissare un appuntamento con noi. Sfortunatamente, non siamo in grado di accogliere la tua richiesta all'orario richiesto.
+
+RICHIESTA ORIGINALE:
+Servizio: {{serviceName}}
+Data richiesta: {{requestedDate}}
+Ora richiesta: {{requestedTime}}
+Riferimento: {{referenceNumber}}
+
+{{#if declineReason}}
+MOTIVO:
+{{declineReason}}
+{{/if}}
+
+SAREMO FELICI DI AIUTARTI
+Ci scusiamo per l'inconveniente. Ti invitiamo a inviare una nuova richiesta per una data e un'ora alternative che si adattino meglio alla nostra disponibilità.
+
+{{#if requestNewAppointmentLink}}
+Richiedi altro orario: {{requestNewAppointmentLink}}
+{{/if}}
+
+Se hai domande o desideri assistenza per trovare una fascia oraria disponibile, non esitare a contattarci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}. Il nostro team è qui per aiutarti a trovare un orario che funzioni per te.
+
+Grazie per aver scelto {{tenantName}}
+
+© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+    },
+    {
+      name: 'new-appointment-request',
+      language_code: 'it',
+      subject: 'Nuova richiesta di appuntamento - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
+      notification_subtype_id: getSubtypeId('new-appointment-request'),
+      html_content: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuova richiesta di appuntamento</title>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      line-height: 1.6;
+      color: #0f172a;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8fafc;
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    }
+    .header {
+      background: linear-gradient(135deg, #8a4dea 0%, #7c3aed 100%);
+      color: white;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: Poppins, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      color: white;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .checkmark {
+      width: 64px;
+      height: 64px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 32px;
+    }
+    .content {
+      padding: 32px 24px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0 0 16px 0;
+    }
+    .message {
+      color: #475569;
+      margin: 0 0 24px 0;
+      font-size: 16px;
+    }
+    .details-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .details-box h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .detail-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #475569;
+      min-width: 120px;
+    }
+    .detail-value {
+      color: #1e293b;
+    }
+    .reference-number {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .info-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .info-box p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    .appointment-box {
+      background: linear-gradient(135deg, #f8f5ff 0%, #ede9fe 100%);
+      border: 2px solid #8A4DEA;
+      padding: 24px;
+      margin: 24px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .appointment-box h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #5b38b0;
+    }
+    .appointment-detail {
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    .appointment-detail strong {
+      color: #5b38b0;
+      display: block;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .appointment-detail span {
+      color: #1e293b;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .technician-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #8a4dea;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .technician-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .technician-info {
+      color: #475569;
+      font-size: 15px;
+    }
+    .action-button {
+      display: inline-block;
+      background: #8A4DEA;
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    .policy-box {
+      background-color: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .policy-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #92400e;
+    }
+    .policy-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+    .reason-box {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .reason-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #991b1b;
+    }
+    .reason-box p {
+      margin: 0;
+      color: #7f1d1d;
+      font-size: 14px;
+    }
+    .action-box {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 6px;
+    }
+    .action-box h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .action-box p {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .urgent-badge {
+      background-color: #fef2f2;
+      color: #991b1b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      margin: 16px 0;
+    }
+    .footer {
+      padding: 24px;
+      text-align: center;
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer p {
+      margin: 8px 0;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .footer .copyright {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Nuova richiesta di appuntamento</h1>
+      <p>Azione richiesta</p>
+      {{#if isUrgent}}
+      <span class="badge">URGENTE</span>
+      {{/if}}
+    </div>
+
+    <div class="content">
+      <p class="greeting">Ciao,</p>
+
+      <p class="message">
+        È stata inviata una nuova richiesta di appuntamento che richiede la tua revisione.
+      </p>
+
+      <div class="details-box">
+        <h3>Dettagli della richiesta</h3>
+        <div class="detail-row">
+          <span class="detail-label">Cliente:</span>
+          <span class="detail-value">{{clientName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Richiedente:</span>
+          <span class="detail-value">{{requesterName}}</span>
+        </div>
+        {{#if requesterEmail}}
+        <div class="detail-row">
+          <span class="detail-label">Email:</span>
+          <span class="detail-value">{{requesterEmail}}</span>
+        </div>
+        {{/if}}
+        {{#if requesterPhone}}
+        <div class="detail-row">
+          <span class="detail-label">Telefono:</span>
+          <span class="detail-value">{{requesterPhone}}</span>
+        </div>
+        {{/if}}
+        <div class="detail-row">
+          <span class="detail-label">Servizio:</span>
+          <span class="detail-value">{{serviceName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Data richiesta:</span>
+          <span class="detail-value">{{requestedDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Ora richiesta:</span>
+          <span class="detail-value">{{requestedTime}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Durata:</span>
+          <span class="detail-value">{{duration}} minuti</span>
+        </div>
+        {{#if preferredTechnician}}
+        <div class="detail-row">
+          <span class="detail-label">Tecnico preferito:</span>
+          <span class="detail-value">{{preferredTechnician}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      {{#if notes}}
+      <div class="info-box">
+        <p><strong>Note del cliente:</strong></p>
+        <p>{{notes}}</p>
+      </div>
+      {{/if}}
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="{{reviewLink}}" class="action-button">Rivedi e rispondi</a>
+      </div>
+
+      <p class="message" style="text-align: center; color: #64748b; font-size: 14px;">
+        Riferimento richiesta: {{referenceNumber}}
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>{{tenantName}} - Sistema di gestione appuntamenti</p>
+      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+      text_content: `Nuova richiesta di appuntamento
+
+È stata inviata una nuova richiesta di appuntamento che richiede la tua revisione.
+
+DETTAGLI DELLA RICHIESTA:
+Cliente: {{clientName}}
+Richiedente: {{requesterName}}
+{{#if requesterEmail}}Email: {{requesterEmail}}{{/if}}
+{{#if requesterPhone}}Telefono: {{requesterPhone}}{{/if}}
+Servizio: {{serviceName}}
+Data richiesta: {{requestedDate}}
+Ora richiesta: {{requestedTime}}
+Durata: {{duration}} minuti
+{{#if preferredTechnician}}Tecnico preferito: {{preferredTechnician}}{{/if}}
+
+{{#if notes}}
+NOTE DEL CLIENTE:
+{{notes}}
+{{/if}}
+
+Riferimento richiesta: {{referenceNumber}}
+
+Rivedi e rispondi: {{reviewLink}}
+
+{{tenantName}} - Sistema di gestione appuntamenti
+© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+    }
+  ];
+
+  await insertTemplates(italianAppointmentTemplates, 'Italian');
+  console.log('✓ Italian appointment email templates added');
+
+  console.log('✓ All styled multi-language email templates added including appointments (French, Spanish, German, Dutch, Italian)');
 };

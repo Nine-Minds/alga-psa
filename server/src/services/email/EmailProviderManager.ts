@@ -10,8 +10,8 @@ import {
   EmailSendResult,
   TenantEmailSettings,
   EmailProviderError,
-  EmailProviderConfig
-} from '../../types/email.types';
+  EmailProviderConfig,
+} from '@shared/types/email';
 
 export class EmailProviderManager implements IEmailProviderManager {
   private providers: Map<string, IEmailProvider> = new Map();
@@ -200,7 +200,7 @@ export class EmailProviderManager implements IEmailProviderManager {
         return new SMTPEmailProvider(config.providerId);
       
       case 'resend':
-        const { ResendEmailProvider } = await import('./providers/ResendEmailProvider');
+        const { ResendEmailProvider } = await import('@product/email-domains/providers/ResendEmailProvider');
         return new ResendEmailProvider(config.providerId);
       
       default:

@@ -13,6 +13,7 @@ export interface SystemEmailTemplate {
   subject: string;
   html_content: string;
   text_content: string;
+  language_code: string;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +25,7 @@ export interface TenantEmailTemplate {
   subject: string;
   html_content: string;
   text_content: string;
+  language_code: string;
   system_template_id: number | null;
   created_at: string;
   updated_at: string;

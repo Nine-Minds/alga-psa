@@ -39,8 +39,9 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
-      # Secret provider configuration (EE edition - supports vault)
-      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
+      # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow configuration
       WORKFLOW_DISTRIBUTED_MODE: "true"
@@ -106,8 +107,9 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
-      # Secret provider configuration for setup (EE edition)
-      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      # Secret provider configuration for setup (EE edition - for local dev, vault is disabled by default)
+      # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
     volumes:
       - type: bind
@@ -170,8 +172,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
-      # Secret provider configuration for workflow-worker (EE edition)
-      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      # Secret provider configuration for workflow-worker (EE edition - for local dev, vault is disabled by default)
+      # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow-specific configuration
       WORKFLOW_DISTRIBUTED_MODE: "true"

@@ -1,6 +1,6 @@
 'use server'
 
-import { getSystemEmailService } from './index';
+import { getSystemEmailService, TenantEmailService } from './index';
 import { DatabaseTemplateProcessor } from '../services/email/templateProcessors';
 import { getConnection } from '../db/db';
 import { runWithTenant } from '../db/index';
@@ -65,12 +65,7 @@ export async function sendPasswordResetEmail({
       logger.info('[sendPasswordResetEmail] Creating template processor for password-reset template');
       const templateProcessor = new DatabaseTemplateProcessor(knex, 'password-reset');
 
-      // Use SystemEmailService for better deliverability
-      logger.info('[sendPasswordResetEmail] Getting system email service...');
-      const systemEmailService = await getSystemEmailService();
-
-      logger.info('[sendPasswordResetEmail] Sending email via SystemEmailService');
-      const result = await systemEmailService.sendEmail({
+      const emailParams = {
         to: email,
         templateProcessor,
         templateData,
@@ -78,7 +73,21 @@ export async function sendPasswordResetEmail({
         tenantId: tenant,
         userId: recipientInfo.userId,
         replyTo: supportEmail // Support email as reply-to
-      });
+      };
+
+      const tenantEmailService = TenantEmailService.getInstance(tenant);
+
+      logger.info('[sendPasswordResetEmail] Attempting to send via TenantEmailService');
+      let result = await tenantEmailService.sendEmail(emailParams);
+
+      if (!result.success) {
+        logger.warn('[sendPasswordResetEmail] Tenant email send failed, falling back to SystemEmailService', {
+          tenant,
+          error: result.error || 'unknown_error'
+        });
+        const systemEmailService = await getSystemEmailService();
+        result = await systemEmailService.sendEmail(emailParams);
+      }
       
       logger.info('[sendPasswordResetEmail] Email send result:', result);
 

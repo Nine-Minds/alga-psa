@@ -17,6 +17,8 @@ import { hasPermission } from 'server/src/lib/auth/rbac';
 import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
 import { publishEvent } from '../../../lib/eventBus/publishers';
+import { getEventBus } from '../../../lib/eventBus';
+import { getEmailEventChannel } from '../../../lib/notifications/emailChannel';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';

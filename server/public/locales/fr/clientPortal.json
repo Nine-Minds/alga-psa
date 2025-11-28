@@ -3,6 +3,7 @@
     "dashboard": "Tableau de bord",
     "tickets": "Tickets d'assistance",
     "projects": "Projets",
+    "appointments": "Rendez-vous",
     "billing": "Facturation",
     "assets": "Actifs",
     "clientSettings": "Paramètres de l'entreprise",
@@ -1010,5 +1011,140 @@
     "seconds": "Secondes",
     "ago": "il y a {{time}}",
     "in": "dans {{time}}"
+  },
+  "appointments": {
+    "modal": {
+      "title": "Demander un rendez-vous",
+      "editTitle": "Modifier la demande de rendez-vous",
+      "step": "Étape",
+      "of": "sur"
+    },
+    "steps": {
+      "service": "Service",
+      "date": "Date",
+      "time": "Heure",
+      "confirm": "Confirmer"
+    },
+    "step1": {
+      "title": "Sélectionner le service",
+      "description": "Choisissez le service pour lequel vous avez besoin d'assistance",
+      "selectService": "Sélectionnez un service",
+      "serviceLabel": "Service",
+      "ticketLabel": "Lier à un ticket existant (Optionnel)",
+      "selectTicket": "Sélectionnez un ticket",
+      "noTicket": "Aucun ticket",
+      "ticketHint": "Liez éventuellement ce rendez-vous à un ticket de support existant"
+    },
+    "step2": {
+      "title": "Choisir la date",
+      "description": "Sélectionnez votre date de rendez-vous préférée",
+      "selectDate": "Sélectionnez une date disponible",
+      "selectedDate": "Date sélectionnée"
+    },
+    "step3": {
+      "title": "Sélectionner l'heure et le technicien",
+      "description": "Choisissez votre créneau horaire préféré et sélectionnez éventuellement un technicien",
+      "selectTime": "Créneaux horaires disponibles",
+      "minutes": "min",
+      "technicianLabel": "Technicien préféré",
+      "selectTechnician": "Sélectionnez un technicien",
+      "noPreference": "Aucune préférence",
+      "technicianHint": "Ceci est une préférence et peut être ajusté en fonction de la disponibilité"
+    },
+    "step4": {
+      "title": "Réviser et confirmer",
+      "description": "Ajoutez des détails supplémentaires et révisez votre demande de rendez-vous",
+      "descriptionPlaceholder": "Veuillez fournir des détails supplémentaires sur votre demande...",
+      "summaryTitle": "Résumé du rendez-vous",
+      "service": "Service",
+      "dateTime": "Date et heure",
+      "at": "à",
+      "duration": "Durée",
+      "technician": "Technicien préféré",
+      "linkedTicket": "Ticket lié",
+      "approvalNote": "Votre demande de rendez-vous sera soumise pour approbation. Vous recevrez un e-mail de confirmation une fois approuvée.",
+      "submit": "Demander un rendez-vous",
+      "update": "Mettre à jour le rendez-vous"
+    },
+    "status": {
+      "pending": "En attente d'approbation",
+      "approved": "Confirmé",
+      "declined": "Refusé",
+      "cancelled": "Annulé"
+    },
+    "errors": {
+      "loadServicesFailed": "Échec du chargement des services disponibles. Veuillez réessayer.",
+      "loadDatesFailed": "Échec du chargement des dates disponibles. Veuillez réessayer.",
+      "loadSlotsFailed": "Échec du chargement des créneaux horaires disponibles. Veuillez réessayer.",
+      "createFailed": "Échec de la création de la demande de rendez-vous. Veuillez réessayer.",
+      "updateFailed": "Échec de la mise à jour de la demande de rendez-vous. Veuillez réessayer.",
+      "loadFailed": "Échec du chargement des rendez-vous. Veuillez réessayer."
+    },
+    "messages": {
+      "requestSuccess": "Demande de rendez-vous soumise avec succès !",
+      "requestSuccessDetail": "Nous examinerons votre demande et vous enverrons un e-mail de confirmation une fois approuvée.",
+      "updateSuccess": "Demande de rendez-vous mise à jour avec succès !",
+      "updateSuccessDetail": "Votre demande de rendez-vous a été mise à jour.",
+      "cancelSuccess": "Rendez-vous annulé avec succès.",
+      "cancelFailed": "Échec de l'annulation du rendez-vous. Veuillez réessayer."
+    },
+    "page": {
+      "title": "Mes rendez-vous",
+      "subtitle": "Voir et gérer vos demandes de rendez-vous",
+      "requestButton": "Demander un nouveau rendez-vous",
+      "noAppointments": "Aucun rendez-vous trouvé",
+      "noAppointmentsDescription": "Vous n'avez pas encore demandé de rendez-vous. Demandez-en un maintenant pour commencer !"
+    },
+    "filters": {
+      "all": "Tous",
+      "pending": "En attente",
+      "approved": "Approuvés",
+      "declined": "Refusés"
+    },
+    "table": {
+      "service": "Service",
+      "dateTime": "Date et heure",
+      "status": "Statut",
+      "technician": "Technicien",
+      "actions": "Actions",
+      "minutes": "min",
+      "notAssigned": "Non assigné",
+      "viewDetails": "Voir les détails",
+      "edit": "Modifier",
+      "cancel": "Annuler"
+    },
+    "details": {
+      "title": "Détails du rendez-vous",
+      "statusApproved": "Ce rendez-vous a été confirmé",
+      "statusPending": "Ce rendez-vous est en attente d'approbation",
+      "statusDeclined": "Cette demande de rendez-vous a été refusée",
+      "statusCancelled": "Ce rendez-vous a été annulé",
+      "reason": "Raison",
+      "reference": "Référence",
+      "service": "Service",
+      "dateTime": "Date et heure",
+      "technician": "Technicien assigné",
+      "linkedTicket": "Ticket lié",
+      "description": "Description",
+      "created": "Demandé",
+      "approved": "Approuvé",
+      "cancelButton": "Annuler le rendez-vous"
+    },
+    "cancel": {
+      "title": "Annuler le rendez-vous",
+      "message": "Êtes-vous sûr de vouloir annuler cette demande de rendez-vous ? Cette action ne peut pas être annulée.",
+      "confirm": "Oui, annuler"
+    },
+    "ticketSection": {
+      "title": "Demandes de rendez-vous",
+      "service": "Service",
+      "publicRequest": "Demande publique",
+      "minutes": "minutes",
+      "preferred": "Préféré :",
+      "approvedBy": "Approuvé par",
+      "on": "le",
+      "declined": "Refusé :",
+      "invalidDateTime": "Date/heure invalide"
+    }
   }
 }

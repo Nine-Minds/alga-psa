@@ -21,6 +21,11 @@ export async function getTenantSettings(): Promise<TenantSettings | null> {
   try {
     const tenant = await getTenantForCurrentRequest();
     if (!tenant) {
+      // In E2E test mode without proper session, gracefully return null
+      // instead of throwing to allow pages to load
+      if (process.env.E2E_AUTH_BYPASS === 'true') {
+        return null;
+      }
       throw new Error('No tenant found');
     }
 

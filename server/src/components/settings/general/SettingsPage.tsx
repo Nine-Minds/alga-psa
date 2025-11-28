@@ -44,6 +44,8 @@ import { CalendarIntegrationsSettings } from 'server/src/components/calendar/Cal
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import SurveySettings from 'server/src/components/surveys/SurveySettings';
+import ProjectSettings from './ProjectSettings';
 
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
@@ -80,6 +82,7 @@ const SettingsPage = (): JSX.Element =>  {
     users: 'Users',
     teams: 'Teams',
     ticketing: 'Ticketing',
+    projects: 'Projects',
     'interaction-types': 'Interaction Types',
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
@@ -184,6 +187,10 @@ const SettingsPage = (): JSX.Element =>  {
           <TicketingSettings />
         </Suspense>
       ),
+    },
+    {
+      label: "Projects",
+      content: <ProjectSettings />,
     },
     {
       label: "Interaction Types",

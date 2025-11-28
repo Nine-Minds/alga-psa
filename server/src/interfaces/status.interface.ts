@@ -15,6 +15,8 @@ export interface IStatus extends TenantEntity {
   is_custom?: boolean;
   created_at?: Date;
   updated_at?: Date;
+  color?: string | null; // Hex color code (e.g., '#3B82F6')
+  icon?: string | null; // Lucide icon name (e.g., 'Clipboard', 'PlayCircle')
 }
 
 export interface IStandardStatus extends TenantEntity {

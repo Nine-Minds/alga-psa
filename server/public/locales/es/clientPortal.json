@@ -3,6 +3,7 @@
     "dashboard": "Panel",
     "tickets": "Tickets de soporte",
     "projects": "Proyectos",
+    "appointments": "Citas",
     "billing": "Facturación",
     "assets": "Activos",
     "clientSettings": "Configuración de la empresa",
@@ -1010,5 +1011,140 @@
     "seconds": "Segundos",
     "ago": "hace {{time}}",
     "in": "en {{time}}"
+  },
+  "appointments": {
+    "modal": {
+      "title": "Solicitar cita",
+      "editTitle": "Editar solicitud de cita",
+      "step": "Paso",
+      "of": "de"
+    },
+    "steps": {
+      "service": "Servicio",
+      "date": "Fecha",
+      "time": "Hora",
+      "confirm": "Confirmar"
+    },
+    "step1": {
+      "title": "Seleccionar servicio",
+      "description": "Elija el servicio con el que necesita asistencia",
+      "selectService": "Seleccione un servicio",
+      "serviceLabel": "Servicio",
+      "ticketLabel": "Vincular a ticket existente (Opcional)",
+      "selectTicket": "Seleccione un ticket",
+      "noTicket": "Sin ticket",
+      "ticketHint": "Opcionalmente vincule esta cita a un ticket de soporte existente"
+    },
+    "step2": {
+      "title": "Elegir fecha",
+      "description": "Seleccione su fecha de cita preferida",
+      "selectDate": "Seleccione una fecha disponible",
+      "selectedDate": "Fecha seleccionada"
+    },
+    "step3": {
+      "title": "Seleccionar hora y técnico",
+      "description": "Elija su franja horaria preferida y opcionalmente seleccione un técnico",
+      "selectTime": "Franjas horarias disponibles",
+      "minutes": "min",
+      "technicianLabel": "Técnico preferido",
+      "selectTechnician": "Seleccione un técnico",
+      "noPreference": "Sin preferencia",
+      "technicianHint": "Esta es una preferencia y puede ajustarse según la disponibilidad"
+    },
+    "step4": {
+      "title": "Revisar y confirmar",
+      "description": "Agregue detalles adicionales y revise su solicitud de cita",
+      "descriptionPlaceholder": "Por favor proporcione detalles adicionales sobre su solicitud...",
+      "summaryTitle": "Resumen de la cita",
+      "service": "Servicio",
+      "dateTime": "Fecha y hora",
+      "at": "a las",
+      "duration": "Duración",
+      "technician": "Técnico preferido",
+      "linkedTicket": "Ticket vinculado",
+      "approvalNote": "Su solicitud de cita será enviada para aprobación. Recibirá un correo de confirmación una vez aprobada.",
+      "submit": "Solicitar cita",
+      "update": "Actualizar cita"
+    },
+    "status": {
+      "pending": "Pendiente de aprobación",
+      "approved": "Confirmada",
+      "declined": "Rechazada",
+      "cancelled": "Cancelada"
+    },
+    "errors": {
+      "loadServicesFailed": "Error al cargar los servicios disponibles. Por favor, inténtelo de nuevo.",
+      "loadDatesFailed": "Error al cargar las fechas disponibles. Por favor, inténtelo de nuevo.",
+      "loadSlotsFailed": "Error al cargar las franjas horarias disponibles. Por favor, inténtelo de nuevo.",
+      "createFailed": "Error al crear la solicitud de cita. Por favor, inténtelo de nuevo.",
+      "updateFailed": "Error al actualizar la solicitud de cita. Por favor, inténtelo de nuevo.",
+      "loadFailed": "Error al cargar las citas. Por favor, inténtelo de nuevo."
+    },
+    "messages": {
+      "requestSuccess": "¡Solicitud de cita enviada con éxito!",
+      "requestSuccessDetail": "Revisaremos su solicitud y le enviaremos un correo de confirmación una vez aprobada.",
+      "updateSuccess": "¡Solicitud de cita actualizada con éxito!",
+      "updateSuccessDetail": "Su solicitud de cita ha sido actualizada.",
+      "cancelSuccess": "Cita cancelada con éxito.",
+      "cancelFailed": "Error al cancelar la cita. Por favor, inténtelo de nuevo."
+    },
+    "page": {
+      "title": "Mis citas",
+      "subtitle": "Ver y gestionar sus solicitudes de citas",
+      "requestButton": "Solicitar nueva cita",
+      "noAppointments": "No se encontraron citas",
+      "noAppointmentsDescription": "Aún no ha solicitado ninguna cita. ¡Solicite una ahora para comenzar!"
+    },
+    "filters": {
+      "all": "Todas",
+      "pending": "Pendientes",
+      "approved": "Aprobadas",
+      "declined": "Rechazadas"
+    },
+    "table": {
+      "service": "Servicio",
+      "dateTime": "Fecha y hora",
+      "status": "Estado",
+      "technician": "Técnico",
+      "actions": "Acciones",
+      "minutes": "min",
+      "notAssigned": "No asignado",
+      "viewDetails": "Ver detalles",
+      "edit": "Editar",
+      "cancel": "Cancelar"
+    },
+    "details": {
+      "title": "Detalles de la cita",
+      "statusApproved": "Esta cita ha sido confirmada",
+      "statusPending": "Esta cita está pendiente de aprobación",
+      "statusDeclined": "Esta solicitud de cita fue rechazada",
+      "statusCancelled": "Esta cita fue cancelada",
+      "reason": "Motivo",
+      "reference": "Referencia",
+      "service": "Servicio",
+      "dateTime": "Fecha y hora",
+      "technician": "Técnico asignado",
+      "linkedTicket": "Ticket vinculado",
+      "description": "Descripción",
+      "created": "Solicitada",
+      "approved": "Aprobada",
+      "cancelButton": "Cancelar cita"
+    },
+    "cancel": {
+      "title": "Cancelar cita",
+      "message": "¿Está seguro de que desea cancelar esta solicitud de cita? Esta acción no se puede deshacer.",
+      "confirm": "Sí, cancelar"
+    },
+    "ticketSection": {
+      "title": "Solicitudes de cita",
+      "service": "Servicio",
+      "publicRequest": "Solicitud pública",
+      "minutes": "minutos",
+      "preferred": "Preferido:",
+      "approvedBy": "Aprobado por",
+      "on": "el",
+      "declined": "Rechazado:",
+      "invalidDateTime": "Fecha/hora no válida"
+    }
   }
 }

@@ -169,7 +169,7 @@ export function ContractBasicsStep({
               {selectedTemplate.contract_name}
             </p>
             <p>
-              <span className="font-semibold text-purple-700">Recommended cadence:</span>{' '}
+              <span className="font-semibold text-purple-700">Billing cadence:</span>{' '}
               {selectedTemplate.billing_frequency
                 ? selectedTemplate.billing_frequency.replace(/_/g, ' ')
                 : 'Not specified'}

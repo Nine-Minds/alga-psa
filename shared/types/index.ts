@@ -9,3 +9,4 @@ export * from './attributes';
 export * from './general';
 export * from './tax';
 export * from './temporal';
+export * from './email';
