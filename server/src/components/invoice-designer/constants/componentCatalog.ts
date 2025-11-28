@@ -20,13 +20,6 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     defaultSize: { width: 520, height: 200 },
   },
   {
-    type: 'column',
-    label: 'Column',
-    description: 'Sub-layout for arranging child elements.',
-    category: 'Structure',
-    defaultSize: { width: 240, height: 200 },
-  },
-  {
     type: 'container',
     label: 'Box Container',
     description: 'Styled container for grouping content (borders, backgrounds).',

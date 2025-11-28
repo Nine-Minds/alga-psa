@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { COMPONENT_CATALOG, ComponentDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS } from '../constants/presets';
+import { OutlineView } from './OutlineView';
+import clsx from 'clsx';
 
 interface PaletteProps {
   onSearch?: (query: string) => void;
@@ -68,28 +70,56 @@ const PresetCard: React.FC<{ presetId: string; label: string; description: strin
 };
 
 export const ComponentPalette: React.FC<PaletteProps> = () => {
+  const [activeTab, setActiveTab] = useState<'components' | 'outline'>('components');
+
   return (
     <div className="flex flex-col h-full border-r border-slate-200 bg-slate-50">
-      <div className="px-4 py-3 border-b border-slate-200">
-        <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Component Library</h3>
-        <p className="text-xs text-slate-500">Drag components onto the canvas.</p>
+      <div className="px-4 pt-3 pb-0 border-b border-slate-200 bg-white">
+        <div className="flex space-x-4">
+          <button
+            className={clsx(
+              "pb-2 text-sm font-medium border-b-2 transition-colors",
+              activeTab === 'components' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            )}
+            onClick={() => setActiveTab('components')}
+          >
+            COMPONENTS
+          </button>
+          <button
+            className={clsx(
+              "pb-2 text-sm font-medium border-b-2 transition-colors",
+              activeTab === 'outline' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+            )}
+            onClick={() => setActiveTab('outline')}
+          >
+            OUTLINE
+          </button>
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-        <section>
-          <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">Layout Presets</h4>
-          {LAYOUT_PRESETS.map((preset) => (
-            <PresetCard key={preset.id} presetId={preset.id} label={preset.label} description={preset.description} />
-          ))}
-        </section>
-        <hr className="border-slate-200" />
-        {Object.entries(paletteGroups).map(([category, components]) => (
-          <section key={category}>
-            <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">{category}</h4>
-            {components.map((component) => (
-              <ComponentCard key={component.type} component={component} />
+      
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'components' ? (
+          <div className="px-4 py-3 space-y-4">
+             <p className="text-xs text-slate-500 mb-2">Drag components onto the canvas.</p>
+            <section>
+              <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">Layout Presets</h4>
+              {LAYOUT_PRESETS.map((preset) => (
+                <PresetCard key={preset.id} presetId={preset.id} label={preset.label} description={preset.description} />
+              ))}
+            </section>
+            <hr className="border-slate-200" />
+            {Object.entries(paletteGroups).map(([category, components]) => (
+              <section key={category}>
+                <h4 className="text-xs font-bold text-slate-600 uppercase mb-2">{category}</h4>
+                {components.map((component) => (
+                  <ComponentCard key={component.type} component={component} />
+                ))}
+              </section>
             ))}
-          </section>
-        ))}
+          </div>
+        ) : (
+          <OutlineView />
+        )}
       </div>
     </div>
   );

@@ -146,6 +146,14 @@ export const DesignerShell: React.FC = () => {
   const [guides, setGuides] = useState<AlignmentGuide[]>([]);
   const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  
+  // Fail-safe: Clear guides when no drag is active
+  React.useEffect(() => {
+    if (!activeDrag && guides.length > 0) {
+      setGuides([]);
+    }
+  }, [activeDrag, guides.length]);
+
   const dragSessionRef = useRef<{
     nodeId: string;
     origin: Point;
@@ -301,6 +309,19 @@ export const DesignerShell: React.FC = () => {
                       <option value="center">Center</option>
                       <option value="end">End</option>
                       <option value="stretch">Stretch</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Justify Content</label>
+                    <select
+                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
+                      value={layout.justify}
+                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { justify: e.target.value as any })}
+                    >
+                      <option value="start">Start</option>
+                      <option value="center">Center</option>
+                      <option value="end">End</option>
+                      <option value="space-between">Space Between</option>
                     </select>
                   </div>
                 </div>

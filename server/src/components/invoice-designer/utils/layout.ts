@@ -88,8 +88,8 @@ export const getParentBounds = (node: DesignerNode, nodes: DesignerNode[]): Pare
   const parentNode = nodes.find((candidate) => candidate.id === node.parentId);
   if (parentNode) {
     return {
-      x: parentNode.position.x,
-      y: parentNode.position.y,
+      x: 0, // Relative to parent
+      y: 0, // Relative to parent
       width: parentNode.size.width,
       height: parentNode.size.height,
     };

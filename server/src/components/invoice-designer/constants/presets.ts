@@ -57,7 +57,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-left',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 260, height: 160 },
@@ -74,7 +74,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-right',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 320, height: 160 },
@@ -134,7 +134,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 520, height: 320 },
@@ -193,7 +193,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-note',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 260, height: 180 },
@@ -210,7 +210,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-totals',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 280, height: 180 },
@@ -268,7 +268,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-left',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 260, height: 180 },
@@ -285,7 +285,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-right',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 260, height: 180 },
@@ -343,7 +343,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-logo',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 220, height: 180 },
@@ -360,7 +360,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-address',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 220, height: 180 },
@@ -377,7 +377,7 @@ export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
       },
       {
         key: 'column-qr',
-        type: 'column',
+        type: 'container',
         parentKey: 'section',
         offset: { x: 0, y: 0 },
         size: { width: 140, height: 180 },

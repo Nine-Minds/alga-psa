@@ -36,10 +36,9 @@ const mergeRefs = <T,>(...refs: Array<React.Ref<T>>) => (value: T) => {
 interface CanvasNodeProps {
   node: DesignerNode;
   isSelected: boolean;
-  parentOrigin: Point;
   onSelect: (id: string) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
-  renderChildren: (parentId: string, parentOrigin: Point) => React.ReactNode;
+  renderChildren: (parentId: string) => React.ReactNode;
   childExtents?: { maxRight: number; maxBottom: number };
 }
 
@@ -122,7 +121,6 @@ const getPreviewContent = (node: DesignerNode): React.ReactNode => {
 const CanvasNode: React.FC<CanvasNodeProps> = ({
   node,
   isSelected,
-  parentOrigin,
   onSelect,
   onResize,
   renderChildren,
@@ -156,8 +154,8 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       ? Math.max(node.size.height, childExtents.maxBottom - node.position.y)
       : node.size.height;
   const localPosition = {
-    x: node.position.x - parentOrigin.x,
-    y: node.position.y - parentOrigin.y,
+    x: node.position.x,
+    y: node.position.y,
   };
   const nodeStyle: React.CSSProperties = {
     width: inferredWidth,
@@ -221,6 +219,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       )}
       {...listeners}
       onPointerDown={handlePointerDown}
+      onClick={(e) => e.stopPropagation()}
       {...attributes}
     >
       {isContainer ? (
@@ -229,7 +228,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
             {node.name} · {node.type}
           </div>
           <div className="relative w-full h-full pt-4">
-            {renderChildren(node.id, node.position)}
+            {renderChildren(node.id)}
           </div>
         </div>
       ) : (
@@ -328,15 +327,14 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     return map;
   }, [nodes]);
 
-  const renderNodeTree = useCallback((parentId: string, parentOrigin: Point) => {
+  const renderNodeTree = useCallback((parentId: string) => {
     const children = childrenMap.get(parentId) ?? [];
     return children
       .filter((node) => node.type !== 'document' && node.type !== 'page')
       .map((node) => (
         <CanvasNode
-          key={node.id}
+          key={`${node.id}-${(node as any)._version || 0}`}
           node={node}
-          parentOrigin={parentOrigin}
           isSelected={selectedNodeId === node.id}
           onSelect={onNodeSelect}
           onResize={onResize}
@@ -347,7 +345,6 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   }, [childExtentsMap, childrenMap, onNodeSelect, onResize, selectedNodeId]);
 
   const rootParentId = (defaultPageNode ?? documentNode)?.id;
-  const rootOrigin = defaultPageNode?.position ?? documentNode?.position ?? { x: 0, y: 0 };
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
   const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
 
@@ -406,7 +403,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             className="absolute inset-0"
             style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}
           >
-            {rootParentId && renderNodeTree(rootParentId, rootOrigin)}
+            {rootParentId && renderNodeTree(rootParentId)}
             {showGuides && guides.map((guide) => (
               <div
                 key={`${guide.type}-${guide.position}`}

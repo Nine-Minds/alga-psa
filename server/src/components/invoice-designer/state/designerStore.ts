@@ -49,6 +49,7 @@ export interface DesignerNode {
   name: string;
   position: Point;
   size: Size;
+  baseSize?: Size;
   canRotate?: boolean;
   rotation?: number;
   allowResize?: boolean;
@@ -153,6 +154,7 @@ const createDocumentNode = (): DesignerNode => ({
   name: 'Document',
   position: { x: 0, y: 0 },
   size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
   canRotate: false,
   allowResize: false,
   rotation: 0,
@@ -178,6 +180,7 @@ const createPageNode = (parentId: string, index = 1): DesignerNode => ({
   name: `Page ${index}`,
   position: { x: 0, y: 0 },
   size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
+  baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
   canRotate: false,
   allowResize: false,
   rotation: 0,
@@ -237,6 +240,7 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
     ...node,
     position: { ...node.position },
     size: { ...node.size },
+    baseSize: node.baseSize ? { ...node.baseSize } : undefined,
     childIds: [...node.childIds],
     allowedChildren: [...node.allowedChildren],
     layout: node.layout ? { ...node.layout } : undefined,
@@ -256,6 +260,25 @@ const resolveWithConstraints = (nodes: DesignerNode[], constraints: DesignerCons
         error instanceof Error ? error.message : 'Constraint conflict detected. Try relaxing or removing constraints.',
     };
   }
+};
+
+export const getAbsolutePosition = (nodeId: string, nodes: DesignerNode[]): Point => {
+  const node = nodes.find((n) => n.id === nodeId);
+  if (!node) return { x: 0, y: 0 };
+  
+  let current = node;
+  let x = current.position.x;
+  let y = current.position.y;
+  
+  while (current.parentId) {
+    const parent = nodes.find((n) => n.id === current.parentId);
+    if (!parent) break;
+    x += parent.position.x;
+    y += parent.position.y;
+    current = parent;
+  }
+  
+  return { x, y };
 };
 
 // --- Auto-Layout Engine ---
@@ -281,52 +304,142 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
         align = 'stretch',
       } = node.layout;
 
-      let currentX = padding;
-      let currentY = padding;
-      let maxCrossSize = 0; // Track max width (col) or height (row) for container sizing
-
       // We need to operate on fresh copies of children from the map
       const children = node.childIds.map((id) => nodeMap.get(id)).filter((n): n is DesignerNode => !!n);
+
+      // 1. Measure Pass: Calculate total content size on main axis
+      let totalContentMainSize = 0;
+      let fillChildrenCount = 0;
+      
+      children.forEach((child, index) => {
+         const childLayout = child.layout ?? { sizing: 'fixed' };
+         if (childLayout.sizing === 'fill') {
+             fillChildrenCount++;
+             // Fill children contribute 0 to fixed content size initially
+         } else {
+             const childSize = child.baseSize ?? child.size;
+             const mainSize = direction === 'column' ? childSize.height : childSize.width;
+             totalContentMainSize += mainSize;
+         }
+         if (index < children.length - 1) totalContentMainSize += gap;
+      });
+
+      // 2. Calculate Justify Offsets & Fill Sizes
+      let startOffset = 0;
+      let effectiveGap = gap;
+      const { justify = 'start' } = node.layout;
+      
+      const availableMainSpace = (direction === 'column' ? node.size.height : node.size.width) - padding * 2;
+      const freeSpace = Math.max(0, availableMainSpace - totalContentMainSize);
+      
+      // Calculate size per fill child
+      const fillChildMainSize = fillChildrenCount > 0 ? freeSpace / fillChildrenCount : 0;
+
+      // Justify only applies if there are NO fill children (fill takes up all space)
+      if (fillChildrenCount === 0) {
+          if (justify === 'center') {
+            startOffset = freeSpace / 2;
+          } else if (justify === 'end') {
+            startOffset = freeSpace;
+          } else if (justify === 'space-between' && children.length > 1) {
+            effectiveGap = gap + freeSpace / (children.length - 1);
+          }
+      }
+
+      let currentX = padding + (direction === 'row' ? startOffset : 0);
+      let currentY = padding + (direction === 'column' ? startOffset : 0);
+      let maxCrossSize = 0;
 
       children.forEach((child) => {
         // Apply Sizing Logic
         const childLayout = child.layout ?? { sizing: 'fixed' }; // Default if missing
-        let newWidth = child.size.width;
-        let newHeight = child.size.height;
+        // Use baseSize as the starting point for calculations (if available), falling back to current size
+        let newWidth = child.baseSize?.width ?? child.size.width;
+        let newHeight = child.baseSize?.height ?? child.size.height;
 
         if (direction === 'column') {
           // Cross axis: Width
           if (childLayout.sizing === 'fill' || align === 'stretch') {
             newWidth = Math.max(0, node.size.width - padding * 2);
           }
-          // Main axis: Height (Fixed for now, unless we implement true 'hug' content measuring)
+          // Main axis: Height
+          if (childLayout.sizing === 'fill') {
+              newHeight = fillChildMainSize;
+          }
         } else {
           // Row
           // Cross axis: Height
           if (childLayout.sizing === 'fill' || align === 'stretch') {
             newHeight = Math.max(0, node.size.height - padding * 2);
           }
+          // Main axis: Width
+          if (childLayout.sizing === 'fill') {
+              newWidth = fillChildMainSize;
+          }
         }
         
         // Update child size in map
         child.size = { width: newWidth, height: newHeight };
 
+        // Calculate Cross-Axis Alignment Offset
+        let crossAxisOffset = 0;
+        if (direction === 'column') {
+          // Cross Axis: X (Width)
+          const availableWidth = node.size.width - padding * 2;
+          if (align === 'center') {
+            crossAxisOffset = (availableWidth - newWidth) / 2;
+          } else if (align === 'end') {
+            crossAxisOffset = availableWidth - newWidth;
+          }
+        } else {
+          // Cross Axis: Y (Height)
+          const availableHeight = node.size.height - padding * 2;
+          if (align === 'center') {
+            crossAxisOffset = (availableHeight - newHeight) / 2;
+          } else if (align === 'end') {
+            crossAxisOffset = availableHeight - newHeight;
+          }
+        }
+
+        // 1. Set Initial Position (Relative)
+        // We must set this BEFORE recursion so children have a valid parent origin (even if relative)
+        const relativeX = direction === 'column' ? padding + crossAxisOffset : currentX;
+        const relativeY = direction === 'column' ? currentY : padding + crossAxisOffset;
+
+        child.position = {
+          x: relativeX,
+          y: relativeY,
+        };
+
         // Recursively layout this child first (if it's also a container)
         // This allows nested stack calculations to propagate
         layoutNode(child.id);
 
-        // Update position relative to parent
-        child.position = {
-          x: node.position.x + currentX,
-          y: node.position.y + currentY,
-        };
+        // 2. Re-evaluate Alignment (if child size changed during recursion, e.g. 'hug')
+        // If the child resized, we might need to re-center it on the cross axis
+        if (child.size.width !== newWidth || child.size.height !== newHeight) {
+           let updatedCrossOffset = crossAxisOffset;
+           if (direction === 'column') {
+             const availableWidth = node.size.width - padding * 2;
+             if (align === 'center') updatedCrossOffset = (availableWidth - child.size.width) / 2;
+             else if (align === 'end') updatedCrossOffset = availableWidth - child.size.width;
+             
+             child.position.x = padding + updatedCrossOffset;
+           } else {
+             const availableHeight = node.size.height - padding * 2;
+             if (align === 'center') updatedCrossOffset = (availableHeight - child.size.height) / 2;
+             else if (align === 'end') updatedCrossOffset = availableHeight - child.size.height;
+
+             child.position.y = padding + updatedCrossOffset;
+           }
+        }
         
         // Advance cursor
         if (direction === 'column') {
-          currentY += child.size.height + gap;
+          currentY += child.size.height + effectiveGap;
           maxCrossSize = Math.max(maxCrossSize, child.size.width);
         } else {
-          currentX += child.size.width + gap;
+          currentX += child.size.width + effectiveGap;
           maxCrossSize = Math.max(maxCrossSize, child.size.height);
         }
       });
@@ -346,8 +459,27 @@ const computeLayout = (nodes: DesignerNode[]): DesignerNode[] => {
         // Let's add a simple Bottom-Up size adjustment here.
       }
     } else {
-      // Canvas Mode: Children layout is manual, but we might still need to recurse
-      node.childIds.forEach((childId) => layoutNode(childId));
+      // Canvas Mode: Children layout is manual, but we must enforce containment constraints
+      // and recurse.
+      node.childIds.forEach((childId) => {
+          const child = nodeMap.get(childId);
+          if (child) {
+              // Enforce Constraints: Keep child within parent bounds
+              // Unless user explicitly wants overflow (not supported yet)
+              const maxX = Math.max(0, node.size.width - child.size.width);
+              const maxY = Math.max(0, node.size.height - child.size.height);
+              
+              // Positions are relative, so we just clamp
+              const newX = Math.max(0, Math.min(child.position.x, maxX));
+              const newY = Math.max(0, Math.min(child.position.y, maxY));
+              
+              if (newX !== child.position.x || newY !== child.position.y) {
+                  child.position = { x: newX, y: newY };
+              }
+              
+              layoutNode(childId);
+          }
+      });
     }
   };
 
@@ -402,12 +534,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     addNodeFromPalette: (type, dropPoint, options = {}) => {
       const { snapToGrid: shouldSnap, gridSize } = get();
-      const position = shouldSnap
-        ? {
-            x: snapToGridValue(dropPoint.x, gridSize),
-            y: snapToGridValue(dropPoint.y, gridSize),
-          }
-        : dropPoint;
 
       const resolvedParentId =
         options.parentId ??
@@ -433,12 +559,28 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         return;
       }
 
+      // Convert global dropPoint to local relative position
+      const parentAbsPos = getAbsolutePosition(resolvedParentId, get().nodes);
+      const relativeDropPoint = {
+        x: dropPoint.x - parentAbsPos.x,
+        y: dropPoint.y - parentAbsPos.y
+      };
+
+      const position = shouldSnap
+        ? {
+            x: snapToGridValue(relativeDropPoint.x, gridSize),
+            y: snapToGridValue(relativeDropPoint.y, gridSize),
+          }
+        : relativeDropPoint;
+
+      const size = options.defaults?.size ?? DEFAULT_SIZE;
       const node: DesignerNode = {
         id: generateId(),
         type,
         name: `${type} ${get().nodes.length + 1}`,
         position,
-        size: options.defaults?.size ?? DEFAULT_SIZE,
+        size,
+        baseSize: size, // Initialize baseSize
         rotation: 0,
         canRotate: true,
         allowResize: true,
@@ -449,12 +591,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         allowedChildren: getAllowedChildrenForType(type),
         layout: {
             mode: 'flex', // Default to flex for new nodes if applicable
-            direction: 'column',
+            direction: type === 'section' ? 'row' : 'column',
             gap: 0,
             padding: 0,
             justify: 'start',
             align: 'stretch',
-            sizing: 'fixed',
+            sizing: type === 'section' ? 'fill' : 'fixed',
         }
       };
 
@@ -508,6 +650,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           return state;
         }
 
+        const dropParentAbs = getAbsolutePosition(resolvedParentId, state.nodes);
+        const localDropOrigin = {
+            x: origin.x - dropParentAbs.x,
+            y: origin.y - dropParentAbs.y
+        };
+
         for (let index = 0; index < preset.nodes.length; index += 1) {
           const nodeDef = preset.nodes[index];
           if (!nodeDef.parentKey && nodeDef.type === dropParentNode.type) {
@@ -532,15 +680,30 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
           const catalogSize = getDefinition(nodeDef.type)?.defaultSize ?? DEFAULT_SIZE;
           const size = nodeDef.size ?? catalogSize;
+          
+          // Calculate Position (Relative)
+          let position: Point;
+          if (parentKey === resolvedParentId) {
+             // Direct child of drop target: Use Local Drop Origin + Offset
+             position = {
+                 x: localDropOrigin.x + nodeDef.offset.x,
+                 y: localDropOrigin.y + nodeDef.offset.y
+             };
+          } else {
+             // Nested child: Use Offset directly (relative to its new parent)
+             position = {
+                 x: nodeDef.offset.x,
+                 y: nodeDef.offset.y
+             };
+          }
+
           const node: DesignerNode = {
             id: newId,
             type: nodeDef.type,
             name: nodeDef.name ?? `${nodeDef.type} ${state.nodes.length + index + 1}`,
-            position: {
-              x: origin.x + nodeDef.offset.x,
-              y: origin.y + nodeDef.offset.y,
-            },
+            position,
             size,
+            baseSize: size, // Initialize baseSize
             rotation: 0,
             canRotate: true,
             allowResize: true,
@@ -562,12 +725,12 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
                 }
               : {
                   mode: 'flex',
-                  direction: 'column',
+                  direction: nodeDef.type === 'section' ? 'row' : 'column',
                   gap: 0,
                   padding: 0,
                   justify: 'start',
                   align: 'stretch',
-                  sizing: 'fixed',
+                  sizing: nodeDef.type === 'section' ? 'fill' : 'fixed',
                 },
           };
 
@@ -629,12 +792,10 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         // If in Auto-Layout, moving might mean REORDERING, not changing X/Y.
         // For this iteration, we will stick to position updates, but the computeLayout
         // will OVERWRITE them if the parent is flex.
-        // To support reordering, we would need to detect if delta crosses a sibling threshold.
         
         const rootNode = state.nodes.find((node) => node.id === id);
         if (!rootNode) return state;
-        const descendantIds = collectDescendants(state.nodes, id);
-        descendantIds.delete(id);
+
         const rawNext = {
           x: rootNode.position.x + delta.x,
           y: rootNode.position.y + delta.y,
@@ -645,34 +806,28 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
               y: snapToGridValue(rawNext.y, gridSize),
             }
           : rawNext;
+        
+        // Clamp works with relative bounds now (x:0, y:0) from utility update
         const boundedNext = clampPositionToParent(rootNode, state.nodes, snappedNext);
+        
         const appliedDelta = {
           x: boundedNext.x - rootNode.position.x,
           y: boundedNext.y - rootNode.position.y,
         };
+
         if (appliedDelta.x === 0 && appliedDelta.y === 0) {
           return state;
         }
+
+        // Only update the moved node. Children are relative, so they move with it.
         const nodes = state.nodes.map((node) => {
           if (node.id === id) {
             return { ...node, position: boundedNext };
-          }
-          if (descendantIds.has(node.id)) {
-            return {
-              ...node,
-              position: {
-                x: node.position.x + appliedDelta.x,
-                y: node.position.y + appliedDelta.y,
-              },
-            };
           }
           return node;
         });
 
         if (!commit) {
-            // During drag, we might want to disable auto-layout temporarily?
-            // Or we run it to show the "snap back"?
-            // For now, let's NOT run auto-layout during drag move, only on commit.
           return { nodes };
         }
 
@@ -699,30 +854,19 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             }
           : position;
         const boundedNext = clampPositionToParent(rootNode, state.nodes, nextPosition);
-        const appliedDelta = {
-          x: boundedNext.x - rootNode.position.x,
-          y: boundedNext.y - rootNode.position.y,
-        };
-        if (appliedDelta.x === 0 && appliedDelta.y === 0) {
+        
+        if (boundedNext.x === rootNode.position.x && boundedNext.y === rootNode.position.y) {
           return state;
         }
-        const descendantIds = collectDescendants(state.nodes, id);
-        descendantIds.delete(id);
+        
+        // Only update target node.
         const nodes = state.nodes.map((node) => {
           if (node.id === id) {
             return { ...node, position: boundedNext };
           }
-          if (descendantIds.has(node.id)) {
-            return {
-              ...node,
-              position: {
-                x: node.position.x + appliedDelta.x,
-                y: node.position.y + appliedDelta.y,
-              },
-            };
-          }
           return node;
         });
+        
         if (!commit) {
           return { nodes };
         }
@@ -738,7 +882,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     updateNodeSize: (id, size, commit = true) => {
       set((state) => {
-        const nodes = state.nodes.map((node) => (node.id === id ? { ...node, size } : node));
+        // Update both size and baseSize (persisting user preference)
+        const nodes = state.nodes.map((node) => (node.id === id ? { ...node, size, baseSize: size } : node));
         if (!commit) {
           return { nodes };
         }
@@ -943,7 +1088,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
     setLayoutMode: (nodeId, mode, options = {}) => {
       set((state) => {
-        const nodes = state.nodes.map((node) => {
+        let nodes = state.nodes.map((node) => {
           if (node.id !== nodeId) return node;
           const updated = {
             ...node,
@@ -961,6 +1106,32 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           };
           return updated;
         });
+
+        // If direction changed, reset children's size on the new main axis
+        const targetNode = nodes.find((n) => n.id === nodeId);
+        if (targetNode && targetNode.layout) {
+          const oldNode = state.nodes.find((n) => n.id === nodeId);
+          const oldDirection = oldNode?.layout?.direction;
+          const newDirection = targetNode.layout.direction;
+
+          if (oldDirection && newDirection && oldDirection !== newDirection) {
+             nodes = nodes.map(node => {
+                 if (targetNode.childIds.includes(node.id)) {
+                     const def = getDefinition(node.type);
+                     if (def) {
+                         if (newDirection === 'row') {
+                             // Reset width to default
+                             return { ...node, size: { ...node.size, width: def.defaultSize.width } };
+                         } else {
+                             // Reset height to default
+                             return { ...node, size: { ...node.size, height: def.defaultSize.height } };
+                         }
+                     }
+                 }
+                 return node;
+             });
+          }
+        }
         
         const { nodes: resolvedNodes, constraintError } = resolveLayout(nodes, state.constraints);
         const { history, historyIndex } = appendHistory(state, resolvedNodes);

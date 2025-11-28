@@ -15,7 +15,28 @@ const HIERARCHY_RULES: Record<DesignerComponentType, HierarchyConfig> = {
     allowedParents: ['document'],
   },
   section: {
-    allowedChildren: ['column'],
+    allowedChildren: [
+      'column', // Legacy
+      'container',
+      'text',
+      'totals',
+      'table',
+      'dynamic-table',
+      'image',
+      'logo',
+      'qr',
+      'field',
+      'label',
+      'subtotal',
+      'tax',
+      'discount',
+      'custom-total',
+      'signature',
+      'action-button',
+      'attachment-list',
+      'divider',
+      'spacer',
+    ],
     allowedParents: ['page'],
   },
   column: {
@@ -44,75 +65,75 @@ const HIERARCHY_RULES: Record<DesignerComponentType, HierarchyConfig> = {
   },
   text: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   totals: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   table: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   'dynamic-table': {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   field: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   label: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   subtotal: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   tax: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   discount: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   'custom-total': {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   image: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   logo: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   qr: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   signature: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   'action-button': {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   'attachment-list': {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   divider: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   spacer: {
     allowedChildren: [],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
   container: {
     allowedChildren: [
@@ -136,7 +157,7 @@ const HIERARCHY_RULES: Record<DesignerComponentType, HierarchyConfig> = {
       'spacer',
       'container',
     ],
-    allowedParents: ['column', 'container'],
+    allowedParents: ['column', 'container', 'section'],
   },
 };
 
