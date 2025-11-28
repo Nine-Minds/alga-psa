@@ -387,7 +387,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           ref={mergeRefs(setDroppableNodeRef, artboardRef)}
           className={clsx(
             'relative mx-auto rounded-lg border border-slate-300 shadow-inner bg-white',
-            isOver && 'ring-2 ring-blue-400'
+            isOver && 'ring-2 ring-blue-400',
+            selectedNodeId === rootParentId && 'ring-2 ring-blue-400'
           )}
           data-designer-canvas="true"
           style={{ 
@@ -398,6 +399,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           }}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (rootParentId) {
+              onNodeSelect(rootParentId);
+            }
+          }}
         >
           <div
             className="absolute inset-0"
