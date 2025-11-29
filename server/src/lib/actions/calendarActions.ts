@@ -147,7 +147,8 @@ export async function initiateCalendarOAuth(params: {
 }
 
 /**
- * Get calendar providers for current tenant
+ * Get calendar providers for current user
+ * Each user has their own calendar sync configuration
  */
 export async function getCalendarProviders(): Promise<{
   success: boolean;
@@ -162,7 +163,8 @@ export async function getCalendarProviders(): Promise<{
 
     const providerService = new CalendarProviderService();
     const providers = await providerService.getProviders({
-      tenant: user.tenant
+      tenant: user.tenant,
+      userId: user.user_id
     });
 
     return { success: true, providers };
@@ -199,8 +201,10 @@ export async function createCalendarProvider(params: {
     const providerService = new CalendarProviderService();
 
     // Reuse existing provider when unique constraint would be violated
+    // Each user can only have one provider per type
     const existingProviders = await providerService.getProviders({
       tenant: user.tenant,
+      userId: user.user_id,
       providerType: params.providerType,
       calendarId: params.calendarId
     });
@@ -228,6 +232,7 @@ export async function createCalendarProvider(params: {
 
     const provider = await providerService.createProvider({
       tenant: user.tenant,
+      userId: user.user_id,
       providerType: params.providerType,
       providerName: params.providerName,
       calendarId: params.calendarId,
@@ -239,13 +244,16 @@ export async function createCalendarProvider(params: {
     return { success: true, provider };
   } catch (error: any) {
     // Handle race where provider created concurrently
-    if (typeof error?.message === 'string' && error.message.includes('calendar_providers_tenant_calendar_id_provider_type_unique')) {
+    // Check for both old and new unique constraint names
+    if (typeof error?.message === 'string' &&
+        (error.message.includes('calendar_providers_tenant_calendar_id_provider_type_unique') ||
+         error.message.includes('calendar_providers_tenant_user_provider_unique'))) {
       try {
         const providerService = new CalendarProviderService();
         const existingProviders = await providerService.getProviders({
           tenant: user.tenant,
-          providerType: params.providerType,
-          calendarId: params.calendarId
+          userId: user.user_id,
+          providerType: params.providerType
         });
         const existing = existingProviders[0];
         if (existing) {

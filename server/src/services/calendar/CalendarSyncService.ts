@@ -266,12 +266,33 @@ export class CalendarSyncService {
 
           // Convert external event to schedule entry format
           const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
-          
-          // Merge with existing entry
+
+          // Merge with existing entry, but preserve assigned_user_ids from Alga
+          // External calendars often don't include the correct attendees, so we keep
+          // the original assignment unless the external event explicitly has attendees
+          // that map to valid Alga users
+          const shouldPreserveAssignees =
+            existingEntry.assigned_user_ids.length > 0 &&
+            (entryData.assigned_user_ids?.length === 0 ||
+             !externalEvent.attendees ||
+             externalEvent.attendees.length === 0);
+
+          console.log('[CalendarSyncService] Merging external event with existing entry', {
+            entryId: existingEntry.entry_id,
+            existingAssignees: existingEntry.assigned_user_ids,
+            externalAttendees: externalEvent.attendees?.map(a => a.email) || [],
+            mappedAssignees: entryData.assigned_user_ids,
+            shouldPreserveAssignees
+          });
+
           const mergedEntry = {
             ...existingEntry,
             ...entryData,
-            entry_id: existingEntry.entry_id // Preserve entry ID
+            entry_id: existingEntry.entry_id, // Preserve entry ID
+            // Preserve existing assignees if external event doesn't have valid attendees
+            assigned_user_ids: shouldPreserveAssignees
+              ? existingEntry.assigned_user_ids
+              : ((entryData.assigned_user_ids?.length ?? 0) > 0 ? entryData.assigned_user_ids! : existingEntry.assigned_user_ids)
           };
 
           // Update schedule entry
@@ -321,9 +342,89 @@ export class CalendarSyncService {
           await this.markProviderConnected(provider.id);
           return syncResult;
         } else {
+          // Check if this event was originally created by Alga (has alga-entry-id)
+          // This handles the race condition where webhook arrives before mapping is saved
+          const algaEntryId = externalEvent.extendedProperties?.private?.['alga-entry-id'];
+
+          if (algaEntryId) {
+            // Check if the entry already exists
+            const existingEntry = await ScheduleEntry.get(trx, algaEntryId);
+            if (existingEntry) {
+              // Entry exists but mapping doesn't - create mapping and skip creating duplicate
+              const [mapping] = await trx('calendar_event_mappings')
+                .insert({
+                  id: uuidv4(),
+                  tenant,
+                  calendar_provider_id: calendarProviderId,
+                  schedule_entry_id: algaEntryId,
+                  external_event_id: externalEventId,
+                  sync_status: 'synced',
+                  last_synced_at: new Date().toISOString(),
+                  sync_direction: 'to_external', // Original direction was to_external
+                  alga_last_modified: existingEntry.updated_at instanceof Date
+                    ? existingEntry.updated_at.toISOString()
+                    : new Date(existingEntry.updated_at).toISOString(),
+                  external_last_modified: externalEvent.updated,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                })
+                .returning('*');
+
+              console.log(`[CalendarSyncService] Created missing mapping for existing entry ${algaEntryId} (race condition recovery)`);
+
+              const syncResult = {
+                success: true,
+                mapping: this.mapDbRowToMapping(mapping),
+                externalEventId: externalEvent.id
+              };
+
+              await this.markProviderConnected(provider.id);
+              return syncResult;
+            }
+            // Entry doesn't exist (may have been deleted) - fall through to create new entry
+            // but don't use the orphaned algaEntryId
+          }
+
+          // Check if this external event should be imported into Alga
+          // By default, we don't import external events - Alga is the source of truth for work schedule
+          // Users can opt-in by adding "@alga" to the event title or description
+          const hasAlgaMarker =
+            externalEvent.title?.toLowerCase().includes('@alga') ||
+            externalEvent.description?.toLowerCase().includes('@alga');
+
+          if (!algaEntryId && !hasAlgaMarker) {
+            // This is a purely external event without the @alga marker - skip import
+            console.log('[CalendarSyncService] Skipping external event import (no @alga marker)', {
+              eventId: externalEventId,
+              title: externalEvent.title
+            });
+            return {
+              success: true,
+              skipped: true,
+              reason: 'External event without @alga marker - not importing'
+            };
+          }
+
           // Create new schedule entry
           const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
-          
+
+          // Strip entry_id if it was from an orphaned alga-entry-id to avoid conflicts
+          if (algaEntryId && entryData.entry_id === algaEntryId) {
+            delete entryData.entry_id;
+          }
+
+          // For user-specific calendar sync, assign the entry to the provider's user
+          // This ensures entries from a user's calendar are assigned to that user
+          const assignedUserIds = provider.user_id
+            ? [provider.user_id]
+            : (entryData.assigned_user_ids || []);
+
+          console.log('[CalendarSyncService] Creating entry from external event', {
+            providerUserId: provider.user_id,
+            mappedAssignees: entryData.assigned_user_ids,
+            finalAssignees: assignedUserIds
+          });
+
           // Create schedule entry
           const createdEntry = await ScheduleEntry.create(
             trx,
@@ -332,7 +433,7 @@ export class CalendarSyncService {
               tenant
             } as any,
             {
-              assignedUserIds: entryData.assigned_user_ids || []
+              assignedUserIds
             }
           );
 
@@ -347,8 +448,8 @@ export class CalendarSyncService {
               sync_status: 'synced',
               last_synced_at: new Date().toISOString(),
               sync_direction: 'from_external',
-              alga_last_modified: createdEntry.updated_at instanceof Date 
-                ? createdEntry.updated_at.toISOString() 
+              alga_last_modified: createdEntry.updated_at instanceof Date
+                ? createdEntry.updated_at.toISOString()
                 : new Date(createdEntry.updated_at).toISOString(),
               external_last_modified: externalEvent.updated,
               created_at: new Date().toISOString(),

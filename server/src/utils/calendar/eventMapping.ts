@@ -116,6 +116,10 @@ export async function mapExternalEventToScheduleEntry(
   if (!userEmails && event.attendees && event.attendees.length > 0) {
     const emails = event.attendees.map(a => a.email);
     userEmails = await fetchUserIdsByEmail(emails, tenant);
+    console.log('[eventMapping] Fetched user IDs by email:', {
+      emails,
+      mappedResults: Array.from(userEmails?.entries() || [])
+    });
   }
 
   // Parse dates
@@ -135,9 +139,21 @@ export async function mapExternalEventToScheduleEntry(
   const assignedUserIds = event.attendees
     ?.map(attendee => {
       const normalizedEmail = attendee.email?.toLowerCase?.() ?? attendee.email;
-      return normalizedEmail ? userEmails?.get(normalizedEmail) : undefined;
+      const userId = normalizedEmail ? userEmails?.get(normalizedEmail) : undefined;
+      console.log('[eventMapping] Mapping attendee:', {
+        email: attendee.email,
+        normalizedEmail,
+        mappedUserId: userId
+      });
+      return userId;
     })
     .filter((id): id is string => id !== undefined) || [];
+
+  console.log('[eventMapping] Final assigned user IDs from attendees:', {
+    attendeeCount: event.attendees?.length || 0,
+    mappedCount: assignedUserIds.length,
+    assignedUserIds
+  });
 
   // If no assignees detected, fallback to organizer
   if (assignedUserIds.length === 0 && event.organizer?.email) {

@@ -11,6 +11,7 @@ import { getSecret } from '../../lib/utils/getSecret';
 
 export interface CreateCalendarProviderData {
   tenant: string;
+  userId: string; // The user who owns this calendar sync
   providerType: 'google' | 'microsoft';
   providerName: string;
   calendarId: string;
@@ -29,6 +30,7 @@ export interface UpdateCalendarProviderData {
 
 export interface GetCalendarProvidersFilter {
   tenant: string;
+  userId?: string; // Filter to providers owned by this user
   providerType?: 'google' | 'microsoft';
   isActive?: boolean;
   calendarId?: string;
@@ -137,6 +139,10 @@ export class CalendarProviderService {
         .where('tenant', filters.tenant)
         .orderBy('created_at', 'desc');
 
+      if (filters.userId) {
+        query = query.where('user_id', filters.userId);
+      }
+
       if (filters.providerType) {
         query = query.where('provider_type', filters.providerType);
       }
@@ -220,6 +226,7 @@ export class CalendarProviderService {
         .insert({
           id: db.raw('gen_random_uuid()'),
           tenant: data.tenant,
+          user_id: data.userId,
           provider_type: data.providerType,
           provider_name: data.providerName,
           calendar_id: data.calendarId,
@@ -478,6 +485,7 @@ export class CalendarProviderService {
     return {
       id: row.id,
       tenant: row.tenant,
+      user_id: row.user_id,
       name: row.provider_name,
       provider_type: row.provider_type,
       calendar_id: row.calendar_id,

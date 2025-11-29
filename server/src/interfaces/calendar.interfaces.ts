@@ -5,6 +5,7 @@ import { IScheduleEntry } from './schedule.interfaces';
 export interface CalendarProviderConfig {
   id: string;
   tenant: string;
+  user_id: string; // The user who owns this calendar sync
   name: string;
   provider_type: 'google' | 'microsoft';
   calendar_id: string; // External calendar ID
