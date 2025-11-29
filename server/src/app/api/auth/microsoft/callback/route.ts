@@ -80,7 +80,12 @@ export async function GET(request: NextRequest) {
 
     // Handle OAuth errors
     if (error) {
-      console.error('Microsoft OAuth error:', error, errorDescription);
+      console.error('[MS OAuth] OAuth error from Microsoft:', {
+        error,
+        errorDescription: errorDescription || '',
+        code: searchParams.get('code'),
+        state: searchParams.get('state')
+      });
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -104,9 +109,14 @@ export async function GET(request: NextRequest) {
     // Parse state to get tenant and other info
     let stateData;
     try {
-      stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-    } catch (e) {
-      console.error('Failed to parse state:', e);
+      const decodedState = Buffer.from(state, 'base64').toString();
+      stateData = JSON.parse(decodedState);
+    } catch (e: any) {
+      console.error('[MS OAuth] Failed to parse state:', {
+        error: e.message,
+        stateLength: state?.length,
+        statePreview: state ? `${state.substring(0, 20)}...` : 'null'
+      });
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -120,7 +130,6 @@ export async function GET(request: NextRequest) {
     const secretProvider = await getSecretProviderInstance();
     let clientId: string | null = null;
     let clientSecret: string | null = null;
-    let tenantAuthority: string | null = null;
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
     const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
     
@@ -129,7 +138,6 @@ export async function GET(request: NextRequest) {
       // Use app-level configuration
       clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
       clientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET') || null;
-      tenantAuthority = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || null;
       credentialSource = 'app_secret';
     } else {
       // Use tenant-specific or fallback credentials
@@ -139,13 +147,8 @@ export async function GET(request: NextRequest) {
       const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
       const appClientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID');
       const appClientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET');
-      const appTenantId = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID');
       clientId = envClientId || tenantClientId || appClientId || null;
       clientSecret = envClientSecret || tenantClientSecret || appClientSecret || null;
-      tenantAuthority = process.env.MICROSOFT_TENANT_ID
-        || (await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id'))
-        || appTenantId
-        || null;
       credentialSource = envClientId && envClientSecret ? 'env'
         : tenantClientId && tenantClientSecret ? 'tenant_secret'
         : appClientId && appClientSecret ? 'app_secret'
@@ -156,25 +159,28 @@ export async function GET(request: NextRequest) {
     clientSecret = clientSecret?.trim() || null;
     
     // Resolve redirect URI with priority:
-    // 1) Hosted: app-level MICROSOFT_REDIRECT_URI
-    // 2) Self-hosted: process.env or tenant secret microsoft_redirect_uri
-    // 3) State-provided redirectUri (from initiation)
-    // 4) Fallback to NEXT_PUBLIC_BASE_URL + route
+    // CRITICAL: The redirect URI MUST match exactly what was used in the authorization URL
+    // Priority: State-provided redirectUri (what was actually used) > configured values > fallback
     const hostedRedirect = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI');
     const tenantRedirect = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_redirect_uri');
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
-    const redirectUri = (isHostedFlow
-      ? hostedRedirect
-      : (process.env.MICROSOFT_REDIRECT_URI || tenantRedirect)
-    ) || stateData.redirectUri || `${baseUrl}/api/auth/microsoft/callback`;
+    
+    // Use state-provided redirectUri first (this is what was used in authorization URL)
+    // Only fall back to configured values if state doesn't have it
+    const redirectUri = stateData.redirectUri || (
+      isHostedFlow
+        ? hostedRedirect
+        : (process.env.MICROSOFT_REDIRECT_URI || tenantRedirect)
+    ) || `${baseUrl}/api/auth/microsoft/callback`;
 
     // Log non-sensitive debug information to help diagnose invalid_client
     const maskedClientId = clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null';
     console.log('[MS OAuth] Using credentials', {
       source: credentialSource,
       clientId: maskedClientId,
-      tenantAuthority: tenantAuthority || 'common',
-      redirectUri
+      redirectUri,
+      stateRedirectUri: stateData.redirectUri,
+      redirectUriSource: stateData.redirectUri ? 'state' : (isHostedFlow ? 'hosted_config' : 'env_or_tenant')
     });
 
     if (!clientId || !clientSecret) {
@@ -190,7 +196,6 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     try {
-      const authority = tenantAuthority || 'common';
       const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
       const params = new URLSearchParams({
         client_id: clientId,
@@ -344,14 +349,28 @@ export async function GET(request: NextRequest) {
         }
       });
     } catch (tokenError: any) {
-      console.error('Failed to exchange authorization code:', tokenError.response?.data || tokenError.message);
+      const errorData = tokenError.response?.data || {};
+      const errorMessage = errorData.error_description || errorData.error || tokenError.message;
+      const errorCode = errorData.error || 'token_exchange_failed';
+      
+      console.error('[MS OAuth] Failed to exchange authorization code:', {
+        error: errorCode,
+        errorDescription: errorMessage,
+        status: tokenError.response?.status,
+        statusText: tokenError.response?.statusText,
+        requestUrl: tokenError.config?.url,
+        redirectUri: redirectUri,
+        clientId: clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null',
+        hasCode: !!code,
+        hasState: !!state
+      });
       
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
         success: false,
-        error: 'token_exchange_failed',
-        errorDescription: tokenError.response?.data?.error_description || tokenError.message
+        error: errorCode,
+        errorDescription: errorMessage
       });
     }
   } catch (error: any) {

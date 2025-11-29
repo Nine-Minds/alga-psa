@@ -89,21 +89,26 @@ export async function initializeScheduledJobs(): Promise<void> {
        logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`, error);
       }
 
-      // Schedule Microsoft webhook renewal (every 30 minutes)
-      try {
-        const cron = '*/30 * * * *';
-        const renewalJobId = await scheduleMicrosoftWebhookRenewalJob(tenantId, cron);
-        if (renewalJobId) {
-          logger.info(`Scheduled Microsoft webhook renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
-        } else {
-          logger.info('Microsoft webhook renewal job already scheduled (singleton active)', {
-            tenantId,
-            cron,
-            returnedJobId: renewalJobId
-          });
+      // Schedule Microsoft calendar webhook renewal (every 30 minutes)
+      // Note: In EE, this is handled by Temporal workflows, so we skip pg-boss scheduling
+      if (process.env.EDITION !== 'enterprise') {
+        try {
+          const cron = '*/30 * * * *';
+          const renewalJobId = await scheduleMicrosoftWebhookRenewalJob(tenantId, cron);
+          if (renewalJobId) {
+            logger.info(`Scheduled Microsoft calendar webhook renewal job for tenant ${tenantId} with job ID ${renewalJobId}`);
+          } else {
+            logger.info('Microsoft calendar webhook renewal job already scheduled (singleton active)', {
+              tenantId,
+              cron,
+              returnedJobId: renewalJobId
+            });
+          }
+        } catch (error) {
+          logger.error(`Failed to schedule Microsoft calendar webhook renewal job for tenant ${tenantId}`, error);
         }
-      } catch (error) {
-        logger.error(`Failed to schedule Microsoft webhook renewal job for tenant ${tenantId}`, error);
+      } else {
+        logger.info(`Skipping pg-boss calendar webhook renewal for tenant ${tenantId} (EE uses Temporal workflows)`);
       }
 
       // Schedule Google Pub/Sub subscription verification (hourly)

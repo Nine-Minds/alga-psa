@@ -5,7 +5,7 @@ import {
   ExecuteResponse,
   HostBindings,
   ContextData
-} from '@alga/extension-runtime';
+} from '@alga-psa/extension-runtime';
 
 // Raw imports from the WIT world
 // @ts-ignore

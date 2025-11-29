@@ -11,6 +11,7 @@ import { CalendarProviderService } from '@/services/calendar/CalendarProviderSer
 import { GoogleCalendarAdapter } from '@/services/calendar/providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from '@/services/calendar/providers/MicrosoftCalendarAdapter';
 import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
+import { CalendarWebhookMaintenanceService } from '@/services/calendar/CalendarWebhookMaintenanceService';
 import { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@/interfaces/calendar.interfaces';
 import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
 
@@ -652,5 +653,63 @@ export async function syncCalendarProvider(
       console.warn('[calendarActions] Failed to update provider status after sync error', statusError);
     }
     return { success: false, error: message };
+  }
+}
+
+/**
+ * Manually retry Microsoft calendar subscription renewal for a specific provider
+ */
+export async function retryMicrosoftCalendarSubscriptionRenewal(
+  providerId: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { success: false, error: 'Unauthorized' };
+
+  try {
+    // RBAC: validate permission
+    const resource = 'system_settings';
+    const action = 'update';
+    const permitted = await hasPermission(user as any, resource, action);
+    if (!permitted) {
+      return { success: false, error: 'Forbidden: insufficient permissions' };
+    }
+
+    // Verify provider belongs to user's tenant
+    const { knex, tenant } = await createTenantKnex();
+    const provider = await knex('calendar_providers')
+      .where({ id: providerId, tenant })
+      .first();
+    
+    if (!provider) {
+      return { success: false, error: 'Provider not found or access denied' };
+    }
+
+    if (provider.provider_type !== 'microsoft') {
+      return { success: false, error: 'Provider is not a Microsoft calendar provider' };
+    }
+
+    const service = new CalendarWebhookMaintenanceService();
+    const results = await service.renewMicrosoftWebhooks({
+      tenantId: tenant,
+      providerId: providerId,
+      lookAheadMinutes: 0 // Force check regardless of expiration time
+    });
+
+    if (results.length === 0) {
+      return { success: false, error: 'Provider not found or not eligible for renewal' };
+    }
+
+    const result = results[0];
+    if (result.success) {
+      return { 
+        success: true, 
+        message: `Subscription ${result.action} successfully${result.newExpiration ? ` (expires: ${new Date(result.newExpiration).toLocaleString()})` : ''}` 
+      };
+    } else {
+      return { success: false, error: result.error || 'Renewal failed' };
+    }
+  } catch (error: any) {
+    console.error('[calendarActions] Manual renewal failed:', error);
+    return { success: false, error: error.message || 'Internal server error' };
   }
 }

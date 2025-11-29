@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CalendarWebhookProcessor } from '@/services/calendar/CalendarWebhookProcessor';
+import { getAdminConnection } from '@shared/db';
+import logger from '@shared/core/logger';
 
 const processor = new CalendarWebhookProcessor();
 
@@ -112,6 +114,61 @@ export async function POST(request: NextRequest) {
         resource: notifications[0]?.resource
       }
     });
+
+    // Track webhook receipt in health table
+    const subscriptionIds = new Set<string>();
+    for (const notification of notifications) {
+      if (notification?.subscriptionId) {
+        subscriptionIds.add(notification.subscriptionId);
+      }
+    }
+
+    // Update last_webhook_received_at for each unique subscription
+    if (subscriptionIds.size > 0) {
+      try {
+        const knex = await getAdminConnection();
+        const now = new Date().toISOString();
+        
+        // Find providers by subscription IDs
+        const providers = await knex('microsoft_calendar_provider_config as mcp')
+          .join('calendar_providers as cp', function() {
+            this.on('mcp.calendar_provider_id', '=', 'cp.id')
+              .andOn('mcp.tenant', '=', 'cp.tenant');
+          })
+          .whereIn('mcp.webhook_subscription_id', Array.from(subscriptionIds))
+          .select('cp.id as provider_id', 'cp.tenant');
+
+        // Update health table for each provider
+        for (const provider of providers) {
+          const existing = await knex('calendar_provider_health')
+            .where('calendar_provider_id', provider.provider_id)
+            .andWhere('tenant', provider.tenant)
+            .first();
+
+          if (existing) {
+            await knex('calendar_provider_health')
+              .where('calendar_provider_id', provider.provider_id)
+              .andWhere('tenant', provider.tenant)
+              .update({
+                last_webhook_received_at: now,
+                updated_at: now
+              });
+          } else {
+            // Create health row if it doesn't exist
+            await knex('calendar_provider_health')
+              .insert({
+                calendar_provider_id: provider.provider_id,
+                tenant: provider.tenant,
+                last_webhook_received_at: now,
+                created_at: now,
+                updated_at: now
+              });
+          }
+        }
+      } catch (error: any) {
+        logger.warn('[Microsoft Calendar Webhook] Failed to update health table', { error: error.message });
+      }
+    }
 
     const result = await processor.processMicrosoftWebhook(notifications);
     return NextResponse.json({

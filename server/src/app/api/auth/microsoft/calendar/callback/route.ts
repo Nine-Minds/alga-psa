@@ -23,8 +23,19 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
+    const isPopup = searchParams.get('popup') === 'true';
+    
+    // Helper: redirect to settings page (for non-popup flows)
+    const redirectToSettings = (success: boolean, error?: string) => {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const params = new URLSearchParams({
+        tab: 'integrations',
+        ...(success ? { calendarAuth: 'success' } : { calendarAuth: 'error', calendarError: error || 'Authorization failed' })
+      });
+      return NextResponse.redirect(`${baseUrl}/msp/settings?${params.toString()}`);
+    };
 
-    // Helper: return a safe HTML page that posts a base64-encoded payload to the opener and closes
+    // Helper: return a safe HTML page that posts a base64-encoded payload to the opener and closes (for popups)
     const respondWithPostMessage = (payload: any) => {
       const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
       const html = `<!DOCTYPE html>
@@ -82,62 +93,77 @@ export async function GET(request: NextRequest) {
     // Handle OAuth errors
     if (error) {
       console.error('Microsoft Calendar OAuth error:', error, errorDescription);
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error,
-        errorDescription: errorDescription || ''
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error,
+          errorDescription: errorDescription || ''
+        });
+      }
+      return redirectToSettings(false, errorDescription || error);
     }
 
     // Validate required parameters
     if (!code || !state) {
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'missing_parameters',
-        errorDescription: 'Authorization code or state parameter is missing'
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'missing_parameters',
+          errorDescription: 'Authorization code or state parameter is missing'
+        });
+      }
+      return redirectToSettings(false, 'Authorization code or state parameter is missing');
     }
 
     // Parse state to get tenant and other info
     const decodedState = decodeCalendarState(state);
     if (!decodedState) {
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'invalid_state',
-        errorDescription: 'Invalid state parameter'
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'invalid_state',
+          errorDescription: 'Invalid state parameter'
+        });
+      }
+      return redirectToSettings(false, 'Invalid state parameter');
     }
 
     if (!decodedState.timestamp || Date.now() - decodedState.timestamp > 10 * 60 * 1000) {
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'invalid_state',
-        errorDescription: 'OAuth state expired'
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'invalid_state',
+          errorDescription: 'OAuth state expired'
+        });
+      }
+      return redirectToSettings(false, 'OAuth state expired');
     }
 
     const storedState = await consumeCalendarOAuthState(decodedState.nonce);
     if (!storedState) {
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'invalid_state',
-        errorDescription: 'OAuth state invalid or already used'
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'invalid_state',
+          errorDescription: 'OAuth state invalid or already used'
+        });
+      }
+      return redirectToSettings(false, 'OAuth state invalid or already used');
     }
 
     if (
@@ -145,28 +171,34 @@ export async function GET(request: NextRequest) {
       storedState.provider !== decodedState.provider ||
       storedState.provider !== 'microsoft'
     ) {
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'invalid_state',
-        errorDescription: 'OAuth state mismatch'
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'invalid_state',
+          errorDescription: 'OAuth state mismatch'
+        });
+      }
+      return redirectToSettings(false, 'OAuth state mismatch');
     }
 
     if (
       (storedState.calendarProviderId || decodedState.calendarProviderId) &&
       storedState.calendarProviderId !== decodedState.calendarProviderId
     ) {
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'invalid_state',
-        errorDescription: 'OAuth state provider mismatch'
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'invalid_state',
+          errorDescription: 'OAuth state provider mismatch'
+        });
+      }
+      return redirectToSettings(false, 'OAuth state provider mismatch');
     }
 
     const stateData = storedState;
@@ -208,14 +240,17 @@ export async function GET(request: NextRequest) {
     });
 
     if (!clientId || !clientSecret) {
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'configuration_error',
-        errorDescription: 'OAuth credentials not configured'
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'configuration_error',
+          errorDescription: 'OAuth credentials not configured'
+        });
+      }
+      return redirectToSettings(false, 'OAuth credentials not configured');
     }
 
     // Exchange authorization code for tokens
@@ -354,44 +389,61 @@ export async function GET(request: NextRequest) {
       }
 
       // Return success
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: true,
-        data: {
-          accessToken: access_token,
-          refreshToken: refresh_token || '',
-          expiresAt: expiresAt.toISOString(),
-          calendarProviderId: stateData.calendarProviderId
-        }
-      });
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: true,
+          data: {
+            accessToken: access_token,
+            refreshToken: refresh_token || '',
+            expiresAt: expiresAt.toISOString(),
+            calendarProviderId: stateData.calendarProviderId
+          }
+        });
+      }
+      return redirectToSettings(true);
     } catch (error: any) {
       console.error('Microsoft Calendar OAuth token exchange error:', error);
-      return respondWithPostMessage({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'token_exchange_failed',
-        errorDescription: error.response?.data?.error_description || error.message || 'Failed to exchange authorization code'
-      });
+      const errorMessage = error.response?.data?.error_description || error.message || 'Failed to exchange authorization code';
+      if (isPopup) {
+        return respondWithPostMessage({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'token_exchange_failed',
+          errorDescription: errorMessage
+        });
+      }
+      return redirectToSettings(false, errorMessage);
     }
   } catch (error: any) {
     console.error('Microsoft Calendar OAuth callback error:', error);
-    return new NextResponse(
-      JSON.stringify({
-        type: 'oauth-callback',
-        provider: 'microsoft',
-        resource: 'calendar',
-        success: false,
-        error: 'internal_error',
-        errorDescription: error.message || 'Internal server error'
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
+    const isPopup = request.nextUrl.searchParams.get('popup') === 'true';
+    if (isPopup) {
+      return new NextResponse(
+        JSON.stringify({
+          type: 'oauth-callback',
+          provider: 'microsoft',
+          resource: 'calendar',
+          success: false,
+          error: 'internal_error',
+          errorDescription: error.message || 'Internal server error'
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const params = new URLSearchParams({
+      tab: 'integrations',
+      calendarAuth: 'error',
+      calendarError: error.message || 'Internal server error'
+    });
+    return NextResponse.redirect(`${baseUrl}/msp/settings?${params.toString()}`);
   }
 }

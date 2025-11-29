@@ -1,6 +1,6 @@
 import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
-import { emailWebhookMaintenanceWorkflow } from '../workflows';
+import { emailWebhookMaintenanceWorkflow, calendarWebhookMaintenanceWorkflow } from '../workflows';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -77,6 +77,54 @@ export async function setupSchedules() {
         }
       } else {
         logger.warn(`Failed to create schedule ${scheduleId}: ${error.message}.`);
+      }
+    }
+
+    // Calendar webhook maintenance schedule (runs every 30 minutes, checks 3 hours ahead)
+    const calendarScheduleId = 'calendar-webhook-maintenance-schedule';
+    try {
+      await client.schedule.create({
+        scheduleId: calendarScheduleId,
+        spec: {
+          intervals: [{ every: '30m' }],
+        },
+        action: {
+          type: 'startWorkflow',
+          workflowType: calendarWebhookMaintenanceWorkflow,
+          args: [{ lookAheadMinutes: 180 }], // Check 3h ahead every 30m (matches pg-boss cadence)
+          taskQueue,
+          workflowExecutionTimeout: '10m',
+        },
+        policies: {
+          overlap: ScheduleOverlapPolicy.SKIP, // Don't stack runs
+          catchupWindow: '1m', // Don't run old missed schedules
+        },
+      });
+      logger.info(`Successfully created schedule: ${calendarScheduleId}`);
+    } catch (error: any) {
+      if (error?.code === 6 || error?.name === 'ScheduleAlreadyRunning' || error?.message?.includes('AlreadyExists')) {
+        logger.info(`Schedule ${calendarScheduleId} already exists. Updating configuration...`);
+        try {
+          const handle = client.schedule.getHandle(calendarScheduleId);
+          await handle.update((prev) => ({
+            ...prev,
+            spec: {
+              intervals: [{ every: '30m' }],
+            },
+            action: {
+              type: 'startWorkflow',
+              workflowType: calendarWebhookMaintenanceWorkflow,
+              args: [{ lookAheadMinutes: 180 }],
+              taskQueue,
+              workflowExecutionTimeout: '10m',
+            },
+          }));
+          logger.info(`Successfully updated schedule: ${calendarScheduleId}`);
+        } catch (updateError: any) {
+          logger.error(`Failed to update existing schedule ${calendarScheduleId}`, updateError);
+        }
+      } else {
+        logger.warn(`Failed to create schedule ${calendarScheduleId}: ${error.message}.`);
       }
     }
 

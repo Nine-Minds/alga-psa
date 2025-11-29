@@ -23,7 +23,7 @@ COPY server/package.json ./server/
 
 # Install dependencies for required workspaces (shared, worker, server)
 # Skip puppeteer Chrome download to save disk space
-RUN PUPPETEER_SKIP_DOWNLOAD=true npm install --workspace=shared --workspace=services/workflow-worker --workspace=server
+RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm install --workspace=shared --workspace=services/workflow-worker --workspace=server
 
 # Copy source code for shared + server workspaces
 COPY shared/ ./shared/
