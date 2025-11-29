@@ -329,9 +329,9 @@ export function CalendarIntegrationsSettings() {
                               <span className="font-medium text-foreground">Type:</span>
                               <span>{provider.provider_type === 'google' ? 'Google Calendar' : 'Microsoft Outlook Calendar'}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">Calendar ID:</span>
-                              <span>{provider.calendar_id || 'Not set'}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium text-foreground flex-shrink-0">Calendar ID:</span>
+                              <span className="truncate" title={provider.calendar_id || 'Not set'}>{provider.calendar_id || 'Not set'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-foreground">Sync Direction:</span>
