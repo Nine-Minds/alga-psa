@@ -25,14 +25,14 @@ export async function GET(request: NextRequest) {
     const errorDescription = searchParams.get('error_description');
     const isPopup = searchParams.get('popup') === 'true';
     
-    // Helper: redirect to settings page (for non-popup flows)
+    // Helper: redirect to user profile calendar tab (for non-popup flows)
     const redirectToSettings = (success: boolean, error?: string) => {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
       const params = new URLSearchParams({
-        tab: 'integrations',
+        tab: 'Calendar',
         ...(success ? { calendarAuth: 'success' } : { calendarAuth: 'error', calendarError: error || 'Authorization failed' })
       });
-      return NextResponse.redirect(`${baseUrl}/msp/settings?${params.toString()}`);
+      return NextResponse.redirect(`${baseUrl}/msp/profile?${params.toString()}`);
     };
 
     // Helper: return a safe HTML page that posts a base64-encoded payload to the opener and closes (for popups)
@@ -440,10 +440,10 @@ export async function GET(request: NextRequest) {
     }
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const params = new URLSearchParams({
-      tab: 'integrations',
+      tab: 'Calendar',
       calendarAuth: 'error',
       calendarError: error.message || 'Internal server error'
     });
-    return NextResponse.redirect(`${baseUrl}/msp/settings?${params.toString()}`);
+    return NextResponse.redirect(`${baseUrl}/msp/profile?${params.toString()}`);
   }
 }
