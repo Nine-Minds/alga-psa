@@ -234,6 +234,8 @@ config:
 runner:
   # Internal URL for the Knative runner service (used for execute + debug stream)
   baseUrl: ""
+  # Public URL for the runner service (used for asset loading and iframes)
+  publicBase: "https://runner.msp.apps.algapsa.com"
   # Optional literal token for authenticating runner calls. Prefer using an existing
   # Kubernetes secret via serviceTokenSecret when running in production.
   serviceToken: ""
