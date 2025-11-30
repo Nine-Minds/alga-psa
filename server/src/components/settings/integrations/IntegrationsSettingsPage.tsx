@@ -23,6 +23,7 @@ import XeroIntegrationSettings from './XeroIntegrationSettings';
 import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 import dynamic from 'next/dynamic';
+import LoadingIndicator from '../../ui/LoadingIndicator';
 
 // Dynamic import for NinjaOne (EE feature)
 const NinjaOneIntegrationSettings = dynamic(
@@ -30,8 +31,14 @@ const NinjaOneIntegrationSettings = dynamic(
   {
     loading: () => (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          Loading NinjaOne integration settings...
+        <CardContent className="py-8">
+          <div className="flex items-center justify-center">
+            <LoadingIndicator 
+              layout="stacked" 
+              text="Loading NinjaOne integration settings..."
+              spinnerProps={{ size: 'md' }}
+            />
+          </div>
         </CardContent>
       </Card>
     ),

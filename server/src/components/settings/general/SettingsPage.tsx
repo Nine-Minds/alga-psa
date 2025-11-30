@@ -3,6 +3,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Settings, Globe, Users, UsersRound, Ticket, FolderKanban, MessageSquare, Bell, Clock, CreditCard, Download, Receipt, Mail, Plug, Puzzle } from 'lucide-react';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
@@ -13,6 +14,7 @@ import GeneralSettings from 'server/src/components/settings/general/GeneralSetti
 import UserManagement from 'server/src/components/settings/general/UserManagement';
 import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
@@ -59,7 +61,15 @@ const SettingsPage = (): JSX.Element =>  {
   const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
     import('@product/settings-extensions/entry').then(mod => mod.DynamicExtensionsComponent),
     {
-      loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
+      loading: () => (
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator 
+            layout="stacked" 
+            text="Loading extensions..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      ),
       ssr: false
     }
   ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
@@ -68,7 +78,15 @@ const SettingsPage = (): JSX.Element =>  {
   const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
     import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as any),
     {
-      loading: () => <div className="text-center py-8 text-gray-500">Loading installer...</div>,
+      loading: () => (
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator 
+            layout="stacked" 
+            text="Loading installer..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      ),
       ssr: false
     }
   ) : () => null;
@@ -140,6 +158,7 @@ const SettingsPage = (): JSX.Element =>  {
   const baseTabContent: TabContent[] = [
     {
       label: "General",
+      icon: Settings,
       content: (
         <Card>
           <CardHeader>
@@ -156,14 +175,17 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Client Portal",
+      icon: Globe,
       content: <ClientPortalSettings />,
     },
     {
       label: "Users",
+      icon: Users,
       content: <UserManagement />,
     },
     {
       label: "Teams",
+      icon: UsersRound,
       content: (
         <Card>
           <CardHeader>
@@ -180,6 +202,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Ticketing",
+      icon: Ticket,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
           <TicketingSettings />
@@ -188,18 +211,26 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Projects",
+      icon: FolderKanban,
       content: <ProjectSettings />,
     },
     {
       label: "Interaction Types",
-      content: <InteractionTypesSettings />,
+      icon: MessageSquare,
+      content: (
+        <Suspense fallback={<SettingsTabSkeleton title="Interaction Types" description="Loading interaction types..." showTabs={false} />}>
+          <InteractionTypesSettings />
+        </Suspense>
+      ),
     },
     {
       label: "Notifications",
+      icon: Bell,
       content: <NotificationsTab />,
     },
     {
       label: "Time Entry",
+      icon: Clock,
       content: (
         <Card>
           <CardHeader>
@@ -214,6 +245,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Billing",
+      icon: CreditCard,
       content: (
         <Card>
           <CardHeader>
@@ -228,10 +260,12 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Import/Export",
+      icon: Download,
       content: <ImportExportSettings />,
     },
     {
       label: "Tax",
+      icon: Receipt,
       content: isBillingEnabled ? (
         <Card>
           <CardHeader>
@@ -248,6 +282,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Email",
+      icon: Mail,
       content: (
         <Card>
           <CardHeader>
@@ -262,6 +297,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     { // Integrations tab with category-based organization
       label: "Integrations",
+      icon: Plug,
       content: <IntegrationsSettingsPage />,
     }
   ];
@@ -273,6 +309,7 @@ const SettingsPage = (): JSX.Element =>  {
     ...baseTabContent,
     {
       label: "Extensions",
+      icon: Puzzle,
       content: (
         <Card>
           <CardHeader>
@@ -343,6 +380,7 @@ const SettingsPage = (): JSX.Element =>  {
         tabs={tabContent}
         defaultTab={activeTab}
         onTabChange={handleTabChange}
+        orientation="vertical"
       />
     </div>
   );
