@@ -282,10 +282,17 @@ export async function GET(request: NextRequest) {
             const { knex } = await createTenantKnex();
             const providerService = new CalendarProviderService();
 
+            // Fetch existing provider to get user_id
+            const existingProvider = await providerService.getProvider(stateData.calendarProviderId!, stateData.tenant);
+            if (!existingProvider) {
+              throw new Error('Calendar provider not found');
+            }
+
             // Get user's calendars
             const tempConfig: CalendarProviderConfig = {
               id: stateData.calendarProviderId!,
               tenant: stateData.tenant!,
+              user_id: existingProvider.user_id,
               name: 'Temp',
               provider_type: 'microsoft' as const,
               calendar_id: 'calendar',
