@@ -474,11 +474,13 @@ export async function getScheduleEntrySyncStatus(
 
 /**
  * Manual sync trigger for a calendar provider
+ * Validates the request synchronously, then kicks off sync in the background
  */
 export async function syncCalendarProvider(
   calendarProviderId: string
 ): Promise<{
   success: boolean;
+  started?: boolean;
   error?: string;
 }> {
   try {
@@ -499,167 +501,154 @@ export async function syncCalendarProvider(
       return { success: false, error: 'Calendar provider not found' };
     }
 
-    const syncService = new CalendarSyncService();
-    const failures: string[] = [];
-    let pushed = 0;
-    let pulled = 0;
+    // Capture user context for background processing
+    const tenantId = user.tenant;
 
-    const allowPush = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'to_external';
-    const allowPull = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'from_external';
+    // Kick off sync in background and return immediately
+    setImmediate(async () => {
+      console.log(`[calendarActions] Starting background sync for provider ${calendarProviderId}`);
+      const startTime = Date.now();
 
-    await runWithTenant(user.tenant, async () => {
-      const { knex } = await createTenantKnex();
+      try {
+        const syncService = new CalendarSyncService();
+        const failures: string[] = [];
+        let pushed = 0;
+        let pulled = 0;
 
-      const mappings = await knex('calendar_event_mappings')
-        .where('tenant', user.tenant)
-        .andWhere('calendar_provider_id', calendarProviderId)
-        .select('schedule_entry_id', 'external_event_id');
+        const allowPush = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'to_external';
+        const allowPull = provider.sync_direction === 'bidirectional' || provider.sync_direction === 'from_external';
 
-      const knownExternalIds = new Set<string>(
-        mappings
-          .map((mapping) => mapping.external_event_id)
-          .filter((id): id is string => Boolean(id))
-      );
+        await runWithTenant(tenantId, async () => {
+          const { knex } = await createTenantKnex();
 
-      for (const mapping of mappings) {
-        if (allowPush) {
-          const result = await syncService.syncScheduleEntryToExternal(mapping.schedule_entry_id, calendarProviderId, true);
-          if (result.success) {
-            pushed += 1;
-            if (result.externalEventId) {
-              knownExternalIds.add(result.externalEventId);
+          // Define sync window: 2 days ago to 15 days from now
+          // This avoids bulk syncing historical or far-future entries
+          const now = new Date();
+          const windowStart = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+          const windowEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days from now
+
+          // Get mappings for entries within the sync window
+          const mappings = await knex('calendar_event_mappings as cem')
+            .join('schedule_entries as se', function () {
+              this.on('se.entry_id', '=', 'cem.schedule_entry_id')
+                .andOn('se.tenant', '=', 'cem.tenant');
+            })
+            .where('cem.tenant', tenantId)
+            .andWhere('cem.calendar_provider_id', calendarProviderId)
+            .andWhere(function () {
+              // Entry overlaps with sync window
+              this.where('se.scheduled_start', '<=', windowEnd)
+                .andWhere('se.scheduled_end', '>=', windowStart);
+            })
+            .select('cem.schedule_entry_id', 'cem.external_event_id');
+
+          // Sync existing mappings within window
+          for (const mapping of mappings) {
+            if (allowPush) {
+              const result = await syncService.syncScheduleEntryToExternal(mapping.schedule_entry_id, calendarProviderId, true);
+              if (result.success) {
+                pushed += 1;
+              } else {
+                failures.push(`Push ${mapping.schedule_entry_id}: ${result.error || 'unknown error'}`);
+              }
             }
-          } else {
-            failures.push(`Push ${mapping.schedule_entry_id}: ${result.error || 'unknown error'}`);
+
+            if (allowPull) {
+              const result = await syncService.syncExternalEventToSchedule(mapping.external_event_id, calendarProviderId, true);
+              if (result.success) {
+                pulled += 1;
+              } else {
+                failures.push(`Pull ${mapping.external_event_id}: ${result.error || 'unknown error'}`);
+              }
+            }
           }
-        }
 
-        if (allowPull) {
-          const result = await syncService.syncExternalEventToSchedule(mapping.external_event_id, calendarProviderId, true);
-          if (result.success) {
-            pulled += 1;
-            if (mapping.external_event_id) {
-              knownExternalIds.add(mapping.external_event_id);
+          // Push unmapped Alga entries within the sync window
+          if (allowPush) {
+            const recentEntriesQuery = knex('schedule_entries')
+              .where('schedule_entries.tenant', tenantId)
+              // Filter to sync window
+              .andWhere('schedule_entries.scheduled_start', '<=', windowEnd)
+              .andWhere('schedule_entries.scheduled_end', '>=', windowStart)
+              .leftJoin('calendar_event_mappings as cem', function () {
+                this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
+                  .andOn('cem.tenant', '=', 'schedule_entries.tenant')
+                  .andOn('cem.calendar_provider_id', '=', knex.raw('?', [calendarProviderId]));
+              })
+              .whereNull('cem.id')
+              .limit(100)
+              .select('schedule_entries.entry_id as entry_id');
+
+            const recentEntries = await recentEntriesQuery;
+
+            for (const entry of recentEntries) {
+              const result = await syncService.syncScheduleEntryToExternal(entry.entry_id, calendarProviderId, true);
+              if (result.success) {
+                pushed += 1;
+              } else {
+                failures.push(`Push ${entry.entry_id}: ${result.error || 'unknown error'}`);
+              }
             }
-          } else {
-            failures.push(`Pull ${mapping.external_event_id}: ${result.error || 'unknown error'}`);
           }
-        }
-      }
 
-      if (allowPush) {
-        const recentEntriesQuery = knex('schedule_entries')
-          .where('schedule_entries.tenant', user.tenant)
-          .modify((builder) => {
-            if (provider.last_sync_at) {
-              builder.andWhere('schedule_entries.updated_at', '>', provider.last_sync_at);
+          // Note: We no longer pull/import external events during manual sync.
+          // External events are only imported via webhooks when they contain the @alga marker.
+          // This avoids importing unwanted historical events.
+
+          // Ensure webhook subscription is active
+          if (allowPull) {
+            const hasProviderSecrets = provider.provider_config && provider.provider_config.clientId;
+            if (hasProviderSecrets) {
+              try {
+                const adapter =
+                  provider.provider_type === 'google'
+                    ? new GoogleCalendarAdapter(provider)
+                    : new MicrosoftCalendarAdapter(provider);
+
+                await adapter.connect();
+                await adapter.registerWebhookSubscription();
+              } catch (subscriptionError: any) {
+                failures.push(`Webhook registration failed: ${subscriptionError?.message || 'unknown error'}`);
+              }
             }
-          })
-          .leftJoin('calendar_event_mappings as cem', function () {
-            this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
-              .andOn('cem.tenant', '=', 'schedule_entries.tenant')
-              .andOn('cem.calendar_provider_id', '=', knex.raw('?', [calendarProviderId]));
-          })
-          .whereNull('cem.id')
-          .limit(50)
-          .select('schedule_entries.entry_id as entry_id');
-
-        const recentEntries = await recentEntriesQuery;
-
-        for (const entry of recentEntries) {
-          const result = await syncService.syncScheduleEntryToExternal(entry.entry_id, calendarProviderId, true);
-          if (result.success) {
-            pushed += 1;
-            if (result.externalEventId) {
-              knownExternalIds.add(result.externalEventId);
-            }
-          } else {
-            failures.push(`Push ${entry.entry_id}: ${result.error || 'unknown error'}`);
           }
+        });
+
+        const duration = Date.now() - startTime;
+
+        if (failures.length === 0) {
+          await providerService.updateProviderStatus(calendarProviderId, {
+            status: 'connected',
+            lastSyncAt: new Date().toISOString(),
+            errorMessage: null
+          });
+          console.log(`[calendarActions] Background sync completed successfully in ${duration}ms. Pushed=${pushed}, Pulled=${pulled}`);
+        } else {
+          const summary = `Manual sync completed with ${failures.length} issue(s). Pushed=${pushed}, Pulled=${pulled}.`;
+          await providerService.updateProviderStatus(calendarProviderId, {
+            status: 'error',
+            errorMessage: `${summary} Details: ${failures.join('; ').slice(0, 500)}`
+          });
+          console.warn(`[calendarActions] Background sync completed with errors in ${duration}ms: ${summary}`);
         }
-      }
-
-      if (allowPull) {
-        const hasProviderSecrets = provider.provider_config && provider.provider_config.clientId;
-        if (!hasProviderSecrets) {
-          failures.push('Pull: Provider credentials are missing, cannot list external events.');
-          return;
-        }
-
-        const adapter =
-          provider.provider_type === 'google'
-            ? new GoogleCalendarAdapter(provider)
-            : new MicrosoftCalendarAdapter(provider);
-
-        await adapter.connect();
-
-        const now = Date.now();
-        const lookbackMs = 1000 * 60 * 60 * 24 * 30; // 30 days
-        const lookaheadMs = 1000 * 60 * 60 * 24 * 30; // 30 days
-        const lastSyncAt = provider.last_sync_at ? new Date(provider.last_sync_at) : null;
-        const startWindow = lastSyncAt
-          ? new Date(Math.min(lastSyncAt.getTime(), now - lookbackMs))
-          : new Date(now - lookbackMs);
-        const endWindow = new Date(now + lookaheadMs);
-
+      } catch (error: any) {
+        const message = error?.message || 'Failed to sync calendar provider';
+        console.error(`[calendarActions] Background sync failed:`, error);
         try {
-          try {
-            await adapter.registerWebhookSubscription();
-          } catch (subscriptionError: any) {
-            failures.push(`Webhook registration failed: ${subscriptionError?.message || 'unknown error'}`);
-          }
-
-          const externalEvents = await adapter.listEvents(startWindow, endWindow);
-          for (const event of externalEvents) {
-            const externalId = event.id;
-            if (!externalId) {
-              continue;
-            }
-            if (knownExternalIds.has(externalId)) {
-              continue;
-            }
-
-            const result = await syncService.syncExternalEventToSchedule(externalId, calendarProviderId, true);
-            if (result.success) {
-              pulled += 1;
-              knownExternalIds.add(externalId);
-            } else {
-              failures.push(`Pull ${externalId}: ${result.error || 'unknown error'}`);
-            }
-          }
-        } catch (error: any) {
-          failures.push(`Pull listing failed: ${error?.message || 'unable to list external events'}`);
+          await providerService.updateProviderStatus(calendarProviderId, {
+            status: 'error',
+            errorMessage: message
+          });
+        } catch (statusError) {
+          console.warn('[calendarActions] Failed to update provider status after sync error', statusError);
         }
       }
     });
 
-    if (failures.length === 0) {
-      await providerService.updateProviderStatus(calendarProviderId, {
-        status: 'connected',
-        lastSyncAt: new Date().toISOString(),
-        errorMessage: null
-      });
-      return { success: true };
-    }
-
-    const summary = `Manual sync completed with ${failures.length} issue(s). Pushed=${pushed}, Pulled=${pulled}.`;
-    await providerService.updateProviderStatus(calendarProviderId, {
-      status: 'error',
-      errorMessage: `${summary} Details: ${failures.join('; ').slice(0, 500)}`
-    });
-
-    return { success: false, error: summary };
+    // Return immediately - sync is running in background
+    return { success: true, started: true };
   } catch (error: any) {
-    const message = error?.message || 'Failed to sync calendar provider';
-    try {
-      const providerService = new CalendarProviderService();
-      await providerService.updateProviderStatus(calendarProviderId, {
-        status: 'error',
-        errorMessage: message
-      });
-    } catch (statusError) {
-      console.warn('[calendarActions] Failed to update provider status after sync error', statusError);
-    }
+    const message = error?.message || 'Failed to start calendar sync';
     return { success: false, error: message };
   }
 }
@@ -698,7 +687,7 @@ export async function retryMicrosoftCalendarSubscriptionRenewal(
 
     const service = new CalendarWebhookMaintenanceService();
     const results = await service.renewMicrosoftWebhooks({
-      tenantId: tenant,
+      tenantId: tenant ?? undefined,
       providerId: providerId,
       lookAheadMinutes: 0 // Force check regardless of expiration time
     });

@@ -5,7 +5,7 @@
 
 import { createTenantKnex } from '../../lib/db';
 import { withTransaction } from '@shared/db';
-import { CalendarProviderConfig, CalendarEventMapping, CalendarSyncResult } from '../../interfaces/calendar.interfaces';
+import { CalendarProviderConfig, CalendarEventMapping, CalendarSyncResult, ExternalCalendarEvent } from '../../interfaces/calendar.interfaces';
 import { IScheduleEntry } from '../../interfaces/schedule.interfaces';
 import { CalendarProviderService } from '../CalendarProviderService';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
@@ -209,7 +209,54 @@ export class CalendarSyncService {
       await adapter.connect();
 
       // Get event from external calendar
-      const externalEvent = await adapter.getEvent(externalEventId);
+      let externalEvent: ExternalCalendarEvent;
+      try {
+        externalEvent = await adapter.getEvent(externalEventId);
+      } catch (error: any) {
+        // If event returns 404, it was deleted - handle as deletion
+        // Google returns status: 404, code: 404 (numeric)
+        // Microsoft returns status: 404, code: 'ErrorItemNotFound' (string)
+        const isNotFound = error.status === 404 || error.code === 404 || error.code === 'ErrorItemNotFound';
+        if (isNotFound) {
+          console.log('[CalendarSyncService] External event not found (likely deleted)', {
+            externalEventId,
+            calendarProviderId
+          });
+
+          // Check if we have a mapping to clean up
+          const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
+          if (existingMapping) {
+            // Delete the corresponding schedule entry (skip external delete since it's already gone)
+            const deleteResult = await this.deleteScheduleEntry(
+              existingMapping.schedule_entry_id,
+              calendarProviderId,
+              'all',
+              true // skipExternalDelete - event already deleted in external calendar
+            );
+            if (deleteResult.success) {
+              return {
+                success: true,
+                deleted: true,
+                reason: 'External event was deleted'
+              };
+            } else {
+              return {
+                success: false,
+                error: `Failed to delete schedule entry after external event deletion: ${deleteResult.error}`
+              };
+            }
+          }
+
+          // No mapping exists, nothing to clean up
+          return {
+            success: true,
+            skipped: true,
+            reason: 'External event not found and no mapping exists'
+          };
+        }
+        // Re-throw other errors
+        throw error;
+      }
 
       // Check for existing mapping
       const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
@@ -580,11 +627,13 @@ export class CalendarSyncService {
 
   /**
    * Delete a schedule entry and its external calendar event
+   * @param skipExternalDelete - If true, skip deleting from external calendar (use when external already deleted)
    */
   async deleteScheduleEntry(
     entryId: string,
     calendarProviderId: string,
-    deleteType: 'single' | 'future' | 'all' = 'all'
+    deleteType: 'single' | 'future' | 'all' = 'all',
+    skipExternalDelete: boolean = false
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const { knex, tenant } = await createTenantKnex();
@@ -609,16 +658,17 @@ export class CalendarSyncService {
         };
       }
 
-      const adapter = await this.createAdapter(provider);
-      await adapter.connect();
-
       const result = await withTransaction(knex, async (trx) => {
-        // Delete from external calendar
-        try {
-          await adapter.deleteEvent(mapping.external_event_id);
-        } catch (error: any) {
-          console.warn(`Failed to delete external event ${mapping.external_event_id}:`, error.message);
-          // Continue with local deletion even if external deletion fails
+        // Delete from external calendar (unless already deleted externally)
+        if (!skipExternalDelete) {
+          try {
+            const adapter = await this.createAdapter(provider);
+            await adapter.connect();
+            await adapter.deleteEvent(mapping.external_event_id);
+          } catch (error: any) {
+            console.warn(`Failed to delete external event ${mapping.external_event_id}:`, error.message);
+            // Continue with local deletion even if external deletion fails
+          }
         }
 
         // Delete schedule entry
