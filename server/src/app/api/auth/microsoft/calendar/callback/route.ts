@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
-    const isPopup = searchParams.get('popup') === 'true';
+    let isPopup = searchParams.get('popup') === 'true';
     
     // Helper: redirect to user profile calendar tab (for non-popup flows)
     const redirectToSettings = (success: boolean, error?: string) => {
@@ -123,6 +123,10 @@ export async function GET(request: NextRequest) {
 
     // Parse state to get tenant and other info
     const decodedState = decodeCalendarState(state);
+    if (decodedState?.isPopup) {
+      isPopup = true;
+    }
+
     if (!decodedState) {
       if (isPopup) {
         return respondWithPostMessage({

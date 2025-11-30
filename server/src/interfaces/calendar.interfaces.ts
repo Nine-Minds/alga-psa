@@ -203,6 +203,7 @@ export interface CalendarOAuthState {
   redirectUri?: string;
   timestamp: number;
   hosted?: boolean;
+  isPopup?: boolean;
 }
 
 export interface CalendarEventCreateRequest {
