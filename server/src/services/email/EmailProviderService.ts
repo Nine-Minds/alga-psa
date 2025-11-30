@@ -8,6 +8,7 @@ import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.i
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
+import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
 
 export interface CreateProviderData {
   tenant: string;
@@ -46,13 +47,10 @@ export class EmailProviderService {
 
   /**
    * Generate webhook URL with proper environment-aware base URL
-   * Uses the same priority logic as generatePubSubNames
+   * Uses dynamic URL resolution that checks ngrok file in development mode
    */
   private generateWebhookUrl(path: string): string {
-    const baseUrl = process.env.NGROK_URL || 
-                    process.env.NEXT_PUBLIC_BASE_URL || 
-                    process.env.NEXTAUTH_URL ||
-                    'http://localhost:3000';
+    const baseUrl = getWebhookBaseUrl();
     return `${baseUrl}${path}`;
   }
 

@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';
 import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
@@ -256,10 +257,7 @@ export async function GET(request: NextRequest) {
                 .first();
 
               if (provider && msConfig) {
-                const baseUrl = process.env.NGROK_URL
-                  || process.env.NEXT_PUBLIC_BASE_URL
-                  || process.env.NEXTAUTH_URL
-                  || 'http://localhost:3000';
+                const baseUrl = getWebhookBaseUrl();
                 const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
                 // Determine folder to monitor from saved config (first folder if multiple)

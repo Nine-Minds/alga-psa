@@ -6,6 +6,7 @@
  */
 
 import crypto from 'crypto';
+import fs from 'fs';
 import { NinjaOneClient } from '../ninjaOneClient';
 import {
   WebhookConfiguration,
@@ -16,8 +17,40 @@ import logger from '@shared/core/logger';
 // Header name for webhook authentication
 const WEBHOOK_AUTH_HEADER = 'X-Alga-Webhook-Secret';
 
-// Environment variable for webhook base URL (production)
-const WEBHOOK_BASE_URL = process.env.NINJAONE_WEBHOOK_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+// Path to ngrok URL file (written by ngrok-sync container)
+const NGROK_URL_FILE = '/app/ngrok/url';
+
+// Check if running in development mode
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
+
+/**
+ * Get the webhook base URL dynamically.
+ * Priority:
+ *   1. Ngrok URL from file (development mode only, for local tunneling)
+ *   2. NINJAONE_WEBHOOK_BASE_URL environment variable
+ *   3. NEXTAUTH_URL environment variable
+ *   4. Default localhost
+ */
+export function getWebhookBaseUrl(): string {
+  // In development mode, check for ngrok URL file first
+  if (isDevelopment) {
+    try {
+      if (fs.existsSync(NGROK_URL_FILE)) {
+        const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+        if (ngrokUrl) {
+          logger.debug('[NinjaOne Webhook] Using ngrok URL from file', { url: ngrokUrl });
+          return ngrokUrl;
+        }
+      }
+    } catch (error) {
+      // Ignore file read errors, fall back to env vars
+      logger.debug('[NinjaOne Webhook] Could not read ngrok URL file, using environment variables');
+    }
+  }
+
+  // Fall back to environment variables
+  return process.env.NINJAONE_WEBHOOK_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+}
 
 /**
  * Generate a secure webhook secret
@@ -32,7 +65,7 @@ export function generateWebhookSecret(): string {
 export function buildWebhookUrl(tenantId: string): string {
   // Use query parameter for tenant identification
   // This allows the webhook handler to identify which tenant the event belongs to
-  const baseUrl = WEBHOOK_BASE_URL.replace(/\/$/, '');
+  const baseUrl = getWebhookBaseUrl().replace(/\/$/, '');
   return `${baseUrl}/api/webhooks/ninjaone?tenant=${encodeURIComponent(tenantId)}`;
 }
 

@@ -6,6 +6,7 @@ import { MicrosoftCalendarAdapter } from '@/services/calendar/providers/Microsof
 import { consumeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
 import { decodeCalendarState } from '@/utils/calendar/oauthHelpers';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
+import { getWebhookBaseUrl } from '@/utils/email/webhookHelpers';
 import axios from 'axios';
 import { randomBytes } from 'crypto';
 import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
@@ -327,14 +328,16 @@ export async function GET(request: NextRequest) {
 
             // Generate webhook verification token and URL
             const webhookVerificationToken = randomBytes(32).toString('hex');
-            const envWebhookBase =
-              process.env.CALENDAR_WEBHOOK_BASE_URL ||
-              process.env.CALENDAR_MICROSOFT_WEBHOOK_BASE_URL ||
-              process.env.MICROSOFT_CALENDAR_WEBHOOK_URL ||
-              process.env.NGROK_URL ||
-              process.env.PUBLIC_WEBHOOK_BASE_URL ||
-              process.env.NEXT_PUBLIC_BASE_URL ||
-              process.env.NEXTAUTH_URL;
+            // Use dynamic URL resolution (checks ngrok file in development mode)
+            const envWebhookBase = getWebhookBaseUrl([
+              'CALENDAR_WEBHOOK_BASE_URL',
+              'CALENDAR_MICROSOFT_WEBHOOK_BASE_URL',
+              'MICROSOFT_CALENDAR_WEBHOOK_URL',
+              'NGROK_URL',
+              'PUBLIC_WEBHOOK_BASE_URL',
+              'NEXT_PUBLIC_BASE_URL',
+              'NEXTAUTH_URL'
+            ]);
 
             const requestBase = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
             let webhookBase = (envWebhookBase || requestBase || 'http://localhost:3000').trim();
