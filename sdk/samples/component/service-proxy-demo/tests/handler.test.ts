@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { handler } from '../src/handler.js';
-import { createMockHostBindings, ExecuteRequest } from '@alga/extension-runtime';
+import { createMockHostBindings, ExecuteRequest } from '@alga-psa/extension-runtime';
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();

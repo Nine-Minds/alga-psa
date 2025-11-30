@@ -21,6 +21,11 @@ This plan implements admin upload/install of extensions to S3, verifies and regi
 - Runner integration to fetch/serve bundles and UI by content hash
 - Developer scripts for pack/sign/publish and updated documentation
 
+Status update (2025-11-21):
+- Bundle store and Runner integration are live: Runner serves ext-ui by content hash; gateway forwards execute payloads with content hash/version/config/providers/secretEnvelope.
+- Upload proxy implemented at `server/src/app/api/ext-bundles/upload-proxy/route.ts` with streaming to S3 and 200 MiB cap; finalize/abort routes unchanged.
+- Admin install UI exists; pack/sign/publish scripts shipped via `alga` client SDK; docs exist but need refresh for proxy adoption.
+
 ## Storage Layout (S3)
 Content-addressed, write-once objects:
 

@@ -27,6 +27,11 @@
 - API routes under `ee/server/src/app/api/ext-bundles/*` provide HTTP surfaces for initiate, finalize, and abort with RBAC and rate limiting.
 - Storage helpers under `ee/server/src/lib/storage/*` provide S3 client abstraction with streaming GET and streaming/small PUT.
 
+Status update (2025-11-21):
+- Streaming upload proxy is implemented at `server/src/app/api/ext-bundles/upload-proxy/route.ts` with rate limiting, size cap (200 MiB), and staging keys; browser-to-S3 direct PUTs are no longer required for the supported flow.
+- Finalize/abort routes remain the same; copy-to-canonical continues to use `sha256/<hash>/bundle.tar.zst` layout.
+- Installer UI still calls presign+finalize; need to confirm adoption of the new upload-proxy in UI/client actions.
+
 ## Risks and Considerations
 
 - Large request bodies must be streamed; avoid buffering in Node runtime.

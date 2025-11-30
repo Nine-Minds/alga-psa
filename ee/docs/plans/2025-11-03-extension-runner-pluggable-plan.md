@@ -8,11 +8,13 @@
 
 ## Goals
 
-- [ ] Introduce a `RunnerBackend` abstraction that encapsulates execute/UI/health operations for the gateway.
-- [ ] Provide configuration to select `knative` or `docker` backends via environment variables with sane defaults.
-- [ ] Add a gateway proxy route so extension UI assets can be served through the same origin as the main application.
-- [ ] Package a Docker Compose setup and helper scripts that run the Runner container locally alongside the Next.js gateway.
-- [ ] Document the new workflow and add smoke tests covering both backends.
+- [x] Introduce a `RunnerBackend` abstraction that encapsulates execute/UI/health operations for the gateway. *(Implemented in `server/src/lib/extensions/runner/backend.ts` with Knative vs Docker backends.)*
+- [x] Provide configuration to select `knative` or `docker` backends via environment variables with sane defaults. *(Env `RUNNER_BACKEND` with defaults; see `package.json` script `dev:runner`.)*
+- [ ] Add a gateway proxy route so extension UI assets can be served through the same origin as the main application. *(ext-ui gate exists but still returns 404/redirect in rust mode; proxy parity for dev remains to be finished.)*
+- [x] Package a Docker Compose setup and helper scripts that run the Runner container locally alongside the Next.js gateway. *(See `scripts/dev-runner.sh` and `docker-compose.runner-dev.yml`; `npm run dev:runner` wires env.)*
+- [ ] Document the new workflow and add smoke tests covering both backends. *(Docs and automated smoke tests still TODO.)*
+
+Status update (2025-11-21): core backend selection and local Docker workflow are in place; ext-ui same-origin proxying and validation tests remain outstanding.
 
 ## Non-Goals
 

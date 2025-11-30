@@ -24,8 +24,15 @@ export class IframeBridge {
   private themeTokens: Record<string, string> = {};
 
   constructor(opts?: { expectedParentOrigin?: string; devAllowWildcard?: boolean }) {
-    this.expectedParentOrigin =
-      opts?.expectedParentOrigin ?? (typeof window !== 'undefined' ? window.location.origin : '');
+    if (opts?.expectedParentOrigin) {
+      this.expectedParentOrigin = opts.expectedParentOrigin;
+    } else if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      this.expectedParentOrigin = params.get('parentOrigin') || window.location.origin;
+    } else {
+      this.expectedParentOrigin = '';
+    }
+
     // Allow explicit dev wildcard only if requested; default off.
     const envDev =
       typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production';
@@ -36,14 +43,24 @@ export class IframeBridge {
     if (typeof window !== 'undefined') {
       window.addEventListener('message', (ev: MessageEvent) => {
         // Origin validation
-        if (this.expectedParentOrigin && ev.origin !== this.expectedParentOrigin) {
+        if (!this.devWildcard && this.expectedParentOrigin && ev.origin !== this.expectedParentOrigin) {
           // Ignore unexpected origins
           return;
         }
         const data = ev.data as Envelope | undefined;
         if (!data || typeof data !== 'object') return;
         if (data.alga !== true || data.version !== ENVELOPE_VERSION || typeof data.type !== 'string') {
+          console.warn('[SDK] Ignoring message with invalid envelope', { origin: ev.origin, data });
           return;
+        }
+        console.log('[SDK] Received host message', { type: data.type, origin: ev.origin, requestId: (data as any).request_id });
+        if (data.type === 'apiproxy_response') {
+          console.log('[SDK] Received apiproxy_response', {
+            requestId: (data as any).request_id,
+            hasBody: !!(data as any).payload?.body,
+            error: (data as any).payload?.error,
+            origin: ev.origin,
+          });
         }
 
         // Known Host -> Client message types
@@ -123,5 +140,67 @@ export class IframeBridge {
   setExpectedParentOrigin(origin: string) {
     this.expectedParentOrigin = origin;
   }
-}
 
+  /**
+   * Call a proxy route via postMessage.
+   */
+  async callProxy(route: string, payload?: Uint8Array | null): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      const requestId = typeof crypto !== 'undefined' ? crypto.randomUUID() : String(Math.random());
+      console.log(`[SDK] Starting callProxy for route: ${route}, requestId: ${requestId}`);
+
+      // Prepare listener for response
+      const cleanup = this.on((msg) => {
+        if (msg.type === 'apiproxy_response' && msg.request_id === requestId) {
+          console.log(`[SDK] Received apiproxy_response for requestId: ${requestId}`);
+          cleanup();
+          if (msg.payload.error) {
+            console.warn(`[SDK] Proxy response error for requestId: ${requestId}, error: ${msg.payload.error}`);
+            reject(new Error(msg.payload.error));
+          } else {
+            const bodyBase64 = msg.payload.body || '';
+            try {
+              const binaryString = atob(bodyBase64);
+              const len = binaryString.length;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              resolve(bytes);
+            } catch (e) {
+              console.error(`[SDK] Failed to decode proxy response for requestId: ${requestId}`, e);
+              reject(new Error('Failed to decode proxy response'));
+            }
+          }
+        }
+      });
+
+      // Encode request
+      let bodyBase64: string | undefined;
+      if (payload) {
+        let binaryString = '';
+        for (let i = 0; i < payload.length; i++) {
+          binaryString += String.fromCharCode(payload[i]);
+        }
+        bodyBase64 = btoa(binaryString);
+      }
+
+      console.log(`[SDK] Emitting 'apiproxy' message to host. requestId: ${requestId}`);
+      this.emitToHost('apiproxy', { route, body: bodyBase64 }, requestId);
+
+      // Timeout
+      setTimeout(() => {
+        console.warn(`[SDK] Timeout reached for requestId: ${requestId}`);
+        cleanup();
+        reject(new Error('Proxy request timed out'));
+      }, 15000);
+    });
+  }
+
+  get uiProxy() {
+    return {
+      callRoute: this.callProxy.bind(this),
+      call: this.callProxy.bind(this), // backward compat
+    };
+  }
+}

@@ -4,8 +4,8 @@
  */
 
 import { createTenantKnex } from '../../lib/db';
-import { EmailProviderConfig } from '../../interfaces/email.interfaces';
-import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
+import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
 
@@ -419,7 +419,8 @@ export class EmailProviderService {
       // Update status to connected
       await this.updateProviderStatus(providerId, {
         status: 'connected',
-        errorMessage: null
+        errorMessage: null,
+        lastSyncAt: new Date().toISOString()
       });
 
       console.log(`✅ Webhook initialized for provider: ${provider.name}`);
@@ -480,6 +481,10 @@ export class EmailProviderService {
    * Map database row to EmailProviderConfig interface
    */
   private mapCurrentDbRowToProvider(row: any, vendorConfig: any): EmailProviderConfig {
+    const webhookPath = row.provider_type === 'microsoft' 
+      ? '/api/email/webhooks/microsoft' 
+      : '/api/email/webhooks/google';
+
     return {
       id: row.id,
       tenant: row.tenant,
@@ -488,7 +493,7 @@ export class EmailProviderService {
       mailbox: row.mailbox,
       folder_to_monitor: 'Inbox', // Default for current implementation
       active: row.is_active,
-      webhook_notification_url: vendorConfig?.webhook_notification_url || '',
+      webhook_notification_url: this.generateWebhookUrl(webhookPath),
       webhook_subscription_id: vendorConfig?.webhook_subscription_id || null,
       webhook_verification_token: vendorConfig?.webhook_verification_token || null,
       webhook_expires_at: vendorConfig?.webhook_expires_at || null,

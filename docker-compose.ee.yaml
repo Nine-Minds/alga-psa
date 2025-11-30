@@ -236,9 +236,14 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${DB_HOST_DOCKER:-postgres}
       DB_PORT: ${DB_PORT:-5432}
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_hocuspocus
+        read_only: true
     secrets:
       - postgres_password
-      - db_password_hocuspocus
+      - db_password_server
       - redis_password
     networks:
       - app-network

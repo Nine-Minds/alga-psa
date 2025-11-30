@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GmailAdapter } from '../../../services/email/providers/GmailAdapter';
-import { EmailProviderConfig } from '../../../interfaces/email.interfaces';
+import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 const historyListMock = vi.fn();
 
