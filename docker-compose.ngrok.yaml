@@ -35,6 +35,9 @@ services:
     command:
       - -c
       - |
+        # Ensure ngrok volume has write permissions
+        chmod 777 /ngrok 2>/dev/null || true
+
         export NGROK_AUTHTOKEN=$$(cat /run/secrets/ngrok_authtoken)
         while true; do
           echo "[ngrok] Starting tunnel to server:3000..."

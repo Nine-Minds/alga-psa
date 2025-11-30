@@ -121,8 +121,8 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
-      # ngrok volume for webhook URL syncing (optional, only mounted with docker-compose.ngrok.yaml)
-      # - ngrok-data:/app/ngrok:ro
+      # ngrok volume for webhook URL syncing (only mounted with docker-compose.ngrok.yaml)
+      - ngrok-data:/app/ngrok:ro
     secrets:
       - postgres_password
       - db_password_server
