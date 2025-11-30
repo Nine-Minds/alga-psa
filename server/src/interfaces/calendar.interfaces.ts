@@ -153,6 +153,9 @@ export interface CalendarSyncResult {
   mapping?: CalendarEventMapping;
   externalEventId?: string;
   error?: string;
+  deleted?: boolean; // True if the entry was deleted (e.g., external event no longer exists)
+  skipped?: boolean; // True if sync was skipped (e.g., no @alga marker, or nothing to do)
+  reason?: string; // Explanation when deleted or skipped
   conflict?: {
     algaModified: string;
     externalModified: string;

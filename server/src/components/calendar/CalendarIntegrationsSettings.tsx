@@ -143,21 +143,22 @@ export function CalendarIntegrationsSettings() {
       const result = await syncCalendarProvider(providerId);
       if (result.success) {
         toast({
-          title: 'Manual sync completed',
-          description: providerName ? `${providerName} synced successfully.` : 'Calendar provider synced successfully.',
+          title: 'Sync started',
+          description: providerName ? `${providerName} sync is running in the background.` : 'Calendar sync is running in the background.',
         });
         setSyncFeedback((prev) => ({
           ...prev,
           [providerId]: {
             variant: 'success',
-            message: 'Manual sync completed successfully.',
+            message: 'Sync started. Check back shortly for results.',
           },
         }));
-        await loadProviders();
+        // Refresh providers after a short delay to pick up status changes
+        setTimeout(() => loadProviders(), 3000);
       } else {
-        const message = result.error || 'Manual sync encountered issues.';
+        const message = result.error || 'Failed to start sync.';
         toast({
-          title: 'Manual sync encountered issues',
+          title: 'Failed to start sync',
           description: message,
           variant: 'destructive',
         });

@@ -62,6 +62,7 @@ export async function mapScheduleEntryToExternalEvent(
   const extendedProperties = {
     private: {
       'alga-entry-id': entry.entry_id,
+      'alga-assigned-user-ids': entry.assigned_user_ids.join(','),
       ...(entry.tenant ? { 'alga-tenant': entry.tenant } : {}),
       ...(entry.work_item_id ? { 'alga-work-item-id': entry.work_item_id } : {}),
       ...(entry.work_item_type ? { 'alga-work-item-type': String(entry.work_item_type) } : {})
@@ -135,55 +136,60 @@ export async function mapExternalEventToScheduleEntry(
       ? new Date(event.end.date + 'T23:59:59Z')
       : new Date();
 
-  // Map assigned user IDs from attendees
-  const assignedUserIds = event.attendees
-    ?.map(attendee => {
-      const normalizedEmail = attendee.email?.toLowerCase?.() ?? attendee.email;
-      const userId = normalizedEmail ? userEmails?.get(normalizedEmail) : undefined;
-      console.log('[eventMapping] Mapping attendee:', {
-        email: attendee.email,
-        normalizedEmail,
-        mappedUserId: userId
-      });
-      return userId;
-    })
-    .filter((id): id is string => id !== undefined) || [];
-
-  console.log('[eventMapping] Final assigned user IDs from attendees:', {
-    attendeeCount: event.attendees?.length || 0,
-    mappedCount: assignedUserIds.length,
-    assignedUserIds
-  });
-
-  // If no assignees detected, fallback to organizer
-  if (assignedUserIds.length === 0 && event.organizer?.email) {
-    const organizerEmail = event.organizer.email.toLowerCase?.() ?? event.organizer.email;
-    if (organizerEmail) {
-      if (!userEmails || !userEmails.has(organizerEmail)) {
-        const organizerMap = await fetchUserIdsByEmail([organizerEmail], tenant);
-        userEmails = userEmails ? new Map([...userEmails, ...organizerMap]) : organizerMap;
-      }
-      const organizerUserId = userEmails?.get(organizerEmail);
-      if (organizerUserId) {
-        assignedUserIds.push(organizerUserId);
-      }
-    }
-  }
-
-  // If still no assignees, fallback to the first tenant user
-  if (assignedUserIds.length === 0) {
-    const fallbackUserId = await fetchFallbackUserId(tenant);
-    if (fallbackUserId) {
-      assignedUserIds.push(fallbackUserId);
-    }
-  }
-
   // Extract Alga entry ID from extended properties if present
   const algaEntryId = event.extendedProperties?.private?.['alga-entry-id'];
   const workItemId = event.extendedProperties?.private?.['alga-work-item-id'];
+  const storedAssignedUserIds = event.extendedProperties?.private?.['alga-assigned-user-ids'];
+  
   let workItemType = event.extendedProperties?.private?.['alga-work-item-type'] as WorkItemType | undefined;
   if (typeof workItemType === 'string') {
     workItemType = workItemType.toLowerCase() as WorkItemType;
+  }
+
+  // Initialize assigned user IDs
+  let assignedUserIds: string[] = [];
+
+  // 1. Try to use stored Alga user IDs first (most reliable)
+  if (storedAssignedUserIds) {
+    assignedUserIds = storedAssignedUserIds.split(',').filter(id => id.trim().length > 0);
+    console.log('[eventMapping] Used stored assigned user IDs:', assignedUserIds);
+  } 
+  
+  // 2. If no stored IDs, map from attendees
+  if (assignedUserIds.length === 0) {
+    assignedUserIds = event.attendees
+      ?.map(attendee => {
+        const normalizedEmail = attendee.email?.toLowerCase?.() ?? attendee.email;
+        const userId = normalizedEmail ? userEmails?.get(normalizedEmail) : undefined;
+        console.log('[eventMapping] Mapping attendee:', {
+          email: attendee.email,
+          normalizedEmail,
+          mappedUserId: userId
+        });
+        return userId;
+      })
+      .filter((id): id is string => id !== undefined) || [];
+
+    console.log('[eventMapping] Final assigned user IDs from attendees:', {
+      attendeeCount: event.attendees?.length || 0,
+      mappedCount: assignedUserIds.length,
+      assignedUserIds
+    });
+
+    // If no assignees detected, fallback to organizer
+    if (assignedUserIds.length === 0 && event.organizer?.email) {
+      const organizerEmail = event.organizer.email.toLowerCase?.() ?? event.organizer.email;
+      if (organizerEmail) {
+        if (!userEmails || !userEmails.has(organizerEmail)) {
+          const organizerMap = await fetchUserIdsByEmail([organizerEmail], tenant);
+          userEmails = userEmails ? new Map([...userEmails, ...organizerMap]) : organizerMap;
+        }
+        const organizerUserId = userEmails?.get(organizerEmail);
+        if (organizerUserId) {
+          assignedUserIds.push(organizerUserId);
+        }
+      }
+    }
   }
 
   // Map status
