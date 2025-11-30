@@ -428,14 +428,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const vendorConfig = this.config.provider_config || {};
-      const envWebhookBase =
-        process.env.CALENDAR_WEBHOOK_BASE_URL ||
-        process.env.CALENDAR_MICROSOFT_WEBHOOK_BASE_URL ||
-        process.env.MICROSOFT_CALENDAR_WEBHOOK_URL ||
-        process.env.NGROK_URL ||
-        process.env.PUBLIC_WEBHOOK_BASE_URL ||
-        process.env.NEXT_PUBLIC_BASE_URL ||
-        process.env.NEXTAUTH_URL;
+      const envWebhookBase = process.env.CALENDAR_WEBHOOK_BASE_URL || process.env.NEXTAUTH_URL;
 
       let webhookUrl = vendorConfig.webhookNotificationUrl?.trim();
       if (webhookUrl && !/^https:\/\//i.test(webhookUrl) && envWebhookBase) {
