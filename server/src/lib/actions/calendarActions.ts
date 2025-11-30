@@ -22,6 +22,7 @@ export async function initiateCalendarOAuth(params: {
   provider: 'google' | 'microsoft';
   calendarProviderId?: string;
   redirectUri?: string;
+  isPopup?: boolean;
 }): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> {
   const user = await getCurrentUser();
   if (!user) return { success: false, error: 'Unauthorized' };
@@ -47,7 +48,7 @@ export async function initiateCalendarOAuth(params: {
       }
     }
 
-    const { provider, calendarProviderId, redirectUri: requestedRedirectUri } = params;
+    const { provider, calendarProviderId, redirectUri: requestedRedirectUri, isPopup } = params;
     const secretProvider = await getSecretProviderInstance();
     const tenant = user.tenant;
 
@@ -113,7 +114,8 @@ export async function initiateCalendarOAuth(params: {
       nonce: generateCalendarNonce(),
       redirectUri,
       timestamp: Date.now(),
-      hosted: isHostedFlow
+      hosted: isHostedFlow,
+      isPopup
     };
     const encodedState = encodeCalendarState(state);
 
