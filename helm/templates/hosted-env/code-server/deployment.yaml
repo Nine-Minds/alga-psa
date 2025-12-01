@@ -1,3 +1,4 @@
+{{- if .Values.hostedEnv }}
 {{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled }}
 apiVersion: apps/v1
 kind: Deployment
@@ -558,4 +559,5 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
 {{- end }}
