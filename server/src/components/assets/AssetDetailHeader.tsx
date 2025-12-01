@@ -16,7 +16,7 @@ import {
   RefreshCw,
   Power
 } from 'lucide-react';
-import { Button } from '../../ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { StatusBadge } from './shared/StatusBadge';
 import { Asset } from '../../interfaces/asset.interfaces';
 import { 
@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel
-} from '../../ui/DropdownMenu';
+} from 'server/src/components/ui/DropdownMenu';
 
 interface AssetDetailHeaderProps {
   asset: Asset;

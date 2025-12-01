@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, Group, ActionIcon, CopyButton, Tooltip } from '@mantine/core';
-import { IconCopy, IconCheck } from '@tabler/icons-react';
+import { Copy, Check } from 'lucide-react';
 
 interface CopyableFieldProps {
   label: string;
@@ -36,7 +36,7 @@ export const CopyableField: React.FC<CopyableFieldProps> = ({
             {({ copied, copy }) => (
               <Tooltip label={copied ? 'Copied' : 'Copy'} withArrow position="right">
                 <ActionIcon color={copied ? 'teal' : 'gray'} variant="subtle" onClick={copy} size="xs">
-                  {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
                 </ActionIcon>
               </Tooltip>
             )}

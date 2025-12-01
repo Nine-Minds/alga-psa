@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Stack, Text, Group, ActionIcon, CopyButton, Tooltip } from '@mantine/core';
 import { ExternalLink, Copy, Check } from 'lucide-react';
 import { Asset } from '../../../interfaces/asset.interfaces';

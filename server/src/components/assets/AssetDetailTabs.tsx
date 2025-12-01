@@ -1,5 +1,5 @@
 import React from 'react';
-import { CustomTabs } from '../../ui/CustomTabs';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { ServiceHistoryTab } from './tabs/ServiceHistoryTab';
 import { SoftwareInventoryTab } from './tabs/SoftwareInventoryTab';
 import { MaintenanceSchedulesTab } from './tabs/MaintenanceSchedulesTab';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { TextInput, Select, Badge, Group } from '@mantine/core';
 import { Search } from 'lucide-react';
 import { Asset } from '../../../interfaces/asset.interfaces';

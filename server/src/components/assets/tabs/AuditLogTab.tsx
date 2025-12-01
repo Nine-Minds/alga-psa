@@ -1,6 +1,6 @@
 import React from 'react';
 import useSWR from 'swr';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Text, Timeline } from '@mantine/core';
 import { getAssetHistory } from '../../../lib/actions/asset-actions/assetActions';
 import { formatDateTime } from '../../../lib/utils/dateTimeUtils';

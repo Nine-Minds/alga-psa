@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Group, Text, Stack, Button, Loader } from '@mantine/core';
 import { RefreshCw, WifiOff } from 'lucide-react';
 import { RmmCachedData } from '../../../interfaces/asset.interfaces';

@@ -6,7 +6,7 @@ import { AssetMetricsBanner } from './AssetMetricsBanner';
 import { AssetDashboardGrid } from './AssetDashboardGrid';
 import { AssetDetailTabs } from './AssetDetailTabs';
 import { useAssetDetail } from '../../hooks/useAssetDetail';
-import { LoadingIndicator } from '../../ui/LoadingIndicator';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Alert, Container } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
 

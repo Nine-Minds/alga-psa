@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Stack, Group, Text, ThemeIcon } from '@mantine/core';
 import { 
   ShieldCheck, 

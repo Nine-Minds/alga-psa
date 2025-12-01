@@ -1,6 +1,6 @@
 import React from 'react';
 import useSWR from 'swr';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Badge, Button, Group, Text, Stack } from '@mantine/core';
 import { CalendarPlus, Check } from 'lucide-react';
 import { getAssetMaintenanceReport } from '../../../lib/actions/asset-actions/assetActions';

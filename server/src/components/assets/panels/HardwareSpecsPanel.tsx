@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Stack, Text, Group } from '@mantine/core';
 import { RmmCachedData } from '../../../interfaces/asset.interfaces';
 import { UtilizationBar } from '../shared/UtilizationBar';

@@ -1,7 +1,7 @@
 import React from 'react';
 import useSWR from 'swr';
 import { Table } from '../../ui/Table'; // Verify path
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Badge, Button, Group, Text, Pagination } from '@mantine/core';
 import { Ticket } from 'lucide-react';
 import { getAssetLinkedTickets } from '../../../lib/actions/asset-actions/assetActions';

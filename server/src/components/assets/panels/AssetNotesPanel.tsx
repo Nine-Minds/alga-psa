@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card } from '../../ui/Card';
+import { Card } from 'server/src/components/ui/Card';
 import { Button, Text, Group } from '@mantine/core';
 import { useAssetNotes } from '../../../hooks/useAssetNotes';
-import { TextEditor } from '../../editor/TextEditor';
-import { LoadingIndicator } from '../../ui/LoadingIndicator';
+import TextEditor from '../../editor/TextEditor';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Save } from 'lucide-react';
 
 interface AssetNotesPanelProps {
