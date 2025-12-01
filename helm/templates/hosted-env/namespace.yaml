@@ -1,3 +1,4 @@
+{{- if .Values.hostedEnv }}
 {{- if and .Values.hostedEnv.enabled .Values.hostedEnv.manageNamespace }}
 apiVersion: v1
 kind: Namespace
@@ -11,4 +12,5 @@ metadata:
     istio.io/rev: {{ .Values.istio.revision | default "default" }}
     branch: "{{ .Values.hostedEnv.sanitizedBranch }}"
     {{- include "sebastian.labels" . | nindent 4 }}
+{{- end }}
 {{- end }}

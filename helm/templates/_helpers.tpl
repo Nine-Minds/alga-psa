@@ -51,9 +51,15 @@ app.kubernetes.io/name: {{ include "sebastian.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{/* Safely check if hostedEnv is enabled.
+     Returns "true" if hostedEnv exists and is enabled, empty string otherwise. */}}
+{{- define "sebastian.hostedEnvEnabled" -}}
+{{- if and .Values.hostedEnv .Values.hostedEnv.enabled -}}true{{- end -}}
+{{- end }}
+
 {{/* Resolve the correct namespace for the resource.
      Returns a trimmed single-line string to avoid newline emission in include sites. */}}
-{{- define "sebastian.namespace" -}}{{- if .Values.devEnv.enabled -}}{{- .Values.devEnv.namespace -}}{{- else if .Values.hostedEnv.enabled -}}{{- .Values.hostedEnv.namespace -}}{{- else -}}{{- .Values.namespace -}}{{- end -}}{{- end }}
+{{- define "sebastian.namespace" -}}{{- if .Values.devEnv.enabled -}}{{- .Values.devEnv.namespace -}}{{- else if (include "sebastian.hostedEnvEnabled" .) -}}{{- .Values.hostedEnv.namespace -}}{{- else -}}{{- .Values.namespace -}}{{- end -}}{{- end }}
 
 {{/* Derive deployment color from release name */}}
 {{- define "sebastian.color" -}}
