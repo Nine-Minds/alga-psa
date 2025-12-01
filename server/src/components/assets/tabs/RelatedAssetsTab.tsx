@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from 'server/src/components/ui/Card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/Table';
 import { Asset } from '../../../interfaces/asset.interfaces';
 import { Text, Badge, Group, Button } from '@mantine/core';
 import { Network, Link as LinkIcon } from 'lucide-react';
@@ -22,47 +23,49 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
       }
     >
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-4 py-3">Asset Name</th>
-              <th className="px-4 py-3">Relationship</th>
-              <th className="px-4 py-3">Linked Date</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Asset Name</TableHead>
+              <TableHead>Relationship</TableHead>
+              <TableHead>Linked Date</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {relationships.length > 0 ? (
               relationships.map((rel, index) => (
-                <tr key={`${rel.child_asset_id}-${index}`} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-4 py-3 font-medium">
+                <TableRow key={`${rel.child_asset_id}-${index}`}>
+                  <TableCell className="font-medium">
                     <Group gap="xs">
-                      <Network size={16} className="text-gray-400" />
+                      <Network size={16} className="text-muted-foreground" />
                       {rel.name}
                     </Group>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <Badge variant="light" color="blue">{rel.relationship_type}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {formatDateTime(new Date(rel.created_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <Button variant="subtle" size="xs" color="red">Unlink</Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-gray-500 flex flex-col items-center gap-2">
-                  <Network size={32} className="opacity-20" />
-                  <Text>No related assets linked.</Text>
-                  <Button variant="subtle" size="xs">Link an asset</Button>
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <Network size={32} className="opacity-20" />
+                    <Text>No related assets linked.</Text>
+                    <Button variant="subtle" size="xs">Link an asset</Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </Card>
   );

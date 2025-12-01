@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Card } from 'server/src/components/ui/Card';
-import { TextInput, Select, Badge, Group } from '@mantine/core';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/Table';
+import { TextInput, Select, Group } from '@mantine/core';
 import { Search } from 'lucide-react';
 import { Asset } from '../../../interfaces/asset.interfaces';
-import { formatDateTime } from '../../../lib/utils/dateTimeUtils';
 
 interface SoftwareInventoryTabProps {
   asset: Asset;
@@ -51,36 +51,36 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
       </Group>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Version</th>
-              <th className="px-4 py-3">Publisher</th>
-              <th className="px-4 py-3">Install Date</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Version</TableHead>
+              <TableHead>Publisher</TableHead>
+              <TableHead>Install Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filteredSoftware.length > 0 ? (
               filteredSoftware.map((sw) => (
-                <tr key={sw.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-4 py-3 font-medium">{sw.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{sw.version}</td>
-                  <td className="px-4 py-3 text-gray-500">{sw.publisher}</td>
-                  <td className="px-4 py-3 text-gray-500">
+                <TableRow key={sw.id}>
+                  <TableCell className="font-medium">{sw.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{sw.version}</TableCell>
+                  <TableCell className="text-muted-foreground">{sw.publisher}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {sw.installDate ? new Date(sw.installDate).toLocaleDateString() : '-'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
                   No software found matching your search.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       
       <div className="mt-4 text-xs text-gray-400 text-right">
