@@ -18,7 +18,7 @@ export const AssetDetailTabs: React.FC<AssetDetailTabsProps> = ({ asset }) => {
     {
       label: 'Service History',
       icon: History,
-      content: <ServiceHistoryTab assetId={asset.asset_id} />
+      content: <ServiceHistoryTab asset={asset} />
     },
     {
       label: 'Software',
