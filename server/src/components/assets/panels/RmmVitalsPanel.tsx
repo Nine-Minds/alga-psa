@@ -62,6 +62,7 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
         <div className="flex flex-row items-center justify-between">
           <CardTitle>RMM Vitals & Connectivity</CardTitle>
           <Button 
+            id="refresh-rmm-vitals-btn"
             variant="subtle" 
             size="xs" 
             leftSection={isRefreshing ? <Loader size={12} /> : <RefreshCw size={12} />}

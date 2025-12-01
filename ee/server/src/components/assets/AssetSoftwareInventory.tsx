@@ -57,16 +57,7 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Only render for workstations and servers that are RMM-managed
-  if (!asset.rmm_provider || !asset.rmm_device_id) {
-    return null;
-  }
-
-  if (asset.asset_type !== 'workstation' && asset.asset_type !== 'server') {
-    return null;
-  }
-
-  const allSoftware = getSoftwareList(asset);
+  const allSoftware = React.useMemo(() => getSoftwareList(asset), [asset]);
 
   const filteredSoftware = useMemo(() => {
     if (!searchTerm) {
@@ -78,6 +69,15 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
       sw.publisher?.toLowerCase().includes(lowerSearch)
     );
   }, [allSoftware, searchTerm]);
+
+  // Only render for workstations and servers that are RMM-managed
+  if (!asset.rmm_provider || !asset.rmm_device_id) {
+    return null;
+  }
+
+  if (asset.asset_type !== 'workstation' && asset.asset_type !== 'server') {
+    return null;
+  }
 
   // Limit display if not expanded
   const displaySoftware = isExpanded ? filteredSoftware : filteredSoftware.slice(0, 5);

@@ -71,17 +71,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
   const [isExpanded, setIsExpanded] = useState(true);
   const [processingAlertId, setProcessingAlertId] = useState<string | null>(null);
 
-  // Don't render if not RMM managed
-  if (!asset.rmm_provider || !asset.rmm_device_id) {
-    return null;
-  }
-
-  // Fetch alerts on mount
-  useEffect(() => {
-    loadAlerts();
-  }, [asset.asset_id]);
-
-  const loadAlerts = async () => {
+  const loadAlerts = React.useCallback(async () => {
     setIsLoading(true);
     try {
       const result = await getAssetAlerts(asset.asset_id);
@@ -93,7 +83,20 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [asset.asset_id]);
+
+  // Fetch alerts on mount - must be called before any early returns
+  useEffect(() => {
+    if (!asset.rmm_provider || !asset.rmm_device_id) {
+      return;
+    }
+    loadAlerts();
+  }, [asset.asset_id, asset.rmm_provider, asset.rmm_device_id, loadAlerts]);
+
+  // Don't render if not RMM managed
+  if (!asset.rmm_provider || !asset.rmm_device_id) {
+    return null;
+  }
 
   const handleAcknowledge = async (alertId: string) => {
     setProcessingAlertId(alertId);

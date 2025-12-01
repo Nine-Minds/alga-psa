@@ -47,7 +47,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-base font-semibold">Maintenance History</CardTitle>
-          <Button leftSection={<CalendarPlus size={16} />} size="xs">
+          <Button id="schedule-maintenance-btn" leftSection={<CalendarPlus size={16} />} size="xs">
             Schedule Maintenance
           </Button>
         </CardHeader>

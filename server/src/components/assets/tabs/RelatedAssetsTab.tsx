@@ -17,7 +17,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-semibold">Related Assets ({relationships.length})</CardTitle>
-        <Button variant="outline" size="xs" leftSection={<LinkIcon size={14} />}>
+        <Button id="link-asset-btn" variant="outline" size="xs" leftSection={<LinkIcon size={14} />}>
           Link Asset
         </Button>
       </CardHeader>
@@ -49,7 +49,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                       {formatDateTime(new Date(rel.created_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}
                     </TableCell>
                     <TableCell>
-                      <Button variant="subtle" size="xs" color="red">Unlink</Button>
+                      <Button id={`unlink-asset-${rel.child_asset_id}-btn`} variant="subtle" size="xs" color="red">Unlink</Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -59,7 +59,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                     <div className="flex flex-col items-center gap-2">
                       <Network size={32} className="opacity-20" />
                       <Text>No related assets linked.</Text>
-                      <Button variant="subtle" size="xs">Link an asset</Button>
+                      <Button id="link-asset-empty-state-btn" variant="subtle" size="xs">Link an asset</Button>
                     </div>
                   </TableCell>
                 </TableRow>

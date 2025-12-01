@@ -48,6 +48,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
         <div className="flex flex-row items-center justify-between">
           <CardTitle>Notes & Quick Info</CardTitle>
           <Button 
+            id="save-asset-note-btn"
             variant="light" 
             size="xs" 
             leftSection={<Save size={14} />}
