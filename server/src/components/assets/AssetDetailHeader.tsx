@@ -36,7 +36,7 @@ interface AssetDetailHeaderProps {
 
 const getAssetIcon = (type: string) => {
   switch (type) {
-    case 'workstation': return Monitor;
+    case 'workstation': return Laptop; // Changed to Laptop as primary for workstation per mockup
     case 'server': return Server;
     case 'mobile_device': return Smartphone;
     case 'printer': return Printer;
@@ -56,25 +56,23 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   const badgeStatus = asset.agent_status || 'unknown';
 
   return (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 border-b bg-white dark:bg-gray-800">
-      <Group align="flex-start">
-        <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-          <Icon size={32} className="text-gray-600 dark:text-gray-300" />
-        </div>
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 bg-white border-b border-gray-200">
+      <Group align="center">
+        <Icon size={40} className="text-gray-700" />
         <div>
-          <Group gap="xs" mb={4}>
-            <Text size="xl" fw={700} className="leading-none">
+          <Group gap="xs" align="center">
+            <Text size="xl" fw={700} className="leading-none text-gray-900">
               {asset.name}
             </Text>
             {asset.rmm_provider && (
               <StatusBadge 
                 status={badgeStatus} 
                 provider={asset.rmm_provider === 'ninjaone' ? 'NinjaOne' : asset.rmm_provider} 
-                size="sm"
+                size="md"
               />
             )}
           </Group>
-          <Text size="sm" c="dimmed">
+          <Text size="sm" c="dimmed" mt={2}>
             Asset Tag: {asset.asset_tag}
           </Text>
         </div>
@@ -83,29 +81,28 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
       <Group>
         {asset.rmm_provider && (
            <Button 
-             variant="outline" 
-             className="flex items-center gap-2"
+             variant="filled" 
+             className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
              onClick={() => {
-               // Initial implementation would log or show unimplemented
                console.log('Remote control clicked');
              }}
            >
              <MonitorPlay size={16} />
-             Remote
+             Remote Control
            </Button>
         )}
         
         <Button 
           variant="outline"
-          className="flex items-center gap-2"
+          className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-2"
         >
-          <Ticket size={16} />
           Create Ticket
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="outline" className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-2 px-3">
+              Actions
               <MoreVertical size={16} />
             </Button>
           </DropdownMenuTrigger>

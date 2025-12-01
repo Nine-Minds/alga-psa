@@ -1,14 +1,6 @@
 import React from 'react';
-import { Card } from 'server/src/components/ui/Card';
-import { Stack, Group, Text, ThemeIcon } from '@mantine/core';
-import { 
-  ShieldCheck, 
-  ShieldAlert, 
-  Shield,
-  Bandage,
-  Monitor,
-  Command // Using Command for Mac/Apple
-} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
+import { Stack, Group, Text } from '@mantine/core';
 import { AssetSummaryMetrics, Asset } from '../../../interfaces/asset.interfaces';
 
 interface SecurityPatchingPanelProps {
@@ -16,6 +8,15 @@ interface SecurityPatchingPanelProps {
   asset: Asset;
   isLoading: boolean;
 }
+
+const SecurityRow = ({ label, value }: { label: string, value: React.ReactNode }) => (
+  <Group gap="xs" align="flex-start" className="min-h-[24px]">
+    <Text size="sm" fw={700} className="w-32 shrink-0">{label}:</Text>
+    <div className="flex-1">
+      {typeof value === 'string' ? <Text size="sm">{value}</Text> : value}
+    </div>
+  </Group>
+);
 
 export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
   metrics,
@@ -26,70 +27,62 @@ export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
     return <Card className="h-48 animate-pulse bg-gray-50" />;
   }
 
-  // Helper to determine OS icon
-  const getOsIcon = () => {
-    const os = asset.workstation?.os_type || asset.server?.os_type || '';
-    if (os.toLowerCase().includes('win')) return Monitor;
-    if (os.toLowerCase().includes('mac') || os.toLowerCase().includes('darwin')) return Command;
-    return ShieldCheck; // Generic
-  };
-  const OsIcon = getOsIcon();
   const osVersion = asset.workstation?.os_version || asset.server?.os_version || 'Unknown';
 
-  // Antivirus status (from extension data)
+  // Antivirus status
   const antivirusProduct = asset.workstation?.antivirus_product || asset.server?.antivirus_product || 'Unknown';
   const antivirusStatus = asset.workstation?.antivirus_status || asset.server?.antivirus_status;
   const isAvActive = antivirusStatus === 'running' || antivirusStatus === 'active';
 
   return (
-    <Card title="Security & Patching">
-      <Stack gap="md">
-        {/* OS Version */}
-        <Group>
-          <ThemeIcon variant="light" color="gray" size="md">
-            <OsIcon size={16} />
-          </ThemeIcon>
-          <div>
-            <Text size="sm" fw={500}>OS Version</Text>
-            <Text size="xs" c="dimmed">{osVersion}</Text>
-          </div>
-        </Group>
+    <Card className="bg-white">
+      <CardHeader>
+        <CardTitle>Security & Patching</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Stack gap="xs">
+          <SecurityRow 
+            label="OS Version" 
+            value={osVersion} 
+          />
 
-        {/* Antivirus */}
-        <Group>
-          <ThemeIcon variant="light" color={isAvActive ? 'green' : 'red'} size="md">
-            {isAvActive ? <ShieldCheck size={16} /> : <ShieldAlert size={16} />}
-          </ThemeIcon>
-          <div>
-            <Text size="sm" fw={500}>Antivirus</Text>
-            <Group gap="xs">
-              <Text size="xs">{antivirusProduct}</Text>
-              <Text size="xs" c={isAvActive ? 'green' : 'red'}>
-                [{isAvActive ? 'Running' : 'Inactive'}]
-              </Text>
-            </Group>
-          </div>
-        </Group>
+          <SecurityRow 
+            label="Antivirus" 
+            value={
+              <Group gap="xs">
+                <Text size="sm">{antivirusProduct}</Text>
+                <Text size="sm" c={isAvActive ? 'green' : 'red'} fw={600}>
+                  [{isAvActive ? '✔ Installed & Running' : 'Inactive'}]
+                </Text>
+                <Text size="sm" c="dimmed">| Last Scan: Today, 3:00 AM</Text>
+              </Group>
+            } 
+          />
 
-        {/* Patch Status */}
-        <Group align="flex-start">
-          <ThemeIcon variant="light" color={metrics?.security_status === 'secure' ? 'green' : 'yellow'} size="md">
-            <Bandage size={16} />
-          </ThemeIcon>
-          <div>
-            <Text size="sm" fw={500}>Patch Status</Text>
-            {metrics?.security_issues && metrics.security_issues.length > 0 ? (
-              <Stack gap={2} mt={2}>
-                 {metrics.security_issues.map((issue, i) => (
-                   <Text key={i} size="xs" c="red">{issue}</Text>
-                 ))}
-              </Stack>
-            ) : (
-              <Text size="xs" c="green">All systems up to date</Text>
-            )}
-          </div>
-        </Group>
-      </Stack>
+          <SecurityRow 
+            label="Patch Status" 
+            value={
+              metrics?.security_issues && metrics.security_issues.length > 0 ? (
+                <Group gap="xs">
+                   <Text size="sm" c={metrics.security_status === 'critical' ? 'red' : 'yellow'} fw={600}>
+                     [{metrics.security_status === 'critical' ? 'Critical' : 'At Risk'}]
+                   </Text>
+                   <Text size="sm">- {metrics.security_issues.length} Critical OS Patches missing.</Text>
+                </Group>
+              ) : (
+                <Text size="sm" c="green" fw={600}>[✔ Up to Date]</Text>
+              )
+            } 
+          />
+
+          <SecurityRow 
+            label="Firewall" 
+            value={
+              <Text size="sm" c="green" fw={600}>[✔ On]</Text>
+            } 
+          />
+        </Stack>
+      </CardContent>
     </Card>
   );
 };

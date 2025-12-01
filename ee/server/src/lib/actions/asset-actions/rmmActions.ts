@@ -51,38 +51,70 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
     let extensionData: Record<string, unknown> | null = null;
     let totalMemoryGb: number | null = null;
 
-    if (asset.asset_type === 'workstation') {
-      extensionData = await knex('workstation_assets')
-        .where({ tenant, asset_id: assetId })
-        .select(
-          'current_user',
-          'uptime_seconds',
-          'lan_ip',
-          'wan_ip',
-          'cpu_utilization_percent',
-          'memory_usage_percent',
-          'memory_used_gb',
-          'disk_usage',
-          'ram_gb'
-        )
-        .first();
-      totalMemoryGb = extensionData?.ram_gb as number || null;
-    } else if (asset.asset_type === 'server') {
-      extensionData = await knex('server_assets')
-        .where({ tenant, asset_id: assetId })
-        .select(
-          'current_user',
-          'uptime_seconds',
-          'lan_ip',
-          'wan_ip',
-          'cpu_usage_percent',
-          'memory_usage_percent',
-          'memory_used_gb',
-          'disk_usage',
-          'ram_gb'
-        )
-        .first();
-      totalMemoryGb = extensionData?.ram_gb as number || null;
+    try {
+      if (asset.asset_type === 'workstation') {
+        // Try to select new RMM cached fields, fallback to basic fields if migration hasn't run
+        try {
+          extensionData = await knex('workstation_assets')
+            .where({ tenant, asset_id: assetId })
+            .select(
+              'current_user',
+              'uptime_seconds',
+              'lan_ip',
+              'wan_ip',
+              'cpu_utilization_percent',
+              'memory_usage_percent',
+              'memory_used_gb',
+              'disk_usage',
+              'ram_gb'
+            )
+            .first();
+        } catch (columnError: any) {
+          // If columns don't exist (migration not run), select only basic fields
+          if (columnError?.code === '42703') {
+            extensionData = await knex('workstation_assets')
+              .where({ tenant, asset_id: assetId })
+              .select('ram_gb')
+              .first();
+          } else {
+            throw columnError;
+          }
+        }
+        totalMemoryGb = extensionData?.ram_gb as number || null;
+      } else if (asset.asset_type === 'server') {
+        // Try to select new RMM cached fields, fallback to basic fields if migration hasn't run
+        try {
+          extensionData = await knex('server_assets')
+            .where({ tenant, asset_id: assetId })
+            .select(
+              'current_user',
+              'uptime_seconds',
+              'lan_ip',
+              'wan_ip',
+              'cpu_usage_percent',
+              'memory_usage_percent',
+              'memory_used_gb',
+              'disk_usage',
+              'ram_gb'
+            )
+            .first();
+        } catch (columnError: any) {
+          // If columns don't exist (migration not run), select only basic fields
+          if (columnError?.code === '42703') {
+            extensionData = await knex('server_assets')
+              .where({ tenant, asset_id: assetId })
+              .select('ram_gb')
+              .first();
+          } else {
+            throw columnError;
+          }
+        }
+        totalMemoryGb = extensionData?.ram_gb as number || null;
+      }
+    } catch (error) {
+      // If query fails entirely, return null to indicate no RMM data available
+      console.warn('Could not fetch RMM extension data, migration may not have run:', error);
+      extensionData = null;
     }
 
     if (!extensionData) {
@@ -113,8 +145,9 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
       storage,
     };
   } catch (error) {
-    console.error('Error getting asset RMM data:', error);
-    throw new Error('Failed to get asset RMM data');
+    console.warn('Error getting asset RMM data (migration may not have run):', error);
+    // Return null instead of throwing to allow page to load without RMM data
+    return null;
   }
 }
 

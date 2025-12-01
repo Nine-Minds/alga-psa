@@ -1662,7 +1662,9 @@ export async function getAssetSummaryMetrics(asset_id: string): Promise<AssetSum
 
         // Count open tickets associated with this asset
         const ticketCountResult = await knex('asset_associations')
-            .where({ tenant, asset_id, entity_type: 'ticket' })
+            .where('asset_associations.tenant', tenant)
+            .where('asset_associations.asset_id', asset_id)
+            .where('asset_associations.entity_type', 'ticket')
             .join('tickets', function() {
                 this.on('tickets.tenant', '=', 'asset_associations.tenant')
                     .andOn('tickets.ticket_id', '=', 'asset_associations.entity_id');

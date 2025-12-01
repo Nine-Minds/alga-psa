@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card } from 'server/src/components/ui/Card';
+import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Button, Text, Group } from '@mantine/core';
 import { useAssetNotes } from '../../../hooks/useAssetNotes';
 import TextEditor from '../../editor/TextEditor';
-import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Save } from 'lucide-react';
 
 interface AssetNotesPanelProps {
@@ -44,35 +43,38 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
   }
 
   return (
-    <Card 
-      title="Notes & Quick Info"
-      action={
-        <Button 
-          variant="light" 
-          size="xs" 
-          leftSection={<Save size={14} />}
-          onClick={handleSave}
-          loading={isSaving}
-        >
-          Save
-        </Button>
-      }
-    >
-      <div className="min-h-[200px]">
-        <TextEditor
-          key={assetId}
-          initialContent={editorContent}
-          onContentChange={setEditorContent}
-        />
-      </div>
-      
-      {lastUpdated && (
-        <Group justify="flex-end" mt="xs">
-          <Text size="xs" c="dimmed">
-            Last updated: {new Date(lastUpdated).toLocaleString()}
-          </Text>
-        </Group>
-      )}
+    <Card className="bg-white">
+      <CardHeader className="pb-2">
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Notes & Quick Info</CardTitle>
+          <Button 
+            variant="light" 
+            size="xs" 
+            leftSection={<Save size={14} />}
+            onClick={handleSave}
+            loading={isSaving}
+          >
+            Save
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="min-h-[200px]">
+          <TextEditor
+            key={assetId}
+            initialContent={editorContent}
+            onContentChange={setEditorContent}
+          />
+        </div>
+        
+        {lastUpdated && (
+          <Group justify="flex-end" mt="xs">
+            <Text size="xs" c="dimmed">
+              Last updated: {new Date(lastUpdated).toLocaleString()}
+            </Text>
+          </Group>
+        )}
+      </CardContent>
     </Card>
   );
 };

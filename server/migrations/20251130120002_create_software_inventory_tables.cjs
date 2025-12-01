@@ -130,7 +130,7 @@ exports.up = async function(knex) {
             a.name AS asset_name,
             a.asset_type,
             a.client_id,
-            c.company_name AS client_name,
+            c.client_name,
             sc.software_id,
             sc.name AS software_name,
             sc.publisher,
@@ -150,7 +150,7 @@ exports.up = async function(knex) {
         FROM asset_software asw
         JOIN software_catalog sc ON sc.tenant = asw.tenant AND sc.software_id = asw.software_id
         JOIN assets a ON a.tenant = asw.tenant AND a.asset_id = asw.asset_id
-        LEFT JOIN companies c ON c.tenant = a.tenant AND c.company_id = a.client_id;
+        LEFT JOIN clients c ON c.tenant = a.tenant AND c.client_id = a.client_id;
     `);
 
     // ============================================================================

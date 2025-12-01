@@ -1,7 +1,7 @@
 // src/utils/dateTimeUtils.ts
 
 import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
-import { parseISO } from 'date-fns';
+import { parseISO, isToday, isYesterday } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
 
@@ -21,6 +21,22 @@ export function localToUtc(localDate: Date, timeZone: string): Date {
 // Function to format date for display (with time)
 export function formatDateTime(date: Date, timeZone: string, formatString: string = 'yyyy-MM-dd HH:mm:ss'): string {
   return format(toZonedTime(date, timeZone), formatString, { timeZone });
+}
+
+// Function to format date relatively (Today, Yesterday, or Date)
+export function formatRelativeDateTime(date: Date, timeZone: string): string {
+  const zonedDate = toZonedTime(date, timeZone);
+  const timeStr = format(zonedDate, 'h:mm a', { timeZone });
+  
+  if (isToday(zonedDate)) {
+    return `Today, ${timeStr}`;
+  }
+  
+  if (isYesterday(zonedDate)) {
+    return `Yesterday, ${timeStr}`;
+  }
+  
+  return format(zonedDate, 'MMM dd, yyyy, h:mm a', { timeZone });
 }
 
 // Function to format date only (without time)

@@ -1,16 +1,18 @@
 import React from 'react';
-import { Card } from 'server/src/components/ui/Card';
+import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Stack, Text, Group } from '@mantine/core';
-import { RmmCachedData } from '../../../interfaces/asset.interfaces';
+import { RmmCachedData, Asset } from '../../../interfaces/asset.interfaces';
 import { UtilizationBar } from '../shared/UtilizationBar';
 
 interface HardwareSpecsPanelProps {
   data: RmmCachedData | null | undefined;
+  asset?: Asset;
   isLoading: boolean;
 }
 
 export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
   data,
+  asset,
   isLoading
 }) => {
   if (isLoading) {
@@ -19,71 +21,97 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
 
   if (!data) {
     return (
-      <Card title="Hardware Specifications">
-        <Text c="dimmed" ta="center" py="xl">No hardware data available</Text>
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>Hardware Specifications</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Text c="dimmed" ta="center" py="xl">No hardware data available</Text>
+        </CardContent>
       </Card>
     );
   }
 
+  const cpuModel = asset?.workstation?.cpu_model || asset?.server?.cpu_model || 'Unknown CPU';
+
   return (
-    <Card title="Hardware Specifications">
-      <Stack gap="lg">
-        {/* CPU */}
-        <div>
-          <Group justify="space-between" mb={4}>
-            <Text size="sm" fw={500}>CPU</Text>
-            <Text size="xs" c="dimmed">Utilization</Text>
-          </Group>
-          <UtilizationBar 
-            value={data.cpu_utilization_percent} 
-            label="CPU Load"
-            showLabel={true}
-          />
-        </div>
+    <Card className="bg-white">
+      <CardHeader>
+        <CardTitle>Hardware Specifications</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Stack gap="sm">
+          {/* CPU */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <Text size="sm" fw={700} className="w-12 shrink-0">CPU:</Text>
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+               <Text size="sm" className="min-w-[120px]">{cpuModel}</Text>
+               <div className="flex items-center gap-2 flex-1">
+                 <Text size="sm" c="dimmed">Utilization:</Text>
+                 <div className="w-32">
+                   <UtilizationBar 
+                     value={data.cpu_utilization_percent} 
+                     showLabel={false}
+                     size="sm"
+                   />
+                 </div>
+                 <Text size="sm">{data.cpu_utilization_percent}%</Text>
+               </div>
+            </div>
+          </div>
 
-        {/* Memory */}
-        <div>
-          <Group justify="space-between" mb={4}>
-            <Text size="sm" fw={500}>Memory</Text>
-            <Text size="xs" c="dimmed">
-              {data.memory_used_gb !== null && data.memory_total_gb !== null 
-                ? `${data.memory_used_gb.toFixed(1)}GB / ${data.memory_total_gb}GB` 
-                : 'Utilization'}
-            </Text>
-          </Group>
-          <UtilizationBar 
-            value={data.memory_utilization_percent} 
-            label="RAM Usage"
-            showLabel={true}
-          />
-        </div>
+          {/* Memory */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <Text size="sm" fw={700} className="w-12 shrink-0">RAM:</Text>
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+               <Text size="sm" className="min-w-[120px]">
+                 {data.memory_total_gb ? `${data.memory_total_gb}GB Unified Memory` : 'Unknown'}
+               </Text>
+               <div className="flex items-center gap-2 flex-1">
+                 <Text size="sm" c="dimmed">Utilization:</Text>
+                 <div className="w-32">
+                   <UtilizationBar 
+                     value={data.memory_utilization_percent} 
+                     showLabel={false}
+                     size="sm"
+                   />
+                 </div>
+                 <Text size="sm">
+                   {data.memory_utilization_percent}% 
+                   {data.memory_used_gb ? ` (${data.memory_used_gb.toFixed(1)}GB Used)` : ''}
+                 </Text>
+               </div>
+            </div>
+          </div>
 
-        {/* Storage */}
-        <div>
-          <Text size="sm" fw={500} mb="xs">Storage</Text>
-          <Stack gap="md">
-            {data.storage.map((drive, index) => (
-              <div key={index}>
-                <Group justify="space-between" mb={2}>
-                  <Text size="xs" fw={500}>{drive.name}</Text>
-                  <Text size="xs" c="dimmed">
-                    {drive.free_gb.toFixed(1)}GB Free / {drive.total_gb.toFixed(1)}GB Total
-                  </Text>
-                </Group>
-                <UtilizationBar 
-                  value={drive.utilization_percent} 
-                  showLabel={false}
-                  tooltip={`${drive.utilization_percent.toFixed(1)}% Used`}
-                  size="sm"
-                />
+          {/* Storage */}
+          <div>
+             {data.storage.map((drive, index) => (
+              <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 last:mb-0">
+                 <Text size="sm" fw={700} className="w-16 shrink-0">Storage:</Text>
+                 <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+                   <Text size="sm" className="min-w-[120px]">{drive.name}</Text>
+                   <div className="flex items-center gap-2 flex-1">
+                     <div className="w-32">
+                       <UtilizationBar 
+                         value={drive.utilization_percent} 
+                         showLabel={false}
+                         size="sm"
+                       />
+                     </div>
+                     <Text size="sm">
+                       {drive.free_gb.toFixed(1)} GB Free
+                     </Text>
+                   </div>
+                 </div>
               </div>
-            ))}
-            {data.storage.length === 0 && (
-              <Text size="xs" c="dimmed">No storage drives detected</Text>
-            )}
-          </Stack>
-        </div>
-      </Stack>
+             ))}
+             {data.storage.length === 0 && (
+               <Text size="sm" c="dimmed">No storage drives detected</Text>
+             )}
+          </div>
+        </Stack>
+      </CardContent>
     </Card>
   );
 };

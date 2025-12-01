@@ -36,6 +36,7 @@ export const AssetDashboardGrid: React.FC<AssetDashboardGridProps> = ({
         />
         <HardwareSpecsPanel 
           data={rmmData} 
+          asset={asset}
           isLoading={isLoading} 
         />
         <SecurityPatchingPanel 

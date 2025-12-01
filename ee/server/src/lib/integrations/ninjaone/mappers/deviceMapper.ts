@@ -23,6 +23,7 @@ import {
   CreateAssetRequest,
   RmmProvider,
   RmmAgentStatus,
+  RmmStorageInfo,
 } from '../../../../../../../server/src/interfaces/asset.interfaces';
 
 /**
@@ -359,7 +360,8 @@ export function mapToWorkstationExtension(
     storage_capacity_gb: calculateTotalStorage(device.volumes),
     gpu_model: undefined, // Not typically available from NinjaOne
     last_login: device.lastLoggedInUser ? undefined : undefined, // Would need activity data
-    installed_software: device.software || [],
+    // JSONB fields must be stringified for Knex to handle correctly
+    installed_software: JSON.stringify(device.software || []) as unknown as unknown[],
     // RMM-specific fields
     agent_version: undefined, // Would need to fetch from agent info
     antivirus_status: antivirus.status,
@@ -368,7 +370,8 @@ export function mapToWorkstationExtension(
     pending_patches: undefined, // Fetched separately via patch API
     failed_patches: undefined,
     last_patch_scan_at: undefined,
-    system_info: {
+    // JSONB field - stringify for Knex
+    system_info: JSON.stringify({
       manufacturer: device.system?.manufacturer,
       model: device.system?.model,
       chassis_type: device.system?.chassisType,
@@ -378,7 +381,7 @@ export function mapToWorkstationExtension(
       public_ip: device.publicIP,
       timezone: device.os?.timezone?.name,
       locale: device.os?.locale,
-    },
+    }) as unknown as Record<string, unknown>,
     // Cached RMM live data (populated during sync)
     current_user: device.lastLoggedInUser || undefined,
     uptime_seconds: calculateUptimeSeconds(device.os?.lastBootTime) ?? undefined,
@@ -389,7 +392,8 @@ export function mapToWorkstationExtension(
     cpu_utilization_percent: undefined,
     memory_usage_percent: undefined,
     memory_used_gb: undefined,
-    disk_usage: mapDiskUsageToRmmStorageInfo(device.volumes),
+    // JSONB fields must be stringified for Knex to handle correctly
+    disk_usage: JSON.stringify(mapDiskUsageToRmmStorageInfo(device.volumes)) as unknown as RmmStorageInfo[],
   };
 }
 
@@ -409,19 +413,22 @@ export function mapToServerExtension(
     cpu_model: processor.model,
     cpu_cores: processor.cores,
     ram_gb: getRamGb(device.system?.memory?.capacity),
-    storage_config: device.volumes?.map(v => ({
+    // JSONB field - stringify for Knex
+    storage_config: JSON.stringify(device.volumes?.map(v => ({
       name: v.name || v.label,
       capacity_gb: Math.round((v.capacity || 0) / (1024 * 1024 * 1024)),
       free_gb: Math.round((v.freeSpace || 0) / (1024 * 1024 * 1024)),
       file_system: v.fileSystem,
-    })) || [],
+    })) || []) as unknown as unknown[],
     raid_config: undefined, // Not available from NinjaOne
     is_virtual: isVirtual,
     hypervisor: isVirtual ? device.nodeClass.includes('VMWARE') ? 'VMware' : 'Hyper-V' : undefined,
-    network_interfaces: mapNetworkInterfaces(device.networkInterfaces),
+    // JSONB field - stringify for Knex
+    network_interfaces: JSON.stringify(mapNetworkInterfaces(device.networkInterfaces)) as unknown as unknown[],
     primary_ip: extractPrimaryLanIp(device.networkInterfaces) || device.networkInterfaces?.[0]?.ipAddresses?.[0],
-    installed_services: [], // Would need to fetch separately
-    installed_software: device.software || [],
+    installed_services: JSON.stringify([]) as unknown as unknown[], // Would need to fetch separately
+    // JSONB field - stringify for Knex
+    installed_software: JSON.stringify(device.software || []) as unknown as unknown[],
     // RMM-specific fields
     agent_version: undefined,
     antivirus_status: antivirus.status,
@@ -430,15 +437,17 @@ export function mapToServerExtension(
     pending_patches: undefined,
     failed_patches: undefined,
     last_patch_scan_at: undefined,
-    system_info: {
+    // JSONB field - stringify for Knex
+    system_info: JSON.stringify({
       manufacturer: device.system?.manufacturer,
       model: device.system?.model,
       domain: device.system?.domain,
       dns_name: device.dnsName,
       public_ip: device.publicIP,
       timezone: device.os?.timezone?.name,
-    },
-    disk_usage: mapDiskUsageToRmmStorageInfo(device.volumes),
+    }) as unknown as Record<string, unknown>,
+    // JSONB field - stringify for Knex
+    disk_usage: JSON.stringify(mapDiskUsageToRmmStorageInfo(device.volumes)) as unknown as RmmStorageInfo[],
     cpu_usage_percent: undefined, // Would need real-time metrics
     memory_usage_percent: undefined,
     // Cached RMM live data (populated during sync)
