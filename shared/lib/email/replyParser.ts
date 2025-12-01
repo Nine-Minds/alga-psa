@@ -360,7 +360,20 @@ function extractTokensFromText(text: string, config: ReplyParserConfig): ReplyTo
   const payload: ReplyTokenMetadata = {};
   const normalized = normalizeText(text);
 
-  const structuredMatch = config.textTokenPattern.exec(normalized);
+  let structuredMatch = config.textTokenPattern.exec(normalized);
+
+  // Fallback: Attempt to recover multi-line tokens broken by email clients (e.g. Gmail wrapping + quoting)
+  if (!structuredMatch) {
+    const tokenStart = normalized.indexOf('[ALGA-REPLY-TOKEN');
+    if (tokenStart >= 0) {
+      // Grab a generous chunk to cover the full wrapped token
+      const chunk = normalized.slice(tokenStart, tokenStart + 1000);
+      // Remove newlines, '>' markers, and collapse extra spaces to reconstruct a single line
+      const cleanChunk = chunk.replace(/[\r\n]+[\s>]*|>/g, ' ').replace(/\s+/g, ' ');
+      structuredMatch = config.textTokenPattern.exec(cleanChunk);
+    }
+  }
+
   if (structuredMatch?.groups?.token) {
     payload.conversationToken = structuredMatch.groups.token;
     if (structuredMatch.groups.ticket) {

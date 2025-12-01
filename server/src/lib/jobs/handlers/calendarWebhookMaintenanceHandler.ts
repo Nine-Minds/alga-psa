@@ -1,8 +1,8 @@
 import logger from '@shared/core/logger';
 import { runWithTenant } from 'server/src/lib/db';
-import { CalendarProviderService } from 'server/src/services/calendar/CalendarProviderService';
-import { MicrosoftCalendarAdapter } from 'server/src/services/calendar/providers/MicrosoftCalendarAdapter';
+import { CalendarWebhookMaintenanceService } from 'server/src/services/calendar/CalendarWebhookMaintenanceService';
 import { GoogleCalendarAdapter } from 'server/src/services/calendar/providers/GoogleCalendarAdapter';
+import { CalendarProviderService } from 'server/src/services/calendar/CalendarProviderService';
 
 export interface MicrosoftWebhookRenewalJobData extends Record<string, unknown> {
   tenantId: string;
@@ -19,47 +19,36 @@ export async function renewMicrosoftCalendarWebhooks(
   const { tenantId, lookAheadMinutes = 180 } = data;
 
   await runWithTenant(tenantId, async () => {
-    const providerService = new CalendarProviderService();
-    const providers = await providerService.getProviders({
-      tenant: tenantId,
-      providerType: 'microsoft',
-      isActive: true
+    const service = new CalendarWebhookMaintenanceService();
+    const results = await service.renewMicrosoftWebhooks({
+      tenantId,
+      lookAheadMinutes
     });
 
-    for (const provider of providers) {
-      const fullProvider = await providerService.getProvider(provider.id, tenantId, {
-        includeSecrets: true
+    // Log summary
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+    
+    logger.info('[CalendarWebhookMaintenance] Microsoft webhook renewal completed', {
+      tenantId,
+      total: results.length,
+      successful: successful.length,
+      failed: failed.length,
+      actions: {
+        renewed: successful.filter(r => r.action === 'renewed').length,
+        recreated: successful.filter(r => r.action === 'recreated').length,
+        failed: failed.length
+      }
+    });
+
+    // Log individual failures for debugging
+    for (const result of failed) {
+      logger.error('[CalendarWebhookMaintenance] Failed to renew Microsoft webhook', {
+        tenantId,
+        providerId: result.providerId,
+        action: result.action,
+        error: result.error
       });
-
-      if (!fullProvider?.provider_config?.webhookExpiresAt) {
-        continue;
-      }
-
-      const expiresAt = new Date(fullProvider.provider_config.webhookExpiresAt);
-      if (Number.isNaN(expiresAt.getTime())) {
-        continue;
-      }
-
-      const minutesUntilExpiry = (expiresAt.getTime() - Date.now()) / 60000;
-      if (minutesUntilExpiry > lookAheadMinutes) {
-        continue;
-      }
-
-      const adapter = new MicrosoftCalendarAdapter(fullProvider);
-      try {
-        await adapter.renewWebhookSubscription();
-        logger.info('[CalendarWebhookMaintenance] Renewed Microsoft webhook subscription', {
-          tenantId,
-          providerId: provider.id,
-          expiresAt: expiresAt.toISOString()
-        });
-      } catch (error: any) {
-        logger.error('[CalendarWebhookMaintenance] Failed to renew Microsoft webhook', {
-          tenantId,
-          providerId: provider.id,
-          error: error?.message || error
-        });
-      }
     }
   });
 }

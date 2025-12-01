@@ -5,6 +5,6 @@ export default defineConfig({
   format: ['esm'],
   outDir: 'dist/js',
   clean: true,
-  external: ['@alga/extension-runtime'],
+  external: ['@alga-psa/extension-runtime'],
   noExternal: [],
 });

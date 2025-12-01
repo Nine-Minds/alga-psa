@@ -30,7 +30,7 @@ This plan specifies the v2 Enterprise extension architecture: out-of-process exe
 - Return normalized `{status, headers, body_b64}` with standardized error codes and traces
 
 ## Phase 4 — Next.js API Gateway
-- Add route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Add route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 - Implement helpers: auth/tenant, registry resolution, endpoint matching, header filtering
 - Proxy to Runner `POST ${RUNNER_BASE_URL}/v1/execute` with service token, timeouts, limited retries
 - Enforce quotas and body/header size caps via configuration (`EXT_GATEWAY_TIMEOUT_MS`, etc.)
@@ -39,7 +39,7 @@ This plan specifies the v2 Enterprise extension architecture: out-of-process exe
 - Serve iframe UI assets from Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
 - Immutable caching (ETag + `Cache-Control: immutable`)
 - Runner-managed cache for `ui/**/*` by `content_hash`
-- Host constructs iframe URL using [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- Host constructs iframe URL using [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Phase 6 — Client SDK and UI Kit
 - Packages:
@@ -83,5 +83,5 @@ This plan specifies the v2 Enterprise extension architecture: out-of-process exe
 - Routing: [api-routing-guide.md](api-routing-guide.md)
 - Security & Signing: [security_signing.md](security_signing.md)
 - Registry: [registry_implementation.md](registry_implementation.md)
-- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- Iframe bootstrap and src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Gateway route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- Iframe bootstrap and src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)

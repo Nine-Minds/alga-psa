@@ -3,7 +3,7 @@ import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { withTransaction } from '@alga-psa/shared/db';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
-import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
+import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
 
 interface GooglePubSubMessage {
@@ -262,6 +262,16 @@ export async function POST(request: NextRequest) {
           } catch (detailErr: any) {
             console.warn(`⚠️ Failed to fetch/publish Gmail message ${msgId}: ${detailErr.message}`);
           }
+        }
+
+        // Update last_sync_at after successful email processing
+        if (processed) {
+          await trx('email_providers')
+            .where('id', provider.id)
+            .update({
+              last_sync_at: trx.fn.now(),
+              updated_at: trx.fn.now()
+            });
         }
 
         // Advance our stored history cursor to the latest notification's historyId

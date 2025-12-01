@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
 import { Switch } from '@/components/ui/Switch';
@@ -22,6 +22,8 @@ import {
 } from '../../../lib/actions/extensionActions';
 import { Extension, ExtensionSettingDefinition, ExtensionSettingType } from '../../../lib/extensions/types';
 
+const STORED_SECRET_PLACEHOLDER = '__STORED_SECRET_DO_NOT_CHANGE__';
+
 // Local helper to attach automation IDs consistently (data attribute only)
 const automationId = (id: string) => ({ 'data-automation-id': id });
 
@@ -29,7 +31,7 @@ export default function ExtensionSettings() {
   const params = useParams();
   const router = useRouter();
   const extensionId = params?.id as string;
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [settingsData, setSettingsData] = useState<Record<string, any>>({});
   const [secretValues, setSecretValues] = useState<Record<string, string>>({});
@@ -38,7 +40,8 @@ export default function ExtensionSettings() {
   const [extension, setExtension] = useState<Extension | null>(null);
   const [hasStoredSecrets, setHasStoredSecrets] = useState(false);
   const [secretsVersion, setSecretsVersion] = useState<string | null>(null);
-  
+  const [customSettings, setCustomSettings] = useState<Array<{ id: string; key: string; value: string; isSensitive: boolean }>>([]);
+
   const allSettingDefinitions = useMemo(() => {
     return extension?.manifest?.settings || [];
   }, [extension]);
@@ -52,13 +55,13 @@ export default function ExtensionSettings() {
     () => allSettingDefinitions.filter((definition) => definition.encrypted),
     [allSettingDefinitions]
   );
-  
+
   // Group settings by category
   const settingsByCategory = useMemo(() => {
     const grouped: Record<string, ExtensionSettingDefinition[]> = {
       'General': []
     };
-    
+
     configSettingDefinitions.forEach(setting => {
       const category = setting.category || 'General';
       if (!grouped[category]) {
@@ -66,15 +69,15 @@ export default function ExtensionSettings() {
       }
       grouped[category].push(setting);
     });
-    
+
     return grouped;
   }, [configSettingDefinitions]);
-  
+
   // Categories for tabs
   const categories = useMemo(() => {
     return Object.keys(settingsByCategory);
   }, [settingsByCategory]);
-  
+
   // Track active tab for controlled Tabs (must be before any early returns)
   const [activeTab, setActiveTab] = useState<string>('');
   useEffect(() => {
@@ -87,7 +90,7 @@ export default function ExtensionSettings() {
   useEffect(() => {
     const loadExtensionAndSettings = async () => {
       setIsLoading(true);
-      
+
       try {
         // Load extension data
         const extensionData = await fetchExtensionById(extensionId);
@@ -96,7 +99,7 @@ export default function ExtensionSettings() {
           setIsLoading(false);
           return;
         }
-        
+
         setExtension(extensionData);
 
         const manifestSettings = extensionData.manifest.settings || [];
@@ -109,10 +112,50 @@ export default function ExtensionSettings() {
         ]);
 
         const initialSettings: Record<string, any> = {};
+        const manifestKeys = new Set(configDefs.map((d) => d.key));
+
         configDefs.forEach((def) => {
           const defaultValue = def.defaultValue ?? def.default ?? null;
           initialSettings[def.key] =
             savedSettings?.[def.key] !== undefined ? savedSettings[def.key] : defaultValue;
+        });
+
+        // Identify custom settings (those not in manifest)
+        const initialCustomSettings: Array<{ id: string; key: string; value: string; isSensitive: boolean }> = [];
+
+        let customSecretKeys: string[] = [];
+        try {
+          const rawKeys = savedSettings?.['_custom_secret_keys'];
+          if (typeof rawKeys === 'string') {
+            customSecretKeys = JSON.parse(rawKeys);
+          } else if (Array.isArray(rawKeys)) {
+            customSecretKeys = rawKeys;
+          }
+        } catch (e) {
+          console.warn('Failed to parse custom secret keys', e);
+        }
+
+        if (savedSettings) {
+          Object.entries(savedSettings).forEach(([key, value]) => {
+            if (!manifestKeys.has(key) && key !== '_custom_secret_keys') {
+              initialCustomSettings.push({
+                id: Math.random().toString(36).substring(2, 9),
+                key,
+                value: String(value ?? ''),
+                isSensitive: false,
+              });
+            }
+          });
+        }
+
+        // Restore custom secret placeholders
+        customSecretKeys.forEach((key) => {
+          initialCustomSettings.push({
+            id: Math.random().toString(36).substring(2, 9),
+            key,
+            value: STORED_SECRET_PLACEHOLDER,
+            isSensitive: true,
+          });
         });
 
         const initialSecrets: Record<string, string> = {};
@@ -121,6 +164,7 @@ export default function ExtensionSettings() {
         });
 
         setSettingsData(initialSettings);
+        setCustomSettings(initialCustomSettings);
         setSecretValues(initialSecrets);
         setHasChanges(false);
         setSecretChanged(false);
@@ -133,10 +177,10 @@ export default function ExtensionSettings() {
         setIsLoading(false);
       }
     };
-    
+
     loadExtensionAndSettings();
   }, [extensionId]);
-  
+
   // Handle settings change
   const handleSettingChange = (key: string, value: any) => {
     setSettingsData(prev => ({
@@ -153,7 +197,43 @@ export default function ExtensionSettings() {
     }));
     setSecretChanged(true);
   };
-  
+
+  // Custom settings handlers
+  const handleAddCustomSetting = () => {
+    setCustomSettings((prev) => [
+      ...prev,
+      { id: Math.random().toString(36).substring(2, 9), key: '', value: '', isSensitive: false },
+    ]);
+    setHasChanges(true);
+  };
+
+  const handleRemoveCustomSetting = (id: string) => {
+    setCustomSettings((prev) => prev.filter((item) => item.id !== id));
+    setHasChanges(true);
+  };
+
+  const handleCustomSettingChange = (id: string, field: 'key' | 'value', newValue: string) => {
+    setCustomSettings((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: newValue } : item))
+    );
+    setHasChanges(true);
+  };
+
+  const handleCustomSettingToggleSensitive = (id: string) => {
+    setCustomSettings((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const newIsSensitive = !item.isSensitive;
+        let newValue = item.value;
+        if (!newIsSensitive && newValue === STORED_SECRET_PLACEHOLDER) {
+          newValue = '';
+        }
+        return { ...item, isSensitive: newIsSensitive, value: newValue };
+      })
+    );
+    setHasChanges(true);
+  };
+
   // Save settings
   const handleSaveSettings = async () => {
     if (secretDefinitions.length > 0 && !hasStoredSecrets) {
@@ -177,8 +257,44 @@ export default function ExtensionSettings() {
       const shouldUpdateConfig = hasChanges;
       let configMessage: string | null = null;
 
-      if (shouldUpdateConfig) {
-        const updateResult = await updateExtensionSettings(extensionId, settingsData);
+      // Validate custom keys
+      const invalidKeys = customSettings.filter(
+        (item) => item.key.trim().length > 0 && !/^[a-zA-Z0-9_.-]+$/.test(item.key.trim())
+      );
+
+      if (invalidKeys.length > 0) {
+        toast.error('Custom keys can only contain letters, numbers, underscores, dots, and dashes.');
+        return;
+      }
+
+      // Prepare merged settings (manifest + custom non-sensitive)
+      const mergedSettings = { ...settingsData };
+      const customSecretKeys: string[] = [];
+
+      customSettings.forEach((item) => {
+        const key = item.key.trim();
+        if (key.length > 0) {
+          if (item.isSensitive) {
+            if (item.value.length > 0) {
+              // Only add to secrets payload if value is provided (rotation)
+            }
+            customSecretKeys.push(key);
+          } else {
+            mergedSettings[key] = item.value;
+          }
+        }
+      });
+
+      // Always save the list of custom secret keys so we can restore the UI
+      if (customSecretKeys.length > 0) {
+        mergedSettings['_custom_secret_keys'] = customSecretKeys;
+      }
+
+      console.log('Saving settings:', { hasChanges, customSecretKeys, mergedSettings });
+
+      // Determine if we need to update config (manifest settings changed OR custom settings changed OR secret keys list needs saving)
+      if (hasChanges || customSecretKeys.length > 0) {
+        const updateResult = await updateExtensionSettings(extensionId, mergedSettings);
         if (!updateResult.success) {
           toast.error(updateResult.message || 'Failed to save extension settings.');
           return;
@@ -195,7 +311,28 @@ export default function ExtensionSettings() {
         return acc;
       }, {});
 
-      if (secretDefinitions.length > 0 && (Object.keys(secretsPayload).length > 0 || !hasStoredSecrets)) {
+      // Add sensitive custom settings to secrets payload
+      customSettings.forEach((item) => {
+        if (
+          item.key &&
+          item.key.trim().length > 0 &&
+          item.isSensitive &&
+          item.value.length > 0 &&
+          item.value !== STORED_SECRET_PLACEHOLDER
+        ) {
+          secretsPayload[item.key.trim()] = item.value;
+        }
+      });
+
+      const hasSecretsToSave = Object.keys(secretsPayload).length > 0;
+      // We should save if we have new secrets (custom or manifest) OR if we have existing manifest secrets that might need clearing/updating (though clearing is handled by empty payload usually, but here we check for existence).
+      // Actually, if we have ANY secrets in payload, we must save.
+      // If we have NO secrets in payload, but we have stored secrets (manifest ones), we might be clearing them?
+      // The original logic was: `if (secretDefinitions.length > 0 && (Object.keys(secretsPayload).length > 0 || !hasStoredSecrets))`
+      // This implies: if there are manifest secrets AND (we have values OR we don't have stored secrets yet).
+      // We need to extend this to: if (hasSecretsToSave || (secretDefinitions.length > 0 && !hasStoredSecrets))
+
+      if (hasSecretsToSave || (secretDefinitions.length > 0 && !hasStoredSecrets)) {
         const secretResult = await updateExtensionSecrets(extensionId, secretsPayload);
         if (!secretResult.success) {
           toast.error(secretResult.message || 'Failed to update extension secrets.');
@@ -228,23 +365,23 @@ export default function ExtensionSettings() {
       setIsLoading(false);
     }
   };
-  
+
   // Reset settings to defaults
   const handleResetToDefaults = async () => {
     if (!confirm('Are you sure you want to reset all settings to their default values?')) {
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const result = await resetExtensionSettings(extensionId);
-      
+
       if (!result.success) {
         toast.error(result.message || 'Failed to reset extension settings.');
         return;
       }
-      
+
       // Reset local state to defaults
       const defaultSettings: Record<string, any> = {};
       configSettingDefinitions.forEach(def => {
@@ -252,6 +389,7 @@ export default function ExtensionSettings() {
       });
 
       setSettingsData(defaultSettings);
+      setCustomSettings([]); // Clear custom settings on reset
       setHasChanges(false);
       setSecretValues(
         secretDefinitions.reduce<Record<string, string>>((acc, definition) => {
@@ -260,7 +398,7 @@ export default function ExtensionSettings() {
         }, {})
       );
       setSecretChanged(false);
-      
+
       toast.success('Settings reset to default values.');
     } catch (error) {
       console.error('Failed to reset extension settings', error);
@@ -269,13 +407,13 @@ export default function ExtensionSettings() {
       setIsLoading(false);
     }
   };
-  
+
   // Render setting input based on type
   const renderSettingInput = (setting: ExtensionSettingDefinition) => {
     const { key, type, options, placeholder } = setting;
     const value = settingsData[key];
     const automationIdProps = automationId(`extension-setting-${key}`);
-    
+
     switch (type) {
       case 'string':
         return (
@@ -288,7 +426,7 @@ export default function ExtensionSettings() {
             {...automationIdProps}
           />
         );
-        
+
       case 'text':
         return (
           <TextArea
@@ -300,7 +438,7 @@ export default function ExtensionSettings() {
             {...automationIdProps}
           />
         );
-        
+
       case 'number':
         return (
           <Input
@@ -313,7 +451,7 @@ export default function ExtensionSettings() {
             {...automationIdProps}
           />
         );
-        
+
       case 'boolean':
         return (
           <Switch
@@ -323,7 +461,7 @@ export default function ExtensionSettings() {
             {...automationIdProps}
           />
         );
-        
+
       case 'select':
         return (
           <CustomSelect
@@ -335,7 +473,7 @@ export default function ExtensionSettings() {
             {...automationIdProps}
           />
         );
-        
+
       default:
         return (
           <Input
@@ -348,7 +486,7 @@ export default function ExtensionSettings() {
         );
     }
   };
-  
+
   if (!extension) {
     return (
       <div className="p-6">
@@ -367,7 +505,7 @@ export default function ExtensionSettings() {
       </div>
     );
   }
-  
+
   const automationIdProps = automationId(`extension-settings-${extensionId}`);
 
   return (
@@ -388,17 +526,17 @@ export default function ExtensionSettings() {
               {extension.name} Settings
             </h1>
           </div>
-          
+
           <div className="flex gap-2">
-            <Button 
+            <Button
               id="reset-to-defaults-button"
-              variant="outline" 
+              variant="outline"
               onClick={handleResetToDefaults}
               disabled={isLoading}
             >
               Reset to Defaults
             </Button>
-            <Button 
+            <Button
               id="save-settings-button"
               onClick={handleSaveSettings}
               disabled={isLoading || (!hasChanges && !secretChanged)}
@@ -407,7 +545,7 @@ export default function ExtensionSettings() {
             </Button>
           </div>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Extension Settings</CardTitle>
@@ -429,14 +567,14 @@ export default function ExtensionSettings() {
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                
+
                 {categories.map((category) => (
                   <TabsContent key={category} value={category}>
                     <div className="space-y-6">
                       {settingsByCategory[category].map((setting) => (
                         <div key={setting.key} className="grid gap-2">
                           <div className="flex items-center justify-between">
-                            <label 
+                            <label
                               htmlFor={`setting-${setting.key}`}
                               className="text-sm font-medium"
                             >
@@ -454,6 +592,89 @@ export default function ExtensionSettings() {
                   </TabsContent>
                 ))}
               </Tabs>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Custom Configuration</CardTitle>
+            <CardDescription>
+              Add custom configuration values for this extension. These are provided to the extension
+              alongside the settings defined above.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {customSettings.length === 0 ? (
+              <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg mb-4">
+                <p className="text-gray-500 mb-2">No custom configuration entries.</p>
+                <Button
+                  id="add-custom-setting-empty-button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddCustomSetting}
+                  className="mt-2"
+                  data-automation-id="add-custom-setting-empty"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Entry
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {customSettings.map((item) => (
+                  <div key={item.id} className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Key (e.g. MY_API_KEY)"
+                        value={item.key}
+                        onChange={(e) => handleCustomSettingChange(item.id, 'key', e.target.value)}
+                        data-automation-id={`custom-setting-key-${item.id}`}
+                      />
+                    </div>
+                    <div className="flex-1 relative">
+                      <Input
+                        type={item.isSensitive ? 'password' : 'text'}
+                        placeholder="Value"
+                        value={item.value}
+                        onChange={(e) => handleCustomSettingChange(item.id, 'value', e.target.value)}
+                        data-automation-id={`custom-setting-value-${item.id}`}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCustomSettingToggleSensitive(item.id)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        title={item.isSensitive ? "Mark as public" : "Mark as sensitive"}
+                      >
+                        {item.isSensitive ? <Lock className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <Button
+                      id={`remove-custom-setting-${item.id}`}
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveCustomSetting(item.id)}
+                      className="text-gray-500 hover:text-red-600"
+                      data-automation-id={`remove-custom-setting-${item.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="pt-2">
+                  <Button
+                    id="add-custom-setting-button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddCustomSetting}
+                    data-automation-id="add-custom-setting"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Entry
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -508,6 +729,6 @@ export default function ExtensionSettings() {
           </Card>
         )}
       </div>
-    </ReflectionContainer>
+    </ReflectionContainer >
   );
 }

@@ -8,6 +8,7 @@ import ClientAccount from '../account/ClientAccount';
 import { DrawerProvider } from "server/src/context/DrawerContext";
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 export default function ClientPortalSettingsPage() {
   const { t } = useTranslation('clientPortal');
@@ -24,7 +25,15 @@ export default function ClientPortalSettingsPage() {
   }, []);
 
   if (isLoading) {
-    return <div>{t('common.loading')}</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text={t('common.loading')}
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   const tabs = [

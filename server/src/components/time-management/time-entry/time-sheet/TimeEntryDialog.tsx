@@ -190,7 +190,10 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         return;
       }
 
-      if (selectedService.tax_rate_id != null && !entry.tax_region) {
+      const hasTaxableRate = selectedService.tax_rate_id != null &&
+        selectedService.tax_percentage != null &&
+        selectedService.tax_percentage > 0;
+      if (hasTaxableRate && !entry.tax_region) {
         toast.error('Please select a tax region for taxable services');
         return;
       }

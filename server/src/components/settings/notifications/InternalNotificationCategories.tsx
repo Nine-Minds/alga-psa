@@ -16,6 +16,7 @@ import {
   InternalNotificationCategory,
   InternalNotificationSubtype
 } from "server/src/lib/models/internalNotification";
+import LoadingIndicator from "server/src/components/ui/LoadingIndicator";
 
 export function InternalNotificationCategories() {
   const [categories, setCategories] = useState<InternalNotificationCategory[] | null>(null);
@@ -38,7 +39,15 @@ export function InternalNotificationCategories() {
   }
 
   if (!categories) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading internal notification categories..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   return <InternalNotificationCategoriesContent categories={categories} />;

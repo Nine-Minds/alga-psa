@@ -5,7 +5,7 @@ This guide outlines the enterprise pipeline to build, package, sign, and publish
 References
 - Development Guide: [ee/docs/extension-system/development_guide.md](ee/docs/extension-system/development_guide.md:1)
 - Runner S3 Integration: [ee/docs/extension-system/runner-s3-integration.md](ee/docs/extension-system/runner-s3-integration.md:1)
-- Upload Proxy API: [ee/server/src/app/api/ext-bundles/upload-proxy/route.ts](ee/server/src/app/api/ext-bundles/upload-proxy/route.ts:1)
+- Upload Proxy API (streaming, 200 MiB cap): [ee/server/src/app/api/ext-bundles/upload-proxy/route.ts](ee/server/src/app/api/ext-bundles/upload-proxy/route.ts:1)
 - Finalize API: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)
 
 ## Objectives and Pipeline

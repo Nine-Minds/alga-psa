@@ -15,6 +15,8 @@ import { getServerLocale } from "../lib/i18n/server";
 import { cookies, headers } from 'next/headers';
 import { getTenantBrandingByDomain } from "../lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { generateBrandingStyles } from "../lib/branding/generateBrandingStyles";
+import { MantineProvider } from '@mantine/core';
+import '@mantine/core/styles.css';
 
 // Removed Google Fonts to avoid network fetch during build
 const inter = { className: "" } as const;
@@ -49,21 +51,23 @@ async function MainContent({ children }: { children: React.ReactNode }) {
   const tenant = await getCurrentTenant();
   return (
     <TenantProvider tenant={tenant}>
-      <ThemeProvider>
-        <Theme>
-          <DynamicExtensionProvider>
-            <ClientUIStateProvider
-              initialPageState={{
-                id: 'msp-application',
-                title: 'MSP Application',
-                components: []
-              }}
-            >
-              {children}
-            </ClientUIStateProvider>
-          </DynamicExtensionProvider>
-        </Theme>
-      </ThemeProvider>
+      <MantineProvider>
+        <ThemeProvider>
+          <Theme>
+            <DynamicExtensionProvider>
+              <ClientUIStateProvider
+                initialPageState={{
+                  id: 'msp-application',
+                  title: 'MSP Application',
+                  components: []
+                }}
+              >
+                {children}
+              </ClientUIStateProvider>
+            </DynamicExtensionProvider>
+          </Theme>
+        </ThemeProvider>
+      </MantineProvider>
     </TenantProvider>
   );
 }

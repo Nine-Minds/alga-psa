@@ -1,3 +1,4 @@
+export * from './lib/build-project.js';
 export * from './lib/create-new-project.js';
 export * from './lib/create-ui-project.js';
 export * from './lib/create-component-project.js';

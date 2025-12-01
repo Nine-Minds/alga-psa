@@ -2,6 +2,11 @@
 
 Last updated: 2025-08-09
 
+Status update (2025-11-21):
+- v2 extension system is live with out-of-process Runner + signed content-addressed bundles; legacy in-process/dynamic import path removed (see `extension-system-v2-migration.md`).
+- UI delivery now uses Runner ext-ui host with iframe sandbox; gateway proxies all API calls to Runner `/v1/execute`.
+- Remaining multi-tenant hardening tracks to the alignment plan (install_id propagation, RBAC, manifest enforcement).
+
 ## Context & Findings
 
 - Current behavior: user-supplied extension code is uploaded into the running application environment and dynamically loaded. This violates multi-tenant isolation and increases operational risk (code execution in app context, shared process memory, filesystem access, and unrestricted egress).

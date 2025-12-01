@@ -27,7 +27,7 @@ This scratchpad tracks near‑term tasks for the multi‑tenant overhaul. Legacy
 - [ ] Precompiled artifacts (optional) resolution
 
 ### Phase 4
-- [ ] `/api/ext/[extensionId]/[...path]` route
+- [ ] `/api/ext/[extensionId]/[[...path]]` route
 - [ ] Helpers: auth/tenant resolution, endpoint matcher, header filters
 - [ ] Proxy to Runner with timeouts/retries and header allowlist
 

@@ -71,6 +71,7 @@ interface QuickAddTicketProps {
   };
   prefilledDescription?: string;
   isEmbedded?: boolean;
+  assetId?: string;
 }
 
 export function QuickAddTicket({
@@ -81,7 +82,8 @@ export function QuickAddTicket({
   prefilledClient,
   prefilledContact,
   prefilledDescription,
-  isEmbedded = false
+  isEmbedded = false,
+  assetId
 }: QuickAddTicketProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -463,6 +465,10 @@ export function QuickAddTicket({
             formData.append('category_id', category.category_id);
           }
         }
+      }
+
+      if (assetId) {
+        formData.append('asset_id', assetId);
       }
 
       // Add ITIL Impact and Urgency for calculation (if provided)

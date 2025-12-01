@@ -11,3 +11,5 @@ export * from "./license-management-activities";
 export * from "./nm-store-callback-activities";
 export * from "./portal-domain-activities";
 export * from "./email-domain-activities";
+export * from "./email-webhook-maintenance-activities";
+export * from "./calendar-webhook-maintenance-activities";
