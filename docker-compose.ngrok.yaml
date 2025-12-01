@@ -1,34 +1,104 @@
-# Custom override for calendar-sync-fixup worktree
-# Adds ngrok tunnel for calendar webhook testing
+# Modular ngrok tunnel for webhook testing
+# Works with any Alga PSA worktree without modification
 #
 # Usage: Add this file to your compose chain:
 #   docker compose -f docker-compose.yaml -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.ngrok.yaml up -d
 #
-# The ngrok dashboard is available at http://localhost:4040
-# Check the dashboard or logs for the public URL
+# The ngrok dashboard is available at http://localhost:${NGROK_DASHBOARD_PORT:-4040}
+# The ngrok URL is written to /app/ngrok/url inside the server container
+#
+# To check the current ngrok URL:
+#   docker compose logs ngrok-sync | grep "Public URL"
+#   - OR -
+#   curl -s http://localhost:${NGROK_DASHBOARD_PORT:-4040}/api/tunnels | jq -r '.tunnels[0].public_url'
+#
+# Prerequisites:
+#   1. Create ./secrets/ngrok_authtoken with your ngrok auth token
+#      Get one at: https://dashboard.ngrok.com/get-started/your-authtoken
+
+volumes:
+  ngrok-data:
+    name: ${COMPOSE_PROJECT_NAME:-alga}_ngrok_data
 
 services:
   ngrok:
     image: ngrok/ngrok:latest
-    container_name: ${APP_NAME:-calendar_sync_fixup}_ngrok
     restart: unless-stopped
     networks:
       - app-network
     ports:
-      - "4040:4040"  # ngrok web interface
+      - "${NGROK_DASHBOARD_PORT:-4040}:4040"
     volumes:
       - ./secrets/ngrok_authtoken:/run/secrets/ngrok_authtoken:ro
+      - ngrok-data:/ngrok:rw
     entrypoint: /bin/sh
     command:
       - -c
       - |
+        # Ensure ngrok volume has write permissions
+        chmod 777 /ngrok 2>/dev/null || true
+
         export NGROK_AUTHTOKEN=$$(cat /run/secrets/ngrok_authtoken)
-        # Retry loop in case of session conflicts
         while true; do
-          echo "Starting ngrok tunnel to server:3000..."
-          ngrok http http://server:3000 --log=stdout && break
-          echo "ngrok exited, retrying in 10 seconds..."
+          echo "[ngrok] Starting tunnel to server:3000..."
+          # Start ngrok and capture public URL
+          ngrok http http://server:3000 --log=stdout 2>&1 | while read line; do
+            echo "$$line"
+            # Extract and save public URL when it appears in logs
+            if echo "$$line" | grep -q "started tunnel"; then
+              PUBLIC_URL=$$(echo "$$line" | grep -oP 'url=\K[^ ]+')
+              if [ -n "$$PUBLIC_URL" ]; then
+                echo "$$PUBLIC_URL" > /ngrok/url
+                echo "$$(date -Iseconds)" > /ngrok/updated_at
+                echo "[ngrok] Saved URL: $$PUBLIC_URL"
+              fi
+            fi
+          done && break
+          echo "[ngrok] Exited, retrying in 10 seconds..."
           sleep 10
         done
     depends_on:
       - server
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4040/api/tunnels"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  ngrok-sync:
+    image: alpine:latest
+    restart: unless-stopped
+    networks:
+      - app-network
+    volumes:
+      - ngrok-data:/ngrok:ro
+    depends_on:
+      ngrok:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "[ngrok-sync] Monitoring ngrok URL file..."
+        LAST_URL=""
+
+        while true; do
+          if [ -f /ngrok/url ]; then
+            PUBLIC_URL=$$(cat /ngrok/url 2>/dev/null || echo "")
+
+            if [ -n "$$PUBLIC_URL" ] && [ "$$PUBLIC_URL" != "$$LAST_URL" ]; then
+              echo "[ngrok-sync] ✓ Public URL: $$PUBLIC_URL"
+              LAST_URL="$$PUBLIC_URL"
+            fi
+          else
+            echo "[ngrok-sync] Waiting for ngrok to create /ngrok/url..."
+          fi
+
+          sleep 5
+        done
+
+  # Note: The server service should mount ngrok-data:/app/ngrok:ro
+  # This can be added to your docker-compose.yaml server service definition as:
+  #   volumes:
+  #     - ngrok-data:/app/ngrok:ro

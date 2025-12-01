@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { loadAssetDetailDrawerData } from 'server/src/components/assets/AssetDetailDrawer';
 
-export async function GET(request: Request, { params }: { params: { assetId: string } }) {
-  const { assetId } = params;
+export async function GET(request: Request, { params }: { params: Promise<{ assetId: string }> }) {
+  const { assetId } = await params;
   if (!assetId) {
     return NextResponse.json({ error: 'Missing assetId' }, { status: 400 });
   }

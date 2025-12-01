@@ -3,11 +3,12 @@
 import React from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AutomationProps } from '../../types/ui-reflection/types';
+import { LucideIcon } from 'lucide-react';
 
 export interface TabContent {
   label: string;
   content: React.ReactNode;
-  icon?: React.ReactNode;
+  icon?: LucideIcon;
 }
 
 export interface CustomTabsProps {
@@ -75,17 +76,24 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
       }}
     >
       <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
-        {tabs.map((tab, index): JSX.Element => (
-          <Tabs.Trigger
-            key={tab.label}
-            id={`${prefix}-trigger-${index}`}
-            className={`${defaultTriggerClass} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass} flex items-center gap-2`}
-            value={tab.label}
-          >
-            {tab.icon && <span className="flex-shrink-0">{tab.icon}</span>}
-            <span>{tab.label}</span>
-          </Tabs.Trigger>
-        ))}
+        {tabs.map((tab, index): JSX.Element => {
+          const IconComponent = tab.icon;
+          const hasIcon = !!IconComponent;
+          const iconClassName = hasIcon 
+            ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
+            : '';
+          return (
+            <Tabs.Trigger
+              key={tab.label}
+              id={`${prefix}-trigger-${index}`}
+              className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
+              value={tab.label}
+            >
+              {IconComponent && <IconComponent className="h-4 w-4 shrink-0" />}
+              {tab.label}
+            </Tabs.Trigger>
+          );
+        })}
         {extraContent}
       </Tabs.List>
       {tabs.map((tab, index): JSX.Element => (

@@ -18,6 +18,7 @@ import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/exten
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { toast } from 'react-hot-toast';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 /**
  * Extensions management page
@@ -135,8 +136,11 @@ export default function Extensions() {
         
         {loading && (
           <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <span className="ml-3 text-gray-600">Loading extensions...</span>
+            <LoadingIndicator 
+              layout="stacked" 
+              text="Loading extensions..."
+              spinnerProps={{ size: 'md' }}
+            />
           </div>
         )}
         

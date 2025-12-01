@@ -4,6 +4,7 @@ import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 import { ITeam } from 'server/src/interfaces/auth.interfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const TeamManagement: React.FC = () => {
   const [teams, setTeams] = useState<ITeam[]>([]);
@@ -52,7 +53,15 @@ const TeamManagement: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="text-text-600">Loading teams...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading teams..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   if (error) {

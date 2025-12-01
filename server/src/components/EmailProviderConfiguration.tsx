@@ -9,12 +9,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
-import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
 import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-providers/entry';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
+import LoadingIndicator from './ui/LoadingIndicator';
 import {
   getEmailProviders,
   deleteEmailProvider,
@@ -260,10 +261,11 @@ function EmailProviderConfigurationContent({
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="flex items-center space-x-2">
-          <Clock className="h-4 w-4 animate-spin" />
-          <span>Loading email providers...</span>
-        </div>
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading email providers..."
+          spinnerProps={{ size: 'md' }}
+        />
       </div>
     );
   }

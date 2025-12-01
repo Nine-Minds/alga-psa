@@ -101,6 +101,10 @@ secrets:
     file: ./secrets/google_oauth_client_secret
   alga_auth_key:
     file: ./secrets/alga_auth_key
+  ninjaone_client_id:
+    file: ./secrets/ninjaone_client_id
+  ninjaone_client_secret:
+    file: ./secrets/ninjaone_client_secret
 
 services:
   server:
@@ -117,6 +121,8 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      # ngrok volume for webhook URL syncing (only mounted with docker-compose.ngrok.yaml)
+      - ngrok-data:/app/ngrok:ro
     secrets:
       - postgres_password
       - db_password_server

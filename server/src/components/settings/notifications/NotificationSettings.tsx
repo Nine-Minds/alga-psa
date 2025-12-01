@@ -9,6 +9,7 @@ import { Button } from "server/src/components/ui/Button";
 import { getNotificationSettingsAction, updateNotificationSettingsAction } from "server/src/lib/actions/notification-actions/notificationActions";
 import { NotificationSettings as NotificationSettingsType } from "server/src/lib/models/notification";
 import { getCurrentTenant } from "server/src/lib/tenant-client";
+import LoadingIndicator from "server/src/components/ui/LoadingIndicator";
 
 export function NotificationSettings() {
   const [settings, setSettings] = useState<NotificationSettingsType | null>(null);
@@ -34,7 +35,15 @@ export function NotificationSettings() {
   }
 
   if (!settings || !tenant) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading notification settings..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   return <NotificationSettingsForm initialSettings={settings} tenant={tenant} />;
