@@ -20,6 +20,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { QuickAddInteractionType } from './QuickAddInteractionType';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -28,6 +29,7 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -64,11 +66,15 @@ const InteractionTypesSettings: React.FC = () => {
 
   const fetchTypes = async () => {
     try {
+      setLoading(true);
       const allTypes = await getAllInteractionTypes();
       setInteractionTypes(allTypes);
+      setError(null);
     } catch (error) {
       console.error('Error fetching types:', error);
       setError('Failed to fetch interaction types');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -202,6 +208,20 @@ const InteractionTypesSettings: React.FC = () => {
       ),
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator 
+            layout="stacked" 
+            text="Loading interaction types..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">

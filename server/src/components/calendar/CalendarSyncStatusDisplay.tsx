@@ -191,13 +191,25 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
                 )}
               </div>
               
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Sync Direction: {status.syncDirection}</p>
+              <div className="text-xs space-y-1 mt-2">
+                <p className="text-[rgb(var(--color-text-600))]">
+                  <span className="font-medium text-[rgb(var(--color-text-900))]">Sync Direction:</span> {status.syncDirection}
+                </p>
                 {status.lastSyncAt && (
-                  <p>Last Sync: {new Date(status.lastSyncAt).toLocaleString()}</p>
+                  <p className="text-[rgb(var(--color-text-600))]">
+                    <span className="font-medium text-[rgb(var(--color-text-900))]">Last Sync:</span> {new Date(status.lastSyncAt).toLocaleString()}
+                  </p>
                 )}
                 {status.entrySyncStatus?.externalEventId && (
-                  <p>External Event ID: {status.entrySyncStatus.externalEventId}</p>
+                  <div className="flex items-center gap-1 text-[rgb(var(--color-text-600))]">
+                    <span className="font-medium text-[rgb(var(--color-text-900))] flex-shrink-0">External ID:</span>
+                    <code 
+                      className="bg-[rgb(var(--color-secondary-50))] text-[rgb(var(--color-secondary-900))] px-1.5 py-0.5 rounded text-[10px] font-mono truncate max-w-[180px] inline-block align-middle border border-[rgb(var(--color-secondary-200))]" 
+                      title={status.entrySyncStatus.externalEventId}
+                    >
+                      {status.entrySyncStatus.externalEventId}
+                    </code>
+                  </div>
                 )}
               </div>
 

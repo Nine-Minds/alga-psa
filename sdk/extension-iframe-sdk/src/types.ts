@@ -21,20 +21,30 @@ export interface BootstrapPayload {
   theme_tokens: Record<string, string>;
   navigation: { path: string };
 }
-export type HostToClientType = 'bootstrap';
+
+export interface ApiProxyResponsePayload {
+  body?: string; // base64 encoded bytes
+  error?: string;
+}
+
+export type HostToClientType = 'bootstrap' | 'apiproxy_response';
 export type HostToClientMessage =
-  | Envelope<'bootstrap', BootstrapPayload>;
+  | Envelope<'bootstrap', BootstrapPayload>
+  | Envelope<'apiproxy_response', ApiProxyResponsePayload>;
 
 /**
  * Client (iframe) -> Host (parent) messages
  */
 export interface ResizePayload { height: number }
 export interface NavigatePayload { path: string }
-export type ClientToHostType = 'ready' | 'resize' | 'navigate';
+export interface ApiProxyPayload { route: string; body?: string } // body is base64 encoded bytes
+
+export type ClientToHostType = 'ready' | 'resize' | 'navigate' | 'apiproxy';
 export type ClientToHostMessage =
   | Envelope<'ready', {}>
   | Envelope<'resize', ResizePayload>
-  | Envelope<'navigate', NavigatePayload>;
+  | Envelope<'navigate', NavigatePayload>
+  | Envelope<'apiproxy', ApiProxyPayload>;
 
 /**
  * Union helpers
@@ -51,10 +61,9 @@ export function isEnvelope(value: unknown): value is Envelope {
 }
 
 export function isHostToClient(msg: Envelope): msg is HostToClientMessage {
-  return msg.type === 'bootstrap';
+  return msg.type === 'bootstrap' || msg.type === 'apiproxy_response';
 }
 
 export function isClientToHost(msg: Envelope): msg is ClientToHostMessage {
-  return msg.type === 'ready' || msg.type === 'resize' || msg.type === 'navigate';
+  return msg.type === 'ready' || msg.type === 'resize' || msg.type === 'navigate' || msg.type === 'apiproxy';
 }
-

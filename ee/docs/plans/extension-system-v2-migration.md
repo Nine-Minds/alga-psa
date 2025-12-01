@@ -11,7 +11,7 @@ Key references:
 - API Routing Spec Example: [ee/docs/extension-system/api-routing-guide.md](ee/docs/extension-system/api-routing-guide.md)
 
 Terminology and target paths:
-- Gateway route: /api/ext/[extensionId]/[...path] implemented under [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Gateway route: /api/ext/[extensionId]/[[...path]] implemented under [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 - Iframe UI delivery: served by Runner at ${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...] (no Next.js route in ee/server)
 - Manifest v2 validator: [ee/server/src/lib/extensions/schemas/manifest-v2.schema.ts](ee/server/src/lib/extensions/schemas/manifest-v2.schema.ts)
 - v2-only exports: [ee/server/src/lib/extensions/index.ts](ee/server/src/lib/extensions/index.ts)

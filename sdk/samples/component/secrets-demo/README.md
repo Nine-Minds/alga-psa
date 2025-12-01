@@ -42,24 +42,31 @@ The handler imports the `secrets` interface directly from the WIT bindings while
 
 ## Building
 
+**Using the Alga CLI (recommended):**
+
 ```bash
 npm install
-npm run build
+npm run build    # runs: alga build
+```
+
+Or directly with the CLI:
+
+```bash
+alga build
 ```
 
 ### Build output
 
-- `dist/component.wasm` — The compiled WASM component
-- `dist/main.wasm` — Alias for the component (referenced by manifest)
-- `dist/component.json` — Metadata with capabilities
+- `dist/main.wasm` — The compiled WASM component
 - `dist/js/` — Intermediate JavaScript artifacts
-- `dist/bundle.tar.zst` — Packaged extension bundle (5.4 MB)
-- `dist/bundle.sha256` — SHA256 integrity hash
 
-**Bundle Hash:**
+### Packaging
+
+```bash
+npm run pack     # runs: alga pack
 ```
-c4a9d892a80e31c34ba6630b56044cc44d46b5171b8f9c04095e527dc0228b2b
-```
+
+This creates `dist/bundle.tar.zst` with the manifest, WASM component, and assets.
 
 ## Packaging and Publishing
 

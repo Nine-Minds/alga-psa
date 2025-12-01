@@ -8,8 +8,8 @@ Key guarantees: See “Correctness Rules” in the README for the canonical list
 
 - Out-of-process execution: Componentized extension handlers run in a separate Runner service (Wasmtime Component APIs).
 - Signed, content-addressed bundles: Stored in object storage (e.g., S3/MinIO), addressed by `sha256/<hash>`, with signature verification.
-- Secure Gateway: Host exposes `/api/ext/[extensionId]/[[...path]]`, resolves tenant install metadata (version, content hash, config map, provider grants, sealed secret envelope), and invokes Runner.
-- UI via iframe (Runner-hosted): Client UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`. There is no Next.js route for ext-ui.
+- Secure Gateway: Host exposes `/api/ext/[extensionId]/[[...path]]`, resolves tenant install metadata (version, content hash, config map, provider grants, sealed secret envelope), and invokes Runner. Manifest endpoint matching is not enforced today.
+- UI via iframe (Runner-hosted): Client UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`. The Next.js ext-ui route acts as a gate/redirect when rust-host mode is enabled.
 
 ## Components (by concern)
 
@@ -116,7 +116,7 @@ sequenceDiagram
   RUN-->>BR: 200 OK (file) + ETag + immutable Cache-Control
 ```
 
-The URL embeds `contentHash`, enabling long‑lived immutable caching for UI assets. The host app constructs the iframe src via [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes the postMessage bridge via [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45).
+The URL embeds `contentHash`, enabling long‑lived immutable caching for UI assets. The host app constructs the iframe src via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes the postMessage bridge via [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45).
 
 ## Iframe Bootstrap (Host App)
 
@@ -126,8 +126,8 @@ Client bootstrap features implemented in the host:
 - Bridges theme tokens into `:root` and via postMessage; handles `ready`, `resize`, and `navigate` messages.
 
 References:
-- [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
-- [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45)
+- [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+- [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Environment & Configuration
 

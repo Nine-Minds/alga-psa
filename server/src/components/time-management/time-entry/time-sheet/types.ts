@@ -5,7 +5,8 @@ export interface Service {
   id: string;
   name: string;
   type: string;
-  tax_rate_id: string | null; // Use tax_rate_id instead
+  tax_rate_id: string | null;
+  tax_percentage: number | null;
 }
 
 export interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {

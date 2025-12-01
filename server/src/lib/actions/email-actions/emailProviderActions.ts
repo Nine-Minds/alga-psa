@@ -7,6 +7,8 @@ import { getSecretProviderInstance } from '@shared/core';
 import { setupPubSub } from './setupPubSub';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
 import { configureGmailProvider } from './configureGmailProvider';
+import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
+
 
 /**
  * Generate standardized Pub/Sub topic and subscription names for a tenant
@@ -401,6 +403,9 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
             'access_token',
             'refresh_token',
             'token_expires_at',
+            'webhook_subscription_id',
+            'webhook_expires_at',
+            'webhook_verification_token',
             'created_at',
             'updated_at'
           )
@@ -491,6 +496,22 @@ export async function upsertEmailProvider(data: {
           providerId: provider.id,
           projectId: effectiveProjectId
         });
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      }
+    }
+    
+    if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
+      try {
+        const service = new EmailProviderService();
+        await service.initializeProviderWebhook(provider.id);
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      } catch (error) {
+        console.error('Failed to initialize Microsoft webhook:', error);
+        // Don't throw here - provider is saved, but webhook failed
       }
     }
     
@@ -557,6 +578,22 @@ export async function updateEmailProvider(
           providerId: provider.id,
           projectId: effectiveProjectId
         });
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      }
+    }
+    
+    if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
+      try {
+        const service = new EmailProviderService();
+        await service.initializeProviderWebhook(provider.id);
+        // Update returned provider state to reflect side-effects
+        provider.lastSyncAt = new Date().toISOString();
+        provider.status = 'connected';
+      } catch (error) {
+        console.error('Failed to initialize Microsoft webhook:', error);
+        // Don't throw here - provider is saved, but webhook failed
       }
     }
     
@@ -604,6 +641,7 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
       .where({ id: providerId })
       .update({
         status: 'connected',
+        last_sync_at: knex.fn.now(),
         updated_at: knex.fn.now()
       });
 
@@ -614,6 +652,36 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
       success: false, 
       error: error instanceof Error ? error.message : 'Connection test failed' 
     };
+  }
+}
+
+/**
+ * Manually retry Microsoft subscription renewal for a specific provider
+ */
+export async function retryMicrosoftSubscriptionRenewal(providerId: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const user = await assertAuthenticated();
+    
+    const service = new EmailWebhookMaintenanceService();
+    const results = await service.renewMicrosoftWebhooks({
+      tenantId: user.tenant,
+      providerId: providerId,
+      lookAheadMinutes: 0 // Force check regardless of expiration time
+    });
+
+    if (results.length === 0) {
+      return { success: false, message: 'Provider not found or not eligible for renewal' };
+    }
+
+    const result = results[0];
+    if (result.success) {
+      return { success: true, message: `Subscription ${result.action} successfully` };
+    } else {
+      return { success: false, message: result.error || 'Renewal failed' };
+    }
+  } catch (error: any) {
+    console.error('Manual renewal failed:', error);
+    return { success: false, message: error.message || 'Internal server error' };
   }
 }
 

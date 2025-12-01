@@ -1,10 +1,9 @@
-# Service Proxy Demo Component
+# Service Proxy Demo Extension
 
-This sample shows how a server-side extension component can:
+This sample demonstrates a full extension (Server Component + Iframe UI) that uses the Service Proxy pattern.
 
-1. Retrieve an API key from the Runner secrets store.
-2. Call the Alga PSA Tickets API via the Runner's HTTP capability.
-3. Expose the ticket data to an iframe UI through the UI proxy capability without ever leaking the API key to the browser.
+1. **Server Component**: Retrieves an API key from the Runner secrets store and calls the Alga PSA Tickets API via the Runner's HTTP capability.
+2. **Iframe UI**: Exposes the ticket data through the UI proxy capability without ever leaking the API key to the browser.
 
 ## How it works
 
@@ -15,11 +14,22 @@ This sample shows how a server-side extension component can:
 
 See [`tests/handler.test.ts`](./tests/handler.test.ts) for mocked end-to-end coverage.
 
-## Running the sample
+## Building and Testing
 
 ```bash
 npm install
 npm test
+npm run build
 ```
 
-In a full extension project you would build the component with `componentize-js` via `npm run component` (see the `package.json` script) and publish the produced `dist/component.wasm` alongside your UI bundle.
+The `npm run build` command will:
+1. Transpile the TypeScript handler to JavaScript.
+2. Componentize the JavaScript into a WASM component (`dist/component.wasm`) using `jco`.
+3. Prepare the metadata for the extension.
+
+## Project Structure
+
+- `src/` - Server-side component logic (SDK-based).
+- `ui/` - Client-side iframe UI.
+- `wit/` - WIT definitions for the runner interface.
+- `manifest.json` - Extension manifest.
