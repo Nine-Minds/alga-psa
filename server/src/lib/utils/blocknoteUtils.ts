@@ -1,5 +1,9 @@
 import { Block, PartialBlock } from '@blocknote/core';
 
+// Type alias to avoid ESLint no-redundant-type-constituents infinite recursion
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+type BlockInput = Block[] | PartialBlock[] | string | undefined;
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -70,8 +74,7 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
  * @param blocks - BlockNote content as Block array, PartialBlock array, JSON string, or undefined
  * @returns A string containing the markdown representation, never undefined
  */
-// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-export function convertBlockNoteToMarkdown(blocks: Block[] | PartialBlock[] | string | undefined): string {
+export function convertBlockNoteToMarkdown(blocks: BlockInput): string {
   console.log("[BlockNoteUtils] Converting to markdown:", typeof blocks === 'string' ? 'JSON string' : (blocks ? 'blocks array' : 'undefined'));
   
   // Handle empty input
@@ -524,8 +527,7 @@ function extractStyledTextToHTML(content: any[]): string {
  * @param blocks - BlockNote content as Block array, PartialBlock array, or JSON string.
  * @returns An HTML string representation of the BlockNote content.
  */
-// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string | undefined): string {
+export function convertBlockNoteToHTML(blocks: BlockInput): string {
   if (!blocks) return '<p>[No content]</p>';
 
   let blockData: Block[] | PartialBlock[];
