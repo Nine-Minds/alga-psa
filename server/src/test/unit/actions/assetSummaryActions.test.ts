@@ -12,7 +12,7 @@ vi.mock('server/src/lib/db', () => ({
 }));
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { getAssetSummaryMetrics } from 'server/src/lib/actions/asset-actions/assetSummaryActions';
+import { getAssetSummaryMetrics } from 'server/src/lib/actions/asset-actions/assetActions';
 
 // Test data
 const TEST_TENANT = 'test-tenant-123';
