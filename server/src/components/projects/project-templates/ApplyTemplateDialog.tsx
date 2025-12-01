@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Label } from '@/components/ui/Label';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { IProjectTemplate } from '@/interfaces/projectTemplate.interfaces';
-import { IClient } from '@/interfaces/client.interfaces';
+import { Dialog } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Label } from 'server/src/components/ui/Label';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { IProjectTemplate } from 'server/src/interfaces/projectTemplate.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { useToast } from 'server/src/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
