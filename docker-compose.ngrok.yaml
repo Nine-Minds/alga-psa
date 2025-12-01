@@ -1,0 +1,34 @@
+# Custom override for calendar-sync-fixup worktree
+# Adds ngrok tunnel for calendar webhook testing
+#
+# Usage: Add this file to your compose chain:
+#   docker compose -f docker-compose.yaml -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.ngrok.yaml up -d
+#
+# The ngrok dashboard is available at http://localhost:4040
+# Check the dashboard or logs for the public URL
+
+services:
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ${APP_NAME:-calendar_sync_fixup}_ngrok
+    restart: unless-stopped
+    networks:
+      - app-network
+    ports:
+      - "4040:4040"  # ngrok web interface
+    volumes:
+      - ./secrets/ngrok_authtoken:/run/secrets/ngrok_authtoken:ro
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        export NGROK_AUTHTOKEN=$$(cat /run/secrets/ngrok_authtoken)
+        # Retry loop in case of session conflicts
+        while true; do
+          echo "Starting ngrok tunnel to server:3000..."
+          ngrok http http://server:3000 --log=stdout && break
+          echo "ngrok exited, retrying in 10 seconds..."
+          sleep 10
+        done
+    depends_on:
+      - server

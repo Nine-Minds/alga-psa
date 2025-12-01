@@ -40,7 +40,6 @@ import ImportExportSettings from 'server/src/components/settings/import-export/I
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@product/email-settings/entry';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
-import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -288,19 +287,6 @@ const SettingsPage = (): JSX.Element =>  {
             </CardHeader>
             <CardContent>
               <EmailProviderConfiguration />
-            </CardContent>
-          </Card>
-
-          {/* Calendar Integrations */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar Integrations</CardTitle>
-              <CardDescription>
-                Connect Google Calendar or Microsoft Outlook Calendar to sync schedule entries
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CalendarIntegrationsSettings />
             </CardContent>
           </Card>
         </div>

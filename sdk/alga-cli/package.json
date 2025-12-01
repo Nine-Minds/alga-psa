@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@alga-psa/client-sdk": "^0.1.0"
+    "@alga-psa/client-sdk": "^0.2.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

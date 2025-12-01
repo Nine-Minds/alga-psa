@@ -9,9 +9,7 @@
     "publisher",
     "version",
     "runtime",
-    "capabilities",
-    "entry",
-    "api"
+    "ui"
   ],
   "properties": {
     "name": { "type": "string", "minLength": 1 },
@@ -32,7 +30,8 @@
           "metrics"
         ]
       },
-      "uniqueItems": true
+      "uniqueItems": true,
+      "default": []
     },
     "ui": {
       "type": "object",
@@ -81,7 +80,7 @@
         }
       }
     },
-    "entry": { "type": "string", "minLength": 1 },
+    
     "precompiled": {
       "type": "object",
       "additionalProperties": { "type": "string" },
@@ -116,4 +115,3 @@
     "sbom": { "type": "string" }
   }
 }
-

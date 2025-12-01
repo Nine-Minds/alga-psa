@@ -52,6 +52,36 @@ export class CalendarWebhookProcessor {
 
         const { knex } = await createTenantKnex();
 
+        // Update health table to track webhook receipt
+        try {
+          const now = new Date().toISOString();
+          const existing = await knex('calendar_provider_health')
+            .where('calendar_provider_id', provider.id)
+            .andWhere('tenant', provider.tenant)
+            .first();
+
+          if (existing) {
+            await knex('calendar_provider_health')
+              .where('calendar_provider_id', provider.id)
+              .andWhere('tenant', provider.tenant)
+              .update({
+                last_webhook_received_at: now,
+                updated_at: now
+              });
+          } else {
+            await knex('calendar_provider_health')
+              .insert({
+                calendar_provider_id: provider.id,
+                tenant: provider.tenant,
+                last_webhook_received_at: now,
+                created_at: now,
+                updated_at: now
+              });
+          }
+        } catch (healthError: any) {
+          console.warn('[CalendarWebhookProcessor] Failed to update Google health table', { error: healthError.message });
+        }
+
         const fallbackStart = provider.last_sync_at ? new Date(provider.last_sync_at) : undefined;
         let syncToken = provider.provider_config?.syncToken || undefined;
 
@@ -111,7 +141,8 @@ export class CalendarWebhookProcessor {
                 const result = await this.syncService.deleteScheduleEntry(
                   mapping.schedule_entry_id,
                   provider.id,
-                  'all'
+                  'all',
+                  true // skipExternalDelete - event already deleted in external calendar
                 );
                 if (!result.success) {
                   throw new Error(result.error || 'Failed to delete schedule entry');
@@ -293,7 +324,8 @@ export class CalendarWebhookProcessor {
                   const result = await this.syncService.deleteScheduleEntry(
                     mapping.schedule_entry_id,
                     provider.id,
-                    'all'
+                    'all',
+                    true // skipExternalDelete - event already deleted in external calendar
                   );
                   if (!result.success) {
                     throw new Error(result.error || 'Failed to delete schedule entry');

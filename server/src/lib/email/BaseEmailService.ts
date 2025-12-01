@@ -42,6 +42,8 @@ export interface BaseEmailParams {
   replyTo?: string | EmailAddress;
   templateProcessor?: ITemplateProcessor;
   templateData?: Record<string, any>;
+  headers?: Record<string, string>;
+  providerId?: string;
   // Allow subclasses to add their own parameters
   [key: string]: any;
 }
@@ -156,7 +158,8 @@ export abstract class BaseEmailService {
         subject,
         html,
         text,
-        attachments: params.attachments
+        attachments: params.attachments,
+        headers: params.headers
       };
 
       // Send via provider

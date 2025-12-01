@@ -6,14 +6,21 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 type Props = {
   domain: string;
+  extensionId: string;
 };
 
-export default function ExtensionIframe({ domain }: Props) {
+export default function ExtensionIframe({ domain, extensionId }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [src, setSrc] = useState<string | undefined>(undefined);
 
-  const src = useMemo(() => `https://${domain}` as const, [domain]);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const parentOrigin = window.location.origin;
+      setSrc(`https://${domain}?parentOrigin=${encodeURIComponent(parentOrigin)}`);
+    }
+  }, [domain]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -44,12 +51,13 @@ export default function ExtensionIframe({ domain }: Props) {
 
     window.addEventListener('message', handleMessage);
 
-    bootstrapIframe({ iframe, allowedOrigin });
+    const cleanupBridge = bootstrapIframe({ iframe, allowedOrigin, extensionId });
 
     return () => {
       window.removeEventListener('message', handleMessage);
+      cleanupBridge();
     };
-  }, [src, domain]);
+  }, [src, domain, extensionId]);
 
   useEffect(() => {
     // Reset state whenever the domain changes so we show the loading state again.

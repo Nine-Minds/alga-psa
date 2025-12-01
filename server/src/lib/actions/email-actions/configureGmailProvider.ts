@@ -4,7 +4,7 @@ import { createTenantKnex, runWithTenant } from '../../db';
 import { setupPubSub } from './setupPubSub';
 import { GmailWebhookService } from '../../../services/email/GmailWebhookService';
 import type { GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
-import type { EmailProviderConfig } from '../../../interfaces/email.interfaces';
+import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 /**
  * Generate standardized Pub/Sub topic and subscription names for a tenant
@@ -183,6 +183,15 @@ export async function configureGmailProvider({
           webhookUrl: pubsubNames.webhookUrl
         });
         
+        // Update the main provider's last_sync_at to reflect successful configuration
+        await knex('email_providers')
+          .where('id', providerId)
+          .andWhere('tenant', tenant)
+          .update({
+            last_sync_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          });
+
         console.log(`✅ Successfully registered Gmail watch subscription for provider ${providerId}`);
       } catch (watchError) {
         console.error(`❌ Failed to register Gmail watch subscription for provider ${providerId}:`, {

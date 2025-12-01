@@ -93,6 +93,9 @@ devPod:
 
 podLabels: {}
 
+podAnnotations:
+  sidecar.istio.io/proxyMemory: "4Gi"
+
 podSecurityContext: {}
   # fsGroup: 2000
 
@@ -477,3 +480,4 @@ hostedEnv:
     service:
       type: "ClusterIP"
       port: 8080
+    includeOutboundIPRanges: ""

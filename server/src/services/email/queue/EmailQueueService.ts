@@ -1,5 +1,5 @@
 import { createClient, RedisClientType } from 'redis';
-import { EmailQueueJob } from '../../../interfaces/email.interfaces';
+import { EmailQueueJob } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 /**
  * Redis-based email processing queue service

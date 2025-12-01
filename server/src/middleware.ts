@@ -52,7 +52,8 @@ const _middleware = auth((request) => {
       '/api/email/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
-      '/api/webhooks/stripe'
+      '/api/webhooks/stripe',
+      '/api/ext-proxy/'
     ];
 
     if (skipPaths.some((path) => pathname.startsWith(path))) {

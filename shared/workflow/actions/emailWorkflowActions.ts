@@ -308,7 +308,7 @@ async function findTicketByOriginalMessageId(
     .where(function() {
       this.whereRaw("t.email_metadata->>'messageId' = ?", [messageId])
           .orWhereRaw("t.email_metadata->>'inReplyTo' = ?", [messageId])
-          .orWhereRaw("t.email_metadata->'references' ? ?", [messageId]);
+          .orWhereRaw("t.email_metadata->'references' \\? ?", [messageId]);
     })
     .first();
 

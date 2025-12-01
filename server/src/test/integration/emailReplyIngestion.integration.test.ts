@@ -56,7 +56,7 @@ vi.mock('@shared/db/admin', () => ({
   destroyAdminConnection: vi.fn(async () => {}),
 }));
 
-const { systemEmailProcessingWorkflow } = await import('@shared/workflow/workflows/system-email-processing-workflow');
+const { systemEmailProcessingWorkflow } = await import('../../../../../services/workflow-worker/src/workflows/system-email-processing-workflow');
 const {
   createCommentFromEmail,
   findTicketByEmailThread,
