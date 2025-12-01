@@ -28,6 +28,10 @@ export function TemplateStatusColumnsStep({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
 
+  console.log('[TemplateStatusColumnsStep] availableStatuses:', availableStatuses);
+  console.log('[TemplateStatusColumnsStep] availableStatuses.length:', availableStatuses.length);
+  console.log('[TemplateStatusColumnsStep] isLoadingStatuses:', isLoadingStatuses);
+
   // Get IDs of statuses already selected in the template
   const selectedStatusIds = new Set(
     data.status_mappings

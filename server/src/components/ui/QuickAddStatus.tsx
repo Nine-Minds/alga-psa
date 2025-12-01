@@ -55,6 +55,7 @@ export function QuickAddStatus({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     const trimmedName = statusName.trim();
 

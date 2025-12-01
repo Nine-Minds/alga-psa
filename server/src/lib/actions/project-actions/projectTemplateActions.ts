@@ -335,7 +335,36 @@ export async function applyTemplate(
       throw new Error('Template not found');
     }
 
-    // 1. Create project (using existing createProject function)
+    // 1. Pre-load template statuses to determine what to pass to createProject
+    const templateStatuses = options.copyStatuses
+      ? await trx('project_template_status_mappings')
+          .where({ template_id: templateId, tenant })
+          .orderBy('display_order')
+      : [];
+
+    // Determine which status IDs to pass to createProject
+    // If copying template statuses that reference existing statuses, pass those IDs
+    // Otherwise, get minimal default statuses
+    let selectedStatusIds: string[] | undefined;
+
+    if (options.copyStatuses && templateStatuses.length > 0) {
+      // For templates with statuses, we'll handle them manually after project creation
+      // Pass undefined to let createProject create defaults, which we'll replace
+      selectedStatusIds = undefined;
+    } else {
+      // When not copying statuses, get just the first few default statuses
+      // to avoid creating 20+ status mappings
+      const defaultStatuses = await trx('statuses')
+        .where({ tenant, status_type: 'project_task' })
+        .orderBy('order_number')
+        .limit(5);  // Limit to a reasonable number of default statuses
+
+      if (defaultStatuses.length > 0) {
+        selectedStatusIds = defaultStatuses.map(s => s.status_id);
+      }
+    }
+
+    // 2. Create project (using existing createProject function)
     const newProject = await createProject({
       project_name: validatedData.project_name,
       client_id: validatedData.client_id,
@@ -346,11 +375,11 @@ export async function applyTemplate(
       status: 'not_started',
       is_inactive: false,
       tenant: tenant || undefined
-    });
+    }, selectedStatusIds);
 
     const newProjectId = newProject.project_id;
 
-    // 2. Load template phases (only if copyPhases is enabled)
+    // 3. Load template phases (only if copyPhases is enabled)
     const templatePhases = options.copyPhases
       ? await trx('project_template_phases')
           .where({ template_id: templateId, tenant })
@@ -359,7 +388,7 @@ export async function applyTemplate(
 
     const phaseMap = new Map<string, string>(); // template_phase_id → new_phase_id
 
-    // 3. Create phases (only if copyPhases is enabled)
+    // 4. Create phases (only if copyPhases is enabled)
     if (options.copyPhases) {
       for (const templatePhase of templatePhases) {
       const startDate = validatedData.start_date
@@ -404,17 +433,11 @@ export async function applyTemplate(
       }
     }
 
-    // 4. Handle status mappings BEFORE creating tasks (only if copyStatuses is enabled)
+    // 5. Handle status mappings BEFORE creating tasks (only if copyStatuses is enabled)
     let firstStatusMappingId: string | undefined;
     const templateStatusToProjectStatusMap = new Map<string, string>(); // template_status_mapping_id → project_status_mapping_id
 
-    if (options.copyStatuses) {
-      // Check if template has custom status mappings
-      const templateStatuses = await trx('project_template_status_mappings')
-        .where({ template_id: templateId, tenant })
-        .orderBy('display_order');
-
-      if (templateStatuses.length > 0) {
+    if (options.copyStatuses && templateStatuses.length > 0) {
       // Remove default status mappings created by createProject
       await trx('project_status_mappings')
         .where({ project_id: newProjectId, tenant })
@@ -427,14 +450,23 @@ export async function applyTemplate(
 
         // If it's a custom status (no status_id), create a new status first
         if (!templateStatus.status_id && templateStatus.custom_status_name) {
-          const [newStatus] = await trx('project_task_statuses')
+          // Get next order number for the new status
+          const maxOrder = await trx('statuses')
+            .where({ tenant, status_type: 'project_task' })
+            .max('order_number as max')
+            .first();
+          const orderNumber = (maxOrder?.max ?? 0) + 1;
+
+          const [newStatus] = await trx('statuses')
             .insert({
               tenant,
+              item_type: 'project_task',
+              status_type: 'project_task',
               name: templateStatus.custom_status_name,
               color: templateStatus.custom_status_color || '#6B7280',
               is_closed: false,
-              is_standard: false,
-              created_by: currentUser.user_id
+              order_number: orderNumber,
+              created_at: new Date().toISOString()
             })
             .returning('*');
 
@@ -466,17 +498,8 @@ export async function applyTemplate(
           firstStatusMappingId = newMapping.project_status_mapping_id;
         }
       }
-      } else {
-        // No custom status mappings, use the default one created by createProject
-        const defaultStatus = await trx('project_status_mappings')
-          .where({ project_id: newProjectId, tenant })
-          .orderBy('display_order')
-          .first();
-
-        firstStatusMappingId = defaultStatus?.project_status_mapping_id;
-      }
     } else {
-      // If not copying statuses, use default status mapping from createProject
+      // Not copying statuses or template has no statuses - use what createProject created
       const defaultStatus = await trx('project_status_mappings')
         .where({ project_id: newProjectId, tenant })
         .orderBy('display_order')
@@ -485,7 +508,7 @@ export async function applyTemplate(
       firstStatusMappingId = defaultStatus?.project_status_mapping_id;
     }
 
-    // 5. Create tasks (only if copyTasks is enabled)
+    // 6. Create tasks (only if copyTasks is enabled)
     const templatePhaseIds = Array.from(phaseMap.keys());
     const taskMap = new Map<string, string>(); // template_task_id → new_task_id
 
@@ -539,6 +562,13 @@ export async function applyTemplate(
         console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${firstStatusMappingId}`);
       }
 
+      // Determine assigned_to based on assignmentOption
+      let taskAssignedTo: string | null = null;
+      if (options.assignmentOption === 'primary' || options.assignmentOption === 'all') {
+        taskAssignedTo = templateTask.assigned_to || null;
+      }
+      // If assignmentOption is 'none', taskAssignedTo remains null
+
       const [newTask] = await trx('project_tasks')
         .insert({
           tenant,
@@ -551,7 +581,7 @@ export async function applyTemplate(
           order_key: templateTask.order_key,
           wbs_code: newWbsCode,
           project_status_mapping_id: taskStatusMappingId,
-          assigned_to: templateTask.assigned_to || null,
+          assigned_to: taskAssignedTo,
           due_date: dueDate
         })
         .returning('*');
@@ -559,8 +589,8 @@ export async function applyTemplate(
       taskMap.set(templateTask.template_task_id, newTask.task_id);
       }
 
-      // Copy additional agent assignments
-      if (templatePhaseIds.length > 0) {
+      // Copy additional agent assignments (only if assignmentOption is 'all')
+      if (options.assignmentOption === 'all' && templatePhaseIds.length > 0) {
         const templateTaskIds = Array.from(taskMap.keys());
 
         if (templateTaskIds.length > 0) {
@@ -605,7 +635,7 @@ export async function applyTemplate(
       }
     }
 
-    // 6. Create dependencies (REMAP IDs!) - only if copyDependencies and copyTasks are enabled
+    // 7. Create dependencies (REMAP IDs!) - only if copyDependencies and copyTasks are enabled
     if (options.copyDependencies && options.copyTasks) {
       const templateDeps = await trx('project_template_dependencies')
         .where({ template_id: templateId, tenant });
@@ -628,7 +658,7 @@ export async function applyTemplate(
       }
     }
 
-    // 7. Create checklists - only if copyChecklists and copyTasks are enabled
+    // 8. Create checklists - only if copyChecklists and copyTasks are enabled
     if (options.copyChecklists && options.copyTasks) {
       const templateTaskIds = Array.from(taskMap.keys());
       if (templateTaskIds.length > 0) {
@@ -654,7 +684,7 @@ export async function applyTemplate(
       }
     }
 
-    // 8. Update template usage stats
+    // 9. Update template usage stats
     await updateTemplateUsage(trx, templateId, tenant);
 
     return newProjectId;

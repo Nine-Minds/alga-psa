@@ -132,6 +132,7 @@ export function TemplateCreationWizard({
           getAllPriorities('project_task'),
           getAllUsers(true, 'internal'), // Load internal users only
         ]);
+        console.log('[TemplateCreationWizard] Loaded statuses:', statuses);
         setAvailableStatuses(
           statuses.map((s) => ({
             status_id: s.status_id,

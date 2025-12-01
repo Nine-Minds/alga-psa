@@ -580,6 +580,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           onClose={() => {
             setShowTaskForm(false);
             setEditingTask(null);
+            setNewTaskStatusMappingId(null);
           }}
           onSave={handleSaveTask}
           task={editingTask}
@@ -588,6 +589,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           priorities={priorities}
           users={users}
           taskTypes={taskTypes}
+          initialStatusMappingId={newTaskStatusMappingId}
         />
       )}
 

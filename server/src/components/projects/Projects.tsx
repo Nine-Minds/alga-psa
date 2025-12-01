@@ -273,7 +273,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Number',
       dataIndex: 'project_number',
-      width: '10%',
+      width: '8%',
       render: (text: string, record: IProject) => {
         return (
           <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800">
@@ -285,7 +285,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Project Name',
       dataIndex: 'project_name',
-      width: '18%',
+      width: '15%',
       render: (text: string, record: IProject) => (
         <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words">
           {text}
@@ -295,11 +295,11 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Client',
       dataIndex: 'client_id',
-      width: '15%',
+      width: '12%',
       render: (value, record) => {
         const client = clients.find(c => c.client_id === value);
         if (!client) return 'No Client';
-        
+
         return (
           <button
             onClick={(e) => {
@@ -316,13 +316,13 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Contact',
       dataIndex: 'contact_name',
-      width: '15%',
+      width: '10%',
       render: (name: string | null) => name || 'No Contact',
     },
     {
       title: 'Status',
       dataIndex: 'status_name',
-      width: '10%',
+      width: '8%',
       render: (_: string | null, record: IProject) => (
         <div className="inline-flex items-center px-2.5 py-0.5 text-sm text-gray-800">
           {record.status_name || 'Unknown'}
@@ -332,13 +332,19 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Deadline',
       dataIndex: 'end_date',
-      width: '10%',
+      width: '8%',
+      render: (value: string | null) => value ? new Date(value).toLocaleDateString() : 'N/A',
+    },
+    {
+      title: 'Created',
+      dataIndex: 'created_at',
+      width: '8%',
       render: (value: string | null) => value ? new Date(value).toLocaleDateString() : 'N/A',
     },
     {
       title: 'Project Manager',
       dataIndex: 'assigned_to',
-      width: '15%',
+      width: '12%',
       render: (userId: string | null, record: IProject) => {
         if (!userId) return 'Unassigned';
         const user = record.assigned_user;
@@ -348,7 +354,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Tags',
       dataIndex: 'tags',
-      width: '20%',
+      width: '14%',
       render: (value: string, record: IProject) => {
         if (!record.project_id) return null;
         
@@ -581,7 +587,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           onPageChange={setCurrentPage}
           pageSize={pageSize}
           onItemsPerPageChange={handlePageSizeChange}
-          initialSorting={[{ id: 'end_date', desc: false }]}
+          initialSorting={[{ id: 'created_at', desc: true }]}
         />
       </div>
 

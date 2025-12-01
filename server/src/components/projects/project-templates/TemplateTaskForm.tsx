@@ -28,6 +28,8 @@ interface TemplateTaskFormProps {
   priorities: Array<{ priority_id: string; priority_name: string }>;
   users: IUserWithRoles[];
   taskTypes: ITaskType[];
+  /** Initial status mapping ID for new tasks (e.g., when clicking + on a status column) */
+  initialStatusMappingId?: string | null;
 }
 
 export function TemplateTaskForm({
@@ -40,6 +42,7 @@ export function TemplateTaskForm({
   priorities,
   users,
   taskTypes,
+  initialStatusMappingId,
 }: TemplateTaskFormProps) {
   const [taskName, setTaskName] = useState('');
   const [description, setDescription] = useState('');
@@ -71,6 +74,7 @@ export function TemplateTaskForm({
         setAdditionalAgents(taskAdditionalAgents);
         setStatusMappingId(task.template_status_mapping_id || statusMappings[0]?.template_status_mapping_id || '');
       } else {
+        // New task - use initialStatusMappingId if provided (e.g., when clicking + on a status column)
         setTaskName('');
         setDescription('');
         setEstimatedHours('');
@@ -79,11 +83,11 @@ export function TemplateTaskForm({
         setPriorityId('');
         setAssignedTo('');
         setAdditionalAgents([]);
-        setStatusMappingId(statusMappings[0]?.template_status_mapping_id || '');
+        setStatusMappingId(initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '');
       }
       setError(null);
     }
-  }, [open, task, taskAssignments, statusMappings]);
+  }, [open, task, taskAssignments, statusMappings, initialStatusMappingId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +125,7 @@ export function TemplateTaskForm({
       title={task ? 'Edit Task' : 'Add Task'}
       className="max-w-lg"
       id="template-task-form-dialog"
+      allowOverflow
     >
       <DialogContent>
         <form onSubmit={handleSubmit} id="template-task-form">

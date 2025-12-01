@@ -254,6 +254,8 @@ export async function reorderProjectStatuses(
 
 /**
  * Get tenant's project task status library
+ * Returns statuses from the 'statuses' table (new system) if available,
+ * otherwise falls back to 'standard_statuses' table (old system)
  */
 export async function getTenantProjectStatuses(): Promise<IStatus[]> {
   const currentUser = await getCurrentUser();
@@ -263,9 +265,38 @@ export async function getTenantProjectStatuses(): Promise<IStatus[]> {
   const tenant = currentUser.tenant;
   const { knex } = await createTenantKnex();
 
-  return await knex('statuses')
-    .where({ tenant, item_type: 'project_task' })
+  // First try the new statuses table
+  const regularStatuses = await knex('statuses')
+    .where({ tenant, status_type: 'project_task' })
     .orderBy('order_number');
+
+  console.log(`[getTenantProjectStatuses] Found ${regularStatuses.length} statuses in 'statuses' table for tenant ${tenant}`);
+
+  if (regularStatuses.length > 0) {
+    return regularStatuses;
+  }
+
+  // Fall back to standard_statuses table (old system)
+  const standardStatuses = await knex('standard_statuses')
+    .where({ tenant, item_type: 'project_task' })
+    .orderBy('display_order');
+
+  console.log(`[getTenantProjectStatuses] Found ${standardStatuses.length} statuses in 'standard_statuses' table for tenant ${tenant}`);
+
+  // Map standard_statuses to IStatus format for compatibility
+  return standardStatuses.map((s: any) => ({
+    status_id: s.standard_status_id,
+    tenant: s.tenant,
+    name: s.name,
+    status_type: 'project_task',
+    item_type: 'project_task',
+    is_closed: s.is_closed,
+    order_number: s.display_order,
+    color: null, // Standard statuses don't have colors
+    icon: null,
+    created_at: s.created_at,
+    updated_at: s.updated_at,
+  }));
 }
 
 /**
@@ -358,7 +389,7 @@ export async function updateTenantProjectStatus(
   const { knex } = await createTenantKnex();
 
   await knex('statuses')
-    .where({ status_id: statusId, tenant, item_type: 'project_task' })
+    .where({ status_id: statusId, tenant, status_type: 'project_task' })
     .update(updates);
 }
 
@@ -397,7 +428,7 @@ export async function deleteTenantProjectStatus(
 
     // Delete the status
     await trx('statuses')
-      .where({ status_id: statusId, tenant, item_type: 'project_task' })
+      .where({ status_id: statusId, tenant, status_type: 'project_task' })
       .del();
   });
 }
@@ -427,7 +458,7 @@ export async function reorderTenantProjectStatuses(
         .where({
           status_id,
           tenant,
-          item_type: 'project_task'
+          status_type: 'project_task'
         })
         .update({ order_number });
     }

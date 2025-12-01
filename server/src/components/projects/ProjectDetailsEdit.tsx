@@ -23,6 +23,7 @@ import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
+import { Dialog } from 'server/src/components/ui/Dialog';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -403,63 +404,67 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         </div>
 
         <div className="flex justify-end space-x-3 mt-4">
-          {showCancelConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg">
-                <h3 className="text-lg font-bold mb-4">Unsaved Changes</h3>
-                <p className="mb-4">You have unsaved changes. Are you sure you want to cancel?</p>
-                <div className="flex justify-end space-x-3">
-                  <Button
-                    id='cancel-button'
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCancelConfirm(false)}
-                  >
-                    Continue Editing
-                  </Button>
-                  <Button
-                    id='discard-button'
-                    type="button"
-                    onClick={() => {
-                      setShowCancelConfirm(false);
-                      onCancel();
-                    }}
-                  >
-                    Discard Changes
-                  </Button>
-                </div>
-              </div>
+          <Dialog
+            isOpen={showCancelConfirm}
+            onClose={() => setShowCancelConfirm(false)}
+            title="Unsaved Changes"
+            id="cancel-confirm-dialog"
+            className="max-w-md"
+            draggable={false}
+          >
+            <p className="mb-4">You have unsaved changes. Are you sure you want to cancel?</p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                id="cancel-button"
+                type="button"
+                variant="outline"
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                Continue Editing
+              </Button>
+              <Button
+                id="discard-button"
+                type="button"
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  onCancel();
+                }}
+              >
+                Discard Changes
+              </Button>
             </div>
-          )}
+          </Dialog>
 
-          {showSaveConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg">
-                <h3 className="text-lg font-bold mb-4">Save Changes</h3>
-                <p className="mb-4">Are you sure you want to save your changes and close the drawer?</p>
-                <div className="flex justify-end space-x-3">
-                  <Button
-                    id='continue-button'
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowSaveConfirm(false)}
-                  >
-                    Continue Editing
-                  </Button>
-                  <Button
-                    id='save-and-close-button'
-                    type="button"
-                    onClick={(e) => {
-                      setShowSaveConfirm(false);
-                      handleSubmit(e);
-                    }}
-                  >
-                    Save and Close
-                  </Button>
-                </div>
-              </div>
+          <Dialog
+            isOpen={showSaveConfirm}
+            onClose={() => setShowSaveConfirm(false)}
+            title="Save Changes"
+            id="save-confirm-dialog"
+            className="max-w-md"
+            draggable={false}
+          >
+            <p className="mb-4">Are you sure you want to save your changes and close the drawer?</p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                id="continue-button"
+                type="button"
+                variant="outline"
+                onClick={() => setShowSaveConfirm(false)}
+              >
+                Continue Editing
+              </Button>
+              <Button
+                id="save-and-close-button"
+                type="button"
+                onClick={(e) => {
+                  setShowSaveConfirm(false);
+                  handleSubmit(e);
+                }}
+              >
+                Save and Close
+              </Button>
             </div>
-          )}
+          </Dialog>
 
           <Button
             id='cancel-button'

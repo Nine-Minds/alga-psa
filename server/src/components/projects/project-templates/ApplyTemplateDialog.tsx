@@ -12,6 +12,7 @@ import { IProjectTemplate } from '@/interfaces/projectTemplate.interfaces';
 import { IClient } from '@/interfaces/client.interfaces';
 import { useToast } from 'server/src/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 
 interface ApplyTemplateDialogProps {
   open: boolean;
@@ -41,10 +42,13 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
     copyPhases: true,
     copyStatuses: true,
     copyTasks: true,
-    copyDependencies: true,
     copyChecklists: true,
     assignmentOption: 'primary' as AssignmentOption
   });
+
+  // Client picker filter states
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   useEffect(() => {
     if (open) {
@@ -106,7 +110,6 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
             copyPhases: options.copyPhases,
             copyStatuses: options.copyStatuses,
             copyTasks: options.copyTasks,
-            copyDependencies: options.copyDependencies,
             copyChecklists: options.copyChecklists,
             assignmentOption: options.assignmentOption
           }
@@ -176,14 +179,15 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
             <label className="block text-sm font-medium mb-2">
               Client *
             </label>
-            <CustomSelect
+            <ClientPicker
               id="apply-template-client"
-              value={formData.client_id}
-              onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-              options={clients.map(c => ({
-                value: c.client_id,
-                label: c.client_name
-              }))}
+              clients={clients}
+              selectedClientId={formData.client_id || null}
+              onSelect={(clientId) => setFormData({ ...formData, client_id: clientId || '' })}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
               placeholder="Select a client"
             />
           </div>
@@ -232,19 +236,10 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
                       setOptions({
                         ...options,
                         copyTasks: e.target.checked,
-                        // Disable dependencies and checklists if tasks are disabled
-                        copyDependencies: e.target.checked ? options.copyDependencies : false,
+                        // Disable checklists if tasks are disabled
                         copyChecklists: e.target.checked ? options.copyChecklists : false
                       });
                     }}
-                    containerClassName="mb-2"
-                  />
-                  <Checkbox
-                    id="copy-dependencies-checkbox"
-                    label="Copy Dependencies"
-                    checked={options.copyDependencies}
-                    disabled={!options.copyTasks}
-                    onChange={(e) => setOptions({ ...options, copyDependencies: e.target.checked })}
                     containerClassName="mb-2"
                   />
                   <Checkbox
