@@ -7,7 +7,8 @@
  * as the number of supported integrations grows.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
 import { Alert, AlertDescription } from '../../ui/Alert';
 import CustomTabs, { TabContent } from '../../ui/CustomTabs';
@@ -65,7 +66,22 @@ interface IntegrationItem {
 
 const IntegrationsSettingsPage: React.FC = () => {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  const [selectedCategory, setSelectedCategory] = useState<string>('accounting');
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams?.get('category');
+  
+  // Initialize selected category from URL param or default to 'accounting'
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    categoryParam && ['accounting', 'rmm', 'communication', 'calendar'].includes(categoryParam)
+      ? categoryParam
+      : 'accounting'
+  );
+  
+  // Update selected category when URL param changes
+  useEffect(() => {
+    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar'].includes(categoryParam)) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [categoryParam]);
 
   // Define integration categories
   const categories: IntegrationCategory[] = useMemo(() => [

@@ -406,9 +406,9 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
       {/* Disconnect Confirmation Modal */}
       {showDisconnectConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-md rounded-lg bg-background p-6 shadow-xl">
-            <h3 className="text-lg font-semibold">Disconnect NinjaOne</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl border border-border">
+            <h3 className="text-lg font-semibold text-foreground">Disconnect NinjaOne</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications.
               Organization mappings will be preserved.

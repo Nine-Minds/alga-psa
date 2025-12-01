@@ -76,12 +76,20 @@ export function createWebhookConfig(
   tenantId: string,
   webhookSecret: string
 ): WebhookConfiguration {
+  // Based on NinjaOne API, activities should be a map of ActivityType -> status codes
+  // For now, we'll subscribe to all activity types by not specifying activities filter
+  // This allows us to receive all webhook events and filter them in our handler
   return {
     url: buildWebhookUrl(tenantId),
-    activities: {
-      // Subscribe to the most relevant status codes for PSA integration
-      statusCode: [...NINJAONE_WEBHOOK_STATUS_CODES],
-    },
+    // Note: Omitting activities filter to receive all webhook events
+    // NinjaOne API expects activities to be a Map<ActivityType, string[]>
+    // but we want to receive all events and filter in our handler
+    // If needed, we can add specific activity types later:
+    // activities: {
+    //   "CONDITION": ["TRIGGERED", "RESET"],
+    //   "SYSTEM": ["NODE_CREATED", "NODE_UPDATED"],
+    //   ...
+    // }
     // Expand device and organization references in webhook payloads
     // This gives us more context without additional API calls
     expand: ['device', 'organization'],
@@ -116,7 +124,7 @@ export async function registerNinjaOneWebhook(
     logger.info('[NinjaOne Webhook] Registering webhook', {
       tenantId,
       url: config.url,
-      statusCodes: config.activities?.statusCode?.length,
+      hasActivitiesFilter: !!config.activities,
     });
 
     // Register with NinjaOne API

@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse, NextRequest } from 'next/server';
 import axios from 'axios';
+import fs from 'fs';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import {
@@ -28,8 +29,33 @@ const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
 const NINJAONE_CLIENT_SECRET_SECRET = 'ninjaone_client_secret';
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
 
-// App base URL for redirects - uses NEXTAUTH_URL
-const APP_BASE_URL = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+// Path to ngrok URL file (written by ngrok-sync container)
+const NGROK_URL_FILE = '/app/ngrok/url';
+
+// Check if running in development mode
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
+
+// App base URL for redirects - uses ngrok in development, otherwise NEXTAUTH_URL
+const getAppBaseUrl = () => {
+  // In development mode, check for ngrok URL file first
+  if (isDevelopment) {
+    try {
+      if (fs.existsSync(NGROK_URL_FILE)) {
+        const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+        if (ngrokUrl) {
+          return ngrokUrl;
+        }
+      }
+    } catch (error) {
+      // Ignore file read errors, fall back to env vars
+    }
+  }
+
+  // Fall back to environment variables
+  return process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+};
+
+const APP_BASE_URL = getAppBaseUrl();
 
 // Redirect URI - should match the connect endpoint
 const getRedirectUri = () => {
@@ -39,9 +65,9 @@ const getRedirectUri = () => {
   return `${APP_BASE_URL}/api/integrations/ninjaone/callback`;
 };
 
-// UI redirect URLs
-const SUCCESS_REDIRECT_URL = '/msp/settings?tab=integrations&ninjaone_status=success';
-const FAILURE_REDIRECT_URL = '/msp/settings?tab=integrations&ninjaone_status=failure&error=';
+// UI redirect URLs - include category=rmm to keep user on RMM tab
+const SUCCESS_REDIRECT_URL = '/msp/settings?tab=integrations&category=rmm&ninjaone_status=success';
+const FAILURE_REDIRECT_URL = '/msp/settings?tab=integrations&category=rmm&ninjaone_status=failure&error=';
 
 // State timeout (10 minutes)
 const STATE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -59,6 +85,16 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
   const ninjaError = searchParams.get('error');
   const ninjaErrorDescription = searchParams.get('error_description');
+
+  // Log all incoming parameters for debugging
+  console.log('[NinjaOne Callback] Received callback with params:', {
+    hasCode: !!code,
+    hasState: !!state,
+    error: ninjaError,
+    errorDescription: ninjaErrorDescription,
+    allParams: Object.fromEntries(searchParams.entries()),
+    url: request.url,
+  });
 
   // Helper function to create failure redirect
   const failureRedirect = (errorCode: string, message?: string) => {
@@ -79,14 +115,39 @@ export async function GET(request: NextRequest) {
 
   // Check for error response from NinjaOne
   if (ninjaError) {
-    console.error('[NinjaOne Callback] NinjaOne returned an error:', ninjaError, ninjaErrorDescription);
-    return failureRedirect('ninjaone_error', ninjaErrorDescription || ninjaError);
+    const errorMsg = ninjaErrorDescription || ninjaError;
+    console.error('[NinjaOne Callback] NinjaOne returned an error:', {
+      error: ninjaError,
+      errorDescription: ninjaErrorDescription,
+      fullUrl: request.url,
+    });
+    
+    // Provide helpful error message for common errors
+    let userFriendlyMessage = errorMsg;
+    if (ninjaError === 'unauthorized_client' && errorMsg?.includes('redirect_uri')) {
+      userFriendlyMessage = `Invalid redirect URI. Please ensure the redirect URI "${getRedirectUri()}" is configured in your NinjaOne OAuth application settings.`;
+    }
+    
+    return failureRedirect('ninjaone_error', userFriendlyMessage);
   }
 
   // Validate required parameters
   if (!code || !state) {
-    console.error('[NinjaOne Callback] Missing code or state in callback query parameters.');
-    return failureRedirect('missing_params');
+    console.error('[NinjaOne Callback] Missing code or state in callback query parameters.', {
+      hasCode: !!code,
+      hasState: !!state,
+      url: request.url,
+    });
+    
+    // Check if this might be NinjaOne's error page being accessed directly
+    if (request.url.includes('/ws/oauth/error')) {
+      return failureRedirect('redirect_uri_mismatch', 
+        'The redirect URI configured in NinjaOne does not match the application. ' +
+        `Expected: ${getRedirectUri()}. Please update your NinjaOne OAuth application settings.`
+      );
+    }
+    
+    return failureRedirect('missing_params', 'Missing required OAuth parameters. Please try connecting again.');
   }
 
   let tenantId: string | null = null;
@@ -123,14 +184,22 @@ export async function GET(request: NextRequest) {
     // For now, we're relying on the state parameter containing tenant info
     console.log(`[NinjaOne Callback] Processing callback for tenant ${tenantId}`);
 
-    // 2. Get app secrets
+    // 2. Get app secrets with fallback to environment variables
     const secretProvider = await getSecretProviderInstance();
-    const clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-    const clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
+    let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+    let clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
+    
+    // Fallback to environment variables if not found in secrets
+    if (!clientId) {
+      clientId = process.env.NINJAONE_CLIENT_ID;
+    }
+    if (!clientSecret) {
+      clientSecret = process.env.NINJAONE_CLIENT_SECRET;
+    }
 
     if (!clientId || !clientSecret) {
-      console.error('[NinjaOne Callback] Missing NinjaOne Client ID or Secret in secrets.');
-      return failureRedirect('config_error', 'NinjaOne integration is not configured correctly.');
+      console.error('[NinjaOne Callback] Missing NinjaOne Client ID or Secret in secrets or environment variables.');
+      return failureRedirect('config_error', 'NinjaOne integration is not configured correctly. Please set NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET environment variables or configure the secrets.');
     }
 
     // 3. Exchange authorization code for tokens
@@ -205,6 +274,21 @@ export async function GET(request: NextRequest) {
         .first();
 
       if (existingIntegration) {
+        // Parse existing settings - handle both string and object cases
+        let existingSettings = {};
+        if (existingIntegration.settings) {
+          if (typeof existingIntegration.settings === 'string') {
+            try {
+              existingSettings = JSON.parse(existingIntegration.settings);
+            } catch (e) {
+              console.warn('[NinjaOne Callback] Failed to parse existing settings, using empty object:', e);
+              existingSettings = {};
+            }
+          } else if (typeof existingIntegration.settings === 'object') {
+            existingSettings = existingIntegration.settings;
+          }
+        }
+
         // Update existing integration
         await knex('rmm_integrations')
           .where({ tenant: tenantId, provider: 'ninjaone' })
@@ -217,7 +301,7 @@ export async function GET(request: NextRequest) {
             settings: JSON.stringify({
               region,
               webhookSecret,
-              ...JSON.parse(existingIntegration.settings || '{}'),
+              ...existingSettings,
             }),
             updated_at: knex.fn.now(),
           });
@@ -254,7 +338,20 @@ export async function GET(request: NextRequest) {
             .first();
 
           if (integration) {
-            const settings = JSON.parse(integration.settings || '{}');
+            // Parse settings - handle both string and object cases
+            let settings: Record<string, any> = {};
+            if (integration.settings) {
+              if (typeof integration.settings === 'string') {
+                try {
+                  settings = JSON.parse(integration.settings);
+                } catch (e) {
+                  console.warn('[NinjaOne Callback] Failed to parse integration settings, using empty object:', e);
+                  settings = {};
+                }
+              } else if (typeof integration.settings === 'object') {
+                settings = integration.settings as Record<string, any>;
+              }
+            }
             settings.webhookRegisteredAt = new Date().toISOString();
             settings.webhookSecret = webhookSecret;
 

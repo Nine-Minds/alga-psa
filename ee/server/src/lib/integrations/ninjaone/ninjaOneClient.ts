@@ -218,11 +218,19 @@ export class NinjaOneClient {
         }
 
         const secretProvider = await getSecretProviderInstance();
-        const clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-        const clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
+        let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+        let clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
+        
+        // Fallback to environment variables if not found in secrets
+        if (!clientId) {
+          clientId = process.env.NINJAONE_CLIENT_ID;
+        }
+        if (!clientSecret) {
+          clientSecret = process.env.NINJAONE_CLIENT_SECRET;
+        }
 
         if (!clientId || !clientSecret) {
-          throw new Error('NinjaOne client credentials not configured');
+          throw new Error('NinjaOne client credentials not configured. Please set NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET environment variables or configure the secrets.');
         }
 
         const tokenUrl = `${this.instanceUrl}/oauth/token`;
@@ -536,10 +544,15 @@ export async function getNinjaOneAuthUrl(
   redirectUri: string
 ): Promise<string> {
   const secretProvider = await getSecretProviderInstance();
-  const clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+  let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+  
+  // Fallback to environment variable if not found in secrets
+  if (!clientId) {
+    clientId = process.env.NINJAONE_CLIENT_ID;
+  }
 
   if (!clientId) {
-    throw new Error('NinjaOne client ID not configured');
+    throw new Error('NinjaOne client ID not configured. Please set NINJAONE_CLIENT_ID environment variable or configure the secret.');
   }
 
   const instanceUrl = NINJAONE_REGIONS[region];
@@ -566,11 +579,19 @@ export async function exchangeNinjaOneCode(
   redirectUri: string
 ): Promise<NinjaOneOAuthCredentials> {
   const secretProvider = await getSecretProviderInstance();
-  const clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-  const clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
+  let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+  let clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
+  
+  // Fallback to environment variables if not found in secrets
+  if (!clientId) {
+    clientId = process.env.NINJAONE_CLIENT_ID;
+  }
+  if (!clientSecret) {
+    clientSecret = process.env.NINJAONE_CLIENT_SECRET;
+  }
 
   if (!clientId || !clientSecret) {
-    throw new Error('NinjaOne client credentials not configured');
+    throw new Error('NinjaOne client credentials not configured. Please set NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET environment variables or configure the secrets.');
   }
 
   const instanceUrl = NINJAONE_REGIONS[region];

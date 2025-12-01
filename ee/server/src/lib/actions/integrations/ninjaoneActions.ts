@@ -188,7 +188,21 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
       .first();
 
     if (existingIntegration) {
-      const settings = JSON.parse(existingIntegration.settings || '{}');
+      // Parse existing settings - handle both string and object cases
+      let settings: Record<string, any> = {};
+      if (existingIntegration.settings) {
+        if (typeof existingIntegration.settings === 'string') {
+          try {
+            settings = JSON.parse(existingIntegration.settings);
+          } catch (e) {
+            logger.warn('[NinjaOneActions] Failed to parse existing settings during disconnect, using empty object:', e);
+            settings = {};
+          }
+        } else if (typeof existingIntegration.settings === 'object') {
+          settings = existingIntegration.settings as Record<string, any>;
+        }
+      }
+      
       // Remove webhook-related settings
       delete settings.webhookSecret;
       delete settings.webhookRegisteredAt;

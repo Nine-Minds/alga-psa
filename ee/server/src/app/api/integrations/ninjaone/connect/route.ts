@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse, NextRequest } from 'next/server';
 import crypto from 'crypto';
+import fs from 'fs';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import { createTenantKnex } from '../../../../../lib/db';
 import { NINJAONE_REGIONS, NinjaOneRegion } from '../../../../../interfaces/ninjaone.interfaces';
@@ -16,11 +17,36 @@ import { NINJAONE_REGIONS, NinjaOneRegion } from '../../../../../interfaces/ninj
 // Secret name for NinjaOne client ID
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
 
-// Redirect URI - uses NEXTAUTH_URL to determine the base URL
+// Path to ngrok URL file (written by ngrok-sync container)
+const NGROK_URL_FILE = '/app/ngrok/url';
+
+// Check if running in development mode
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
+
+// Redirect URI - uses ngrok URL in development, otherwise NEXTAUTH_URL
 const getRedirectUri = () => {
+  // If explicitly set, use that
   if (process.env.NINJAONE_REDIRECT_URI) {
     return process.env.NINJAONE_REDIRECT_URI;
   }
+
+  // In development mode, check for ngrok URL file first
+  if (isDevelopment) {
+    try {
+      if (fs.existsSync(NGROK_URL_FILE)) {
+        const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+        if (ngrokUrl) {
+          console.log(`[NinjaOne Connect] Using ngrok URL for redirect URI: ${ngrokUrl}`);
+          return `${ngrokUrl}/api/integrations/ninjaone/callback`;
+        }
+      }
+    } catch (error) {
+      // Ignore file read errors, fall back to env vars
+      console.debug('[NinjaOne Connect] Could not read ngrok URL file, using environment variables');
+    }
+  }
+
+  // Fall back to environment variables
   const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
   return `${baseUrl}/api/integrations/ninjaone/callback`;
 };
@@ -55,13 +81,16 @@ export async function GET(request: NextRequest) {
     // Get the secret provider instance
     const secretProvider = await getSecretProviderInstance();
 
-    // Retrieve NinjaOne Client ID (App-level secret)
-    const clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+    // Retrieve NinjaOne Client ID (App-level secret) with fallback to environment variable
+    let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+    if (!clientId) {
+      clientId = process.env.NINJAONE_CLIENT_ID;
+    }
 
     if (!clientId) {
-      console.error('[NinjaOne Connect] Missing NinjaOne Client ID in secrets.');
+      console.error('[NinjaOne Connect] Missing NinjaOne Client ID in secrets or environment variables.');
       return NextResponse.json(
-        { error: 'NinjaOne integration is not configured correctly.' },
+        { error: 'NinjaOne integration is not configured correctly. Please set NINJAONE_CLIENT_ID environment variable or configure the secret.' },
         { status: 500 }
       );
     }
@@ -80,19 +109,22 @@ export async function GET(request: NextRequest) {
 
     // Get the appropriate NinjaOne instance URL for the region
     const instanceUrl = NINJAONE_REGIONS[region];
+    const redirectUri = getRedirectUri();
 
     // Construct the authorization URL
     const params = new URLSearchParams({
       client_id: clientId,
       response_type: 'code',
       scope: NINJAONE_SCOPES,
-      redirect_uri: getRedirectUri(),
+      redirect_uri: redirectUri,
       state: state,
     });
 
     const authorizationUrl = `${instanceUrl}/oauth/authorize?${params.toString()}`;
 
     console.log(`[NinjaOne Connect] Redirecting tenant ${tenantId} to NinjaOne (${region}) for authorization.`);
+    console.log(`[NinjaOne Connect] Redirect URI: ${redirectUri}`);
+    console.log(`[NinjaOne Connect] Authorization URL: ${authorizationUrl}`);
 
     // Redirect the user's browser to NinjaOne
     return NextResponse.redirect(authorizationUrl);
