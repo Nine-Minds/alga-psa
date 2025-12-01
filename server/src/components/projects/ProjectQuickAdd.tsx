@@ -292,6 +292,10 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 availableStatuses={taskStatuses}
                 selectedStatuses={selectedTaskStatuses}
                 onChange={setSelectedTaskStatuses}
+                onStatusCreated={(newStatus) => {
+                  // Add new status to the available list
+                  setTaskStatuses(prev => [...prev, newStatus]);
+                }}
                 error={hasAttemptedSubmit && selectedTaskStatuses.length === 0 ? 'At least one task status must be selected' : undefined}
               />
               <div className="flex justify-between mt-6">

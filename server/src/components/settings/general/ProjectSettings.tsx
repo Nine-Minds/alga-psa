@@ -6,7 +6,7 @@ import CustomTabs from 'server/src/components/ui/CustomTabs';
 import NumberingSettings from './NumberingSettings';
 import { TenantProjectTaskStatusSettings } from 'server/src/components/settings/projects/TenantProjectTaskStatusSettings';
 import { ProjectStatusSettings } from 'server/src/components/settings/projects/ProjectStatusSettings';
-import { Card, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import TaskPrioritySettings from 'server/src/components/settings/projects/TaskPrioritySettings';
 
 const ProjectSettings = (): JSX.Element => {
   const searchParams = useSearchParams();
@@ -17,7 +17,7 @@ const ProjectSettings = (): JSX.Element => {
     'project-numbering': 'Project Numbering',
     'project-statuses': 'Project Statuses',
     'task-statuses': 'Task Statuses',
-    'templates': 'Templates'
+    'task-priorities': 'Task Priorities'
   };
 
   // Determine initial active tab based on URL parameter
@@ -49,17 +49,8 @@ const ProjectSettings = (): JSX.Element => {
       content: <TenantProjectTaskStatusSettings />
     },
     {
-      label: "Templates",
-      content: (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle className="text-gray-400">Project Templates</CardTitle>
-            <CardDescription className="text-gray-400">
-              Coming soon: Create and manage project templates
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )
+      label: "Task Priorities",
+      content: <TaskPrioritySettings />
     }
   ];
 

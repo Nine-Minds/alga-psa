@@ -56,9 +56,6 @@ services:
         source: ./scripts
         target: /app/scripts
         read_only: true
-      - type: bind
-        source: ./shared/workflow/workflows
-        target: /app/shared/workflow/workflows
     entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
@@ -147,9 +144,6 @@ services:
         source: ./scripts
         target: /app/scripts
         read_only: true
-      - type: bind
-        source: ./shared/workflow/workflows
-        target: /app/shared/workflow/workflows
     secrets:
       - postgres_password
       - db_password_server
