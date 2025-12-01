@@ -67,7 +67,7 @@ const createClientPaymentCustomers = (knex) =>
     table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
 
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign('client_id').references('companies.company_id').onDelete('CASCADE');
+    table.foreign('client_id').references('clients.client_id').onDelete('CASCADE');
     table.unique(['tenant', 'client_id', 'provider_type']);
   });
 

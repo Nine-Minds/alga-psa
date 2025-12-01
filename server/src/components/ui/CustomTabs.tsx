@@ -7,6 +7,7 @@ import { AutomationProps } from '../../types/ui-reflection/types';
 export interface TabContent {
   label: string;
   content: React.ReactNode;
+  icon?: React.ReactNode;
 }
 
 export interface CustomTabsProps {
@@ -78,10 +79,11 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
           <Tabs.Trigger
             key={tab.label}
             id={`${prefix}-trigger-${index}`}
-            className={`${defaultTriggerClass} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
+            className={`${defaultTriggerClass} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass} flex items-center gap-2`}
             value={tab.label}
           >
-            {tab.label}
+            {tab.icon && <span className="flex-shrink-0">{tab.icon}</span>}
+            <span>{tab.label}</span>
           </Tabs.Trigger>
         ))}
         {extraContent}
