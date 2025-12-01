@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import { Group, Text } from '@mantine/core';
 import { useSWRConfig } from 'swr';
 import { 
-  Monitor, 
   Laptop, 
   Server, 
   Smartphone, 
   Printer, 
   Network, 
   HelpCircle,
-  MonitorPlay,
-  Ticket,
   MoreVertical,
   Edit,
   Trash2,
@@ -21,6 +18,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { StatusBadge } from './shared/StatusBadge';
 import { Asset } from '../../interfaces/asset.interfaces';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
+import { RemoteAccessButton } from './RemoteAccessButton';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
@@ -89,19 +87,15 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
 
         <Group>
           {asset.rmm_provider && (
-             <Button 
-               variant="filled" 
-               className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-               onClick={() => {
-                 console.log('Remote control clicked');
-               }}
-             >
-               <MonitorPlay size={16} />
-               Remote Control
-             </Button>
+            <RemoteAccessButton
+              asset={asset}
+              variant="default"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-0"
+            />
           )}
           
           <Button 
+            id="create-ticket-header-btn"
             variant="outline"
             className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-2"
             onClick={() => setIsTicketDialogOpen(true)}
@@ -111,7 +105,11 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-2 px-3">
+              <Button 
+                id="asset-actions-btn"
+                variant="outline" 
+                className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 flex items-center gap-2 px-3"
+              >
                 Actions
                 <MoreVertical size={16} />
               </Button>

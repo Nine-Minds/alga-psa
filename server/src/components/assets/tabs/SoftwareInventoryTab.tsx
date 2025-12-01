@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from 'server/src/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/Table';
 import { TextInput, Select, Group } from '@mantine/core';
 import { Search } from 'lucide-react';
@@ -33,59 +33,64 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
   );
 
   return (
-    <Card title="Software Inventory">
-      <Group mb="md">
-        <TextInput 
-          placeholder="Search software..." 
-          leftSection={<Search size={16} />}
-          value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
-          className="flex-1"
-        />
-        <Select 
-          placeholder="Category" 
-          data={['All', 'Browser', 'Security', 'Productivity', 'Development']}
-          defaultValue="All"
-          className="w-48"
-        />
-      </Group>
+    <Card>
+      <CardHeader>
+        <CardTitle>Software Inventory</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Group mb="md">
+          <TextInput 
+            placeholder="Search software..." 
+            leftSection={<Search size={16} />}
+            value={search}
+            onChange={(e) => setSearch(e.currentTarget.value)}
+            className="flex-1"
+          />
+          <Select 
+            placeholder="Category" 
+            data={['All', 'Browser', 'Security', 'Productivity', 'Development']}
+            defaultValue="All"
+            className="w-48"
+          />
+        </Group>
 
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Version</TableHead>
-              <TableHead>Publisher</TableHead>
-              <TableHead>Install Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredSoftware.length > 0 ? (
-              filteredSoftware.map((sw) => (
-                <TableRow key={sw.id}>
-                  <TableCell className="font-medium">{sw.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{sw.version}</TableCell>
-                  <TableCell className="text-muted-foreground">{sw.publisher}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {sw.installDate ? new Date(sw.installDate).toLocaleDateString() : '-'}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Version</TableHead>
+                <TableHead>Publisher</TableHead>
+                <TableHead>Install Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSoftware.length > 0 ? (
+                filteredSoftware.map((sw) => (
+                  <TableRow key={sw.id}>
+                    <TableCell className="font-medium">{sw.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{sw.version}</TableCell>
+                    <TableCell className="text-muted-foreground">{sw.publisher}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {sw.installDate ? new Date(sw.installDate).toLocaleDateString() : '-'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    No software found matching your search.
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  No software found matching your search.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      
-      <div className="mt-4 text-xs text-gray-400 text-right">
-        Total Items: {filteredSoftware.length}
-      </div>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        
+        <div className="mt-4 text-xs text-gray-400 text-right">
+          Total Items: {filteredSoftware.length}
+        </div>
+      </CardContent>
     </Card>
   );
 };
