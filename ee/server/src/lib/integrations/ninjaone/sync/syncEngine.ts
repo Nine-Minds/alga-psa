@@ -1222,7 +1222,7 @@ export async function runIncrementalSync(
 }
 
 /**
- * Sync a single device
+ * Sync a single device by NinjaOne device ID
  */
 export async function syncSingleDevice(
   tenantId: string,
@@ -1231,4 +1231,45 @@ export async function syncSingleDevice(
 ): Promise<Asset> {
   const engine = new NinjaOneSyncEngine(tenantId, integrationId);
   return engine.syncDevice(deviceId);
+}
+
+/**
+ * Sync a single device by Alga asset ID
+ * Used for on-demand refresh from the asset detail page
+ * @see ee/docs/plans/asset-detail-view-enhancement.md §1.3.2
+ */
+export async function syncSingleDeviceByAssetId(
+  tenantId: string,
+  assetId: string
+): Promise<Asset> {
+  const { knex } = await createTenantKnex();
+
+  // Look up the asset to get rmm_device_id and integration info
+  const asset = await knex('assets')
+    .where({ tenant: tenantId, asset_id: assetId })
+    .first();
+
+  if (!asset) {
+    throw new Error('Asset not found');
+  }
+
+  if (asset.rmm_provider !== 'ninjaone' || !asset.rmm_device_id) {
+    throw new Error('Asset is not managed by NinjaOne');
+  }
+
+  // Find the integration for this tenant
+  const integration = await knex('rmm_integrations')
+    .where({
+      tenant: tenantId,
+      provider: 'ninjaone',
+      is_active: true,
+    })
+    .first();
+
+  if (!integration) {
+    throw new Error('No active NinjaOne integration found');
+  }
+
+  const engine = new NinjaOneSyncEngine(tenantId, integration.integration_id);
+  return engine.syncDevice(parseInt(asset.rmm_device_id, 10));
 }

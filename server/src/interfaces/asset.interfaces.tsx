@@ -44,6 +44,8 @@ export interface Asset {
   agent_status?: RmmAgentStatus;
   last_seen_at?: string;
   last_rmm_sync_at?: string;
+  // Notes document (BlockNote format, like company notes)
+  notes_document_id?: string;
   // Related data
   client?: AssetClientInfo;
   relationships?: AssetRelationship[];
@@ -84,6 +86,15 @@ export interface WorkstationAsset {
   failed_patches?: number;
   last_patch_scan_at?: string;
   system_info?: Record<string, unknown>;
+  // Cached RMM live data (synced from RMM)
+  current_user?: string;
+  uptime_seconds?: number;
+  lan_ip?: string;
+  wan_ip?: string;
+  cpu_utilization_percent?: number;
+  memory_usage_percent?: number;
+  memory_used_gb?: number;
+  disk_usage?: RmmStorageInfo[];
 }
 
 export interface NetworkDeviceAsset {
@@ -114,6 +125,7 @@ export interface ServerAsset {
   network_interfaces: unknown[];
   primary_ip?: string;
   installed_services: unknown[];
+  installed_software?: unknown[];
   // RMM Integration fields
   agent_version?: string;
   antivirus_status?: string;
@@ -125,9 +137,15 @@ export interface ServerAsset {
   failed_patches?: number;
   last_patch_scan_at?: string;
   system_info?: Record<string, unknown>;
-  disk_usage?: DiskUsageInfo[];
+  disk_usage?: RmmStorageInfo[];
   cpu_usage_percent?: number;
   memory_usage_percent?: number;
+  // Cached RMM live data (synced from RMM)
+  current_user?: string;
+  uptime_seconds?: number;
+  lan_ip?: string;
+  wan_ip?: string;
+  memory_used_gb?: number;
 }
 
 export interface DiskUsageInfo {
@@ -136,6 +154,46 @@ export interface DiskUsageInfo {
   used_gb: number;
   free_gb: number;
   percent_used: number;
+}
+
+// RMM Storage info (used for cached disk usage from RMM sync)
+export interface RmmStorageInfo {
+  name: string;
+  total_gb: number;
+  free_gb: number;
+  utilization_percent: number;
+}
+
+// Cached RMM data structure (returned by getAssetRmmData)
+export interface RmmCachedData {
+  provider: RmmProvider;
+  agent_status: RmmAgentStatus;
+  last_check_in: string | null;
+  last_rmm_sync_at: string | null;
+  current_user: string | null;
+  uptime_seconds: number | null;
+  lan_ip: string | null;
+  wan_ip: string | null;
+  cpu_utilization_percent: number | null;
+  memory_utilization_percent: number | null;
+  memory_used_gb: number | null;
+  memory_total_gb: number | null;
+  storage: RmmStorageInfo[];
+}
+
+// Asset summary metrics (for the key metrics banner)
+export type HealthStatus = 'healthy' | 'warning' | 'critical' | 'unknown';
+export type SecurityStatus = 'secure' | 'at_risk' | 'critical';
+export type WarrantyStatus = 'active' | 'expiring_soon' | 'expired' | 'unknown';
+
+export interface AssetSummaryMetrics {
+  health_status: HealthStatus;
+  health_reason: string | null;
+  open_tickets_count: number;
+  security_status: SecurityStatus;
+  security_issues: string[];
+  warranty_days_remaining: number | null;
+  warranty_status: WarrantyStatus;
 }
 
 export interface MobileDeviceAsset {

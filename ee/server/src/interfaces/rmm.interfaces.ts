@@ -152,6 +152,41 @@ export interface RmmWorkstationFields {
   system_info?: Record<string, unknown>;
 }
 
+/**
+ * Cached RMM live data fields stored on workstation_assets/server_assets
+ * These fields are populated during sync and cached for instant page load.
+ * @see ee/docs/plans/asset-detail-view-enhancement.md §1.2
+ */
+export interface RmmWorkstationCacheFields {
+  current_user: string | null;
+  uptime_seconds: number | null;
+  lan_ip: string | null;
+  wan_ip: string | null;
+  cpu_utilization_percent: number | null;
+  memory_usage_percent: number | null;
+  memory_used_gb: number | null;
+  disk_usage: RmmStorageInfo[] | null;
+  pending_os_patches: number | null;
+  pending_software_patches: number | null;
+}
+
+export interface RmmServerCacheFields extends RmmWorkstationCacheFields {
+  // Server-specific fields inherit all workstation fields
+  // cpu_usage_percent is different naming from workstation (cpu_utilization_percent)
+  cpu_usage_percent: number | null;
+}
+
+/**
+ * Storage info structure for cached disk usage data
+ * Matches the structure populated during NinjaOne sync
+ */
+export interface RmmStorageInfo {
+  name: string;
+  total_gb: number;
+  free_gb: number;
+  utilization_percent: number;
+}
+
 export interface RmmServerFields extends RmmWorkstationFields {
   disk_usage?: RmmDiskUsage[];
   cpu_usage_percent?: number;

@@ -440,6 +440,61 @@ export class NinjaOneClient {
     return response.data;
   }
 
+  /**
+   * Get all available remote access links for a device
+   */
+  async getDeviceLinks(deviceId: number): Promise<NinjaOneDeviceLink[]> {
+    const response = await this.axiosInstance.get<NinjaOneDeviceLink[]>(
+      `/device/${deviceId}/links`
+    );
+    return response.data;
+  }
+
+  // ============ Device Control API ============
+
+  /**
+   * Reboot a device
+   * NinjaOne API: POST /v2/device/{id}/control/reboot
+   */
+  async rebootDevice(deviceId: number): Promise<void> {
+    await this.axiosInstance.post(`/device/${deviceId}/control/reboot`);
+    logger.info('[NinjaOneClient] Reboot command sent', {
+      tenantId: this.tenantId,
+      deviceId,
+    });
+  }
+
+  /**
+   * Run a script on a device
+   * NinjaOne API: POST /v2/device/{id}/script/run
+   * @param deviceId The device ID
+   * @param scriptId The script ID to run
+   * @param parameters Optional script parameters
+   * @returns Job ID for tracking the script execution
+   */
+  async runScript(
+    deviceId: number,
+    scriptId: string,
+    parameters?: Record<string, string>
+  ): Promise<{ jobId: string }> {
+    const response = await this.axiosInstance.post<{ jobUid: string }>(
+      `/device/${deviceId}/script/run`,
+      {
+        id: scriptId,
+        parameters,
+      }
+    );
+
+    logger.info('[NinjaOneClient] Script execution queued', {
+      tenantId: this.tenantId,
+      deviceId,
+      scriptId,
+      jobId: response.data.jobUid,
+    });
+
+    return { jobId: response.data.jobUid };
+  }
+
   // ============ Software Inventory API ============
 
   /**

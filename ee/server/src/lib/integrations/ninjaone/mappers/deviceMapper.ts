@@ -192,7 +192,7 @@ export function mapNetworkInterfaces(interfaces?: NinjaOneNetworkInterface[]): u
 }
 
 /**
- * Map volumes to disk usage format
+ * Map volumes to disk usage format (legacy format)
  */
 export function mapDiskUsage(volumes?: NinjaOneVolume[]): Array<{
   drive: string;
@@ -219,6 +219,97 @@ export function mapDiskUsage(volumes?: NinjaOneVolume[]): Array<{
         percent_used: percentUsed,
       };
     });
+}
+
+/**
+ * Map volumes to RMM storage info format (new cached format)
+ * @see ee/docs/plans/asset-detail-view-enhancement.md §1.3.1
+ */
+export function mapDiskUsageToRmmStorageInfo(volumes?: NinjaOneVolume[]): Array<{
+  name: string;
+  total_gb: number;
+  free_gb: number;
+  utilization_percent: number;
+}> {
+  if (!volumes) return [];
+
+  return volumes
+    .filter(vol => vol.capacity && vol.capacity > 0)
+    .map(vol => {
+      const totalGb = (vol.capacity || 0) / (1024 * 1024 * 1024);
+      const freeGb = (vol.freeSpace || 0) / (1024 * 1024 * 1024);
+      const utilizationPercent = totalGb > 0 ? ((totalGb - freeGb) / totalGb) * 100 : 0;
+
+      return {
+        name: vol.name || vol.label || 'Unknown',
+        total_gb: Math.round(totalGb * 100) / 100, // 2 decimal places
+        free_gb: Math.round(freeGb * 100) / 100,
+        utilization_percent: Math.round(utilizationPercent * 100) / 100,
+      };
+    });
+}
+
+/**
+ * Extract primary LAN IP from network interfaces
+ * Finds the first non-loopback IPv4 address
+ */
+export function extractPrimaryLanIp(networkInterfaces?: NinjaOneNetworkInterface[]): string | null {
+  if (!networkInterfaces) return null;
+
+  for (const nic of networkInterfaces) {
+    if (!nic.ipAddresses) continue;
+
+    // Find first IPv4 address that's not loopback
+    for (const ip of nic.ipAddresses) {
+      // Skip loopback and link-local addresses
+      if (ip.startsWith('127.') || ip.startsWith('169.254.')) continue;
+      // Skip IPv6 addresses (contains :)
+      if (ip.includes(':')) continue;
+      return ip;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Calculate uptime in seconds from last boot time
+ */
+export function calculateUptimeSeconds(lastBootTime?: string): number | null {
+  if (!lastBootTime) return null;
+
+  try {
+    const bootDate = new Date(lastBootTime);
+    if (isNaN(bootDate.getTime())) return null;
+
+    const now = Date.now();
+    const uptimeMs = now - bootDate.getTime();
+
+    // Sanity check: uptime should be positive and reasonable (< 5 years)
+    if (uptimeMs < 0 || uptimeMs > 5 * 365 * 24 * 60 * 60 * 1000) {
+      return null;
+    }
+
+    return Math.floor(uptimeMs / 1000);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Calculate memory used in GB from total and available memory
+ * NinjaOne provides memory.capacity in bytes
+ * Note: Available memory would need to come from real-time metrics
+ */
+export function calculateMemoryUsedGb(
+  totalMemoryBytes?: number,
+  availableMemoryBytes?: number
+): number | null {
+  if (!totalMemoryBytes) return null;
+  if (availableMemoryBytes === undefined || availableMemoryBytes === null) return null;
+
+  const usedBytes = totalMemoryBytes - availableMemoryBytes;
+  return Math.round((usedBytes / (1024 * 1024 * 1024)) * 100) / 100;
 }
 
 /**
@@ -288,6 +379,17 @@ export function mapToWorkstationExtension(
       timezone: device.os?.timezone?.name,
       locale: device.os?.locale,
     },
+    // Cached RMM live data (populated during sync)
+    current_user: device.lastLoggedInUser || undefined,
+    uptime_seconds: calculateUptimeSeconds(device.os?.lastBootTime) ?? undefined,
+    lan_ip: extractPrimaryLanIp(device.networkInterfaces) ?? undefined,
+    wan_ip: device.publicIP || undefined,
+    // Note: CPU/memory usage percentages require real-time metrics endpoint
+    // These will be undefined until we implement real-time metrics fetching
+    cpu_utilization_percent: undefined,
+    memory_usage_percent: undefined,
+    memory_used_gb: undefined,
+    disk_usage: mapDiskUsageToRmmStorageInfo(device.volumes),
   };
 }
 
@@ -317,8 +419,9 @@ export function mapToServerExtension(
     is_virtual: isVirtual,
     hypervisor: isVirtual ? device.nodeClass.includes('VMWARE') ? 'VMware' : 'Hyper-V' : undefined,
     network_interfaces: mapNetworkInterfaces(device.networkInterfaces),
-    primary_ip: device.networkInterfaces?.[0]?.ipAddresses?.[0],
+    primary_ip: extractPrimaryLanIp(device.networkInterfaces) || device.networkInterfaces?.[0]?.ipAddresses?.[0],
     installed_services: [], // Would need to fetch separately
+    installed_software: device.software || [],
     // RMM-specific fields
     agent_version: undefined,
     antivirus_status: antivirus.status,
@@ -335,9 +438,15 @@ export function mapToServerExtension(
       public_ip: device.publicIP,
       timezone: device.os?.timezone?.name,
     },
-    disk_usage: mapDiskUsage(device.volumes),
+    disk_usage: mapDiskUsageToRmmStorageInfo(device.volumes),
     cpu_usage_percent: undefined, // Would need real-time metrics
     memory_usage_percent: undefined,
+    // Cached RMM live data (populated during sync)
+    current_user: device.lastLoggedInUser || undefined,
+    uptime_seconds: calculateUptimeSeconds(device.os?.lastBootTime) ?? undefined,
+    lan_ip: extractPrimaryLanIp(device.networkInterfaces) ?? undefined,
+    wan_ip: device.publicIP || undefined,
+    memory_used_gb: undefined, // Requires real-time metrics
   };
 }
 

@@ -1171,10 +1171,14 @@ export async function searchSoftware(
     assetId: string;
     assetName: string;
     companyId: string;
+    clientName: string;
     software: {
+      softwareId: string;
       name: string;
-      version?: string;
-      publisher?: string;
+      version: string | null;
+      publisher: string | null;
+      category: string | null;
+      installDate: string | null;
     };
   }>;
   error?: string;

@@ -2,14 +2,23 @@
  * NinjaOne Software Inventory Sync
  *
  * Synchronizes software inventory from NinjaOne to Alga PSA assets.
- * Updates the installed_software field in asset extension tables.
+ * Uses normalized tables (software_catalog + asset_software) for better
+ * querying, deduplication, and change tracking.
+ *
+ * @see ee/docs/plans/asset-detail-view-enhancement.md §1.3.3
  */
 
 import logger from '@shared/core/logger';
 import axios from 'axios';
+import { Knex } from 'knex';
 import { createTenantKnex } from '../../../../../../../server/src/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneSoftware } from '../../../../interfaces/ninjaone.interfaces';
+import type {
+  SoftwareCatalogEntry,
+  SoftwareCategory,
+  SoftwareType,
+} from '../../../../../../../server/src/interfaces/software.interfaces';
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
@@ -46,6 +55,9 @@ export interface SoftwareSyncResult {
   assetsUpdated: number;
   assetsFailed: number;
   totalSoftwareItems: number;
+  softwareInstalled: number;
+  softwareUninstalled: number;
+  catalogEntriesCreated: number;
   errors: string[];
   startedAt: string;
   completedAt: string;
@@ -58,6 +70,48 @@ export interface SoftwareItem {
   installDate?: string;
   size?: number;
   location?: string;
+}
+
+/**
+ * Normalize software name for matching
+ */
+function normalizeName(name: string): string {
+  return name.toLowerCase().trim();
+}
+
+/**
+ * Infer software category from name (heuristic)
+ */
+function inferSoftwareCategory(name: string): SoftwareCategory {
+  const lower = name.toLowerCase();
+  if (/chrome|firefox|safari|edge|opera|brave|browser/.test(lower)) return 'Browser';
+  if (/office|word|excel|powerpoint|outlook|teams|onenote/.test(lower)) return 'Productivity';
+  if (/visual studio|vscode|intellij|xcode|android studio|eclipse|jetbrains|rider|webstorm|phpstorm|pycharm/.test(lower)) return 'Development';
+  if (/antivirus|defender|norton|mcafee|sentinelone|crowdstrike|sophos|bitdefender|kaspersky|malwarebytes|firewall|security/.test(lower)) return 'Security';
+  if (/zoom|teams|slack|discord|skype|webex/.test(lower)) return 'Communication';
+  if (/adobe|photoshop|illustrator|acrobat|premiere|lightroom|indesign|creative/.test(lower)) return 'Creative';
+  if (/node|python|java|dotnet|\.net|runtime|framework|sdk|jdk|jre/.test(lower)) return 'Runtime';
+  if (/driver|nvidia|amd|intel|realtek/.test(lower)) return 'Driver';
+  return null;
+}
+
+/**
+ * Infer software type from name
+ */
+function inferSoftwareType(name: string): SoftwareType {
+  const lower = name.toLowerCase();
+  if (/driver/.test(lower)) return 'driver';
+  if (/update|hotfix|kb\d+|patch/.test(lower)) return 'update';
+  if (/runtime|framework|redistributable/.test(lower)) return 'system';
+  return 'application';
+}
+
+/**
+ * Check if software is security-relevant
+ */
+function isSecurityRelevant(name: string): boolean {
+  const lower = name.toLowerCase();
+  return /antivirus|security|defender|firewall|malware|endpoint|protection/.test(lower);
 }
 
 /**
@@ -78,7 +132,143 @@ function transformSoftware(ninjaSoftware: NinjaOneSoftware[]): SoftwareItem[] {
 }
 
 /**
+ * Find or create a software catalog entry
+ * Uses normalized name + publisher for deduplication
+ */
+async function findOrCreateSoftwareCatalogEntry(
+  knex: Knex,
+  tenant: string,
+  software: { name: string; publisher?: string }
+): Promise<string> {
+  const normalizedName = normalizeName(software.name);
+  const publisher = software.publisher?.trim() || null;
+
+  // Try to find existing entry
+  const existing = await knex('software_catalog')
+    .where({
+      tenant,
+      normalized_name: normalizedName,
+      publisher,
+    })
+    .first();
+
+  if (existing) {
+    return existing.software_id;
+  }
+
+  // Create new entry
+  const [entry] = await knex('software_catalog')
+    .insert({
+      tenant,
+      name: software.name.trim(),
+      normalized_name: normalizedName,
+      publisher,
+      category: inferSoftwareCategory(software.name),
+      software_type: inferSoftwareType(software.name),
+      is_managed: false,
+      is_security_relevant: isSecurityRelevant(software.name),
+    })
+    .returning('software_id');
+
+  return entry.software_id;
+}
+
+/**
+ * Sync asset software to normalized tables
+ * Handles upsert for existing software and soft-delete for uninstalled software
+ */
+async function syncAssetSoftwareToNormalizedTables(
+  knex: Knex,
+  tenant: string,
+  assetId: string,
+  softwareList: SoftwareItem[],
+  syncTimestamp: Date
+): Promise<{ installed: number; uninstalled: number; catalogCreated: number }> {
+  const stats = { installed: 0, uninstalled: 0, catalogCreated: 0 };
+
+  // Get current software IDs for this asset
+  const currentSoftware = await knex('asset_software')
+    .where({ tenant, asset_id: assetId, is_current: true })
+    .select('software_id');
+  const currentSoftwareIds = new Set(currentSoftware.map(s => s.software_id));
+
+  // Track which software we see in this sync
+  const seenSoftwareIds = new Set<string>();
+
+  // Process each software item from RMM
+  for (const sw of softwareList) {
+    if (!sw.name) continue;
+
+    // Find or create catalog entry
+    const softwareId = await findOrCreateSoftwareCatalogEntry(knex, tenant, {
+      name: sw.name,
+      publisher: sw.publisher,
+    });
+
+    seenSoftwareIds.add(softwareId);
+
+    // Check if already exists for this asset
+    const existing = await knex('asset_software')
+      .where({ tenant, asset_id: assetId, software_id: softwareId })
+      .first();
+
+    if (existing) {
+      // Update last_seen_at and potentially re-install if it was uninstalled
+      const updateData: Record<string, unknown> = {
+        last_seen_at: syncTimestamp,
+        version: sw.version || existing.version,
+        install_path: sw.location || existing.install_path,
+        size_bytes: sw.size || existing.size_bytes,
+      };
+
+      // If it was previously uninstalled, mark as re-installed
+      if (!existing.is_current) {
+        updateData.is_current = true;
+        updateData.uninstalled_at = null;
+        stats.installed++;
+      }
+
+      await knex('asset_software')
+        .where({ tenant, asset_id: assetId, software_id: softwareId })
+        .update(updateData);
+    } else {
+      // New software installation
+      await knex('asset_software').insert({
+        tenant,
+        asset_id: assetId,
+        software_id: softwareId,
+        version: sw.version || null,
+        install_date: sw.installDate ? new Date(sw.installDate) : null,
+        install_path: sw.location || null,
+        size_bytes: sw.size || null,
+        first_seen_at: syncTimestamp,
+        last_seen_at: syncTimestamp,
+        is_current: true,
+      });
+      stats.installed++;
+      stats.catalogCreated++;
+    }
+  }
+
+  // Mark software that's no longer present as uninstalled (soft delete)
+  for (const softwareId of currentSoftwareIds) {
+    if (!seenSoftwareIds.has(softwareId)) {
+      await knex('asset_software')
+        .where({ tenant, asset_id: assetId, software_id: softwareId, is_current: true })
+        .update({
+          is_current: false,
+          uninstalled_at: syncTimestamp,
+        });
+      stats.uninstalled++;
+    }
+  }
+
+  return stats;
+}
+
+/**
  * Sync software inventory for all RMM-managed devices or a specific set
+ * Now uses normalized tables (software_catalog + asset_software)
  */
 export async function syncSoftwareInventory(
   tenantId: string,
@@ -92,6 +282,9 @@ export async function syncSoftwareInventory(
     assetsUpdated: 0,
     assetsFailed: 0,
     totalSoftwareItems: 0,
+    softwareInstalled: 0,
+    softwareUninstalled: 0,
+    catalogEntriesCreated: 0,
     errors: [],
     startedAt: startTime,
     completedAt: '',
@@ -100,7 +293,7 @@ export async function syncSoftwareInventory(
   const { batchSize = 25, assetIds, performedBy, trackChanges = false } = options;
 
   try {
-    logger.info('[SoftwareSync] Starting software inventory sync', {
+    logger.info('[SoftwareSync] Starting software inventory sync (normalized tables)', {
       tenantId,
       integrationId,
       assetIds: assetIds?.length,
@@ -108,6 +301,9 @@ export async function syncSoftwareInventory(
     });
 
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
     const client = await createNinjaOneClient(tenantId);
 
     // Build query for assets to sync
@@ -124,6 +320,8 @@ export async function syncSoftwareInventory(
     const assets = await assetsQuery.select('asset_id', 'asset_type', 'rmm_device_id', 'name');
 
     logger.info('[SoftwareSync] Found assets to sync', { count: assets.length });
+
+    const syncTimestamp = new Date();
 
     // Process in batches (smaller batches since software data is larger)
     for (let i = 0; i < assets.length; i += batchSize) {
@@ -145,27 +343,25 @@ export async function syncSoftwareInventory(
 
             result.totalSoftwareItems += software.length;
 
-            // Determine the extension table based on asset type
+            // Sync to normalized tables
+            const stats = await syncAssetSoftwareToNormalizedTables(
+              knex,
+              tenant,
+              asset.asset_id,
+              software,
+              syncTimestamp
+            );
+
+            result.softwareInstalled += stats.installed;
+            result.softwareUninstalled += stats.uninstalled;
+            result.catalogEntriesCreated += stats.catalogCreated;
+
+            // Also update the JSONB column for backwards compatibility
+            // This can be removed once frontend migrates to normalized tables
             const extensionTable = asset.asset_type === 'workstation'
               ? 'workstation_assets'
               : 'server_assets';
 
-            // Get existing software for change tracking
-            let previousSoftware: SoftwareItem[] = [];
-            if (trackChanges) {
-              const existing = await knex(extensionTable)
-                .where({ tenant, asset_id: asset.asset_id })
-                .select('installed_software')
-                .first();
-
-              if (existing?.installed_software) {
-                previousSoftware = Array.isArray(existing.installed_software)
-                  ? existing.installed_software
-                  : [];
-              }
-            }
-
-            // Update the extension table with software data
             await knex(extensionTable)
               .where({ tenant, asset_id: asset.asset_id })
               .update({
@@ -176,27 +372,23 @@ export async function syncSoftwareInventory(
             await knex('assets')
               .where({ tenant, asset_id: asset.asset_id })
               .update({
-                last_rmm_sync_at: new Date().toISOString(),
+                last_rmm_sync_at: syncTimestamp.toISOString(),
               });
 
             // Track changes in asset history if enabled
-            if (trackChanges && previousSoftware.length > 0) {
-              const changes = calculateSoftwareChanges(previousSoftware, software);
-              if (changes.added.length > 0 || changes.removed.length > 0) {
-                await knex('asset_history').insert({
-                  tenant,
-                  asset_id: asset.asset_id,
-                  changed_by: performedBy || 'system',
-                  change_type: 'software_update',
-                  changes: JSON.stringify({
-                    added: changes.added.slice(0, 10), // Limit to avoid huge entries
-                    removed: changes.removed.slice(0, 10),
-                    addedCount: changes.added.length,
-                    removedCount: changes.removed.length,
-                  }),
-                  changed_at: new Date().toISOString(),
-                });
-              }
+            if (trackChanges && (stats.installed > 0 || stats.uninstalled > 0)) {
+              await knex('asset_history').insert({
+                tenant,
+                asset_id: asset.asset_id,
+                changed_by: performedBy || 'system',
+                change_type: 'software_update',
+                changes: JSON.stringify({
+                  installed: stats.installed,
+                  uninstalled: stats.uninstalled,
+                  source: 'ninjaone_sync',
+                }),
+                changed_at: syncTimestamp.toISOString(),
+              });
             }
 
             result.assetsUpdated++;
@@ -205,6 +397,8 @@ export async function syncSoftwareInventory(
               assetId: asset.asset_id,
               assetName: asset.name,
               softwareCount: software.length,
+              installed: stats.installed,
+              uninstalled: stats.uninstalled,
             });
           } catch (assetError) {
             result.assetsFailed++;
@@ -234,6 +428,9 @@ export async function syncSoftwareInventory(
       updated: result.assetsUpdated,
       failed: result.assetsFailed,
       totalSoftware: result.totalSoftwareItems,
+      installed: result.softwareInstalled,
+      uninstalled: result.softwareUninstalled,
+      catalogCreated: result.catalogEntriesCreated,
       duration: Date.now() - new Date(startTime).getTime(),
     });
 
@@ -251,6 +448,7 @@ export async function syncSoftwareInventory(
 
 /**
  * Sync software inventory for a single device
+ * Now uses normalized tables
  */
 export async function syncDeviceSoftware(
   tenantId: string,
@@ -258,10 +456,15 @@ export async function syncDeviceSoftware(
 ): Promise<{
   success: boolean;
   softwareCount?: number;
+  installed?: number;
+  uninstalled?: number;
   error?: string;
 }> {
   try {
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
 
     // Get the asset
     const asset = await knex('assets')
@@ -285,12 +488,22 @@ export async function syncDeviceSoftware(
     const ninjaSoftware = await client.getDeviceSoftware(deviceId) as NinjaOneSoftware[];
     const software = transformSoftware(ninjaSoftware);
 
-    // Determine extension table
+    const syncTimestamp = new Date();
+
+    // Sync to normalized tables
+    const stats = await syncAssetSoftwareToNormalizedTables(
+      knex,
+      tenant,
+      assetId,
+      software,
+      syncTimestamp
+    );
+
+    // Also update the JSONB column for backwards compatibility
     const extensionTable = asset.asset_type === 'workstation'
       ? 'workstation_assets'
       : 'server_assets';
 
-    // Update extension table
     await knex(extensionTable)
       .where({ tenant, asset_id: assetId })
       .update({
@@ -301,12 +514,14 @@ export async function syncDeviceSoftware(
     await knex('assets')
       .where({ tenant, asset_id: assetId })
       .update({
-        last_rmm_sync_at: new Date().toISOString(),
+        last_rmm_sync_at: syncTimestamp.toISOString(),
       });
 
     return {
       success: true,
       softwareCount: software.length,
+      installed: stats.installed,
+      uninstalled: stats.uninstalled,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -347,124 +562,158 @@ function calculateSoftwareChanges(
 }
 
 /**
- * Search for software across all assets
+ * Search for software across all assets using normalized tables
+ * Uses v_asset_software_details view for efficient querying
  */
 export async function searchSoftwareAcrossAssets(
   tenantId: string,
   searchTerm: string,
   options: {
     companyId?: string;
+    category?: string;
     limit?: number;
   } = {}
 ): Promise<Array<{
   assetId: string;
   assetName: string;
   companyId: string;
-  software: SoftwareItem;
+  clientName: string;
+  software: {
+    softwareId: string;
+    name: string;
+    version: string | null;
+    publisher: string | null;
+    category: string | null;
+    installDate: string | null;
+  };
 }>> {
-  const { companyId, limit = 100 } = options;
+  const { companyId, category, limit = 100 } = options;
 
   try {
     const { knex, tenant } = await createTenantKnex();
-    const lowerSearch = searchTerm.toLowerCase();
 
-    // Query workstations
-    let workstationsQuery = knex('assets as a')
-      .join('workstation_assets as aw', function() {
-        this.on('a.tenant', '=', 'aw.tenant')
-          .andOn('a.asset_id', '=', 'aw.asset_id');
+    // Use the view for efficient querying
+    let query = knex('v_asset_software_details')
+      .where('tenant', tenant)
+      .where('is_current', true)
+      .where(function() {
+        this.whereILike('software_name', `%${searchTerm}%`)
+          .orWhereILike('publisher', `%${searchTerm}%`);
       })
-      .where('a.tenant', tenant)
-      .where('a.asset_type', 'workstation')
-      .whereNotNull('aw.installed_software')
-      .select('a.asset_id', 'a.name as asset_name', 'a.client_id as company_id', 'aw.installed_software');
+      .select(
+        'asset_id',
+        'asset_name',
+        'client_id',
+        'client_name',
+        'software_id',
+        'software_name',
+        'version',
+        'publisher',
+        'category',
+        'install_date'
+      )
+      .orderBy('software_name')
+      .limit(limit);
 
     if (companyId) {
-      workstationsQuery = workstationsQuery.where('a.client_id', companyId);
+      query = query.where('client_id', companyId);
     }
 
-    // Query servers
-    let serversQuery = knex('assets as a')
-      .join('server_assets as asrv', function() {
-        this.on('a.tenant', '=', 'asrv.tenant')
-          .andOn('a.asset_id', '=', 'asrv.asset_id');
-      })
-      .where('a.tenant', tenant)
-      .where('a.asset_type', 'server')
-      .whereNotNull('asrv.installed_software')
-      .select('a.asset_id', 'a.name as asset_name', 'a.client_id as company_id', 'asrv.installed_software');
-
-    if (companyId) {
-      serversQuery = serversQuery.where('a.client_id', companyId);
+    if (category) {
+      query = query.where('category', category);
     }
 
-    const [workstations, servers] = await Promise.all([
-      workstationsQuery,
-      serversQuery,
-    ]);
+    const rows = await query;
 
-    const results: Array<{
-      assetId: string;
-      assetName: string;
-      companyId: string;
-      software: SoftwareItem;
-    }> = [];
-
-    // Search through workstations
-    for (const ws of workstations) {
-      const softwareList: SoftwareItem[] = typeof ws.installed_software === 'string'
-        ? JSON.parse(ws.installed_software)
-        : ws.installed_software;
-
-      for (const sw of softwareList) {
-        if (
-          sw.name?.toLowerCase().includes(lowerSearch) ||
-          sw.publisher?.toLowerCase().includes(lowerSearch)
-        ) {
-          results.push({
-            assetId: ws.asset_id,
-            assetName: ws.asset_name,
-            companyId: ws.company_id,
-            software: sw,
-          });
-
-          if (results.length >= limit) break;
-        }
-      }
-
-      if (results.length >= limit) break;
-    }
-
-    // Search through servers
-    if (results.length < limit) {
-      for (const srv of servers) {
-        const softwareList: SoftwareItem[] = typeof srv.installed_software === 'string'
-          ? JSON.parse(srv.installed_software)
-          : srv.installed_software;
-
-        for (const sw of softwareList) {
-          if (
-            sw.name?.toLowerCase().includes(lowerSearch) ||
-            sw.publisher?.toLowerCase().includes(lowerSearch)
-          ) {
-            results.push({
-              assetId: srv.asset_id,
-              assetName: srv.asset_name,
-              companyId: srv.company_id,
-              software: sw,
-            });
-
-            if (results.length >= limit) break;
-          }
-        }
-
-        if (results.length >= limit) break;
-      }
-    }
-
-    return results;
+    return rows.map(row => ({
+      assetId: row.asset_id,
+      assetName: row.asset_name,
+      companyId: row.client_id,
+      clientName: row.client_name,
+      software: {
+        softwareId: row.software_id,
+        name: row.software_name,
+        version: row.version,
+        publisher: row.publisher,
+        category: row.category,
+        installDate: row.install_date,
+      },
+    }));
   } catch (error) {
     logger.error('[SoftwareSync] Failed to search software across assets', { error: extractErrorInfo(error) });
+    throw error;
+  }
+}
+
+/**
+ * Get software summary for fleet (aggregate stats)
+ */
+export async function getFleetSoftwareSummary(
+  tenantId: string,
+  options: { companyId?: string } = {}
+): Promise<{
+  totalUniqueSoftware: number;
+  totalInstallations: number;
+  byCategory: Record<string, number>;
+  topInstalled: Array<{ name: string; publisher: string | null; count: number }>;
+}> {
+  const { companyId } = options;
+
+  try {
+    const { knex, tenant } = await createTenantKnex();
+
+    // Base query for current software
+    const baseQuery = () => {
+      let q = knex('v_asset_software_details')
+        .where('tenant', tenant)
+        .where('is_current', true);
+      if (companyId) {
+        q = q.where('client_id', companyId);
+      }
+      return q;
+    };
+
+    // Total unique software
+    const uniqueCount = await baseQuery()
+      .countDistinct('software_id as count')
+      .first();
+
+    // Total installations
+    const totalCount = await baseQuery()
+      .count('* as count')
+      .first();
+
+    // By category
+    const categoryStats = await baseQuery()
+      .select('category')
+      .count('* as count')
+      .groupBy('category');
+
+    const byCategory: Record<string, number> = {};
+    for (const row of categoryStats) {
+      byCategory[row.category || 'Uncategorized'] = parseInt(String(row.count), 10);
+    }
+
+    // Top installed software
+    const topInstalled = await baseQuery()
+      .select('software_name as name', 'publisher')
+      .count('* as count')
+      .groupBy('software_name', 'publisher')
+      .orderBy('count', 'desc')
+      .limit(10);
+
+    return {
+      totalUniqueSoftware: parseInt(String(uniqueCount?.count || 0), 10),
+      totalInstallations: parseInt(String(totalCount?.count || 0), 10),
+      byCategory,
+      topInstalled: topInstalled.map(row => ({
+        name: String(row.name),
+        publisher: row.publisher ? String(row.publisher) : null,
+        count: parseInt(String(row.count), 10),
+      })),
+    };
+  } catch (error) {
+    logger.error('[SoftwareSync] Failed to get fleet software summary', { error: extractErrorInfo(error) });
     throw error;
   }
 }
@@ -473,4 +722,5 @@ export default {
   syncSoftwareInventory,
   syncDeviceSoftware,
   searchSoftwareAcrossAssets,
+  getFleetSoftwareSummary,
 };
