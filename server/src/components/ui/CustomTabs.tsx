@@ -8,7 +8,7 @@ import { LucideIcon } from 'lucide-react';
 export interface TabContent {
   label: string;
   content: React.ReactNode;
-  icon?: LucideIcon;
+  icon?: LucideIcon | React.ReactNode;
 }
 
 export interface CustomTabsProps {
@@ -77,11 +77,36 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     >
       <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
         {tabs.map((tab, index): JSX.Element => {
-          const IconComponent = tab.icon;
-          const hasIcon = !!IconComponent;
+          const icon = tab.icon;
+          const hasIcon = !!icon;
           const iconClassName = hasIcon 
             ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
             : '';
+          
+          // Render icon based on type
+          let iconElement: React.ReactNode = null;
+          if (hasIcon) {
+            // First check if it's a valid React element (already rendered JSX)
+            if (React.isValidElement(icon)) {
+              iconElement = icon;
+            } 
+            // Then check if it's a component type (function constructor like LucideIcon)
+            else if (typeof icon === 'function') {
+              try {
+                iconElement = React.createElement(icon as LucideIcon, { className: 'h-4 w-4 shrink-0' });
+              } catch (error) {
+                // If createElement fails, don't render the icon
+                console.warn('Error creating icon element:', error);
+                iconElement = null;
+              }
+            }
+            // Otherwise, it's a primitive or other React node
+            else if (icon !== null && icon !== undefined && (typeof icon === 'string' || typeof icon === 'number')) {
+              iconElement = <span className="shrink-0">{icon}</span>;
+            }
+            // If it's something else we can't handle, don't render it
+          }
+          
           return (
             <Tabs.Trigger
               key={tab.label}
@@ -89,7 +114,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
               className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
               value={tab.label}
             >
-              {IconComponent && <IconComponent className="h-4 w-4 shrink-0" />}
+              {iconElement}
               {tab.label}
             </Tabs.Trigger>
           );
