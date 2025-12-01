@@ -168,6 +168,7 @@ export default [
       "@typescript-eslint/restrict-template-expressions": "warn",
       "@typescript-eslint/unbound-method": "warn",
       "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/no-redundant-type-constituents": "off", // Disabled due to infinite recursion with complex types
 
       // React hooks rules
       "react-hooks/rules-of-hooks": "error",
@@ -185,10 +186,11 @@ export default [
       "react/prop-types": "off", // TypeScript handles this
 
       // Override recommended configs to use warnings
+      // NOTE: Disabled "recommended-requiring-type-checking" due to memory exhaustion during type checking
       ...Object.fromEntries(
         Object.entries({
           ...tseslint.configs.recommended.rules,
-          ...tseslint.configs["recommended-requiring-type-checking"].rules,
+          // ...tseslint.configs["recommended-requiring-type-checking"].rules,  // DISABLED: Causes OOM
           ...tseslint.configs.strict.rules,
         }).map(([key, value]) => [
           key,
