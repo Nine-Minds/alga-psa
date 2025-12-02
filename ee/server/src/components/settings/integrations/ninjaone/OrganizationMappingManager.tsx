@@ -8,18 +8,18 @@
  */
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../../../server/src/components/ui/Card';
-import { Button } from '../../../../../../../server/src/components/ui/Button';
-import { Alert, AlertDescription } from '../../../../../../../server/src/components/ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Building2, Link2, Link2Off, RefreshCw, Check } from 'lucide-react';
 import {
   getNinjaOneOrganizationMappings,
   updateNinjaOneOrganizationMapping,
   syncNinjaOneOrganizations,
 } from '../../../../lib/actions/integrations/ninjaoneActions';
-import { getAllClients } from '../../../../../../../server/src/lib/actions/client-actions/clientActions';
+import { getAllClients } from '@/lib/actions/client-actions/clientActions';
 import { RmmOrganizationMapping } from '../../../../interfaces/rmm.interfaces';
-import { IClient } from '../../../../../../../server/src/interfaces/client.interfaces';
+import { IClient } from '@/interfaces/client.interfaces';
 
 interface OrganizationMappingManagerProps {
   onMappingChanged?: () => void;

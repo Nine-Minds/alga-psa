@@ -7,7 +7,7 @@
 
 import logger from '@shared/core/logger';
 import axios from 'axios';
-import { createTenantKnex } from '../../../../../../../server/src/db';
+import { createTenantKnex } from '@/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneDevicePatchStatus } from '../../../../interfaces/ninjaone.interfaces';
 

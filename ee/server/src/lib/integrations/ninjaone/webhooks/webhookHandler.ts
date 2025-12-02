@@ -7,7 +7,7 @@
 
 import { Knex } from 'knex';
 import crypto from 'crypto';
-import { createTenantKnex } from '../../../../../../../server/src/lib/db';
+import { createTenantKnex } from '@/lib/db';
 import { withTransaction } from '@shared/db';
 import logger from '@shared/core/logger';
 import { publishEvent } from '@shared/events/publisher';

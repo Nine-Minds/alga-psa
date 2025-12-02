@@ -9,8 +9,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Check, ExternalLink, Ticket, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { Button } from '../../../../../server/src/components/ui/Button';
-import type { Asset } from '../../../../../server/src/interfaces/asset.interfaces';
+import { Button } from '@/components/ui/Button';
+import type { Asset } from '@/interfaces/asset.interfaces';
 import type { RmmAlert } from '../../interfaces/rmm.interfaces';
 import { getAssetAlerts, acknowledgeRmmAlert, createTicketFromRmmAlert } from '../../lib/actions/integrations/ninjaoneActions';
 import { toast } from 'react-hot-toast';

@@ -11,14 +11,14 @@
 import logger from '@shared/core/logger';
 import axios from 'axios';
 import { Knex } from 'knex';
-import { createTenantKnex } from '../../../../../../../server/src/db';
+import { createTenantKnex } from '@/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import type { NinjaOneSoftware } from '../../../../interfaces/ninjaone.interfaces';
 import type {
   SoftwareCatalogEntry,
   SoftwareCategory,
   SoftwareType,
-} from '../../../../../../../server/src/interfaces/software.interfaces';
+} from '@/interfaces/software.interfaces';
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
