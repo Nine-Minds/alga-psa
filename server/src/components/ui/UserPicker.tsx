@@ -1,7 +1,7 @@
 // server/src/components/ui/UserPicker.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
@@ -17,11 +17,11 @@ interface UserPickerProps {
   value: string;
   onValueChange: (value: string) => void;
   size?: 'sm' | 'lg';
-  users: IUserWithRoles[];
+  users: IUser[];
   disabled?: boolean;
-  className?: string; 
-  labelStyle?: 'bold' | 'medium' | 'normal' | 'none'; 
-  buttonWidth?: 'fit' | 'full'; 
+  className?: string;
+  labelStyle?: 'bold' | 'medium' | 'normal' | 'none';
+  buttonWidth?: 'fit' | 'full';
   placeholder?: string;
   userTypeFilter?: string | string[] | null; // null means no filtering, string/array for specific types
 }
@@ -85,7 +85,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   const pickerId = dataAutomationId || 'account-manager-picker';
   
   // Apply user type filter
-  const applyUserTypeFilter = (user: IUserWithRoles) => {
+  const applyUserTypeFilter = (user: IUser) => {
     if (userTypeFilter === null) {
       return true; // No filtering
     }

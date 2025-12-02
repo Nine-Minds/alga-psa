@@ -409,6 +409,44 @@ export async function findUserById(id: string): Promise<IUserWithRoles | null> {
   }
 }
 
+/**
+ * Get all users without roles - more efficient for components that only need basic user info
+ * (e.g., UserPicker, dropdowns, assignments)
+ */
+export async function getAllUsersBasic(includeInactive: boolean = true, userType?: string): Promise<IUser[]> {
+  try {
+    const currentUser = await getCurrentUser();
+    const tenant = currentUser?.tenant;
+
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const {knex} = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read users');
+      }
+
+      const users = await User.getAll(trx, includeInactive);
+
+      // Filter by tenant and optionally by user_type
+      return users.filter(user =>
+        user.tenant === tenant &&
+        (userType ? user.user_type === userType : true)
+      );
+    });
+  } catch (error) {
+    logger.error('Failed to fetch users:', error);
+    throw new Error('Failed to fetch users');
+  }
+}
+
 export async function getAllUsers(includeInactive: boolean = true, userType?: string): Promise<IUserWithRoles[]> {
   try {
     const currentUser = await getCurrentUser();
@@ -423,23 +461,28 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
     }
 
     const {knex} = await createTenantKnex();
-    
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
 
       const users = await User.getAll(trx, includeInactive);
-      const usersWithRoles = await Promise.all(users.map(async (user: IUser): Promise<IUserWithRoles> => {
-        const roles = await User.getUserRoles(trx, user.user_id);
-        return { ...user, roles };
-      }));
 
-      // Filter by tenant and optionally by user_type
-      return usersWithRoles.filter(user =>
+      // Filter by tenant and optionally by user_type first to reduce role fetching
+      const filteredUsers = users.filter(user =>
         user.tenant === tenant &&
         (userType ? user.user_type === userType : true)
       );
+
+      // Fetch all roles in a single query (avoids N+1)
+      const userIds = filteredUsers.map(u => u.user_id);
+      const rolesByUser = await User.getUserRolesBulk(trx, userIds);
+
+      return filteredUsers.map((user): IUserWithRoles => ({
+        ...user,
+        roles: rolesByUser.get(user.user_id) || []
+      }));
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);

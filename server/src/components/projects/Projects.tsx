@@ -28,9 +28,9 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 
@@ -66,7 +66,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   
   // Data for pickers
   const [contacts, setContacts] = useState<IContact[]>([]);
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -139,7 +139,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       try {
         const [contactsData, usersData] = await Promise.all([
           getAllContacts('all'),
-          getAllUsers(true)
+          getAllUsersBasic(true)
         ]);
         setContacts(contactsData || []);
         setUsers(usersData || []);

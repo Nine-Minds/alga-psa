@@ -5,7 +5,7 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { IUserWithRoles } from 'server/src/interfaces/index';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { ArrowDown, ArrowUp } from 'lucide-react';
@@ -17,7 +17,7 @@ interface DocumentFiltersProps {
   onFiltersChange: (filters: DocumentFilters) => void;
   onClearFilters: () => void;
   entityTypeOptions: SelectOption[];
-  allUsersData: IUserWithRoles[];
+  allUsersData: IUser[];
   onShowAllDocuments?: () => void;
   showAllDocumentsButton?: boolean;
 }

@@ -34,7 +34,7 @@ import AssociatedAssets from "server/src/components/assets/AssociatedAssets";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { findUserById, getAllUsers, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
+import { findUserById, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";

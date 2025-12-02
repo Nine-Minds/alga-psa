@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { IContact, IUserWithRoles } from 'server/src/interfaces';
+import { IContact } from 'server/src/interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import Contacts from './Contacts';
 import OverallInteractionsFeed from '../interactions/OverallInteractionsFeed';
@@ -9,13 +10,13 @@ import { useCollapsiblePreference } from 'server/src/hooks/useCollapsiblePrefere
 
 interface ContactsLayoutProps {
   uniqueContacts: IContact[];
-  usersWithRoles: IUserWithRoles[];
+  users: IUser[];
   clients: IClient[];
 }
 
 export default function ContactsLayout({
   uniqueContacts,
-  usersWithRoles,
+  users,
   clients
 }: ContactsLayoutProps) {
   const {
@@ -51,7 +52,7 @@ export default function ContactsLayout({
           : 'w-full md:w-1/3'
       }`}>
         <OverallInteractionsFeed
-          users={usersWithRoles}
+          users={users}
           contacts={uniqueContacts}
           clients={clients}
           isCollapsed={isInteractionsCollapsed}
