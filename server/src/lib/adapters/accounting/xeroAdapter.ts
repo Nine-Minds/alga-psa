@@ -28,6 +28,7 @@ import {
   buildNormalizedCompanyPayload
 } from '../../services/companySync';
 import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 
 type DbInvoice = {
   invoice_id: string;
@@ -80,6 +81,8 @@ interface XeroDocumentPayload {
   tenantId: string;
   connectionId?: string | null;
   invoice: XeroInvoicePayload;
+  /** Charge IDs in same order as invoice.lines[] for mapping after delivery */
+  chargeIds: string[];
   mapping: {
     clientId: string;
     source?: string;
@@ -183,6 +186,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       }
 
       const lineItems: XeroInvoiceLinePayload[] = [];
+      const chargeIds: string[] = []; // Track charge IDs in same order as lineItems
       let invoiceTotal = 0;
       let detectedLineAmountType: LineAmountType | undefined;
 
@@ -289,6 +293,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         };
 
         lineItems.push(payload);
+        chargeIds.push(line.invoice_charge_id);
         invoiceTotal += Math.round(line.amount_cents);
       }
 
@@ -321,6 +326,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         tenantId,
         connectionId: context.batch.target_realm ?? null,
         invoice: invoicePayload,
+        chargeIds, // Alga charge IDs in same order as invoice.lines[]
         mapping: {
           clientId,
           source: extractMappingSource(clientMapping.metadata)
@@ -355,7 +361,9 @@ export class XeroAdapter implements AccountingExportAdapter {
       throw new AppError('XERO_TENANT_REQUIRED', 'Xero export requires batch tenant identifier');
     }
 
+    const { knex } = await createTenantKnex();
     const client = await XeroClientService.create(tenantId, context.batch.target_realm ?? null);
+    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const documents = transformResult.documents;
     logger.info('[XeroAdapter] delivering invoices to Xero', {
@@ -377,19 +385,59 @@ export class XeroAdapter implements AccountingExportAdapter {
       });
     }
 
-    const deliveredLines = documents.flatMap((document, index) => {
-      const result = deliveryResults[index];
+    const deliveredLines: { lineId: string; externalDocumentRef: string }[] = [];
+
+    for (let i = 0; i < documents.length; i++) {
+      const document = documents[i];
+      const result = deliveryResults[i];
+      const payload = document.payload as unknown as XeroDocumentPayload;
       const externalRef = result.invoiceId ?? result.documentId;
+
       if (!externalRef) {
         throw new AppError('XERO_DELIVERY_NO_ID', 'Xero did not return an invoice identifier', {
           documentId: document.documentId
         });
       }
-      return document.lineIds.map((lineId) => ({
-        lineId,
-        externalDocumentRef: externalRef
-      }));
-    });
+
+      // Build charge-to-Xero-line mapping from response
+      // Xero may return line IDs in the raw response - extract if available
+      const rawInvoice = result.raw as Record<string, any> | undefined;
+      const xeroLines = rawInvoice?.LineItems ?? [];
+      const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+
+      for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
+        const xeroLineItemId = xeroLines[j]?.LineItemID;
+        if (xeroLineItemId) {
+          chargeLineMappings.push({
+            chargeId: payload.chargeIds[j],
+            xeroLineItemId
+          });
+        }
+      }
+
+      // Store invoice mapping with charge line mappings
+      const metadata = {
+        last_exported_at: new Date().toISOString(),
+        invoiceNumber: result.invoiceNumber,
+        chargeLineMappings // Store mapping for tax import
+      };
+
+      await invoiceMappingRepository.upsertInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId: document.documentId,
+        externalInvoiceId: externalRef,
+        targetRealm: context.batch.target_realm ?? undefined,
+        metadata
+      });
+
+      deliveredLines.push(
+        ...document.lineIds.map((lineId) => ({
+          lineId,
+          externalDocumentRef: externalRef
+        }))
+      );
+    }
 
     return {
       deliveredLines,
@@ -540,6 +588,26 @@ export class XeroAdapter implements AccountingExportAdapter {
         };
       }
 
+      // Look up charge-to-line mapping from invoice metadata
+      // This was stored during export to enable robust matching
+      const mappingRow = await knex('tenant_external_entity_mappings')
+        .where({
+          tenant: tenantId,
+          integration_type: this.type,
+          alga_entity_type: 'invoice',
+          external_entity_id: externalInvoiceRef
+        })
+        .first();
+
+      const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> =
+        (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
+
+      // Build reverse map: Xero lineItemId → Alga charge ID
+      const xeroLineToChargeId = new Map<string, string>();
+      for (const mapping of chargeLineMappings) {
+        xeroLineToChargeId.set(mapping.xeroLineItemId, mapping.chargeId);
+      }
+
       // Map Xero line items to external invoice charges with full tax component details
       const charges: ExternalInvoiceChargeTax[] = xeroInvoice.lineItems.map((line, index) => {
         // Calculate effective tax rate from the line if available
@@ -554,9 +622,14 @@ export class XeroAdapter implements AccountingExportAdapter {
           amount: component.amount
         }));
 
+        // Use stored charge ID if available, otherwise fall back to Xero lineItemId or positional index
+        const xeroLineItemId = line.lineItemId;
+        const chargeId = xeroLineItemId ? xeroLineToChargeId.get(xeroLineItemId) : undefined;
+        const lineId = chargeId ?? xeroLineItemId ?? `line-${index}`;
+
         return {
-          lineId: line.lineItemId ?? `line-${index}`,
-          externalLineId: line.lineItemId,
+          lineId,
+          externalLineId: xeroLineItemId,
           taxAmount: line.taxAmount,
           taxCode: line.taxType,
           taxRate: effectiveRate,

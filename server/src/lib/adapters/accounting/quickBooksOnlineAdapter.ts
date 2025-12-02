@@ -80,6 +80,8 @@ type MappingRow = {
 interface InvoiceDocumentPayload {
   invoice: QboInvoice;
   clientId: string;
+  /** Charge IDs in same order as invoice.Line[] for mapping after delivery */
+  chargeIds: string[];
   mapping?: {
     customerId: string;
     source?: string;
@@ -191,6 +193,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       }
 
       const qboLines: QboInvoiceLine[] = [];
+      const chargeIds: string[] = []; // Track charge IDs in same order as qboLines
       for (const line of exportLines) {
         if (!line.invoice_charge_id) {
           throw new Error(`QuickBooks adapter: export line ${line.line_id} has no invoice_charge_id`);
@@ -263,6 +266,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           Description: charge.description ?? undefined,
           SalesItemLineDetail: salesDetail
         });
+        chargeIds.push(line.invoice_charge_id);
       }
 
       if (qboLines.length === 0) {
@@ -320,6 +324,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       const payload: InvoiceDocumentPayload = {
         invoice: qboInvoice,
         clientId,
+        chargeIds, // Alga charge IDs in same order as invoice.Line[]
         mapping: {
           customerId: clientMapping.external_entity_id,
           source: mappingSource ?? 'mapping_table'
@@ -404,10 +409,26 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         response = await qboClient.create<QboInvoice>('Invoice', payload.invoice);
       }
 
+      // Build charge-to-QBO-line mapping from response
+      // QBO returns lines in same order as sent, filter to SalesItemLineDetail only
+      const qboSalesLines = (response.Line ?? [])
+        .filter((line: QboInvoiceLine) => line.DetailType === 'SalesItemLineDetail');
+      const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> = [];
+      for (let i = 0; i < payload.chargeIds.length && i < qboSalesLines.length; i++) {
+        const qboLineId = qboSalesLines[i].Id;
+        if (qboLineId) {
+          chargeLineMappings.push({
+            chargeId: payload.chargeIds[i],
+            qboLineId
+          });
+        }
+      }
+
       const metadata = {
         ...(existingMetadata ?? {}),
         sync_token: response.SyncToken ?? existingMetadata?.sync_token ?? null,
-        last_exported_at: new Date().toISOString()
+        last_exported_at: new Date().toISOString(),
+        chargeLineMappings // Store mapping for tax import
       };
 
       const externalRef = response.Id;
@@ -589,6 +610,26 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         };
       }
 
+      // Look up charge-to-line mapping from invoice metadata
+      // This was stored during export to enable robust matching
+      const mappingRow = await knex('tenant_external_entity_mappings')
+        .where({
+          tenant: tenantId,
+          integration_type: this.type,
+          alga_entity_type: 'invoice',
+          external_entity_id: externalInvoiceRef
+        })
+        .first();
+
+      const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> =
+        (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
+
+      // Build reverse map: QBO line ID → Alga charge ID
+      const qboLineToChargeId = new Map<string, string>();
+      for (const mapping of chargeLineMappings) {
+        qboLineToChargeId.set(mapping.qboLineId, mapping.chargeId);
+      }
+
       // Calculate total tax from QBO invoice
       const totalTax = amountToCents(qboInvoice.TxnTaxDetail?.TotalTax ?? 0);
       const totalAmount = amountToCents(qboInvoice.TotalAmt ?? 0);
@@ -607,9 +648,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           const detail = line.SalesItemLineDetail;
           // QBO line Amount is the line total before tax
           const lineAmount = amountToCents(line.Amount ?? 0);
+          const qboLineId = line.Id ?? undefined;
+
+          // Use stored charge ID if available, otherwise fall back to positional index
+          const chargeId = qboLineId ? qboLineToChargeId.get(qboLineId) : undefined;
+          const lineId = chargeId ?? `line-${lineIndex}`;
+
           lineItems.push({
-            lineId: `line-${lineIndex}`,
-            externalLineId: line.Id ?? undefined,
+            lineId,
+            externalLineId: qboLineId,
             amount: lineAmount,
             taxCode: detail.TaxCodeRef?.value
           });

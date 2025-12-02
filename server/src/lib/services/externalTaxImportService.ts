@@ -481,6 +481,9 @@ export class ExternalTaxImportService {
 
   /**
    * Apply external tax amounts to invoice charges.
+   * Uses the documented rounding algorithm from docs/tax_calculation_allocation.md:
+   * - floor((chargeAmount / subtotal) * totalTax) for each charge
+   * - Remainder assigned to the last charge
    */
   private async applyExternalTaxToCharges(
     knex: any,
@@ -493,55 +496,107 @@ export class ExternalTaxImportService {
     let chargesUpdated = 0;
 
     // Create a map of external charges by lineId for matching
+    // lineId is now the actual charge ID (item_id) when charge mappings are stored
     const externalChargeMap = new Map(
       externalInvoice.charges.map(c => [c.lineId, c])
     );
 
-    // Also create a secondary map by description for fallback matching
-    const externalChargeByDescMap = new Map<string, typeof externalInvoice.charges[0]>();
-    for (const charge of externalInvoice.charges) {
-      // External systems may not have clean line IDs, so we try description matching
-      if (charge.externalLineId) {
-        externalChargeByDescMap.set(charge.externalLineId, charge);
+    // Build set of charge IDs for robust matching
+    const chargeIds = new Set(charges.map(c => c.item_id));
+
+    // Check if external charges use actual charge IDs (robust matching)
+    // or fall back to positional line-N format
+    const hasChargeIdMatching = externalInvoice.charges.some(
+      c => chargeIds.has(c.lineId)
+    );
+
+    const hasPositionalMatching = !hasChargeIdMatching &&
+      charges.every((_, i) => externalChargeMap.has(`line-${i}`));
+
+    if (hasChargeIdMatching && externalInvoice.charges.length > 0) {
+      // Direct mapping by charge ID - most robust
+      for (const charge of charges) {
+        const externalCharge = externalChargeMap.get(charge.item_id);
+
+        if (externalCharge) {
+          await knex('invoice_charges')
+            .where({ item_id: charge.item_id, tenant })
+            .update({
+              external_tax_amount: externalCharge.taxAmount,
+              external_tax_code: externalCharge.taxCode,
+              external_tax_rate: externalCharge.taxRate,
+              updated_at: knex.fn.now()
+            });
+
+          chargesUpdated++;
+        } else {
+          warnings.push(`No external tax data for charge ${charge.item_id}`);
+        }
       }
-    }
-
-    for (let i = 0; i < charges.length; i++) {
-      const charge = charges[i];
-
-      // Try to find matching external charge
-      let externalCharge = externalChargeMap.get(`line-${i}`);
-
-      // If no match by index, try by external line ID stored in charge mapping
-      if (!externalCharge) {
-        // Fall back to proportional distribution if we can't match
-        const proportionalTax = externalInvoice.charges.length > 0
-          ? Math.round(externalInvoice.totalTax / charges.length)
-          : 0;
+    } else if (hasPositionalMatching && externalInvoice.charges.length > 0) {
+      // Fallback: positional matching (line-0, line-1, etc.)
+      warnings.push('Using positional line matching - charge ID mapping not available');
+      for (let i = 0; i < charges.length; i++) {
+        const charge = charges[i];
+        const externalCharge = externalChargeMap.get(`line-${i}`)!;
 
         await knex('invoice_charges')
           .where({ item_id: charge.item_id, tenant })
           .update({
-            external_tax_amount: proportionalTax,
+            external_tax_amount: externalCharge.taxAmount,
+            external_tax_code: externalCharge.taxCode,
+            external_tax_rate: externalCharge.taxRate,
             updated_at: knex.fn.now()
           });
 
-        warnings.push(`Charge ${charge.item_id} matched proportionally`);
         chargesUpdated++;
-        continue;
       }
+    } else {
+      // Fallback: Proportional distribution based on charge amounts
+      // Using documented algorithm: floor + remainder to last item
+      warnings.push('Using proportional tax distribution - external line matching failed');
 
-      // Update the charge with external tax amount
-      await knex('invoice_charges')
-        .where({ item_id: charge.item_id, tenant })
-        .update({
-          external_tax_amount: externalCharge.taxAmount,
-          external_tax_code: externalCharge.taxCode,
-          external_tax_rate: externalCharge.taxRate,
-          updated_at: knex.fn.now()
-        });
+      // Get charge amounts from database (order must match the charges parameter)
+      const chargeAmounts = await knex('invoice_charges')
+        .where({ invoice_id: invoiceId, tenant })
+        .select('item_id', 'net_amount')
+        .orderBy('created_at')
+        .orderBy('item_id');
 
-      chargesUpdated++;
+      const subtotal = chargeAmounts.reduce(
+        (sum: number, c: any) => sum + Number(c.net_amount || 0),
+        0
+      );
+
+      const totalTax = externalInvoice.totalTax;
+      let distributedTax = 0;
+
+      for (let i = 0; i < chargeAmounts.length; i++) {
+        const chargeData = chargeAmounts[i];
+        const chargeAmount = Number(chargeData.net_amount || 0);
+        const isLast = i === chargeAmounts.length - 1;
+
+        let taxAmount: number;
+        if (isLast) {
+          // Last item gets the remainder to ensure sum equals total
+          taxAmount = totalTax - distributedTax;
+        } else if (subtotal > 0) {
+          // Proportional distribution using floor
+          taxAmount = Math.floor((chargeAmount / subtotal) * totalTax);
+          distributedTax += taxAmount;
+        } else {
+          taxAmount = 0;
+        }
+
+        await knex('invoice_charges')
+          .where({ item_id: chargeData.item_id, tenant })
+          .update({
+            external_tax_amount: taxAmount,
+            updated_at: knex.fn.now()
+          });
+
+        chargesUpdated++;
+      }
     }
 
     return { chargesUpdated, warnings };

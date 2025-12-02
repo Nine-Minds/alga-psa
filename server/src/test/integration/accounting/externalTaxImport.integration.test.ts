@@ -151,6 +151,7 @@ describe('External Tax Import', () => {
 
   /**
    * Mock the adapter's fetchExternalInvoice to return specific tax amounts.
+   * Mocks both our local service instance and the singleton used by AccountingExportService.
    */
   function mockAdapterFetchInvoice(
     adapterType: 'quickbooks_online' | 'xero',
@@ -158,11 +159,6 @@ describe('External Tax Import', () => {
     taxAmounts: number[],
     totalTax: number
   ): void {
-    const adapter = (service as any).adapters.get(adapterType);
-    if (!adapter) {
-      throw new Error(`Adapter ${adapterType} not found`);
-    }
-
     const mockResult: ExternalInvoiceFetchResult = {
       success: true,
       invoice: {
@@ -182,7 +178,18 @@ describe('External Tax Import', () => {
       }
     };
 
-    vi.spyOn(adapter, 'fetchExternalInvoice').mockResolvedValue(mockResult);
+    // Mock on our local service instance
+    const localAdapter = (service as any).adapters.get(adapterType);
+    if (localAdapter) {
+      vi.spyOn(localAdapter, 'fetchExternalInvoice').mockResolvedValue(mockResult);
+    }
+
+    // Also mock on the singleton (used by AccountingExportService)
+    const singleton = getExternalTaxImportService();
+    const singletonAdapter = (singleton as any).adapters.get(adapterType);
+    if (singletonAdapter) {
+      vi.spyOn(singletonAdapter, 'fetchExternalInvoice').mockResolvedValue(mockResult);
+    }
   }
 
   describe('importing tax from external accounting system', () => {
@@ -272,6 +279,333 @@ describe('External Tax Import', () => {
         .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
         .first();
 
+      expect(Number(invoice.total_amount)).toBe(16500);
+    });
+  });
+
+  describe('tax allocation across charges', () => {
+    it('should apply per-line tax amounts from external system', async () => {
+      // Arrange: Invoice with 3 lines - different amounts, different tax
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000, 2000]);
+      const externalRef = 'QB-PERLINE';
+      await createExternalMapping(invoiceId, externalRef, 'quickbooks_online');
+
+      // External system calculated: $10 tax on $100, $5 on $50, $2 on $20
+      // (different effective rates based on items)
+      mockAdapterFetchInvoice('quickbooks_online', externalRef, [1000, 500, 200], 1700);
+
+      // Act
+      await service.importTaxForInvoice(invoiceId);
+
+      // Assert: Each charge has its specific tax amount
+      const charges = await ctx.db('invoice_charges')
+        .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .orderBy('created_at');
+
+      expect(Number(charges[0].external_tax_amount)).toBe(1000); // $10
+      expect(Number(charges[1].external_tax_amount)).toBe(500);  // $5
+      expect(Number(charges[2].external_tax_amount)).toBe(200);  // $2
+    });
+
+    it('should handle mix of taxable and non-taxable items', async () => {
+      // Arrange: Invoice with 3 lines - one is non-taxable (0 tax from external)
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000, 3000]);
+      const externalRef = 'QB-MIXED';
+      await createExternalMapping(invoiceId, externalRef, 'quickbooks_online');
+
+      // External system: $10 tax, $0 (non-taxable), $3 tax
+      mockAdapterFetchInvoice('quickbooks_online', externalRef, [1000, 0, 300], 1300);
+
+      // Act
+      await service.importTaxForInvoice(invoiceId);
+
+      // Assert: Middle item has zero tax (non-taxable)
+      const charges = await ctx.db('invoice_charges')
+        .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .orderBy('created_at');
+
+      expect(Number(charges[0].external_tax_amount)).toBe(1000);
+      expect(Number(charges[1].external_tax_amount)).toBe(0);    // Non-taxable
+      expect(Number(charges[2].external_tax_amount)).toBe(300);
+    });
+
+    it('should handle different tax rates across items', async () => {
+      // Arrange: Invoice with items at different rates
+      // Item 1: $100 @ 10% = $10, Item 2: $100 @ 5% = $5, Item 3: $100 @ 0% = $0
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 10000, 10000]);
+      const externalRef = 'QB-RATES';
+      await createExternalMapping(invoiceId, externalRef, 'quickbooks_online');
+
+      // External calculated different rates
+      mockAdapterFetchInvoice('quickbooks_online', externalRef, [1000, 500, 0], 1500);
+
+      // Act
+      await service.importTaxForInvoice(invoiceId);
+
+      // Assert: Each has its rate-specific tax
+      const charges = await ctx.db('invoice_charges')
+        .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .orderBy('created_at');
+
+      expect(Number(charges[0].external_tax_amount)).toBe(1000); // 10%
+      expect(Number(charges[1].external_tax_amount)).toBe(500);  // 5%
+      expect(Number(charges[2].external_tax_amount)).toBe(0);    // 0%
+    });
+
+    it('should distribute proportionally when line matching fails', async () => {
+      // Arrange: Create invoice but mock adapter returns different line count
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000]);
+      const externalRef = 'QB-MISMATCH';
+      await createExternalMapping(invoiceId, externalRef, 'quickbooks_online');
+
+      // Mock adapter returns total tax but with empty charges array (simulating mismatch)
+      const adapter = (service as any).adapters.get('quickbooks_online');
+      vi.spyOn(adapter, 'fetchExternalInvoice').mockResolvedValue({
+        success: true,
+        invoice: {
+          externalInvoiceId: `ext-${externalRef}`,
+          externalInvoiceRef: externalRef,
+          status: 'synced',
+          totalTax: 1500,
+          totalAmount: 16500,
+          currency: 'USD',
+          charges: [] // No per-line tax - forces fallback
+        }
+      });
+
+      // Also mock on singleton
+      const singleton = getExternalTaxImportService();
+      const singletonAdapter = (singleton as any).adapters.get('quickbooks_online');
+      vi.spyOn(singletonAdapter, 'fetchExternalInvoice').mockResolvedValue({
+        success: true,
+        invoice: {
+          externalInvoiceId: `ext-${externalRef}`,
+          externalInvoiceRef: externalRef,
+          status: 'synced',
+          totalTax: 1500,
+          totalAmount: 16500,
+          currency: 'USD',
+          charges: [] // No per-line tax - forces fallback
+        }
+      });
+
+      // Act
+      await service.importTaxForInvoice(invoiceId);
+
+      // Assert: Tax distributed proportionally by line amount
+      const charges = await ctx.db('invoice_charges')
+        .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .orderBy('created_at')
+        .orderBy('item_id');
+
+      // Get taxes and amounts for verification
+      const charge1Tax = Number(charges[0].external_tax_amount);
+      const charge2Tax = Number(charges[1].external_tax_amount);
+      const charge1Amount = Number(charges[0].net_amount);
+      const charge2Amount = Number(charges[1].net_amount);
+
+      // Total tax should equal 1500
+      expect(charge1Tax + charge2Tax).toBe(1500);
+
+      // Tax should be proportional to amounts
+      // Verify the ratio of tax matches the ratio of amounts (within rounding tolerance)
+      const amountRatio = charge1Amount / charge2Amount;
+      const taxRatio = charge1Tax / charge2Tax;
+      // Allow 20% tolerance for rounding effects
+      expect(Math.abs(amountRatio - taxRatio)).toBeLessThan(amountRatio * 0.2);
+    });
+
+    it('should match by charge ID even when external lines are returned out of order', async () => {
+      // Arrange: Create invoice with 3 lines at different amounts
+      const { invoiceId, chargeIds } = await createInvoiceWithPendingExternalTax([10000, 5000, 2000]);
+      const externalRef = 'QB-OUTOFORDER';
+
+      // Store mapping with chargeLineMappings in metadata (simulating what adapter stores during export)
+      const now = new Date().toISOString();
+      await ctx.db('tenant_external_entity_mappings').insert({
+        id: uuidv4(),
+        tenant: ctx.tenantId,
+        alga_entity_type: 'invoice',
+        alga_entity_id: invoiceId,
+        integration_type: 'quickbooks_online',
+        external_entity_id: externalRef,
+        external_realm_id: 'test-realm-123',
+        sync_status: 'synced',
+        metadata: {
+          chargeLineMappings: [
+            { chargeId: chargeIds[0], qboLineId: 'qbo-line-A' },
+            { chargeId: chargeIds[1], qboLineId: 'qbo-line-B' },
+            { chargeId: chargeIds[2], qboLineId: 'qbo-line-C' }
+          ]
+        },
+        created_at: now,
+        updated_at: now
+      });
+
+      // Mock adapter returns charges in REVERSE order but with charge IDs as lineId
+      // This simulates the robust matching where lineId = chargeId
+      const mockResult: ExternalInvoiceFetchResult = {
+        success: true,
+        invoice: {
+          externalInvoiceId: `ext-${externalRef}`,
+          externalInvoiceRef: externalRef,
+          status: 'synced',
+          totalTax: 1700,
+          totalAmount: 18700,
+          currency: 'USD',
+          // Return in REVERSE order: charge[2], charge[1], charge[0]
+          // Each should still map to correct charge by ID
+          charges: [
+            { lineId: chargeIds[2], externalLineId: 'qbo-line-C', taxAmount: 200, taxCode: 'TAX', taxRate: 10 },
+            { lineId: chargeIds[1], externalLineId: 'qbo-line-B', taxAmount: 500, taxCode: 'TAX', taxRate: 10 },
+            { lineId: chargeIds[0], externalLineId: 'qbo-line-A', taxAmount: 1000, taxCode: 'TAX', taxRate: 10 }
+          ]
+        }
+      };
+
+      // Mock on our local service instance
+      const localAdapter = (service as any).adapters.get('quickbooks_online');
+      vi.spyOn(localAdapter, 'fetchExternalInvoice').mockResolvedValue(mockResult);
+
+      // Also mock on the singleton
+      const singleton = getExternalTaxImportService();
+      const singletonAdapter = (singleton as any).adapters.get('quickbooks_online');
+      vi.spyOn(singletonAdapter, 'fetchExternalInvoice').mockResolvedValue(mockResult);
+
+      // Act
+      const result = await service.importTaxForInvoice(invoiceId);
+
+      // Assert: Import succeeded
+      expect(result.success).toBe(true);
+      expect(result.chargesUpdated).toBe(3);
+
+      // Assert: Each charge has the correct tax despite out-of-order return
+      // We look up by item_id (charge ID) to verify mapping worked correctly
+      const charge1 = await ctx.db('invoice_charges')
+        .where({ item_id: chargeIds[0], tenant: ctx.tenantId })
+        .first();
+      const charge2 = await ctx.db('invoice_charges')
+        .where({ item_id: chargeIds[1], tenant: ctx.tenantId })
+        .first();
+      const charge3 = await ctx.db('invoice_charges')
+        .where({ item_id: chargeIds[2], tenant: ctx.tenantId })
+        .first();
+
+      // $100 item gets $10 tax, $50 item gets $5 tax, $20 item gets $2 tax
+      expect(Number(charge1.external_tax_amount)).toBe(1000); // chargeIds[0] -> $10
+      expect(Number(charge2.external_tax_amount)).toBe(500);  // chargeIds[1] -> $5
+      expect(Number(charge3.external_tax_amount)).toBe(200);  // chargeIds[2] -> $2
+    });
+  });
+
+  describe('internal tax calculation is skipped for external delegation', () => {
+    it('should set tax to zero when invoice has pending_external tax source', async () => {
+      // Arrange: Create invoice with pending_external tax source
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000]);
+
+      // Import the invoice service function
+      const { calculateAndDistributeTax } = await import('../../../lib/services/invoiceService');
+
+      // Create a mock tax service (shouldn't be called)
+      const mockTaxService = {
+        calculateTax: vi.fn().mockRejectedValue(new Error('Should not be called'))
+      };
+
+      // Act: Run tax calculation on invoice with pending_external tax source
+      const result = await ctx.db.transaction(async (trx: any) => {
+        return calculateAndDistributeTax(
+          trx,
+          invoiceId,
+          { company_id: ctx.clientId },
+          mockTaxService as any,
+          ctx.tenantId
+        );
+      });
+
+      // Assert: Tax should be zero (internal calculation skipped)
+      expect(result).toBe(0);
+
+      // Assert: Tax service should NOT have been called
+      expect(mockTaxService.calculateTax).not.toHaveBeenCalled();
+
+      // Assert: All charges should have zero tax
+      const charges = await ctx.db('invoice_charges')
+        .where({ invoice_id: invoiceId, tenant: ctx.tenantId });
+
+      for (const charge of charges) {
+        expect(Number(charge.tax_amount)).toBe(0);
+      }
+    });
+
+  });
+
+  describe('automatic tax import after export', () => {
+    /**
+     * This test exposes a gap in the current implementation:
+     * When an invoice with external tax delegation is exported to the accounting system,
+     * the tax should be automatically imported back after successful export.
+     */
+    it('should automatically import tax after exporting invoice with tax delegation', async () => {
+      // Arrange: Create invoice with pending_external tax source
+      const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000]);
+
+      // Set up the external mapping (simulating the export created this)
+      const externalRef = 'QB-AUTO-123';
+      await createExternalMapping(invoiceId, externalRef, 'quickbooks_online');
+
+      // Mock the adapter to return tax when fetched
+      mockAdapterFetchInvoice('quickbooks_online', externalRef, [1000, 500], 1500);
+
+      // Import the AccountingExportService after mocking
+      const { AccountingExportService } = await import('../../../lib/services/accountingExportService');
+
+      // Create a mock export batch and context that simulates a completed export
+      // with tax delegation mode
+      const mockDeliveryResult = {
+        deliveredLines: [
+          { lineId: `line-${invoiceId}-0`, externalDocumentRef: externalRef }
+        ]
+      };
+
+      const mockContext = {
+        batch: {
+          batch_id: uuidv4(),
+          tenant: ctx.tenantId,
+          status: 'delivered'
+        },
+        lines: [
+          { invoice_id: invoiceId, line_id: `line-${invoiceId}-0` }
+        ],
+        taxDelegationMode: 'delegate' as const,
+        excludeTaxFromExport: true
+      };
+
+      // Act: Call the method that should trigger automatic tax import after export
+      const exportService = new AccountingExportService(null as any, null as any);
+
+      // Get the adapter from the tax import service to pass to the export service
+      const adapter = (service as any).adapters.get('quickbooks_online');
+
+      // Call the private method that handles post-export tax import
+      await (exportService as any).importExternalTaxAfterDelivery(mockDeliveryResult, mockContext, adapter);
+
+      // Assert: Invoice should now have external tax imported
+      const invoice = await ctx.db('invoices')
+        .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .first();
+
+      // This assertion will FAIL until we implement automatic tax import
+      expect(invoice.tax_source).toBe('external');
+
+      // Charges should have external tax amounts
+      const charges = await ctx.db('invoice_charges')
+        .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+        .orderBy('created_at');
+
+      expect(Number(charges[0].external_tax_amount)).toBe(1000);
+      expect(Number(charges[1].external_tax_amount)).toBe(500);
+
+      // Total should include tax
       expect(Number(invoice.total_amount)).toBe(16500);
     });
   });
