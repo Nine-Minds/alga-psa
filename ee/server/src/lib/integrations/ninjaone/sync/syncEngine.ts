@@ -7,7 +7,7 @@
 
 import { Knex } from 'knex';
 import axios from 'axios';
-import { createTenantKnex } from '../../../../../../server/src/lib/db';
+import { createTenantKnex } from '@/lib/db';
 import { withTransaction } from '@shared/db';
 import logger from '@shared/core/logger';
 

@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAssetRemoteControlUrl } from '../../../../../../../../../ee/server/src/lib/actions/asset-actions/rmmActions';
+import { getAssetRemoteControlUrl } from '@ee/lib/actions/asset-actions/rmmActions';
 
 export async function GET(
   request: Request,

@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import type { Asset } from '../../../interfaces/asset.interfaces';
+import type { Asset } from '@/interfaces/asset.interfaces';
 
 interface RemoteAccessButtonProps {
   asset: Asset;

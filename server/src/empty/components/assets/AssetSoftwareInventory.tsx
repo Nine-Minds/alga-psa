@@ -7,7 +7,7 @@
  * This stub returns null to gracefully handle when the component is imported.
  */
 
-import type { Asset } from '../../../interfaces/asset.interfaces';
+import type { Asset } from '@/interfaces/asset.interfaces';
 
 interface AssetSoftwareInventoryProps {
   asset: Asset;

@@ -14,7 +14,7 @@
 
 import Stripe from 'stripe';
 import { Knex } from 'knex';
-import { getConnection } from '../../../../../server/src/lib/db/db';
+import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/shared/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 

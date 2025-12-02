@@ -8,10 +8,10 @@
  */
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../../../../server/src/components/ui/Card';
-import { Button } from '../../../../../../server/src/components/ui/Button';
-import { Alert, AlertDescription } from '../../../../../../server/src/components/ui/Alert';
-import LoadingIndicator from '../../../../../../server/src/components/ui/LoadingIndicator';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import {
   CheckCircle,
   AlertCircle,

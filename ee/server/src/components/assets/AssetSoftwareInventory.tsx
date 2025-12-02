@@ -9,8 +9,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Package, Search, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { Button } from '../../../../../server/src/components/ui/Button';
-import type { Asset, WorkstationAsset, ServerAsset } from '../../../../../server/src/interfaces/asset.interfaces';
+import { Button } from '@/components/ui/Button';
+import type { Asset, WorkstationAsset, ServerAsset } from '@/interfaces/asset.interfaces';
 
 interface AssetSoftwareInventoryProps {
   asset: Asset;
