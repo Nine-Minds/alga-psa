@@ -563,8 +563,21 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
       clients = clients.filter(client => !client.is_inactive);
     }
 
-    console.log('[getAllClients] Returning', clients.length, 'clients (filtered for inactive:', !includeInactive, ')');
-    return clients as IClient[];
+    // Load logos for all clients
+    let clientsWithLogos = clients;
+    if (clients.length > 0) {
+      const clientIds = clients.map(c => c.client_id);
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+
+      clientsWithLogos = clients.map((client) => ({
+        ...client,
+        properties: client.properties || {},
+        logoUrl: logoUrlsMap.get(client.client_id) || null,
+      }));
+    }
+
+    console.log('[getAllClients] Returning', clientsWithLogos.length, 'clients (filtered for inactive:', !includeInactive, ')');
+    return clientsWithLogos as IClient[];
   } catch (error: any) {
     console.error('[getAllClients] Error fetching all clients:', error);
 

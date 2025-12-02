@@ -124,15 +124,24 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
                   size={size === 'sm' ? 'sm' : 'md'}
                 />
                 <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>
-                <button
+                <div
                   onClick={(e) => {
                     e.stopPropagation();
                     removeUser(user.user_id);
                   }}
-                  className="ml-1 p-1 hover:bg-gray-200 rounded-full"
+                  className="ml-1 p-1 hover:bg-gray-200 rounded-full cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      removeUser(user.user_id);
+                    }
+                  }}
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </div>
               </div>
             ))
           )}

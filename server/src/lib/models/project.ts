@@ -60,7 +60,9 @@ const ProjectModel = {
         query = query.where('projects.is_inactive', false);
       }
       
-      const projects = await query.orderBy('projects.end_date', 'asc');
+      const projects = await query
+        .orderBy('projects.created_at', 'desc')
+        .orderBy('projects.project_number', 'desc');
       return projects;
     } catch (error) {
       console.error('Error getting all projects:', error);

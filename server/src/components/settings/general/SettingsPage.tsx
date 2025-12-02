@@ -28,7 +28,7 @@ const TeamManagement = dynamic(() => import('server/src/components/settings/gene
   loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
   ssr: false
 });
-import InteractionTypesSettings from 'server/src/components/settings/general/InteractionTypeSettings';
+import InteractionSettings from 'server/src/components/settings/general/InteractionSettings';
 import TimeEntrySettings from 'server/src/components/settings/time-entry/TimeEntrySettings';
 import BillingSettings from 'server/src/components/settings/billing/BillingSettings'; // Import the new component
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
@@ -99,7 +99,7 @@ const SettingsPage = (): JSX.Element =>  {
     teams: 'Teams',
     ticketing: 'Ticketing',
     projects: 'Projects',
-    'interaction-types': 'Interaction Types',
+    interactions: 'Interactions',
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
     billing: 'Billing',
@@ -215,11 +215,11 @@ const SettingsPage = (): JSX.Element =>  {
       content: <ProjectSettings />,
     },
     {
-      label: "Interaction Types",
+      label: "Interactions",
       icon: MessageSquare,
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Interaction Types" description="Loading interaction types..." showTabs={false} />}>
-          <InteractionTypesSettings />
+        <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
+          <InteractionSettings />
         </Suspense>
       ),
     },
