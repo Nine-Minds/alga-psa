@@ -4,4 +4,4 @@
  * Re-exports the EE implementation for NinjaOne webhook handling.
  */
 
-export { POST, GET, OPTIONS, runtime } from '../../../../../../ee/server/src/app/api/webhooks/ninjaone/route';
+export { POST, GET, OPTIONS, runtime } from '@ee/app/api/webhooks/ninjaone/route';

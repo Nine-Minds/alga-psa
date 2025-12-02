@@ -1,5 +1,5 @@
 import { createTenantKnex } from '../lib/db';
-import { ExtensionRegistry } from '../../../ee/server/src/lib/extensions/registry';
+import { ExtensionRegistry } from '@ee/lib/extensions/registry';
 
 async function checkExtensions() {
   try {

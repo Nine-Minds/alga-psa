@@ -34,3 +34,25 @@ export async function triggerRmmReboot(_assetId: string): Promise<RmmRebootResul
     message: 'RMM integration is only available in the Enterprise Edition',
   };
 }
+
+export interface RmmScriptResult {
+  success: boolean;
+  message: string;
+  jobId?: string;
+}
+
+export async function triggerRmmScript(_assetId: string, _scriptId: string): Promise<RmmScriptResult> {
+  // RMM integration is an Enterprise Edition feature
+  return {
+    success: false,
+    message: 'RMM integration is only available in the Enterprise Edition',
+  };
+}
+
+export async function getAssetRemoteControlUrl(
+  _assetId: string,
+  _connectionType: 'splashtop' | 'teamviewer' | 'vnc' | 'rdp' | 'shell'
+): Promise<string | null> {
+  // RMM integration is an Enterprise Edition feature
+  return null;
+}

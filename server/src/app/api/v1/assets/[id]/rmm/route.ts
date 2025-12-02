@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAssetRmmData } from '../../../../../../../../ee/server/src/lib/actions/asset-actions/rmmActions';
+import { getAssetRmmData } from '@ee/lib/actions/asset-actions/rmmActions';
 
 export async function GET(
   request: Request,
