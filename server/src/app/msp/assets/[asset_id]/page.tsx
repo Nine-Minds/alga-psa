@@ -2,7 +2,7 @@ import { getAssetDetailBundle } from 'server/src/lib/actions/asset-actions/asset
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import AssetDetails from 'server/src/components/assets/AssetDetails';
+import { AssetDetailView } from 'server/src/components/assets/AssetDetailView';
 import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 
@@ -40,7 +40,7 @@ export default async function AssetPage({ params }: Props) {
       return <div>Asset not found</div>;
     }
 
-    return <AssetDetails asset={bundle.asset} maintenanceReport={bundle.maintenanceReport} />;
+    return <AssetDetailView assetId={resolvedParams.asset_id} />;
   } catch (error) {
     console.error('Error fetching user or asset:', error);
     return <div>An error occurred. Please try again later.</div>;

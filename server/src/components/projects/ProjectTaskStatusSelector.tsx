@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { IStatus } from 'server/src/interfaces/status.interface';
 import { Button } from 'server/src/components/ui/Button';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { ChevronUp, ChevronDown, Plus, X, ChevronRight } from 'lucide-react';
+import { ChevronUp, ChevronDown, Plus, X, ChevronRight, Circle } from 'lucide-react';
+import { QuickAddStatus } from 'server/src/components/ui/QuickAddStatus';
 
 interface ProjectTaskStatusSelectorProps {
   availableStatuses: IStatus[];
   selectedStatuses: Array<{ status_id: string; display_order: number }>;
   onChange: (statuses: Array<{ status_id: string; display_order: number }>) => void;
+  onStatusCreated?: (status: IStatus) => void;
   error?: string;
 }
 
@@ -17,11 +18,12 @@ export function ProjectTaskStatusSelector({
   availableStatuses,
   selectedStatuses,
   onChange,
+  onStatusCreated,
   error
 }: ProjectTaskStatusSelectorProps) {
   const [showAvailableList, setShowAvailableList] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [useStandard, setUseStandard] = useState(true);
+  const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
 
   // Get status details by ID
   const getStatusDetails = (statusId: string) => {
@@ -122,7 +124,14 @@ export function ProjectTaskStatusSelector({
   // Toggle between standard and custom mode
   const handleExpandCustomize = () => {
     setIsExpanded(!isExpanded);
-    setUseStandard(false);
+  };
+
+  // Handle new status creation
+  const handleStatusCreated = (newStatus: IStatus) => {
+    // Notify parent to refresh statuses list
+    onStatusCreated?.(newStatus);
+    // Auto-add the new status to selection
+    addStatus(newStatus.status_id);
   };
 
   return (
@@ -153,10 +162,17 @@ export function ProjectTaskStatusSelector({
               const status = getStatusDetails(selected.status_id);
               if (!status) return null;
               return (
-                <span key={selected.status_id}>
+                <span key={selected.status_id} className="flex items-center">
+                  {status.color && (
+                    <Circle
+                      className="w-3 h-3 mr-1"
+                      fill={status.color}
+                      stroke={status.color}
+                    />
+                  )}
                   {status.name}
                   {index < selectedStatuses.length - 1 && (
-                    <ChevronRight className="w-3 h-3 inline mx-1 text-gray-400" />
+                    <ChevronRight className="w-3 h-3 mx-1 text-gray-400" />
                   )}
                 </span>
               );
@@ -170,18 +186,30 @@ export function ProjectTaskStatusSelector({
         <>
           <div className="flex justify-between items-center mb-2">
             <span className="text-xs text-gray-600">Customize task statuses for this project</span>
-            {unselectedStatuses.length > 0 && (
+            <div className="flex gap-2">
+              {unselectedStatuses.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAvailableList(!showAvailableList)}
+                  id="toggle-available-statuses"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Existing
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowAvailableList(!showAvailableList)}
-                id="toggle-available-statuses"
+                onClick={() => setShowQuickAddStatus(true)}
+                id="create-new-status-button"
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Add Status
+                Create New
               </Button>
-            )}
+            </div>
           </div>
 
           {/* Available statuses dropdown */}
@@ -200,9 +228,16 @@ export function ProjectTaskStatusSelector({
                       setShowAvailableList(false);
                     }
                   }}
-                  className="w-full text-left px-3 py-2 text-sm bg-white border rounded hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm bg-white border rounded hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center"
                   id={`add-status-${status.status_id}`}
                 >
+                  {status.color && (
+                    <Circle
+                      className="w-4 h-4 mr-2"
+                      fill={status.color}
+                      stroke={status.color}
+                    />
+                  )}
                   {status.name}
                   {status.is_closed && (
                     <span className="ml-2 text-xs px-2 py-0.5 bg-gray-200 rounded">
@@ -250,6 +285,15 @@ export function ProjectTaskStatusSelector({
                       </button>
                     </div>
 
+                    {/* Status color indicator */}
+                    {status.color && (
+                      <Circle
+                        className="w-4 h-4"
+                        fill={status.color}
+                        stroke={status.color}
+                      />
+                    )}
+
                     {/* Status info */}
                     <div className="flex-1 text-sm">
                       <span className="font-medium">{status.name}</span>
@@ -282,7 +326,7 @@ export function ProjectTaskStatusSelector({
           ) : (
             <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg border-2 border-dashed">
               <p className="font-medium mb-1">No statuses selected</p>
-              <p className="text-xs">Click "Add Status" to add statuses to your project.</p>
+              <p className="text-xs">Click "Add Existing" to select from available statuses, or "Create New" to add a new status.</p>
             </div>
           )}
 
@@ -296,6 +340,15 @@ export function ProjectTaskStatusSelector({
       {error && (
         <p className="text-xs text-red-500 mt-1">{error}</p>
       )}
+
+      {/* Quick Add Status Dialog */}
+      <QuickAddStatus
+        open={showQuickAddStatus}
+        onOpenChange={setShowQuickAddStatus}
+        onStatusCreated={handleStatusCreated}
+        statusType="project_task"
+        existingStatuses={availableStatuses}
+      />
     </div>
   );
 }

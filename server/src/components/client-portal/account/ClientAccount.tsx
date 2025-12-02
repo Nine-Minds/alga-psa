@@ -6,6 +6,7 @@ import { Table } from 'server/src/components/ui/Table';
 import { getClientClient } from 'server/src/lib/actions/client-portal-actions/client-client';
 import { getClientContractLine, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
@@ -78,10 +79,12 @@ export default function ClientAccount() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Card id="client-details-card" className="p-6"><div>{t('common.loading')}</div></Card>
-        <Card id="contract-line-card" className="p-6"><div>{t('common.loading')}</div></Card>
-        <Card className="p-6"><div>{t('common.loading')}</div></Card>
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text={t('common.loading')}
+          spinnerProps={{ size: 'md' }}
+        />
       </div>
     );
   }

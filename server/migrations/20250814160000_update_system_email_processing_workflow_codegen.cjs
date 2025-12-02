@@ -16,7 +16,7 @@ function sanitizeTsToJs(source) {
 
 function buildDbWorkflowCode() {
   // Prefer pre-generated JS produced by scripts/generate-system-email-workflow.cjs
-  const generatedPath = path.join(__dirname, '../../shared/workflow/workflows/system-email-processing-workflow.generated.js');
+  const generatedPath = path.join(__dirname, '../../services/workflow-worker/src/workflows/system-email-processing-workflow.generated.js');
   if (fs.existsSync(generatedPath)) {
     const code = fs.readFileSync(generatedPath, 'utf8');
     if (code && code.includes('function execute(')) return code;
@@ -24,7 +24,7 @@ function buildDbWorkflowCode() {
   }
 
   // Fallback: read TS file and extract systemEmailProcessingWorkflow body
-  const workflowPath = path.join(__dirname, '../../shared/workflow/workflows/system-email-processing-workflow.ts');
+  const workflowPath = path.join(__dirname, '../../services/workflow-worker/src/workflows/system-email-processing-workflow.ts');
   if (!fs.existsSync(workflowPath)) {
     console.warn(`[workflow-migration:new] Shared workflow file not found at ${workflowPath}`);
     return null;

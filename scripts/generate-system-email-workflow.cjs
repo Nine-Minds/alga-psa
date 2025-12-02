@@ -1,5 +1,5 @@
 // Generate a DB-ready JS workflow file from the shared TS source.
-// Produces: shared/workflow/workflows/system-email-processing-workflow.generated.js
+// Produces: services/workflow-worker/src/workflows/system-email-processing-workflow.generated.js
 
 const fs = require('fs');
 const path = require('path');
@@ -37,8 +37,8 @@ function transpileToJs(code) {
 
 function main() {
   const root = path.resolve(__dirname, '..');
-  const srcPath = path.resolve(root, 'shared/workflow/workflows/system-email-processing-workflow.ts');
-  const outPath = path.resolve(root, 'shared/workflow/workflows/system-email-processing-workflow.generated.js');
+  const srcPath = path.resolve(root, 'services/workflow-worker/src/workflows/system-email-processing-workflow.ts');
+  const outPath = path.resolve(root, 'services/workflow-worker/src/workflows/system-email-processing-workflow.generated.js');
 
   if (!fs.existsSync(srcPath)) {
     console.error(`[generate] Source file not found: ${srcPath}`);

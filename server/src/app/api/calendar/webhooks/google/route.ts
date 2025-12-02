@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { withTransaction } from '@alga-psa/shared/db';
 import { CalendarWebhookProcessor } from '@/services/calendar/CalendarWebhookProcessor';
 
 interface GooglePubSubMessage {
@@ -80,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Extract subscription name from full subscription path
     const subscriptionName = payload.subscription?.split('/').pop();
-    
+
     if (!subscriptionName) {
       console.error('❌ Could not extract subscription name from payload');
       return NextResponse.json(
@@ -89,15 +87,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process webhook notification
-    const processor = new CalendarWebhookProcessor();
-    const result = await processor.processGoogleWebhook(payload.message, subscriptionName);
+    // Acknowledge webhook immediately, process asynchronously
+    // This prevents Pub/Sub from retrying due to slow processing
+    const startTime = Date.now();
+    const messageForProcessing = payload.message;
 
-    return NextResponse.json({
-      success: result.failed === 0,
-      processed: result.success,
-      failed: result.failed
+    // Process in background after responding
+    setImmediate(async () => {
+      try {
+        const processor = new CalendarWebhookProcessor();
+        const result = await processor.processGoogleWebhook(messageForProcessing, subscriptionName);
+        console.log(`[Google Calendar Webhook] Processed in ${Date.now() - startTime}ms`, {
+          success: result.success,
+          failed: result.failed
+        });
+      } catch (error) {
+        console.error('[Google Calendar Webhook] Background processing error:', error);
+      }
     });
+
+    // Return immediately
+    return NextResponse.json({ success: true, accepted: true });
 
   } catch (error: any) {
     console.error('Google Calendar webhook handler error:', error);

@@ -1,9 +1,9 @@
 # MinIO E2E Walkthrough: Upload → Finalize → List
 
-This document provides a concrete, step-by-step manual validation flow for uploading an extension bundle to S3-compatible storage (MinIO), finalizing the bundle, and verifying visibility in the Extensions list using the Install page UI.
+This document provides a concrete, step-by-step manual validation flow for uploading an extension bundle to S3-compatible storage (MinIO), finalizing the bundle, and verifying visibility in the Extensions list using the Install page UI. Preferred path is the server-side streaming upload proxy (no direct browser→S3 PUTs) with a 200 MiB cap and staging keys.
 
 - Links to relevant routes and UI pages:
-- Upload Proxy API: [ee/server/src/app/api/ext-bundles/upload-proxy/route.ts](ee/server/src/app/api/ext-bundles/upload-proxy/route.ts:1)
+- Upload Proxy API: [ee/server/src/app/api/ext-bundles/upload-proxy/route.ts](ee/server/src/app/api/ext-bundles/upload-proxy/route.ts:1) (streaming, 200 MiB cap, staging key)
 - Finalize API: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)
 - Abort API: [ee/server/src/app/api/ext-bundles/abort/route.ts](ee/server/src/app/api/ext-bundles/abort/route.ts:1)
 - Install UI page: [ee/server/src/app/msp/settings/extensions/install/page.tsx](ee/server/src/app/msp/settings/extensions/install/page.tsx:1)
@@ -41,7 +41,7 @@ Step 2 — Use the Install Page UI
   - Manifest JSON: Paste the minimal manifest from Step 1.
 
 Step 3 — Upload (Proxy)
-- Click upload. The server streams your file to S3 via the upload‑proxy API and returns a staging key.
+- Click upload. The server streams your file to S3 via the upload‑proxy API (no direct presigned PUT). Max size: 200 MiB. A staging key is returned on success.
 
 Step 4 — Verify Upload
 - Confirm the UI shows upload completion with a returned staging key.

@@ -426,17 +426,99 @@ export async function upsertInstallConfigRecord(input: UpsertInstallConfigInput)
   };
 }
 
+function decodeInlineCiphertext(ciphertext: string): Record<string, string> | null {
+  try {
+    const json = Buffer.from(ciphertext, 'base64').toString('utf8');
+    const payload = JSON.parse(json);
+    return coerceSecretsMap(payload);
+  } catch {
+    return null;
+  }
+}
+
+async function decryptWithVault(ciphertext: string, overrides?: { transitKey?: string; transitMount?: string }): Promise<Record<string, string> | null> {
+  const cfg = resolveVaultConfig(overrides);
+  if (!cfg) return null;
+
+  try {
+    const url = `${cfg.addr.replace(/\/$/, '')}/v1/${cfg.mount.replace(/^\/|\/$/g, '')}/decrypt/${cfg.key.replace(/^\/|\/$/g, '')}`;
+    const headers: Record<string, string> = {
+      'content-type': 'application/json',
+      'x-vault-token': cfg.token,
+    };
+    if (cfg.namespace) {
+      headers['x-vault-namespace'] = cfg.namespace;
+    }
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ ciphertext }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.warn('[installConfig] Vault transit decrypt failed', { status: resp.status, body: text?.slice?.(0, 256) });
+      return null;
+    }
+
+    const data = await resp.json();
+    const plaintextB64 = data?.data?.plaintext;
+    if (!plaintextB64 || typeof plaintextB64 !== 'string') {
+      console.warn('[installConfig] Vault transit decrypt missing plaintext');
+      return null;
+    }
+
+    const json = Buffer.from(plaintextB64, 'base64').toString('utf8');
+    const payload = JSON.parse(json);
+    return coerceSecretsMap(payload);
+  } catch (err: any) {
+    console.warn('[installConfig] Vault transit decrypt exception', { error: err?.message });
+    return null;
+  }
+}
+
+async function decryptSecretEnvelope(envelope: SecretEnvelopeRecord): Promise<Record<string, string> | null> {
+  if (envelope.algorithm === INLINE_ALGORITHM) {
+    return decodeInlineCiphertext(envelope.ciphertext);
+  }
+  if (envelope.algorithm === VAULT_ALGORITHM) {
+    return decryptWithVault(envelope.ciphertext, {
+      transitKey: envelope.transitKey ?? undefined,
+      transitMount: envelope.transitMount ?? undefined,
+    });
+  }
+  return null;
+}
+
 export async function upsertInstallSecretsRecord(input: UpsertInstallSecretsInput): Promise<UpsertInstallSecretsResult> {
   const { installId, tenantId } = input;
   if (!installId || !tenantId) throw new Error('installId and tenantId are required');
 
-  const envelope = await createSecretEnvelopeRecord(tenantId, installId, input.secrets, {
+  const connection = (await resolveConnection(input.connection)) as Knex;
+
+  // Load existing secrets to merge
+  const existingRow = await connection('tenant_extension_install_secrets').where({ install_id: installId }).first();
+  let mergedSecrets = { ...input.secrets };
+
+  if (existingRow) {
+    const existingEnvelope = {
+      ciphertext: existingRow.ciphertext,
+      algorithm: existingRow.algorithm,
+      transitKey: existingRow.transit_key,
+      transitMount: existingRow.transit_mount,
+    };
+    const existingSecrets = await decryptSecretEnvelope(existingEnvelope);
+    if (existingSecrets) {
+      // Merge: existing secrets + new secrets (new overwrites old)
+      mergedSecrets = { ...existingSecrets, ...input.secrets };
+    }
+  }
+
+  const envelope = await createSecretEnvelopeRecord(tenantId, installId, mergedSecrets, {
     algorithmPreference: input.algorithmPreference,
     transitKey: input.transitKeyOverride,
     transitMount: input.transitMountOverride,
   });
-
-  const connection = (await resolveConnection(input.connection)) as Knex;
 
   if (!envelope) {
     await deleteInstallSecretsRecord({ installId, connection });

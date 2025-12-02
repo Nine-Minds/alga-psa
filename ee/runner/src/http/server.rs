@@ -168,6 +168,7 @@ async fn execute(
         .get("x-request-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
+
     let idem = headers
         .get("x-idempotency-key")
         .and_then(|v| v.to_str().ok())

@@ -59,7 +59,7 @@ const TicketingSettingsRefactored = (): JSX.Element => {
     },
     {
       label: "Priorities",
-      content: <PrioritySettings initialPriorityType={typeParam} />
+      content: <PrioritySettings initialPriorityType="ticket" />
     },
     {
       label: "Categories",

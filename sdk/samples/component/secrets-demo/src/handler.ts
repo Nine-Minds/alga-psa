@@ -1,4 +1,4 @@
-import type { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga/extension-runtime';
+import type { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/extension-runtime';
 
 // Inline jsonResponse to avoid external dependency for jco componentize
 const encoder = new TextEncoder();

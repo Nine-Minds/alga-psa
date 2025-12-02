@@ -5,6 +5,7 @@ import { IScheduleEntry } from './schedule.interfaces';
 export interface CalendarProviderConfig {
   id: string;
   tenant: string;
+  user_id: string; // The user who owns this calendar sync
   name: string;
   provider_type: 'google' | 'microsoft';
   calendar_id: string; // External calendar ID
@@ -152,6 +153,9 @@ export interface CalendarSyncResult {
   mapping?: CalendarEventMapping;
   externalEventId?: string;
   error?: string;
+  deleted?: boolean; // True if the entry was deleted (e.g., external event no longer exists)
+  skipped?: boolean; // True if sync was skipped (e.g., no @alga marker, or nothing to do)
+  reason?: string; // Explanation when deleted or skipped
   conflict?: {
     algaModified: string;
     externalModified: string;
@@ -199,6 +203,7 @@ export interface CalendarOAuthState {
   redirectUri?: string;
   timestamp: number;
   hosted?: boolean;
+  isPopup?: boolean;
 }
 
 export interface CalendarEventCreateRequest {

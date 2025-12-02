@@ -595,7 +595,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   // Create the content of the form
   const content = (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 overflow-y-auto z-10
+    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className={`bg-white p-4 rounded-lg h-auto flex flex-col transition-all duration-300 z-10
     ${isInDrawer ? 
       'w-fit max-w-[90vw] shadow-none' : 
       'max-w-[95vw] w-auto min-w-[300px] max-h-[90vh] shadow-none'

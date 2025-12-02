@@ -4,8 +4,8 @@
  */
 
 import { EmailProviderService } from './EmailProviderService';
-import { EmailProviderConfig } from '../../interfaces/email.interfaces';
-import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
+import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
+import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import axios from 'axios';

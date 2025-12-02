@@ -16,6 +16,7 @@ import {
   NotificationCategory,
   NotificationSubtype 
 } from "server/src/lib/models/notification";
+import LoadingIndicator from "server/src/components/ui/LoadingIndicator";
 
 export function NotificationCategories() {
   const [categories, setCategories] = useState<NotificationCategory[] | null>(null);
@@ -38,7 +39,15 @@ export function NotificationCategories() {
   }
 
   if (!categories) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading notification categories..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   return <NotificationCategoriesContent categories={categories} />;

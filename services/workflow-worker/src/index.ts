@@ -16,6 +16,7 @@ import { WorkerServer } from './server.js';
 import logger from '@shared/core/logger.js';
 import { initializeServerWorkflows } from '@shared/workflow/index.js';
 import { registerAccountingExportWorkflowActions } from 'server/src/lib/workflow/registerAccountingExportActions';
+import { updateSystemWorkflowsFromAssets } from './init/updateWorkflows.js';
 
 async function startServices() {
   try {
@@ -24,6 +25,9 @@ async function startServices() {
     // Initialize the workflow system
     await initializeServerWorkflows();
     registerAccountingExportWorkflowActions();
+    
+    // Update system workflows from compiled assets
+    await updateSystemWorkflowsFromAssets();
     
     // Get the action registry and workflow runtime
     const actionRegistry = getActionRegistry();

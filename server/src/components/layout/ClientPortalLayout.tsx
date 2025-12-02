@@ -15,6 +15,7 @@ import { checkClientPortalPermissions } from 'server/src/lib/actions/client-port
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
 import { getTenantSlugForTenant } from 'server/src/lib/actions/tenant-actions/tenantSlugActions';
+import { ClientExtensionsMenu } from 'server/src/components/client-portal/ClientExtensionsMenu';
 import { NotificationBell } from 'server/src/components/notifications/NotificationBell';
 import { ActivityDrawerProvider } from 'server/src/components/user-activities/ActivityDrawerProvider';
 import { DrawerProvider } from 'server/src/context/DrawerContext';
@@ -97,7 +98,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   return (
     <DrawerProvider>
       <ActivityDrawerProvider>
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100 flex flex-col">
         {/* Navigation Bar */}
         <nav className="bg-transparent shadow-[0_5px_10px_rgba(0,0,0,0.1)]">
         <div className="w-full px-6">
@@ -182,6 +183,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                     {t('nav.clientSettings')}
                   </Link>
                 )}
+                <ClientExtensionsMenu />
               </div>
             </div>
 
@@ -241,7 +243,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
       </nav>
 
           {/* Main Content */}
-          <main className="w-full px-6 py-8">
+          <main className="flex-1 w-full px-6 py-8 flex flex-col min-h-0">
             {children}
           </main>
         </div>

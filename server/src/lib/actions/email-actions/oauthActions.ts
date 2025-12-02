@@ -79,14 +79,9 @@ export async function initiateEmailOAuth(params: {
       hosted: isHosted
     };
 
-    // Determine Microsoft tenant authority for single-tenant apps
-    let msTenantAuthority: string | undefined;
-    if (provider === 'microsoft') {
-      msTenantAuthority = process.env.MICROSOFT_TENANT_ID
-        || (await secretProvider.getAppSecret('MICROSOFT_TENANT_ID'))
-        || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_tenant_id'))
-        || 'common';
-    }
+    // For multi-tenant Azure AD apps, always use 'common' for the authorization URL
+    // This allows users from any Azure AD tenant to authenticate
+    const msTenantAuthority = 'common';
 
     const authUrl = provider === 'microsoft'
       ? generateMicrosoftAuthUrl(clientId, state.redirectUri, state, undefined as any, msTenantAuthority)

@@ -40,6 +40,20 @@ export const EventTypeEnum = z.enum([
   'SURVEY_INVITATION_SENT',
   'SURVEY_RESPONSE_SUBMITTED',
   'SURVEY_NEGATIVE_RESPONSE',
+  // RMM Integration events
+  'RMM_DEVICE_CREATED',
+  'RMM_DEVICE_UPDATED',
+  'RMM_DEVICE_DELETED',
+  'RMM_DEVICE_ONLINE',
+  'RMM_DEVICE_OFFLINE',
+  'RMM_ALERT_TRIGGERED',
+  'RMM_ALERT_RESOLVED',
+  'RMM_SYNC_STARTED',
+  'RMM_SYNC_COMPLETED',
+  'RMM_SYNC_FAILED',
+  'RMM_WEBHOOK_RECEIVED',
+  // Generic unknown type for custom events
+  'UNKNOWN',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
