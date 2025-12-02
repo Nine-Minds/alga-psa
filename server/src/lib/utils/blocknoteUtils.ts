@@ -70,7 +70,7 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
  * @param blocks - BlockNote content as Block array, PartialBlock array, JSON string, or undefined
  * @returns A string containing the markdown representation, never undefined
  */
-export function convertBlockNoteToMarkdown(blocks: Block[] | PartialBlock[] | string | undefined): string {
+export function convertBlockNoteToMarkdown(blocks: any): string {
   console.log("[BlockNoteUtils] Converting to markdown:", typeof blocks === 'string' ? 'JSON string' : (blocks ? 'blocks array' : 'undefined'));
   
   // Handle empty input
@@ -523,7 +523,7 @@ function extractStyledTextToHTML(content: any[]): string {
  * @param blocks - BlockNote content as Block array, PartialBlock array, or JSON string.
  * @returns An HTML string representation of the BlockNote content.
  */
-export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string | undefined): string {
+export function convertBlockNoteToHTML(blocks: any): string {
   if (!blocks) return '<p>[No content]</p>';
 
   let blockData: Block[] | PartialBlock[];

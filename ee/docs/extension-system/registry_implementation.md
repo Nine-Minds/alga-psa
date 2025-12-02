@@ -43,14 +43,14 @@ Tenant isolation enforced via RLS and query predicates.
 
 ## Gateway Integration
 
-- Route: `/api/ext/[extensionId]/[...path]`
+- Route: `/api/ext/[extensionId]/[[...path]]`
 - Steps:
   1. Resolve tenant install for `extensionId`
   2. Resolve active `version_id → content_hash`
   3. Load manifest for that version and match endpoint `{method, path}`
   4. Call Runner `/v1/execute` with normalized request
 
-Gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+Gateway scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 ## Observability
 

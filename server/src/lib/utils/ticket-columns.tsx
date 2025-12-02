@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
@@ -67,13 +68,18 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'ticket_number',
         width: '10%',
         render: (value: string, record: ITicketListItem) => (
-          <button
-            onClick={() => onTicketClick(record.ticket_id as string)}
-            className="text-blue-500 hover:underline cursor-pointer bg-transparent border-none p-0 block break-all whitespace-normal text-left"
+          <Link
+            href={`/msp/tickets/${record.ticket_id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onTicketClick(record.ticket_id as string);
+            }}
+            className="text-blue-600 hover:text-blue-800 block break-all whitespace-normal text-left"
             style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
           >
             {value}
-          </button>
+          </Link>
         ),
       }
     });
@@ -87,8 +93,18 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       dataIndex: 'title',
       width: tagsInlineUnderTitle ? '26%' : '20%',
       render: (value: string, record: ITicketListItem) => (
-        <div className="flex flex-col gap-1">
-          <span>{value}</span>
+        <div className="flex flex-col gap-1 overflow-hidden">
+          <Link
+            href={`/msp/tickets/${record.ticket_id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onTicketClick(record.ticket_id as string);
+            }}
+            className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words"
+          >
+            {value}
+          </Link>
           {tagsInlineUnderTitle && columnVisibility.tags && showTags && ticketTagsRef && onTagsChange && record.ticket_id && (
             <div onClick={(e) => e.stopPropagation()}>
               <TagManager

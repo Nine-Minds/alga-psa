@@ -167,7 +167,7 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
       note: comment.note ? `${comment.note.substring(0, 50)}...` : undefined
     }
   });
-  
+
   const { knex: db, tenant: commentTenant } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -178,7 +178,21 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
         throw new Error(`Comment with id ${id} not found`);
       }
       console.log(`[updateComment] Found existing comment:`, existingComment);
-    
+
+      // Store old comment data for event publishing
+      const oldCommentData = {
+        id: existingComment.comment_id!,
+        content: existingComment.note!,
+        isInternal: existingComment.is_internal || false
+      };
+
+      // Get the original author name for old comment
+      const oldAuthor = await trx('users')
+        .select('first_name', 'last_name')
+        .where({ user_id: existingComment.user_id, tenant: commentTenant! })
+        .first();
+      const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
+
       // Verify user permissions - only allow users to edit their own comments
       // or  MSP (internal) users to edit any comment
       if (comment.user_id && comment.user_id !== existingComment.user_id) {
@@ -187,12 +201,12 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
           .where('user_id', comment.user_id)
           .andWhere('tenant', commentTenant!)
           .first();
-      
+
       // Only MSP (internal) users can edit other users' comments
       if (!user || user.user_type !== 'internal') {
         throw new Error('You can only edit your own comments');
       }
-      
+
       // Set author_type based on user type
       if (user) {
         comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
@@ -216,15 +230,15 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
     // Convert BlockNote JSON to Markdown if note is being updated
     if (comment.note !== undefined) {
       console.log(`[updateComment] Converting note to markdown for comment update`);
-      
+
       try {
         comment.markdown_content = await convertBlockNoteToMarkdown(comment.note);
-        
+
         if (!comment.markdown_content || comment.markdown_content.trim() === '') {
           console.warn(`[updateComment] Markdown conversion returned empty result, using fallback`);
           comment.markdown_content = "[Fallback markdown content]";
         }
-        
+
         console.log(`[updateComment] Markdown conversion successful:`, {
           length: comment.markdown_content.length
         });
@@ -250,11 +264,11 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
       hasMarkdownContent: commentToUpdate.markdown_content !== undefined,
       markdownContentLength: commentToUpdate.markdown_content ? commentToUpdate.markdown_content.length : 0
     });
-      
+
       // Use the Comment model to update the comment
       await Comment.update(trx, id, commentToUpdate);
       console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
-      
+
       // Verify the comment was updated correctly
       const updatedComment = await Comment.get(trx, id);
       if (updatedComment) {
@@ -263,6 +277,42 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
           has_markdown: !!updatedComment.markdown_content,
           markdown_length: updatedComment.markdown_content ? updatedComment.markdown_content.length : 0
         });
+      }
+
+      // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
+      if (updatedComment && comment.user_id && commentTenant) {
+        const newAuthor = await trx('users')
+          .select('first_name', 'last_name')
+          .where({ user_id: comment.user_id, tenant: commentTenant })
+          .first();
+        const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
+
+        try {
+          await publishEvent({
+            eventType: 'TICKET_COMMENT_UPDATED',
+            payload: {
+              tenantId: commentTenant,
+              ticketId: updatedComment.ticket_id!,
+              userId: comment.user_id,
+              oldComment: {
+                id: oldCommentData.id,
+                content: oldCommentData.content,
+                author: oldAuthorName,
+                isInternal: oldCommentData.isInternal
+              },
+              newComment: {
+                id: updatedComment.comment_id!,
+                content: updatedComment.note!,
+                author: newAuthorName,
+                isInternal: updatedComment.is_internal || false
+              }
+            }
+          });
+          console.log(`[updateComment] Published TICKET_COMMENT_UPDATED event for comment:`, id);
+        } catch (eventError) {
+          console.error(`[updateComment] Failed to publish TICKET_COMMENT_UPDATED event:`, eventError);
+          // Don't throw - allow comment update to succeed even if event publishing fails
+        }
       }
     });
   } catch (error) {

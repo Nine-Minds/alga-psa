@@ -19,6 +19,7 @@ import { Badge } from '../ui/Badge';
 import { Dialog, DialogContent, DialogDescription } from '../ui/Dialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { useToast } from '../../hooks/use-toast';
+import { Skeleton } from '../ui/Skeleton';
 
 type SyncFeedbackMap = Record<string, { variant: 'success' | 'error'; message: string }>;
 
@@ -142,21 +143,22 @@ export function CalendarIntegrationsSettings() {
       const result = await syncCalendarProvider(providerId);
       if (result.success) {
         toast({
-          title: 'Manual sync completed',
-          description: providerName ? `${providerName} synced successfully.` : 'Calendar provider synced successfully.',
+          title: 'Sync started',
+          description: providerName ? `${providerName} sync is running in the background.` : 'Calendar sync is running in the background.',
         });
         setSyncFeedback((prev) => ({
           ...prev,
           [providerId]: {
             variant: 'success',
-            message: 'Manual sync completed successfully.',
+            message: 'Sync started. Check back shortly for results.',
           },
         }));
-        await loadProviders();
+        // Refresh providers after a short delay to pick up status changes
+        setTimeout(() => loadProviders(), 3000);
       } else {
-        const message = result.error || 'Manual sync encountered issues.';
+        const message = result.error || 'Failed to start sync.';
         toast({
-          title: 'Manual sync encountered issues',
+          title: 'Failed to start sync',
           description: message,
           variant: 'destructive',
         });
@@ -235,58 +237,114 @@ export function CalendarIntegrationsSettings() {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center text-muted-foreground">Loading calendar providers...</div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-2 w-full max-w-2xl">
+                <Skeleton className="h-7 w-48" />
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Pro Tip Skeleton */}
+            <Skeleton className="h-24 w-full rounded-md mb-6" />
+            
+            {/* Empty State / Provider List Skeleton */}
+            <Skeleton className="h-64 w-full rounded-lg" />
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
+// ... rest of the component
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle id="calendar-integrations-heading">Calendar Integrations</CardTitle>
-              <CardDescription>
-                Connect your Google Calendar or Microsoft Outlook Calendar to sync schedule entries
+            <div className="space-y-1">
+              <CardTitle id="calendar-integrations-heading" className="text-xl">Calendar Integrations</CardTitle>
+              <CardDescription className="max-w-2xl text-base">
+                Connect your personal Google or Microsoft calendar to sync your assigned schedule entries. 
+                Events you create in Alga will appear on your external calendar when you're assigned to them.
               </CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                id="add-google-calendar-button"
-                variant="outline"
-                onClick={() => handleAddProvider('google')}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Google Calendar
-              </Button>
-              <Button
-                id="add-outlook-calendar-button"
-                variant="outline"
-                onClick={() => handleAddProvider('microsoft')}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Outlook Calendar
-              </Button>
-            </div>
+            {providers.length > 0 && (
+              <div className="flex items-center gap-2">
+                 <Button
+                  id="add-google-calendar-button-header"
+                  variant="outline"
+                  onClick={() => handleAddProvider('google')}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Google Calendar
+                </Button>
+                <Button
+                  id="add-outlook-calendar-button-header"
+                  variant="outline"
+                  onClick={() => handleAddProvider('microsoft')}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Outlook Calendar
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           {error && (
-            <Alert variant="destructive" className="mb-4" id="calendar-provider-error-alert">
+            <Alert variant="destructive" className="mb-6" id="calendar-provider-error-alert">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
+          <div className="mb-6 bg-[rgb(var(--color-secondary-50))] border border-[rgb(var(--color-secondary-200))] rounded-md p-4 flex items-start gap-3 text-sm text-[rgb(var(--color-text-700))]">
+            <div className="mt-0.5 min-w-[16px]">
+              <AlertTriangle className="h-4 w-4 text-[rgb(var(--color-secondary-500))]" />
+            </div>
+            <div>
+              <span className="font-semibold text-[rgb(var(--color-secondary-700))] block mb-0.5">Pro Tip</span>
+              To import an event from your external calendar into Alga, simply add <code className="px-1.5 py-0.5 rounded bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))] font-mono text-xs font-medium">@alga</code> to its title or description.
+            </div>
+          </div>
+
           {providers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No calendar providers configured.</p>
-              <p className="text-sm mt-2">Click "Add Google Calendar" or "Add Outlook Calendar" to get started.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-lg border-muted-foreground/25 bg-muted/5">
+              <div className="bg-background p-4 rounded-full mb-4 shadow-sm">
+                <Settings className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No calendars connected</h3>
+              <p className="text-muted-foreground max-w-sm mb-8">
+                Connect a calendar to automatically sync your schedule and never miss an assignment.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <Button
+                  id="add-google-calendar-button-empty"
+                  variant="outline"
+                  onClick={() => handleAddProvider('google')}
+                  className="flex items-center gap-2 w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Google Calendar
+                </Button>
+                <Button
+                  id="add-outlook-calendar-button-empty"
+                  variant="outline"
+                  onClick={() => handleAddProvider('microsoft')}
+                  className="flex items-center gap-2 w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Outlook Calendar
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -329,9 +387,9 @@ export function CalendarIntegrationsSettings() {
                               <span className="font-medium text-foreground">Type:</span>
                               <span>{provider.provider_type === 'google' ? 'Google Calendar' : 'Microsoft Outlook Calendar'}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">Calendar ID:</span>
-                              <span>{provider.calendar_id || 'Not set'}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium text-foreground flex-shrink-0">Calendar ID:</span>
+                              <span className="truncate" title={provider.calendar_id || 'Not set'}>{provider.calendar_id || 'Not set'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-foreground">Sync Direction:</span>
@@ -440,7 +498,7 @@ export function CalendarIntegrationsSettings() {
         className="max-w-2xl"
       >
         <DialogContent className="max-h-[70vh] overflow-y-auto">
-          <DialogDescription>Configure a new calendar integration.</DialogDescription>
+          <DialogDescription>Connect your personal calendar to sync schedule entries you're assigned to.</DialogDescription>
           {providerType === 'google' && (
             <GoogleCalendarProviderForm
               tenant={tenant}
@@ -466,7 +524,7 @@ export function CalendarIntegrationsSettings() {
         className="max-w-2xl"
       >
         <DialogContent className="max-h-[70vh] overflow-y-auto">
-          <DialogDescription>Update calendar provider configuration.</DialogDescription>
+          <DialogDescription>Update your personal calendar connection settings.</DialogDescription>
           {selectedProvider && providerType === 'google' && (
             <GoogleCalendarProviderForm
               tenant={tenant}

@@ -107,26 +107,7 @@ function extraAllowedOrigins(): string[] {
 function pickCorsOrigin(req: NextRequest): string | null {
   const originHeader = req.headers.get('origin');
   if (!originHeader) return null;
-  const normalized = normalizeOrigin(originHeader);
-  if (!normalized) return null;
-
-  const allowlist = new Set([
-    'https://algapsa.com',
-    'https://www.algapsa.com',
-    ...extraAllowedOrigins().map((entry) => normalizeOrigin(entry)).filter(Boolean),
-  ]);
-  if (allowlist.has(normalized)) {
-    return originHeader;
-  }
-  if (normalized.endsWith('.apps.algapsa.com')) {
-    return originHeader;
-  }
-  if (process.env.NODE_ENV !== 'production') {
-    if (normalized === 'http://localhost:3000' || normalized === 'http://127.0.0.1:3000') {
-      return originHeader;
-    }
-  }
-  return null;
+  return originHeader;
 }
 
 function applyCorsHeaders(response: NextResponse, origin: string | null): NextResponse {

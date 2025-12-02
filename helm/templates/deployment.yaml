@@ -1,4 +1,4 @@
-{{- if and (not .Values.devEnv.enabled) (not .Values.hostedEnv.enabled) }}
+{{- if and (not .Values.devEnv.enabled) (not (include "sebastian.hostedEnvEnabled" .)) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -145,7 +145,7 @@ spec:
           {{- end }}
 
           # ----------- HOCUSPOCUS ----------------
-          {{- if or .Values.hocuspocus.enabled (not .Values.hostedEnv.enabled) }}
+          {{- if or .Values.hocuspocus.enabled (not (include "sebastian.hostedEnvEnabled" .)) }}
           - name: REQUIRE_HOCUSPOCUS
             value: "true"
           - name: HOCUSPOCUS_HOST

@@ -93,6 +93,9 @@ devPod:
 
 podLabels: {}
 
+podAnnotations:
+  sidecar.istio.io/proxyMemory: "4Gi"
+
 podSecurityContext: {}
   # fsGroup: 2000
 
@@ -466,3 +469,14 @@ istio:
     excludeOutboundIPRanges: ""
     # Optional CIDR ranges to allow via Envoy only (string). Leave empty to disable.
     includeOutboundIPRanges: ""
+
+# Hosted Environment Configuration
+# Used for cloud-hosted environments (different from dev environments)
+hostedEnv:
+  enabled: false
+  namespace: ""
+  codeServer:
+    enabled: false
+    service:
+      type: "ClusterIP"
+      port: 8080

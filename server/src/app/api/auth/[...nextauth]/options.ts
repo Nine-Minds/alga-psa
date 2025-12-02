@@ -787,7 +787,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 AzureADProvider({
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
-                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
+                    // Always use 'common' for multi-tenant Azure AD apps
+                    issuer: `https://login.microsoftonline.com/common/v2.0`,
                     checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
@@ -1543,7 +1544,8 @@ export const options: NextAuthConfig = {
                 AzureADProvider({
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    // Always use 'common' for multi-tenant Azure AD apps
+                    issuer: `https://login.microsoftonline.com/common/v2.0`,
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??

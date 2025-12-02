@@ -30,6 +30,10 @@ import { Clock3, Copy, FileText, Layers, Link as LinkIcon, ListChecks, Settings2
 import AssetDocuments from './AssetDocuments';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
+import { RemoteAccessButton } from './RemoteAccessButton';
+import { AssetAlertsSection } from './AssetAlertsSection';
+import { AssetPatchStatusSection } from './AssetPatchStatusSection';
+import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
 
 interface AssetDetailDrawerClientProps {
@@ -240,6 +244,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
           <Button id="asset-drawer-open-record" variant="secondary" size="sm" className="gap-2" onClick={() => router.push(`/msp/assets/${asset.asset_id}`)}>
             <FileText className="h-4 w-4" /> Open asset record
           </Button>
+          <RemoteAccessButton asset={asset} variant="secondary" size="sm" />
           <CreateTicketFromAssetButton asset={asset} />
           <DeleteAssetButton
             assetId={asset.asset_id}
@@ -287,6 +292,15 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
         <SectionTitle icon={<Settings2 className="h-4 w-4" />} title="Asset summary" />
         <InfoGrid asset={asset} />
       </Card>
+
+      {/* RMM Alerts Section - Shows active alerts for RMM-managed assets */}
+      <AssetAlertsSection asset={asset} />
+
+      {/* RMM Patch Status Section - Shows patch compliance for workstations/servers */}
+      <AssetPatchStatusSection asset={asset} />
+
+      {/* RMM Software Inventory - Shows installed software for workstations/servers */}
+      <AssetSoftwareInventory asset={asset} />
 
       {history && history.length > 0 && (
         <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-history' })}>

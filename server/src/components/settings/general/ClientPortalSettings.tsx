@@ -375,6 +375,7 @@ const ClientPortalSettings = () => {
                     }
                     showTextColor={false}
                     previewType="circle"
+                    colorMode="tag"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Used for buttons, links, and highlights
@@ -406,6 +407,7 @@ const ClientPortalSettings = () => {
                     }
                     showTextColor={false}
                     previewType="circle"
+                    colorMode="tag"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Used for accents and secondary actions

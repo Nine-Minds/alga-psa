@@ -9,7 +9,7 @@ This report describes the Enterprise v2 extension architecture and the design de
 The v2 model provides:
 - Out‑of‑process execution in a dedicated Runner (Rust + Wasmtime) with resource limits and capability‑scoped host APIs
 - Signed, content‑addressed bundles stored in object storage and verified at install and load time
-- A Next.js API Gateway at `/api/ext/[extensionId]/[...path]` that resolves manifest endpoints and proxies to Runner `POST /v1/execute` with strict header/size/time policies
+- A Next.js API Gateway at `/api/ext/[extensionId]/[[...path]]` (manifest endpoints advisory) that proxies to Runner `POST /v1/execute` with strict header/size/time policies
 - UI delivered exclusively via sandboxed iframes; static assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
 
 These choices materially improve isolation, provenance, security, and operability.
@@ -25,12 +25,12 @@ These choices materially improve isolation, provenance, security, and operabilit
   - Tables: `extension_registry`, `extension_version`, `extension_bundle`, `tenant_extension_install`, `extension_event_subscription`, `extension_execution_log`, `extension_quota_usage`
   - Version metadata includes `content_hash`, signatures, runtime, optional precompiled artifacts
 - Gateway (Next.js)
-  - Route: `/api/ext/[extensionId]/[...path]`
+  - Route: `/api/ext/[extensionId]/[[...path]]`
   - Resolves tenant install → version → manifest endpoint
   - Normalizes request and proxies to Runner `POST /v1/execute`
 - UI Delivery (Runner‑hosted)
   - Immutable static assets at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
-  - Host constructs iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+  - Host constructs iframe src via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 
 ## Data Model (Initial)
 
@@ -58,6 +58,6 @@ See: [registry_implementation.md](registry_implementation.md) and [manifest_sche
 - [API Routing Guide](api-routing-guide.md)
 - [Security & Signing](security_signing.md)
 - [Overview](overview.md)
-- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- Iframe bootstrap and src builder: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Gateway route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- Iframe bootstrap and src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
 - Registry service scaffold: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)

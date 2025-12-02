@@ -813,5 +813,21 @@
       "searchPlaceholder": "Search by user name, email, device, or IP address...",
       "noResults": "No sessions match your search"
     }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Comments",
+        "internal_only": "Internal Only",
+        "placeholder": "Add a comment... Use @ to mention teammates",
+        "add_comment": "Add Comment",
+        "no_comments": "No comments yet. Be the first to comment!",
+        "edited": "Edited",
+        "error_creating": "Failed to create comment. Please try again.",
+        "error_updating": "Failed to update comment. Please try again.",
+        "error_deleting": "Failed to delete comment. Please try again.",
+        "confirm_delete": "Are you sure you want to delete this comment?"
+      }
+    }
   }
 }

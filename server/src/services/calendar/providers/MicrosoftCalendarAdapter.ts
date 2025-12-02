@@ -4,6 +4,7 @@ import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/cale
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { getAdminConnection } from '@shared/db';
 import { CalendarProviderService } from '../CalendarProviderService';
+import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
 
 /**
  * Microsoft Graph API adapter for calendar synchronization
@@ -132,11 +133,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // Determine tenant authority
-      const vendorTenantId = vendorConfig.tenantId;
-      let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID || 'common';
-
-      const tokenUrl = `https://login.microsoftonline.com/${tenantAuthority}/oauth2/v2.0/token`;
+      // Always use 'common' for multi-tenant Azure AD apps
+      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
 
       const params = new URLSearchParams({
         client_id: clientId,
@@ -386,7 +384,16 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`);
 
       return this.mapMicrosoftEventToExternal(response.data);
-    } catch (error) {
+    } catch (error: any) {
+      // Handle 404 quietly - this is expected when events are deleted
+      const status = error?.response?.status;
+      const code = error?.response?.data?.error?.code;
+      if (status === 404 || code === 'ErrorItemNotFound') {
+        const notFoundError = new Error('Event not found');
+        (notFoundError as any).status = 404;
+        (notFoundError as any).code = 'ErrorItemNotFound';
+        throw notFoundError;
+      }
       throw this.handleError(error, 'getEvent');
     }
   }
@@ -422,14 +429,17 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const vendorConfig = this.config.provider_config || {};
-      const envWebhookBase =
-        process.env.CALENDAR_WEBHOOK_BASE_URL ||
-        process.env.CALENDAR_MICROSOFT_WEBHOOK_BASE_URL ||
-        process.env.MICROSOFT_CALENDAR_WEBHOOK_URL ||
-        process.env.NGROK_URL ||
-        process.env.PUBLIC_WEBHOOK_BASE_URL ||
-        process.env.NEXT_PUBLIC_BASE_URL ||
-        process.env.NEXTAUTH_URL;
+      
+      // Use dynamic URL resolution (checks ngrok file in development mode)
+      const envWebhookBase = getWebhookBaseUrl([
+        'CALENDAR_WEBHOOK_BASE_URL',
+        'CALENDAR_MICROSOFT_WEBHOOK_BASE_URL',
+        'MICROSOFT_CALENDAR_WEBHOOK_URL',
+        'NGROK_URL',
+        'PUBLIC_WEBHOOK_BASE_URL',
+        'NEXT_PUBLIC_BASE_URL',
+        'NEXTAUTH_URL'
+      ]);
 
       let webhookUrl = vendorConfig.webhookNotificationUrl?.trim();
       if (webhookUrl && !/^https:\/\//i.test(webhookUrl) && envWebhookBase) {

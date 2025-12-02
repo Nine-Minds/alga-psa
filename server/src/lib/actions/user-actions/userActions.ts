@@ -1338,3 +1338,22 @@ export async function getClientUsersForClient(clientId: string): Promise<IUser[]
 
 // Alias for compatibility
 export const getUserById = findUserById;
+
+/**
+ * Get the current user's avatar URL (server action for client components)
+ */
+export async function getCurrentUserAvatarUrl(): Promise<string | null> {
+  'use server';
+
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      return null;
+    }
+
+    return await getUserAvatarUrl(user.user_id, user.tenant);
+  } catch (error) {
+    logger.error('Error getting current user avatar URL:', error);
+    return null;
+  }
+}

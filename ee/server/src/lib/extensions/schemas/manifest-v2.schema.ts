@@ -20,6 +20,11 @@ const uiHooksSchema = z
         label: z.string().min(1),
       })
       .optional(),
+    clientPortalMenu: z
+      .object({
+        label: z.string().min(1),
+      })
+      .optional(),
   })
   .catchall(z.unknown());
 

@@ -11,6 +11,7 @@ import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces'
 import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from 'server/src/lib/actions/time-period-settings-actions/timePeriodSettingsActions';
 import { ISO8601String } from 'server/src/types/types.d';
 import { formatISO, parseISO } from 'date-fns';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 type FrequencyUnit = 'day' | 'week' | 'month' | 'year';
 
@@ -156,7 +157,17 @@ const TimePeriodSettings: React.FC = () => {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading time period settings..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
+  }
 
   return (
     <Card>

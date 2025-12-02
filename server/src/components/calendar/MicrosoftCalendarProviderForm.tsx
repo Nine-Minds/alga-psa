@@ -132,6 +132,7 @@ export function MicrosoftCalendarProviderForm({
       const oauthResult = await initiateCalendarOAuth({
         provider: 'microsoft',
         calendarProviderId: providerId,
+        isPopup: true,
       });
 
       if (!oauthResult.success) {

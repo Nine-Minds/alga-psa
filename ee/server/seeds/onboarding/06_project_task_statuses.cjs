@@ -29,6 +29,8 @@ exports.seed = async function (knex, tenantId) {
                 is_closed: false,
                 is_default: true,
                 item_type: 'project_task',
+                color: '#6B7280', // Gray
+                icon: 'Clipboard',
                 tenant: tenantId,
                 created_by: null, // No user exists yet during tenant creation
                 created_at: knex.fn.now()
@@ -41,6 +43,8 @@ exports.seed = async function (knex, tenantId) {
                 is_closed: false,
                 is_default: false,
                 item_type: 'project_task',
+                color: '#3B82F6', // Blue
+                icon: 'PlayCircle',
                 tenant: tenantId,
                 created_by: null, // No user exists yet during tenant creation
                 created_at: knex.fn.now()
@@ -53,6 +57,8 @@ exports.seed = async function (knex, tenantId) {
                 is_closed: true,
                 is_default: false,
                 item_type: 'project_task',
+                color: '#10B981', // Green
+                icon: 'CheckCircle',
                 tenant: tenantId,
                 created_by: null, // No user exists yet during tenant creation
                 created_at: knex.fn.now()

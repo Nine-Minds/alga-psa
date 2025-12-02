@@ -35,8 +35,27 @@ interface EmailProviderCardProps {
   onDelete: (providerId: string) => void;
   onTestConnection: (provider: EmailProvider) => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
+  onRetryRenewal: (provider: EmailProvider) => void;
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
 }
+
+const getExpirationStatus = (provider: EmailProvider) => {
+  if (provider.providerType !== 'microsoft' || !provider.microsoftConfig?.webhook_expires_at) {
+    return null;
+  }
+  const expiresAt = new Date(provider.microsoftConfig.webhook_expires_at);
+  const now = new Date();
+  const diffMs = expiresAt.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  if (diffHours < 0) {
+    return { label: 'Expired', color: 'text-red-500' };
+  }
+  if (diffHours < 24) {
+    return { label: `Expires in ${Math.ceil(diffHours)}h`, color: 'text-yellow-600' };
+  }
+  return { label: `Expires in ${Math.ceil(diffHours / 24)}d`, color: 'text-muted-foreground' };
+};
 
 const getStatusIcon = (status: EmailProvider['status']) => {
   switch (status) {
@@ -105,8 +124,11 @@ export function EmailProviderCard({
   onDelete,
   onTestConnection,
   onRefreshWatchSubscription,
+  onRetryRenewal,
   onChangeDefaults,
 }: EmailProviderCardProps) {
+  const expirationStatus = getExpirationStatus(provider);
+
   return (
     <Card className={`transition-all ${!provider.isActive ? 'opacity-60' : ''}`}>
       <CardHeader className="pb-3">
@@ -145,6 +167,12 @@ export function EmailProviderCard({
                   <DropdownMenuItem onClick={() => onRefreshWatchSubscription(provider)}>
                     <Repeat className="h-4 w-4 mr-2" />
                     Refresh Pub/Sub & Watch
+                  </DropdownMenuItem>
+                )}
+                {provider.providerType === 'microsoft' && (
+                  <DropdownMenuItem onClick={() => onRetryRenewal(provider)}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry Renewal
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -190,6 +218,15 @@ export function EmailProviderCard({
               {new Date(provider.createdAt).toLocaleDateString()}
             </div>
           </div>
+
+          {expirationStatus && (
+            <div>
+              <div className="text-muted-foreground mb-1">Subscription</div>
+              <div className={`font-medium ${expirationStatus.color}`}>
+                {expirationStatus.label}
+              </div>
+            </div>
+          )}
         </div>
 
         {provider.status === 'error' && provider.errorMessage && (

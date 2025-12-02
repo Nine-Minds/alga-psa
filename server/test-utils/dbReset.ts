@@ -1,6 +1,12 @@
 import knex, { Knex } from 'knex';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { verifyTestDatabase } from './dbConfig';
 import { getSecret } from '../src/lib/utils/getSecret';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const serverRoot = path.resolve(__dirname, '..');
 /**
  * Options for database reset
  */
@@ -109,7 +115,13 @@ export async function resetDatabase(
     const refreshedDb = knex({
       ...clientConfig,
       asyncStackTraces: true,
-      connection: connectionConfig
+      connection: connectionConfig,
+      migrations: {
+        directory: path.join(serverRoot, 'migrations'),
+      },
+      seeds: {
+        directory: path.join(serverRoot, 'seeds', 'dev'),
+      },
     });
 
     try {

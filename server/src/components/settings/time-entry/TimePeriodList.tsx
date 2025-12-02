@@ -15,6 +15,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const TimePeriodList: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -131,7 +132,15 @@ const TimePeriodList: React.FC = () => {
   ];
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading time periods..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   return (

@@ -1,5 +1,5 @@
 import { EmailQueueService } from './queue/EmailQueueService';
-import { EmailProviderConfig } from '../../interfaces/email.interfaces';
+import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 /**
  * Central service for managing email webhook processing

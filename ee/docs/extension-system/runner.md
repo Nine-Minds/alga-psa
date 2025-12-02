@@ -4,7 +4,7 @@ This document explains the Extension Runner’s role in the Enterprise Extension
 
 References:
 - Runner project (Rust): [ee/runner/Cargo.toml](ee/runner/Cargo.toml)
-- Iframe bootstrap and URL builder in host UI: [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45), [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Iframe bootstrap and URL builder in host UI: [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45), [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
 - Registry v2 service (types and scaffold): [ExtensionRegistryServiceV2](../../server/src/lib/extensions/registry-v2.ts:48)
 - Gateway handler (current implementation): [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
@@ -90,7 +90,7 @@ Earlier versions included an `endpoint` field pointing at `dist/handlers/...`. C
   - Assets validated (existence and content hash) before serving.
   - MIME type is derived safely (e.g., via `mime_guess`); only static file types served.
 - Host bootstrap:
-  - The host uses [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38) to construct the iframe URL for the Runner’s public base and [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45) to perform the secure initialization (sandbox, origin checks, postMessage protocol).
+  - The host uses [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) to construct the iframe URL for the Runner’s public base and [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45) to perform the secure initialization (sandbox, origin checks, postMessage protocol).
 
 ## Execution model
 
@@ -116,7 +116,7 @@ Earlier versions included an `endpoint` field pointing at `dist/handlers/...`. C
   - Verification occurs on publish/install and before load/serve.
   - Trust roots provisioned via Runner/Registry environment (e.g., PEM chain).
 - Origin and iframe safety:
-  - The host enforces sandbox defaults (`allow-scripts`, no implicit `allow-same-origin`) and validates target origins in the bootstrap flow (see [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45)).
+  - The host enforces sandbox defaults (`allow-scripts`, no implicit `allow-same-origin`) and validates target origins in the bootstrap flow (see [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)).
 - Header policy:
   - Gateway strips end-user `authorization` and injects service-level headers (`x-request-id`, tenant/extension IDs).
   - Runner enforces response header allowlist (`content-type`, safe `cache-control`, custom `x-ext-*`).
