@@ -5,24 +5,19 @@
  * in the Enterprise Edition of Alga PSA.
  */
 
-export interface RmmData {
-  deviceId?: string;
-  status?: string;
-  lastSeen?: string;
-  // Add other fields as needed
-}
+import type { RmmCachedData } from '@/interfaces/asset.interfaces';
 
 export interface RmmRebootResult {
   success: boolean;
   message: string;
 }
 
-export async function getAssetRmmData(_assetId: string): Promise<RmmData | null> {
+export async function getAssetRmmData(_assetId: string): Promise<RmmCachedData | null> {
   // RMM integration is an Enterprise Edition feature
   return null;
 }
 
-export async function refreshAssetRmmData(_assetId: string): Promise<RmmData | null> {
+export async function refreshAssetRmmData(_assetId: string): Promise<RmmCachedData | null> {
   // RMM integration is an Enterprise Edition feature
   return null;
 }
