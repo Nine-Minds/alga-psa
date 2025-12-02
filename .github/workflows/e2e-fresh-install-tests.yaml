@@ -167,23 +167,39 @@ jobs:
         run: |
           echo "Freeing up disk space before build..."
           df -h
-          docker system prune -a -f --volumes
+          # Only remove unused system files, NOT Docker cache
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           df -h
         shell: bash
 
-      - name: Build server image with no cache
+      - name: Set up Docker Buildx
+        if: steps.install_docker_compose.outcome == 'success'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        if: steps.install_docker_compose.outcome == 'success'
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          # Cache key based on dependency files - only changes when deps change
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile.build', 'server/package.json', 'server/package-lock.json', 'shared/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build server image with caching
         if: steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Building server image with --no-cache to ensure fresh build"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache server setup
+          echo "Building server image with Docker layer caching"
+          export DOCKER_BUILDKIT=1
+          export COMPOSE_DOCKER_CLI_BUILD=1
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build server setup
         shell: bash
 
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting foundational services: postgres and redis"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d postgres redis
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d postgres redis
         shell: bash
 
       - name: Wait for postgres to be ready
@@ -212,7 +228,7 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting pgbouncer service"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d pgbouncer
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d pgbouncer
         shell: bash
 
       - name: Wait for pgbouncer to be ready
@@ -254,7 +270,7 @@ jobs:
             -f docker-compose.ce.yaml \
             -f docker-compose.prod.yaml \
             -f docker-compose.setup-ubuntu.override.yaml \
-            up --build -d setup
+            up -d setup
         shell: bash
 
       - name: Wait for Setup service to complete (Ubuntu build override)
@@ -350,7 +366,7 @@ jobs:
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Setup completed successfully. Starting remaining services..."
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d --scale setup=0
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d --scale setup=0
         shell: bash
 
       - name: Collect initial container logs
