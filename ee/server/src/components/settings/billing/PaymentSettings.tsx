@@ -7,13 +7,14 @@
  * Includes connection management, settings configuration, and webhook URL display.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Switch } from 'server/src/components/ui/Switch';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import {
   AlertCircle,
   CheckCircle,
@@ -34,6 +35,112 @@ import {
 } from '@ee/lib/actions/payment-actions';
 import type { PaymentSettings as PaymentSettingsType } from 'server/src/interfaces/payment.interfaces';
 
+// Payment Link Expiration Selector Component
+interface PaymentLinkExpirationSelectorProps {
+  value: number; // hours
+  onChange: (hours: number) => void;
+  disabled?: boolean;
+}
+
+const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps> = ({
+  value,
+  onChange,
+  disabled = false,
+}) => {
+  // Predefined expiration options in hours
+  const expirationOptions = useMemo(() => [
+    { hours: 24, label: '1 day' },
+    { hours: 48, label: '2 days' },
+    { hours: 72, label: '3 days' },
+    { hours: 168, label: '7 days' },
+    { hours: 336, label: '14 days' },
+    { hours: 720, label: '30 days' },
+  ], []);
+
+  // Check if current value matches a predefined option
+  const currentOption = expirationOptions.find(opt => opt.hours === value);
+  const isCustom = !currentOption;
+
+  // Format hours to a readable string
+  const formatHours = (hours: number): string => {
+    if (hours < 24) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    const days = hours / 24;
+    if (days === Math.floor(days)) {
+      return `${days} day${days !== 1 ? 's' : ''}`;
+    }
+    return `${days.toFixed(1)} days`;
+  };
+
+  // Create select options
+  const selectOptions = useMemo(() => [
+    ...expirationOptions.map(opt => ({
+      value: opt.hours.toString(),
+      label: opt.label,
+    })),
+    { value: 'custom', label: 'Custom...' },
+  ], [expirationOptions]);
+
+  const [showCustomInput, setShowCustomInput] = useState(isCustom);
+  const [customHours, setCustomHours] = useState(isCustom ? value : 168);
+
+  const handleSelectChange = (selectedValue: string) => {
+    if (selectedValue === 'custom') {
+      setShowCustomInput(true);
+      setCustomHours(value);
+    } else {
+      setShowCustomInput(false);
+      const hours = parseInt(selectedValue, 10);
+      onChange(hours);
+    }
+  };
+
+  const handleCustomHoursChange = (hours: number) => {
+    setCustomHours(hours);
+    onChange(hours);
+  };
+
+  return (
+    <div className="space-y-3">
+      <CustomSelect
+        options={selectOptions}
+        value={isCustom ? 'custom' : value.toString()}
+        onValueChange={handleSelectChange}
+        placeholder="Select expiration time"
+        disabled={disabled}
+        className="w-full max-w-xs"
+      />
+      
+      {showCustomInput && (
+        <div className="flex items-center gap-2 pl-2">
+          <Input
+            type="number"
+            min={1}
+            max={720}
+            value={customHours}
+            onChange={(e) => {
+              const hours = parseInt(e.target.value, 10) || 168;
+              handleCustomHoursChange(hours);
+            }}
+            className="w-24"
+            disabled={disabled}
+          />
+          <span className="text-sm text-gray-500">
+            hours ({formatHours(customHours)})
+          </span>
+        </div>
+      )}
+
+      {!showCustomInput && currentOption && (
+        <p className="text-sm text-gray-500 pl-2">
+          Payment links will expire after {formatHours(value)}
+        </p>
+      )}
+    </div>
+  );
+};
+
 interface PaymentConfigDisplay {
   provider_type: string;
   is_enabled: boolean;
@@ -52,6 +159,10 @@ export const PaymentSettings: React.FC = () => {
   const [testing, setTesting] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState<string>('');
+  
+  // Local state for payment settings (to track changes)
+  const [localSettings, setLocalSettings] = useState<PaymentSettingsType | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Form state for connecting Stripe
   const [showConnectForm, setShowConnectForm] = useState(false);
@@ -66,6 +177,11 @@ export const PaymentSettings: React.FC = () => {
       const result = await getPaymentConfigAction();
       if (result.success) {
         setConfig(result.data || null);
+        // Initialize local settings with loaded config
+        if (result.data?.settings) {
+          setLocalSettings(result.data.settings);
+          setHasChanges(false);
+        }
       } else {
         toast.error(result.error || 'Failed to load payment configuration');
       }
@@ -166,19 +282,36 @@ export const PaymentSettings: React.FC = () => {
     }
   };
 
-  // Update settings
-  const handleUpdateSettings = async (settings: Partial<PaymentSettingsType>) => {
+  // Update local settings (for tracking changes)
+  const handleLocalSettingsChange = (updates: Partial<PaymentSettingsType>) => {
+    if (!localSettings) return;
+    const newSettings = { ...localSettings, ...updates };
+    setLocalSettings(newSettings);
+    
+    // Check if settings have changed from original config
+    if (config?.settings) {
+      const hasChanged = JSON.stringify(newSettings) !== JSON.stringify(config.settings);
+      setHasChanges(hasChanged);
+    }
+  };
+
+  // Save settings
+  const handleSaveSettings = async () => {
+    if (!localSettings || !hasChanges) return;
+    
     setSavingSettings(true);
     try {
-      const result = await updatePaymentSettingsAction(settings);
+      const result = await updatePaymentSettingsAction(localSettings);
       if (result.success && result.data) {
         setConfig((prev) => prev ? { ...prev, settings: result.data! } : null);
-        toast.success('Settings updated');
+        setLocalSettings(result.data);
+        setHasChanges(false);
+        toast.success('Settings saved successfully');
       } else {
-        toast.error(result.error || 'Failed to update settings');
+        toast.error(result.error || 'Failed to save settings');
       }
     } catch (error) {
-      toast.error('Failed to update settings');
+      toast.error('Failed to save settings');
     } finally {
       setSavingSettings(false);
     }
@@ -233,10 +366,11 @@ export const PaymentSettings: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     onClick={handleTestConnection}
                     disabled={testing}
+                    id="test-stripe-connection"
                   >
                     {testing ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
@@ -245,10 +379,10 @@ export const PaymentSettings: React.FC = () => {
                     )}
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={handleDisconnect}
-                    className="text-red-600 hover:text-red-700"
+                    id="disconnect-stripe"
                   >
                     <Unplug className="h-4 w-4 mr-1" />
                     Disconnect
@@ -406,9 +540,9 @@ export const PaymentSettings: React.FC = () => {
                 </p>
               </div>
               <Switch
-                checked={config.settings.paymentLinksInEmails}
+                checked={localSettings?.paymentLinksInEmails ?? false}
                 onCheckedChange={(checked) =>
-                  handleUpdateSettings({ paymentLinksInEmails: checked })
+                  handleLocalSettingsChange({ paymentLinksInEmails: checked })
                 }
                 disabled={savingSettings}
               />
@@ -423,9 +557,9 @@ export const PaymentSettings: React.FC = () => {
                 </p>
               </div>
               <Switch
-                checked={config.settings.sendPaymentConfirmations}
+                checked={localSettings?.sendPaymentConfirmations ?? false}
                 onCheckedChange={(checked) =>
-                  handleUpdateSettings({ sendPaymentConfirmations: checked })
+                  handleLocalSettingsChange({ sendPaymentConfirmations: checked })
                 }
                 disabled={savingSettings}
               />
@@ -435,26 +569,35 @@ export const PaymentSettings: React.FC = () => {
             <div className="space-y-2">
               <Label>Payment Link Expiration</Label>
               <p className="text-sm text-gray-500">
-                How long payment links remain valid (in hours)
+                How long payment links remain valid before expiring
               </p>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  max={720}
-                  value={config.settings.paymentLinkExpirationHours}
-                  onChange={(e) =>
-                    handleUpdateSettings({
-                      paymentLinkExpirationHours: parseInt(e.target.value, 10) || 168,
-                    })
-                  }
-                  className="w-24"
-                  disabled={savingSettings}
-                />
-                <span className="text-sm text-gray-500">
-                  hours ({Math.round(config.settings.paymentLinkExpirationHours / 24)} days)
-                </span>
-              </div>
+              <PaymentLinkExpirationSelector
+                value={localSettings?.paymentLinkExpirationHours ?? 168}
+                onChange={(hours) =>
+                  handleLocalSettingsChange({
+                    paymentLinkExpirationHours: hours,
+                  })
+                }
+                disabled={savingSettings}
+              />
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t">
+              <Button
+                id="save-payment-settings"
+                onClick={handleSaveSettings}
+                disabled={!hasChanges || savingSettings}
+              >
+                {savingSettings ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Settings'
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -18,13 +18,14 @@ import {
   Mail,
   Calendar,
   ChevronRight,
+  CreditCard,
 } from 'lucide-react';
 import QboIntegrationSettings from './QboIntegrationSettings';
 import XeroIntegrationSettings from './XeroIntegrationSettings';
 import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 import dynamic from 'next/dynamic';
-import LoadingIndicator from '../../ui/LoadingIndicator';
+import Spinner from '../../ui/Spinner';
 
 // Dynamic import for NinjaOne (EE feature)
 const NinjaOneIntegrationSettings = dynamic(
@@ -33,12 +34,27 @@ const NinjaOneIntegrationSettings = dynamic(
     loading: () => (
       <Card>
         <CardContent className="py-8">
-          <div className="flex items-center justify-center">
-            <LoadingIndicator 
-              layout="stacked" 
-              text="Loading NinjaOne integration settings..."
-              spinnerProps={{ size: 'md' }}
-            />
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading NinjaOne integration settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    ssr: false,
+  }
+);
+
+// Dynamic import for PaymentSettings (EE feature)
+const PaymentSettings = dynamic(
+  () => import('@ee/components/settings/billing/PaymentSettings'),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading payment settings...</span>
           </div>
         </CardContent>
       </Card>
@@ -71,14 +87,14 @@ const IntegrationsSettingsPage: React.FC = () => {
   
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam && ['accounting', 'rmm', 'communication', 'calendar'].includes(categoryParam)
+    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'payments'].includes(categoryParam)
       ? categoryParam
       : 'accounting'
   );
   
   // Update selected category when URL param changes
   useEffect(() => {
-    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar'].includes(categoryParam)) {
+    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'payments'].includes(categoryParam)) {
       setSelectedCategory(categoryParam);
     }
   }, [categoryParam]);
@@ -164,6 +180,21 @@ const IntegrationsSettingsPage: React.FC = () => {
         },
       ],
     },
+    {
+      id: 'payments',
+      label: 'Payments',
+      description: 'Accept online payments for invoices',
+      icon: CreditCard,
+      integrations: [
+        ...(isEEAvailable ? [{
+          id: 'stripe',
+          name: 'Stripe',
+          description: 'Accept credit card payments for invoices via Stripe',
+          component: PaymentSettings,
+          isEE: true,
+        }] : []),
+      ],
+    },
   ], [isEEAvailable]);
 
   // Filter out empty categories
@@ -175,6 +206,7 @@ const IntegrationsSettingsPage: React.FC = () => {
   // Build tab content
   const tabContent: TabContent[] = visibleCategories.map(category => ({
     label: category.label,
+    icon: <category.icon className="w-4 h-4" />,
     content: (
       <div className="space-y-6">
         {/* Category header */}

@@ -1,0 +1,22 @@
+{
+  "name": "service-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build:js": "tsup src/index.ts --format esm --out-dir dist/js --clean --external alga:extension/secrets --external alga:extension/http --external alga:extension/logging",
+    "build:component": "jco componentize dist/js/index.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
+    "build": "npm run clean && npm run build:js && npm run build:component",
+    "postbuild": "node ./scripts/postbuild.mjs"
+  },
+  "dependencies": {
+    "@alga/extension-runtime": "file:../../../sdk/extension-runtime"
+  },
+  "devDependencies": {
+    "@bytecodealliance/componentize-js": "^0.19.3",
+    "rimraf": "^5.0.0",
+    "tsup": "^7.2.0",
+    "typescript": "^5.4.0"
+  }
+}
