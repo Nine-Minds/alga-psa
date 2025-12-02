@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import { IStatus } from 'server/src/interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -17,7 +17,7 @@ import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelec
 import { TagManager } from 'server/src/components/tags';
 import { updateProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { toast } from 'react-hot-toast';
@@ -57,7 +57,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [contacts, setContacts] = useState<{ value: string; label: string }[]>([]);
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -70,7 +70,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     const fetchData = async () => {
       try {
         const [allUsers, projectStatuses, projectTagsData] = await Promise.all([
-          getAllUsers(),
+          getAllUsersBasic(),
           getProjectStatuses(),
           initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([])
         ]);

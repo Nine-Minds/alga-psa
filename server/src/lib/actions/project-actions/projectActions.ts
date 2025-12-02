@@ -830,10 +830,12 @@ export async function getProjectMetadata(projectId: string): Promise<{
         // Fetch contact details if needed
         let contact: { full_name: string } | undefined;
         if (project.contact_name_id) {
-            const contactData = await knex('contacts')
-                .where({ contact_name_id: project.contact_name_id })
-                .select('full_name')
-                .first();
+            const contactData = await withTransaction(knex, async (trx: Knex.Transaction) => {
+                return await trx('contacts')
+                    .where({ contact_name_id: project.contact_name_id })
+                    .select('full_name')
+                    .first();
+            });
             contact = contactData;
         }
         

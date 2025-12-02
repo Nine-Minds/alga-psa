@@ -1,6 +1,6 @@
 import React from 'react';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
-import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import TimeSlot from './TimeSlot';
 import ScheduleEvent from './ScheduleEvent';
 
