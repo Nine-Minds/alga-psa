@@ -949,10 +949,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               totalItems={totalCount}
               onItemsPerPageChange={onPageSizeChange}
               rowClassName={(record: ITicketListItem) =>
-                record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                `cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
                   ? '!bg-blue-50'
-                  : ''
+                  : ''}`
               }
+              onRowClick={(record: ITicketListItem) => {
+                if (record.ticket_id) {
+                  handleTicketClick(record.ticket_id);
+                }
+              }}
               onVisibleRowsChange={handleVisibleRowsChange}
               manualSorting={true}
               sortBy={sortBy}
