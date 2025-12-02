@@ -174,25 +174,48 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.install_docker_compose.outcome == 'success'
+        id: buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Cache Docker layers
-        if: steps.install_docker_compose.outcome == 'success'
-        uses: actions/cache@v4
         with:
-          path: /tmp/.buildx-cache
-          # Cache key based on dependency files - only changes when deps change
-          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile.build', 'server/package.json', 'server/package-lock.json', 'shared/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:latest
 
-      - name: Build server image with caching
+      - name: Build server image with GHA cache
+        if: steps.install_docker_compose.outcome == 'success'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.build
+          push: false
+          load: true
+          # Tag for both compose v1 (underscore) and v2 (hyphen) naming
+          tags: |
+            alga-e2e-test-server:latest
+            alga-e2e-test_server:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Debug build info
         if: steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Building server image with Docker layer caching"
+          echo "::group::Debug Docker Images"
+          echo "Built images:"
+          docker images | grep -E "alga|server" || echo "No matching images"
+          echo "::endgroup::"
+        shell: bash
+
+      - name: Build setup service
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          # Setup uses a different Dockerfile, build separately
           export DOCKER_BUILDKIT=1
-          export COMPOSE_DOCKER_CLI_BUILD=1
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build server setup
+          docker-compose -p alga-e2e-test \
+            -f docker-compose.base.yaml \
+            -f docker-compose.ce.yaml \
+            -f docker-compose.prod.yaml \
+            -f docker-compose.setup-ubuntu.override.yaml \
+            build setup
         shell: bash
 
       - name: Start foundational services (postgres and redis)
