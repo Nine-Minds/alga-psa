@@ -1,20 +1,23 @@
 'use server';
 
 import { createTenantKnex } from '../db';
-import { TaxSource, ExternalTaxAdapter, ITenantTaxSettings } from '../../interfaces/tax.interfaces';
+import { TaxSource } from '../../interfaces/tax.interfaces';
 
 /**
- * Client-specific tax source resolution result
+ * Client-specific tax source resolution result.
+ * Note: The accounting adapter is determined automatically based on which system
+ * the invoice is exported to (from tenant_external_entity_mappings), not configured here.
  */
 export interface ClientTaxSourceInfo {
   taxSource: TaxSource;
-  externalAdapter: ExternalTaxAdapter;
   isOverride: boolean;
 }
 
 /**
  * Get the effective tax source for a client.
  * Checks client override first, then falls back to tenant settings.
+ * Note: The adapter is NOT returned here - it's determined at export time
+ * based on which accounting system the invoice is exported to.
  */
 export async function getEffectiveTaxSourceForClient(
   clientId: string
@@ -24,7 +27,6 @@ export async function getEffectiveTaxSourceForClient(
   if (!tenant) {
     return {
       taxSource: 'internal',
-      externalAdapter: null,
       isOverride: false
     };
   }
@@ -32,13 +34,12 @@ export async function getEffectiveTaxSourceForClient(
   // First check if the client has an override
   const clientSettings = await knex('client_tax_settings')
     .where({ client_id: clientId, tenant })
-    .select('tax_source_override', 'external_tax_adapter_override')
+    .select('tax_source_override')
     .first();
 
   if (clientSettings?.tax_source_override) {
     return {
       taxSource: clientSettings.tax_source_override as TaxSource,
-      externalAdapter: clientSettings.external_tax_adapter_override as ExternalTaxAdapter,
       isOverride: true
     };
   }
@@ -46,12 +47,11 @@ export async function getEffectiveTaxSourceForClient(
   // Fall back to tenant settings
   const tenantSettings = await knex('tenant_settings')
     .where({ tenant })
-    .select('default_tax_source', 'allow_external_tax_override', 'external_tax_adapter')
+    .select('default_tax_source', 'allow_external_tax_override')
     .first();
 
   return {
     taxSource: (tenantSettings?.default_tax_source as TaxSource) || 'internal',
-    externalAdapter: (tenantSettings?.external_tax_adapter as ExternalTaxAdapter) || null,
     isOverride: false
   };
 }

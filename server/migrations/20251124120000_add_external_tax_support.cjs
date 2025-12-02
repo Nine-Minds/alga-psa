@@ -56,45 +56,39 @@ exports.up = async function(knex) {
   }
 
   // B.1.3 Add tax delegation settings to tenant_settings table
+  // Note: external_tax_adapter is NOT stored here - the adapter is determined automatically
+  // based on which accounting system the invoice is exported to (from tenant_external_entity_mappings)
   console.log('  Adding tax delegation settings to tenant_settings...');
   const hasDefaultTaxSource = await knex.schema.hasColumn('tenant_settings', 'default_tax_source');
   if (!hasDefaultTaxSource) {
     await knex.schema.alterTable('tenant_settings', (table) => {
       table.string('default_tax_source', 20).defaultTo('internal');
       table.boolean('allow_external_tax_override').defaultTo(false);
-      table.string('external_tax_adapter', 50).nullable();
     });
 
     await knex.raw(`
       COMMENT ON COLUMN tenant_settings.default_tax_source IS
-      'Default tax calculation source for new invoices'
+      'Default tax calculation source for new invoices: internal (Alga calculates) or external (accounting package calculates after export)'
     `);
     await knex.raw(`
       COMMENT ON COLUMN tenant_settings.allow_external_tax_override IS
       'Whether clients can override the default tax source'
     `);
-    await knex.raw(`
-      COMMENT ON COLUMN tenant_settings.external_tax_adapter IS
-      'Default external accounting adapter for tax calculation (xero, quickbooks, etc.)'
-    `);
   }
 
   // B.1.4 Add client-level tax source override to client_tax_settings
+  // Note: No adapter override needed - the adapter is determined by which accounting system
+  // the invoice is exported to, not by a pre-configured setting
   console.log('  Adding client-level tax source override...');
   const hasTaxSourceOverride = await knex.schema.hasColumn('client_tax_settings', 'tax_source_override');
   if (!hasTaxSourceOverride) {
     await knex.schema.alterTable('client_tax_settings', (table) => {
       table.string('tax_source_override', 20).nullable();
-      table.string('external_tax_adapter_override', 50).nullable();
     });
 
     await knex.raw(`
       COMMENT ON COLUMN client_tax_settings.tax_source_override IS
-      'Per-client override of tenant tax source setting'
-    `);
-    await knex.raw(`
-      COMMENT ON COLUMN client_tax_settings.external_tax_adapter_override IS
-      'Per-client override of external tax adapter'
+      'Per-client override of tenant tax source setting (internal or external)'
     `);
   }
 
@@ -109,7 +103,10 @@ exports.up = async function(knex) {
       table.string('adapter_type', 50).notNullable();
       table.string('external_invoice_ref', 255).nullable();
       table.timestamp('imported_at', { useTz: true }).defaultTo(knex.fn.now());
-      table.uuid('imported_by').nullable().references('user_id').inTable('users');
+      // imported_by is nullable and references users(user_id) within the same tenant
+      // Note: No foreign key constraint since users table has composite primary key (tenant, user_id)
+      // Referential integrity is maintained at application level
+      table.uuid('imported_by').nullable();
       table.string('import_status', 20).defaultTo('success');
       table.integer('original_internal_tax').nullable();
       table.integer('imported_external_tax').nullable();
@@ -121,6 +118,17 @@ exports.up = async function(knex) {
       table.index('invoice_id', 'idx_external_tax_imports_invoice');
       table.index('tenant', 'idx_external_tax_imports_tenant');
     });
+
+    // Add composite foreign key constraint for imported_by
+    // Since users table has composite primary key (tenant, user_id), we need to reference both
+    // PostgreSQL allows NULL values in foreign key columns, so this works even when imported_by is NULL
+    await knex.raw(`
+      ALTER TABLE external_tax_imports
+      ADD CONSTRAINT external_tax_imports_imported_by_foreign
+      FOREIGN KEY (tenant, imported_by)
+      REFERENCES users(tenant, user_id)
+      ON DELETE SET NULL
+    `);
 
     // Add RLS policy
     await knex.raw(`
@@ -159,12 +167,11 @@ exports.down = async function(knex) {
   }
 
   // Remove client_tax_settings columns
-  console.log('  Removing client-level tax source override columns...');
+  console.log('  Removing client-level tax source override column...');
   const hasTaxSourceOverride = await knex.schema.hasColumn('client_tax_settings', 'tax_source_override');
   if (hasTaxSourceOverride) {
     await knex.schema.alterTable('client_tax_settings', (table) => {
       table.dropColumn('tax_source_override');
-      table.dropColumn('external_tax_adapter_override');
     });
   }
 
@@ -175,7 +182,6 @@ exports.down = async function(knex) {
     await knex.schema.alterTable('tenant_settings', (table) => {
       table.dropColumn('default_tax_source');
       table.dropColumn('allow_external_tax_override');
-      table.dropColumn('external_tax_adapter');
     });
   }
 

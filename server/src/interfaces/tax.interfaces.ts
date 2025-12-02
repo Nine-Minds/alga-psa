@@ -90,8 +90,9 @@ export interface IClientTaxRateAssociation extends TenantEntity {
 }
 
 // Tax source types for external tax delegation
+// Note: The adapter is determined automatically based on which accounting system
+// the invoice is exported to (from tenant_external_entity_mappings), not configured here
 export type TaxSource = 'internal' | 'external' | 'pending_external';
-export type ExternalTaxAdapter = 'xero' | 'quickbooks' | 'sage' | null;
 
 // Tenant-level tax delegation settings
 export interface ITenantTaxSettings {
@@ -99,16 +100,12 @@ export interface ITenantTaxSettings {
   default_tax_source: TaxSource;
   /** Whether clients can override the default tax source */
   allow_external_tax_override: boolean;
-  /** Default external accounting adapter for tax calculation */
-  external_tax_adapter?: ExternalTaxAdapter;
 }
 
 // Client-level tax source override (extends IClientTaxSettings)
 export interface IClientTaxSourceSettings {
   /** Per-client override of tenant tax source setting */
   tax_source_override?: TaxSource;
-  /** Per-client override of external tax adapter */
-  external_tax_adapter_override?: ExternalTaxAdapter;
 }
 
 // External tax import tracking

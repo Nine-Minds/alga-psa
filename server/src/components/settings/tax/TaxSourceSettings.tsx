@@ -6,26 +6,18 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from 'serve
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
-import { Info, AlertTriangle, Calculator, Cloud } from 'lucide-react';
+import { Info, Calculator, Cloud } from 'lucide-react';
 
-import { TaxSource, ExternalTaxAdapter } from 'server/src/interfaces/tax.interfaces';
+import { TaxSource } from 'server/src/interfaces/tax.interfaces';
 import {
   getTenantTaxSettings,
   updateTenantTaxSettings,
 } from 'server/src/lib/actions/taxSettingsActions';
 
-const ADAPTER_OPTIONS = [
-  { value: 'quickbooks', label: 'QuickBooks Online' },
-  { value: 'xero', label: 'Xero' },
-  { value: 'sage', label: 'Sage' },
-];
-
 interface LocalTaxSettings {
   default_tax_source: TaxSource;
   allow_external_tax_override: boolean;
-  external_tax_adapter: ExternalTaxAdapter;
 }
 
 interface TaxSourceSettingsProps {
@@ -35,8 +27,7 @@ interface TaxSourceSettingsProps {
 export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps) {
   const [settings, setSettings] = useState<LocalTaxSettings>({
     default_tax_source: 'internal',
-    allow_external_tax_override: false,
-    external_tax_adapter: null,
+    allow_external_tax_override: true, // Always enabled
   });
   const [originalSettings, setOriginalSettings] = useState<LocalTaxSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,8 +40,7 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
       if (fetchedSettings) {
         const mappedSettings: LocalTaxSettings = {
           default_tax_source: fetchedSettings.default_tax_source,
-          allow_external_tax_override: fetchedSettings.allow_external_tax_override,
-          external_tax_adapter: (fetchedSettings.external_tax_adapter as ExternalTaxAdapter) || null,
+          allow_external_tax_override: true, // Always enabled
         };
         setSettings(mappedSettings);
         setOriginalSettings(mappedSettings);
@@ -70,8 +60,12 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateTenantTaxSettings(settings);
-      setOriginalSettings(settings);
+      // Always set allow_external_tax_override to true
+      await updateTenantTaxSettings({
+        ...settings,
+        allow_external_tax_override: true,
+      });
+      setOriginalSettings({ ...settings, allow_external_tax_override: true });
       toast.success('Tax source settings saved successfully.');
     } catch (error: any) {
       console.error('Failed to save tax source settings:', error);
@@ -165,81 +159,39 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
         </div>
 
         {settings.default_tax_source === 'external' && (
-          <div className="space-y-4 pl-6 border-l-2 border-blue-200">
-            <div className="space-y-2">
-              <Label htmlFor="external-adapter-select">Accounting System</Label>
-              <CustomSelect
-                options={ADAPTER_OPTIONS}
-                value={settings.external_tax_adapter || ''}
-                onValueChange={(value) => setSettings({ ...settings, external_tax_adapter: value as ExternalTaxAdapter })}
-                placeholder="Select accounting system..."
-                disabled={isReadOnly}
-              />
-            </div>
-
-            {settings.external_tax_adapter && (
-              <Alert variant="info" showIcon>
-                <AlertDescription>
-                  <p className="font-medium">External Tax Calculation Workflow</p>
-                  <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
-                    <li>Invoice is exported to {ADAPTER_OPTIONS.find(o => o.value === settings.external_tax_adapter)?.label} without tax</li>
-                    <li>Tax is calculated by {ADAPTER_OPTIONS.find(o => o.value === settings.external_tax_adapter)?.label}</li>
-                    <li>Tax amounts are imported back to Alga PSA</li>
-                    <li>Invoice totals are updated with imported tax</li>
-                  </ol>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {!settings.external_tax_adapter && (
-              <Alert variant="destructive" showIcon={false}>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Please select an accounting system to use for external tax calculation.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+          <Alert variant="info" showIcon>
+            <AlertDescription>
+              <p className="font-medium">External Tax Calculation Workflow</p>
+              <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
+                <li>Invoice is created without tax amounts</li>
+                <li>Invoice is exported to your connected accounting system (QuickBooks, Xero, etc.)</li>
+                <li>Tax is calculated by the accounting system based on its tax rules</li>
+                <li>Tax amounts are imported back to Alga PSA</li>
+                <li>Invoice totals are updated with the imported tax</li>
+              </ol>
+              <p className="mt-3 text-sm text-muted-foreground">
+                The accounting system used is determined automatically based on which system you export the invoice to.
+              </p>
+            </AlertDescription>
+          </Alert>
         )}
 
-        {settings.default_tax_source === 'external' && (
-          <div className="pt-4 border-t">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="allow-override"
-                checked={settings.allow_external_tax_override}
-                onChange={(e) => setSettings({ ...settings, allow_external_tax_override: e.target.checked })}
-                disabled={isReadOnly}
-                className="rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <Label htmlFor="allow-override" className="cursor-pointer">
-                Allow clients to override tax source
-              </Label>
-              <Tooltip content="When enabled, individual clients can be configured to use a different tax calculation method">
-                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-              </Tooltip>
-            </div>
-            <p className="text-sm text-muted-foreground ml-6 mt-1">
-              Enable this to allow per-client tax source configuration in client billing settings.
-            </p>
-          </div>
-        )}
-
-        {hasChanges && !isReadOnly && (
+        {!isReadOnly && (
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              id="cancel-tax-source-settings-button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
+            {hasChanges && (
+              <Button
+                id="cancel-tax-source-settings-button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+            )}
             <Button
               id="save-tax-source-settings-button"
               onClick={handleSave}
-              disabled={isSaving || (settings.default_tax_source === 'external' && !settings.external_tax_adapter)}
+              disabled={isSaving || !hasChanges}
             >
               {isSaving ? 'Saving...' : 'Save Settings'}
             </Button>

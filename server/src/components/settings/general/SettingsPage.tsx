@@ -3,7 +3,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Users, UsersRound, Ticket, FolderKanban, MessageSquare, Bell, Clock, CreditCard, Download, Receipt, Mail, Plug, Puzzle } from 'lucide-react';
+import { Settings, Globe, Users, UsersRound, Ticket, FolderKanban, MessageSquare, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
@@ -15,8 +15,6 @@ import UserManagement from 'server/src/components/settings/general/UserManagemen
 import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
-import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
@@ -33,7 +31,6 @@ import TimeEntrySettings from 'server/src/components/settings/time-entry/TimeEnt
 import BillingSettings from 'server/src/components/settings/billing/BillingSettings'; // Import the new component
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
-import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import IntegrationsSettingsPage from '../integrations/IntegrationsSettingsPage';
 import { useSearchParams } from 'next/navigation';
@@ -51,8 +48,6 @@ import ProjectSettings from './ProjectSettings';
 const SettingsPage = (): JSX.Element =>  {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const billingFeatureFlag = useFeatureFlag('billing-enabled');
-  const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -104,7 +99,6 @@ const SettingsPage = (): JSX.Element =>  {
     'time-entry': 'Time Entry',
     billing: 'Billing',
     'import-export': 'Import/Export',
-    tax: 'Tax',
     email: 'Email',
     integrations: 'Integrations',
     ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
@@ -262,23 +256,6 @@ const SettingsPage = (): JSX.Element =>  {
       label: "Import/Export",
       icon: Download,
       content: <ImportExportSettings />,
-    },
-    {
-      label: "Tax",
-      icon: Receipt,
-      content: isBillingEnabled ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tax Settings</CardTitle>
-            <CardDescription>Manage tax regions and related settings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TaxRegionsManager />
-          </CardContent>
-        </Card>
-      ) : (
-        <FeaturePlaceholder />
-      ),
     },
     {
       label: "Email",

@@ -617,12 +617,13 @@ export async function getClientTaxExemptStatus(
 
 /**
  * Fetches tenant-level tax source settings.
+ * Note: The accounting adapter is determined automatically based on which system
+ * the invoice is exported to, not configured in settings.
  * @returns A promise that resolves to the tenant tax settings.
  */
 export async function getTenantTaxSettings(): Promise<{
   default_tax_source: 'internal' | 'external' | 'pending_external';
   allow_external_tax_override: boolean;
-  external_tax_adapter: string | null;
 } | null> {
   try {
     const { knex, tenant } = await createTenantKnex();
@@ -632,7 +633,7 @@ export async function getTenantTaxSettings(): Promise<{
 
     const settings = await knex('tenant_settings')
       .where({ tenant })
-      .select('default_tax_source', 'allow_external_tax_override', 'external_tax_adapter')
+      .select('default_tax_source', 'allow_external_tax_override')
       .first();
 
     if (!settings) {
@@ -640,14 +641,12 @@ export async function getTenantTaxSettings(): Promise<{
       return {
         default_tax_source: 'internal',
         allow_external_tax_override: false,
-        external_tax_adapter: null,
       };
     }
 
     return {
       default_tax_source: settings.default_tax_source || 'internal',
       allow_external_tax_override: settings.allow_external_tax_override ?? false,
-      external_tax_adapter: settings.external_tax_adapter || null,
     };
   } catch (error) {
     console.error('Error fetching tenant tax settings:', error);
@@ -660,13 +659,14 @@ export async function getTenantTaxSettings(): Promise<{
 
 /**
  * Updates tenant-level tax source settings.
+ * Note: The accounting adapter is determined automatically based on which system
+ * the invoice is exported to, not configured here.
  * @param settings - The settings to update.
  * @returns A promise that resolves when the settings are updated.
  */
 export async function updateTenantTaxSettings(settings: {
   default_tax_source: 'internal' | 'external' | 'pending_external';
   allow_external_tax_override: boolean;
-  external_tax_adapter?: string | null;
 }): Promise<void> {
   try {
     const currentUser = await getCurrentUser();
@@ -686,7 +686,6 @@ export async function updateTenantTaxSettings(settings: {
     const updateData = {
       default_tax_source: settings.default_tax_source,
       allow_external_tax_override: settings.allow_external_tax_override,
-      external_tax_adapter: settings.external_tax_adapter || null,
     };
 
     // Try to update existing row, or insert if not exists
