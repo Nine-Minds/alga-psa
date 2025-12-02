@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { refreshAssetRmmData } from '../../../../../../../../../ee/server/src/lib/actions/asset-actions/rmmActions';
+import { refreshAssetRmmData } from '@ee/lib/actions/asset-actions/rmmActions';
 
 export async function POST(
   request: Request,

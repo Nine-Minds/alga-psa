@@ -26,7 +26,8 @@ async function getDbConfig(): Promise<KnexType.Config> {
       max: 20,
       idleTimeoutMillis: 1000,
       reapIntervalMillis: 1000,
-      createTimeoutMillis: 30000,
+      createTimeoutMillis: 3000, // REDUCED from 30s to 3s - fail fast instead of hanging
+      acquireTimeoutMillis: 5000, // Max 5s to acquire connection from pool
       destroyTimeoutMillis: 5000
     }
   };

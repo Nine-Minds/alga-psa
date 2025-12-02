@@ -21,7 +21,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { CalendarSyncStatusDisplay } from '../calendar/CalendarSyncStatusDisplay';
 import {
@@ -47,7 +47,7 @@ interface EntryPopupProps {
   onSave: (entryData: Omit<IScheduleEntry, 'tenant'> & { updateType?: string }) => void;
   onDelete?: (entryId: string, deleteType?: IEditScope) => void;
   canAssignMultipleAgents: boolean;
-  users: IUserWithRoles[];
+  users: IUser[];
   currentUserId: string;
   loading?: boolean;
   isInDrawer?: boolean;

@@ -879,40 +879,42 @@ export async function deleteInvoiceTemplate(templateId: string): Promise<{ succe
         });
 
         if (templateWasTenantDefault) {
-            const fallbackCustom = await knex('invoice_templates')
-                .where({ tenant })
-                .select('template_id')
-                .orderBy('name')
-                .first();
-
-            if (fallbackCustom) {
-                await setDefaultTemplate({
-                    templateSource: 'custom',
-                    templateId: fallbackCustom.template_id
-                });
-            } else {
-                const fallbackStandard = await knex('standard_invoice_templates')
-                    .select('standard_invoice_template_code')
-                    .orderByRaw("CASE WHEN standard_invoice_template_code = 'standard-default' THEN 0 ELSE 1 END")
+            await withTransaction(knex, async (trx) => {
+                const fallbackCustom = await trx('invoice_templates')
+                    .where({ tenant })
+                    .select('template_id')
                     .orderBy('name')
                     .first();
 
-                if (fallbackStandard) {
+                if (fallbackCustom) {
                     await setDefaultTemplate({
-                        templateSource: 'standard',
-                        standardTemplateCode: fallbackStandard.standard_invoice_template_code
+                        templateSource: 'custom',
+                        templateId: fallbackCustom.template_id
                     });
                 } else {
-                    await knex('invoice_template_assignments')
-                        .where({ tenant, scope_type: 'tenant' })
-                        .whereNull('scope_id')
-                        .del();
+                    const fallbackStandard = await trx('standard_invoice_templates')
+                        .select('standard_invoice_template_code')
+                        .orderByRaw("CASE WHEN standard_invoice_template_code = 'standard-default' THEN 0 ELSE 1 END")
+                        .orderBy('name')
+                        .first();
 
-                    await knex('invoice_templates')
-                        .where({ tenant })
-                        .update({ is_default: false });
+                    if (fallbackStandard) {
+                        await setDefaultTemplate({
+                            templateSource: 'standard',
+                            standardTemplateCode: fallbackStandard.standard_invoice_template_code
+                        });
+                    } else {
+                        await trx('invoice_template_assignments')
+                            .where({ tenant, scope_type: 'tenant' })
+                            .whereNull('scope_id')
+                            .del();
+
+                        await trx('invoice_templates')
+                            .where({ tenant })
+                            .update({ is_default: false });
+                    }
                 }
-            }
+            });
         }
 
         console.log(`Successfully deleted template ${templateId} for tenant ${tenant}`);

@@ -26,10 +26,10 @@ import { useSession } from 'next-auth/react';
 import UserPicker from '../ui/UserPicker';
 import { ClientPicker } from '../clients/ClientPicker';
 import { ContactPicker } from '../ui/ContactPicker';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -71,7 +71,7 @@ export function QuickAddInteraction({
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -206,7 +206,7 @@ export function QuickAddInteraction({
         
         // Fetch users, clients, and contacts for edit mode
         if (isEditMode) {
-          const usersList = await getAllUsers();
+          const usersList = await getAllUsersBasic();
           setUsers(usersList);
           
           const clientsList = await getAllClients();

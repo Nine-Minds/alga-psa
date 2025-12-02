@@ -9,12 +9,12 @@
 
 import logger from '@shared/core/logger';
 import axios from 'axios';
-import { getCurrentUser } from '../../../../../../server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
-import { hasPermission } from '../../../../../../server/src/lib/auth/rbac';
-import { createTenantKnex } from '../../../../../../server/src/db';
-import { auditLog } from '../../../../../../server/src/lib/logging/auditLog';
+import { hasPermission } from '@/lib/auth/rbac';
+import { createTenantKnex } from '@/db';
+import { auditLog } from '@/lib/logging/auditLog';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
 import {
@@ -31,7 +31,7 @@ import {
   RmmSyncResult,
   RmmAlert,
 } from '../../../interfaces/rmm.interfaces';
-import { Asset } from '../../../../../../server/src/interfaces/asset.interfaces';
+import { Asset } from '@/interfaces/asset.interfaces';
 import {
   NINJAONE_REGIONS,
   NinjaOneRegion,

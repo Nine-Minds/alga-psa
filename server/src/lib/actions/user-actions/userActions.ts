@@ -230,8 +230,9 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         throw new Error('Tenant context mismatch');
       }
       
-      // Use transaction to avoid connection pool exhaustion
-      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // PERFORMANCE FIX: Fetch avatar outside transaction to avoid nested transaction deadlock
+      // getUserAvatarUrl() uses its own withTransaction(), causing connection leaks when nested
+      const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // For Citus, we need to explicitly filter by tenant in the query
         // Even though User.get includes tenant filter, be explicit for safety
         const user = await trx<IUser>('users')
@@ -239,12 +240,12 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
           .where('user_id', sessionUser.id)
           .where('tenant', sessionUser.tenant) // Explicit tenant filter for Citus
           .first();
-        
+
         if (!user) {
           logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
           return null;
         }
-        
+
         logger.debug(`Fetching roles for user ID: ${user.user_id}`);
         // Get roles with explicit tenant filter for Citus
         const roles = await trx<IRole>('roles')
@@ -256,12 +257,19 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
           .where('user_roles.tenant', sessionUser.tenant) // Explicit tenant filter for Citus
           .where('roles.tenant', sessionUser.tenant) // Explicit tenant filter for Citus
           .select('roles.*');
-        
-        const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
-        
+
         logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-        return { ...user, roles, avatarUrl };
+        return { ...user, roles };
       });
+
+      if (!userWithRoles) {
+        return null;
+      }
+
+      // Fetch avatar outside transaction to avoid nested transaction
+      const avatarUrl = await getUserAvatarUrl(userWithRoles.user_id, userWithRoles.tenant);
+
+      return { ...userWithRoles, avatarUrl };
     }
     
     // Fallback paths should fail in production for security
@@ -289,7 +297,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     if (sessionUser.user_type && session.user?.email) {
       logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}, tenant: ${tenant}`);
 
-      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Explicit query with tenant filter for Citus
         const user = await trx<IUser>('users')
           .select('*')
@@ -302,7 +310,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
           logger.debug(`User not found for email: ${session.user!.email}, type: ${sessionUser.user_type}, tenant: ${tenant}`);
           return null;
         }
-        
+
         // Get roles with explicit tenant filter
         const roles = await trx<IRole>('roles')
           .join('user_roles', function() {
@@ -313,12 +321,19 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
           .where('user_roles.tenant', tenant) // Explicit tenant filter for Citus
           .where('roles.tenant', tenant) // Explicit tenant filter for Citus
           .select('roles.*');
-        
-        const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
-        
+
         logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-        return { ...user, roles, avatarUrl };
+        return { ...user, roles };
       });
+
+      if (!userWithRoles) {
+        return null;
+      }
+
+      // Fetch avatar outside transaction to avoid nested transaction
+      const avatarUrl = await getUserAvatarUrl(userWithRoles.user_id, userWithRoles.tenant);
+
+      return { ...userWithRoles, avatarUrl };
     }
     
     // Last resort: email-only lookup (development only)
@@ -329,7 +344,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
 
     logger.warn(`DEVELOPMENT ONLY: Email-only lookup for: ${session.user.email} in tenant: ${tenant}`);
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const user = await trx<IUser>('users')
         .select('*')
         .where('email', session.user!.email!.toLowerCase())
@@ -340,7 +355,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         logger.debug(`User not found for email: ${session.user!.email} in tenant: ${tenant}`);
         return null;
       }
-      
+
       // Get roles with explicit tenant filter
       const roles = await trx<IRole>('roles')
         .join('user_roles', function() {
@@ -352,11 +367,18 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         .where('roles.tenant', tenant) // Explicit tenant filter for Citus
         .select('roles.*');
 
-      const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
-
       logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-      return { ...user, roles, avatarUrl };
+      return { ...user, roles };
     });
+
+    if (!userWithRoles) {
+      return null;
+    }
+
+    // Fetch avatar outside transaction to avoid nested transaction
+    const avatarUrl = await getUserAvatarUrl(userWithRoles.user_id, userWithRoles.tenant);
+
+    return { ...userWithRoles, avatarUrl };
   } catch (error) {
     logger.error('Failed to get current user:', error);
     // Preserve the original error and stack trace
@@ -387,6 +409,44 @@ export async function findUserById(id: string): Promise<IUserWithRoles | null> {
   }
 }
 
+/**
+ * Get all users without roles - more efficient for components that only need basic user info
+ * (e.g., UserPicker, dropdowns, assignments)
+ */
+export async function getAllUsersBasic(includeInactive: boolean = true, userType?: string): Promise<IUser[]> {
+  try {
+    const currentUser = await getCurrentUser();
+    const tenant = currentUser?.tenant;
+
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
+
+    const {knex} = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(currentUser, 'user', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read users');
+      }
+
+      const users = await User.getAll(trx, includeInactive);
+
+      // Filter by tenant and optionally by user_type
+      return users.filter(user =>
+        user.tenant === tenant &&
+        (userType ? user.user_type === userType : true)
+      );
+    });
+  } catch (error) {
+    logger.error('Failed to fetch users:', error);
+    throw new Error('Failed to fetch users');
+  }
+}
+
 export async function getAllUsers(includeInactive: boolean = true, userType?: string): Promise<IUserWithRoles[]> {
   try {
     const currentUser = await getCurrentUser();
@@ -401,23 +461,28 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
     }
 
     const {knex} = await createTenantKnex();
-    
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
 
       const users = await User.getAll(trx, includeInactive);
-      const usersWithRoles = await Promise.all(users.map(async (user: IUser): Promise<IUserWithRoles> => {
-        const roles = await User.getUserRoles(trx, user.user_id);
-        return { ...user, roles };
-      }));
 
-      // Filter by tenant and optionally by user_type
-      return usersWithRoles.filter(user =>
+      // Filter by tenant and optionally by user_type first to reduce role fetching
+      const filteredUsers = users.filter(user =>
         user.tenant === tenant &&
         (userType ? user.user_type === userType : true)
       );
+
+      // Fetch all roles in a single query (avoids N+1)
+      const userIds = filteredUsers.map(u => u.user_id);
+      const rolesByUser = await User.getUserRolesBulk(trx, userIds);
+
+      return filteredUsers.map((user): IUserWithRoles => ({
+        ...user,
+        roles: rolesByUser.get(user.user_id) || []
+      }));
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);

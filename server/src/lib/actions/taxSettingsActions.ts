@@ -81,10 +81,12 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
   try {
     const { knex, tenant } = await createTenantKnex(); // Get tenant for filtering
     // Select all fields directly from tax_rates
-    const taxRates = await knex<ITaxRate>('tax_rates')
-      .select('*') // Select all columns from tax_rates
-      .where('is_active', true) // Filter for active tax rates
-      .andWhere('tenant', tenant); // Filter tax rates by tenant
+    const taxRates = await withTransaction(knex, async (trx) => {
+      return await trx<ITaxRate>('tax_rates')
+        .select('*') // Select all columns from tax_rates
+        .where('is_active', true) // Filter for active tax rates
+        .andWhere('tenant', tenant); // Filter tax rates by tenant
+    });
 
     return taxRates;
   } catch (error) {

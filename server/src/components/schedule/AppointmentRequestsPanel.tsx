@@ -13,8 +13,8 @@ import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import toast from 'react-hot-toast';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
-import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getAllUsersBasic, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import {
   getAppointmentRequests,
   approveAppointmentRequest as approveRequest,
@@ -57,7 +57,7 @@ export default function AppointmentRequestsPanel({
   const [isTicketDrawerOpen, setIsTicketDrawerOpen] = useState(false);
 
   // Users for technician assignment
-  const [technicians, setTechnicians] = useState<IUserWithRoles[]>([]);
+  const [technicians, setTechnicians] = useState<IUser[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -89,7 +89,7 @@ export default function AppointmentRequestsPanel({
 
   const loadTechnicians = async () => {
     try {
-      const users = await getAllUsers(false, 'internal');
+      const users = await getAllUsersBasic(false, 'internal');
       setTechnicians(users);
     } catch (error) {
       console.error('Failed to load technicians:', error);
@@ -108,8 +108,7 @@ export default function AppointmentRequestsPanel({
           tenant: currentUser.tenant,
           hashed_password: '',
           created_at: currentUser.created_at || new Date(),
-          updated_at: new Date(),
-          roles: currentUser.roles || []
+          updated_at: new Date()
         }]);
       }
     }

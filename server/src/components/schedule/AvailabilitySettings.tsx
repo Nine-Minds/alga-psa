@@ -28,8 +28,8 @@ import {
   IAvailabilitySetting,
   IAvailabilityException
 } from 'server/src/lib/actions/availabilitySettingsActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
@@ -63,7 +63,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const { data: session } = useSession();
 
   // Team management state
-  const [allUsers, setAllUsers] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]);
+  const [allUsers, setAllUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
   const [managedTeams, setManagedTeams] = useState<ITeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [isManager, setIsManager] = useState(false);
@@ -79,7 +79,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [autoApprovalRespectBuffers, setAutoApprovalRespectBuffers] = useState(true);
 
   // User hours state
-  const [users, setUsers] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]);
+  const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [userHours, setUserHours] = useState<Record<number, UserHoursSetting>>({});
   const [userDefaultDuration, setUserDefaultDuration] = useState('60');
@@ -133,16 +133,16 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       }
 
       // Try to load all users (requires user:read permission)
-      let fetchedUsers: Omit<IUserWithRoles, 'tenant'>[] = [];
+      let fetchedUsers: Omit<IUser, 'tenant'>[] = [];
       try {
-        fetchedUsers = await getAllUsers(false, 'internal');
+        fetchedUsers = await getAllUsersBasic(false, 'internal');
         console.log('[AvailabilitySettings] Loaded all users:', fetchedUsers.length);
         setAllUsers(fetchedUsers);
       } catch (error) {
         console.log('[AvailabilitySettings] Cannot load all users (permission denied), loading team members only');
         // If user doesn't have permission to load all users, load team members from managed teams
         if (userManagedTeams.length > 0) {
-          const allMembers: Omit<IUserWithRoles, 'tenant'>[] = [];
+          const allMembers: Omit<IUser, 'tenant'>[] = [];
           userManagedTeams.forEach(team => {
             if (team.members) {
               allMembers.push(...team.members);
@@ -530,11 +530,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   );
 
   // Column definitions for configured users table
-  const configuredUsersColumns: ColumnDefinition<Omit<IUserWithRoles, 'tenant'>>[] = useMemo(() => [
+  const configuredUsersColumns: ColumnDefinition<Omit<IUser, 'tenant'>>[] = useMemo(() => [
     {
       title: 'User Name',
       dataIndex: 'first_name' as any,
-      render: (_, user: Omit<IUserWithRoles, 'tenant'>) => `${user.first_name} ${user.last_name}`
+      render: (_, user: Omit<IUser, 'tenant'>) => `${user.first_name} ${user.last_name}`
     },
     {
       title: 'Status',
@@ -544,7 +544,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     {
       title: 'Action',
       dataIndex: 'user_id' as any,
-      render: (_, user: Omit<IUserWithRoles, 'tenant'>) => (
+      render: (_, user: Omit<IUser, 'tenant'>) => (
         <Button
           id={`edit-user-${user.user_id}`}
           variant="ghost"

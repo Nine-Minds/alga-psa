@@ -89,6 +89,8 @@ export interface PortalSessionTokenPayload {
   clientId?: string | null;
   contactId?: string | null;
   roles?: string[] | null;
+  session_id?: string | null; // NEW: Preserve session ID across domain handoff
+  login_method?: string | null; // NEW: Preserve login method
   [key: string]: unknown;
 }
 
