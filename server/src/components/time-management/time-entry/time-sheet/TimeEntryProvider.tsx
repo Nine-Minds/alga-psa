@@ -8,27 +8,7 @@ import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServ
 import { getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
-
-interface Service {
-  id: string;
-  name: string;
-  type: string;
-  tax_rate_id: string | null;
-  tax_percentage: number | null;
-}
-
-interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
-  isNew?: boolean;
-  isDirty?: boolean;
-  tempId?: string;
-  client_id?: string; // Added for contract line selection
-  tax_rate_id?: string | null; // ID of the applied tax rate
-  tax_percentage?: number | null; // Percentage of the applied tax rate
-  // Service prefill tracking (only for new entries)
-  _isServicePrefilled?: boolean; // True if service was auto-filled from work item
-  _originalServiceId?: string | null; // Original prefilled service ID
-  _serviceOverridden?: boolean; // True if user changed the prefilled service
-}
+import { Service, ITimeEntryWithNew } from './types';
 
 interface TimeEntryState {
   entries: ITimeEntryWithNew[];
