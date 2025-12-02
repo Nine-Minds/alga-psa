@@ -6,6 +6,7 @@ export interface IClientTaxSettings extends TenantEntity {
   client_id: string;
   tax_rate_id?: string; // Made optional for backward compatibility with tests
   is_reverse_charge_applicable: boolean;
+  tax_source_override?: TaxSource | null; // Per-client override of tenant tax source setting
   tax_components?: ITaxComponent[];
   tax_rate_thresholds?: ITaxRateThreshold[];
   tax_holidays?: ITaxHoliday[];

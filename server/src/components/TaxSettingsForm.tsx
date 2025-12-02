@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings, updateClientTaxExemptStatus, getClientTaxExemptStatus } from '../lib/actions/taxSettingsActions';
-import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
+import { canClientOverrideTaxSource, getEffectiveTaxSourceForClient } from '../lib/actions/taxSourceActions';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday, TaxSource } from '../interfaces/tax.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'server/src/components/ui/Card';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ShieldOff, ShieldCheck, Info } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface TaxSettingsFormProps {
   clientId: string;
@@ -31,18 +33,39 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
   const [originalCertificate, setOriginalCertificate] = useState('');
   const [isUpdatingExemptStatus, setIsUpdatingExemptStatus] = useState(false);
 
+  // Tax source override state
+  const [canOverrideTaxSource, setCanOverrideTaxSource] = useState(false);
+  const [effectiveTaxSource, setEffectiveTaxSource] = useState<TaxSource>('internal');
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [settings, rates, taxExemptStatus] = await Promise.all([
+        const [settings, rates, taxExemptStatus, overrideAllowed, effectiveSource] = await Promise.all([
           getClientTaxSettings(clientId),
           getTaxRates(),
-          getClientTaxExemptStatus(clientId)
+          getClientTaxExemptStatus(clientId),
+          canClientOverrideTaxSource(),
+          getEffectiveTaxSourceForClient(clientId)
         ]);
 
-        setTaxSettings(settings);
-        // Store original settings for reverting on error
-        setOriginalSettings(JSON.parse(JSON.stringify(settings)));
+        // Automatically create default tax settings when none exist
+        if (!settings) {
+          try {
+            const defaultSettings = await createDefaultTaxSettings(clientId);
+            setTaxSettings(defaultSettings);
+            setOriginalSettings(JSON.parse(JSON.stringify(defaultSettings)));
+            setSuccessMessage('Default tax settings created successfully');
+          } catch (createErr) {
+            setError('Error creating default tax settings');
+            setLoading(false);
+            return;
+          }
+        } else {
+          setTaxSettings(settings);
+          // Store original settings for reverting on error
+          setOriginalSettings(JSON.parse(JSON.stringify(settings)));
+        }
+
         setTaxRates(rates);
 
         // Set tax exempt status
@@ -53,13 +76,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
           setOriginalCertificate(taxExemptStatus.tax_exemption_certificate || '');
         }
 
+        // Set tax source override state
+        setCanOverrideTaxSource(overrideAllowed);
+        setEffectiveTaxSource(effectiveSource.taxSource);
+
         setLoading(false);
       } catch (err) {
-        if (err instanceof Error && err.message === 'No tax settings found') {
-          setTaxSettings(null);
-        } else {
-          setError('Error fetching tax settings');
-        }
+        setError('Error fetching tax settings');
         setLoading(false);
       }
     };
@@ -194,7 +217,17 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
  // Removed handlers for components, thresholds, and holidays as these sections are removed
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading tax settings..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
+  }
 
   // Dismissible error message
   const ErrorMessage = () => {
@@ -244,6 +277,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
   if (!taxSettings) {
     return (
       <div className="text-center">
+        <ErrorMessage />
         <p className="mb-4">No tax settings found for this client.</p>
         <Button
           id="create-default-tax-settings-button"
@@ -367,19 +401,82 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
               Configure special tax handling for this client.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="reverseCharge"
-                label="Apply Reverse Charge"
-                checked={taxSettings.is_reverse_charge_applicable}
-                onChange={(e) =>
-                  setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: (e.target as HTMLInputElement).checked })
-                }
-              />
-              <Tooltip content="Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.">
-                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-              </Tooltip>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Apply Reverse Charge</span>
+                <Tooltip content="Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.">
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </Tooltip>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {taxSettings.is_reverse_charge_applicable ? 'Enabled' : 'Disabled'}
+                </span>
+                <Switch
+                  id="reverseCharge"
+                  checked={taxSettings.is_reverse_charge_applicable}
+                  onCheckedChange={(checked) =>
+                    setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: checked })
+                  }
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="tax-source-override" className="text-sm font-medium">
+                    Tax Source Override
+                  </label>
+                  <Tooltip content="Override the tenant default tax source for this client. 'Internal' uses Alga's tax calculation. 'External' delegates tax calculation to the accounting system when invoices are exported.">
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </Tooltip>
+                </div>
+                <CustomSelect
+                  id="tax-source-override"
+                  value={!canOverrideTaxSource 
+                    ? (effectiveTaxSource === 'pending_external' ? 'external' : effectiveTaxSource)
+                    : (taxSettings.tax_source_override || '')
+                  }
+                  onValueChange={(value) => {
+                    const newValue = value === '' ? null : (value as TaxSource);
+                    setTaxSettings({ ...taxSettings, tax_source_override: newValue });
+                  }}
+                  options={[
+                    { value: '', label: 'Use Tenant Default' },
+                    { value: 'internal', label: 'Alga PSA Calculates Tax' },
+                    { value: 'external', label: 'Accounting Package Calculates Tax' },
+                  ]}
+                  placeholder="Select tax source..."
+                  disabled={isSubmitting || !canOverrideTaxSource}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Current effective tax source: <span className="font-medium">
+                    {effectiveTaxSource === 'internal' ? 'Alga PSA Calculates Tax' : effectiveTaxSource === 'external' ? 'Accounting Package Calculates Tax' : 'Pending External'}
+                  </span>
+                  {taxSettings.tax_source_override && (
+                    <span className="ml-1">(overridden)</span>
+                  )}
+                </p>
+                {!canOverrideTaxSource && (
+                  <Alert variant="info" showIcon>
+                    <AlertDescription>
+                      <p className="text-sm">
+                        Tax source override is not available. This feature must be enabled in the{' '}
+                        <Link 
+                          href="/msp/settings?tab=billing" 
+                          className="text-primary-600 hover:text-primary-700 underline font-medium"
+                        >
+                          billing settings
+                        </Link>
+                        {' '}to allow per-client tax source overrides.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -47,6 +47,7 @@ export async function updateClientTaxSettings(
       .update({
         // tax_rate_id: taxSettings.tax_rate_id, // Removed field
         is_reverse_charge_applicable: taxSettings.is_reverse_charge_applicable,
+        tax_source_override: taxSettings.tax_source_override ?? null,
         // Note: tax_components, tax_rate_thresholds, tax_holidays are no longer managed
         // directly through this settings update based on tax_rate_id.
         // Their management is tied to specific tax rates/components now.
