@@ -8,6 +8,7 @@ import QuickAddContact from 'server/src/components/contacts/QuickAddContact';
 import ProjectQuickAdd from 'server/src/components/projects/ProjectQuickAdd';
 import { QuickAddService } from 'server/src/components/settings/billing/QuickAddService';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { ITicket, IClient, IContact, IProject } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
@@ -138,7 +139,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
         <Dialog isOpen={true} onClose={onClose} title="Add New Contact">
           <DialogContent className="max-w-2xl">
             <div className="flex justify-center items-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <LoadingIndicator />
             </div>
           </DialogContent>
         </Dialog>
@@ -162,7 +163,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
         <Dialog isOpen={true} onClose={onClose} title="Add New Project">
           <DialogContent className="max-w-2xl">
             <div className="flex justify-center items-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <LoadingIndicator />
             </div>
           </DialogContent>
         </Dialog>
@@ -185,7 +186,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
         <Dialog isOpen={true} onClose={onClose} title="Add New Service">
           <DialogContent className="max-w-2xl">
             <div className="flex justify-center items-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <LoadingIndicator />
             </div>
           </DialogContent>
         </Dialog>
