@@ -31,7 +31,6 @@ import {
   disconnectStripeAction,
   updatePaymentSettingsAction,
   testStripeConnectionAction,
-  getStripeWebhookUrlAction,
 } from '@ee/lib/actions/payment-actions';
 import type { PaymentSettings as PaymentSettingsType } from 'server/src/interfaces/payment.interfaces';
 
@@ -150,6 +149,9 @@ interface PaymentConfigDisplay {
   updated_at: string;
   publishable_key?: string;
   has_webhook_secret: boolean;
+  webhook_url?: string;
+  webhook_events?: string[];
+  webhook_status?: 'enabled' | 'disabled' | 'not_configured';
 }
 
 export const PaymentSettings: React.FC = () => {
@@ -158,8 +160,7 @@ export const PaymentSettings: React.FC = () => {
   const [connecting, setConnecting] = useState(false);
   const [testing, setTesting] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState<string>('');
-  
+
   // Local state for payment settings (to track changes)
   const [localSettings, setLocalSettings] = useState<PaymentSettingsType | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -168,7 +169,6 @@ export const PaymentSettings: React.FC = () => {
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [secretKey, setSecretKey] = useState('');
   const [publishableKey, setPublishableKey] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
 
   // Load current configuration
   const loadConfig = useCallback(async () => {
@@ -184,12 +184,6 @@ export const PaymentSettings: React.FC = () => {
         }
       } else {
         toast.error(result.error || 'Failed to load payment configuration');
-      }
-
-      // Get webhook URL
-      const webhookResult = await getStripeWebhookUrlAction();
-      if (webhookResult.success && webhookResult.data) {
-        setWebhookUrl(webhookResult.data.webhookUrl);
       }
     } catch (error) {
       toast.error('Failed to load payment configuration');
@@ -226,15 +220,17 @@ export const PaymentSettings: React.FC = () => {
       const result = await connectStripeAction({
         secretKey,
         publishableKey,
-        webhookSecret: webhookSecret || undefined,
       });
 
-      if (result.success) {
-        toast.success('Stripe connected successfully!');
+      if (result.success && result.data) {
+        if (result.data.webhookConfigured) {
+          toast.success('Stripe connected and webhooks configured automatically!');
+        } else {
+          toast.success('Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.');
+        }
         setShowConnectForm(false);
         setSecretKey('');
         setPublishableKey('');
-        setWebhookSecret('');
         await loadConfig();
       } else {
         toast.error(result.error || 'Failed to connect Stripe');
@@ -319,8 +315,10 @@ export const PaymentSettings: React.FC = () => {
 
   // Copy webhook URL
   const handleCopyWebhookUrl = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    toast.success('Webhook URL copied to clipboard');
+    if (config?.webhook_url) {
+      navigator.clipboard.writeText(config.webhook_url);
+      toast.success('Webhook URL copied to clipboard');
+    }
   };
 
   if (loading) {
@@ -390,35 +388,55 @@ export const PaymentSettings: React.FC = () => {
                 </div>
               </div>
 
-              {/* Webhook URL */}
-              <div className="space-y-2">
-                <Label>Webhook URL</Label>
-                <p className="text-sm text-gray-500">
-                  Add this URL to your{' '}
-                  <a
-                    href="https://dashboard.stripe.com/webhooks"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-600 hover:underline inline-flex items-center gap-1"
-                  >
-                    Stripe Dashboard
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </p>
-                <div className="flex gap-2">
-                  <Input
-                    value={webhookUrl}
-                    readOnly
-                    className="font-mono text-sm bg-gray-50"
-                  />
-                  <Button variant="outline" size="sm" onClick={handleCopyWebhookUrl}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                {!config.has_webhook_secret && (
-                  <div className="flex items-center gap-2 text-amber-600 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    Webhook secret not configured. Reconnect Stripe to add it.
+              {/* Webhook Status */}
+              <div className="space-y-3">
+                <Label>Webhook Configuration</Label>
+                {config.webhook_status === 'enabled' ? (
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 text-green-700 mb-2">
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="font-medium">Webhooks configured automatically</span>
+                    </div>
+                    <p className="text-sm text-green-600 mb-2">
+                      Alga PSA will receive payment notifications for:
+                    </p>
+                    <ul className="text-sm text-green-600 list-disc list-inside space-y-1">
+                      {config.webhook_events?.map((event) => (
+                        <li key={event}>{event}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="flex items-center gap-2 text-amber-700 mb-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <span className="font-medium">Manual webhook configuration required</span>
+                    </div>
+                    <p className="text-sm text-amber-600 mb-2">
+                      Add this URL to your{' '}
+                      <a
+                        href="https://dashboard.stripe.com/webhooks"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:underline inline-flex items-center gap-1"
+                      >
+                        Stripe Dashboard
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={config.webhook_url || ''}
+                        readOnly
+                        className="font-mono text-xs bg-white"
+                      />
+                      <Button id="copy-webhook-url" variant="outline" size="sm" onClick={handleCopyWebhookUrl}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-amber-500 mt-2">
+                      Subscribe to: {config.webhook_events?.join(', ')}
+                    </p>
                   </div>
                 )}
               </div>
@@ -460,27 +478,8 @@ export const PaymentSettings: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="webhookSecret">Webhook Secret (Optional)</Label>
-                <Input
-                  id="webhookSecret"
-                  type="password"
-                  placeholder="whsec_..."
-                  value={webhookSecret}
-                  onChange={(e) => setWebhookSecret(e.target.value)}
-                />
-                <p className="text-sm text-gray-500">
-                  Add the webhook URL below to Stripe first, then copy the signing secret here.
-                </p>
-              </div>
-
-              <div className="p-3 bg-gray-50 rounded-lg space-y-1">
-                <p className="text-sm font-medium">Webhook URL to add in Stripe:</p>
-                <code className="text-sm text-gray-600 break-all">{webhookUrl}</code>
-              </div>
-
               <div className="flex gap-2">
-                <Button type="submit" disabled={connecting}>
+                <Button id="connect-stripe-submit" type="submit" disabled={connecting}>
                   {connecting ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -491,6 +490,7 @@ export const PaymentSettings: React.FC = () => {
                   )}
                 </Button>
                 <Button
+                  id="connect-stripe-cancel"
                   type="button"
                   variant="outline"
                   onClick={() => setShowConnectForm(false)}
@@ -505,7 +505,7 @@ export const PaymentSettings: React.FC = () => {
               <p className="text-gray-500 mb-4">
                 Connect your Stripe account to accept online payments for invoices
               </p>
-              <Button onClick={() => setShowConnectForm(true)}>
+              <Button id="connect-stripe-button" onClick={() => setShowConnectForm(true)}>
                 <CreditCard className="h-4 w-4 mr-2" />
                 Connect Stripe
               </Button>

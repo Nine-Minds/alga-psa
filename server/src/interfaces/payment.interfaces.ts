@@ -288,6 +288,7 @@ export interface IPaymentProviderConfig extends TenantEntity {
   configuration: Record<string, unknown>;
   credentials_vault_path?: string;
   webhook_secret_vault_path?: string;
+  settings?: Record<string, unknown>; // PaymentSettings stored as JSONB
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }

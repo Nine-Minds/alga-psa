@@ -74,8 +74,17 @@ interface PaymentActionResult<T = void> {
 interface StripeCredentials {
   secretKey: string;
   publishableKey: string;
-  webhookSecret?: string;
 }
+
+/**
+ * Events we subscribe to for invoice payment processing.
+ * These are automatically configured when connecting Stripe.
+ */
+const STRIPE_WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
+  'checkout.session.completed',
+  'payment_intent.succeeded',
+  'payment_intent.payment_failed',
+];
 
 /**
  * Payment provider configuration for display.
@@ -89,6 +98,9 @@ interface PaymentProviderDisplay {
   updated_at: string;
   publishable_key?: string; // Safe to display
   has_webhook_secret: boolean;
+  webhook_url?: string;
+  webhook_events?: string[];
+  webhook_status?: 'enabled' | 'disabled' | 'not_configured';
 }
 
 /**
@@ -113,6 +125,17 @@ export async function getPaymentConfigAction(): Promise<PaymentActionResult<Paym
       return { success: true, data: null };
     }
 
+    // Get webhook URL for display
+    const baseUrl = getStripeBaseUrl();
+    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+
+    // Determine webhook status
+    const configuration = config.configuration as any;
+    let webhookStatus: 'enabled' | 'disabled' | 'not_configured' = 'not_configured';
+    if (configuration?.webhook_endpoint_id && config.webhook_secret_vault_path) {
+      webhookStatus = 'enabled';
+    }
+
     // Build display config (hide sensitive data)
     const displayConfig: PaymentProviderDisplay = {
       provider_type: config.provider_type,
@@ -124,8 +147,11 @@ export async function getPaymentConfigAction(): Promise<PaymentActionResult<Paym
       },
       created_at: config.created_at,
       updated_at: config.updated_at,
-      publishable_key: (config.configuration as any)?.publishable_key,
+      publishable_key: configuration?.publishable_key,
       has_webhook_secret: !!config.webhook_secret_vault_path,
+      webhook_url: webhookUrl,
+      webhook_events: STRIPE_WEBHOOK_EVENTS as string[],
+      webhook_status: webhookStatus,
     };
 
     return { success: true, data: displayConfig };
@@ -137,11 +163,11 @@ export async function getPaymentConfigAction(): Promise<PaymentActionResult<Paym
 
 /**
  * Connects a Stripe account to the tenant.
- * Validates the credentials before storing.
+ * Validates the credentials, creates webhook endpoint automatically, and stores configuration.
  */
 export async function connectStripeAction(
   credentials: StripeCredentials
-): Promise<PaymentActionResult<{ publishableKey: string }>> {
+): Promise<PaymentActionResult<{ publishableKey: string; webhookConfigured: boolean }>> {
   try {
     const user = await getCurrentUser();
     if (!user?.tenant) {
@@ -176,12 +202,82 @@ export async function connectStripeAction(
       credentials.secretKey
     );
 
-    if (credentials.webhookSecret) {
-      await secretProvider.setTenantSecret(
-        user.tenant,
-        'stripe_payment_webhook_secret',
-        credentials.webhookSecret
+    // Get the webhook URL
+    const baseUrl = getStripeBaseUrl();
+    const webhookUrl = `${baseUrl}/api/webhooks/stripe/payments`;
+
+    // Check for existing webhook endpoints to avoid duplicates
+    let webhookEndpointId: string | null = null;
+    let webhookSecret: string | null = null;
+    let webhookConfigured = false;
+
+    try {
+      // List existing webhooks to check for duplicates
+      const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
+      const existingEndpoint = existingWebhooks.data.find(
+        (endpoint) => endpoint.url === webhookUrl
       );
+
+      if (existingEndpoint) {
+        // Webhook already exists - update it with correct events
+        logger.info('[PaymentActions] Found existing webhook endpoint, updating events', {
+          endpointId: existingEndpoint.id,
+          tenantId: user.tenant,
+        });
+
+        await stripe.webhookEndpoints.update(existingEndpoint.id, {
+          enabled_events: STRIPE_WEBHOOK_EVENTS,
+          description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+        });
+
+        webhookEndpointId = existingEndpoint.id;
+        // Note: We can't retrieve the secret for an existing webhook
+        // User would need to delete and recreate if secret is lost
+        webhookConfigured = true;
+      } else {
+        // Create new webhook endpoint
+        logger.info('[PaymentActions] Creating new Stripe webhook endpoint', {
+          webhookUrl,
+          tenantId: user.tenant,
+        });
+
+        const webhookEndpoint = await stripe.webhookEndpoints.create({
+          url: webhookUrl,
+          enabled_events: STRIPE_WEBHOOK_EVENTS,
+          description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+          metadata: {
+            tenant_id: user.tenant,
+            created_by: 'alga-psa',
+          },
+        });
+
+        webhookEndpointId = webhookEndpoint.id;
+        webhookSecret = webhookEndpoint.secret || null;
+        webhookConfigured = true;
+
+        // Store the webhook secret
+        if (webhookSecret) {
+          await secretProvider.setTenantSecret(
+            user.tenant,
+            'stripe_payment_webhook_secret',
+            webhookSecret
+          );
+        }
+
+        logger.info('[PaymentActions] Webhook endpoint created successfully', {
+          endpointId: webhookEndpointId,
+          tenantId: user.tenant,
+        });
+      }
+    } catch (webhookError: any) {
+      // Log webhook creation failure but don't fail the connection
+      // User can still use Stripe, just without automatic webhook processing
+      logger.warn('[PaymentActions] Failed to create webhook endpoint', {
+        error: webhookError.message,
+        tenantId: user.tenant,
+        webhookUrl,
+      });
+      // webhookConfigured remains false
     }
 
     // Create or update provider config
@@ -198,11 +294,12 @@ export async function connectStripeAction(
       is_default: true,
       configuration: {
         publishable_key: credentials.publishableKey,
+        webhook_endpoint_id: webhookEndpointId,
       },
       credentials_vault_path: `tenant/${user.tenant}/stripe_payment_secret_key`,
-      webhook_secret_vault_path: credentials.webhookSecret
+      webhook_secret_vault_path: webhookSecret
         ? `tenant/${user.tenant}/stripe_payment_webhook_secret`
-        : null,
+        : (existingConfig?.webhook_secret_vault_path || null),
       settings: DEFAULT_PAYMENT_SETTINGS,
       updated_at: knex.fn.now(),
     };
@@ -222,11 +319,12 @@ export async function connectStripeAction(
     logger.info('[PaymentActions] Stripe connected successfully', {
       tenantId: user.tenant,
       userId: user.user_id,
+      webhookConfigured,
     });
 
     return {
       success: true,
-      data: { publishableKey: credentials.publishableKey },
+      data: { publishableKey: credentials.publishableKey, webhookConfigured },
     };
   } catch (error) {
     logger.error('[PaymentActions] Failed to connect Stripe', { error });
@@ -236,6 +334,7 @@ export async function connectStripeAction(
 
 /**
  * Disconnects the Stripe account from the tenant.
+ * Also deletes the webhook endpoint from Stripe.
  */
 export async function disconnectStripeAction(): Promise<PaymentActionResult> {
   try {
@@ -245,8 +344,51 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
     }
 
     const knex = await getConnection();
+    const secretProvider = await getSecretProviderInstance();
 
-    // Disable the provider config
+    // Get current config to find webhook endpoint ID
+    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+      .where({
+        tenant: user.tenant,
+        provider_type: 'stripe',
+      })
+      .first();
+
+    // Try to delete the webhook endpoint from Stripe
+    if (config) {
+      const configuration = config.configuration as any;
+      const webhookEndpointId = configuration?.webhook_endpoint_id;
+
+      if (webhookEndpointId) {
+        try {
+          const secretKey = await secretProvider.getTenantSecret(
+            user.tenant,
+            'stripe_payment_secret_key'
+          );
+
+          if (secretKey) {
+            const stripe = new Stripe(secretKey, {
+              apiVersion: '2024-12-18.acacia' as any,
+            });
+
+            await stripe.webhookEndpoints.del(webhookEndpointId);
+            logger.info('[PaymentActions] Deleted Stripe webhook endpoint', {
+              endpointId: webhookEndpointId,
+              tenantId: user.tenant,
+            });
+          }
+        } catch (webhookError: any) {
+          // Log but don't fail - webhook might already be deleted
+          logger.warn('[PaymentActions] Failed to delete webhook endpoint', {
+            error: webhookError.message,
+            endpointId: webhookEndpointId,
+            tenantId: user.tenant,
+          });
+        }
+      }
+    }
+
+    // Disable the provider config and clear webhook info
     await knex('payment_provider_configs')
       .where({
         tenant: user.tenant,
@@ -254,11 +396,17 @@ export async function disconnectStripeAction(): Promise<PaymentActionResult> {
       })
       .update({
         is_enabled: false,
+        configuration: knex.raw("configuration - 'webhook_endpoint_id'"),
+        webhook_secret_vault_path: null,
         updated_at: knex.fn.now(),
       });
 
-    // Note: We don't delete the secrets - they can be reused if reconnecting
-    // This also preserves the ability to process existing webhooks
+    // Delete the webhook secret from vault
+    try {
+      await secretProvider.deleteTenantSecret(user.tenant, 'stripe_payment_webhook_secret');
+    } catch {
+      // Ignore if secret doesn't exist
+    }
 
     logger.info('[PaymentActions] Stripe disconnected', {
       tenantId: user.tenant,

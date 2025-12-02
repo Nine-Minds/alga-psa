@@ -487,73 +487,73 @@ async function updateInvoicePaymentStatus(invoiceId: string, paymentAmount: numb
 /msp/settings/billing/payments
 ├── Payment Providers
 │   ├── Stripe (Connect/Disconnect)
-│   │   ├── API Key Configuration
-│   │   ├── Webhook URL Display
-│   │   └── Test Mode Toggle
+│   │   ├── API Key Configuration (Secret + Publishable)
+│   │   ├── Webhook Status Display (auto-configured)
+│   │   └── Test Connection Button
 │   └── [Future: PayPal, Square]
 ├── Payment Settings
 │   ├── Enable Payment Links in Emails (toggle)
-│   ├── Default Payment Terms Display
+│   ├── Payment Link Expiration (selector)
 │   ├── Payment Confirmation Emails (toggle)
 │   └── Allow Partial Payments (toggle - future)
 └── Payment History
     └── Recent Payments Table
 ```
 
-### Stripe Connection Flow
+### Automatic Webhook Configuration
 
+When a user connects their Stripe account, webhooks are configured automatically using the Stripe API. This eliminates the need for users to manually configure webhooks in the Stripe Dashboard.
+
+**Webhook Events Subscribed:**
+- `checkout.session.completed` - Primary event for completed payments
+- `payment_intent.succeeded` - Backup/direct payment confirmations
+- `payment_intent.payment_failed` - Failed payment notifications
+
+**Implementation Flow:**
 ```typescript
-// ee/server/src/components/settings/billing/StripePaymentConfig.tsx
+// During connectStripeAction:
+const webhookEndpoint = await stripe.webhookEndpoints.create({
+  url: `${baseUrl}/api/webhooks/stripe/payments`,
+  enabled_events: [
+    'checkout.session.completed',
+    'payment_intent.succeeded',
+    'payment_intent.payment_failed',
+  ],
+  description: `Alga PSA payment webhook for tenant ${tenantId}`,
+  metadata: { tenant_id: tenantId, created_by: 'alga-psa' },
+});
 
-export function StripePaymentConfig() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Stripe Payments</CardTitle>
-        <CardDescription>
-          Accept credit card payments for invoices
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {!isConnected ? (
-          <StripeConnectButton onConnect={handleConnect} />
-        ) : (
-          <StripeConnectionStatus
-            accountId={config.stripe_account_id}
-            onDisconnect={handleDisconnect}
-          />
-        )}
-
-        <SettingsToggle
-          label="Include payment links in invoice emails"
-          checked={config.payment_links_enabled}
-          onChange={handleToggle}
-        />
-
-        <WebhookUrlDisplay
-          url={`${baseUrl}/api/webhooks/stripe/payments`}
-        />
-      </CardContent>
-    </Card>
-  );
-}
+// The webhook secret is returned in the response and stored securely
+await secretProvider.setTenantSecret(tenant, 'stripe_payment_webhook_secret', webhookEndpoint.secret);
 ```
+
+**Benefits:**
+- Zero manual configuration required from users
+- Correct events are always subscribed
+- Webhook secret is automatically stored for signature verification
+- Webhook endpoint is cleaned up on disconnect
+
+**Fallback:**
+If automatic webhook creation fails (e.g., due to API rate limits or network issues), the UI displays the webhook URL and required events for manual configuration.
 
 ### Server Actions
 
 ```typescript
 // ee/server/src/lib/actions/payment-actions.ts
 
-export async function connectStripePaymentAction(credentials: StripeCredentials) {
-  // Validate API key by making test request
-  // Store credentials in secret provider
-  // Create payment_provider_configs record
-  // Return success/failure
+export async function connectStripeAction(credentials: StripeCredentials) {
+  // 1. Validate API key by fetching account info
+  // 2. Store credentials in secret provider
+  // 3. Automatically create webhook endpoint via Stripe API
+  // 4. Store webhook endpoint ID and secret
+  // 5. Create payment_provider_configs record
+  // Return { publishableKey, webhookConfigured }
 }
 
-export async function disconnectStripePaymentAction() {
-  // Disable provider config
-  // Optionally revoke credentials
+export async function disconnectStripeAction() {
+  // 1. Delete webhook endpoint from Stripe
+  // 2. Clear webhook secret from vault
+  // 3. Disable provider config
 }
 
 export async function updatePaymentSettingsAction(settings: PaymentSettings) {
@@ -561,17 +561,18 @@ export async function updatePaymentSettingsAction(settings: PaymentSettings) {
 }
 
 export async function getPaymentConfigAction() {
-  // Return current payment provider configuration
+  // Return config including webhook_status, webhook_url, webhook_events
 }
 ```
 
 ### Phase 5 Tasks
-- [ ] Create payment settings page component
-- [ ] Implement Stripe credential input and validation
-- [ ] Add webhook URL display with copy button
-- [ ] Create payment provider enable/disable toggles
-- [ ] Add payment link preferences UI
-- [ ] Implement server actions for configuration
+- [x] Create payment settings page component
+- [x] Implement Stripe credential input and validation
+- [x] Implement automatic webhook configuration via Stripe API
+- [x] Add webhook status display (auto-configured vs manual)
+- [x] Create payment provider enable/disable toggles
+- [x] Add payment link preferences UI
+- [x] Implement server actions for configuration
 - [ ] Add test payment functionality
 - [ ] Create payment activity log viewer
 
