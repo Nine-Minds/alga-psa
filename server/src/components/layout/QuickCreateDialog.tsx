@@ -6,12 +6,14 @@ import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
 import QuickAddClient from 'server/src/components/clients/QuickAddClient';
 import QuickAddContact from 'server/src/components/contacts/QuickAddContact';
 import ProjectQuickAdd from 'server/src/components/projects/ProjectQuickAdd';
+import { QuickAddService } from 'server/src/components/settings/billing/QuickAddService';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { ITicket, IClient, IContact, IProject } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
 import { toast } from 'react-hot-toast';
 
-export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | null;
+export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | null;
 
 interface QuickCreateDialogProps {
   type: QuickCreateType;
@@ -21,6 +23,8 @@ interface QuickCreateDialogProps {
 export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]>([]);
+  const [isLoadingServiceTypes, setIsLoadingServiceTypes] = useState(false);
 
   // Load clients when needed for projects and contacts
   useEffect(() => {
@@ -35,6 +39,20 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
         .finally(() => setIsLoadingClients(false));
     }
   }, [type, clients.length]);
+
+  // Load service types when needed for services
+  useEffect(() => {
+    if (type === 'service') {
+      setIsLoadingServiceTypes(true);
+      getServiceTypesForSelection()
+        .then(setServiceTypes)
+        .catch((error) => {
+          console.error('Failed to load service types:', error);
+          toast.error('Failed to load service types');
+        })
+        .finally(() => setIsLoadingServiceTypes(false));
+    }
+  }, [type]);
 
   const handleAssetAdded = () => {
     toast.success('Asset created successfully');
@@ -60,6 +78,20 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
   const handleProjectAdded = (project: IProject) => {
     toast.success(`Project "${project.project_name}" created successfully`);
     onClose();
+  };
+
+  const handleServiceAdded = () => {
+    toast.success('Service created successfully');
+    onClose();
+  };
+
+  const handleServiceTypesChange = () => {
+    // Refresh service types after inline create/update/delete
+    getServiceTypesForSelection()
+      .then(setServiceTypes)
+      .catch((error) => {
+        console.error('Failed to refresh service types:', error);
+      });
   };
 
   // Handle QuickAddAsset which uses a different dialog pattern
@@ -142,6 +174,31 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
         onClose={onClose}
         onProjectAdded={handleProjectAdded}
         clients={clients}
+      />
+    );
+  }
+
+  // Handle QuickAddService
+  if (type === 'service') {
+    if (isLoadingServiceTypes) {
+      return (
+        <Dialog isOpen={true} onClose={onClose} title="Add New Service">
+          <DialogContent className="max-w-2xl">
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    return (
+      <QuickAddService
+        isOpen={true}
+        onClose={onClose}
+        onServiceAdded={handleServiceAdded}
+        allServiceTypes={serviceTypes}
+        onServiceTypesChange={handleServiceTypesChange}
       />
     );
   }

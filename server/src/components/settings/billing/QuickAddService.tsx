@@ -21,6 +21,9 @@ interface QuickAddServiceProps {
   onServiceAdded: () => void;
   allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]; // Updated billing methods
   onServiceTypesChange: () => void; // Add callback to refresh service types
+  // Optional controlled mode props for quick create integration
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 // Updated interface to use custom_service_type_id
@@ -57,8 +60,12 @@ const BILLING_METHOD_OPTIONS = [
   { value: 'usage', label: 'Usage Based' }
 ];
 
-export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange }: QuickAddServiceProps) { // Destructure new prop
-  const [open, setOpen] = useState(false)
+export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange, isOpen, onClose }: QuickAddServiceProps) { // Destructure new prop
+  // Support both controlled (isOpen/onClose) and uncontrolled (internal state) modes
+  const isControlled = isOpen !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = isControlled ? isOpen : internalOpen;
+  const setOpen = isControlled ? (value: boolean) => { if (!value && onClose) onClose(); } : setInternalOpen;
   const [triggerButton, setTriggerButton] = useState<HTMLButtonElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
@@ -239,13 +246,16 @@ console.log('[QuickAddService] Service created successfully');
 
   return (
     <>
-      <Button 
-        ref={setTriggerButton}
-        id='add-service' 
-        onClick={() => setOpen(true)}
-      >
-        Add Service
-      </Button>
+      {/* Only render trigger button in uncontrolled mode */}
+      {!isControlled && (
+        <Button
+          ref={setTriggerButton}
+          id='add-service'
+          onClick={() => setOpen(true)}
+        >
+          Add Service
+        </Button>
+      )}
       <Dialog
         isOpen={open}
         onClose={() => {
