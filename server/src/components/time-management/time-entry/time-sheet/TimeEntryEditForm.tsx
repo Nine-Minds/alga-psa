@@ -17,6 +17,7 @@ import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import { ISO8601String } from 'server/src/types/types.d';
+import ContractInfoBanner from './ContractInfoBanner';
 
 // Define the expected structure returned by getEligibleContractLinesForUI,
 // including the date fields needed for filtering.
@@ -245,66 +246,6 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           setEligibleContractLines([]); // Reset on error
         }
       }
-
-      // 2. Load Eligible Contract Lines (dependent on service and client)
-      if (!entry?.service_id) {
-        console.log('No service ID available, cannot load contract lines');
-        setEligibleContractLines([]);
-      } else if (!clientId) {
-        console.log('No client ID available, using default contract line logic (no specific lines loaded)');
-        setEligibleContractLines([]);
-      } else {
-        // Fetch and filter plans only if service and client are known
-        try {
-          const plans = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligiblePlanUI[];
-          const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
-
-          const filteredPlans = plans.filter(plan => {
-            const start = new Date(plan.start_date as string);
-            const end = plan.end_date ? new Date(plan.end_date as string) : null;
-            // Ensure entryDate is valid before comparison
-            return !isNaN(entryDate.getTime()) && start <= entryDate && (!end || end >= entryDate);
-          });
-
-          currentEligiblePlans = filteredPlans;
-          setEligibleContractLines(currentEligiblePlans);
-          console.log('Eligible contract lines loaded:', currentEligiblePlans);
-
-          // 3. Set Default Contract Line (only if lines were loaded)
-          const currentContractLineId = entry?.contract_line_id; // Use entry from closure
-          if (!currentContractLineId && currentEligiblePlans.length > 0) {
-            let defaultPlanId: string | null = null;
-            if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
-              console.log('Setting default contract line (only one eligible):', defaultPlanId);
-            } else {
-              const overlayPlans = currentEligiblePlans.filter(plan => plan.has_bucket_overlay);
-              if (overlayPlans.length === 1) {
-                defaultPlanId = overlayPlans[0].client_contract_line_id;
-                console.log('Setting default contract line (single bucket line):', defaultPlanId);
-              } else {
-                console.log('Multiple eligible contract lines, no single default determined.');
-              }
-            }
-
-            if (defaultPlanId) {
-              const entryWithUpdatedPlan = {
-                ...entry, // Includes tax updates already applied
-                contract_line_id: defaultPlanId
-              };
-              onUpdateEntry(index, entryWithUpdatedPlan);
-              // Update the 'entry' variable in this scope
-              entry = entryWithUpdatedPlan;
-            }
-          } else {
-            console.log('Contract line already set or no eligible lines found, skipping default selection.');
-          }
-
-        } catch (error) {
-          console.error('Error loading eligible contract lines:', error);
-          setEligibleContractLines([]); // Reset on error
-        }
-      }
     }
 
     // Only run if entry exists
@@ -459,7 +400,13 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               value={entry?.service_id || ''}
               onValueChange={(value) => {
                 if (entry) {
-                  const updatedEntry = { ...entry, service_id: value };
+                  // Track if a prefilled service is being changed
+                  const isServiceOverridden = entry._isServicePrefilled && value !== entry._originalServiceId;
+                  const updatedEntry = {
+                    ...entry,
+                    service_id: value,
+                    _serviceOverridden: isServiceOverridden
+                  };
                   onUpdateEntry(index, updatedEntry);
                 }
               }}
@@ -477,75 +424,30 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
         </div>
 
-        {/* Contract Line Selector with enhanced guidance */}
-        {showContractLineSelector && (
-          <div>
-            {eligibleContractLines.length > 1 && (
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-md mb-2">
-                <div className="flex items-center">
-                  <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
-                  <p className="text-sm text-blue-700">
-                    This service appears in multiple contract lines. You can optionally select which line to bill against, or leave it blank to use the default.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-1">
-              <label className={`block text-sm font-medium ${eligibleContractLines.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
-                Contract Line <span className="text-gray-400 text-xs">(Optional)</span>
-              </label>
-              <Tooltip content={
-                <p className="max-w-xs">
-                  {!clientId
-                    ? "Client information not available. The system will use the default contract line."
-                    : eligibleContractLines.length > 1
-                      ? "This service appears in multiple contract lines. You can optionally select which line to use for this time entry, or leave it blank to use the default contract line."
-                      : eligibleContractLines.length === 1
-                        ? `This time entry will be billed under the "${eligibleContractLines[0].contract_line_name}" contract line.`
-                        : "No eligible contract lines found for this service."}
-                </p>
-              }>
-                <InfoCircledIcon className="h-4 w-4 text-gray-500" />
-              </Tooltip>
+        {/* Service Prefill Indicator - only shown for new entries with prefilled service */}
+        {isNewEntry && entry?._isServicePrefilled && (
+          <div className="p-3 bg-green-50 border border-green-100 rounded-md">
+            <div className="flex items-center">
+              <Info className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
+              <p className="text-sm text-green-700">
+                Service prefilled from task configuration.
+                {entry?._serviceOverridden && (
+                  <span className="text-yellow-600 ml-1">(Modified)</span>
+                )}
+              </p>
             </div>
-
-            <CustomSelect
-              value={entry?.contract_line_id || ''}
-              onValueChange={(value) => {
-                if (entry) {
-                  const updatedEntry = { ...entry, contract_line_id: value };
-                  onUpdateEntry(index, updatedEntry);
-                }
-              }}
-              disabled={!isEditable || !clientId || eligibleContractLines.length <= 1}
-              className={`mt-1 w-full ${eligibleContractLines.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
-              options={eligibleContractLines.map(plan => ({
-                value: plan.client_contract_line_id,
-                label: `${plan.contract_line_name} (${plan.contract_line_type})` // Now contract_line_type exists on EligiblePlanUI
-              }))}
-              placeholder={!clientId
-                ? "Using default contract line"
-                : eligibleContractLines.length === 0
-                  ? "No eligible contract lines"
-                  : eligibleContractLines.length === 1
-                    ? `Using ${eligibleContractLines[0].contract_line_name}`
-                      : "Select a contract line (optional)"}
-              />
-
-            {eligibleContractLines.length > 1 && (
-              <div className="mt-1 text-xs text-gray-600">
-                <span className="flex items-center">
-                  <Info className="h-3 w-3 text-blue-500 mr-1" />
-                  If no contract line is selected, the system will use the default
-                </span>
-              </div>
-            )}
-
-            {showErrors && validationErrors.contractLine && (
-              <span className="text-sm text-red-500">{validationErrors.contractLine}</span>
-            )}
           </div>
+        )}
+
+        {/* Contract Info Banner - shows which contract will be used */}
+        {entry?.work_item_id && entry?.service_id && (
+          <ContractInfoBanner
+            workItemId={entry.work_item_id}
+            workItemType={entry.work_item_type}
+            serviceId={entry.service_id}
+            entryDate={entry.start_time ? parseISO(entry.start_time) : undefined}
+            clientId={clientId}
+          />
         )}
       </div>
 

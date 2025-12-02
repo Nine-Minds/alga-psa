@@ -69,11 +69,12 @@ export interface IProjectTask extends TenantEntity, ITaggable {
   project_status_mapping_id: string;
   created_at: Date;
   updated_at: Date;
-  wbs_code: string;  
+  wbs_code: string;
   order_key?: string;
   due_date: Date | null;
   priority_id?: string | null;
   task_type_key: string;
+  service_id?: string | null;
   task_type?: ITaskType;
   dependencies?: IProjectTaskDependency[];
   dependents?: IProjectTaskDependency[];

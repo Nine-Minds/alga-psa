@@ -203,7 +203,8 @@ export async function createTemplateFromProject(
           assigned_to: copyOptions.copyAssignments ? task.assigned_to : null,
           template_status_mapping_id: templateStatusMappingId || null,
           order_key: task.order_key,
-          duration_days
+          duration_days,
+          service_id: task.service_id || null
         })
         .returning('*');
 
@@ -582,7 +583,8 @@ export async function applyTemplate(
           wbs_code: newWbsCode,
           project_status_mapping_id: taskStatusMappingId,
           assigned_to: taskAssignedTo,
-          due_date: dueDate
+          due_date: dueDate,
+          service_id: templateTask.service_id || null
         })
         .returning('*');
 
@@ -1012,7 +1014,8 @@ export async function duplicateTemplate(templateId: string): Promise<string> {
             duration_days: task.duration_days,
             task_type_key: task.task_type_key,
             priority_id: task.priority_id,
-            order_key: task.order_key
+            order_key: task.order_key,
+            service_id: task.service_id || null
           })
           .returning('*');
 
@@ -1327,6 +1330,7 @@ export async function addTemplateTask(
     priority_id?: string;
     assigned_to?: string;
     template_status_mapping_id?: string;
+    service_id?: string | null;
   },
   afterTaskId?: string | null
 ): Promise<IProjectTemplateTask> {
@@ -1378,6 +1382,7 @@ export async function addTemplateTask(
         priority_id: taskData.priority_id || null,
         assigned_to: taskData.assigned_to || null,
         template_status_mapping_id: taskData.template_status_mapping_id || null,
+        service_id: taskData.service_id || null,
         order_key: orderKey
       })
       .returning('*');
@@ -1407,6 +1412,7 @@ export async function updateTemplateTask(
     template_status_mapping_id?: string | null;
     template_phase_id?: string;
     order_key?: string;
+    service_id?: string | null;
   }
 ): Promise<IProjectTemplateTask> {
   const currentUser = await getCurrentUser();

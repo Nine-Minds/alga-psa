@@ -37,6 +37,8 @@ export interface IExtendedWorkItem extends IWorkItem {
   project_name?: string;
   phase_name?: string;
   task_name?: string;
+  service_id?: string | null;
+  service_name?: string | null;
   
   // Interaction specific fields
   interaction_type?: string;

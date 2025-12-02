@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { TaxRegion } from 'server/src/types/types.d';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
 import { getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
@@ -24,6 +24,10 @@ interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   client_id?: string; // Added for contract line selection
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
+  // Service prefill tracking (only for new entries)
+  _isServicePrefilled?: boolean; // True if service was auto-filled from work item
+  _originalServiceId?: string | null; // Original prefilled service ID
+  _serviceOverridden?: boolean; // True if user changed the prefilled service
 }
 
 interface TimeEntryState {
@@ -117,7 +121,7 @@ interface InitializeEntriesParams {
   defaultStartTime?: Date;
   defaultEndTime?: Date;
   defaultTaxRegion?: string;
-  workItem: Omit<IWorkItem, 'tenant'>;
+  workItem: Omit<IExtendedWorkItem, 'tenant'>;
   date: Date;
 }
 
@@ -180,13 +184,19 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
 
       // Determine if the entry should be billable by default
       const isBillable = workItem.is_billable === false ? false : true;
-      
+
+      // Check if workItem has a service_id (from project task)
+      const prefilledServiceId = workItem.type === 'project_task' && workItem.service_id
+        ? workItem.service_id
+        : '';
+
       console.log('Creating new time entry with defaults:', {
         isBillable,
         duration,
-        billableDuration: isBillable ? duration : 0
+        billableDuration: isBillable ? duration : 0,
+        prefilledServiceId: prefilledServiceId || null
       });
-      
+
       newEntries = [{
         work_item_id: workItem.work_item_id,
         start_time: formatISO(defaultStartTime),
@@ -199,11 +209,15 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         created_at: formatISO(new Date()),
         updated_at: formatISO(new Date()),
         approval_status: 'DRAFT',
-        service_id: '',
+        service_id: prefilledServiceId,
         tax_region: defaultTaxRegion || client?.region_code || '',
         isNew: true,
         tempId: crypto.randomUUID(),
         client_id: clientId || undefined,
+        // Service prefill tracking (only for new entries with prefilled service)
+        _isServicePrefilled: !!prefilledServiceId,
+        _originalServiceId: prefilledServiceId || null,
+        _serviceOverridden: false,
       }];
     } else {
       // For ad-hoc items, get the scheduled times from the schedule entry

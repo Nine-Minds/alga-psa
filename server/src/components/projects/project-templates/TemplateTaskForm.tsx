@@ -17,6 +17,8 @@ import {
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
+import { IService } from 'server/src/interfaces/billing.interfaces';
+import { getServices } from 'server/src/lib/actions/serviceActions';
 
 interface TemplateTaskFormProps {
   open: boolean;
@@ -53,8 +55,23 @@ export function TemplateTaskForm({
   const [assignedTo, setAssignedTo] = useState('');
   const [additionalAgents, setAdditionalAgents] = useState<string[]>([]);
   const [statusMappingId, setStatusMappingId] = useState('');
+  const [serviceId, setServiceId] = useState('');
+  const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch services on mount
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await getServices(1, 999);
+        setAvailableServices(response.services);
+      } catch (err) {
+        console.error('Failed to fetch services:', err);
+      }
+    };
+    fetchServices();
+  }, []);
 
   // Reset form when dialog opens/closes or task changes
   useEffect(() => {
@@ -73,6 +90,7 @@ export function TemplateTaskForm({
           .map(a => a.user_id);
         setAdditionalAgents(taskAdditionalAgents);
         setStatusMappingId(task.template_status_mapping_id || statusMappings[0]?.template_status_mapping_id || '');
+        setServiceId(task.service_id || '');
       } else {
         // New task - use initialStatusMappingId if provided (e.g., when clicking + on a status column)
         setTaskName('');
@@ -84,6 +102,7 @@ export function TemplateTaskForm({
         setAssignedTo('');
         setAdditionalAgents([]);
         setStatusMappingId(initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '');
+        setServiceId('');
       }
       setError(null);
     }
@@ -110,6 +129,7 @@ export function TemplateTaskForm({
         priority_id: priorityId || undefined,
         assigned_to: assignedTo || undefined,
         template_status_mapping_id: statusMappingId || undefined,
+        service_id: serviceId || null,
       }, additionalAgents);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save task');
@@ -297,6 +317,28 @@ export function TemplateTaskForm({
               )}
               <p className="text-xs text-gray-500 mt-1">
                 Additional team members to assign to this task
+              </p>
+            </div>
+
+            {/* Service (for time entry prefill) */}
+            <div>
+              <Label htmlFor="task-service" className="block text-sm font-medium text-gray-700 mb-1">
+                Service (for time entries)
+              </Label>
+              <CustomSelect
+                value={serviceId}
+                onValueChange={setServiceId}
+                options={[
+                  { value: '', label: 'No service' },
+                  ...availableServices.map((s) => ({
+                    value: s.service_id,
+                    label: s.service_name,
+                  })),
+                ]}
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                When set, this service will be automatically selected when creating time entries from tasks created using this template.
               </p>
             </div>
           </div>
