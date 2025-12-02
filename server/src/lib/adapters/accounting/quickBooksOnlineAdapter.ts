@@ -10,6 +10,7 @@ import {
   ExternalInvoiceFetchResult,
   ExternalInvoiceData,
   ExternalInvoiceChargeTax,
+  ExternalTaxComponent,
   PendingTaxImportRecord
 } from './accountingExportAdapter';
 import { createTenantKnex } from '../../db';
@@ -105,7 +106,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       supportsInvoiceUpdates: true,
       supportsTaxDelegation: true,
       supportsInvoiceFetch: true,
-      supportsTaxComponentImport: false // QBO doesn't expose detailed tax component breakdown
+      supportsTaxComponentImport: true // QBO provides tax components at invoice level via TxnTaxDetail.TaxLine
     };
   }
 
@@ -588,37 +589,116 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         };
       }
 
-      // Extract tax information from QBO invoice
-      const charges: ExternalInvoiceChargeTax[] = [];
+      // Calculate total tax from QBO invoice
+      const totalTax = amountToCents(qboInvoice.TxnTaxDetail?.TotalTax ?? 0);
+      const totalAmount = amountToCents(qboInvoice.TotalAmt ?? 0);
+
+      // Extract line items with their amounts for proportional tax distribution
+      const lineItems: Array<{
+        lineId: string;
+        externalLineId?: string;
+        amount: number;
+        taxCode?: string;
+      }> = [];
       let lineIndex = 0;
 
       for (const line of qboInvoice.Line ?? []) {
         if (line.DetailType === 'SalesItemLineDetail' && line.SalesItemLineDetail) {
           const detail = line.SalesItemLineDetail;
-          // QBO doesn't provide per-line tax breakdown directly
-          // We calculate proportionally if there's an overall tax amount
-          charges.push({
+          // QBO line Amount is the line total before tax
+          const lineAmount = amountToCents(line.Amount ?? 0);
+          lineItems.push({
             lineId: `line-${lineIndex}`,
             externalLineId: line.Id ?? undefined,
-            taxAmount: 0, // Will be calculated proportionally below
-            taxCode: detail.TaxCodeRef?.value,
-            taxRate: undefined // QBO doesn't expose per-line rate
+            amount: lineAmount,
+            taxCode: detail.TaxCodeRef?.value
           });
           lineIndex++;
         }
       }
 
-      // Calculate total tax from QBO invoice
-      const totalTax = amountToCents(qboInvoice.TxnTaxDetail?.TotalTax ?? 0);
-      const totalAmount = amountToCents(qboInvoice.TotalAmt ?? 0);
+      // Calculate subtotal from line items
+      const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
 
-      // Distribute tax proportionally across lines if there are charges
+      // Distribute tax proportionally across lines based on line amounts
+      // Using documented rounding algorithm from docs/tax_calculation_allocation.md:
+      // - Use Math.floor() for each line's proportional share
+      // - Assign remainder to the LAST item to ensure sum equals total
+      const charges: ExternalInvoiceChargeTax[] = lineItems.map((item, index) => {
+        let taxAmount = 0;
+
+        if (subtotal > 0 && totalTax > 0) {
+          // Proportional distribution: itemTax = floor((itemNetAmount / totalRegionalNet) × totalGroupTax)
+          taxAmount = Math.floor((item.amount / subtotal) * totalTax);
+        }
+
+        // Calculate effective tax rate for this line
+        const effectiveRate = item.amount > 0 ? (taxAmount / item.amount) * 100 : undefined;
+
+        return {
+          lineId: item.lineId,
+          externalLineId: item.externalLineId,
+          taxAmount,
+          taxCode: item.taxCode,
+          taxRate: effectiveRate
+        };
+      });
+
+      // Handle rounding - assign remainder to the LAST item (per documented algorithm)
       if (charges.length > 0 && totalTax > 0) {
-        const subtotal = totalAmount - totalTax;
-        for (const charge of charges) {
-          // For now, use equal distribution; a more accurate method would
-          // use the line amounts if available
-          charge.taxAmount = Math.round(totalTax / charges.length);
+        const distributedTax = charges.reduce((sum, c) => sum + c.taxAmount, 0);
+        const roundingDiff = totalTax - distributedTax;
+        if (roundingDiff !== 0) {
+          // Apply rounding difference to the last item in the group
+          charges[charges.length - 1].taxAmount += roundingDiff;
+        }
+      }
+
+      // Extract tax component breakdown from TxnTaxDetail.TaxLine[]
+      // QBO provides this at the invoice level (not per-line like Xero)
+      const taxLines = qboInvoice.TxnTaxDetail?.TaxLine ?? [];
+      const invoiceTaxComponents: ExternalTaxComponent[] = taxLines
+        .filter(line => line.TaxLineDetailType === 'TaxLineDetail' || line.Amount !== undefined)
+        .map(line => ({
+          name: line.TaxRateRef?.name ?? line.TaxRateRef?.value ?? 'Tax',
+          rate: line.TaxPercent ?? 0,
+          amount: amountToCents(line.Amount ?? 0)
+        }));
+
+      // If we have tax components, distribute them proportionally to line items
+      // Using documented rounding algorithm: floor + remainder to last item
+      if (invoiceTaxComponents.length > 0 && charges.length > 0) {
+        // For each tax component, distribute to charges proportionally
+        for (const component of invoiceTaxComponents) {
+          let distributedComponentTax = 0;
+
+          for (let i = 0; i < charges.length; i++) {
+            const charge = charges[i];
+            if (!charge.taxComponents) {
+              charge.taxComponents = [];
+            }
+
+            if (subtotal > 0 && charge.taxAmount > 0) {
+              const isLastCharge = i === charges.length - 1;
+              let componentAmount: number;
+
+              if (isLastCharge) {
+                // Last item gets the remainder
+                componentAmount = component.amount - distributedComponentTax;
+              } else {
+                // Use floor for all but the last
+                const proportion = charge.taxAmount / totalTax;
+                componentAmount = Math.floor(component.amount * proportion);
+                distributedComponentTax += componentAmount;
+              }
+
+              charge.taxComponents.push({
+                name: component.name,
+                rate: component.rate,
+                amount: componentAmount
+              });
+            }
+          }
         }
       }
 
@@ -634,7 +714,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           syncToken: qboInvoice.SyncToken,
           txnDate: qboInvoice.TxnDate,
           dueDate: qboInvoice.DueDate,
-          customerId: qboInvoice.CustomerRef?.value
+          customerId: qboInvoice.CustomerRef?.value,
+          // Include invoice-level tax components for reference
+          taxComponents: invoiceTaxComponents.length > 0 ? invoiceTaxComponents : undefined,
+          txnTaxCodeRef: qboInvoice.TxnTaxDetail?.TxnTaxCodeRef?.value
         }
       };
 

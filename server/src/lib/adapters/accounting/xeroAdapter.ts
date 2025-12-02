@@ -8,6 +8,8 @@ import {
   AccountingExportTransformResult,
   AccountingExportDocument,
   ExternalInvoiceFetchResult,
+  ExternalInvoiceData,
+  ExternalInvoiceChargeTax,
   PendingTaxImportRecord
 } from './accountingExportAdapter';
 import {
@@ -519,25 +521,86 @@ export class XeroAdapter implements AccountingExportAdapter {
    * Fetch invoice data including tax amounts from Xero.
    * Used to import externally calculated tax back into Alga PSA.
    * Xero provides detailed tax component breakdown per line.
-   *
-   * TODO: Implement in B.4 (External Tax Import Service) task.
-   * This requires adding a getInvoice method to XeroClientService.
    */
   async fetchExternalInvoice(
     externalInvoiceRef: string,
     targetRealm?: string
   ): Promise<ExternalInvoiceFetchResult> {
-    // Note: Full implementation pending B.4 task which will add
-    // the getInvoice capability to XeroClientService.
-    // For now, return not implemented error.
-    logger.warn('[XeroAdapter] fetchExternalInvoice not yet implemented', {
-      externalInvoiceRef,
-      targetRealm
-    });
-    return {
-      success: false,
-      error: 'Xero invoice fetch not yet implemented - pending B.4 External Tax Import Service'
-    };
+    try {
+      const { knex } = await createTenantKnex();
+      const tenantId = await this.getTenantFromContext(knex);
+
+      const client = await XeroClientService.create(tenantId, targetRealm ?? null);
+      const xeroInvoice = await client.getInvoice(externalInvoiceRef);
+
+      if (!xeroInvoice) {
+        return {
+          success: false,
+          error: `Invoice ${externalInvoiceRef} not found in Xero`
+        };
+      }
+
+      // Map Xero line items to external invoice charges with full tax component details
+      const charges: ExternalInvoiceChargeTax[] = xeroInvoice.lineItems.map((line, index) => {
+        // Calculate effective tax rate from the line if available
+        const effectiveRate = line.lineAmount > 0
+          ? (line.taxAmount / line.lineAmount) * 100
+          : undefined;
+
+        // Map Xero tax components to our format
+        const taxComponents = line.taxComponents?.map(component => ({
+          name: component.name,
+          rate: component.rate,
+          amount: component.amount
+        }));
+
+        return {
+          lineId: line.lineItemId ?? `line-${index}`,
+          externalLineId: line.lineItemId,
+          taxAmount: line.taxAmount,
+          taxCode: line.taxType,
+          taxRate: effectiveRate,
+          taxComponents
+        };
+      });
+
+      const externalInvoice: ExternalInvoiceData = {
+        externalInvoiceId: xeroInvoice.invoiceId,
+        externalInvoiceRef: xeroInvoice.invoiceNumber ?? xeroInvoice.reference,
+        status: xeroInvoice.status ?? 'synced',
+        totalTax: xeroInvoice.totalTax,
+        totalAmount: xeroInvoice.total,
+        currency: xeroInvoice.currencyCode,
+        charges,
+        metadata: {
+          lineAmountTypes: xeroInvoice.lineAmountTypes,
+          subTotal: xeroInvoice.subTotal,
+          reference: xeroInvoice.reference
+        }
+      };
+
+      logger.info('[XeroAdapter] successfully fetched invoice with tax details', {
+        invoiceId: externalInvoiceRef,
+        totalTax: xeroInvoice.totalTax,
+        lineCount: charges.length,
+        hasComponentBreakdown: charges.some(c => c.taxComponents && c.taxComponents.length > 0)
+      });
+
+      return {
+        success: true,
+        invoice: externalInvoice
+      };
+    } catch (error: any) {
+      logger.error('[XeroAdapter] failed to fetch external invoice', {
+        externalInvoiceRef,
+        targetRealm,
+        error: error.message
+      });
+      return {
+        success: false,
+        error: error.message ?? 'Failed to fetch invoice from Xero'
+      };
+    }
   }
 
   /**
