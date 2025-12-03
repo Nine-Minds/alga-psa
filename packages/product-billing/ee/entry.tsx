@@ -12,6 +12,7 @@ export const BillingDashboard = () => import('../../../ee/server/src/components/
 export const InvoiceTemplates = () => import('../../../ee/server/src/components/billing/InvoiceTemplates.js');
 export const PaymentProcessing = () => import('../../../ee/server/src/components/billing/PaymentProcessing.js');
 export const BillingReports = () => import('../../../ee/server/src/components/billing/BillingReports.js');
+export const PaymentSettings = () => import('../../../ee/server/src/components/settings/billing/PaymentSettings.js');
 
 // Default export
 const billing = {
@@ -19,6 +20,7 @@ const billing = {
   InvoiceTemplates: () => import('../../../ee/server/src/components/billing/InvoiceTemplates.js'),
   PaymentProcessing: () => import('../../../ee/server/src/components/billing/PaymentProcessing.js'),
   BillingReports: () => import('../../../ee/server/src/components/billing/BillingReports.js'),
+  PaymentSettings: () => import('../../../ee/server/src/components/settings/billing/PaymentSettings.js'),
 };
 
 export default billing;
