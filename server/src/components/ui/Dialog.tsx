@@ -160,7 +160,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
-          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 max-h-[90vh] flex flex-col`}
+          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
           onKeyDown={onKeyDown}
           onOpenAutoFocus={onOpenAutoFocus}

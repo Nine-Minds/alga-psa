@@ -43,6 +43,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
     copyStatuses: true,
     copyTasks: true,
     copyChecklists: true,
+    copyServices: true,
     assignmentOption: 'primary' as AssignmentOption
   });
 
@@ -52,9 +53,25 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
 
   useEffect(() => {
     if (open) {
+      // Reset form state when dialog opens
+      setFormData({
+        template_id: initialTemplateId || '',
+        project_name: '',
+        client_id: '',
+        assigned_to: ''
+      });
+      setStartDate(undefined);
+      setOptions({
+        copyPhases: true,
+        copyStatuses: true,
+        copyTasks: true,
+        copyChecklists: true,
+        copyServices: true,
+        assignmentOption: 'primary'
+      });
       loadData();
     }
-  }, [open]);
+  }, [open, initialTemplateId]);
 
   async function loadData() {
     try {
@@ -111,6 +128,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
             copyStatuses: options.copyStatuses,
             copyTasks: options.copyTasks,
             copyChecklists: options.copyChecklists,
+            copyServices: options.copyServices,
             assignmentOption: options.assignmentOption
           }
         })
@@ -236,8 +254,9 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
                       setOptions({
                         ...options,
                         copyTasks: e.target.checked,
-                        // Disable checklists if tasks are disabled
-                        copyChecklists: e.target.checked ? options.copyChecklists : false
+                        // Disable checklists and services if tasks are disabled
+                        copyChecklists: e.target.checked ? options.copyChecklists : false,
+                        copyServices: e.target.checked ? options.copyServices : false
                       });
                     }}
                     containerClassName="mb-2"
@@ -248,6 +267,14 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
                     checked={options.copyChecklists}
                     disabled={!options.copyTasks}
                     onChange={(e) => setOptions({ ...options, copyChecklists: e.target.checked })}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="copy-services-checkbox"
+                    label="Copy Task Services"
+                    checked={options.copyServices}
+                    disabled={!options.copyTasks}
+                    onChange={(e) => setOptions({ ...options, copyServices: e.target.checked })}
                     containerClassName="mb-2"
                   />
                 </div>

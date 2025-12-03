@@ -8,6 +8,8 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getServices } from 'server/src/lib/actions/serviceActions';
+import { IService } from 'server/src/interfaces/billing.interfaces';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -47,7 +49,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/compone
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
-import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { IExtendedWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
@@ -129,6 +131,8 @@ export default function TaskForm({
   } | null>(null);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
+  const [availableServices, setAvailableServices] = useState<IService[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(task?.service_id ?? null);
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
     successors: IProjectTaskDependency[];
@@ -155,10 +159,14 @@ export default function TaskForm({
         // Fetch priorities for project tasks
         const allPriorities = await getAllPriorities('project_task');
         setPriorities(allPriorities);
-        
+
         // Fetch task types
         const types = await getTaskTypes();
         setTaskTypes(types);
+
+        // Fetch services for time entry prefill
+        const servicesResponse = await getServices(1, 999);
+        setAvailableServices(servicesResponse.services);
         
         // Fetch all tasks in the project
         if (phase.project_id) {
@@ -469,7 +477,8 @@ export default function TaskForm({
           checklist_items: checklistItems,
           project_status_mapping_id: statusChanged ? taskToUpdate.project_status_mapping_id : task.project_status_mapping_id,
           task_type_key: selectedTaskType,
-          order_key: task.order_key // Always preserve the original order_key
+          order_key: task.order_key, // Always preserve the original order_key
+          service_id: selectedServiceId
         };
         resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
         onSubmit(resultTask);
@@ -487,7 +496,8 @@ export default function TaskForm({
           due_date: dueDate || null, // Use selected due date or null
           priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
-          task_type_key: selectedTaskType
+          task_type_key: selectedTaskType,
+          service_id: selectedServiceId
         };
 
         // Create the task first
@@ -565,6 +575,7 @@ export default function TaskForm({
       if (pendingTicketLinks.length > 0) return true;
       if (selectedPriorityId !== null) return true; // User explicitly selected a priority
       if (selectedTaskType !== initialTaskType) return true; // Only if changed from initial value
+      if (selectedServiceId !== null) return true; // User explicitly selected a service
       return false; // No changes detected
     }
     
@@ -579,6 +590,7 @@ export default function TaskForm({
     if (actualHours !== Number(task.actual_hours) / 60) return true;
     if (assignedUser !== task.assigned_to) return true;
     if (selectedPriorityId !== task.priority_id) return true;
+    if (selectedServiceId !== (task.service_id ?? null)) return true;
 
     // Compare checklist items
     if (checklistItems.length !== task.checklist_items?.length) return true;
@@ -749,18 +761,19 @@ export default function TaskForm({
         return;
       }
 
-      const workItem: Omit<IWorkItem, 'tenant'> & {
-        project_name?: string;
-        phase_name?: string;
-        task_name?: string;
-      } = {
+      // Get the service name for the selected service
+      const selectedService = availableServices.find(s => s.service_id === selectedServiceId);
+
+      const workItem: Omit<IExtendedWorkItem, 'tenant'> = {
         work_item_id: task.task_id,
         type: 'project_task' as WorkItemType,
         name: `${task.task_name}`,
         description: '',  // Don't copy task description to time entry notes
         project_name: phase.phase_name, // Using phase name as a placeholder
         phase_name: phase.phase_name,
-        task_name: task.task_name
+        task_name: task.task_name,
+        service_id: selectedServiceId || task.service_id || null,
+        service_name: selectedService?.service_name || null,
       };
 
       openDrawer(
@@ -959,6 +972,30 @@ export default function TaskForm({
               className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 whitespace-pre-wrap break-words"
               rows={3}
             />
+          </div>
+
+          {/* Service (for time entry prefill) - right under description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Service (for time entries)
+            </label>
+            <CustomSelect
+              id="task-service-select"
+              value={selectedServiceId || ''}
+              onValueChange={(value) => setSelectedServiceId(value || null)}
+              options={[
+                { value: '', label: 'No service' },
+                ...availableServices.map(s => ({
+                  value: s.service_id,
+                  label: s.service_name
+                }))
+              ]}
+              placeholder="Select service for time entry prefill..."
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              When set, this service will be automatically selected when creating time entries from this task.
+            </p>
           </div>
 
           {/* 2 Column Grid Section */}

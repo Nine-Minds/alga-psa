@@ -417,9 +417,9 @@ export async function copyPresetToContractLine(
 
             const contractLineId = contractLine.contract_line_id;
 
-            // 3. Add the contract line to the contract by directly inserting into the mapping table
-            // We can't use addContractLine() because it creates its own transaction and session
-            const countResult = await trx('contract_line_mappings')
+            // 3. Link the contract line to the contract by updating contract_lines directly
+            // After migration 20251028090000, data is stored directly in contract_lines
+            const countResult = await trx('contract_lines')
                 .where({ tenant: tenantId, contract_id: contractId })
                 .count<{ count: string | number }>('contract_line_id as count')
                 .first();
@@ -431,14 +431,14 @@ export async function copyPresetToContractLine(
                         : Number(countResult.count)
                     : 0;
 
-            await trx('contract_line_mappings').insert({
-                tenant: tenantId,
-                contract_id: contractId,
-                contract_line_id: contractLineId,
-                display_order: existingCount,
-                custom_rate: null,
-                created_at: trx.fn.now()
-            });
+            await trx('contract_lines')
+                .where({ tenant: tenantId, contract_line_id: contractLineId })
+                .update({
+                    contract_id: contractId,
+                    display_order: existingCount,
+                    custom_rate: null,
+                    updated_at: trx.fn.now()
+                });
 
             // 4. Copy services and their configurations
             const presetServices = await ContractLinePresetService.getByPresetId(trx, presetId);

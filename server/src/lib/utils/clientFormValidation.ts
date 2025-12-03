@@ -9,14 +9,6 @@ export interface ValidationResult {
 // Common emoji regex pattern used across validation functions
 const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
 
-// Professional validation lists - what real SaaS/CRM platforms use
-const VALID_TLDS = [
-  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'co', 'io', 'ai', 'app', 'dev',
-  'us', 'uk', 'ca', 'au', 'de', 'fr', 'jp', 'cn', 'in', 'br', 'ru', 'mx', 'it', 'es', 'nl', 'se', 'no', 'dk', 'fi',
-  'biz', 'info', 'name', 'pro', 'aero', 'coop', 'museum', 'travel', 'mobi', 'tel', 'asia', 'jobs', 'cat',
-  'tech', 'online', 'store', 'site', 'website', 'space', 'club', 'xyz', 'top', 'win', 'bid'
-];
-
 // Disposable/temporary email domains - commonly blocked by professional platforms
 const DISPOSABLE_EMAIL_DOMAINS = [
   '10minutemail.com', '20minutemail.com', 'mailinator.com', 'guerrillamail.com', 'tempmail.org',
@@ -67,9 +59,9 @@ export function validateClientName(name: string): string | null {
     return 'Client name cannot be just a business abbreviation';
   }
   
-  // No repeats of the same character 3+ times
-  if (/(.)\1{2,}/.test(nameWithoutEmojis)) {
-    return 'Client name cannot contain repeated characters';
+  // No repeats of the same character 5+ times (allows names like "AAA Auto")
+  if (/(.)\1{4,}/.test(nameWithoutEmojis)) {
+    return 'Client name cannot contain excessively repeated characters';
   }
   
   // Block domain extensions
@@ -142,15 +134,11 @@ export function validateWebsiteUrl(url: string): string | null {
     if (!hostname.includes('.')) {
       return 'Please enter a valid website URL with a domain extension';
     }
-    
-    // Validate TLD against known valid TLDs
-    const parts = hostname.split('.');
-    const tld = parts[parts.length - 1];
-    
-    if (!VALID_TLDS.includes(tld)) {
-      return 'Please enter a website with a valid domain extension';
-    }
-    
+
+    // Note: We don't validate TLDs because ICANN has 1,500+ valid TLDs
+    // and blocking legitimate customers is worse than accepting edge cases.
+    // The URL constructor already validates syntactic correctness.
+
     return null;
   } catch {
     return 'Please enter a valid website URL (e.g., apple.com)';
@@ -215,20 +203,14 @@ export function validateEmailAddress(email: string): string | null {
   if (!domain.includes('.') || domain.split('.').length < 2) {
     return 'Please enter a valid email domain';
   }
-  
-  // Validate TLD against known valid TLDs (like professional platforms)
+
+  // Check for obviously invalid TLDs (single char or all numbers)
   const domainParts = domain.split('.');
   const tld = domainParts[domainParts.length - 1];
-  
-  if (!VALID_TLDS.includes(tld)) {
-    return 'Please enter an email with a valid domain extension';
-  }
-  
-  // Additional check for common fake patterns
   if (tld.length === 1 || /^[0-9]+$/.test(tld)) {
     return 'Please enter a valid email domain';
   }
-  
+
   return null;
 }
 
@@ -282,29 +264,29 @@ export function validatePhoneNumber(phone: string): string | null {
       return 'Please enter a valid phone number';
     }
 
-    // Reject sequential patterns (supports Unicode digits)
-    const isSequential = (str: string): boolean => {
-      for (let i = 0; i < str.length - 2; i++) {
+    // Reject only if ENTIRE number is sequential (like 1234567890 or 9876543210)
+    const isEntirelySequential = (str: string): boolean => {
+      if (str.length < 7) return false;
+
+      let ascendingCount = 0;
+      let descendingCount = 0;
+
+      for (let i = 0; i < str.length - 1; i++) {
         const current = parseInt(str[i]);
-        const next1 = parseInt(str[i + 1]);
-        const next2 = parseInt(str[i + 2]);
+        const next = parseInt(str[i + 1]);
 
-        // Check for ascending sequence (123, 234, etc.)
-        if (!isNaN(current) && !isNaN(next1) && !isNaN(next2)) {
-          if (next1 === current + 1 && next2 === current + 2) {
-            return true;
-          }
-
-          // Check for descending sequence (321, 210, etc.)
-          if (next1 === current - 1 && next2 === current - 2) {
-            return true;
-          }
+        if (!isNaN(current) && !isNaN(next)) {
+          if (next === current + 1) ascendingCount++;
+          else if (next === current - 1) descendingCount++;
         }
       }
-      return false;
+
+      // Only reject if 80%+ of the number is sequential
+      const sequentialRatio = Math.max(ascendingCount, descendingCount) / (str.length - 1);
+      return sequentialRatio >= 0.8;
     };
 
-    if (isSequential(unicodeDigitString)) {
+    if (isEntirelySequential(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
 

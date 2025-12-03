@@ -405,6 +405,30 @@ const Service = {
 
         log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
 
+        // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
+        const updatedTasks = await knexOrTrx('project_tasks')
+          .where({
+            service_id,
+            tenant
+          })
+          .update({
+            service_id: null
+          });
+
+        log.info(`[Service.delete] Updated ${updatedTasks} project_tasks records for service ${service_id}`);
+
+        // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
+        const updatedTemplateTasks = await knexOrTrx('project_template_tasks')
+          .where({
+            service_id,
+            tenant
+          })
+          .update({
+            service_id: null
+          });
+
+        log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
+
         // Then delete the service
         const deletedCount = await knexOrTrx('service_catalog')
           .where({
@@ -428,6 +452,30 @@ const Service = {
             });
 
           log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
+
+          // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
+          const updatedTasks = await trx('project_tasks')
+            .where({
+              service_id,
+              tenant
+            })
+            .update({
+              service_id: null
+            });
+
+          log.info(`[Service.delete] Updated ${updatedTasks} project_tasks records for service ${service_id}`);
+
+          // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
+          const updatedTemplateTasks = await trx('project_template_tasks')
+            .where({
+              service_id,
+              tenant
+            })
+            .update({
+              service_id: null
+            });
+
+          log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
 
           // Then delete the service
           const deletedCount = await trx('service_catalog')

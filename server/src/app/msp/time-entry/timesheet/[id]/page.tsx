@@ -4,7 +4,8 @@ import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 import { fetchTimeSheet } from 'server/src/lib/actions/timeSheetActions';
 import TimeSheetClient from './TimeSheetClient';
 
-export default async function TimeSheetPage({ params }: any) {
+export default async function TimeSheetPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     return notFound();
@@ -14,7 +15,7 @@ export default async function TimeSheetPage({ params }: any) {
   const isManager = teamsData.some(team => team.manager_id === currentUser?.user_id);
 
   try {
-    const timeSheet = await fetchTimeSheet(params.id);
+    const timeSheet = await fetchTimeSheet(id);
     
     // Verify the user has access to this timesheet
     if (timeSheet.user_id !== currentUser.user_id && !isManager) {

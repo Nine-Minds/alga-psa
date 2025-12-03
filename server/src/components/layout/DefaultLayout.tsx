@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
@@ -18,16 +19,67 @@ interface DefaultLayoutProps {
 export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
+  const pathname = usePathname();
+
+  // Track if we're on settings page
+  const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
+
+  // Standard sidebar state - just use the initial preference
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
+
   const [disableTransition, setDisableTransition] = useState(true);
 
+  // Track current collapsed state in a ref for use in effects
+  const sidebarCollapsedRef = useRef(sidebarCollapsed);
   useEffect(() => {
-    setDisableTransition(false);
+    sidebarCollapsedRef.current = sidebarCollapsed;
+  }, [sidebarCollapsed]);
+
+  // Track if we auto-collapsed on settings entry (to restore on leave)
+  const wasAutoCollapsedRef = useRef(false);
+  const prevIsOnSettingsRef = useRef(isOnSettingsPage);
+
+  // Enable transitions after initial render
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      setDisableTransition(false);
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
+
+  // Auto-collapse sidebar when entering settings page, restore when leaving
+  useEffect(() => {
+    const wasOnSettings = prevIsOnSettingsRef.current;
+
+    // Entering settings page
+    if (isOnSettingsPage && !wasOnSettings) {
+      // Only auto-collapse if sidebar is currently expanded
+      if (!sidebarCollapsedRef.current) {
+        wasAutoCollapsedRef.current = true;
+        setSidebarCollapsedState(true);
+      }
+    }
+    // Leaving settings page
+    else if (!isOnSettingsPage && wasOnSettings) {
+      // Only restore if we auto-collapsed (user didn't manually toggle while on settings)
+      if (wasAutoCollapsedRef.current) {
+        setSidebarCollapsedState(false);
+      }
+      wasAutoCollapsedRef.current = false;
+    }
+
+    prevIsOnSettingsRef.current = isOnSettingsPage;
+  }, [isOnSettingsPage]);
 
   const setSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
     setSidebarCollapsedState(prev => {
       const newValue = typeof value === 'function' ? value(prev) : value;
+
+      // If user manually toggles while on settings, clear auto-collapse flag
+      // so we don't override their preference when leaving
+      if (isOnSettingsPage) {
+        wasAutoCollapsedRef.current = false;
+      }
 
       // Save using the helper
       savePreference('sidebar_collapsed', String(newValue));
@@ -134,7 +186,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               rightSidebarOpen={rightSidebarOpen}
               setRightSidebarOpen={setRightSidebarOpen}
             />
-            <main className="flex-1 overflow-hidden flex pt-2 px-3">
+            <main className={`flex-1 overflow-hidden flex ${isOnSettingsPage ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               <RightSidebar
                 isOpen={rightSidebarOpen}

@@ -28,11 +28,11 @@ const ensureTable = async (knex, tableName, createFn) => {
  */
 const createPaymentProviderConfigs = (knex) =>
   knex.schema.createTable('payment_provider_configs', (table) => {
+    table.uuid('tenant').notNullable();
     table
       .uuid('config_id')
       .defaultTo(knex.raw('gen_random_uuid()'))
-      .primary();
-    table.uuid('tenant').notNullable();
+      .notNullable();
     table.string('provider_type', 50).notNullable(); // 'stripe', 'paypal', etc.
     table.boolean('is_enabled').defaultTo(false);
     table.boolean('is_default').defaultTo(false);
@@ -43,6 +43,7 @@ const createPaymentProviderConfigs = (knex) =>
     table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
     table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
 
+    table.primary(['tenant', 'config_id']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
     table.unique(['tenant', 'provider_type']);
   });
@@ -53,11 +54,11 @@ const createPaymentProviderConfigs = (knex) =>
  */
 const createClientPaymentCustomers = (knex) =>
   knex.schema.createTable('client_payment_customers', (table) => {
+    table.uuid('tenant').notNullable();
     table
       .uuid('mapping_id')
       .defaultTo(knex.raw('gen_random_uuid()'))
-      .primary();
-    table.uuid('tenant').notNullable();
+      .notNullable();
     table.uuid('client_id').notNullable();
     table.string('provider_type', 50).notNullable();
     table.string('external_customer_id', 255).notNullable(); // stripe: cus_xxx
@@ -66,8 +67,9 @@ const createClientPaymentCustomers = (knex) =>
     table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
     table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
 
+    table.primary(['tenant', 'mapping_id']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign('client_id').references('clients.client_id').onDelete('CASCADE');
+    table.foreign(['tenant', 'client_id']).references(['tenant', 'client_id']).inTable('clients').onDelete('CASCADE');
     table.unique(['tenant', 'client_id', 'provider_type']);
   });
 
@@ -77,11 +79,11 @@ const createClientPaymentCustomers = (knex) =>
  */
 const createInvoicePaymentLinks = (knex) =>
   knex.schema.createTable('invoice_payment_links', (table) => {
+    table.uuid('tenant').notNullable();
     table
       .uuid('link_id')
       .defaultTo(knex.raw('gen_random_uuid()'))
-      .primary();
-    table.uuid('tenant').notNullable();
+      .notNullable();
     table.uuid('invoice_id').notNullable();
     table.string('provider_type', 50).notNullable();
     table.string('external_link_id', 255).notNullable(); // stripe: cs_xxx (checkout session)
@@ -94,8 +96,9 @@ const createInvoicePaymentLinks = (knex) =>
     table.jsonb('metadata').defaultTo('{}');
     table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
 
+    table.primary(['tenant', 'link_id']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign('invoice_id').references('invoices.invoice_id').onDelete('CASCADE');
+    table.foreign(['tenant', 'invoice_id']).references(['tenant', 'invoice_id']).inTable('invoices').onDelete('CASCADE');
     // Allow multiple payment links per invoice (e.g., expired ones replaced by new)
     // but track external_link_id uniqueness per tenant
     table.unique(['tenant', 'external_link_id']);
@@ -107,11 +110,11 @@ const createInvoicePaymentLinks = (knex) =>
  */
 const createPaymentWebhookEvents = (knex) =>
   knex.schema.createTable('payment_webhook_events', (table) => {
+    table.uuid('tenant').notNullable();
     table
       .uuid('event_id')
       .defaultTo(knex.raw('gen_random_uuid()'))
-      .primary();
-    table.uuid('tenant').notNullable();
+      .notNullable();
     table.string('provider_type', 50).notNullable();
     table.string('external_event_id', 255).notNullable(); // stripe: evt_xxx
     table.string('event_type', 100).notNullable(); // e.g., 'checkout.session.completed'
@@ -123,8 +126,10 @@ const createPaymentWebhookEvents = (knex) =>
     table.timestamp('processed_at', { useTz: true });
     table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
 
+    table.primary(['tenant', 'event_id']);
     table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-    table.foreign('invoice_id').references('invoices.invoice_id').onDelete('SET NULL');
+    // Note: No ON DELETE SET NULL - incompatible with Citus. Handle in application code.
+    table.foreign(['tenant', 'invoice_id']).references(['tenant', 'invoice_id']).inTable('invoices');
     table.unique(['tenant', 'provider_type', 'external_event_id']);
   });
 

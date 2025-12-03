@@ -65,7 +65,7 @@ exports.up = async function(knex) {
       }
 
       // Drop any unique constraints that reference tenant_id FIRST
-      // (This will automatically drop the backing indexes)
+      // (unique constraints create backing indexes that can't be dropped directly)
       const uniqueConstraints = await knex.raw(`
         SELECT con.conname
         FROM pg_constraint con
