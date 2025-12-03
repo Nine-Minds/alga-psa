@@ -19,35 +19,49 @@ interface DefaultLayoutProps {
 export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
-  const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
-  const [disableTransition, setDisableTransition] = useState(true);
   const pathname = usePathname();
 
-  // Track if we're on settings page and if collapse was auto-triggered
+  // Track if we're on settings page
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
-  const wasAutoCollapsedRef = useRef(false);
-  const prevIsOnSettingsRef = useRef(false); // Start false to trigger on initial load
 
+  // Standard sidebar state - just use the initial preference
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
+
+  const [disableTransition, setDisableTransition] = useState(true);
+
+  // Track current collapsed state in a ref for use in effects
+  const sidebarCollapsedRef = useRef(sidebarCollapsed);
   useEffect(() => {
-    setDisableTransition(false);
+    sidebarCollapsedRef.current = sidebarCollapsed;
+  }, [sidebarCollapsed]);
+
+  // Track if we auto-collapsed on settings entry (to restore on leave)
+  const wasAutoCollapsedRef = useRef(false);
+  const prevIsOnSettingsRef = useRef(isOnSettingsPage);
+
+  // Enable transitions after initial render
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      setDisableTransition(false);
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // Auto-collapse sidebar when entering settings page, restore when leaving
-  // Only applies if user's preference is expanded (initialSidebarCollapsed === false)
   useEffect(() => {
     const wasOnSettings = prevIsOnSettingsRef.current;
 
-    // Entering settings page (or initial load on settings page)
+    // Entering settings page
     if (isOnSettingsPage && !wasOnSettings) {
-      // Only auto-collapse if user's preference is expanded
-      if (!initialSidebarCollapsed) {
+      // Only auto-collapse if sidebar is currently expanded
+      if (!sidebarCollapsedRef.current) {
         wasAutoCollapsedRef.current = true;
         setSidebarCollapsedState(true);
       }
     }
     // Leaving settings page
     else if (!isOnSettingsPage && wasOnSettings) {
-      // Only restore if we auto-collapsed (user didn't manually toggle)
+      // Only restore if we auto-collapsed (user didn't manually toggle while on settings)
       if (wasAutoCollapsedRef.current) {
         setSidebarCollapsedState(false);
       }
@@ -55,7 +69,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     }
 
     prevIsOnSettingsRef.current = isOnSettingsPage;
-  }, [isOnSettingsPage, initialSidebarCollapsed]);
+  }, [isOnSettingsPage]);
 
   const setSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
     setSidebarCollapsedState(prev => {

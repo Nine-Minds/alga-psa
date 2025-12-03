@@ -21,6 +21,10 @@ interface SettingsSidebarProps {
   onTabChange: (tab: string) => void;
 }
 
+// Helper to convert title to kebab-case slug for IDs
+const toKebabCase = (str: string): string =>
+  str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 const settingsMenuGroups: SettingsMenuGroup[] = [
   {
     title: 'Organization & Access',
@@ -101,6 +105,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ activeTab, onTabChang
           return (
             <div key={groupIndex} className="mb-2">
               <button
+                id={`settings-section-${toKebabCase(group.title)}-toggle`}
                 type="button"
                 onClick={() => toggleSection(groupIndex)}
                 className="w-full px-4 py-2 flex items-center gap-2 transition-colors hover:bg-gray-50"
@@ -121,6 +126,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ activeTab, onTabChang
                     return (
                       <li key={item.slug}>
                         <button
+                          id={`settings-tab-${item.slug}-button`}
                           type="button"
                           onClick={() => onTabChange(item.label)}
                           className={`w-full px-4 py-2 pl-9 flex items-center gap-2 text-sm transition-colors ${
