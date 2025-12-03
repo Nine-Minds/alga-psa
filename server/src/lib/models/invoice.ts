@@ -79,12 +79,20 @@ export default class Invoice {
 
   static async delete(knexOrTrx: Knex | Knex.Transaction, invoiceId: string): Promise<boolean> {
     const tenant = await getCurrentTenantId();
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for deleting invoice');
     }
 
     try {
+      // Nullify invoice_id in payment_webhook_events
+      const hasPaymentWebhookEvents = await knexOrTrx.schema.hasTable('payment_webhook_events');
+      if (hasPaymentWebhookEvents) {
+        await knexOrTrx('payment_webhook_events')
+          .where({ invoice_id: invoiceId, tenant })
+          .update({ invoice_id: null });
+      }
+
       const deleted = await knexOrTrx('invoices')
         .where({
           invoice_id: invoiceId,
