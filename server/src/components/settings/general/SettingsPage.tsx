@@ -3,13 +3,10 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Users, UsersRound, Ticket, FolderKanban, MessageSquare, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
-import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
-import CreditExpirationSettings from '../billing/CreditExpirationSettings';
-import CustomTabs, { TabContent, TabGroup } from "server/src/components/ui/CustomTabs";
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
+import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { Input } from "server/src/components/ui/Input";
-import { Button } from "server/src/components/ui/Button";
+import SettingsSidebar from "server/src/components/layout/SettingsSidebar";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
 import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
@@ -174,12 +171,12 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Users",
-      icon: Users,
+      icon: UserCog,
       content: <UserManagement />,
     },
     {
       label: "Teams",
-      icon: UsersRound,
+      icon: Users,
       content: (
         <Card>
           <CardHeader>
@@ -196,7 +193,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Ticketing",
-      icon: Ticket,
+      icon: MessageSquare,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
           <TicketingSettings />
@@ -205,12 +202,12 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Projects",
-      icon: FolderKanban,
+      icon: Layers,
       content: <ProjectSettings />,
     },
     {
       label: "Interactions",
-      icon: MessageSquare,
+      icon: Handshake,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
           <InteractionSettings />
@@ -346,63 +343,23 @@ const SettingsPage = (): JSX.Element =>  {
     ),
   };
 
-  // Organize tabs into logical functional groups
-  const getTabByLabel = (label: string): TabContent | undefined => {
-    return baseTabContent.find(t => t.label === label);
-  };
-
-  const tabGroups: TabGroup[] = [
-    {
-      title: 'Organization & Access',
-      tabs: [
-        getTabByLabel('General'),
-        getTabByLabel('Users'),
-        getTabByLabel('Teams'),
-        getTabByLabel('Client Portal'),
-      ].filter((tab): tab is TabContent => tab !== undefined)
-    },
-    {
-      title: 'Work Management',
-      tabs: [
-        getTabByLabel('Ticketing'),
-        getTabByLabel('Projects'),
-        getTabByLabel('Interactions'),
-      ].filter((tab): tab is TabContent => tab !== undefined)
-    },
-    {
-      title: 'Time & Billing',
-      tabs: [
-        getTabByLabel('Time Entry'),
-        getTabByLabel('Billing'),
-      ].filter((tab): tab is TabContent => tab !== undefined)
-    },
-    {
-      title: 'Communication',
-      tabs: [
-        getTabByLabel('Notifications'),
-        getTabByLabel('Email'),
-      ].filter((tab): tab is TabContent => tab !== undefined)
-    },
-    {
-      title: 'Data & Integration',
-      tabs: [
-        getTabByLabel('Import/Export'),
-        getTabByLabel('Integrations'),
-        extensionsTab,
-      ].filter((tab): tab is TabContent => tab !== undefined)
-    }
-  ];
+  // Create a map of tab content by label for easy lookup
+  const allTabs = [...baseTabContent, extensionsTab];
+  const activeTabContent = allTabs.find(tab => tab.label === activeTab);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
-      <CustomTabs
-        tabs={[]}
-        groups={tabGroups}
-        defaultTab={activeTab}
+    <div className="flex h-full">
+      {/* Settings sidebar - navigation panel */}
+      <SettingsSidebar
+        activeTab={activeTab}
         onTabChange={handleTabChange}
-        orientation="vertical"
       />
+
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
+        {activeTabContent?.content}
+      </div>
     </div>
   );
 };

@@ -127,7 +127,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   const selectedOption = uniqueOptions.find((option) => option.value === value);
 
   return (
-    <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType}>
+    <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType} suppressHydrationWarning>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}
@@ -166,8 +166,9 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             ${customStyles?.trigger || ''}
           `}
           aria-label={placeholder}
+          suppressHydrationWarning
         >
-          <RadixSelect.Value 
+          <RadixSelect.Value
             placeholder={placeholder}
             className="flex-1 text-left"
           >

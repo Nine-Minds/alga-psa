@@ -159,10 +159,10 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                     onClick={() => toggleSection(groupIndex)}
                     className="w-full px-3 pt-4 pb-2 first:pt-0 flex items-center gap-2 group transition-opacity"
                   >
-                    <ChevronDown 
-                      className={`h-3 w-3 text-primary-600 group-hover:text-yellow-500 transition-all duration-200 ${isExpanded ? '' : '-rotate-90'}`}
+                    <ChevronDown
+                      className={`h-3 w-3 text-primary-600 transition-all duration-200 ${isExpanded ? '' : '-rotate-90'}`}
                     />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 group-hover:text-yellow-500 transition-colors duration-200">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 transition-colors duration-200">
                       {group.title}
                     </p>
                   </button>
