@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { Input } from 'server/src/components/ui/Input';
 import { PhoneInput } from 'server/src/components/ui/PhoneInput';
 import { Button } from 'server/src/components/ui/Button';
@@ -18,7 +18,7 @@ import {
   DialogFooter
 } from 'server/src/components/ui/Dialog';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { createClient } from 'server/src/lib/actions/client-actions/clientActions';
 import { createClientLocation } from 'server/src/lib/actions/client-actions/clientLocationActions';
 import { createClientContact } from 'server/src/lib/actions/contact-actions/contactActions';
@@ -125,7 +125,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   const [formData, setFormData] = useState<CreateClientData>(initialFormData);
   const [locationData, setLocationData] = useState<CreateLocationData>(initialLocationData);
   const [contactData, setContactData] = useState<CreateContactData>(initialContactData);
-  const [internalUsers, setInternalUsers] = useState<IUserWithRoles[]>([]);
+  const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
@@ -144,7 +144,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         if (isLoadingUsers || internalUsers.length > 0) return;
         setIsLoadingUsers(true);
         try {
-          const users = await getAllUsers();
+          const users = await getAllUsersBasic();
           setInternalUsers(users);
         } catch (error: any) {
           console.error("Error fetching MSP users:", error);

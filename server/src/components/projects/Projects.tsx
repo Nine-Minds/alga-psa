@@ -17,7 +17,7 @@ import { TagFilter, TagManager } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink } from 'lucide-react';
+import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
@@ -28,11 +28,12 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -47,6 +48,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
@@ -66,7 +68,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   
   // Data for pickers
   const [contacts, setContacts] = useState<IContact[]>([]);
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -139,7 +141,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       try {
         const [contactsData, usersData] = await Promise.all([
           getAllContacts('all'),
-          getAllUsers(true)
+          getAllUsersBasic(true)
         ]);
         setContacts(contactsData || []);
         setUsers(usersData || []);
@@ -152,8 +154,9 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const filteredProjects = useMemo(() => {
     let filtered = projects.filter(project =>
-      project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (filterStatus === 'all' || 
+      (project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       project.project_number?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterStatus === 'all' ||
        (filterStatus === 'active' && !project.is_inactive) ||
        (filterStatus === 'inactive' && project.is_inactive))
     );
@@ -268,9 +271,21 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const columns: ColumnDefinition<IProject>[] = [
     {
+      title: 'Number',
+      dataIndex: 'project_number',
+      width: '8%',
+      render: (text: string, record: IProject) => {
+        return (
+          <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800">
+            {text}
+          </Link>
+        );
+      },
+    },
+    {
       title: 'Project Name',
       dataIndex: 'project_name',
-      width: '20%',
+      width: '15%',
       render: (text: string, record: IProject) => (
         <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words">
           {text}
@@ -280,11 +295,11 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Client',
       dataIndex: 'client_id',
-      width: '15%',
+      width: '12%',
       render: (value, record) => {
         const client = clients.find(c => c.client_id === value);
         if (!client) return 'No Client';
-        
+
         return (
           <button
             onClick={(e) => {
@@ -301,13 +316,13 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Contact',
       dataIndex: 'contact_name',
-      width: '15%',
+      width: '10%',
       render: (name: string | null) => name || 'No Contact',
     },
     {
       title: 'Status',
       dataIndex: 'status_name',
-      width: '10%',
+      width: '8%',
       render: (_: string | null, record: IProject) => (
         <div className="inline-flex items-center px-2.5 py-0.5 text-sm text-gray-800">
           {record.status_name || 'Unknown'}
@@ -317,13 +332,19 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Deadline',
       dataIndex: 'end_date',
-      width: '10%',
+      width: '8%',
+      render: (value: string | null) => value ? new Date(value).toLocaleDateString() : 'N/A',
+    },
+    {
+      title: 'Created',
+      dataIndex: 'created_at',
+      width: '8%',
       render: (value: string | null) => value ? new Date(value).toLocaleDateString() : 'N/A',
     },
     {
       title: 'Project Manager',
       dataIndex: 'assigned_to',
-      width: '15%',
+      width: '12%',
       render: (userId: string | null, record: IProject) => {
         if (!userId) return 'Unassigned';
         const user = record.assigned_user;
@@ -333,7 +354,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     {
       title: 'Tags',
       dataIndex: 'tags',
-      width: '20%',
+      width: '14%',
       render: (value: string, record: IProject) => {
         if (!record.project_id) return null;
         
@@ -432,7 +453,15 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Projects</h1>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-3">
+          <Button
+            id='create-from-template-button'
+            onClick={() => setShowApplyTemplate(true)}
+            variant="outline"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Create from Template
+          </Button>
           <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
             Add Project
           </Button>
@@ -549,6 +578,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
       <div className="bg-white shadow rounded-lg p-4">
         <DataTable
+          key={`${currentPage}-${pageSize}`}
           id="projects-table"
           data={filteredProjects}
           columns={columns}
@@ -557,7 +587,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           onPageChange={setCurrentPage}
           pageSize={pageSize}
           onItemsPerPageChange={handlePageSizeChange}
-          initialSorting={[{ id: 'end_date', desc: false }]}
+          initialSorting={[{ id: 'created_at', desc: true }]}
         />
       </div>
 
@@ -566,6 +596,18 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           onClose={() => setShowQuickAdd(false)}
           onProjectAdded={handleProjectAdded}
           clients={clients}
+        />
+      )}
+
+      {showApplyTemplate && (
+        <ApplyTemplateDialog
+          open={showApplyTemplate}
+          onClose={() => setShowApplyTemplate(false)}
+          onSuccess={(projectId) => {
+            setShowApplyTemplate(false);
+            // Refresh the page or add the new project to the list
+            window.location.reload();
+          }}
         />
       )}
 

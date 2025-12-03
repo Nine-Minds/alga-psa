@@ -636,5 +636,184 @@
       "Tickets": "Tickets",
       "Time Entries": "Saisies de temps"
     }
+  },
+  "availability": {
+    "settings": {
+      "title": "Paramètres de disponibilité",
+      "description": "Configurer les règles et horaires de disponibilité pour les rendez-vous"
+    },
+    "tabs": {
+      "general": "Paramètres généraux",
+      "userHours": "Horaires des utilisateurs",
+      "serviceRules": "Règles de service",
+      "exceptions": "Exceptions"
+    },
+    "general": {
+      "advanceBookingDays": "Jours de réservation à l'avance",
+      "advanceBookingDaysHelper": "Combien de temps à l'avance les clients peuvent réserver",
+      "minimumNoticeHours": "Heures de préavis minimum",
+      "minimumNoticeHoursHelper": "Temps minimum requis avant un rendez-vous",
+      "defaultBufferBefore": "Tampon par défaut avant (minutes)",
+      "defaultBufferAfter": "Tampon par défaut après (minutes)",
+      "bufferHelper": "Tampon de temps entre les rendez-vous"
+    },
+    "userHours": {
+      "selectUser": "Sélectionner un utilisateur",
+      "dayOfWeek": "Jour de la semaine",
+      "startTime": "Heure de début",
+      "endTime": "Heure de fin",
+      "available": "Disponible",
+      "cloneSettings": "Cloner vers d'autres utilisateurs",
+      "maxAppointmentsPerDay": "Maximum de rendez-vous par jour"
+    },
+    "serviceRules": {
+      "selectService": "Sélectionner un service",
+      "allowWithoutContract": "Autoriser sans contrat",
+      "advanceBooking": "Jours de réservation à l'avance",
+      "maxAppointments": "Maximum de rendez-vous par jour"
+    },
+    "exceptions": {
+      "addException": "Ajouter une exception",
+      "date": "Date",
+      "reason": "Raison",
+      "userSpecific": "Spécifique à l'utilisateur",
+      "companyWide": "Pour toute l'entreprise"
+    },
+    "messages": {
+      "saveSuccess": "Paramètres de disponibilité enregistrés avec succès",
+      "saveFailed": "Échec de l'enregistrement des paramètres de disponibilité",
+      "loadFailed": "Échec du chargement des paramètres de disponibilité"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Demandes de rendez-vous",
+      "approve": "Approuver et planifier",
+      "decline": "Refuser",
+      "assignTech": "Assigner un technicien",
+      "internalNotes": "Notes internes",
+      "viewAll": "Voir toutes les demandes",
+      "pendingCount": "{{count}} demandes en attente",
+      "filterByStatus": "Filtrer par statut",
+      "filterByService": "Filtrer par service",
+      "filterByDate": "Filtrer par date"
+    },
+    "panel": {
+      "title": "Demandes de rendez-vous",
+      "description": "Examiner et gérer les demandes de rendez-vous des clients",
+      "noRequests": "Aucune demande de rendez-vous trouvée",
+      "loadingRequests": "Chargement des demandes..."
+    },
+    "card": {
+      "requesterName": "Demandeur",
+      "companyName": "Entreprise",
+      "service": "Service",
+      "requestedDateTime": "Date et heure demandées",
+      "duration": "Durée",
+      "preferredTechnician": "Technicien préféré",
+      "linkedTicket": "Ticket lié",
+      "actions": "Actions"
+    },
+    "approvalModal": {
+      "title": "Approuver la demande de rendez-vous",
+      "confirmDateTime": "Confirmer la date et l'heure",
+      "modifyDateTime": "Modifier la date et l'heure",
+      "assignedUser": "Technicien assigné",
+      "linkToTicket": "Lier au ticket",
+      "internalNotes": "Notes internes",
+      "approve": "Approuver et créer une entrée de planning",
+      "approving": "Approbation en cours..."
+    },
+    "declineModal": {
+      "title": "Refuser la demande de rendez-vous",
+      "reason": "Raison du refus",
+      "reasonRequired": "Veuillez fournir une raison",
+      "reasonPlaceholder": "Expliquez pourquoi cette demande est refusée...",
+      "decline": "Refuser la demande",
+      "declining": "Refus en cours..."
+    },
+    "detailsModal": {
+      "title": "Détails de la demande",
+      "requesterInfo": "Informations sur le demandeur",
+      "requestInfo": "Informations de la demande",
+      "status": "Statut",
+      "createdAt": "Demandé le",
+      "approvedAt": "Approuvé le",
+      "approvedBy": "Approuvé par",
+      "declinedReason": "Raison du refus"
+    },
+    "status": {
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "declined": "Refusé",
+      "cancelled": "Annulé"
+    },
+    "messages": {
+      "approveSuccess": "Demande de rendez-vous approuvée avec succès",
+      "approveFailed": "Échec de l'approbation de la demande de rendez-vous",
+      "declineSuccess": "Demande de rendez-vous refusée",
+      "declineFailed": "Échec du refus de la demande de rendez-vous",
+      "loadFailed": "Échec du chargement des demandes de rendez-vous",
+      "scheduleEntryCreated": "Entrée de planning créée avec succès"
+    }
+  },
+  "sessionManagement": {
+    "title": "Sessions actives",
+    "description": "Gérez vos sessions de connexion actives sur tous les appareils (maximum 5 sessions)",
+    "states": {
+      "loading": "Chargement des sessions...",
+      "noSessions": "Aucune session active trouvée"
+    },
+    "labels": {
+      "unknownDevice": "Appareil inconnu",
+      "currentSession": "Session actuelle",
+      "yourSession": "Votre session",
+      "lastActive": "Dernière activité"
+    },
+    "loginMethods": {
+      "password": "Mot de passe",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Interne",
+      "client": "Client"
+    },
+    "actions": {
+      "logout": "Déconnexion",
+      "revoke": "Révoquer",
+      "revoking": "Révocation...",
+      "loggingOut": "Déconnexion...",
+      "logoutFromOther": "Déconnecter de {{count}} autre appareil{{count, plural, one {} other {s}}}"
+    },
+    "confirmations": {
+      "logoutCurrent": "Cela vous déconnectera de votre session actuelle. Êtes-vous sûr ?",
+      "logoutAllOther": "Cela vous déconnectera de tous les autres appareils. Êtes-vous sûr ?"
+    },
+    "prompts": {
+      "enter2FA": "Veuillez entrer votre code 2FA :"
+    },
+    "messages": {
+      "loggingOut": "Déconnexion...",
+      "sessionRevoked": "Session révoquée avec succès"
+    },
+    "warnings": {
+      "oauthLogout": "Cela vous déconnectera uniquement d'Alga PSA. Vous resterez connecté à {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Échec de la récupération des sessions",
+      "loadFailed": "Échec du chargement des sessions actives",
+      "revokeFailed": "Échec de la révocation de la session",
+      "revokeAllFailed": "Échec de la révocation des sessions",
+      "logoutAllFailed": "Échec de la déconnexion des autres appareils",
+      "adminAccessRequired": "Autorisations insuffisantes pour voir toutes les sessions"
+    },
+    "admin": {
+      "title": "Toutes les sessions utilisateurs",
+      "description": "{{sessionCount}} sessions actives de {{userCount}} utilisateurs",
+      "searchPlaceholder": "Rechercher par nom d'utilisateur, email, appareil ou adresse IP...",
+      "noResults": "Aucune session ne correspond à votre recherche"
+    }
   }
 }

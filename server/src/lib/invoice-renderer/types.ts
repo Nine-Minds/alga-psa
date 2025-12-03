@@ -29,6 +29,7 @@ export interface WasmInvoiceViewModel {
   subtotal: number;
   tax: number;
   total: number;
+  taxSource?: 'internal' | 'external' | 'pending_external';
   notes?: string;
   // Add sample structure for side report data
   timeEntries?: Array<{

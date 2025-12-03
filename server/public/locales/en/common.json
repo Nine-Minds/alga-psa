@@ -554,7 +554,8 @@
           "boards": "Boards",
           "statuses": "Statuses",
           "priorities": "Priorities",
-          "any": "Any"
+          "any": "Any",
+          "unrestricted": "Applies to every ticket and project"
         },
         "status": {
           "enabled": "Enabled",
@@ -623,6 +624,210 @@
       "errorMessage": "We could not record your feedback. Please try again.",
       "selectRatingError": "Select a rating before submitting.",
       "supportMessage": "If you have questions, please contact your technician."
+    }
+  },
+  "availability": {
+    "settings": {
+      "title": "Availability Settings",
+      "description": "Configure appointment availability rules and schedules"
+    },
+    "tabs": {
+      "general": "General Settings",
+      "userHours": "User Hours",
+      "serviceRules": "Service Rules",
+      "exceptions": "Exceptions"
+    },
+    "general": {
+      "advanceBookingDays": "Advance Booking Days",
+      "advanceBookingDaysHelper": "How far in advance clients can book appointments",
+      "minimumNoticeHours": "Minimum Notice Hours",
+      "minimumNoticeHoursHelper": "Minimum time required before an appointment",
+      "defaultBufferBefore": "Default Buffer Before (minutes)",
+      "defaultBufferAfter": "Default Buffer After (minutes)",
+      "bufferHelper": "Time buffer between appointments"
+    },
+    "userHours": {
+      "selectUser": "Select User",
+      "dayOfWeek": "Day of Week",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "available": "Available",
+      "cloneSettings": "Clone to Other Users",
+      "maxAppointmentsPerDay": "Max Appointments Per Day"
+    },
+    "serviceRules": {
+      "selectService": "Select Service",
+      "allowWithoutContract": "Allow Without Contract",
+      "advanceBooking": "Advance Booking Days",
+      "maxAppointments": "Max Appointments Per Day"
+    },
+    "exceptions": {
+      "addException": "Add Exception",
+      "date": "Date",
+      "reason": "Reason",
+      "userSpecific": "User Specific",
+      "companyWide": "Company Wide"
+    },
+    "messages": {
+      "saveSuccess": "Availability settings saved successfully",
+      "saveFailed": "Failed to save availability settings",
+      "loadFailed": "Failed to load availability settings"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Appointment Requests",
+      "viewAll": "View All Requests",
+      "approve": "Approve & Schedule",
+      "decline": "Decline",
+      "assignTech": "Assign Technician",
+      "internalNotes": "Internal Notes",
+      "pendingCount": "{{count}} pending requests",
+      "filterByStatus": "Filter by Status",
+      "filterByService": "Filter by Service",
+      "filterByDate": "Filter by Date"
+    },
+    "panel": {
+      "title": "Appointment Requests",
+      "description": "Review and manage appointment requests from clients",
+      "noRequests": "No appointment requests found",
+      "loadingRequests": "Loading requests..."
+    },
+    "card": {
+      "requesterName": "Requester",
+      "companyName": "Company",
+      "service": "Service",
+      "requestedDateTime": "Requested Date & Time",
+      "duration": "Duration",
+      "preferredTechnician": "Preferred Technician",
+      "linkedTicket": "Linked Ticket",
+      "actions": "Actions"
+    },
+    "approvalModal": {
+      "title": "Approve Appointment Request",
+      "confirmDateTime": "Confirm Date & Time",
+      "modifyDateTime": "Modify Date & Time",
+      "assignedUser": "Assigned Technician",
+      "linkToTicket": "Link to Ticket",
+      "internalNotes": "Internal Notes",
+      "approve": "Approve & Create Schedule Entry",
+      "approving": "Approving..."
+    },
+    "declineModal": {
+      "title": "Decline Appointment Request",
+      "reason": "Reason for Declining",
+      "reasonRequired": "Please provide a reason",
+      "reasonPlaceholder": "Explain why this request is being declined...",
+      "decline": "Decline Request",
+      "declining": "Declining..."
+    },
+    "detailsModal": {
+      "title": "Request Details",
+      "requesterInfo": "Requester Information",
+      "requestInfo": "Request Information",
+      "status": "Status",
+      "createdAt": "Requested At",
+      "approvedAt": "Approved At",
+      "approvedBy": "Approved By",
+      "declinedReason": "Decline Reason"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "declined": "Declined",
+      "cancelled": "Cancelled"
+    },
+    "messages": {
+      "approveSuccess": "Appointment request approved successfully",
+      "approveFailed": "Failed to approve appointment request",
+      "declineSuccess": "Appointment request declined",
+      "declineFailed": "Failed to decline appointment request",
+      "loadFailed": "Failed to load appointment requests",
+      "scheduleEntryCreated": "Schedule entry created successfully"
+    }
+  },
+  "common": {
+    "loading": "Loading",
+    "move_up": "Move up",
+    "move_down": "Move down"
+  },
+  "projects": {
+    "settings": {
+    }
+  },
+  "sessionManagement": {
+    "title": "Active Sessions",
+    "description": "Manage your active login sessions across all devices (max 5 sessions)",
+    "states": {
+      "loading": "Loading sessions...",
+      "noSessions": "No active sessions found"
+    },
+    "labels": {
+      "unknownDevice": "Unknown Device",
+      "currentSession": "Current Session",
+      "yourSession": "Your Session",
+      "lastActive": "Last active"
+    },
+    "loginMethods": {
+      "password": "Password",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Internal",
+      "client": "Client"
+    },
+    "actions": {
+      "logout": "Logout",
+      "revoke": "Revoke",
+      "revoking": "Revoking...",
+      "loggingOut": "Logging out...",
+      "logoutFromOther": "Logout from {{count}} other device{{count, plural, one {} other {s}}}"
+    },
+    "confirmations": {
+      "logoutCurrent": "This will log you out of your current session. Are you sure?",
+      "logoutAllOther": "This will log you out from all other devices. Are you sure?"
+    },
+    "prompts": {
+      "enter2FA": "Please enter your 2FA code:"
+    },
+    "messages": {
+      "loggingOut": "Logging out...",
+      "sessionRevoked": "Session revoked successfully"
+    },
+    "warnings": {
+      "oauthLogout": "This will log you out of Alga PSA only. You'll remain signed into {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Failed to fetch sessions",
+      "loadFailed": "Failed to load active sessions",
+      "revokeFailed": "Failed to revoke session",
+      "revokeAllFailed": "Failed to revoke sessions",
+      "logoutAllFailed": "Failed to logout from other devices",
+      "adminAccessRequired": "Insufficient permissions to view all sessions"
+    },
+    "admin": {
+      "title": "All User Sessions",
+      "description": "{{sessionCount}} active sessions from {{userCount}} users",
+      "searchPlaceholder": "Search by user name, email, device, or IP address...",
+      "noResults": "No sessions match your search"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Comments",
+        "internal_only": "Internal Only",
+        "placeholder": "Add a comment... Use @ to mention teammates",
+        "add_comment": "Add Comment",
+        "no_comments": "No comments yet. Be the first to comment!",
+        "edited": "Edited",
+        "error_creating": "Failed to create comment. Please try again.",
+        "error_updating": "Failed to update comment. Please try again.",
+        "error_deleting": "Failed to delete comment. Please try again.",
+        "confirm_delete": "Are you sure you want to delete this comment?"
+      }
     }
   }
 }

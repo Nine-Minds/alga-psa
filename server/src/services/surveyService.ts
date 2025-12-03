@@ -44,6 +44,8 @@ type InvitationRow = {
   template_id: string;
   survey_token_hash: string;
   token_expires_at: Date | string;
+  sent_at?: Date | string | null;
+  responded?: boolean;
 };
 
 type TicketRow = {
@@ -225,6 +227,10 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       ticket_closed_at: ticket.closed_at ? toIsoString(ticket.closed_at) : '',
     };
 
+    if (!contact.email) {
+      throw new Error('Contact email is required to send survey invitation');
+    }
+
     try {
       const processor = new DatabaseTemplateProcessor(knex, SURVEY_EMAIL_TEMPLATE_CODE);
       const emailService = TenantEmailService.getInstance(params.tenantId);
@@ -347,17 +353,20 @@ async function loadContact(
   tenantId: string,
   contactId: string
 ): Promise<ContactRow | null> {
-  return knex<ContactRow>(CONTACTS_TABLE)
+  const result = await knex<ContactRow>(CONTACTS_TABLE)
     .select('contact_name_id', 'full_name', 'email')
-    .where({ tenant: tenantId, contact_name_id: contactId })
+    .where('tenant', tenantId)
+    .andWhere('contact_name_id', contactId)
     .first();
+  return result || null;
 }
 
 async function loadTenant(knex: Knex | Knex.Transaction, tenantId: string): Promise<TenantRow | null> {
-  return knex<TenantRow>(TENANTS_TABLE)
+  const result = await knex<TenantRow>(TENANTS_TABLE)
     .select('tenant', 'client_name')
-    .where({ tenant: tenantId })
+    .where('tenant', tenantId)
     .first();
+  return result || null;
 }
 
 async function removeInvitationSafe(tenantId: string, invitationId: string): Promise<void> {

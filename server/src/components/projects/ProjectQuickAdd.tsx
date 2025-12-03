@@ -8,7 +8,8 @@ import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { IProject, IClient, IStatus } from 'server/src/interfaces';
 import { toast } from 'react-hot-toast';
-import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
+import { createProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
+import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
@@ -16,8 +17,9 @@ import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
-import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from '@shared/interfaces/user.interfaces';
+import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -31,7 +33,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]); 
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -40,6 +42,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState<string | null>(null);
+  const [taskStatuses, setTaskStatuses] = useState<IStatus[]>([]);
+  const [selectedTaskStatuses, setSelectedTaskStatuses] = useState<Array<{ status_id: string; display_order: number }>>([]);
   const [budgetedHours, setBudgetedHours] = useState<string>('');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -47,12 +51,15 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatuses] = await Promise.all([
-          getAllUsers(),
-          getProjectStatuses()
+        const [allUsers, projectStatuses, projectTaskStatuses] = await Promise.all([
+          getAllUsersBasic(),
+          getProjectStatuses(),
+          getTenantProjectStatuses()
         ]);
         setUsers(allUsers);
         setStatuses(projectStatuses);
+        setTaskStatuses(projectTaskStatuses);
+        // Default selection is now handled by ProjectTaskStatusSelector component
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -87,9 +94,12 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       errors.push('Client is required');
     }
     if (!selectedStatusId) {
-      errors.push('Status is required');
+      errors.push('Project status is required');
     }
-    
+    if (selectedTaskStatuses.length === 0) {
+      errors.push('At least one task status must be selected');
+    }
+
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
@@ -105,14 +115,12 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         return;
       }
       
-      const wbsCode = await generateNextWbsCode();
-      const projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant'> = {
+      const projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code' | 'project_number'> = {
         project_name: projectName,
         description: description || null,
         client_id: selectedClientId,
         start_date: startDate || null,
         end_date: endDate || null,
-        wbs_code: wbsCode,
         is_inactive: false,
         status: selectedStatusId,
         assigned_to: selectedUserId || null,
@@ -120,10 +128,14 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         budgeted_hours: budgetedHours ? Math.round(Number(budgetedHours) * 60) : null
       };
 
-      // Create the project
-      const newProject = await createProject(projectData);
-      
-      
+      // Create the project with selected task statuses in specified order
+      const statusIds = selectedTaskStatuses
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(s => s.status_id);
+
+      const newProject = await createProject(projectData, statusIds);
+
+
       onProjectAdded(newProject);
       
       onClose();
@@ -276,6 +288,16 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   />
                 </div>
               </div>
+              <ProjectTaskStatusSelector
+                availableStatuses={taskStatuses}
+                selectedStatuses={selectedTaskStatuses}
+                onChange={setSelectedTaskStatuses}
+                onStatusCreated={(newStatus) => {
+                  // Add new status to the available list
+                  setTaskStatuses(prev => [...prev, newStatus]);
+                }}
+                error={hasAttemptedSubmit && selectedTaskStatuses.length === 0 ? 'At least one task status must be selected' : undefined}
+              />
               <div className="flex justify-between mt-6">
                 <Button id='cancel-button' variant="ghost" onClick={() => {
                   setHasAttemptedSubmit(false);

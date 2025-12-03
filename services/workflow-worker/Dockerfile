@@ -1,4 +1,4 @@
-FROM node:20.9-alpine
+FROM node:20.19-alpine
 
 # Install required system dependencies
 RUN apk add --no-cache \
@@ -19,12 +19,18 @@ COPY package.json package-lock.json ./
 # Copy all workspace package.json files to set up the dependency tree
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
+COPY server/package.json ./server/
 
-# Install dependencies for specific workspaces (exclude ee/server)
-RUN npm install --workspace=shared --workspace=services/workflow-worker
+# Install dependencies for required workspaces (shared, worker, server)
+# Skip puppeteer Chrome download to save disk space
+RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm install --workspace=shared --workspace=services/workflow-worker --workspace=server
 
-# Copy shared source code and build it first
+# Copy source code for shared + server workspaces
 COPY shared/ ./shared/
+COPY server/ ./server/
+COPY packages/ ./packages/
+
+# Build shared workspace first (server is only referenced for type imports)
 WORKDIR /app/shared
 RUN npm run build
 

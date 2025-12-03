@@ -39,18 +39,27 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
-      # Secret provider configuration (EE edition - supports vault)
-      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
+      # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow configuration
       WORKFLOW_DISTRIBUTED_MODE: "true"
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
+      # NinjaOne Integration Configuration
+      # These can be set via environment variables OR via secrets files (mounted at /run/secrets/)
+      # The secret provider will check filesystem secrets first (if SECRET_READ_CHAIN includes 'filesystem')
+      NINJAONE_CLIENT_ID: ${NINJAONE_CLIENT_ID:-}
+      NINJAONE_CLIENT_SECRET: ${NINJAONE_CLIENT_SECRET:-}
+      NINJAONE_REDIRECT_URI: ${NINJAONE_REDIRECT_URI:-}
     volumes:
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      # Mount ngrok volume to access ngrok URL for OAuth redirects and webhooks
+      - ngrok-data:/app/ngrok:ro
     secrets:
       - postgres_password
       - db_password_server
@@ -63,6 +72,8 @@ services:
       - google_oauth_client_id
       - google_oauth_client_secret
       - alga_auth_key
+      - ninjaone_client_id
+      - ninjaone_client_secret
     networks:
       - app-network
     depends_on:
@@ -106,8 +117,9 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
-      # Secret provider configuration for setup (EE edition)
-      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      # Secret provider configuration for setup (EE edition - for local dev, vault is disabled by default)
+      # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
     volumes:
       - type: bind
@@ -170,8 +182,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
-      # Secret provider configuration for workflow-worker (EE edition)
-      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      # Secret provider configuration for workflow-worker (EE edition - for local dev, vault is disabled by default)
+      # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow-specific configuration
       WORKFLOW_DISTRIBUTED_MODE: "true"
@@ -233,9 +246,14 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${DB_HOST_DOCKER:-postgres}
       DB_PORT: ${DB_PORT:-5432}
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_hocuspocus
+        read_only: true
     secrets:
       - postgres_password
-      - db_password_hocuspocus
+      - db_password_server
       - redis_password
     networks:
       - app-network
@@ -269,6 +287,11 @@ services:
     extends:
       file: docker-compose.base.yaml
       service: pgbouncer
+
+volumes:
+  ngrok-data:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME:-alga}_ngrok_data
 
 networks:
   app-network:

@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
 import { getSession } from 'server/src/lib/auth/getSession';
+import { validateInvoiceFinalization } from 'server/src/lib/actions/taxSourceActions';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -62,6 +63,12 @@ export async function finalizeInvoiceWithKnex(
   userId: string
 ): Promise<void> {
   let invoice: any;
+
+  // Validate tax source before finalization
+  const taxValidation = await validateInvoiceFinalization(invoiceId);
+  if (!taxValidation.canFinalize) {
+    throw new Error(taxValidation.error || 'Invoice cannot be finalized');
+  }
 
   // First transaction to update invoice status
   await withTransaction(knex, async (trx: Knex.Transaction) => {

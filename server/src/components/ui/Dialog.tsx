@@ -25,21 +25,24 @@ interface DialogProps {
   initialPosition?: { x?: number; y?: number };
   /** Whether to constrain dragging within viewport */
   constrainToViewport?: boolean;
+  /** Allow content to overflow (for dialogs with dropdowns) */
+  allowOverflow?: boolean;
 }
 
-export const Dialog: React.FC<DialogProps & AutomationProps> = ({ 
-  isOpen, 
-  onClose, 
-  children, 
-  className, 
-  title = '', 
-  id = 'dialog', 
-  hideCloseButton = false, 
-  onKeyDown, 
+export const Dialog: React.FC<DialogProps & AutomationProps> = ({
+  isOpen,
+  onClose,
+  children,
+  className,
+  title = '',
+  id = 'dialog',
+  hideCloseButton = false,
+  onKeyDown,
   onOpenAutoFocus,
   draggable = true,
   initialPosition,
-  constrainToViewport = false
+  constrainToViewport = false,
+  allowOverflow = false
 }) => {
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
@@ -157,7 +160,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
-          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
+          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
           onKeyDown={onKeyDown}
           onOpenAutoFocus={onOpenAutoFocus}
@@ -181,7 +184,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
               </>
             )}
           </div>
-          <div className="px-6 pt-3 pb-6 flex-1 overflow-y-auto overflow-x-visible min-h-0">
+          <div className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'}`}>
             <ReflectionParentContext.Provider value={updateDialog.id}>
               {children}
             </ReflectionParentContext.Provider>
@@ -189,7 +192,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
           {!hideCloseButton && (
             <RadixDialog.Close asChild>
               <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 z-10"
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                 aria-label="Close"
               >
                 <Cross2Icon />

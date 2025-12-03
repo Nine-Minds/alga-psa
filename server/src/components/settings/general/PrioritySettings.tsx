@@ -10,7 +10,6 @@ import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.inter
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
 import {
   DropdownMenu,
@@ -21,7 +20,6 @@ import {
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
-import { useSearchParams } from 'next/navigation';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
 
 interface PrioritySettingsProps {
@@ -30,13 +28,13 @@ interface PrioritySettingsProps {
 }
 
 const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: PrioritySettingsProps): JSX.Element => {
-  const searchParams = useSearchParams();
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
-  const [selectedPriorityType, setSelectedPriorityType] = useState<'ticket' | 'project_task'>(() => {
-    // Use initialPriorityType if provided, otherwise default to 'ticket'
+  const [selectedPriorityType] = useState<'ticket' | 'project_task'>(() => {
+    // Use initialPriorityType, default to 'ticket' if not provided
     const validTypes: ('ticket' | 'project_task')[] = ['ticket', 'project_task'];
-    const typeFromUrl = initialPriorityType || searchParams?.get('type');
-    return validTypes.includes(typeFromUrl as 'ticket' | 'project_task') ? (typeFromUrl as 'ticket' | 'project_task') : 'ticket';
+    return validTypes.includes(initialPriorityType as 'ticket' | 'project_task')
+      ? (initialPriorityType as 'ticket' | 'project_task')
+      : 'ticket';
   });
   const [userId, setUserId] = useState<string>('');
   const [showPriorityDialog, setShowPriorityDialog] = useState(false);
@@ -220,28 +218,12 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
 
   return (
     <div>
-      {/* Priorities Section with Tabs for Ticket and Project Task */}
+      {/* Priorities Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Priorities</h3>
-          <CustomSelect
-            value={selectedPriorityType}
-            onValueChange={(value) => {
-              const newType = value as 'ticket' | 'project_task';
-              setSelectedPriorityType(newType);
-              
-              // Update URL with new type parameter
-              const currentSearchParams = new URLSearchParams(window.location.search);
-              currentSearchParams.set('type', newType);
-              const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
-              window.history.pushState({}, '', newUrl);
-            }}
-            options={[
-              { value: 'ticket', label: 'Ticket Priorities' },
-              { value: 'project_task', label: 'Project Task Priorities' }
-            ]}
-            className="w-64"
-          />
+          <h3 className="text-lg font-semibold text-gray-800">
+            {selectedPriorityType === 'project_task' ? 'Project Task Priorities' : 'Ticket Priorities'}
+          </h3>
         </div>
         
         {/* Info box about priorities */}
@@ -382,9 +364,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   priority_name: name,
                   order_number: level,
                   color: priorityColor,
-                  item_type: selectedPriorityType,
-                  created_by: userId,
-                  created_at: new Date()
+                  item_type: selectedPriorityType
                 });
               }
               
@@ -476,6 +456,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                     }}
                     showTextColor={false}
                     previewType="circle"
+                    colorMode="tag"
                     trigger={
                       <Button
                         id="priority-color-picker-btn"

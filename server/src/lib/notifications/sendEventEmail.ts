@@ -7,6 +7,7 @@ import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from '../i18n/config';
 import Handlebars from 'handlebars';
+import { EmailAddress } from '../../types/email.types';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 
@@ -31,6 +32,7 @@ export interface SendEmailParams {
     threadId?: string;
     conversationToken?: string;
   };
+  from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
    * If not provided, will be resolved based on user preferences
@@ -47,6 +49,16 @@ export interface SendEmailParams {
    * Ensures client's defaultLocale preference is respected
    */
   recipientClientId?: string;
+  /**
+   * Optional: custom email headers for threading or other purposes.
+   * Will be passed directly to the email provider.
+   */
+  headers?: Record<string, string>;
+  /**
+   * Optional: specific provider ID to use for sending this email.
+   * If provided, the system will attempt to use this provider instead of the tenant default.
+   */
+  providerId?: string;
 }
 
 function applyReplyMarkers(
@@ -64,13 +76,15 @@ function applyReplyMarkers(
     .filter(Boolean)
     .join(' ');
 
-  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">ALGA-REPLY-TOKEN</div>`;
+  const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
+  const tokenString = footerLines[0];
+
+  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">${tokenString}</div>`;
   const hiddenBoundary = `<div data-alga-reply-boundary="true" style="display:none;max-height:0;overflow:hidden;">${REPLY_BANNER_TEXT}</div>`;
   const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
 
   const augmentedHtml = `${hiddenToken}${hiddenBoundary}${visibleBanner}${html}`;
 
-  const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
   if (payload.ticketId) {
     footerLines.push(`ALGA-TICKET-ID:${payload.ticketId}`);
   }
@@ -374,13 +388,13 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
-    const systemFrom = process.env.EMAIL_FROM;
-    const systemFromName = process.env.EMAIL_FROM_NAME || 'Portal Notifications';
     const result = await service.sendEmail({
       to: params.to,
       tenantId: params.tenantId,
       templateProcessor: processor,
-      ...(systemFrom ? { from: /<[^>]+>/.test(systemFrom) ? systemFrom : `${systemFromName} <${systemFrom}>` } : {})
+      headers: params.headers,
+      providerId: params.providerId,
+      from: params.from
     });
 
     if (!result.success) {
@@ -393,6 +407,38 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         subject,
         recipient: params.to,
       });
+    }
+
+    // Store the outbound Message-ID in the ticket's email_metadata references
+    // This enables In-Reply-To threading even if the token is stripped
+    if (result.success && result.messageId && params.replyContext?.ticketId) {
+      try {
+        // We use a raw query to append to the JSONB array safely
+        await knex('tickets')
+          .where({ tenant: params.tenantId, ticket_id: params.replyContext.ticketId })
+          .update({
+            email_metadata: knex.raw(
+              `jsonb_set(
+                COALESCE(email_metadata, '{}'::jsonb), 
+                '{references}', 
+                (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
+              )`,
+              [result.messageId]
+            ),
+            updated_at: new Date() // Good practice to touch updated_at
+          });
+          
+        logger.debug('[SendEventEmail] Linked outbound Message-ID to ticket:', {
+          ticketId: params.replyContext.ticketId,
+          messageId: result.messageId
+        });
+      } catch (error) {
+        logger.warn('[SendEventEmail] Failed to link outbound Message-ID to ticket:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          ticketId: params.replyContext.ticketId,
+          messageId: result.messageId
+        });
+      }
     }
 
     logger.info('[SendEventEmail] Email sent successfully via TenantEmailService:', {

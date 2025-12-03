@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
@@ -41,6 +41,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import TaskTicketLinks from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple from './TaskDocumentsSimple';
+import TaskCommentThread from './TaskCommentThread';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
@@ -61,7 +62,7 @@ interface TaskFormProps {
   onSubmit: (task: IProjectTask | null) => void;
   projectStatuses: ProjectStatus[];
   defaultStatus?: ProjectStatus;
-  users: IUserWithRoles[];
+  users: IUser[];
   mode: 'create' | 'edit';
   onPhaseChange: (phaseId: string) => void;
   inDrawer?: boolean;
@@ -1090,54 +1091,58 @@ export default function TaskForm({
                 className="w-full"
               />
             </div>
-            {/* Row 5: Assigned To and Additional Agents */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-              <UserPicker
-                label=""
-                value={assignedUser ?? ''}
-                onValueChange={(value) => {
-                  // Only set to null if explicitly choosing "Not assigned"
-                  setAssignedUser(value === '' ? null : value);
-                }}
-                size="sm"
-                users={users.filter(u => 
-                  !(task?.task_id ? taskResources : tempTaskResources)
-                    .some(r => r.additional_user_id === u.user_id)
-                )}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Additional Agents</label>
-              {!assignedUser ? (
-                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded mb-2">
-                  Please assign a primary agent first before adding additional agents.
-                </div>
-              ) : mode === 'edit' && task?.assigned_to !== assignedUser ? (
-                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded mb-2">
-                  Please save the task after changing the primary agent before adding additional agents.
-                </div>
-              ) : (
-                <div className="mb-2">
+            {/* Row 5: Assigned To and Additional Agents in one row */}
+            <div className="col-span-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
                   <UserPicker
-                    key={`agent-picker-${(task?.task_id ? taskResources : tempTaskResources).length}`}
-                    value=""
-                    onValueChange={(userId) => {
-                      if (userId) {
-                        handleAddAgent(userId);
-                      }
+                    label=""
+                    value={assignedUser ?? ''}
+                    onValueChange={(value) => {
+                      // Only set to null if explicitly choosing "Not assigned"
+                      setAssignedUser(value === '' ? null : value);
                     }}
-                    users={users.filter(u => 
-                      u.user_id !== assignedUser && 
+                    size="sm"
+                    users={users.filter(u =>
                       !(task?.task_id ? taskResources : tempTaskResources)
                         .some(r => r.additional_user_id === u.user_id)
                     )}
-                    size="sm"
-                    placeholder="Select additional agent..."
                   />
                 </div>
-              )}
-              <div className="space-y-2 max-h-32 overflow-y-auto">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Additional Agents</label>
+                  {!assignedUser ? (
+                    <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+                      Please assign a primary agent first.
+                    </div>
+                  ) : mode === 'edit' && task?.assigned_to !== assignedUser ? (
+                    <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+                      Save task after changing primary agent.
+                    </div>
+                  ) : (
+                    <UserPicker
+                      key={`agent-picker-${(task?.task_id ? taskResources : tempTaskResources).length}`}
+                      value=""
+                      onValueChange={(userId) => {
+                        if (userId) {
+                          handleAddAgent(userId);
+                        }
+                      }}
+                      users={users.filter(u =>
+                        u.user_id !== assignedUser &&
+                        !(task?.task_id ? taskResources : tempTaskResources)
+                          .some(r => r.additional_user_id === u.user_id)
+                      )}
+                      size="sm"
+                      placeholder="Select additional agent..."
+                    />
+                  )}
+                </div>
+              </div>
+              {/* Show list of additional agents below the pickers */}
+              {(task?.task_id ? taskResources : tempTaskResources).length > 0 && (
+                <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
                 {(task?.task_id ? taskResources : tempTaskResources).map((resource): JSX.Element => (
                   <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                     <div className="flex items-center gap-2">
@@ -1160,7 +1165,8 @@ export default function TaskForm({
                     </Button>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1285,6 +1291,16 @@ export default function TaskForm({
             <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
               <TaskDocumentsSimple
                 taskId={task.task_id}
+              />
+            </div>
+          )}
+
+          {/* Full width Comments section */}
+          {mode === 'edit' && task && (
+            <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+              <TaskCommentThread
+                taskId={task.task_id}
+                projectId={phase.project_id}
               />
             </div>
           )}

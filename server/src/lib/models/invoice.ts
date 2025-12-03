@@ -625,6 +625,7 @@ export default class Invoice {
         credit_applied: creditApplied,
         billing_cycle_id: invoice.billing_cycle_id,
         is_manual: invoice.is_manual,
+        tax_source: invoice.tax_source || 'internal',
       };
 
       console.log('Returning original invoice view model:', {

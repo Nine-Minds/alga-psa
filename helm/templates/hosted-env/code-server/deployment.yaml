@@ -1,3 +1,4 @@
+{{- if .Values.hostedEnv }}
 {{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled }}
 apiVersion: apps/v1
 kind: Deployment
@@ -374,11 +375,8 @@ spec:
             {{- end }}
 
             # ----------- GOOGLE AUTH (OAuth for app sign-in) ----------------
-            {{- if .Values.google_auth.enabled }}
-            - name: GOOGLE_OAUTH_CLIENT_ID
-              value: "{{ .Values.google_auth.client_id }}"
-            - name: GOOGLE_OAUTH_CLIENT_SECRET
-              value: "{{ .Values.google_auth.client_secret }}"
+            {{- with include "sebastian.googleOAuthEnv" . }}
+{{ . | nindent 12 }}
             {{- end }}
 
             # ----------- MICROSOFT INTEGRATION ----------------
@@ -398,6 +396,9 @@ spec:
             {{- if .Values.microsoft_integration.redirect_uri }}
             - name: MICROSOFT_REDIRECT_URI
               value: "{{ .Values.microsoft_integration.redirect_uri }}"
+            {{- end }}
+            {{- with include "sebastian.microsoftOAuthEnv" . }}
+{{ . | nindent 12 }}
             {{- end }}
             {{- end }}
 
@@ -558,4 +559,5 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
 {{- end }}

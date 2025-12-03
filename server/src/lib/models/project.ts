@@ -60,7 +60,9 @@ const ProjectModel = {
         query = query.where('projects.is_inactive', false);
       }
       
-      const projects = await query.orderBy('projects.end_date', 'asc');
+      const projects = await query
+        .orderBy('projects.created_at', 'desc')
+        .orderBy('projects.project_number', 'desc');
       return projects;
     } catch (error) {
       console.error('Error getting all projects:', error);
@@ -137,7 +139,8 @@ const ProjectModel = {
           assigned_to: insertData.assigned_to || null,
           contact_name_id: insertData.contact_name_id || null,
           status: insertData.status || '',
-          budgeted_hours: insertData.budgeted_hours || null
+          budgeted_hours: insertData.budgeted_hours || null,
+          project_number: insertData.project_number
         })
         .returning('*');
 

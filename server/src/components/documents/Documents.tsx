@@ -168,6 +168,14 @@ const Documents = ({
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
 
+  // Sync currentFolder with URL changes (for breadcrumb navigation)
+  useEffect(() => {
+    if (!entityId && !entityType) {
+      const folderParam = searchParams.get('folder');
+      setCurrentFolder(folderParam || null);
+    }
+  }, [searchParams, entityId, entityType]);
+
   // Reset to first page when view mode changes
   useEffect(() => {
     setCurrentPage(1);
@@ -209,16 +217,8 @@ const Documents = ({
         const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
 
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, page, pageSize, filters);
-        let docs = response.documents;
 
-        // Apply client-side search filter if needed
-        if (searchTerm) {
-          docs = docs.filter(doc =>
-            doc.document_name.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-        }
-
-        setDocumentsToDisplay(docs);
+        setDocumentsToDisplay(response.documents);
         setTotalDocuments(response.total);
         setTotalPages(Math.ceil(response.total / pageSize));
       } catch (err) {

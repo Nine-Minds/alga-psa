@@ -9,7 +9,7 @@ import { TemplateFixedFeeServicesStep } from './steps/TemplateFixedFeeServicesSt
 import { TemplateHourlyServicesStep } from './steps/TemplateHourlyServicesStep';
 import { TemplateUsageBasedServicesStep } from './steps/TemplateUsageBasedServicesStep';
 import { TemplateReviewContractStep } from './steps/TemplateReviewContractStep';
-import { createContractTemplateFromWizard, ContractTemplateWizardSubmission } from 'server/src/lib/actions/contractWizardActions';
+import { createContractTemplateFromWizard, ContractTemplateWizardSubmission, checkTemplateNameExists } from 'server/src/lib/actions/contractWizardActions';
 
 const TEMPLATE_STEPS = [
   'Template Basics',
@@ -32,6 +32,8 @@ export interface TemplateWizardData {
   contract_name: string;
   description?: string;
   billing_frequency: string;
+  fixed_base_rate?: number;
+  enable_proration?: boolean;
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
@@ -41,11 +43,13 @@ export interface TemplateWizardData {
   hourly_services: Array<{
     service_id: string;
     service_name?: string;
+    hourly_rate?: number;
     bucket_overlay?: TemplateBucketOverlayInput | null;
   }>;
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
+    unit_rate?: number;
     unit_of_measure?: string;
     bucket_overlay?: TemplateBucketOverlayInput | null;
   }>;
@@ -64,6 +68,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [templateNameError, setTemplateNameError] = useState<string>('');
 
   const [wizardData, setWizardData] = useState<TemplateWizardData>({
     contract_name: '',
@@ -87,6 +92,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
       setErrors({});
       setCompletedSteps(new Set());
       setCurrentStep(0);
+      setTemplateNameError('');
     }
   }, [open]);
 
@@ -103,9 +109,26 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
 
   const updateData = (data: Partial<TemplateWizardData>) => {
     setWizardData((prev) => ({ ...prev, ...data }));
+    // Clear template name error when user modifies the name
+    if (data.contract_name !== undefined) {
+      setTemplateNameError('');
+    }
   };
 
-  const validateStep = (stepIndex: number): boolean => {
+  const checkDuplicateTemplateName = async (name: string): Promise<boolean> => {
+    if (!name?.trim()) {
+      return false;
+    }
+    try {
+      const exists = await checkTemplateNameExists(name);
+      return exists;
+    } catch (error) {
+      console.error('Error checking for duplicate template name:', error);
+      return false;
+    }
+  };
+
+  const validateStep = async (stepIndex: number): Promise<boolean> => {
     setErrors((prev) => ({ ...prev, [stepIndex]: '' }));
 
     switch (stepIndex) {
@@ -118,6 +141,13 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Billing frequency is required' }));
           return false;
         }
+        // Check for duplicate template name
+        const isDuplicate = await checkDuplicateTemplateName(wizardData.contract_name);
+        if (isDuplicate) {
+          setTemplateNameError('A template with this name already exists');
+          setErrors((prev) => ({ ...prev, [stepIndex]: 'Template name is already in use' }));
+          return false;
+        }
         return true;
       case 4: {
         const hasServices =
@@ -126,7 +156,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           !!(wizardData.usage_services && wizardData.usage_services.length > 0);
 
         if (!hasServices) {
-          setErrors((prev) => ({ ...prev, [stepIndex]: 'At least one service block is required' }));
+          setErrors((prev) => ({ ...prev, [stepIndex]: 'At least one service is required' }));
           return false;
         }
         return true;
@@ -136,8 +166,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     }
   };
 
-  const handleNext = () => {
-    if (!validateStep(currentStep)) {
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (!isValid) {
       return;
     }
     if (currentStep < TEMPLATE_STEPS.length - 1) {
@@ -153,8 +184,10 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   };
 
   const handleSkip = () => {
-    // Template wizard requires each step to be acknowledged, so treat skip as a noop
-    handleNext();
+    if (currentStep < TEMPLATE_STEPS.length - 1 && !REQUIRED_TEMPLATE_STEPS.includes(currentStep)) {
+      setCompletedSteps((prev) => new Set([...prev, currentStep]));
+      setCurrentStep((prev) => prev + 1);
+    }
   };
 
   const handleStepClick = (stepIndex: number) => {
@@ -168,7 +201,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
   };
 
   const handleFinish = async () => {
-    if (!validateStep(currentStep)) {
+    const isValid = await validateStep(currentStep);
+    if (!isValid) {
       return;
     }
 
@@ -226,7 +260,11 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
 
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
           {currentStep === 0 && (
-            <TemplateContractBasicsStep data={wizardData} updateData={updateData} />
+            <TemplateContractBasicsStep
+              data={wizardData}
+              updateData={updateData}
+              nameError={templateNameError}
+            />
           )}
           {currentStep === 1 && (
             <TemplateFixedFeeServicesStep data={wizardData} updateData={updateData} />
@@ -257,7 +295,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
             onSkip={handleSkip}
             onFinish={handleFinish}
             isNextDisabled={isSaving}
-            isSkipDisabled
+            isSkipDisabled={REQUIRED_TEMPLATE_STEPS.includes(currentStep)}
             isLoading={isSaving}
             nextLabel="Continue"
             finishLabel="Publish Template"

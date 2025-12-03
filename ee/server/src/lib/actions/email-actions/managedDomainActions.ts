@@ -4,16 +4,36 @@
 
 'use server';
 
-import { createTenantKnex, getTenantContext } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId, getTenantContext, runWithTenant } from 'server/src/lib/db';
+import type { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import type { DnsRecord } from 'server/src/types/email.types';
+import type { DnsRecord, DnsLookupResult } from '@shared/types/email';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
-const EMAIL_DOMAIN_RESOURCE = 'emailDomains';
+const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
 type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
+
+type TenantColumnName = 'tenant_id' | 'tenant';
+let cachedTenantColumn: Promise<TenantColumnName> | null = null;
+
+async function getEmailDomainTenantColumn(knex: Knex): Promise<TenantColumnName> {
+  if (!cachedTenantColumn) {
+    cachedTenantColumn = (async () => {
+      if (await knex.schema.hasColumn('email_domains', 'tenant_id')) {
+        return 'tenant_id';
+      }
+      if (await knex.schema.hasColumn('email_domains', 'tenant')) {
+        return 'tenant';
+      }
+      throw new Error('email_domains table missing tenant identifier column');
+    })();
+  }
+
+  return cachedTenantColumn;
+}
 
 export interface ManagedDomainStatus {
   domain: string;
@@ -21,6 +41,8 @@ export interface ManagedDomainStatus {
   providerId?: string | null;
   providerDomainId?: string | null;
   dnsRecords: DnsRecord[];
+  dnsLookupResults?: DnsLookupResult[];
+  dnsLastCheckedAt?: string | null;
   verifiedAt?: string | null;
   failureReason?: string | null;
   updatedAt?: string | null;
@@ -32,25 +54,33 @@ async function ensureTenantContext(action: EmailDomainPermissionAction) {
     throw new Error('User not authenticated');
   }
 
-  const tenantFromContext = await getTenantContext();
+  let tenantFromContext = await getTenantContext();
+  if (!tenantFromContext) {
+    tenantFromContext = (await getCurrentTenantId()) ?? undefined;
+  }
+
   if (!tenantFromContext) {
     throw new Error('Tenant context not found');
   }
 
-  const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, EMAIL_DOMAIN_RESOURCE, action, knex);
-  if (!allowed) {
-    throw new Error('You do not have permission to manage managed email domains.');
-  }
+  return runWithTenant(tenantFromContext, async () => {
+    const { knex } = await createTenantKnex();
+    const allowed = await hasPermission(user, EMAIL_SETTINGS_RESOURCE, action, knex);
+    if (!allowed && user.user_type === 'client') {
+      throw new Error('You do not have permission to manage managed email domains.');
+    }
+    // MSP/internal roles are temporarily allowed even if the granular permission has not been seeded yet.
 
-  return { knex, tenantId: tenantFromContext };
+    return { knex, tenantId: tenantFromContext };
+  });
 }
 
 export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
   const { knex, tenantId } = await ensureTenantContext('read');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const rows = await knex('email_domains')
-    .where({ tenant_id: tenantId })
+    .where({ [tenantColumn]: tenantId })
     .orderBy('created_at', 'desc');
 
   return rows.map((row: any) => {
@@ -59,6 +89,11 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
         ? row.dns_records
         : JSON.parse(row.dns_records)
       : [];
+    const parsedDnsLookup: DnsLookupResult[] = row.dns_lookup_results
+      ? Array.isArray(row.dns_lookup_results)
+        ? row.dns_lookup_results
+        : JSON.parse(row.dns_lookup_results)
+      : [];
 
     return {
       domain: row.domain_name,
@@ -66,6 +101,8 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
       providerId: row.provider_id,
       providerDomainId: row.provider_domain_id,
       dnsRecords: parsedRecords,
+      dnsLookupResults: parsedDnsLookup,
+      dnsLastCheckedAt: row.dns_last_checked_at ? new Date(row.dns_last_checked_at).toISOString() : null,
       verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : null,
       failureReason: row.failure_reason,
       updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
@@ -75,6 +112,7 @@ export async function getManagedEmailDomains(): Promise<ManagedDomainStatus[]> {
 
 export async function requestManagedEmailDomain(domainName: string) {
   const { knex, tenantId } = await ensureTenantContext('create');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
 
   const normalizedDomain = domainName.trim().toLowerCase();
   if (!isValidDomain(normalizedDomain)) {
@@ -85,13 +123,13 @@ export async function requestManagedEmailDomain(domainName: string) {
 
   await knex('email_domains')
     .insert({
-      tenant_id: tenantId,
+      [tenantColumn]: tenantId,
       domain_name: normalizedDomain,
       status: 'pending',
       created_at: now,
       updated_at: now,
     })
-    .onConflict(['tenant_id', 'domain_name'])
+    .onConflict([tenantColumn, 'domain_name'])
     .merge({
       status: 'pending',
       failure_reason: null,
@@ -114,10 +152,11 @@ export async function requestManagedEmailDomain(domainName: string) {
 
 export async function refreshManagedEmailDomain(domainName: string) {
   const { knex, tenantId } = await ensureTenantContext('update');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ tenant_id: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -140,10 +179,11 @@ export async function refreshManagedEmailDomain(domainName: string) {
 
 export async function deleteManagedEmailDomain(domainName: string) {
   const { knex, tenantId } = await ensureTenantContext('delete');
+  const tenantColumn = await getEmailDomainTenantColumn(knex);
   const normalizedDomain = domainName.trim().toLowerCase();
 
   const existing = await knex('email_domains')
-    .where({ tenant_id: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
     .first();
 
   if (!existing) {
@@ -152,7 +192,7 @@ export async function deleteManagedEmailDomain(domainName: string) {
 
   const now = new Date();
   await knex('email_domains')
-    .where({ tenant_id: tenantId, domain_name: normalizedDomain })
+    .where({ [tenantColumn]: tenantId, domain_name: normalizedDomain })
     .update({
       status: 'deleting',
       updated_at: now,

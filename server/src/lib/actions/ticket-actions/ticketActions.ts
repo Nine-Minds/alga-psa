@@ -23,6 +23,8 @@ import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
 import { AssetAssociationModel } from 'server/src/models/asset';
 import { publishEvent } from '../../../lib/eventBus/publishers';
+import { getEventBus } from '../../../lib/eventBus';
+import { getEmailEventChannel } from '../../../lib/notifications/emailChannel';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
@@ -141,6 +143,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       const subcategory_id = data.get('subcategory_id');
       const description = data.get('description');
       const location_id = data.get('location_id');
+      const asset_id = data.get('asset_id');
 
       // ITIL-specific fields
       const itil_impact = data.get('itil_impact');
@@ -205,6 +208,16 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
         user.user_id,
         3 // max retries
       );
+
+      // Server-specific: Create asset association if asset_id is provided
+      if (asset_id) {
+        await AssetAssociationModel.create(trx, {
+          asset_id: asset_id as string,
+          entity_id: ticketResult.ticket_id,
+          entity_type: 'ticket',
+          relationship_type: 'affected'
+        }, user.user_id);
+      }
 
       // Server-specific: Handle assigned ticket event
       if (createTicketInput.assigned_to) {

@@ -42,13 +42,17 @@
     "@js-temporal/polyfill": "^0.4.4",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
-    "axios": "^1.7.4",
+    "axios": "^1.13.2",
+    "clean": "^4.0.2",
     "dotenv": "^16.4.5",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^152.0.0",
     "knex": "^3.1.0",
     "node-vault": "^0.10.2",
     "pg": "^8.16.0",
     "pg-types": "^4.0.2",
     "redis": "^4.6.10",
+    "turndown": "^7.2.2",
     "typescript": "^5.7.3",
     "uuid": "^9.0.1",
     "vitest": "^3.2.4",
@@ -59,8 +63,9 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
+    "@types/turndown": "^5.0.6",
     "@types/uuid": "^9.0.7",
-    "tsc-alias": "^1.8.11"
+    "tsc-alias": "^1.8.16"
   },
   "peerDependencies": {
     "react": "^18.0.0"

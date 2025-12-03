@@ -3,9 +3,10 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Settings, Globe, Users, UsersRound, Ticket, FolderKanban, MessageSquare, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
-import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
+import CustomTabs, { TabContent, TabGroup } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
@@ -13,8 +14,7 @@ import GeneralSettings from 'server/src/components/settings/general/GeneralSetti
 import UserManagement from 'server/src/components/settings/general/UserManagement';
 import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
-import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
@@ -26,32 +26,28 @@ const TeamManagement = dynamic(() => import('server/src/components/settings/gene
   loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
   ssr: false
 });
-import InteractionTypesSettings from 'server/src/components/settings/general/InteractionTypeSettings';
+import InteractionSettings from 'server/src/components/settings/general/InteractionSettings';
 import TimeEntrySettings from 'server/src/components/settings/time-entry/TimeEntrySettings';
 import BillingSettings from 'server/src/components/settings/billing/BillingSettings'; // Import the new component
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
-import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
-import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
-import XeroIntegrationSettings from '../integrations/XeroIntegrationSettings';
+import IntegrationsSettingsPage from '../integrations/IntegrationsSettingsPage';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@product/email-settings/entry';
 import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
-import { CalendarIntegrationsSettings } from 'server/src/components/calendar/CalendarIntegrationsSettings';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import SurveySettings from 'server/src/components/surveys/SurveySettings';
+import ProjectSettings from './ProjectSettings';
 
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const billingFeatureFlag = useFeatureFlag('billing-enabled');
-  const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -60,7 +56,15 @@ const SettingsPage = (): JSX.Element =>  {
   const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
     import('@product/settings-extensions/entry').then(mod => mod.DynamicExtensionsComponent),
     {
-      loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
+      loading: () => (
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator 
+            layout="stacked" 
+            text="Loading extensions..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      ),
       ssr: false
     }
   ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
@@ -69,7 +73,15 @@ const SettingsPage = (): JSX.Element =>  {
   const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
     import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as any),
     {
-      loading: () => <div className="text-center py-8 text-gray-500">Loading installer...</div>,
+      loading: () => (
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator 
+            layout="stacked" 
+            text="Loading installer..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      ),
       ssr: false
     }
   ) : () => null;
@@ -81,13 +93,12 @@ const SettingsPage = (): JSX.Element =>  {
     users: 'Users',
     teams: 'Teams',
     ticketing: 'Ticketing',
-    'interaction-types': 'Interaction Types',
+    projects: 'Projects',
+    interactions: 'Interactions',
     notifications: 'Notifications',
-    surveys: 'Surveys',
     'time-entry': 'Time Entry',
     billing: 'Billing',
     'import-export': 'Import/Export',
-    tax: 'Tax',
     email: 'Email',
     integrations: 'Integrations',
     ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
@@ -141,6 +152,7 @@ const SettingsPage = (): JSX.Element =>  {
   const baseTabContent: TabContent[] = [
     {
       label: "General",
+      icon: Settings,
       content: (
         <Card>
           <CardHeader>
@@ -157,21 +169,24 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Client Portal",
+      icon: Globe,
       content: <ClientPortalSettings />,
     },
     {
       label: "Users",
+      icon: Users,
       content: <UserManagement />,
     },
     {
       label: "Teams",
+      icon: UsersRound,
       content: (
         <Card>
           <CardHeader>
             <CardTitle>Team Management</CardTitle>
             <CardDescription>Manage teams and team members</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-visible">
             <Suspense fallback={<SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />}>
               <TeamManagement />
             </Suspense>
@@ -181,6 +196,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Ticketing",
+      icon: Ticket,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
           <TicketingSettings />
@@ -188,19 +204,27 @@ const SettingsPage = (): JSX.Element =>  {
       ),
     },
     {
-      label: "Interaction Types",
-      content: <InteractionTypesSettings />,
+      label: "Projects",
+      icon: FolderKanban,
+      content: <ProjectSettings />,
+    },
+    {
+      label: "Interactions",
+      icon: MessageSquare,
+      content: (
+        <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
+          <InteractionSettings />
+        </Suspense>
+      ),
     },
     {
       label: "Notifications",
+      icon: Bell,
       content: <NotificationsTab />,
     },
     {
-      label: "Surveys",
-      content: <SurveySettings />,
-    },
-    {
       label: "Time Entry",
+      icon: Clock,
       content: (
         <Card>
           <CardHeader>
@@ -215,6 +239,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Billing",
+      icon: CreditCard,
       content: (
         <Card>
           <CardHeader>
@@ -229,26 +254,12 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Import/Export",
+      icon: Download,
       content: <ImportExportSettings />,
     },
     {
-      label: "Tax",
-      content: isBillingEnabled ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tax Settings</CardTitle>
-            <CardDescription>Manage tax regions and related settings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TaxRegionsManager />
-          </CardContent>
-        </Card>
-      ) : (
-        <FeaturePlaceholder />
-      ),
-    },
-    {
       label: "Email",
+      icon: Mail,
       content: (
         <Card>
           <CardHeader>
@@ -261,129 +272,135 @@ const SettingsPage = (): JSX.Element =>  {
         </Card>
       ),
     },
-    { // Add the new Integrations tab definition
+    { // Integrations tab with category-based organization
       label: "Integrations",
-      content: (
-        <div className="space-y-6">
-          <Alert variant="info">
-            <AlertDescription>
-              QuickBooks Online and Xero integrations are available to testers only. Expect missing pieces while we iterate, and please work in a sandbox environment when evaluating. We appreciate your feedback as we move toward general availability.
-            </AlertDescription>
-          </Alert>
-
-          {/* QuickBooks Online Integration */}
-          <QboIntegrationSettings />
-
-          {/* Xero Integration */}
-          <XeroIntegrationSettings />
-
-          {/* Inbound Email Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Inbound Email Integration</CardTitle>
-              <CardDescription>
-                Configure email providers to automatically process incoming emails into tickets
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EmailProviderConfiguration />
-            </CardContent>
-          </Card>
-
-          {/* Calendar Integrations */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar Integrations</CardTitle>
-              <CardDescription>
-                Connect Google Calendar or Microsoft Outlook Calendar to sync schedule entries
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CalendarIntegrationsSettings />
-            </CardContent>
-          </Card>
-        </div>
-      ),
+      icon: Plug,
+      content: <IntegrationsSettingsPage />,
     }
   ];
 
   // Always include an "Extensions" tab.
   // - EE: full Manage + Install sub-tabs
   // - OSS: enterprise-only stub
-  const tabContent: TabContent[] = [
-    ...baseTabContent,
+  const extensionsTab: TabContent = {
+    label: "Extensions",
+    icon: Puzzle,
+    content: (
+      <Card>
+        <CardHeader>
+          <CardTitle>Extension Management</CardTitle>
+          <CardDescription>
+            Install, configure, and manage extensions to extend Alga PSA functionality.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isEEAvailable ? (
+            <div className="space-y-4">
+              <CustomTabs
+                tabs={[
+                  {
+                    label: "Manage",
+                    content: (
+                      <div className="py-2 space-y-3">
+                        {/* Primary extensions management grid */}
+                        <DynamicExtensionsComponent />
+                        {/* Global debug console link for the Service Proxy Demo extension */}
+                        <div className="flex items-center justify-end gap-2 text-[10px]">
+                          <span className="text-slate-500">
+                            Need extension logs?
+                          </span>
+                          <Link
+                            href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Open Service Proxy Demo Debug Console
+                          </Link>
+                        </div>
+                      </div>
+                    )
+                  },
+                  {
+                    label: "Install",
+                    content: (
+                      <div className="py-2">
+                        {/* EE server-actions installer, styled with standard UI */}
+                        <DynamicInstallComponent />
+                      </div>
+                    )
+                  }
+                ] as TabContent[]}
+                defaultTab="Manage"
+              />
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
+              <p className="text-sm text-gray-600 mt-2">
+                Extensions are available in the Enterprise edition of Alga PSA.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    ),
+  };
+
+  // Organize tabs into logical functional groups
+  const getTabByLabel = (label: string): TabContent | undefined => {
+    return baseTabContent.find(t => t.label === label);
+  };
+
+  const tabGroups: TabGroup[] = [
     {
-      label: "Extensions",
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Extension Management</CardTitle>
-            <CardDescription>
-              Install, configure, and manage extensions to extend Alga PSA functionality.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isEEAvailable ? (
-              <div className="space-y-4">
-                <CustomTabs
-                  tabs={[
-                    {
-                      label: "Manage",
-                      content: (
-                        <div className="py-2 space-y-3">
-                          {/* Primary extensions management grid */}
-                          <DynamicExtensionsComponent />
-                          {/* Global debug console link for the Service Proxy Demo extension */}
-                          <div className="flex items-center justify-end gap-2 text-[10px]">
-                            <span className="text-slate-500">
-                              Need extension logs?
-                            </span>
-                            <Link
-                              href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                              Open Service Proxy Demo Debug Console
-                            </Link>
-                          </div>
-                        </div>
-                      )
-                    },
-                    {
-                      label: "Install",
-                      content: (
-                        <div className="py-2">
-                          {/* EE server-actions installer, styled with standard UI */}
-                          <DynamicInstallComponent />
-                        </div>
-                      )
-                    }
-                  ] as TabContent[]}
-                  defaultTab="Manage"
-                />
-              </div>
-            ) : (
-              <div className="text-center py-10">
-                <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
-                <p className="text-sm text-gray-600 mt-2">
-                  Extensions are available in the Enterprise edition of Alga PSA.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ),
+      title: 'Organization & Access',
+      tabs: [
+        getTabByLabel('General'),
+        getTabByLabel('Users'),
+        getTabByLabel('Teams'),
+        getTabByLabel('Client Portal'),
+      ].filter((tab): tab is TabContent => tab !== undefined)
+    },
+    {
+      title: 'Work Management',
+      tabs: [
+        getTabByLabel('Ticketing'),
+        getTabByLabel('Projects'),
+        getTabByLabel('Interactions'),
+      ].filter((tab): tab is TabContent => tab !== undefined)
+    },
+    {
+      title: 'Time & Billing',
+      tabs: [
+        getTabByLabel('Time Entry'),
+        getTabByLabel('Billing'),
+      ].filter((tab): tab is TabContent => tab !== undefined)
+    },
+    {
+      title: 'Communication',
+      tabs: [
+        getTabByLabel('Notifications'),
+        getTabByLabel('Email'),
+      ].filter((tab): tab is TabContent => tab !== undefined)
+    },
+    {
+      title: 'Data & Integration',
+      tabs: [
+        getTabByLabel('Import/Export'),
+        getTabByLabel('Integrations'),
+        extensionsTab,
+      ].filter((tab): tab is TabContent => tab !== undefined)
     }
   ];
-
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
       <CustomTabs
-        tabs={tabContent}
+        groups={tabGroups}
         defaultTab={activeTab}
         onTabChange={handleTabChange}
+        orientation="vertical"
       />
     </div>
   );

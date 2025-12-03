@@ -198,7 +198,6 @@ export interface IContractLine extends TenantEntity {
   contract_line_id?: string;
   contract_line_name: string;
   billing_frequency: string;
-  is_custom: boolean;
   contract_id?: string | null;
   service_category?: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
@@ -206,20 +205,43 @@ export interface IContractLine extends TenantEntity {
   custom_rate?: number | null;
   display_order?: number;
   enable_proration?: boolean;
-  billing_cycle_alignment?: 'start' | 'end' | 'prorated';
-  // Add potentially existing hourly fields (to be deprecated for Hourly type)
+  is_custom?: boolean; // Whether this is a custom contract line (not from preset)
+  // Hourly contract line fields (contract-line-level, same for all services)
+  hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
+  minimum_billable_time?: number | null; // Minimum time to bill for hourly services
+  round_up_to_nearest?: number | null; // Round up time entries to nearest X minutes
+  // Other contract line-wide fields
+  enable_overtime?: boolean | null;
+  overtime_rate?: number | null;
+  overtime_threshold?: number | null;
+  enable_after_hours_rate?: boolean | null;
+  after_hours_multiplier?: number | null;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
+/**
+ * Interface for contract line presets/templates
+ * These are reusable templates that can be copied into contracts
+ */
+export interface IContractLinePreset extends TenantEntity {
+  preset_id: string;
+  preset_name: string;
+  billing_frequency: string;
+  service_category?: string;
+  contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  billing_timing?: 'arrears' | 'advance';
+  // Hourly-specific fields
   hourly_rate?: number | null;
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
-  // Add other contract line-wide fields that might exist (like overtime, etc.)
   enable_overtime?: boolean | null;
   overtime_rate?: number | null;
-  overtime_threshold?: number | null; // Assuming threshold is numeric
+  overtime_threshold?: number | null;
   enable_after_hours_rate?: boolean | null;
   after_hours_multiplier?: number | null;
-  // user_type_rates might be handled differently (e.g., separate table/JSON)
-  // If it's a JSONB column in contract_lines, it could be:
-  // user_type_rates?: Record<string, number> | null;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
 }
 
 /**
@@ -241,6 +263,37 @@ export interface IContractLineService extends TenantEntity {
   service_id: string;
   quantity?: number;
   custom_rate?: number;
+}
+
+/**
+ * Interface for contract line preset services
+ * Stores services associated with contract line presets
+ */
+export interface IContractLinePresetService extends TenantEntity {
+  preset_id: string;
+  service_id: string;
+  quantity?: number;
+  custom_rate?: number;
+  unit_of_measure?: string;
+  // Bucket overlay fields - recommended bucket configuration
+  bucket_total_minutes?: number;
+  bucket_overage_rate?: number;
+  bucket_allow_rollover?: boolean;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
+/**
+ * Interface for contract line preset fixed config
+ * Stores fixed fee configuration for contract line presets
+ */
+export interface IContractLinePresetFixedConfig extends TenantEntity {
+  preset_id: string;
+  base_rate?: number | null;
+  enable_proration: boolean;
+  billing_cycle_alignment: 'start' | 'end' | 'prorated';
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
 }
 
 export interface IBucketContractLine extends TenantEntity {

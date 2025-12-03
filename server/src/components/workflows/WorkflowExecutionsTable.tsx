@@ -324,6 +324,7 @@ export default function WorkflowExecutionsTable({
       </div>
       
       <DataTable
+        key={`${currentPage}-${pageSize}`}
         data={data}
         columns={finalColumns}
         onRowClick={handleRowClick}

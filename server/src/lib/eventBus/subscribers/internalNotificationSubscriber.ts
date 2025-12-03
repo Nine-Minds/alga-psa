@@ -9,13 +9,20 @@ import {
   TicketAssignedEvent,
   TicketAdditionalAgentAssignedEvent,
   TicketCommentAddedEvent,
+  TicketCommentUpdatedEvent,
   ProjectCreatedEvent,
   ProjectAssignedEvent,
   ProjectTaskAssignedEvent,
   ProjectTaskAdditionalAgentAssignedEvent,
+  TaskCommentAddedEvent,
+  TaskCommentUpdatedEvent,
   InvoiceGeneratedEvent,
   MessageSentEvent,
-  UserMentionedInDocumentEvent
+  UserMentionedInDocumentEvent,
+  AppointmentRequestCreatedEvent,
+  AppointmentRequestApprovedEvent,
+  AppointmentRequestDeclinedEvent,
+  AppointmentRequestCancelledEvent
 } from '../events';
 import { createNotificationFromTemplateInternal } from '../../actions/internal-notification-actions/internalNotificationActions';
 import logger from '@alga-psa/shared/core/logger';
@@ -885,7 +892,8 @@ function stripHtml(html: string): string {
 
 /**
  * Extract user IDs from BlockNote mention inline content
- * BlockNote stores mentions as structured objects, not plain text
+ * Searches through BlockNote blocks for mention inline content
+ * Returns array of user IDs (including special '@everyone' string)
  */
 function extractMentionUserIds(content: any): string[] {
   if (!content) return [];
@@ -915,6 +923,35 @@ function extractMentionUserIds(content: any): string[] {
 
   // Remove duplicates
   return Array.from(new Set(userIds));
+}
+
+/**
+ * Resolve @everyone to all internal users in the tenant
+ * Also handles regular user IDs
+ */
+async function resolveEveryoneMention(
+  db: Knex,
+  tenantId: string,
+  mentionedUserIds: string[]
+): Promise<string[]> {
+  const resolvedUserIds: string[] = [];
+
+  for (const userId of mentionedUserIds) {
+    if (userId === '@everyone') {
+      // Get all active internal users in the tenant
+      const internalUsers = await db('users')
+        .select('user_id')
+        .where({ tenant: tenantId, user_type: 'internal', is_inactive: false });
+
+      resolvedUserIds.push(...internalUsers.map(u => u.user_id));
+    } else {
+      // Regular user ID
+      resolvedUserIds.push(userId);
+    }
+  }
+
+  // Remove duplicates
+  return Array.from(new Set(resolvedUserIds));
 }
 
 /**
@@ -959,6 +996,381 @@ async function findMentionedUsers(db: Knex, tenantId: string, mentions: string[]
     });
 
   return users;
+}
+
+/**
+ * Handle task comment added events
+ */
+async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<void> {
+  const { payload } = event;
+  const { tenantId, taskId, projectId, userId, taskCommentId, taskName, commentContent } = payload;
+
+  console.log('[InternalNotificationSubscriber] handleTaskCommentAdded START', {
+    taskId,
+    userId,
+    taskCommentId,
+    hasContent: !!commentContent
+  });
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Get task details
+    const task = await db('project_tasks as pt')
+      .select(
+        'pt.task_id',
+        'pt.task_name',
+        'pt.assigned_to',
+        'p.project_id',
+        'p.project_name'
+      )
+      .leftJoin('project_phases as ph', function() {
+        this.on('pt.phase_id', 'ph.phase_id')
+           .andOn('pt.tenant', 'ph.tenant');
+      })
+      .leftJoin('projects as p', function() {
+        this.on('ph.project_id', 'p.project_id')
+           .andOn('ph.tenant', 'p.tenant');
+      })
+      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+      .first();
+
+    if (!task) {
+      console.log('[InternalNotificationSubscriber] Task not found:', taskId);
+      return;
+    }
+
+    // Get author name
+    const author = await db('users')
+      .select('first_name', 'last_name')
+      .where({ user_id: userId, tenant: tenantId })
+      .first();
+
+    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+
+    // Extract comment text preview from BlockNote content
+    let commentPreview = '';
+    let commentText = '';
+    if (commentContent) {
+      try {
+        commentText = convertBlockNoteToMarkdown(commentContent);
+        // Remove markdown formatting for preview
+        commentPreview = truncateText(commentText.replace(/[*_~`#\[\]]/g, ''), 100);
+      } catch (error) {
+        console.error('[InternalNotificationSubscriber] Failed to parse BlockNote content:', error);
+        // Fallback to stripHtml for older content
+        commentText = stripHtml(commentContent);
+        commentPreview = truncateText(commentText, 100);
+      }
+    }
+
+    console.log('[InternalNotificationSubscriber] About to extract mentions from task comment:', {
+      contentType: typeof commentContent,
+      contentLength: commentContent?.length
+    });
+
+    // Extract user IDs from BlockNote mention inline content
+    const mentionedUserIds = extractMentionUserIds(commentContent);
+    console.log('[InternalNotificationSubscriber] Found mentioned user IDs in task comment:', mentionedUserIds);
+
+    // Resolve @everyone mentions
+    const resolvedMentionedUserIds = await resolveEveryoneMention(db, tenantId, mentionedUserIds);
+    console.log('[InternalNotificationSubscriber] Resolved mentioned user IDs:', resolvedMentionedUserIds);
+
+    // Get user details for mentioned users
+    const mentionedUsers = resolvedMentionedUserIds.length > 0
+      ? await db('users')
+          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', resolvedMentionedUserIds)
+          .andWhere('tenant', tenantId)
+      : [];
+
+    console.log('[InternalNotificationSubscriber] Found mentioned users in task comment:', mentionedUsers.length);
+
+    // Resolve notification link
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'project_task',
+      projectId,
+      taskId,
+      taskCommentId
+    });
+
+    // Track users who have been notified to avoid duplicates
+    const notifiedUserIds = new Set<string>();
+
+    // Create notifications for mentioned users (excluding the comment author)
+    for (const mentionedUser of mentionedUsers) {
+      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: mentionedUser.user_id,
+          template_name: 'user-mentioned',
+          type: 'info',
+          category: 'messages',
+          link: internalUrl,
+          data: {
+            authorName,
+            entityType: 'task comment',
+            entityName: task.task_name
+          },
+          metadata: {
+            taskId: task.task_id,
+            projectId: task.project_id,
+            taskName: task.task_name,
+            projectName: task.project_name,
+            taskCommentId: taskCommentId,
+            commentText: commentText,
+            commentPreview: commentPreview,
+            commentAuthor: authorName,
+            commentAuthorId: userId,
+            contextType: 'task',
+            contextId: taskId
+          }
+        });
+
+        notifiedUserIds.add(mentionedUser.user_id);
+
+        console.log('[InternalNotificationSubscriber] Created notification for user mentioned in task comment', {
+          taskId,
+          mentionedUserId: mentionedUser.user_id,
+          mentionedUsername: mentionedUser.username,
+          commentAuthor: userId,
+          tenantId
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for user mentioned in task comment', {
+          taskId,
+          mentionedUserId: mentionedUser.user_id,
+          commentAuthor: userId,
+          tenantId
+        });
+      }
+    }
+
+    // Resolve link without comment anchor for general notifications
+    const { internalUrl: taskUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'project_task',
+      projectId,
+      taskId
+    });
+
+    // Notify all assigned agents
+    const allAssignees = await getAllTaskAssignees(db, tenantId, taskId);
+
+    for (const assigneeId of allAssignees) {
+      if (assigneeId !== userId && !notifiedUserIds.has(assigneeId)) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: assigneeId,
+          template_name: 'task-comment-added',
+          type: 'info',
+          category: 'projects',
+          link: taskUrl,
+          data: {
+            authorName,
+            taskName: task.task_name,
+            projectName: task.project_name,
+            commentPreview
+          },
+          metadata: {
+            taskId: task.task_id,
+            projectId: task.project_id,
+            taskName: task.task_name,
+            projectName: task.project_name,
+            comment: {
+              id: taskCommentId,
+              text: commentPreview,
+              author: authorName,
+              authorId: userId
+            }
+          }
+        });
+        notifiedUserIds.add(assigneeId);
+
+        logger.info('[InternalNotificationSubscriber] Created notification for task comment (assigned user)', {
+          taskId,
+          userId: assigneeId,
+          tenantId
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[InternalNotificationSubscriber] Error handling task comment added (full error):', error);
+    logger.error('[InternalNotificationSubscriber] Error handling task comment added', {
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : error,
+      taskId,
+      tenantId
+    });
+  }
+}
+
+/**
+ * Handle task comment updated events
+ */
+async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise<void> {
+  const { payload } = event;
+  const { tenantId, taskId, projectId, userId, taskCommentId, taskName, oldCommentContent, newCommentContent } = payload;
+
+  console.log('[InternalNotificationSubscriber] handleTaskCommentUpdated START', {
+    taskId,
+    userId,
+    taskCommentId,
+    hasOldContent: !!oldCommentContent,
+    hasNewContent: !!newCommentContent
+  });
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Get task details
+    const task = await db('project_tasks as pt')
+      .select(
+        'pt.task_id',
+        'pt.task_name',
+        'pt.assigned_to',
+        'p.project_id',
+        'p.project_name'
+      )
+      .leftJoin('project_phases as ph', function() {
+        this.on('pt.phase_id', 'ph.phase_id')
+           .andOn('pt.tenant', 'ph.tenant');
+      })
+      .leftJoin('projects as p', function() {
+        this.on('ph.project_id', 'p.project_id')
+           .andOn('ph.tenant', 'p.tenant');
+      })
+      .where({ 'pt.task_id': taskId, 'pt.tenant': tenantId })
+      .first();
+
+    if (!task) {
+      console.log('[InternalNotificationSubscriber] Task not found:', taskId);
+      return;
+    }
+
+    // Get author name
+    const author = await db('users')
+      .select('first_name', 'last_name')
+      .where({ user_id: userId, tenant: tenantId })
+      .first();
+
+    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+
+    // Extract comment text preview from BlockNote content
+    let commentPreview = '';
+    let commentText = '';
+    if (newCommentContent) {
+      try {
+        commentText = convertBlockNoteToMarkdown(newCommentContent);
+        // Remove markdown formatting for preview
+        commentPreview = truncateText(commentText.replace(/[*_~`#\[\]]/g, ''), 100);
+      } catch (error) {
+        console.error('[InternalNotificationSubscriber] Failed to parse BlockNote content:', error);
+        // Fallback to stripHtml for older content
+        commentText = stripHtml(newCommentContent);
+        commentPreview = truncateText(commentText, 100);
+      }
+    }
+
+    // Extract user IDs from old and new content
+    const oldMentionedUserIds = extractMentionUserIds(oldCommentContent);
+    const newMentionedUserIds = extractMentionUserIds(newCommentContent);
+
+    console.log('[InternalNotificationSubscriber] Mentions comparison:', {
+      oldMentions: oldMentionedUserIds,
+      newMentions: newMentionedUserIds
+    });
+
+    // Find only NEW mentions (not in old content)
+    const newlyMentionedUserIds = newMentionedUserIds.filter(
+      userId => !oldMentionedUserIds.includes(userId)
+    );
+
+    console.log('[InternalNotificationSubscriber] Newly mentioned user IDs:', newlyMentionedUserIds);
+
+    // Resolve @everyone mentions
+    const resolvedNewlyMentionedUserIds = await resolveEveryoneMention(db, tenantId, newlyMentionedUserIds);
+    console.log('[InternalNotificationSubscriber] Resolved newly mentioned user IDs:', resolvedNewlyMentionedUserIds);
+
+    // Get user details for newly mentioned users
+    const newlyMentionedUsers = resolvedNewlyMentionedUserIds.length > 0
+      ? await db('users')
+          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', resolvedNewlyMentionedUserIds)
+          .andWhere('tenant', tenantId)
+      : [];
+
+    console.log('[InternalNotificationSubscriber] Found newly mentioned users:', newlyMentionedUsers.length);
+
+    // Resolve notification link
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'project_task',
+      projectId,
+      taskId,
+      taskCommentId
+    });
+
+    // Track users who have been notified to avoid duplicates
+    const notifiedUserIds = new Set<string>();
+
+    // Create notifications for NEWLY mentioned users only (excluding the comment author)
+    for (const mentionedUser of newlyMentionedUsers) {
+      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: mentionedUser.user_id,
+          template_name: 'user-mentioned',
+          type: 'info',
+          category: 'messages',
+          link: internalUrl,
+          data: {
+            authorName,
+            entityType: 'task comment',
+            entityName: task.task_name
+          },
+          metadata: {
+            taskId: task.task_id,
+            projectId: task.project_id,
+            taskName: task.task_name,
+            projectName: task.project_name,
+            taskCommentId: taskCommentId,
+            commentText: commentText,
+            commentPreview: commentPreview,
+            commentAuthor: authorName,
+            commentAuthorId: userId,
+            contextType: 'task',
+            contextId: taskId
+          }
+        });
+
+        notifiedUserIds.add(mentionedUser.user_id);
+
+        console.log('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated task comment', {
+          taskId,
+          mentionedUserId: mentionedUser.user_id,
+          mentionedUsername: mentionedUser.username,
+          commentAuthor: userId,
+          tenantId
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated task comment', {
+          taskId,
+          mentionedUserId: mentionedUser.user_id,
+          commentAuthor: userId,
+          tenantId
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling task comment updated', {
+      error,
+      taskId,
+      tenantId
+    });
+  }
 }
 
 /**
@@ -1024,11 +1436,15 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const mentionedUserIds = extractMentionUserIds(comment?.content);
     console.log('[InternalNotificationSubscriber] Found mentioned user IDs:', mentionedUserIds);
 
+    // Resolve @everyone mentions
+    const resolvedMentionedUserIds = await resolveEveryoneMention(db, tenantId, mentionedUserIds);
+    console.log('[InternalNotificationSubscriber] Resolved mentioned user IDs:', resolvedMentionedUserIds);
+
     // Get user details for mentioned users
-    const mentionedUsers = mentionedUserIds.length > 0
+    const mentionedUsers = resolvedMentionedUserIds.length > 0
       ? await db('users')
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', mentionedUserIds)
+          .whereIn('user_id', resolvedMentionedUserIds)
           .andWhere('tenant', tenantId)
       : [];
 
@@ -1196,16 +1612,168 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 }
 
 /**
+ * Handle ticket comment updated events
+ */
+async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Promise<void> {
+  const { payload } = event;
+  const { tenantId, ticketId, userId, oldComment, newComment } = payload;
+
+  console.log('[InternalNotificationSubscriber] handleTicketCommentUpdated START', {
+    ticketId,
+    userId,
+    hasOldComment: !!oldComment,
+    hasNewComment: !!newComment
+  });
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Get ticket details including contact
+    const ticket = await db('tickets')
+      .select('ticket_id', 'ticket_number', 'title', 'assigned_to', 'contact_name_id', 'tenant')
+      .where({ ticket_id: ticketId, tenant: tenantId })
+      .first();
+
+    if (!ticket) {
+      console.log('[InternalNotificationSubscriber] Ticket not found:', ticketId);
+      return;
+    }
+
+    // Get author name
+    const author = await db('users')
+      .select('first_name', 'last_name')
+      .where({ user_id: userId, tenant: tenantId })
+      .first();
+
+    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+
+    // Extract comment text preview from BlockNote content
+    let commentPreview = '';
+    let commentText = '';
+    if (newComment?.content) {
+      try {
+        commentText = convertBlockNoteToMarkdown(newComment.content);
+        // Remove markdown formatting for preview
+        commentPreview = truncateText(commentText.replace(/[*_~`#\[\]]/g, ''), 100);
+      } catch (error) {
+        console.error('[InternalNotificationSubscriber] Failed to parse BlockNote content:', error);
+        // Fallback to stripHtml for older content
+        commentText = stripHtml(newComment.content);
+        commentPreview = truncateText(commentText, 100);
+      }
+    }
+
+    // Extract user IDs from old and new content
+    const oldMentionedUserIds = extractMentionUserIds(oldComment?.content);
+    const newMentionedUserIds = extractMentionUserIds(newComment?.content);
+
+    console.log('[InternalNotificationSubscriber] Mentions comparison:', {
+      oldMentions: oldMentionedUserIds,
+      newMentions: newMentionedUserIds
+    });
+
+    // Find only NEW mentions (not in old content)
+    const newlyMentionedUserIds = newMentionedUserIds.filter(
+      userId => !oldMentionedUserIds.includes(userId)
+    );
+
+    console.log('[InternalNotificationSubscriber] Newly mentioned user IDs:', newlyMentionedUserIds);
+
+    // Resolve @everyone mentions
+    const resolvedNewlyMentionedUserIds = await resolveEveryoneMention(db, tenantId, newlyMentionedUserIds);
+    console.log('[InternalNotificationSubscriber] Resolved newly mentioned user IDs:', resolvedNewlyMentionedUserIds);
+
+    // Get user details for newly mentioned users
+    const newlyMentionedUsers = resolvedNewlyMentionedUserIds.length > 0
+      ? await db('users')
+          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', resolvedNewlyMentionedUserIds)
+          .andWhere('tenant', tenantId)
+      : [];
+
+    console.log('[InternalNotificationSubscriber] Found newly mentioned users:', newlyMentionedUsers.length);
+
+    // Resolve links for both MSP and client portal
+    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number,
+      commentId: newComment?.id
+    });
+
+    // Track users who have been notified to avoid duplicates
+    const notifiedUserIds = new Set<string>();
+
+    // Create notifications for NEWLY mentioned users only (excluding the comment author)
+    for (const mentionedUser of newlyMentionedUsers) {
+      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: mentionedUser.user_id,
+          template_name: 'user-mentioned-in-comment',
+          type: 'info',
+          category: 'messages',
+          link: internalUrl,
+          data: {
+            commentAuthor: authorName,
+            ticketNumber: ticket.ticket_number || 'New Ticket',
+            commentPreview
+          },
+          metadata: {
+            ticketId: ticket.ticket_id,
+            ticketNumber: ticket.ticket_number || 'New Ticket',
+            ticketTitle: ticket.title,
+            commentId: newComment?.id || '',
+            commentText: commentText,
+            commentPreview: commentPreview,
+            commentAuthor: authorName,
+            commentAuthorId: userId,
+            contextType: 'ticket',
+            contextId: ticketId
+          }
+        });
+
+        notifiedUserIds.add(mentionedUser.user_id);
+
+        console.log('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated ticket comment', {
+          ticketId,
+          mentionedUserId: mentionedUser.user_id,
+          mentionedUsername: mentionedUser.username,
+          commentAuthor: userId,
+          tenantId
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated ticket comment', {
+          ticketId,
+          mentionedUserId: mentionedUser.user_id,
+          commentAuthor: userId,
+          tenantId
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling ticket comment updated', {
+      error,
+      ticketId,
+      tenantId
+    });
+  }
+}
+
+/**
  * Handle user mentioned in document events
  */
 async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent): Promise<void> {
   const { payload } = event;
-  const { tenantId, documentId, documentName, userId, content } = payload;
+  const { tenantId, documentId, documentName, userId, content, oldContent, newContent, isUpdate } = payload;
 
   console.log('[InternalNotificationSubscriber] handleUserMentionedInDocument START', {
     documentId,
     userId,
-    hasContent: !!content
+    hasContent: !!content,
+    hasOldContent: !!oldContent,
+    hasNewContent: !!newContent,
+    isUpdate
   });
 
   try {
@@ -1230,15 +1798,40 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
 
     const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
 
-    // Extract user IDs from BlockNote mention inline content
-    const mentionedUserIds = extractMentionUserIds(content);
-    console.log('[InternalNotificationSubscriber] Found mentioned user IDs in document:', mentionedUserIds);
+    // Determine which content to use based on payload structure
+    let mentionedUserIds: string[] = [];
+
+    if (isUpdate && oldContent && newContent) {
+      // Smart mention detection: compare old vs new
+      const oldMentionedUserIds = extractMentionUserIds(oldContent);
+      const newMentionedUserIds = extractMentionUserIds(newContent);
+
+      console.log('[InternalNotificationSubscriber] Document mentions comparison:', {
+        oldMentions: oldMentionedUserIds,
+        newMentions: newMentionedUserIds
+      });
+
+      // Find only NEW mentions (not in old content)
+      mentionedUserIds = newMentionedUserIds.filter(
+        userId => !oldMentionedUserIds.includes(userId)
+      );
+
+      console.log('[InternalNotificationSubscriber] Newly mentioned user IDs in document:', mentionedUserIds);
+    } else {
+      // New document or no old/new content provided - use all mentions from content
+      mentionedUserIds = extractMentionUserIds(content || newContent);
+      console.log('[InternalNotificationSubscriber] Found mentioned user IDs in document:', mentionedUserIds);
+    }
+
+    // Resolve @everyone mentions
+    const resolvedMentionedUserIds = await resolveEveryoneMention(db, tenantId, mentionedUserIds);
+    console.log('[InternalNotificationSubscriber] Resolved mentioned user IDs in document:', resolvedMentionedUserIds);
 
     // Get user details for mentioned users
-    const mentionedUsers = mentionedUserIds.length > 0
+    const mentionedUsers = resolvedMentionedUserIds.length > 0
       ? await db('users')
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', mentionedUserIds)
+          .whereIn('user_id', resolvedMentionedUserIds)
           .andWhere('tenant', tenantId)
       : [];
 
@@ -1634,6 +2227,302 @@ async function handleMessageSent(event: MessageSentEvent): Promise<void> {
 }
 
 /**
+ * Handle appointment request created events
+ */
+async function handleAppointmentRequestCreated(event: AppointmentRequestCreatedEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    clientId,
+    clientUserId,
+    serviceName,
+    requestedDate,
+    requestedTime,
+    requesterName,
+    isAuthenticated
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to CLIENT who created the request (if authenticated)
+    if (isAuthenticated && clientUserId) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: clientUserId,
+        template_name: 'appointment-request-created-client',
+        type: 'info',
+        category: 'appointments',
+        link: `/client-portal/appointments/${appointmentRequestId}`,
+        data: {
+          serviceName,
+          requestedDate,
+          requestedTime,
+          referenceNumber: appointmentRequestId.slice(0, 8).toUpperCase()
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for appointment request (client)', {
+        appointmentRequestId,
+        clientUserId,
+        tenantId
+      });
+    }
+
+    // Send notification to MSP STAFF
+    // Get users with 'schedule' 'update' permission
+    const staffUsers = await db('users as u')
+      .join('user_roles as ur', function() {
+        this.on('u.user_id', 'ur.user_id')
+            .andOn('u.tenant', 'ur.tenant');
+      })
+      .join('roles as r', function() {
+        this.on('ur.role_id', 'r.role_id')
+            .andOn('ur.tenant', 'r.tenant');
+      })
+      .join('role_permissions as rp', function() {
+        this.on('r.role_id', 'rp.role_id')
+            .andOn('r.tenant', 'rp.tenant');
+      })
+      .join('permissions as p', function() {
+        this.on('rp.permission_id', 'p.permission_id');
+      })
+      .where({
+        'u.tenant': tenantId,
+        'u.user_type': 'internal',
+        'p.resource': 'schedule',
+        'p.action': 'update'
+      })
+      .distinct('u.user_id');
+
+    // Get client name if available
+    let clientName = 'Unknown';
+    if (clientId) {
+      const client = await db('companies')
+        .select('company_name')
+        .where({ company_id: clientId, tenant: tenantId })
+        .first();
+      clientName = client?.company_name || 'Unknown';
+    }
+
+    for (const staffUser of staffUsers) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: staffUser.user_id,
+        template_name: 'appointment-request-created-staff',
+        type: 'info',
+        category: 'appointments',
+        link: `/msp/appointments/requests/${appointmentRequestId}`,
+        data: {
+          requesterName: requesterName || 'Unknown',
+          clientName,
+          serviceName,
+          requestedDate,
+          requestedTime
+        },
+        metadata: {
+          appointment_request_id: appointmentRequestId,
+          requires_action: true
+        }
+      });
+    }
+
+    logger.info('[InternalNotificationSubscriber] Created notifications for appointment request (staff)', {
+      appointmentRequestId,
+      staffCount: staffUsers.length,
+      tenantId
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request created', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
+ * Handle appointment request approved events
+ */
+async function handleAppointmentRequestApproved(event: AppointmentRequestApprovedEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    clientUserId,
+    serviceName,
+    requestedDate,
+    requestedTime,
+    assignedUserId
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to CLIENT
+    if (clientUserId) {
+      // Get technician name
+      let technicianName = 'Your technician';
+      if (assignedUserId) {
+        const technician = await db('users')
+          .select('first_name', 'last_name')
+          .where({ user_id: assignedUserId, tenant: tenantId })
+          .first();
+
+        if (technician) {
+          technicianName = `${technician.first_name} ${technician.last_name}`;
+        }
+      }
+
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: clientUserId,
+        template_name: 'appointment-request-approved',
+        type: 'success',
+        category: 'appointments',
+        link: `/client-portal/appointments/${appointmentRequestId}`,
+        data: {
+          serviceName,
+          appointmentDate: requestedDate,
+          appointmentTime: requestedTime,
+          technicianName
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for appointment approved', {
+        appointmentRequestId,
+        clientUserId,
+        tenantId
+      });
+    }
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request approved', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
+ * Handle appointment request declined events
+ */
+async function handleAppointmentRequestDeclined(event: AppointmentRequestDeclinedEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    clientUserId,
+    serviceName,
+    declineReason
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to CLIENT
+    if (clientUserId) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: clientUserId,
+        template_name: 'appointment-request-declined',
+        type: 'warning',
+        category: 'appointments',
+        link: `/client-portal/appointments/${appointmentRequestId}`,
+        data: {
+          serviceName,
+          declineReason: declineReason || 'No reason provided'
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for appointment declined', {
+        appointmentRequestId,
+        clientUserId,
+        tenantId
+      });
+    }
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request declined', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
+ * Handle appointment request cancelled events
+ */
+async function handleAppointmentRequestCancelled(event: AppointmentRequestCancelledEvent): Promise<void> {
+  const { payload } = event;
+  const {
+    tenantId,
+    appointmentRequestId,
+    serviceName,
+    requestedDate,
+    requesterName
+  } = payload;
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Send notification to MSP STAFF (who had been notified about this request)
+    const staffUsers = await db('users as u')
+      .join('user_roles as ur', function() {
+        this.on('u.user_id', 'ur.user_id')
+            .andOn('u.tenant', 'ur.tenant');
+      })
+      .join('roles as r', function() {
+        this.on('ur.role_id', 'r.role_id')
+            .andOn('ur.tenant', 'r.tenant');
+      })
+      .join('role_permissions as rp', function() {
+        this.on('r.role_id', 'rp.role_id')
+            .andOn('r.tenant', 'rp.tenant');
+      })
+      .join('permissions as p', function() {
+        this.on('rp.permission_id', 'p.permission_id');
+      })
+      .where({
+        'u.tenant': tenantId,
+        'u.user_type': 'internal',
+        'p.resource': 'schedule',
+        'p.action': 'update'
+      })
+      .distinct('u.user_id');
+
+    for (const staffUser of staffUsers) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: staffUser.user_id,
+        template_name: 'appointment-request-cancelled-staff',
+        type: 'info',
+        category: 'appointments',
+        link: `/msp/appointments/requests/${appointmentRequestId}`,
+        data: {
+          requesterName: requesterName || 'A client',
+          serviceName,
+          requestedDate
+        }
+      });
+    }
+
+    logger.info('[InternalNotificationSubscriber] Created notifications for appointment cancelled', {
+      appointmentRequestId,
+      staffCount: staffUsers.length,
+      tenantId
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling appointment request cancelled', {
+      error,
+      appointmentRequestId,
+      tenantId
+    });
+  }
+}
+
+/**
  * Handle all internal notification events
  */
 async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> {
@@ -1667,6 +2556,15 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'TICKET_COMMENT_ADDED':
       await handleTicketCommentAdded(validatedEvent as TicketCommentAddedEvent);
       break;
+    case 'TICKET_COMMENT_UPDATED':
+      await handleTicketCommentUpdated(validatedEvent as TicketCommentUpdatedEvent);
+      break;
+    case 'TASK_COMMENT_ADDED':
+      await handleTaskCommentAdded(validatedEvent as TaskCommentAddedEvent);
+      break;
+    case 'TASK_COMMENT_UPDATED':
+      await handleTaskCommentUpdated(validatedEvent as TaskCommentUpdatedEvent);
+      break;
     case 'PROJECT_CREATED':
       await handleProjectCreated(validatedEvent as ProjectCreatedEvent);
       break;
@@ -1688,6 +2586,18 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'USER_MENTIONED_IN_DOCUMENT':
       await handleUserMentionedInDocument(validatedEvent as UserMentionedInDocumentEvent);
       break;
+    case 'APPOINTMENT_REQUEST_CREATED':
+      await handleAppointmentRequestCreated(validatedEvent as AppointmentRequestCreatedEvent);
+      break;
+    case 'APPOINTMENT_REQUEST_APPROVED':
+      await handleAppointmentRequestApproved(validatedEvent as AppointmentRequestApprovedEvent);
+      break;
+    case 'APPOINTMENT_REQUEST_DECLINED':
+      await handleAppointmentRequestDeclined(validatedEvent as AppointmentRequestDeclinedEvent);
+      break;
+    case 'APPOINTMENT_REQUEST_CANCELLED':
+      await handleAppointmentRequestCancelled(validatedEvent as AppointmentRequestCancelledEvent);
+      break;
     default:
       // Silently ignore other events
       break;
@@ -1708,20 +2618,27 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_COMMENT_ADDED',
+      'TICKET_COMMENT_UPDATED',
+      'TASK_COMMENT_ADDED',
+      'TASK_COMMENT_UPDATED',
       'PROJECT_CREATED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
-      'USER_MENTIONED_IN_DOCUMENT'
+      'USER_MENTIONED_IN_DOCUMENT',
+      'APPOINTMENT_REQUEST_CREATED',
+      'APPOINTMENT_REQUEST_APPROVED',
+      'APPOINTMENT_REQUEST_DECLINED',
+      'APPOINTMENT_REQUEST_CANCELLED'
     ];
 
     // Use a dedicated channel for internal notifications
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().subscribe(eventType, handleInternalNotificationEvent, { channel });
+      await getEventBus().subscribe(eventType as any, handleInternalNotificationEvent, { channel });
       logger.info(`[InternalNotificationSubscriber] Subscribed to ${eventType} on channel "${channel}"`);
     }
 
@@ -1744,19 +2661,26 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_COMMENT_ADDED',
+      'TICKET_COMMENT_UPDATED',
+      'TASK_COMMENT_ADDED',
+      'TASK_COMMENT_UPDATED',
       'PROJECT_CREATED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
-      'USER_MENTIONED_IN_DOCUMENT'
+      'USER_MENTIONED_IN_DOCUMENT',
+      'APPOINTMENT_REQUEST_CREATED',
+      'APPOINTMENT_REQUEST_APPROVED',
+      'APPOINTMENT_REQUEST_DECLINED',
+      'APPOINTMENT_REQUEST_CANCELLED'
     ];
 
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().unsubscribe(eventType, handleInternalNotificationEvent, { channel });
+      await getEventBus().unsubscribe(eventType as any, handleInternalNotificationEvent, { channel });
     }
 
     logger.info('[InternalNotificationSubscriber] Successfully unregistered');

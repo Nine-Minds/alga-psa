@@ -959,6 +959,44 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           db.raw('ARRAY[]::uuid[] as additional_user_ids')
         )
         .first();
+    } else if (workItemType === 'appointment_request') {
+      workItem = await db('appointment_requests as ar')
+        .where({
+          'ar.appointment_request_id': workItemId,
+          'ar.tenant': tenant
+        })
+        .leftJoin('service_catalog as sc', function() {
+          this.on('ar.service_id', '=', 'sc.service_id')
+              .andOn('ar.tenant', '=', 'sc.tenant');
+        })
+        .leftJoin('clients as c', function() {
+          this.on('ar.client_id', '=', 'c.client_id')
+              .andOn('ar.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('contacts as ct', function() {
+          this.on('ar.contact_id', '=', 'ct.contact_name_id')
+              .andOn('ar.tenant', '=', 'ct.tenant');
+        })
+        .select(
+          'ar.appointment_request_id as work_item_id',
+          db.raw("COALESCE(sc.service_name, 'Appointment Request') as name"),
+          'ar.description',
+          db.raw("'appointment_request' as type"),
+          db.raw('NULL::text as ticket_number'),
+          db.raw("COALESCE(sc.service_name, 'Appointment Request') as title"),
+          db.raw('NULL::text as project_name'),
+          db.raw('NULL::text as phase_name'),
+          db.raw('NULL::text as task_name'),
+          'ar.client_id',
+          'c.client_name',
+          db.raw("ar.status as status_name"),
+          db.raw('NULL::text as board_name'),
+          db.raw('NULL::text as assigned_to_name'),
+          'ct.full_name as contact_name',
+          db.raw('ARRAY[]::uuid[] as assigned_user_ids'),
+          db.raw('ARRAY[]::uuid[] as additional_user_ids')
+        )
+        .first();
     }
 
     if (workItem) {

@@ -3,14 +3,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "build": "alga build",
+    "postbuild": "node ./scripts/postbuild.mjs",
+    "pack": "alga pack",
     "test": "vitest"
   },
   "dependencies": {
-    "@alga/extension-runtime": "^0.1.0"
+    "@alga-psa/extension-runtime": "^0.2.0",
+    "@mongodb-js/zstd": "^7.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "@alga-psa/cli": "^0.2.0",
+    "rimraf": "^5.0.0",
     "vitest": "^3.0.7"
   }
 }

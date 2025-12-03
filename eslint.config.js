@@ -13,6 +13,30 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
+  // Configuration for migration files - enforce naming conventions
+  // IMPORTANT: This must come first before other configs that might ignore these files
+  {
+    files: ["**/migrations/**/*.cjs"],
+    ignores: [
+      "**/migrations/**/utils/**", // Exclude utility files in utils directories
+      "ee/server/migrations/**/*", // Exclude EE migrations entirely
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      },
+      ecmaVersion: 2020,
+      sourceType: "commonjs"
+    },
+    plugins: {
+      "custom-rules": customRules,
+    },
+    rules: {
+      "custom-rules/migration-filename": "error",
+      "no-unused-vars": "warn",
+    }
+  },
+
   // Configuration for JavaScript files (no TypeScript)
   {
     files: ["**/*.{js,mjs,cjs}"],
@@ -31,7 +55,7 @@ export default [
       ".ai/**/*",
       "**/build/**/*",
       "server/public/**/*",
-      "shared/workflow/workflows/system-email-processing-workflow.ts", // Plain JS for workflow runtime compatibility
+      "services/workflow-worker/src/workflows/system-email-processing-workflow.ts", // Plain JS for workflow runtime compatibility
       "server/src/invoice-templates/assemblyscript/**/*" // AssemblyScript files have different syntax
     ],
 
@@ -144,6 +168,7 @@ export default [
       "@typescript-eslint/restrict-template-expressions": "warn",
       "@typescript-eslint/unbound-method": "warn",
       "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/no-redundant-type-constituents": "off", // Disabled due to infinite recursion with complex types
 
       // React hooks rules
       "react-hooks/rules-of-hooks": "error",
@@ -161,10 +186,11 @@ export default [
       "react/prop-types": "off", // TypeScript handles this
 
       // Override recommended configs to use warnings
+      // NOTE: Disabled "recommended-requiring-type-checking" due to memory exhaustion during type checking
       ...Object.fromEntries(
         Object.entries({
           ...tseslint.configs.recommended.rules,
-          ...tseslint.configs["recommended-requiring-type-checking"].rules,
+          // ...tseslint.configs["recommended-requiring-type-checking"].rules,  // DISABLED: Causes OOM
           ...tseslint.configs.strict.rules,
         }).map(([key, value]) => [
           key,

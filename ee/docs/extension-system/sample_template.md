@@ -6,10 +6,10 @@ This template outlines a minimal v2 extension composed of:
 - A Manifest v2 that declares endpoints and the UI entry
 
 Core rules:
-- All server calls go through the Gateway: `/api/ext/[extensionId]/[...path]` → Runner `POST /v1/execute`
+- All server calls go through the Gateway: `/api/ext/[extensionId]/[[...path]]` → Runner `POST /v1/execute`
 - UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
-- Iframe src is constructed via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initialized with [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
-- Gateway scaffold reference: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Iframe src is constructed via [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and initialized with [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
+- Gateway scaffold reference: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 ## File Structure
 
@@ -120,7 +120,7 @@ See: [security_signing.md](security_signing.md)
 - Validate inputs; return structured errors
 
 Related references:
-- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
-- Iframe bridge: [ee/server/src/lib/extensions/ui/iframeBridge.ts](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Gateway route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
+- Iframe bridge: [server/src/lib/extensions/ui/iframeBridge.ts](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
 - Runner overview: [runner.md](runner.md)
 - Manifest schema: [manifest_schema.md](manifest_schema.md)

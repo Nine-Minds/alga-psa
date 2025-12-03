@@ -93,6 +93,9 @@ devPod:
 
 podLabels: {}
 
+podAnnotations:
+  sidecar.istio.io/proxyMemory: "4Gi"
+
 podSecurityContext: {}
   # fsGroup: 2000
 
@@ -227,6 +230,24 @@ config:
         days: 30
         copies: 7
 
+# Runner/extension execution service configuration
+runner:
+  # Internal URL for the Knative runner service (used for execute + debug stream)
+  baseUrl: ""
+  # Optional literal token for authenticating runner calls. Prefer using an existing
+  # Kubernetes secret via serviceTokenSecret when running in production.
+  serviceToken: ""
+  serviceTokenSecret:
+    name: ""   # e.g., alga-psa-shared
+    key: ""    # e.g., ALGA_AUTH_KEY
+  debugStream:
+    redisUrl: ""
+    redisUrlSecret:
+      name: ""
+      key: ""
+    streamPrefix: "ext-debug:"
+    maxLen: 2000
+
 
 redis:
   enabled: true
@@ -292,11 +313,6 @@ token:
 
 auth:
   nextauth_session_expires: 86400
-
-google_auth:
-  enabled: false
-  client_id: "get from google"
-  client_secret: "get from google"
 
 # Gmail Integration (Enterprise Edition)
 gmail_integration:
@@ -453,3 +469,14 @@ istio:
     excludeOutboundIPRanges: ""
     # Optional CIDR ranges to allow via Envoy only (string). Leave empty to disable.
     includeOutboundIPRanges: ""
+
+# Hosted Environment Configuration
+# Used for cloud-hosted environments (different from dev environments)
+hostedEnv:
+  enabled: false
+  namespace: ""
+  codeServer:
+    enabled: false
+    service:
+      type: "ClusterIP"
+      port: 8080

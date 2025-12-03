@@ -636,5 +636,200 @@
     "response": {
       "pageTitle": "Encuesta de satisfacción del cliente"
     }
+  },
+  "availability": {
+    "settings": {
+      "title": "Configuración de disponibilidad",
+      "description": "Configure reglas de disponibilidad y horarios para citas"
+    },
+    "tabs": {
+      "general": "Configuración general",
+      "userHours": "Horarios de usuarios",
+      "serviceRules": "Reglas de servicio",
+      "exceptions": "Excepciones"
+    },
+    "general": {
+      "advanceBookingDays": "Días de reserva anticipada",
+      "advanceBookingDaysHelper": "Con cuánta anticipación los clientes pueden reservar citas",
+      "minimumNoticeHours": "Horas mínimas de aviso",
+      "minimumNoticeHoursHelper": "Tiempo mínimo requerido antes de una cita",
+      "defaultBufferBefore": "Margen predeterminado antes (minutos)",
+      "defaultBufferAfter": "Margen predeterminado después (minutos)",
+      "bufferHelper": "Margen de tiempo entre citas"
+    },
+    "userHours": {
+      "selectUser": "Seleccionar usuario",
+      "dayOfWeek": "Día de la semana",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de finalización",
+      "available": "Disponible",
+      "cloneSettings": "Clonar a otros usuarios",
+      "maxAppointmentsPerDay": "Máximo de citas por día"
+    },
+    "serviceRules": {
+      "selectService": "Seleccionar servicio",
+      "allowWithoutContract": "Permitir sin contrato",
+      "advanceBooking": "Días de reserva anticipada",
+      "maxAppointments": "Máximo de citas por día"
+    },
+    "exceptions": {
+      "addException": "Agregar excepción",
+      "date": "Fecha",
+      "reason": "Motivo",
+      "userSpecific": "Específico del usuario",
+      "companyWide": "Para toda la empresa"
+    },
+    "messages": {
+      "saveSuccess": "Configuración de disponibilidad guardada correctamente",
+      "saveFailed": "Error al guardar la configuración de disponibilidad",
+      "loadFailed": "Error al cargar la configuración de disponibilidad"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Solicitudes de citas",
+      "approve": "Aprobar y programar",
+      "decline": "Rechazar",
+      "assignTech": "Asignar técnico",
+      "internalNotes": "Notas internas",
+      "viewAll": "Ver todas las solicitudes",
+      "pendingCount": "{{count}} solicitudes pendientes",
+      "filterByStatus": "Filtrar por estado",
+      "filterByService": "Filtrar por servicio",
+      "filterByDate": "Filtrar por fecha"
+    },
+    "panel": {
+      "title": "Solicitudes de citas",
+      "description": "Revisar y gestionar solicitudes de citas de clientes",
+      "noRequests": "No se encontraron solicitudes de citas",
+      "loadingRequests": "Cargando solicitudes..."
+    },
+    "card": {
+      "requesterName": "Solicitante",
+      "companyName": "Empresa",
+      "service": "Servicio",
+      "requestedDateTime": "Fecha y hora solicitadas",
+      "duration": "Duración",
+      "preferredTechnician": "Técnico preferido",
+      "linkedTicket": "Ticket vinculado",
+      "actions": "Acciones"
+    },
+    "approvalModal": {
+      "title": "Aprobar solicitud de cita",
+      "confirmDateTime": "Confirmar fecha y hora",
+      "modifyDateTime": "Modificar fecha y hora",
+      "assignedUser": "Técnico asignado",
+      "linkToTicket": "Vincular a ticket",
+      "internalNotes": "Notas internas",
+      "approve": "Aprobar y crear entrada de programación",
+      "approving": "Aprobando..."
+    },
+    "declineModal": {
+      "title": "Rechazar solicitud de cita",
+      "reason": "Motivo del rechazo",
+      "reasonRequired": "Por favor proporcione un motivo",
+      "reasonPlaceholder": "Explique por qué se rechaza esta solicitud...",
+      "decline": "Rechazar solicitud",
+      "declining": "Rechazando..."
+    },
+    "detailsModal": {
+      "title": "Detalles de la solicitud",
+      "requesterInfo": "Información del solicitante",
+      "requestInfo": "Información de la solicitud",
+      "status": "Estado",
+      "createdAt": "Solicitada el",
+      "approvedAt": "Aprobada el",
+      "approvedBy": "Aprobada por",
+      "declinedReason": "Motivo del rechazo"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "approved": "Aprobada",
+      "declined": "Rechazada",
+      "cancelled": "Cancelada"
+    },
+    "messages": {
+      "approveSuccess": "Solicitud de cita aprobada correctamente",
+      "approveFailed": "Error al aprobar la solicitud de cita",
+      "declineSuccess": "Solicitud de cita rechazada",
+      "declineFailed": "Error al rechazar la solicitud de cita",
+      "loadFailed": "Error al cargar solicitudes de citas",
+      "scheduleEntryCreated": "Entrada de programación creada correctamente"
+    }
+  },
+  "sessionManagement": {
+    "title": "Sesiones activas",
+    "description": "Administre sus sesiones de inicio de sesión activas en todos los dispositivos (máximo 5 sesiones)",
+    "states": {
+      "loading": "Cargando sesiones...",
+      "noSessions": "No se encontraron sesiones activas"
+    },
+    "labels": {
+      "unknownDevice": "Dispositivo desconocido",
+      "currentSession": "Sesión actual",
+      "yourSession": "Tu sesión",
+      "lastActive": "Última actividad"
+    },
+    "loginMethods": {
+      "password": "Contraseña",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Interno",
+      "client": "Cliente"
+    },
+    "actions": {
+      "logout": "Cerrar sesión",
+      "revoke": "Revocar",
+      "revoking": "Revocando...",
+      "loggingOut": "Cerrando sesión...",
+      "logoutFromOther": "Cerrar sesión de {{count}} otro dispositivo{{count, plural, one {} other {s}}}"
+    },
+    "confirmations": {
+      "logoutCurrent": "Esto cerrará tu sesión actual. ¿Estás seguro?",
+      "logoutAllOther": "Esto cerrará tu sesión de todos los demás dispositivos. ¿Estás seguro?"
+    },
+    "prompts": {
+      "enter2FA": "Por favor ingresa tu código 2FA:"
+    },
+    "messages": {
+      "loggingOut": "Cerrando sesión...",
+      "sessionRevoked": "Sesión revocada exitosamente"
+    },
+    "warnings": {
+      "oauthLogout": "Esto te desconectará solo de Alga PSA. Permanecerás conectado a {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Error al obtener las sesiones",
+      "loadFailed": "Error al cargar las sesiones activas",
+      "revokeFailed": "Error al revocar la sesión",
+      "revokeAllFailed": "Error al revocar las sesiones",
+      "logoutAllFailed": "Error al cerrar sesión de otros dispositivos",
+      "adminAccessRequired": "Permisos insuficientes para ver todas las sesiones"
+    },
+    "admin": {
+      "title": "Todas las sesiones de usuarios",
+      "description": "{{sessionCount}} sesiones activas de {{userCount}} usuarios",
+      "searchPlaceholder": "Buscar por nombre de usuario, correo electrónico, dispositivo o dirección IP...",
+      "noResults": "No se encontraron sesiones que coincidan con tu búsqueda"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Comentarios",
+        "internal_only": "Solo Interno",
+        "placeholder": "Agregar un comentario... Usa @ para mencionar compañeros",
+        "add_comment": "Agregar Comentario",
+        "no_comments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
+        "edited": "Editado",
+        "error_creating": "No se pudo crear el comentario. Inténtalo de nuevo.",
+        "error_updating": "No se pudo actualizar el comentario. Inténtalo de nuevo.",
+        "error_deleting": "No se pudo eliminar el comentario. Inténtalo de nuevo.",
+        "confirm_delete": "¿Seguro que deseas eliminar este comentario?"
+      }
+    }
   }
 }

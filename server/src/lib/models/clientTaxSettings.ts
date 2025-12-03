@@ -91,17 +91,15 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax components lookup');
       }
-      // const components = await db<ITaxComponent>('tax_components')
-      //   .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
-      //   .where({
-      //     'composite_tax_mappings.composite_tax_id': tax_rate_id,
-      //     'tax_components.tenant': tenant,
-      //     // 'composite_tax_mappings.tenant': tenant
-      //   })
-      //   .orderBy('composite_tax_mappings.sequence')
-      //   .select('tax_components.*');
-      // return components;
-      return [];
+      const components = await db<ITaxComponent>('tax_components')
+        .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
+        .where({
+          'composite_tax_mappings.composite_tax_id': tax_rate_id,
+          'tax_components.tenant': tenant,
+        })
+        .orderBy('composite_tax_mappings.sequence')
+        .select('tax_components.*');
+      return components;
     } catch (error) {
       console.error(`Error getting composite tax components for tax rate ${tax_rate_id}:`, error);
       throw error;
@@ -114,14 +112,11 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax rate thresholds lookup');
       }
-      // const thresholds = await db<ITaxRateThreshold>('tax_rate_thresholds')
-      //   .where({
-      //     tax_rate_id,
-      //     tenant
-      //   })
-      //   .orderBy('min_amount');
-      // return thresholds;
-      return [];
+      // Note: tenant isolation is enforced via RLS policy on tax_rate_id
+      const thresholds = await db<ITaxRateThreshold>('tax_rate_thresholds')
+        .where({ tax_rate_id })
+        .orderBy('min_amount');
+      return thresholds;
     } catch (error) {
       console.error(`Error getting tax rate thresholds for tax rate ${tax_rate_id}:`, error);
       throw error;
@@ -134,9 +129,9 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax holidays lookup');
       }
+      // Note: tenant isolation is enforced via RLS policy on tax_rate_id
       const holidays = await db<ITaxHoliday>('tax_holidays')
         .where('tax_rate_id', tax_rate_id)
-        .where('tenant', tenant)
         .orderBy('start_date');
       return holidays;
     } catch (error) {

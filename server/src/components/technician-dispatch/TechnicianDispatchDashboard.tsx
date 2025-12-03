@@ -7,11 +7,11 @@ import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType, IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import WorkItemListPanel from './WorkItemListPanel';
 import ScheduleViewPanel from './ScheduleViewPanel';
 import WorkItemCard from './WorkItemCard';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import { searchDispatchWorkItems, getWorkItemById, DispatchSearchOptions } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
@@ -54,7 +54,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const currentUser = session?.user;
 
   const [selectedPriority, setSelectedPriority] = useState('All');
-  const [users, setUsers] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]); // Changed type here
+  const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]); // Changed type here
   const [events, setEvents] = useState<Omit<IScheduleEntry, 'tenant'>[]>([]);
   const [workItems, setWorkItems] = useState<Omit<IExtendedWorkItem, "tenant">[]>([]);
   const [date, setDate] = useState(startOfDay(new Date()));
@@ -261,7 +261,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       try {
         if (canEdit || canView) {
           // Fetch all users including inactive ones - we'll filter them in the display logic
-          const fetchedUsers = await getAllUsers(true, 'internal');
+          const fetchedUsers = await getAllUsersBasic(true, 'internal');
           setUsers(fetchedUsers);
         } else {
           setUsers([]);
@@ -577,7 +577,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     }
     
     // Filter users based on permissions
-    let filteredUsers: Omit<IUserWithRoles, 'tenant'>[] = [];
+    let filteredUsers: Omit<IUser, 'tenant'>[] = [];
     if (canEdit) {
       filteredUsers = [...users];
     } else if (canView) {
@@ -717,7 +717,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         };
         
         // Get all users for the EntryPopup component
-        const allUsers = await getAllUsers();
+        const allUsers = await getAllUsersBasic();
         
         // Open the entry popup in view-only mode
         openDrawer(

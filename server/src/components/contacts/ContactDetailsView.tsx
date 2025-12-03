@@ -35,6 +35,7 @@ interface ContactDetailsViewProps {
   documents?: IDocument[];
   onDocumentCreated?: () => Promise<void>;
   quickView?: boolean;
+  clientReadOnly?: boolean; // When true, prevents editing the client (e.g., when opened from a ticket)
 }
 
 interface TableRowProps {
@@ -61,15 +62,16 @@ const TableRow: React.FC<TableRowProps> = ({ label, value, onClick }) => (
   </tr>
 );
 
-const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({ 
+const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   id = 'contact-details',
-  initialContact, 
+  initialContact,
   clients,
   isInDrawer = false,
   userId,
   documents: initialDocuments = [],
   onDocumentCreated,
-  quickView = false
+  quickView = false,
+  clientReadOnly = false
 }) => {
   const [contact, setContact] = useState<IContact>(initialContact);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
@@ -194,6 +196,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               documents={[]}
               contacts={[]}
               isInDrawer={true}
+              quickView={true}
             />
           );
         } else {
@@ -347,15 +350,17 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                     ) : (
                       <span className="text-gray-500 italic">No client assigned</span>
                     )}
-                    <Button
-                      id="edit-client-btn"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingClient(true)}
-                      className="p-1 ml-2"
-                    >
-                      <Pen className="h-3 w-3 text-gray-600" />
-                    </Button>
+                    {!clientReadOnly && (
+                      <Button
+                        id="edit-client-btn"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsEditingClient(true)}
+                        className="p-1 ml-2"
+                      >
+                        <Pen className="h-3 w-3 text-gray-600" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </td>

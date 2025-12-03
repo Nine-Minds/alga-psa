@@ -7,6 +7,7 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
 import styles from './ProjectDetail.module.css';
+import * as LucideIcons from 'lucide-react';
 import { Circle, Clipboard, PlayCircle, PauseCircle, CheckCircle, XCircle } from 'lucide-react';
 
 interface KanbanBoardProps {
@@ -39,12 +40,39 @@ interface KanbanBoardProps {
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
 }
 
-const statusIcons: { [key: string]: React.ReactNode } = {
-  'To Do': <Clipboard className="w-4 h-4" />,
-  'In Progress': <PlayCircle className="w-4 h-4" />,
-  'On Hold': <PauseCircle className="w-4 h-4" />,
-  'Done': <CheckCircle className="w-4 h-4" />,
-  'Cancelled': <XCircle className="w-4 h-4" />
+// Helper function to get the configured icon or fallback to auto-detected icon
+const getStatusIcon = (status: ProjectStatus): React.ReactNode => {
+  // If status has a configured icon, use it
+  if (status.icon) {
+    const IconComponent = (LucideIcons as any)[status.icon];
+    if (IconComponent) {
+      return <IconComponent className="w-4 h-4" />;
+    }
+  }
+
+  // Fallback to auto-detection based on status name and is_closed flag
+  if (status.is_closed) {
+    return <CheckCircle className="w-4 h-4" />;
+  }
+
+  const displayName = status.custom_name || status.name;
+  const lowerName = displayName.toLowerCase();
+
+  if (lowerName.includes('progress') || lowerName.includes('doing')) {
+    return <PlayCircle className="w-4 h-4" />;
+  }
+  if (lowerName.includes('hold') || lowerName.includes('blocked') || lowerName.includes('waiting')) {
+    return <PauseCircle className="w-4 h-4" />;
+  }
+  if (lowerName.includes('cancel')) {
+    return <XCircle className="w-4 h-4" />;
+  }
+  if (lowerName.includes('done') || lowerName.includes('complete')) {
+    return <CheckCircle className="w-4 h-4" />;
+  }
+
+  // Default icon for new/todo/open statuses
+  return <Clipboard className="w-4 h-4" />;
 };
 
 const borderColors = ['border-gray-300', 'border-indigo-300', 'border-green-300', 'border-yellow-300'];
@@ -118,11 +146,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <div className={styles.kanbanBoard}>
       {statuses.filter(status => status.is_visible).map((status, index): JSX.Element => {
-        const backgroundColor = cycleColors[index % cycleColors.length];
-        const darkBackgroundColor = darkCycleColors[index % darkCycleColors.length];
-        const borderColor = borderColors[index % borderColors.length];
+        // Use configured color or fallback to cycling colors
+        const configuredColor = status.color;
+        const backgroundColor = configuredColor ? '' : cycleColors[index % cycleColors.length];
+        const darkBackgroundColor = configuredColor ? '' : darkCycleColors[index % darkCycleColors.length];
+        const borderColor = configuredColor ? '' : borderColors[index % borderColors.length];
+
         const statusTasks = enrichedPhaseTasks.filter((task: IProjectTask) => task.project_status_mapping_id === status.project_status_mapping_id);
-        
+
+        const statusIcon = getStatusIcon(status);
+
         return (
           <StatusColumn
             key={status.project_status_mapping_id}
@@ -135,10 +168,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             taskResources={taskResources}
             taskTags={taskTags}
             taskDocumentCounts={taskDocumentCounts instanceof Map ? Object.fromEntries(taskDocumentCounts.entries()) : {}}
-            statusIcon={statusIcons[status.name] || <Circle className="w-4 h-4" />}
+            statusIcon={statusIcon}
             backgroundColor={backgroundColor}
             darkBackgroundColor={darkBackgroundColor}
             borderColor={borderColor}
+            configuredColor={configuredColor}
             isAddingTask={isAddingTask}
             selectedPhase={selectedPhase}
             onDrop={onDrop}

@@ -27,6 +27,13 @@ export default function MspSignIn() {
         message: 'You do not have permission to access the MSP dashboard.'
       });
       setIsAlertOpen(true);
+    } else if (error === 'SessionRevoked') {
+      setAlertInfo({
+        type: 'warning',
+        title: 'Session Ended',
+        message: 'Your session has been signed out. Please sign in again.'
+      });
+      setIsAlertOpen(true);
     }
   }, [error]);
 

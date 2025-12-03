@@ -51,9 +51,15 @@ app.kubernetes.io/name: {{ include "sebastian.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{/* Safely check if hostedEnv is enabled.
+     Returns "true" if hostedEnv exists and is enabled, empty string otherwise. */}}
+{{- define "sebastian.hostedEnvEnabled" -}}
+{{- if and .Values.hostedEnv .Values.hostedEnv.enabled -}}true{{- end -}}
+{{- end }}
+
 {{/* Resolve the correct namespace for the resource.
      Returns a trimmed single-line string to avoid newline emission in include sites. */}}
-{{- define "sebastian.namespace" -}}{{- if .Values.devEnv.enabled -}}{{- .Values.devEnv.namespace -}}{{- else if .Values.hostedEnv.enabled -}}{{- .Values.hostedEnv.namespace -}}{{- else -}}{{- .Values.namespace -}}{{- end -}}{{- end }}
+{{- define "sebastian.namespace" -}}{{- if .Values.devEnv.enabled -}}{{- .Values.devEnv.namespace -}}{{- else if (include "sebastian.hostedEnvEnabled" .) -}}{{- .Values.hostedEnv.namespace -}}{{- else -}}{{- .Values.namespace -}}{{- end -}}{{- end }}
 
 {{/* Derive deployment color from release name */}}
 {{- define "sebastian.color" -}}
@@ -76,4 +82,28 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- else -}}
 {{- $suffix -}}
 {{- end -}}
+{{- end }}
+
+{{/* Render GOOGLE_OAUTH_* env vars from gmail_integration config */}}
+{{- define "sebastian.googleOAuthEnv" -}}
+{{- if and .Values.gmail_integration.enabled .Values.gmail_integration.client_id .Values.gmail_integration.client_secret }}
+- name: GOOGLE_OAUTH_CLIENT_ID
+  value: "{{ .Values.gmail_integration.client_id }}"
+- name: GOOGLE_OAUTH_CLIENT_SECRET
+  value: "{{ .Values.gmail_integration.client_secret }}"
+{{- end }}
+{{- end }}
+
+{{/*
+Render MICROSOFT_OAUTH_* env vars using the microsoft_integration config.
+*/}}
+{{- define "sebastian.microsoftOAuthEnv" -}}
+{{- if and .Values.microsoft_integration.enabled .Values.microsoft_integration.client_id }}
+- name: MICROSOFT_OAUTH_CLIENT_ID
+  value: "{{ .Values.microsoft_integration.client_id }}"
+{{- end }}
+{{- if and .Values.microsoft_integration.enabled .Values.microsoft_integration.client_secret }}
+- name: MICROSOFT_OAUTH_CLIENT_SECRET
+  value: "{{ .Values.microsoft_integration.client_secret }}"
+{{- end }}
 {{- end }}

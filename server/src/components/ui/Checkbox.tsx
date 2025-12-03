@@ -61,7 +61,7 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
     }
   }, [indeterminate, checked]);
 
-  const wrapperClasses = cn('flex items-center', containerClassName ?? 'mb-4');
+  const wrapperClasses = cn('flex items-center gap-2', containerClassName ?? 'mb-4');
 
   return (
     <div className={wrapperClasses}>

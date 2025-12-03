@@ -56,7 +56,7 @@ export interface AssetActionItem {
 
 export const navigationSections: NavigationSection[] = [
   {
-    title: 'Workspace',
+    title: '',
     items: [
       {
         name: 'Home',
@@ -67,12 +67,7 @@ export const navigationSections: NavigationSection[] = [
         name: 'User Activities',
         icon: BarChart3,
         href: '/msp/user-activities'
-      }
-    ]
-  },
-  {
-    title: 'Service Delivery',
-    items: [
+      },
       {
         name: 'Tickets',
         icon: MessageSquare,
@@ -86,7 +81,11 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Projects',
         icon: Layers,
-        href: '/msp/projects'
+        href: '/msp/projects',
+        subItems: [
+          { name: 'All Projects', icon: Layers, href: '/msp/projects' },
+          { name: 'Templates', icon: FileText, href: '/msp/projects/templates' }
+        ]
       },
       {
         name: 'Clients',
@@ -113,12 +112,7 @@ export const navigationSections: NavigationSection[] = [
           { name: 'Lifecycle Policies', icon: Shield, href: '/msp/assets/policies' },
           { name: 'Automation Rules', icon: Workflow, href: '/msp/assets/automation' },
         ]
-      }
-    ]
-  },
-  {
-    title: 'Business Operations',
-    items: [
+      },
       {
         name: 'Time Management',
         icon: Clock,

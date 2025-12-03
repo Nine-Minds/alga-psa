@@ -14,8 +14,8 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from '@shared/interfaces/user.interfaces';
+import { getAllUsersBasic, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -41,7 +41,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
   const [clientId, setClientId] = useState<string>('');
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -121,7 +121,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
     const loadData = async () => {
       try {
         const [fetchedUsers, fetchedClients] = await Promise.all([
-          getAllUsers(),
+          getAllUsersBasic(),
           getAllClients()
         ]);
         setUsers(fetchedUsers);

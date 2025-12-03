@@ -4,13 +4,14 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Pencil, Trash2, ExternalLink, Shield } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, ExternalLink, Shield, ShieldOff } from "lucide-react";
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { TagManager } from 'server/src/components/tags';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
  import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
  import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
  import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
@@ -79,7 +80,7 @@ interface ClientLinkProps {
 const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
   const linkId = `client-link-${client.client_id}`;
   const isDefault = (client as any).is_default;
-  
+
    useRegisterChild<ButtonComponent>({
      id: linkId,
      type: 'button',
@@ -88,7 +89,7 @@ const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
    });
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center gap-2">
       <a
         data-automation-id={linkId}
         href={`/msp/clients/${client.client_id}`}
@@ -99,10 +100,18 @@ const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
         {client.client_name}
       </a>
       {isDefault && (
-        <div className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100" title="Default Client">
+        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100" title="Default Client">
           <Shield className="h-3 w-3 text-purple-600 mr-1" />
           <span className="text-xs text-purple-700 font-medium">Default</span>
         </div>
+      )}
+      {client.is_tax_exempt && (
+        <Tooltip content="This client is tax exempt - no taxes will be applied to their invoices">
+          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100">
+            <ShieldOff className="h-3 w-3 text-amber-600 mr-1" />
+            <span className="text-xs text-amber-700 font-medium">Tax Exempt</span>
+          </div>
+        </Tooltip>
       )}
     </div>
   );
@@ -306,6 +315,7 @@ const ClientsList = ({
     return (
         <div className="w-full">
             <DataTable
+                key={`${currentPage}-${pageSize}`}
                 id="clients-table"
                 data={filteredClients}
                 columns={columns}

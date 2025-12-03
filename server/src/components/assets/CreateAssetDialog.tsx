@@ -33,8 +33,9 @@ const ASSET_TYPE_OPTIONS: SelectOption[] = [
   { value: 'printer', label: 'Printer' }
 ];
 
-type WorkstationFields = Required<Omit<WorkstationAsset, 'tenant' | 'asset_id'>>;
-type NetworkDeviceFields = Required<Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>>;
+// Only require the core workstation fields, RMM fields are optional
+type WorkstationFields = Omit<WorkstationAsset, 'tenant' | 'asset_id'>;
+type NetworkDeviceFields = Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>;
 
 const INITIAL_WORKSTATION: WorkstationFields = {
   os_type: '',

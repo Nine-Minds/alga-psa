@@ -1,4 +1,4 @@
-{{- if and (not .Values.devEnv.enabled) (not .Values.hostedEnv.enabled) }}
+{{- if and (not .Values.devEnv.enabled) (not (include "sebastian.hostedEnvEnabled" .)) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -145,7 +145,7 @@ spec:
           {{- end }}
 
           # ----------- HOCUSPOCUS ----------------
-          {{- if or .Values.hocuspocus.enabled (not .Values.hostedEnv.enabled) }}
+          {{- if or .Values.hocuspocus.enabled (not (include "sebastian.hostedEnvEnabled" .)) }}
           - name: REQUIRE_HOCUSPOCUS
             value: "true"
           - name: HOCUSPOCUS_HOST
@@ -410,12 +410,46 @@ spec:
             value: "{{ . }}"
           {{- end }}
 
+          # ----------- RUNNER / EXTENSION EXECUTION -----------
+          {{- with .Values.runner }}
+          {{- $runnerBaseUrl := .baseUrl | default (printf "http://runner-exec.%s.svc.cluster.local" $.Release.Namespace) }}
+          - name: RUNNER_BASE_URL
+            value: "{{ $runnerBaseUrl }}"
+          {{- if and .serviceTokenSecret (hasKey .serviceTokenSecret "name") (hasKey .serviceTokenSecret "key") (.serviceTokenSecret.name) (.serviceTokenSecret.key) }}
+          - name: RUNNER_SERVICE_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .serviceTokenSecret.name | quote }}
+                key: {{ .serviceTokenSecret.key | quote }}
+          {{- else if .serviceToken }}
+          - name: RUNNER_SERVICE_TOKEN
+            value: "{{ .serviceToken }}"
+          {{- end }}
+          {{- if .debugStream }}
+          {{- if and .debugStream.redisUrlSecret (hasKey .debugStream.redisUrlSecret "name") (hasKey .debugStream.redisUrlSecret "key") (.debugStream.redisUrlSecret.name) (.debugStream.redisUrlSecret.key) }}
+          - name: RUNNER_DEBUG_REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: {{ .debugStream.redisUrlSecret.name | quote }}
+                key: {{ .debugStream.redisUrlSecret.key | quote }}
+          {{- else if .debugStream.redisUrl }}
+          - name: RUNNER_DEBUG_REDIS_URL
+            value: "{{ .debugStream.redisUrl }}"
+          {{- end }}
+          {{- if .debugStream.streamPrefix }}
+          - name: RUNNER_DEBUG_REDIS_STREAM_PREFIX
+            value: "{{ .debugStream.streamPrefix }}"
+          {{- end }}
+          {{- if .debugStream.maxLen }}
+          - name: RUNNER_DEBUG_REDIS_MAXLEN
+            value: "{{ .debugStream.maxLen }}"
+          {{- end }}
+          {{- end }}
+          {{- end }}
+
           # ----------- GOOGLE AUTH ----------------
-          {{- if .Values.google_auth.enabled }}
-          - name: GOOGLE_OAUTH_CLIENT_ID
-            value: "{{ .Values.google_auth.client_id }}"
-          - name: GOOGLE_OAUTH_CLIENT_SECRET
-            value: "{{ .Values.google_auth.client_secret }}"
+          {{- with include "sebastian.googleOAuthEnv" . }}
+{{ . | nindent 10 }}
           {{- end }}
 
           # ----------- GMAIL INTEGRATION ----------------
@@ -469,6 +503,9 @@ spec:
           {{- if .Values.microsoft_integration.redirect_uri }}
           - name: MICROSOFT_REDIRECT_URI
             value: "{{ .Values.microsoft_integration.redirect_uri }}"
+          {{- end }}
+          {{- with include "sebastian.microsoftOAuthEnv" . }}
+{{ . | nindent 10 }}
           {{- end }}
           {{- end }}
 
@@ -524,6 +561,15 @@ spec:
           - name: STRIPE_LICENSE_PRICE_ID
             value: "{{ .Values.stripe.license_price_id }}"
           {{- end }}
+          {{- end }}
+
+          # ----------- IPINFO INTEGRATION ----------------
+          {{- if .Values.secrets.IPINFO_API_TOKEN }}
+          - name: IPINFO_API_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: IPINFO_API_TOKEN
           {{- end }}
 
           # ----------- SECRET PROVIDER ----------------

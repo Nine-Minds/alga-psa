@@ -24,6 +24,7 @@ interface StatusColumnProps {
   backgroundColor: string;
   darkBackgroundColor: string;
   borderColor: string;
+  configuredColor?: string | null; // Hex color from status configuration
   isAddingTask: boolean;
   selectedPhase: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
@@ -57,6 +58,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   backgroundColor,
   darkBackgroundColor,
   borderColor,
+  configuredColor,
   isAddingTask,
   selectedPhase,
   projectTreeData,
@@ -271,17 +273,33 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
     return keyA < keyB ? -1 : keyA > keyB ? 1 : 0;
   });
 
+  // Helper to lighten hex color (for background)
+  const lightenColor = (hex: string, percent: number) => {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
+    const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * percent));
+    const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * percent));
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+  };
+
   return (
     <div
-      className={`${styles.kanbanColumn} ${backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
+      className={`${styles.kanbanColumn} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
         isDraggedOver ? 'border-purple-500 ' + styles.dragOver : 'border-gray-200'
       }`}
+      style={configuredColor ? { backgroundColor: lightenColor(configuredColor, 0.85) } : undefined}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
       <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
-        <div className={`flex ${darkBackgroundColor} rounded-[20px] border-2 ${borderColor} shadow-sm items-center ps-3 py-3 pe-4`}>
+        <div
+          className={`flex ${configuredColor ? '' : darkBackgroundColor} rounded-[20px] border-2 ${configuredColor ? '' : borderColor} shadow-sm items-center ps-3 py-3 pe-4`}
+          style={configuredColor ? {
+            backgroundColor: lightenColor(configuredColor, 0.70),
+            borderColor: lightenColor(configuredColor, 0.40)
+          } : undefined}
+        >
           {statusIcon}
           <span className="ml-2">{status.custom_name || status.name}</span>
         </div>

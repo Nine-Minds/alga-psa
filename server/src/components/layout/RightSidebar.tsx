@@ -1,7 +1,7 @@
 // server/src/components/layout/RightSidebar.tsx
 'use client';
 
-import React, { useEffect, useId, Suspense, lazy, useState } from 'react';
+import React, { useEffect, Suspense, lazy, useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
 interface RightSidebarProps {
@@ -24,7 +24,7 @@ const resolvedEdition =
 const isEnterpriseEditionEnv =
   resolvedEdition === 'enterprise' || resolvedEdition === 'ee';
 const EnterpriseRightSidebar = lazy(
-  () => import('../../../../ee/server/src/components/layout/RightSidebar')
+  () => import('@ee/components/layout/RightSidebar')
 );
 
 const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -32,7 +32,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   setIsOpen,
   ...props
 }) => {
-  const collapsibleId = useId();
   const [shouldUseEnterpriseSidebar, setShouldUseEnterpriseSidebar] = useState(
     isEnterpriseEditionEnv
   );
@@ -68,7 +67,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   return (
     <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
       <Collapsible.Content
-        id={`right-sidebar-${collapsibleId}`}
+        id="right-sidebar-content"
         className={`fixed top-0 right-0 h-full bg-gray-50 w-96 shadow-xl overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex flex-col h-full border-l-2 border-gray-200">

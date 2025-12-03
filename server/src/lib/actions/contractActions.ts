@@ -423,6 +423,15 @@ export async function updateContract(
   }
 }
 
+export async function checkContractHasInvoices(contractId: string): Promise<boolean> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  return await Contract.hasInvoices(contractId);
+}
+
 export async function deleteContract(contractId: string): Promise<void> {
   const session = await getSession();
   if (!session?.user?.id) {

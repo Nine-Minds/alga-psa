@@ -34,7 +34,7 @@ import AssociatedAssets from "server/src/components/assets/AssociatedAssets";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { findUserById, getAllUsers, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
+import { findUserById, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
@@ -47,6 +47,7 @@ import { getAllPriorities } from "server/src/lib/actions/priorityActions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
 import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions";
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
+import ClientDetails from "server/src/components/clients/ClientDetails";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
 import { Button } from "server/src/components/ui/Button";
@@ -60,7 +61,6 @@ import { IntervalTrackingService } from "server/src/services/IntervalTrackingSer
 import { IntervalManagement } from "server/src/components/time-management/interval-tracking/IntervalManagement";
 import { convertBlockNoteToMarkdown } from "server/src/lib/utils/blocknoteUtils";
 import BackNav from 'server/src/components/ui/BackNav';
-import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
 interface TicketDetailsProps {
@@ -463,19 +463,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
     }, []);
 
-    const handleClientClick = async () => {
-        if (ticket.client_id) {
-            try {
-                const client = await getClientById(ticket.client_id);
-                if (client) {
-                    // Client details functionality has been moved to contacts
-                    console.log('Client:', client.client_name);
-                } else {
-                    console.error('Client not found');
-                }
-            } catch (error) {
-                console.error('Error fetching client details:', error);
-            }
+    const handleClientClick = () => {
+        if (client) {
+            openDrawer(
+                <ClientDetails
+                    client={client}
+                    isInDrawer={true}
+                    quickView={true}
+                />
+            );
         } else {
             console.log('No client associated with this ticket');
         }
@@ -484,13 +480,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleContactClick = () => {
         if (contactInfo && client) {
             openDrawer(
-                <ContactDetailsView 
+                <ContactDetailsView
                     initialContact={{
                         ...contactInfo,
                         client_id: client.client_id
                     }}
                     clients={[client]}
                     isInDrawer={true}
+                    clientReadOnly={true}
                 />
             );
         } else {
@@ -548,16 +545,21 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
+        const normalizedValue =
+            field === 'assigned_to'
+                ? (newValue && newValue !== 'unassigned' ? newValue : null)
+                : newValue;
+
         // Store the previous value before updating
         const previousValue = ticket[field];
         
         // Optimistically update the UI
-        setTicket(prevTicket => ({ ...prevTicket, [field]: newValue }));
+        setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
         try {
             // Use the optimized handler if provided
             if (onTicketUpdate) {
-                await onTicketUpdate(field, newValue);
+                await onTicketUpdate(field, normalizedValue);
                 
                 // If we're changing the assigned_to field, we need to handle additional resources
                 // This will be handled by the container component and passed back in props
@@ -571,10 +573,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     return;
                 }
                 
-                const result = await updateTicket(ticket.ticket_id || '', { [field]: newValue }, user);
+                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue }, user);
                 
                 if (result === 'success') {
-                    console.log(`${field} changed to: ${newValue}`);
+                    console.log(`${field} changed to: ${normalizedValue}`);
                     
                     // If we're changing the assigned_to field, refresh the additional resources
                     if (field === 'assigned_to') {
@@ -1332,7 +1334,6 @@ const handleClose = () => {
                         </Suspense>
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
-                        <TicketSurveySummaryCard summary={surveySummary} />
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
                             <TicketProperties
                                 id={`${id}-properties`}
@@ -1376,10 +1377,11 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
+                                surveySummary={surveySummary}
                             />
                         </Suspense>
                         
-                        {/* Assets - commented out for now
+                        {/* Associated Assets - with Remote Access for RMM-managed devices */}
                         {ticket.client_id && ticket.ticket_id && (
                             <div className="mt-6" id="associated-assets-container">
                                 <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
@@ -1392,7 +1394,6 @@ const handleClose = () => {
                                 </Suspense>
                             </div>
                         )}
-                        */}
                     </div>
                 </div>
             </div>

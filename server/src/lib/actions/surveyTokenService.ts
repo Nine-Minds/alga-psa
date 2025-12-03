@@ -81,7 +81,7 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
 
   const lookup = await admin<InvitationLookupRow>(SURVEY_INVITATIONS_TABLE)
     .select(['tenant', 'invitation_id'])
-    .where({ survey_token_hash: hashedToken })
+    .where('survey_token_hash', hashedToken)
     .first();
 
   if (!lookup || typeof lookup.tenant !== 'string') {

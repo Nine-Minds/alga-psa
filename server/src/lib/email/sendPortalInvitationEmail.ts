@@ -1,6 +1,6 @@
 'use server'
 
-import { getSystemEmailService } from './index';
+import { getSystemEmailService, TenantEmailService } from './index';
 import { DatabaseTemplateProcessor } from '../services/email/templateProcessors';
 import { getConnection } from '../db/db';
 import { runWithTenant } from '../db/index';
@@ -79,15 +79,31 @@ export async function sendPortalInvitationEmail({
       // Create database template processor with locale support
       const templateProcessor = new DatabaseTemplateProcessor(knex, 'portal-invitation');
 
-      // Use SystemEmailService for better deliverability
-      const systemEmailService = await getSystemEmailService();
-      const result = await systemEmailService.sendEmail({
+      const tenantEmailService = TenantEmailService.getInstance(tenant);
+      const emailParams = {
         to: email,
         templateProcessor,
         templateData,
         locale: recipientLocale,
         replyTo: clientLocationEmail // Client email as reply-to
+      };
+
+      let result = await tenantEmailService.sendEmail({
+        ...emailParams,
+        tenantId: tenant
       });
+
+      if (!result.success) {
+        logger.warn('[SendPortalInvitationEmail] Tenant email provider failed, falling back to system provider', {
+          tenant,
+          error: result.error || 'unknown_error'
+        });
+        const systemEmailService = await getSystemEmailService();
+        result = await systemEmailService.sendEmail({
+          ...emailParams,
+          tenantId: tenant
+        });
+      }
 
       if (!result.success) {
         logger.error('Failed to send portal invitation email:', result.error);

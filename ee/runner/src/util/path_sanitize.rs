@@ -57,7 +57,7 @@ pub fn sanitize(relative: &str) -> Result<PathBuf, Error> {
 
     // Normalize by splitting on '/' and filtering empty segments (handles repeated slashes)
     let mut normalized = PathBuf::new();
-    let mut last_component_starts_with_dot: Option<bool> = None;
+    // let mut last_component_starts_with_dot: Option<bool> = None; // Unused but kept for future extension validation
 
     for seg in relative.split('/') {
         if seg.is_empty() {
@@ -71,7 +71,7 @@ pub fn sanitize(relative: &str) -> Result<PathBuf, Error> {
             return Err(Error::HiddenFile);
         }
         normalized.push(seg);
-        last_component_starts_with_dot = Some(seg.starts_with('.'));
+        // last_component_starts_with_dot = Some(seg.starts_with('.')); // Unused
     }
 
     // If after normalization we got empty, that's allowed (represents root)

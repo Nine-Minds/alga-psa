@@ -220,6 +220,7 @@ const Contract = {
           await Contract.checkAndUpdateExpiredStatus(contract_id, { trx, tenant });
         }
 
+        // Now fetch with updated statuses
         const rows = await trx('contracts as co')
           .leftJoin('client_contracts as cc', function joinClientContracts() {
             this.on('co.contract_id', '=', 'cc.contract_id')

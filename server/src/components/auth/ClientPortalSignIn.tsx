@@ -10,7 +10,7 @@ import { AlertProps } from 'server/src/interfaces';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { TenantBranding } from 'server/src/lib/actions/tenant-actions/tenantBrandingActions';
-import { isValidTenantSlug } from 'server/src/lib/utils/tenantSlug';
+import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 
 interface ClientPortalSignInProps {
   branding?: TenantBranding | null;
@@ -38,6 +38,13 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
         type: 'error',
         title: t('auth.accessDeniedTitle', 'Access Denied'),
         message: t('auth.accessDeniedMessage', 'You do not have permission to access the client portal.')
+      });
+      setIsAlertOpen(true);
+    } else if (error === 'SessionRevoked') {
+      setAlertInfo({
+        type: 'warning',
+        title: t('auth.sessionEndedTitle', 'Session Ended'),
+        message: t('auth.sessionEndedMessage', 'Your session has been signed out. Please sign in again.')
       });
       setIsAlertOpen(true);
     } else if (registered === 'true') {

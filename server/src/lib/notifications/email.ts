@@ -28,7 +28,7 @@ import {
   NotificationService
 } from '../models/notification';
 import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
-import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
+import { TenantEmailSettings, EmailMessage } from '@shared/types/email';
 import { TenantEmailService } from '../services/TenantEmailService';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getConnection } from '../db/db';
@@ -53,6 +53,7 @@ export class EmailNotificationService implements NotificationService {
       return {
         tenantId,
         defaultFromDomain: settings.default_from_domain,
+        ticketingFromEmail: settings.ticketing_from_email,
         customDomains: settings.custom_domains || [],
         emailProvider: settings.email_provider,
         providerConfigs: settings.provider_configs || [],

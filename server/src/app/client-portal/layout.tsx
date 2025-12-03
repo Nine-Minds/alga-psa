@@ -1,4 +1,5 @@
-import { getSession } from "server/src/lib/auth/getSession";
+import { redirect } from "next/navigation";
+import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { getHierarchicalLocaleAction } from "server/src/lib/actions/locale-actions/getHierarchicalLocale";
@@ -8,7 +9,21 @@ export default async function Layout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession();
+  // Use full auth with revocation check so terminated sessions cannot keep browsing
+  const session = await getSessionWithRevocationCheck();
+
+  // If session is null, redirect to signin
+  // Don't include error parameter to avoid redirect loops
+  if (!session) {
+    console.log('[client-portal-layout] No session found, redirecting to signin');
+    redirect('/auth/client-portal/signin');
+  }
+
+  // Check if user is trying to access wrong portal
+  if (session.user.user_type === 'internal') {
+    console.log('[client-portal-layout] MSP user trying to access client portal, redirecting to switch prompt');
+    redirect('/auth/client-portal/signin');
+  }
 
   // Get branding from session tenant (no host header needed!)
   const branding = session?.user?.tenant

@@ -1,3 +1,4 @@
+{{- if .Values.hostedEnv }}
 {{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled .Values.hostedEnv.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -24,5 +25,6 @@ spec:
   {{- if .Values.hostedEnv.persistence.storageClass }}
   storageClassName: {{ .Values.hostedEnv.persistence.storageClass }}
   {{- end }}
+{{- end }}
 {{- end }}
 

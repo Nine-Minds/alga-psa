@@ -1,8 +1,8 @@
-import { getAsset } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getAssetDetailBundle } from 'server/src/lib/actions/asset-actions/assetActions';
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import AssetDetails from 'server/src/components/assets/AssetDetails';
+import { AssetDetailView } from 'server/src/components/assets/AssetDetailView';
 import { getConnection } from 'server/src/lib/db/db';
 import { getSession } from 'server/src/lib/auth/getSession';
 
@@ -35,12 +35,12 @@ export default async function AssetPage({ params }: Props) {
       redirect('/auth/msp/signin');
     }
 
-    const asset = await getAsset(resolvedParams.asset_id);
-    if (!asset) {
+    const bundle = await getAssetDetailBundle(resolvedParams.asset_id);
+    if (!bundle.asset) {
       return <div>Asset not found</div>;
     }
 
-    return <AssetDetails asset={asset} />;
+    return <AssetDetailView assetId={resolvedParams.asset_id} />;
   } catch (error) {
     console.error('Error fetching user or asset:', error);
     return <div>An error occurred. Please try again later.</div>;

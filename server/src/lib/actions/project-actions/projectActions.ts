@@ -16,12 +16,13 @@ import { z } from 'zod';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
-import { 
-    createProjectSchema, 
-    updateProjectSchema, 
+import {
+    createProjectSchema,
+    updateProjectSchema,
     projectPhaseSchema
 } from '../../schemas/project.schemas';
 import { OrderingService } from 'server/src/lib/services/orderingService';
+import { SharedNumberingService } from '@shared/services/numberingService';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -498,10 +499,13 @@ export async function generateNextWbsCode(): Promise<string> {
     }
 }
 
-export async function createProject(projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'wbs_code'> & {
-  assigned_to?: string | null;
-  contact_name_id?: string | null;
-}): Promise<IProject> {
+export async function createProject(
+  projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'wbs_code' | 'project_number'> & {
+    assigned_to?: string | null;
+    contact_name_id?: string | null;
+  },
+  selectedTaskStatusIds?: string[]
+): Promise<IProject> {
     try {
         // Get project statuses first
         const projectStatuses = await getProjectStatuses();
@@ -527,8 +531,12 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
             return [standardStatuses, regularStatuses];
         });
 
-        // Use standard statuses if available (backward compatibility), otherwise use regular statuses
-        const taskStatusesToUse = standardTaskStatuses.length > 0 ? standardTaskStatuses : projectTaskStatuses;
+        // Prefer regular statuses (new system with colors/icons) over standard statuses (old system)
+        const taskStatusesToUse = projectTaskStatuses.length > 0 ? projectTaskStatuses : standardTaskStatuses;
+
+        console.log(`[createProject] Found ${projectTaskStatuses.length} custom statuses and ${standardTaskStatuses.length} standard statuses`);
+        console.log(`[createProject] Using ${taskStatusesToUse.length} statuses, isStandard: ${projectTaskStatuses.length === 0}`);
+        console.log(`[createProject] selectedTaskStatusIds:`, selectedTaskStatusIds);
 
         if (taskStatusesToUse.length === 0) {
             throw new Error('No project task statuses found. Please ensure task statuses are configured.');
@@ -539,6 +547,14 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
         // Ensure we're passing all fields including assigned_to and contact_name_id
         const fullProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'create', trx);
+
+            // Generate project number
+            const projectNumber = await SharedNumberingService.getNextNumber(
+                'PROJECT',
+                { knex: trx, tenant: currentUser.tenant! }
+            );
+            console.log(`[createProject] Generated project number: ${projectNumber}`);
+
             const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
             const defaultStatus = projectStatuses[0];
             // Remove tenant field if present in validatedData
@@ -550,10 +566,11 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
                 is_closed: defaultStatus.is_closed,
                 assigned_to: safeValidatedData.assigned_to || null,
                 contact_name_id: safeValidatedData.contact_name_id || null,
-                wbs_code: wbsCode
+                wbs_code: wbsCode,
+                project_number: projectNumber
             };
             console.log('Project data with status:', projectDataWithStatus); // Debug log
-            
+
             // Add debug logging before database insert
             console.log('Creating project with data:', projectDataWithStatus);
 
@@ -564,16 +581,44 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
             });
 
             // Create project status mappings - handle both standard and regular statuses
-            const isUsingStandardStatuses = standardTaskStatuses.length > 0;
+            const isUsingStandardStatuses = projectTaskStatuses.length === 0;
 
-            for (const status of taskStatusesToUse) {
+            console.log(`[createProject] isUsingStandardStatuses: ${isUsingStandardStatuses}`);
+
+            // Filter and order statuses based on selection (if provided)
+            let statusesToCreate: Array<IStandardStatus | IStatus>;
+
+            if (selectedTaskStatusIds && selectedTaskStatusIds.length > 0) {
+                // Create ordered list based on selectedTaskStatusIds array order
+                statusesToCreate = selectedTaskStatusIds
+                    .map(statusId => {
+                        return taskStatusesToUse.find(status => {
+                            const id = isUsingStandardStatuses
+                                ? (status as IStandardStatus).standard_status_id
+                                : (status as IStatus).status_id;
+                            return id === statusId;
+                        });
+                    })
+                    .filter((status): status is IStandardStatus | IStatus => status !== undefined);
+            } else {
+                // If no selection, use all statuses (backward compatibility)
+                statusesToCreate = taskStatusesToUse;
+            }
+
+            console.log(`[createProject] Creating ${statusesToCreate.length} status mappings`);
+
+            // Create mappings in the specified order
+            for (let i = 0; i < statusesToCreate.length; i++) {
+                const status = statusesToCreate[i];
+                const displayOrder = i + 1; // Use index for display_order to maintain user's chosen order
+
                 if (isUsingStandardStatuses) {
                     // Using standard_statuses table (backward compatibility)
                     await ProjectModel.addProjectStatusMapping(trx, newProject.project_id, {
                         standard_status_id: (status as IStandardStatus).standard_status_id,
                         is_standard: true,
                         custom_name: null,
-                        display_order: (status as IStandardStatus).display_order,
+                        display_order: displayOrder,
                         is_visible: true,
                     });
                 } else {
@@ -581,8 +626,8 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
                     await ProjectModel.addProjectStatusMapping(trx, newProject.project_id, {
                         status_id: (status as IStatus).status_id,
                         is_standard: false,
-                        custom_name: (status as IStatus).name,
-                        display_order: (status as IStatus).order_number || 0,
+                        custom_name: null, // Name comes from join with statuses table
+                        display_order: displayOrder,
                         is_visible: true,
                     });
                 }
@@ -785,10 +830,12 @@ export async function getProjectMetadata(projectId: string): Promise<{
         // Fetch contact details if needed
         let contact: { full_name: string } | undefined;
         if (project.contact_name_id) {
-            const contactData = await knex('contacts')
-                .where({ contact_name_id: project.contact_name_id })
-                .select('full_name')
-                .first();
+            const contactData = await withTransaction(knex, async (trx: Knex.Transaction) => {
+                return await trx('contacts')
+                    .where({ contact_name_id: project.contact_name_id })
+                    .select('full_name')
+                    .first();
+            });
             contact = contactData;
         }
         
@@ -961,7 +1008,9 @@ export async function getProjectTaskStatuses(projectId: string): Promise<Project
                             display_order: mapping.display_order,
                             is_visible: mapping.is_visible,
                             is_standard: false,
-                            is_closed: customStatus.is_closed
+                            is_closed: customStatus.is_closed,
+                            color: customStatus.color,
+                            icon: customStatus.icon
                         } as ProjectStatus;
                     }
                 console.warn(`Invalid status mapping ${mapping.project_status_mapping_id}: missing both standard_status_id and status_id`);

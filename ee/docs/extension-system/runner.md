@@ -4,13 +4,13 @@ This document explains the Extension Runner’s role in the Enterprise Extension
 
 References:
 - Runner project (Rust): [ee/runner/Cargo.toml](ee/runner/Cargo.toml)
-- Iframe bootstrap and URL builder in host UI: [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45), [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38)
-- Registry v2 service (types and scaffold): [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
-- Gateway handler (spec-aligned scaffold): [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Iframe bootstrap and URL builder in host UI: [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45), [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Registry v2 service (types and scaffold): [ExtensionRegistryServiceV2](../../server/src/lib/extensions/registry-v2.ts:48)
+- Gateway handler (current implementation): [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts)
 
 ## Purpose and responsibilities
 
-- Execute extension server handlers as out-of-process WASM modules with strict isolation.
+- Execute extension server handlers (Wasmtime components produced by `componentize-js`) with strict isolation.
 - Serve static UI assets for extensions by immutable content hash (content-addressed).
 - Enforce capability-based host APIs and guardrails (quotas, timeouts, egress policies).
 - Provide a stable HTTP interface for the Gateway to invoke extension handlers.
@@ -18,8 +18,8 @@ References:
 
 ## High-level architecture
 
-- Process and runtime: Rust + Wasmtime (WASI).
-  - Wasmtime is used to load/execute precompiled or interpreted WASM modules with resource limits.
+- Process and runtime: Rust + Wasmtime (Component Model).
+  - Wasmtime is used to load/execute precompiled or interpreted WASM components with resource limits.
 - HTTP server: Axum + Tower layers (tracing, headers, static files), see dependencies in [ee/runner/Cargo.toml](ee/runner/Cargo.toml).
 - Storage and caching:
   - Immutable content-addressed bundles (tar/zstd or similar) stored in object storage.
@@ -36,6 +36,7 @@ References:
 - HTTP: `POST /v1/execute`
 - Caller: Gateway
 - Request (example):
+- Actual payload shape (2025-11-12):
 ```json
 {
   "context": {
@@ -43,26 +44,29 @@ References:
     "tenant_id": "tenant-123",
     "extension_id": "com.example.sales",
     "version_id": "ver_abc123",
-    "content_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd"
+    "content_hash": "sha256:012345...abcd"
+    // install_id is currently omitted; tracked in Workstream A1.
   },
-  "endpoint": "dist/handlers/http/sync",
   "http": {
     "method": "POST",
     "path": "/agreements/sync",
     "query": { "force": "true" },
     "headers": {
-      "x-request-id": "3d2c3f27-5b9c-4ad0-90f5-4c5ec8e844be",
+      "x-request-id": "3d2c3f27-...",
       "x-alga-tenant": "tenant-123",
       "x-alga-extension": "com.example.sales",
       "content-type": "application/json"
     },
     "body_b64": "eyAiZm9vIjogImJhciIgfQ=="
   },
-  "limits": {
-    "timeout_ms": 5000
-  }
+  "limits": { "timeout_ms": 5000 },
+  "config": { "region": "emea" },
+  "providers": ["cap:http.fetch","cap:storage.kv","cap:secrets.get"],
+  "secret_envelope": { "ciphertext_b64": "vault:v1:....", "algorithm": "vault-transit:v1" }
 }
 ```
+
+Earlier versions included an `endpoint` field pointing at `dist/handlers/...`. Componentized extensions no longer require the gateway to select a handler file; the component inspects `request.http` directly.
 - Response (example):
 ```json
 {
@@ -74,7 +78,7 @@ References:
   "body_b64": "eyAic3RhdHVzIjogIm9rIiB9"
 }
 ```
-- The Gateway normalizes the inbound Next.js request and forwards a minimal envelope. See gateway scaffolding at [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts).
+- The Gateway normalizes the inbound Next.js request, attaches install metadata, and forwards the envelope. See [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts).
 
 ### 2) Static UI asset hosting (Runner)
 
@@ -86,12 +90,12 @@ References:
   - Assets validated (existence and content hash) before serving.
   - MIME type is derived safely (e.g., via `mime_guess`); only static file types served.
 - Host bootstrap:
-  - The host uses [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) to construct the iframe URL for the Runner’s public base and [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45) to perform the secure initialization (sandbox, origin checks, postMessage protocol).
+  - The host uses [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) to construct the iframe URL for the Runner’s public base and [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45) to perform the secure initialization (sandbox, origin checks, postMessage protocol).
 
 ## Execution model
 
 - Module resolution:
-  - `version_id` → fetch manifest → resolve `endpoint.handler` path → load WASM (precompiled preferred) from content-addressed storage.
+  - `version_id` + `content_hash` → fetch component artifact (`dist/main.wasm`) from object storage/cache. The handler selection happens inside the component; manifest endpoint data is advisory today.
 - Isolation and limits:
   - Memory/time/fuel limits enforced per invocation (configurable).
   - Concurrency controls per tenant/extension (global caps, per-request rate limits).
@@ -99,7 +103,8 @@ References:
   - `http.fetch` with tenant/extension egress allowlists.
   - `storage.kv` with tenant-namespaced keys.
   - `secrets.get` returning handles/tokens; plaintext minimized.
-  - `log` and `metrics` emitting structured events and counters/histograms.
+  - `ui_proxy.call_route` bridging from components to host-approved UI proxy endpoints.
+  - `log`, `metrics`, and live debug events emitting structured telemetry.
 
 ## Security and signing
 
@@ -111,28 +116,29 @@ References:
   - Verification occurs on publish/install and before load/serve.
   - Trust roots provisioned via Runner/Registry environment (e.g., PEM chain).
 - Origin and iframe safety:
-  - The host enforces sandbox defaults (`allow-scripts`, no implicit `allow-same-origin`) and validates target origins in the bootstrap flow (see [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)).
+  - The host enforces sandbox defaults (`allow-scripts`, no implicit `allow-same-origin`) and validates target origins in the bootstrap flow (see [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)).
 - Header policy:
   - Gateway strips end-user `authorization` and injects service-level headers (`x-request-id`, tenant/extension IDs).
   - Runner enforces response header allowlist (`content-type`, safe `cache-control`, custom `x-ext-*`).
 
 ## Configuration (env)
 
-- `RUNNER_BACKEND`: Selects `knative` (default) or `docker` backend for the gateway.
 - `RUNNER_BASE_URL`: Gateway’s internal URL to call Runner (e.g., `http://runner:8080`).
 - `RUNNER_DOCKER_HOST`: Override Runner base URL when using the Docker backend (e.g., `http://localhost:8085`).
 - `RUNNER_PUBLIC_BASE`: Public base used in iframe src for UI assets. Accepts absolute URLs or relative paths (e.g., `/runner`) when the gateway proxies Runner assets.
-- `EXT_GATEWAY_TIMEOUT_MS`: Gateway-side invocation timeout (Runner should also have server-side timeouts).
 - `SIGNING_TRUST_BUNDLE`: Path or value for trusted publisher certificates/keys.
-- `BUNDLE_STORAGE_*`: Object storage configuration for content-addressed bundle retrieval (S3 or equivalent, if used).
-- `REGISTRY_BASE_URL`: Base URL of the EE server for registry lookups (e.g., `https://algapsa.com`).
-- `ALGA_AUTH_KEY`: Service API key used by the Runner when calling the EE registry endpoints. The Runner sends this as `x-api-key` for `/api/installs/lookup-by-host` and `/api/installs/validate`.
+- `BUNDLE_STORE_BASE` / `BUNDLE_STORAGE_*`: Object storage configuration for content-addressed bundle retrieval (S3 or equivalent).
+- `REGISTRY_BASE_URL`, `ALGA_AUTH_KEY`: Used to fetch install metadata/signature info from the EE server.
+- `EXT_EGRESS_ALLOWLIST`: Comma-separated list of hostnames allowed for `alga.http.fetch`.
+- `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_STREAM_PREFIX`, `RUNNER_DEBUG_REDIS_MAXLEN`, `RUNNER_DEBUG_MAX_EVENT_BYTES`: Enable Redis-backed debug streaming (stdout/stderr/log fan-out).
+- `UI_PROXY_BASE_URL`, `UI_PROXY_AUTH_KEY`, `UI_PROXY_TIMEOUT_MS`: Configure the UI proxy host capability.
+- `WASM_POOL_*` / `EXT_CACHE_ROOT`: Tune Wasmtime pooling and cache directories.
 
 ## Gateway → Runner flow (summary)
 
 1. Client calls host `/api/ext/{extensionId}/{...}`.
-2. Gateway resolves tenant install → `version_id` → `content_hash` → manifest endpoint.
-3. Gateway builds normalized request and `POST /v1/execute` to Runner with timeouts and service auth.
+2. Gateway resolves tenant install → (`version_id`, `content_hash`, config, provider grants, sealed secret envelope).
+3. Gateway builds normalized request (currently without `install_id`, see plan A1) and `POST /v1/execute` to Runner with timeouts and service auth.
 4. Runner executes the handler in a sandbox and returns `{status, headers, body_b64}`.
 5. Gateway returns filtered headers/body to the client.
 
@@ -141,6 +147,9 @@ References:
 - Structured logs per request with correlation IDs.
 - Metrics exposed by Runner:
   - Invocation duration, memory usage, fuel, egress bytes, error counts.
+- Live debug stream:
+  - When `RUNNER_DEBUG_REDIS_URL` is set, stdout/stderr/log events are published to Redis Streams (`ext-debug:{tenant}:{extension}`) and consumed by `/api/ext-debug/stream`.
+  - `RUNNER_DEBUG_MAX_EVENT_BYTES` truncates noisy messages; the UI shows a `[truncated]` marker.
 - Execution logs persisted via Registry or a logging backend keyed by tenant/extension.
 
 ## Local development
@@ -160,4 +169,4 @@ References:
 ## Registry integration
 
 - The Runner relies on Registry to supply metadata: versions, manifests, content hashes, and signatures (publish/install workflows).
-- See [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48) for service scaffolding used by the Gateway and Registry layer.
+- See [ExtensionRegistryServiceV2](../../server/src/lib/extensions/registry-v2.ts:48) for service scaffolding used by the Gateway and Registry layer.

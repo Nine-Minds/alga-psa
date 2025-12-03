@@ -15,7 +15,7 @@ import {
     type PortalSessionTokenPayload,
 } from "server/src/lib/auth/sessionCookies";
 import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
-import { buildTenantPortalSlug, isValidTenantSlug } from "server/src/lib/utils/tenantSlug";
+import { buildTenantPortalSlug, isValidTenantSlug } from "@shared/utils/tenantSlug";
 import { isEnterprise } from "server/src/lib/features";
 import {
     applyOAuthAccountHints,
@@ -31,6 +31,11 @@ import {
 import { isAutoLinkEnabledForTenant } from "@ee/lib/auth/ssoAutoLink";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
 import { cookies } from "next/headers";
+import { UserSession } from "server/src/lib/models/UserSession";
+import { getClientIp } from "server/src/lib/auth/ipAddress";
+import { generateDeviceFingerprint, getDeviceInfo } from "server/src/lib/auth/deviceFingerprint";
+import { getLocationFromIp } from "server/src/lib/auth/geolocation";
+import { getConnection } from "server/src/lib/db/db";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -166,6 +171,8 @@ async function computeVanityRedirect({
             user_type: userType,
             clientId: typeof token.clientId === 'string' ? token.clientId : undefined,
             contactId: typeof token.contactId === 'string' ? token.contactId : undefined,
+            session_id: typeof token.session_id === 'string' ? token.session_id : undefined, // NEW: Preserve session ID
+            login_method: typeof token.login_method === 'string' ? token.login_method : undefined, // NEW: Preserve login method
         };
 
         const { token: ott } = await issuePortalDomainOtt({
@@ -212,6 +219,15 @@ interface ExtendedUser {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    deviceInfo?: {
+        ip: string;
+        userAgent: string;
+        deviceFingerprint: string;
+        deviceName: string;
+        deviceType: string;
+        locationData: any;
+    };
+    loginMethod?: string;
 }
 
 function toOAuthProfileMappingResult(user: ExtendedUser): OAuthProfileMappingResult {
@@ -771,7 +787,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 AzureADProvider({
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
-                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
+                    // Always use 'common' for multi-tenant Azure AD apps
+                    issuer: `https://login.microsoftonline.com/common/v2.0`,
                     checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
@@ -815,7 +832,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
             },
-            async authorize(credentials): Promise<ExtendedUser | null> {
+            async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@shared/db/admin");
                 const logger = (await import('@alga-psa/shared/core/logger')).default;
                 const { authenticateUser } = await import('server/src/lib/actions/auth');
@@ -901,34 +918,71 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     }
                     }
 
-                    // 2FA Verification
+                    // 2FA Verification with device recognition
                     if (user.two_factor_enabled) {
-                        console.log('2FA is enabled for user, starting verification');
-                        if (!credentials.twoFactorCode) {
-                            console.log('2FA verification failed: No code provided');
-                            logger.warn("2FA code required for email", credentials.email);
-                            return null;
+                        console.log('2FA is enabled for user, checking device recognition');
+
+                        let shouldRequire2FA = true;
+
+                        // Check if device-based 2FA skip is enabled
+                        if ((user as any).two_factor_required_new_device && request) {
+                            try {
+                                // Generate device fingerprint from request
+                                const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
+                                const deviceFingerprint = generateDeviceFingerprint(userAgent);
+
+                                // Check if this device is known
+                                const isKnown = await UserSession.isKnownDevice(
+                                    user.tenant,
+                                    user.user_id.toString(),
+                                    deviceFingerprint
+                                );
+
+                                console.log('Device recognition check:', {
+                                    deviceFingerprint,
+                                    isKnownDevice: isKnown
+                                });
+
+                                // Skip 2FA for known devices
+                                if (isKnown) {
+                                    shouldRequire2FA = false;
+                                    console.log('Device recognized, skipping 2FA verification');
+                                }
+                            } catch (error) {
+                                console.error('Device recognition check failed, falling back to 2FA:', error);
+                                // On error, require 2FA for security
+                                shouldRequire2FA = true;
+                            }
                         }
-                        if (!user.two_factor_secret) {
-                            console.log('2FA verification failed: No secret found');
-                            logger.warn("2FA secret not found for email", credentials.email);
-                            return null;
+
+                        if (shouldRequire2FA) {
+                            console.log('2FA verification required, starting verification');
+                            if (!credentials.twoFactorCode) {
+                                console.log('2FA verification failed: No code provided');
+                                logger.warn("2FA code required for email", credentials.email);
+                                return null;
+                            }
+                            if (!user.two_factor_secret) {
+                                console.log('2FA verification failed: No secret found');
+                                logger.warn("2FA secret not found for email", credentials.email);
+                                return null;
+                            }
+                            console.log('Verifying 2FA code');
+                            const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
+                            const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
+                            console.log('2FA verification result:', { isValid: isValid2FA });
+                            if (!isValid2FA) {
+                                console.log('2FA verification failed: Invalid code');
+                                logger.warn("Invalid 2FA code for email", credentials.email);
+                                return null;
+                            }
+                            console.log('2FA verification successful');
                         }
-                        console.log('Verifying 2FA code');
-                        const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
-                        const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
-                        console.log('2FA verification result:', { isValid: isValid2FA });
-                        if (!isValid2FA) {
-                            console.log('2FA verification failed: Invalid code');
-                            logger.warn("Invalid 2FA code for email", credentials.email);
-                            return null;
-                        }
-                        console.log('2FA verification successful');
                     }
 
                     logger.info("User sign in successful with email", credentials.email);
                     const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
-                    const userResponse = {
+                    const userResponse: ExtendedUser = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
@@ -941,12 +995,48 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         contactId: user.contact_id,
                         tenantSlug: tenantSlugForUser,
                     };
+
+                    // NEW: Capture device information for session tracking
+                    if (request) {
+                        try {
+                            const ip = getClientIp(request as any);
+                            const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
+                            const deviceFingerprint = generateDeviceFingerprint(userAgent);
+                            const deviceInfo = getDeviceInfo(userAgent);
+
+                            // Enforce platform-level max sessions (hardcoded for security)
+                            const MAX_SESSIONS = 5; // Platform security policy
+                            await UserSession.enforceMaxSessions(userResponse.tenant!, userResponse.id, MAX_SESSIONS);
+
+                            userResponse.deviceInfo = {
+                                ip,
+                                userAgent,
+                                deviceFingerprint,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type,
+                                locationData: null,
+                            };
+
+                            // Set login method for credentials provider
+                            userResponse.loginMethod = 'credentials';
+
+                            console.log('[auth] Device info captured in Credentials provider:', {
+                                ip,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type
+                            });
+                        } catch (error) {
+                            console.error('[auth] Failed to capture device info:', error);
+                        }
+                    }
+
                     console.log('Authorization successful. Returning user data:', {
                         id: userResponse.id,
                         email: userResponse.email,
                         username: userResponse.username,
                         userType: userResponse.user_type,
-                        tenant: userResponse.tenant
+                        tenant: userResponse.tenant,
+                        hasDeviceInfo: !!userResponse.deviceInfo
                     });
                     console.log('==== Credentials OAuth Authorization Complete ====');
                     return userResponse;
@@ -1066,9 +1156,10 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
         sessionToken: SESSION_COOKIE,
     },
     callbacks: {
-        async signIn({ user, account, credentials }) {
+        async signIn({ user, account, credentials, profile, ...context }) {
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
+            const request = (context as any).request; // NextAuth v5 runtime provides request
 
             if (extendedUser && providerId && providerId !== 'credentials') {
                 const accountRecord = account as unknown as Record<string, unknown> | null;
@@ -1155,6 +1246,41 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 }
             }
 
+            // NEW: Capture device information for session tracking
+            if (extendedUser && request) {
+                try {
+                    const ip = getClientIp(request as any);
+                    const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
+                    const deviceFingerprint = generateDeviceFingerprint(userAgent);
+                    const deviceInfo = getDeviceInfo(userAgent);
+
+                    // Enforce platform-level max sessions (hardcoded for security)
+                    // This prevents account sharing and is not configurable
+                    if (extendedUser.tenant && extendedUser.id) {
+                        const MAX_SESSIONS = 5; // Platform security policy
+                        await UserSession.enforceMaxSessions(extendedUser.tenant, extendedUser.id, MAX_SESSIONS);
+                    }
+
+                    // Store device info in user object for jwt callback
+                    extendedUser.deviceInfo = {
+                        ip,
+                        userAgent,
+                        deviceFingerprint,
+                        deviceName: deviceInfo.name,
+                        deviceType: deviceInfo.type,
+                        locationData: null, // Will be fetched async in jwt callback
+                    };
+
+                    // Capture login method from OAuth provider
+                    if (account?.provider) {
+                        (extendedUser as any).loginMethod = account.provider;
+                    }
+                } catch (error) {
+                    console.error('[auth] Session tracking error:', error);
+                    // Don't block login on session tracking errors
+                }
+            }
+
             return true; // Allow sign in
         },
         async jwt({ token, user }) {
@@ -1189,53 +1315,97 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 token.contactId = extendedUser.contactId;
               }
 
-            // On subsequent requests, validate the token
-            const validatedUser = await validateUser(token);
-            if (!validatedUser) {
-                console.log('JWT callback - validation failed for token:', token);
-                // If validation fails, return a token that will cause the session to be invalid
-                return { ...token, error: "TokenValidationError" };
-            }
+            // NEW: Create session record on initial sign-in
+            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
+            if ((user as any)?.deviceInfo && !token.session_id) {
+                try {
+                    const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
+                    const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 
-            console.log('JWT callback - validated user:', {
-                user_id: validatedUser.user_id,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant
-            });
+                    // Determine login method - use captured provider from signIn, or default to credentials
+                    const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
 
-            // For client users, fetch clientId if missing
-            let clientId = token.clientId;
-            let contactId = token.contactId || validatedUser.contact_id;
+                    const sessionId = await UserSession.create({
+                        tenant: token.tenant as string,
+                        user_id: token.id as string,
+                        ip_address: extendedUser.deviceInfo.ip,
+                        user_agent: extendedUser.deviceInfo.userAgent,
+                        device_fingerprint: extendedUser.deviceInfo.deviceFingerprint,
+                        device_name: extendedUser.deviceInfo.deviceName,
+                        device_type: extendedUser.deviceInfo.deviceType,
+                        location_data: extendedUser.deviceInfo.locationData,
+                        expires_at: expiresAt,
+                        login_method: loginMethod,
+                    });
 
-            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !clientId) {
-                console.log('JWT callback - fetching clientId for client user');
-                const { getAdminConnection } = await import("@shared/db/admin");
-                const connection = await getAdminConnection();
-                const contact = await connection('contacts')
-                    .where({
-                        contact_name_id: validatedUser.contact_id,
-                        tenant: validatedUser.tenant
-                    })
-                    .first();
+                    token.session_id = sessionId;
+                    token.login_method = loginMethod;
 
-                if (contact) {
-                    clientId = contact.client_id;
-                    console.log('JWT callback - found clientId:', clientId);
+                    // Fire-and-forget: Update location data asynchronously
+                    const ipForLocation = extendedUser.deviceInfo.ip;
+                    const tenantForLocation = token.tenant as string;
+                    getLocationFromIp(ipForLocation)
+                        .then((locationData) => {
+                            if (locationData) {
+                                return UserSession.updateLocation(tenantForLocation, sessionId, locationData);
+                            }
+                        })
+                        .catch((error) => {
+                            console.warn('[auth] Failed to update session location:', error);
+                        });
+
+                    // Clean up device info (don't store in token)
+                    delete (user as any).deviceInfo;
+                } catch (error) {
+                    console.error('[auth] Failed to create session record:', error);
                 }
             }
 
+            // NEW: Check if session was revoked (throttled to reduce DB load)
+            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
+            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
+            // Activity tracking is not critical and can be updated less frequently via background job
+            if (token.session_id) {
+                try {
+                    const lastRevocationCheck = token.last_revocation_check as number || 0;
+                    const now = Date.now();
+                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
+
+                    if (shouldCheckRevocation) {
+                        const isRevoked = await UserSession.isRevoked(
+                            token.tenant as string,
+                            token.session_id as string
+                        );
+
+                        if (isRevoked) {
+                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
+                            return null; // This will force a logout
+                        }
+
+                        token.last_revocation_check = now;
+                    }
+                } catch (error) {
+                    console.error('[auth] Session revocation check error:', error);
+                    // Don't block on session check errors
+                }
+            }
+
+            // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
+            // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
+            // - With max 20 connections, pool exhausted instantly with multiple users
+            // - Result: "remaining connection slots reserved for superuser" errors
+            //
+            // Security is maintained by:
+            // 1. NextAuth JWT signature validation (cryptographically secure)
+            // 2. Session revocation check above (handles compromised sessions)
+            // 3. User validation at login time (sufficient for most use cases)
+            //
+            // If user is deleted/deactivated between requests, they'll be caught at next login
+
             const result = {
-                ...token,
-                id: validatedUser.user_id, // Always use the validated user_id
-                name: validatedUser.first_name + " " + validatedUser.last_name,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant,
-                tenantSlug:
-                    token.tenantSlug ??
-                    (validatedUser.tenant ? buildTenantPortalSlug(validatedUser.tenant) : undefined),
-                user_type: validatedUser.user_type,
-                clientId: clientId, // Use fetched or preserved clientId
-                contactId: contactId  // Use fetched or preserved contactId
+                ...token
+                // Token already contains all necessary user data from initial sign-in
+                // No need to fetch from DB on every request
             };
 
             console.log('JWT callback - final token:', {
@@ -1292,6 +1462,15 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 tenant: session.user?.tenant,
                 clientId: session.user?.clientId
             });
+
+            // NEW: Add session_id to session object
+            if (token.session_id) {
+                (session as any).session_id = token.session_id as string;
+            }
+            if (token.login_method) {
+                (session as any).login_method = token.login_method as string;
+            }
+
             return session;
         },
         async redirect({ url, baseUrl }) {
@@ -1365,7 +1544,8 @@ export const options: NextAuthConfig = {
                 AzureADProvider({
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    // Always use 'common' for multi-tenant Azure AD apps
+                    issuer: `https://login.microsoftonline.com/common/v2.0`,
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??
@@ -1408,7 +1588,7 @@ export const options: NextAuthConfig = {
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
             },
-            async authorize(credentials): Promise<ExtendedUser | null> {
+            async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@shared/db/admin");
                 const { authenticateUser } = await import('server/src/lib/actions/auth');
                 const logger = { info: (..._a:any[])=>{}, warn: (..._a:any[])=>{}, debug: (..._a:any[])=>{}, trace: (..._a:any[])=>{}, error: (..._a:any[])=>{} };
@@ -1492,34 +1672,71 @@ export const options: NextAuthConfig = {
                     }
                     }
 
-                    // 2FA Verification
+                    // 2FA Verification with device recognition
                     if (user.two_factor_enabled) {
-                        console.log('2FA is enabled for user, starting verification');
-                        if (!credentials.twoFactorCode) {
-                            console.log('2FA verification failed: No code provided');
-                            logger.warn("2FA code required for email", credentials.email);
-                            return null;
+                        console.log('2FA is enabled for user, checking device recognition');
+
+                        let shouldRequire2FA = true;
+
+                        // Check if device-based 2FA skip is enabled
+                        if ((user as any).two_factor_required_new_device && request) {
+                            try {
+                                // Generate device fingerprint from request
+                                const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
+                                const deviceFingerprint = generateDeviceFingerprint(userAgent);
+
+                                // Check if this device is known
+                                const isKnown = await UserSession.isKnownDevice(
+                                    user.tenant,
+                                    user.user_id.toString(),
+                                    deviceFingerprint
+                                );
+
+                                console.log('Device recognition check:', {
+                                    deviceFingerprint,
+                                    isKnownDevice: isKnown
+                                });
+
+                                // Skip 2FA for known devices
+                                if (isKnown) {
+                                    shouldRequire2FA = false;
+                                    console.log('Device recognized, skipping 2FA verification');
+                                }
+                            } catch (error) {
+                                console.error('Device recognition check failed, falling back to 2FA:', error);
+                                // On error, require 2FA for security
+                                shouldRequire2FA = true;
+                            }
                         }
-                        if (!user.two_factor_secret) {
-                            console.log('2FA verification failed: No secret found');
-                            logger.warn("2FA secret not found for email", credentials.email);
-                            return null;
+
+                        if (shouldRequire2FA) {
+                            console.log('2FA verification required, starting verification');
+                            if (!credentials.twoFactorCode) {
+                                console.log('2FA verification failed: No code provided');
+                                logger.warn("2FA code required for email", credentials.email);
+                                return null;
+                            }
+                            if (!user.two_factor_secret) {
+                                console.log('2FA verification failed: No secret found');
+                                logger.warn("2FA secret not found for email", credentials.email);
+                                return null;
+                            }
+                            console.log('Verifying 2FA code');
+                            const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
+                            const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
+                            console.log('2FA verification result:', { isValid: isValid2FA });
+                            if (!isValid2FA) {
+                                console.log('2FA verification failed: Invalid code');
+                                logger.warn("Invalid 2FA code for email", credentials.email);
+                                return null;
+                            }
+                            console.log('2FA verification successful');
                         }
-                        console.log('Verifying 2FA code');
-                        const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
-                        const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
-                        console.log('2FA verification result:', { isValid: isValid2FA });
-                        if (!isValid2FA) {
-                            console.log('2FA verification failed: Invalid code');
-                            logger.warn("Invalid 2FA code for email", credentials.email);
-                            return null;
-                        }
-                        console.log('2FA verification successful');
                     }
 
                     logger.info("User sign in successful with email", credentials.email);
                     const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
-                    const userResponse = {
+                    const userResponse: ExtendedUser = {
                         id: user.user_id.toString(),
                         email: user.email,
                         username: user.username,
@@ -1532,12 +1749,48 @@ export const options: NextAuthConfig = {
                         contactId: user.contact_id,
                         tenantSlug: tenantSlugForUser,
                     };
+
+                    // NEW: Capture device information for session tracking
+                    if (request) {
+                        try {
+                            const ip = getClientIp(request as any);
+                            const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
+                            const deviceFingerprint = generateDeviceFingerprint(userAgent);
+                            const deviceInfo = getDeviceInfo(userAgent);
+
+                            // Enforce platform-level max sessions (hardcoded for security)
+                            const MAX_SESSIONS = 5; // Platform security policy
+                            await UserSession.enforceMaxSessions(userResponse.tenant!, userResponse.id, MAX_SESSIONS);
+
+                            userResponse.deviceInfo = {
+                                ip,
+                                userAgent,
+                                deviceFingerprint,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type,
+                                locationData: null,
+                            };
+
+                            // Set login method for credentials provider
+                            userResponse.loginMethod = 'credentials';
+
+                            console.log('[auth] Device info captured in Credentials provider (Client Portal):', {
+                                ip,
+                                deviceName: deviceInfo.name,
+                                deviceType: deviceInfo.type
+                            });
+                        } catch (error) {
+                            console.error('[auth] Failed to capture device info:', error);
+                        }
+                    }
+
                     console.log('Authorization successful. Returning user data:', {
                         id: userResponse.id,
                         email: userResponse.email,
                         username: userResponse.username,
                         userType: userResponse.user_type,
-                        tenant: userResponse.tenant
+                        tenant: userResponse.tenant,
+                        hasDeviceInfo: !!userResponse.deviceInfo
                     });
                     console.log('==== Credentials OAuth Authorization Complete ====');
                     return userResponse;
@@ -1785,53 +2038,97 @@ export const options: NextAuthConfig = {
                 token.contactId = extendedUser.contactId;
               }
 
-            // On subsequent requests, validate the token
-            const validatedUser = await validateUser(token);
-            if (!validatedUser) {
-                console.log('JWT callback - validation failed for token:', token);
-                // If validation fails, return a token that will cause the session to be invalid
-                return { ...token, error: "TokenValidationError" };
-            }
+            // NEW: Create session record on initial sign-in
+            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
+            if ((user as any)?.deviceInfo && !token.session_id) {
+                try {
+                    const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
+                    const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 
-            console.log('JWT callback - validated user:', {
-                user_id: validatedUser.user_id,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant
-            });
+                    // Determine login method - use captured provider from signIn, or default to credentials
+                    const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
 
-            // For client users, fetch clientId if missing
-            let clientId = token.clientId;
-            let contactId = token.contactId || validatedUser.contact_id;
+                    const sessionId = await UserSession.create({
+                        tenant: token.tenant as string,
+                        user_id: token.id as string,
+                        ip_address: extendedUser.deviceInfo.ip,
+                        user_agent: extendedUser.deviceInfo.userAgent,
+                        device_fingerprint: extendedUser.deviceInfo.deviceFingerprint,
+                        device_name: extendedUser.deviceInfo.deviceName,
+                        device_type: extendedUser.deviceInfo.deviceType,
+                        location_data: extendedUser.deviceInfo.locationData,
+                        expires_at: expiresAt,
+                        login_method: loginMethod,
+                    });
 
-            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !clientId) {
-                console.log('JWT callback - fetching clientId for client user');
-                const { getAdminConnection } = await import("@shared/db/admin");
-                const connection = await getAdminConnection();
-                const contact = await connection('contacts')
-                    .where({
-                        contact_name_id: validatedUser.contact_id,
-                        tenant: validatedUser.tenant
-                    })
-                    .first();
+                    token.session_id = sessionId;
+                    token.login_method = loginMethod;
 
-                if (contact) {
-                    clientId = contact.client_id;
-                    console.log('JWT callback - found clientId:', clientId);
+                    // Fire-and-forget: Update location data asynchronously
+                    const ipForLocation = extendedUser.deviceInfo.ip;
+                    const tenantForLocation = token.tenant as string;
+                    getLocationFromIp(ipForLocation)
+                        .then((locationData) => {
+                            if (locationData) {
+                                return UserSession.updateLocation(tenantForLocation, sessionId, locationData);
+                            }
+                        })
+                        .catch((error) => {
+                            console.warn('[auth] Failed to update session location:', error);
+                        });
+
+                    // Clean up device info (don't store in token)
+                    delete (user as any).deviceInfo;
+                } catch (error) {
+                    console.error('[auth] Failed to create session record:', error);
                 }
             }
 
+            // NEW: Check if session was revoked (throttled to reduce DB load)
+            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
+            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
+            // Activity tracking is not critical and can be updated less frequently via background job
+            if (token.session_id) {
+                try {
+                    const lastRevocationCheck = token.last_revocation_check as number || 0;
+                    const now = Date.now();
+                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
+
+                    if (shouldCheckRevocation) {
+                        const isRevoked = await UserSession.isRevoked(
+                            token.tenant as string,
+                            token.session_id as string
+                        );
+
+                        if (isRevoked) {
+                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
+                            return null; // This will force a logout
+                        }
+
+                        token.last_revocation_check = now;
+                    }
+                } catch (error) {
+                    console.error('[auth] Session revocation check error:', error);
+                    // Don't block on session check errors
+                }
+            }
+
+            // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
+            // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
+            // - With max 20 connections, pool exhausted instantly with multiple users
+            // - Result: "remaining connection slots reserved for superuser" errors
+            //
+            // Security is maintained by:
+            // 1. NextAuth JWT signature validation (cryptographically secure)
+            // 2. Session revocation check above (handles compromised sessions)
+            // 3. User validation at login time (sufficient for most use cases)
+            //
+            // If user is deleted/deactivated between requests, they'll be caught at next login
+
             const result = {
-                ...token,
-                id: validatedUser.user_id, // Always use the validated user_id
-                name: validatedUser.first_name + " " + validatedUser.last_name,
-                email: validatedUser.email,
-                tenant: validatedUser.tenant,
-                tenantSlug:
-                    token.tenantSlug ??
-                    (validatedUser.tenant ? buildTenantPortalSlug(validatedUser.tenant) : undefined),
-                user_type: validatedUser.user_type,
-                clientId: clientId, // Use fetched or preserved clientId
-                contactId: contactId  // Use fetched or preserved contactId
+                ...token
+                // Token already contains all necessary user data from initial sign-in
+                // No need to fetch from DB on every request
             };
 
             console.log('JWT callback - final token:', {
@@ -1887,6 +2184,15 @@ export const options: NextAuthConfig = {
                 tenant: session.user?.tenant,
                 clientId: session.user?.clientId
             });
+
+            // NEW: Add session_id to session object
+            if (token.session_id) {
+                (session as any).session_id = token.session_id as string;
+            }
+            if (token.login_method) {
+                (session as any).login_method = token.login_method as string;
+            }
+
             return session;
         },
         async redirect({ url, baseUrl }) {

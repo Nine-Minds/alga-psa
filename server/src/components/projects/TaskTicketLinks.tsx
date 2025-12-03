@@ -29,7 +29,7 @@ import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryAction
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import TicketSelect from './TicketSelect';
 
 interface TaskTicketLinksProps {
@@ -37,7 +37,7 @@ interface TaskTicketLinksProps {
   phaseId: string;
   projectId: string;
   initialLinks?: IProjectTicketLinkWithDetails[];
-  users: IUserWithRoles[];
+  users: IUser[];
   onLinksChange?: (links: IProjectTicketLinkWithDetails[]) => void;
 }
 

@@ -53,7 +53,7 @@ The following table lists the configurable parameters and their default values.
 |-----------|-------------|---------|
 | `temporal.address` | Temporal frontend service address | `temporal-frontend.temporal.svc.cluster.local:7233` |
 | `temporal.namespace` | Temporal namespace | `default` |
-| `temporal.taskQueue` | Task queue name | `tenant-workflows` |
+| `temporal.taskQueue` | Task queue name (comma-separated for multiple queues) | `tenant-workflows,portal-domain-workflows,email-domain-workflows` |
 | `temporal.maxConcurrentActivityExecutions` | Max concurrent activities | `10` |
 | `temporal.maxConcurrentWorkflowTaskExecutions` | Max concurrent workflow tasks | `10` |
 
