@@ -22,6 +22,7 @@ import { Search, Eye, EyeOff, Info } from 'lucide-react';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -826,7 +827,13 @@ const fetchContacts = async (): Promise<void> => {
           </div>
         )}
         {loading ? (
-          <p>Loading users...</p>
+          <div className="flex items-center justify-center py-8">
+            <LoadingIndicator 
+              layout="stacked" 
+              text="Loading users..."
+              spinnerProps={{ size: 'md' }}
+            />
+          </div>
         ) : (
           <UserList 
             users={filteredUsers} 

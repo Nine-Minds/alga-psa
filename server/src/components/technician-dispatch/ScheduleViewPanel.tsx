@@ -4,7 +4,7 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import DailyTechnicianScheduleGrid from './DailyTechnicianScheduleGrid';
 import WeeklyTechnicianScheduleGrid from './WeeklyTechnicianScheduleGrid';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
-import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { DropEvent, EventDrop, WorkItemDrop } from 'server/src/interfaces/event.interfaces';
 import { View, NavigateAction } from 'react-big-calendar';
 import { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -15,7 +15,7 @@ interface ScheduleViewPanelProps {
   viewMode: 'day' | 'week';
   date: Date;
   events: Omit<IScheduleEntry, 'tenant'>[];
-  technicians: Omit<IUserWithRoles, 'tenant'>[];
+  technicians: Omit<IUser, 'tenant'>[];
   primaryTechnicianId: string | null;
   comparisonTechnicianIds: Set<string>;
   onNavigate: (action: 'prev' | 'next' | 'today', newDate?: Date) => void;
@@ -256,7 +256,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 date={date}
                 primaryTechnicianId={primaryTechnicianId}
                 comparisonTechnicianIds={Array.from(comparisonTechnicianIds)}
-                allTechnicians={technicians as IUserWithRoles[]}
+                allTechnicians={technicians as IUser[]}
                 events={events as IScheduleEntry[]}
                 onNavigate={handleNavigate}
                 onViewChange={handleViewChange}

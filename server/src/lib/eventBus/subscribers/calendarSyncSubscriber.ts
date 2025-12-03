@@ -27,7 +27,7 @@ let providerService: CalendarProviderService;
  * Handle schedule entry created event
  */
 async function handleScheduleEntryCreated(event: ScheduleEntryCreatedEvent): Promise<void> {
-  const { entryId, tenantId } = event.payload;
+  const { entryId, tenantId, changes } = event.payload;
 
   if (!tenantId) {
     logger.warn('[CalendarSyncSubscriber] Received SCHEDULE_ENTRY_CREATED with missing tenantId', { entryId });
@@ -40,6 +40,13 @@ async function handleScheduleEntryCreated(event: ScheduleEntryCreatedEvent): Pro
         entryId,
         tenantId
       });
+
+      // Get the entry's assigned user IDs from the event payload
+      const assignedUserIds = changes?.assignedUserIds || [];
+      if (assignedUserIds.length === 0) {
+        logger.debug('[CalendarSyncSubscriber] Entry has no assigned users, skipping sync', { entryId });
+        return;
+      }
 
       if (!providerService) {
         providerService = new CalendarProviderService();
@@ -65,6 +72,25 @@ async function handleScheduleEntryCreated(event: ScheduleEntryCreatedEvent): Pro
             providerId: provider.id,
             providerTenant: provider.tenant,
             eventTenant: tenantId
+          });
+          continue;
+        }
+
+        // Only sync to providers that have a user_id (user-specific sync)
+        // Skip legacy tenant-level providers without a user_id
+        if (!provider.user_id) {
+          logger.debug('[CalendarSyncSubscriber] Skipping provider - no user_id (legacy tenant-level provider)', {
+            providerId: provider.id
+          });
+          continue;
+        }
+
+        // Only sync to providers where the provider's user is assigned to the entry
+        if (!assignedUserIds.includes(provider.user_id)) {
+          logger.debug('[CalendarSyncSubscriber] Skipping provider - user not assigned to entry', {
+            providerId: provider.id,
+            providerUserId: provider.user_id,
+            entryAssignees: assignedUserIds
           });
           continue;
         }
@@ -111,7 +137,7 @@ async function handleScheduleEntryCreated(event: ScheduleEntryCreatedEvent): Pro
  * Handle schedule entry updated event
  */
 async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Promise<void> {
-  const { entryId, tenantId } = event.payload;
+  const { entryId, tenantId, changes } = event.payload;
 
   if (!tenantId) {
     logger.warn('[CalendarSyncSubscriber] Received SCHEDULE_ENTRY_UPDATED with missing tenantId', { entryId });
@@ -124,6 +150,9 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
         entryId,
         tenantId
       });
+
+      // Get assigned user IDs from the updated entry (after state)
+      const assignedUserIds = changes?.after?.assignedUserIds || [];
 
       if (!providerService) {
         providerService = new CalendarProviderService();
@@ -153,11 +182,47 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
           continue;
         }
 
+        // Only sync to providers that have a user_id (user-specific sync)
+        // Skip legacy tenant-level providers without a user_id
+        if (!provider.user_id) {
+          logger.debug('[CalendarSyncSubscriber] Skipping provider - no user_id (legacy tenant-level provider)', {
+            providerId: provider.id
+          });
+          continue;
+        }
+
+        // Only sync to providers where the provider's user is assigned to the entry
+        // For updates, we also need to handle the case where user was unassigned (delete from their calendar)
+        const userIsAssigned = assignedUserIds.includes(provider.user_id);
+        const userWasAssigned = (changes?.before?.assignedUserIds || []).includes(provider.user_id);
+
+        if (!userIsAssigned && !userWasAssigned) {
+          logger.debug('[CalendarSyncSubscriber] Skipping provider - user not assigned to entry', {
+            providerId: provider.id,
+            providerUserId: provider.user_id,
+            entryAssignees: assignedUserIds
+          });
+          continue;
+        }
+
         if (provider.sync_direction !== 'to_external' && provider.sync_direction !== 'bidirectional') {
           continue;
         }
 
         try {
+          // If user was assigned but no longer is, delete from their calendar
+          if (userWasAssigned && !userIsAssigned && provider.user_id) {
+            const result = await syncService.deleteScheduleEntry(entryId, provider.id, 'all');
+            if (result.success) {
+              logger.info('[CalendarSyncSubscriber] Removed entry from calendar after user unassignment', {
+                entryId,
+                calendarProviderId: provider.id,
+                userId: provider.user_id
+              });
+            }
+            continue;
+          }
+
           const result = await syncService.syncScheduleEntryToExternal(entryId, provider.id);
 
           if (result.success) {
@@ -194,7 +259,7 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
  * Handle schedule entry deleted event
  */
 async function handleScheduleEntryDeleted(event: ScheduleEntryDeletedEvent): Promise<void> {
-  const { entryId, tenantId } = event.payload;
+  const { entryId, tenantId, changes } = event.payload;
 
   if (!tenantId) {
     logger.warn('[CalendarSyncSubscriber] Received SCHEDULE_ENTRY_DELETED with missing tenantId', { entryId });
@@ -207,6 +272,9 @@ async function handleScheduleEntryDeleted(event: ScheduleEntryDeletedEvent): Pro
         entryId,
         tenantId
       });
+
+      // Get assigned user IDs from the deleted entry (before state)
+      const assignedUserIds = changes?.before?.assignedUserIds || [];
 
       if (!providerService) {
         providerService = new CalendarProviderService();
@@ -232,6 +300,25 @@ async function handleScheduleEntryDeleted(event: ScheduleEntryDeletedEvent): Pro
             providerId: provider.id,
             providerTenant: provider.tenant,
             eventTenant: tenantId
+          });
+          continue;
+        }
+
+        // Only sync to providers that have a user_id (user-specific sync)
+        // Skip legacy tenant-level providers without a user_id
+        if (!provider.user_id) {
+          logger.debug('[CalendarSyncSubscriber] Skipping provider - no user_id (legacy tenant-level provider)', {
+            providerId: provider.id
+          });
+          continue;
+        }
+
+        // Only delete from providers where the provider's user was assigned to the entry
+        if (assignedUserIds.length > 0 && !assignedUserIds.includes(provider.user_id)) {
+          logger.debug('[CalendarSyncSubscriber] Skipping provider - user was not assigned to entry', {
+            providerId: provider.id,
+            providerUserId: provider.user_id,
+            entryAssignees: assignedUserIds
           });
           continue;
         }

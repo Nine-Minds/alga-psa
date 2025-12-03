@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
 import Popup from './Popup';
 import { Template } from '../../services/flow/types/workflowTypes';
-import { Input } from '../../../../../server/src/components/ui/Input';
+import { Input } from '@/components/ui/Input';
 
 interface InputFieldSelectorProps {
   value: Template;

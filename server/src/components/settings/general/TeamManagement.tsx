@@ -4,6 +4,7 @@ import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 import { ITeam } from 'server/src/interfaces/auth.interfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 const TeamManagement: React.FC = () => {
   const [teams, setTeams] = useState<ITeam[]>([]);
@@ -52,7 +53,15 @@ const TeamManagement: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="text-text-600">Loading teams...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading teams..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   if (error) {
@@ -70,16 +79,16 @@ const TeamManagement: React.FC = () => {
   }
 
   return (
-    <div className="flex">
-      <div className="w-1/3 pr-4">
+    <div className="flex gap-4 min-h-0">
+      <div className="flex-shrink-0 w-1/3 min-w-0">
         <TeamList teams={teams} onSelectTeam={handleTeamUpdate} />
       </div>
-      <div className="w-2/3">
+      <div className="flex-1 min-w-0">
         {selectedTeam ? (
           <TeamDetails teamId={selectedTeam.team_id} onUpdate={handleTeamUpdate} />
         ) : (
-          <div className="flex items-center justify-center h-full p-8 rounded-lg border border-border-200">
-            <p className="text-lg text-text-500">Please select a team to manage members</p>
+          <div className="flex items-center justify-center h-full min-h-[400px] p-8 rounded-lg border border-border-200">
+            <p className="text-lg text-text-500 text-center">Please select a team to manage members</p>
           </div>
         )}
       </div>

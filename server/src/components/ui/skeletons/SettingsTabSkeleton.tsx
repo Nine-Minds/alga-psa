@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
+import LoadingIndicator from '../LoadingIndicator';
 
 interface SettingsTabSkeletonProps {
   title?: string;
@@ -104,10 +105,11 @@ const SettingsTabSkeleton: React.FC<SettingsTabSkeletonProps> = ({
       
       {/* Loading indicator */}
       <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mb-4"></div>
-          <p className="text-gray-500">{description}</p>
-        </div>
+        <LoadingIndicator 
+          layout="stacked" 
+          text={description}
+          spinnerProps={{ size: 'md' }}
+        />
       </div>
     </>
   );

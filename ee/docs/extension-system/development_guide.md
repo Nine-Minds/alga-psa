@@ -12,17 +12,50 @@ This guide describes how to build Enterprise Edition (v2) extensions for Alga PS
 - Node.js 18+
 - Component toolchain:
   - `@bytecodealliance/componentize-js` (`jco`) or another WIT-compatible pipeline
-  - `@alga/extension-runtime` helpers for handlers/tests
+  - `@alga-psa/extension-runtime` helpers for handlers/tests
 - Familiarity with:
   - TypeScript, React (for UI)
   - Security best practices and least-privilege design
+
+## SDK and CLI Tools
+
+The Alga SDK provides CLI tools and libraries to streamline extension development:
+
+### Installation
+
+```bash
+npm install -g @alga-psa/cli
+# Or use npx: npx @alga-psa/cli <command>
+```
+
+### CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `alga create extension <name>` | Scaffold a new extension project |
+| `alga create component <name>` | Scaffold a WASM component project |
+| `alga build` | Build the extension (compile TS → WASM if needed) |
+| `alga pack` | Create `bundle.tar.zst` from built extension |
+| `alga extension publish <dir>` | Build, pack, and publish to an Alga instance |
+| `alga extension install <id>` | Install an extension from the registry |
+| `alga extension uninstall <id>` | Uninstall an extension |
+| `alga sign <bundle>` | Sign a bundle with cosign, x509, or pgp |
+
+### SDK Packages
+
+| Package | Purpose |
+|---------|---------|
+| `@alga-psa/cli` | Command-line tools for building and publishing |
+| `@alga-psa/client-sdk` | Programmatic APIs for build/pack/publish |
+| `@alga-psa/extension-runtime` | TypeScript types and helpers for WASM handlers |
+| `@alga/extension-iframe-sdk` | Host communication APIs for iframe UIs |
 
 ## Project Layout (Example)
 
 ```
 my-extension/
 ├── src/
-│   ├── component/                # Component handler source (TS/JS + @alga/extension-runtime)
+│   ├── component/                # Component handler source (TS/JS + @alga-psa/extension-runtime)
 │   │   ├── handler.ts
 │   │   └── wit/                  # Generated WIT/world bindings
 │   ├── ui/                       # Iframe app (Vite + React)
@@ -41,17 +74,39 @@ my-extension/
 
 ## Step-by-step: Build + Package an Extension
 
+### Quick Start with CLI
+
+The fastest way to create and build an extension:
+
+```bash
+# Create a new extension project
+alga create extension my-extension
+cd my-extension
+
+# Build (compiles TypeScript and creates WASM if needed)
+alga build
+
+# Create the bundle archive
+alga pack
+# Output: dist/bundle.tar.zst
+
+# Publish to your Alga instance
+alga extension publish . --api-key $ALGA_API_KEY --tenant $ALGA_TENANT_ID
+```
+
+### Manual Setup
+
 1. **Scaffold directories**
    - Create `component/` for your handler sources (e.g., `component/src/handler.ts`) and copy the platform WIT definitions into `component/wit/extension-runner.wit`.
    - Add `ui/` for your static iframe app (any bundler). The host will serve files from `ui/dist` inside the bundle.
    - Place `manifest.json` at the repo root alongside `package.json`.
 
 2. **Author the Wasmtime endpoint**
-   - Install the toolchain: `npm install @alga/extension-runtime @bytecodealliance/componentize-js`.
+   - Install the toolchain: `npm install @alga-psa/extension-runtime @bytecodealliance/componentize-js`.
    - Implement `handler` using the runtime helpers:
      ```ts
      // component/src/handler.ts
-     import { Handler, jsonResponse } from '@alga/extension-runtime';
+     import { Handler, jsonResponse } from '@alga-psa/extension-runtime';
 
      export const handler: Handler = async (req, host) => {
        const secret = await host.secrets.get('api_key');
@@ -71,21 +126,29 @@ my-extension/
    - Reference the entry file from the manifest via `"ui": { "type": "iframe", "entry": "ui/dist/index.html" }`.
 
 4. **Create or update `manifest.json`**
-   - Include metadata, capabilities, optional `api.endpoints` (for docs/UX), and `assets` globs:
+   - Include metadata, capabilities, and `assets` globs:
      ```json
      {
        "name": "com.example.basic",
        "publisher": "Example Inc.",
        "version": "1.0.0",
        "runtime": "wasm-js@1",
-       "capabilities": ["http.fetch", "secrets.get", "log.emit"],
+       "capabilities": ["cap:http.fetch", "cap:secrets.get", "cap:log.emit", "cap:ui.proxy"],
        "ui": { "type": "iframe", "entry": "ui/dist/index.html" },
-       "api": { "endpoints": [{ "method": "POST", "path": "/ping", "handler": "ping" }] },
        "assets": ["ui/dist/**/*"]
      }
      ```
+   - Note: `api.endpoints` is optional advisory metadata for documentation/tooling. It is NOT required for the proxy pattern to work.
 
 5. **Package the bundle**
+
+   **Using the CLI (recommended):**
+   ```bash
+   alga pack --project .
+   # Creates dist/bundle.tar.zst with proper structure
+   ```
+
+   **Manual packaging:**
    - Layout your release directory:
      ```
      dist/main.wasm
@@ -93,7 +156,7 @@ my-extension/
      manifest.json
      precompiled/ (optional cwasm artifacts)
      ```
-   - Create the canonical tarball (zstd recommended):  
+   - Create the canonical tarball (zstd recommended):
      `tar --zstd -cf bundle.tar.zst manifest.json dist/main.wasm ui/dist`
    - Compute the content hash: `shasum -a 256 bundle.tar.zst` → `sha256:...`
    - Produce `SIGNATURE` (detached) with your publisher key per [security_signing.md](security_signing.md).
@@ -114,33 +177,28 @@ See [Manifest Schema](manifest_schema.md) for full details.
   "publisher": "Acme Inc.",
   "version": "1.0.0",
   "runtime": "wasm-js@1",
-  "capabilities": ["http.fetch", "storage.kv", "secrets.get"],
+  "capabilities": ["cap:http.fetch", "cap:storage.kv", "cap:secrets.get", "cap:ui.proxy"],
   "ui": { "type": "iframe", "entry": "ui/index.html" },
-  "api": {
-    "endpoints": [
-      { "method": "GET", "path": "/agreements", "handler": "agreements/list" },
-      { "method": "POST", "path": "/agreements/sync", "handler": "agreements/sync" }
-    ]
-  },
   "assets": ["ui/**/*"]
 }
 ```
 
 Key points:
 - `ui.entry` points to your iframe HTML within the bundle.
-- `api.endpoints` describe your HTTP surface area for docs and telemetry. (Enforcement is currently advisory; see [manifest schema](manifest_schema.md) for details.)
+- `cap:ui.proxy` enables the postMessage proxy pattern for UI→WASM handler communication.
 - `capabilities` request access to host features (http, storage, secrets, ui proxy, logging) and are granted per tenant install.
+- `api.endpoints` is optional advisory metadata for documentation/tooling—not required for the extension to function.
 
 ## Building Server Handlers (Componentized WASM)
 
-- Write handlers in TypeScript (or JS) using `@alga/extension-runtime`, then run `jco componentize` to produce `dist/main.wasm`.
+- Write handlers in TypeScript (or JS) using `@alga-psa/extension-runtime`, then run `jco componentize` to produce `dist/main.wasm`.
 - Optional: use other WIT-compatible languages (`wit-bindgen` for Rust/TinyGo) as long as the output conforms to the `alga:extension/runner` world.
 - Use host APIs (capability-scoped) exposed via the generated bindings:
   - `host.http.fetch`, `host.storage.*`, `host.secrets.get`, `host.uiProxy.callRoute`, `host.logging.*`.
 
 Conceptual handler shape:
 ```ts
-import { Handler, jsonResponse } from '@alga/extension-runtime';
+import { Handler, jsonResponse } from '@alga-psa/extension-runtime';
 
 export const handler: Handler = async (request, host) => {
   const items = await host.storage.list({
@@ -155,6 +213,15 @@ export const handler: Handler = async (request, host) => {
 ```
 
 Build example:
+
+**Using the CLI:**
+```bash
+alga build --project .
+# Automatically detects if WASM build is needed based on manifest
+# Outputs: dist/main.wasm
+```
+
+**Using npm scripts:**
 ```bash
 npm run build          # compiles TS → JS
 npm run build:component
@@ -168,19 +235,52 @@ CI should output `dist/main.wasm` plus optional `precompiled/` artifacts referen
 ## Building the Iframe UI
 
 - Use the provided SDKs:
-  - `@alga/extension-iframe-sdk` for host communication (auth, theme, navigation)
+  - `@alga/extension-iframe-sdk` for host communication (auth, theme, navigation, **proxy calls**)
   - `@alga/ui-kit` for accessible, consistent components
 - Iframe bootstrap and URL construction are handled by the host via:
-  - [buildExtUiSrc()](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
-  - [bootstrapIframe()](../../server/src/lib/extensions/ui/iframeBridge.ts:45)
+  - [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+  - [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 - UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` with immutable caching
 
-Fetching via the Gateway from your UI:
+### Calling Your WASM Handler from the UI (postMessage Proxy Pattern)
+
+**Important:** Extension UIs should NOT make direct `fetch()` calls to `/api/ext/` endpoints. Instead, use the **postMessage proxy pattern** which ensures:
+- Authentication is handled by the host
+- Secrets never reach the browser
+- Consistent error handling and timeouts
+
+Using the iframe SDK:
 ```ts
-const url = `/api/ext/${context.extensionId}/agreements`;
-const res = await fetch(url, { headers: context.authHeaders });
-const data = await res.json();
+import { IframeBridge } from '@alga/extension-iframe-sdk';
+
+const bridge = new IframeBridge();
+await bridge.ready();
+
+// Call your WASM handler via the proxy
+const response = await bridge.uiProxy.call('/agreements');
+const data = JSON.parse(new TextDecoder().decode(response));
 ```
+
+Or using the lower-level postMessage API (see [client-portal-test sample](../../../ee/extensions/samples/client-portal-test/ui/main.js)):
+```ts
+// Send request to host
+window.parent.postMessage({
+  alga: true,
+  version: '1',
+  type: 'apiproxy',
+  request_id: crypto.randomUUID(),
+  payload: { route: '/agreements' }
+}, '*');
+
+// Listen for response
+window.addEventListener('message', (ev) => {
+  if (ev.data?.type === 'apiproxy_response') {
+    // Handle response...
+  }
+});
+```
+
+The `cap:ui.proxy` capability is required in your manifest to use the proxy pattern.
 
 ## Signing and Packaging
 
@@ -211,12 +311,16 @@ Reference route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/rout
 
 ## Local Development Tips
 
-- Use the new pluggable runner backend to switch between Knative (`RUNNER_BACKEND=knative`) and the local Docker runner (`RUNNER_BACKEND=docker`).
-  - Start the runner container: `npm run runner:up` (stops with `npm run runner:down`).
+For a detailed walkthrough of local development setup, build, install, and debugging workflows, see [Local Development Guide](local-development.md).
+
+Quick reference:
+- Use the pluggable runner backend to switch between Knative (`RUNNER_BACKEND=knative`) and the local Docker runner (`RUNNER_BACKEND=docker`).
+  - Start the runner container: `npm run runner:up` or `docker compose -f docker-compose.runner-dev.yml up` (stops with `npm run runner:down`).
   - Launch the app with Docker backend defaults: `npm run dev:runner` (sets `RUNNER_DOCKER_HOST=http://localhost:${RUNNER_DOCKER_PORT:-8085}` and proxies UI assets through `/runner/*`).
+  - Install your extension locally: `node scripts/dev-install-extension.mjs ./path/to/extension`.
   - Override runner URLs via `.env.runner` (see `.env.runner.example`) if you are using alternative S3 or registry endpoints.
 - Keep UI bundles small; leverage code splitting where appropriate
-- Use the iframe SDK’s theme APIs to adapt to host styling
+- Use the iframe SDK's theme APIs to adapt to host styling
 - Validate endpoint inputs/outputs and include clear error responses
 
 ## Best Practices
@@ -228,9 +332,10 @@ Reference route scaffold: [server/src/app/api/ext/[extensionId]/[[...path]]/rout
 
 ## References
 
+- [Local Development Guide](local-development.md) — Complete setup and workflow for developing locally with Docker Runner
 - [Manifest Schema](manifest_schema.md)
 - [API Routing Guide](api-routing-guide.md)
 - [Security & Signing](security_signing.md)
 - [Runner](runner.md)
 - [Sample Extension](sample_template.md)
-- Iframe bootstrap and src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../server/src/lib/extensions/ui/iframeBridge.ts:38)
+- Iframe bootstrap and src builder: [server/src/lib/extensions/ui/iframeBridge.ts](../../../server/src/lib/extensions/ui/iframeBridge.ts:38)

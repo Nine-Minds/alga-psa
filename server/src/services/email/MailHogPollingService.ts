@@ -1,6 +1,6 @@
 import { EmailProcessor } from './EmailProcessor';
 import { EmailQueueService } from './queue/EmailQueueService';
-import { EmailQueueJob } from '../../interfaces/email.interfaces';
+import { EmailQueueJob } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

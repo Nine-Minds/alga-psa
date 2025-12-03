@@ -93,6 +93,9 @@ devPod:
 
 podLabels: {}
 
+podAnnotations:
+  sidecar.istio.io/proxyMemory: "4Gi"
+
 podSecurityContext: {}
   # fsGroup: 2000
 

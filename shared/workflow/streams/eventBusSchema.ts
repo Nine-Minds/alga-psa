@@ -35,6 +35,18 @@ export const EventTypeEnum = z.enum([
   'CALENDAR_CONFLICT_DETECTED',
   'MESSAGE_SENT',
   'USER_MENTIONED_IN_DOCUMENT',
+  // RMM Integration Events
+  'RMM_DEVICE_CREATED',
+  'RMM_DEVICE_UPDATED',
+  'RMM_DEVICE_DELETED',
+  'RMM_DEVICE_ONLINE',
+  'RMM_DEVICE_OFFLINE',
+  'RMM_ALERT_TRIGGERED',
+  'RMM_ALERT_RESOLVED',
+  'RMM_SYNC_STARTED',
+  'RMM_SYNC_COMPLETED',
+  'RMM_SYNC_FAILED',
+  'RMM_WEBHOOK_RECEIVED',
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -271,6 +283,68 @@ export const MessageSentPayloadSchema = BasePayloadSchema.extend({
   metadata: z.record(z.unknown()).optional(),
 });
 
+// RMM Device event payload schema
+export const RmmDeviceEventPayloadSchema = BasePayloadSchema.extend({
+  integrationId: z.string().uuid(),
+  provider: z.string(), // 'ninjaone', etc.
+  assetId: z.string().uuid().optional(), // Alga asset ID if mapped
+  externalDeviceId: z.string(),
+  externalOrganizationId: z.string().optional(),
+  deviceName: z.string().optional(),
+  deviceType: z.string().optional(), // 'workstation', 'server', etc.
+  changes: z.record(z.unknown()).optional(),
+});
+
+// RMM Device status event payload schema
+export const RmmDeviceStatusEventPayloadSchema = RmmDeviceEventPayloadSchema.extend({
+  previousStatus: z.string().optional(),
+  currentStatus: z.string(), // 'online', 'offline'
+  lastSeenAt: z.string().datetime().optional(),
+});
+
+// RMM Alert event payload schema
+export const RmmAlertEventPayloadSchema = BasePayloadSchema.extend({
+  integrationId: z.string().uuid(),
+  provider: z.string(),
+  alertId: z.string().uuid(),
+  externalAlertId: z.string(),
+  externalDeviceId: z.string().optional(),
+  assetId: z.string().uuid().optional(),
+  ticketId: z.string().uuid().optional(),
+  severity: z.string(), // 'critical', 'major', 'moderate', 'minor', 'none'
+  priority: z.string().optional(),
+  message: z.string().optional(),
+  sourceType: z.string().optional(),
+  alertClass: z.string().optional(),
+  triggeredAt: z.string().datetime().optional(),
+  resolvedAt: z.string().datetime().optional(),
+});
+
+// RMM Sync event payload schema
+export const RmmSyncEventPayloadSchema = BasePayloadSchema.extend({
+  integrationId: z.string().uuid(),
+  provider: z.string(),
+  syncType: z.enum(['full', 'incremental', 'organizations', 'devices', 'alerts']),
+  itemsProcessed: z.number().optional(),
+  itemsCreated: z.number().optional(),
+  itemsUpdated: z.number().optional(),
+  itemsFailed: z.number().optional(),
+  error: z.object({
+    message: z.string(),
+    code: z.string().optional(),
+  }).optional(),
+});
+
+// RMM Webhook event payload schema
+export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
+  integrationId: z.string().uuid(),
+  provider: z.string(),
+  webhookEventType: z.string(), // Provider-specific event type
+  externalDeviceId: z.string().optional(),
+  assetId: z.string().uuid().optional(),
+  rawPayload: z.record(z.unknown()), // Full webhook payload for processing
+});
+
 // Map event types to their payload schemas
 export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
@@ -306,6 +380,18 @@ export const EventPayloadSchemas = {
   CALENDAR_CONFLICT_DETECTED: CalendarConflictEventPayloadSchema,
   MESSAGE_SENT: MessageSentPayloadSchema,
   USER_MENTIONED_IN_DOCUMENT: DocumentMentionPayloadSchema,
+  // RMM Integration Events
+  RMM_DEVICE_CREATED: RmmDeviceEventPayloadSchema,
+  RMM_DEVICE_UPDATED: RmmDeviceEventPayloadSchema,
+  RMM_DEVICE_DELETED: RmmDeviceEventPayloadSchema,
+  RMM_DEVICE_ONLINE: RmmDeviceStatusEventPayloadSchema,
+  RMM_DEVICE_OFFLINE: RmmDeviceStatusEventPayloadSchema,
+  RMM_ALERT_TRIGGERED: RmmAlertEventPayloadSchema,
+  RMM_ALERT_RESOLVED: RmmAlertEventPayloadSchema,
+  RMM_SYNC_STARTED: RmmSyncEventPayloadSchema,
+  RMM_SYNC_COMPLETED: RmmSyncEventPayloadSchema,
+  RMM_SYNC_FAILED: RmmSyncEventPayloadSchema,
+  RMM_WEBHOOK_RECEIVED: RmmWebhookEventPayloadSchema,
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -355,6 +441,18 @@ export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_
 export type CalendarConflictDetectedEvent = z.infer<typeof EventSchemas.CALENDAR_CONFLICT_DETECTED>;
 export type MessageSentEvent = z.infer<typeof EventSchemas.MESSAGE_SENT>;
 export type UserMentionedInDocumentEvent = z.infer<typeof EventSchemas.USER_MENTIONED_IN_DOCUMENT>;
+// RMM Integration Event Types
+export type RmmDeviceCreatedEvent = z.infer<typeof EventSchemas.RMM_DEVICE_CREATED>;
+export type RmmDeviceUpdatedEvent = z.infer<typeof EventSchemas.RMM_DEVICE_UPDATED>;
+export type RmmDeviceDeletedEvent = z.infer<typeof EventSchemas.RMM_DEVICE_DELETED>;
+export type RmmDeviceOnlineEvent = z.infer<typeof EventSchemas.RMM_DEVICE_ONLINE>;
+export type RmmDeviceOfflineEvent = z.infer<typeof EventSchemas.RMM_DEVICE_OFFLINE>;
+export type RmmAlertTriggeredEvent = z.infer<typeof EventSchemas.RMM_ALERT_TRIGGERED>;
+export type RmmAlertResolvedEvent = z.infer<typeof EventSchemas.RMM_ALERT_RESOLVED>;
+export type RmmSyncStartedEvent = z.infer<typeof EventSchemas.RMM_SYNC_STARTED>;
+export type RmmSyncCompletedEvent = z.infer<typeof EventSchemas.RMM_SYNC_COMPLETED>;
+export type RmmSyncFailedEvent = z.infer<typeof EventSchemas.RMM_SYNC_FAILED>;
+export type RmmWebhookReceivedEvent = z.infer<typeof EventSchemas.RMM_WEBHOOK_RECEIVED>;
 
 export type Event =
   | TicketCreatedEvent
@@ -389,7 +487,19 @@ export type Event =
   | CalendarSyncFailedEvent
   | CalendarConflictDetectedEvent
   | MessageSentEvent
-  | UserMentionedInDocumentEvent;
+  | UserMentionedInDocumentEvent
+  // RMM Integration Events
+  | RmmDeviceCreatedEvent
+  | RmmDeviceUpdatedEvent
+  | RmmDeviceDeletedEvent
+  | RmmDeviceOnlineEvent
+  | RmmDeviceOfflineEvent
+  | RmmAlertTriggeredEvent
+  | RmmAlertResolvedEvent
+  | RmmSyncStartedEvent
+  | RmmSyncCompletedEvent
+  | RmmSyncFailedEvent
+  | RmmWebhookReceivedEvent;
 
 /**
  * Convert an event bus event to a workflow event

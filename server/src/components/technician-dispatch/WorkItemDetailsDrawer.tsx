@@ -7,7 +7,7 @@ import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { getTaskWithDetails } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
-import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { getScheduleEntries } from 'server/src/lib/actions/scheduleActions';
 import { getInteractionById } from 'server/src/lib/actions/interactionActions';
 import { toast } from 'react-hot-toast';
@@ -45,10 +45,10 @@ export function WorkItemDetailsDrawer({
             console.log('Starting to load users...');
             try {
                 setIsUsersLoading(true);
-                const allUsers = await getAllUsers();
+                const allUsers = await getAllUsersBasic();
                 console.log('Users loaded:', allUsers?.length ?? 0);
                 if (!allUsers || allUsers.length === 0) {
-                    console.warn('No users returned from getAllUsers');
+                    console.warn('No users returned from getAllUsersBasic');
                     toast.error('No users available in the system');
                 }
                 setUsers(allUsers || []);

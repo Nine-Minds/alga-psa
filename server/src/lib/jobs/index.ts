@@ -10,6 +10,7 @@ import { creditReconciliationHandler, CreditReconciliationJobData } from './hand
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
 import {
@@ -114,6 +115,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await handleReconcileBucketUsage(job);
     });
 
+    // Register email webhook maintenance handler
+    jobScheduler.registerJobHandler<EmailWebhookMaintenanceJobData>('email-webhook-maintenance', async (job: Job<EmailWebhookMaintenanceJobData>) => {
+      await emailWebhookMaintenanceHandler(job);
+    });
+
     // Register cleanup temporary forms handler
     jobScheduler.registerJobHandler('cleanup-temporary-workflow-forms', async (job: Job<{ tenantId: string }>) => {
       await cleanupTemporaryFormsJob();
@@ -158,7 +164,8 @@ export type {
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData, 
-  AssetImportJobData
+  AssetImportJobData,
+  EmailWebhookMaintenanceJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -330,3 +337,16 @@ export { scheduleCleanupTemporaryFormsJob } from '../../services/cleanupTemporar
 
 // Note: Password reset token cleanup is handled automatically during token operations
 // No scheduled job needed since pg-boss is unreliable and auto-cleanup is more efficient
+
+export const scheduleEmailWebhookMaintenanceJob = async (
+  tenantId?: string,
+  cronExpression: string = '0 0 * * *' // Daily at midnight
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<EmailWebhookMaintenanceJobData>(
+    'email-webhook-maintenance',
+    cronExpression,
+    { tenantId }
+  );
+};
+

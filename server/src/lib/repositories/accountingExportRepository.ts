@@ -246,4 +246,23 @@ export class AccountingExportRepository {
 
     return typeof updated === 'number' ? updated : uniqueIds.length;
   }
+
+  /**
+   * Get tax_source for a list of invoices.
+   * Used to determine if tax delegation is needed during export.
+   */
+  async getInvoicesTaxSource(invoiceIds: string[]): Promise<Array<{ invoice_id: string; tax_source: string | null }>> {
+    const tenant = this.requireTenant();
+    if (invoiceIds.length === 0) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(invoiceIds));
+    const invoices = await this.knex('invoices')
+      .where({ tenant })
+      .whereIn('invoice_id', uniqueIds)
+      .select('invoice_id', 'tax_source');
+
+    return invoices;
+  }
 }

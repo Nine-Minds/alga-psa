@@ -6,8 +6,15 @@
 
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
-import { TenantEmailSettings, EmailProviderConfig } from '../../../types/email.types';
+import { TenantEmailSettings } from '../../../types/email.types';
 import { TenantEmailService } from '../../services/TenantEmailService';
+
+function extractDomain(address?: string | null): string | null {
+  if (!address) return null;
+  const parts = address.split('@');
+  if (parts.length !== 2) return null;
+  return parts[1]?.trim().toLowerCase() || null;
+}
 
 export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
   const user = await getCurrentUser();
@@ -25,6 +32,8 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
       // Return default settings if none exist
       const defaultSettings: TenantEmailSettings = {
         tenantId: tenant || '',
+        defaultFromDomain: process.env.EMAIL_FROM ? extractDomain(process.env.EMAIL_FROM) || undefined : undefined,
+        ticketingFromEmail: undefined,
         customDomains: [],
         emailProvider: 'smtp',
         providerConfigs: [
@@ -79,16 +88,45 @@ export async function updateEmailSettings(updates: Partial<TenantEmailSettings>)
 
   try {
     const now = new Date();
-    
+
+    // Load current settings so we can merge partial updates safely
+    const existingSettings = await TenantEmailService.getTenantEmailSettings(tenant || '', knex);
+
+    const mergedSettings: TenantEmailSettings = {
+      tenantId: tenant || '',
+      defaultFromDomain: updates.defaultFromDomain ?? existingSettings?.defaultFromDomain,
+      ticketingFromEmail: updates.ticketingFromEmail ?? existingSettings?.ticketingFromEmail ?? null,
+      customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
+      emailProvider: updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp',
+      providerConfigs: updates.providerConfigs ?? existingSettings?.providerConfigs ?? [],
+      trackingEnabled: updates.trackingEnabled ?? existingSettings?.trackingEnabled ?? false,
+      maxDailyEmails: updates.maxDailyEmails ?? existingSettings?.maxDailyEmails,
+      createdAt: existingSettings?.createdAt ?? now,
+      updatedAt: now
+    };
+
+    const targetDomain = mergedSettings.defaultFromDomain?.trim().toLowerCase();
+    if (mergedSettings.ticketingFromEmail) {
+      if (!targetDomain) {
+        throw new Error('Configure an outbound domain before choosing a ticketing From address');
+      }
+
+      const fromDomain = extractDomain(mergedSettings.ticketingFromEmail);
+      if (!fromDomain || fromDomain !== targetDomain) {
+        throw new Error('Ticketing From address must use the configured outbound domain');
+      }
+    }
+
     // Prepare data for database
     const settingsData = {
       tenant: tenant,
-      default_from_domain: updates.defaultFromDomain,
-      custom_domains: JSON.stringify(updates.customDomains || []),
-      email_provider: updates.emailProvider,
-      provider_configs: JSON.stringify(updates.providerConfigs || []),
-      tracking_enabled: updates.trackingEnabled,
-      max_daily_emails: updates.maxDailyEmails,
+      default_from_domain: mergedSettings.defaultFromDomain ?? null,
+      ticketing_from_email: mergedSettings.ticketingFromEmail || null,
+      custom_domains: JSON.stringify(mergedSettings.customDomains || []),
+      email_provider: mergedSettings.emailProvider,
+      provider_configs: JSON.stringify(mergedSettings.providerConfigs || []),
+      tracking_enabled: mergedSettings.trackingEnabled,
+      max_daily_emails: mergedSettings.maxDailyEmails,
       updated_at: now
     };
 

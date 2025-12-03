@@ -11,7 +11,7 @@ This directory contains the Enterprise Edition documentation for the Alga PSA Ex
 - [Development Guide](development_guide.md) — Building componentized extensions (WASM handler + iframe UI)
 
 ### Technical Guides
-- [API Routing Guide](api-routing-guide.md) — Gateway pattern `/api/ext/[extensionId]/[...]` → Runner `/v1/execute`
+- [API Routing Guide](api-routing-guide.md) — Gateway pattern `/api/ext/[extensionId]/[[...path]]` → Runner `/v1/execute`
 - [Client UI Template/SDK Guide](template-system-guide.md) — Iframe SDK and UI kit usage
 - [DataTable Integration Guide](datatable-integration-guide.md) — Using the UI kit DataTable in iframe apps
 - [Enterprise Build Workflow](enterprise-build-workflow.md) — EE build, packaging, and publish
@@ -35,20 +35,20 @@ Design goals:
 - Per-tenant isolation for compute, storage, and egress
 - Signed, content-addressed bundles with verified provenance (sha256:…)
 - Least-privilege host APIs with quotas and auditable execution
-- Component-model execution so extensions produced via `componentize-js` + `@alga/extension-runtime` behave consistently across languages
+- Component-model execution so extensions produced via `componentize-js` + `@alga-psa/extension-runtime` behave consistently across languages
 
 ## Architecture Snapshot
 
 - Runner (Rust + Wasmtime components): executes handlers produced by `componentize-js`, enforces capability-scoped host APIs, and serves static iframe UI assets at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`.
 - Registry + Bundle Store (S3-compatible): content-addressed artifacts, install-scoped config, provider grants, and sealed secret envelopes.
-- API Gateway (Next.js): `/api/ext/[extensionId]/[[...path]]` looks up the tenant install via `@ee/lib/extensions/installConfig`, forwards `{context, http, limits, config, providers, secret_envelope}` to Runner `POST /v1/execute`, and proxies the response.
-- Client SDKs: `@alga/extension-iframe-sdk` (postMessage bridge) and `@alga/ui-kit` (components + theming), plus `@alga/extension-runtime` for component handlers.
+- API Gateway (Next.js): `/api/ext/[extensionId]/[[...path]]` looks up the tenant install via `@ee/lib/extensions/installConfig`, forwards `{context, http, limits, config, providers, secret_envelope}` to Runner `POST /v1/execute`, and proxies the response. Manifest endpoint lists are advisory; enforcement is undecided (see alignment plan).
+- Client SDKs: `@alga/extension-iframe-sdk` (postMessage bridge) and `@alga/ui-kit` (components + theming), plus `@alga-psa/extension-runtime` for component handlers.
 
 ## Correctness Rules
 
 - All extension API calls go through `/api/ext/[extensionId]/[[...path]]` and are proxied to Runner `/v1/execute`. Reference the Next.js handler at [server/src/app/api/ext/[extensionId]/[[...path]]/route.ts](../../../server/src/app/api/ext/%5BextensionId%5D/%5B%5B...path%5D%5D/route.ts).
-- UI assets are served by the Runner only at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]` (no Next.js route for ext-ui)
-- Iframe src is constructed by [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstrapped via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+- UI assets are served by the Runner only at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`; the Next.js `ext-ui` route is a gate that returns 404/redirect when rust-host mode is active.
+- Iframe src is constructed by [buildExtUiSrc()](../../../server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstrapped via [bootstrapIframe()](../../../server/src/lib/extensions/ui/iframeBridge.ts:45)
 - Tenant install metadata (config, providers, secret envelopes) flows through [@ee/lib/extensions/installConfig](../../server/src/lib/extensions/installConfig.ts) and is attached to each execute request so the Runner can unlock capabilities.
 - Registry v2 and signing integrate with [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)
 
@@ -93,3 +93,27 @@ Refer to this list from other docs to avoid drift. See Runner S3 guide for runti
   - Server handlers targeting the Runner (WASM-first)
   - An iframe UI that uses the Client SDK and UI kit
 - See [Sample Extension](sample_template.md) for an end‑to‑end example
+
+## Host Embedding Quickstart (iframe)
+
+- Construct src with the canonical helper: `buildExtUiSrc(extensionId, contentHash, path, { tenantId? })` from `server/src/lib/extensions/ui/iframeBridge.ts`.
+- If `RUNNER_PUBLIC_BASE` is absolute, set `allowedOrigin` to that origin before bootstrapping the iframe.
+- Bootstrap once the iframe element exists:
+
+```ts
+import { buildExtUiSrc, bootstrapIframe } from 'server/src/lib/extensions/ui/iframeBridge';
+
+const src = buildExtUiSrc(extId, contentHash, '/');
+iframe.src = src;
+bootstrapIframe({
+  iframe,
+  extensionId: extId,
+  contentHash,
+  initialPath: '/',
+  session: { token, expiresAt },
+  themeTokens,
+  allowedOrigin: process.env.RUNNER_PUBLIC_BASE, // required when absolute
+});
+```
+
+- ext-ui is always served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/...`; the Next.js `ext-ui` route only gates/redirects when rust-host mode is enabled.

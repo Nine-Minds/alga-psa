@@ -275,6 +275,68 @@ const User = {
     }
   },
 
+  /**
+   * Fetch roles for multiple users in a single query (avoids N+1)
+   * Returns a Map of user_id -> IRole[]
+   */
+  getUserRolesBulk: async (knexOrTrx: Knex | Knex.Transaction, userIds: string[]): Promise<Map<string, IRole[]>> => {
+    const tenant = await getCurrentTenantId();
+    const rolesByUser = new Map<string, IRole[]>();
+
+    if (userIds.length === 0) {
+      return rolesByUser;
+    }
+
+    try {
+      const rows = await knexOrTrx('roles')
+        .join('user_roles', function() {
+          this.on('roles.role_id', '=', 'user_roles.role_id')
+              .andOn('roles.tenant', '=', 'user_roles.tenant');
+        })
+        .whereIn('user_roles.user_id', userIds)
+        .where('roles.tenant', tenant)
+        .select(
+          'user_roles.user_id',
+          'roles.role_id',
+          'roles.role_name',
+          'roles.description',
+          'roles.tenant',
+          'roles.msp',
+          'roles.client'
+        );
+
+      // Group roles by user_id
+      for (const row of rows) {
+        const userId = row.user_id;
+        const role: IRole = {
+          role_id: row.role_id,
+          role_name: row.role_name,
+          description: row.description,
+          tenant: row.tenant,
+          msp: row.msp,
+          client: row.client,
+        };
+
+        if (!rolesByUser.has(userId)) {
+          rolesByUser.set(userId, []);
+        }
+        rolesByUser.get(userId)!.push(role);
+      }
+
+      // Ensure all requested users have an entry (even if empty)
+      for (const userId of userIds) {
+        if (!rolesByUser.has(userId)) {
+          rolesByUser.set(userId, []);
+        }
+      }
+
+      return rolesByUser;
+    } catch (error) {
+      logger.error('Error getting roles for multiple users:', error);
+      throw error;
+    }
+  },
+
   getUserRolesWithPermissions: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IRoleWithPermissions[]> => {
     const tenant = await getCurrentTenantId();
     try {

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from 'server/src/interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { Filter, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -26,7 +26,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 
 interface OverallInteractionsFeedProps {
-  users: IUserWithRoles[];
+  users: IUser[];
   contacts: IContact[];
   clients: IClient[];
   isCollapsed?: boolean;

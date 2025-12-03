@@ -9,16 +9,18 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
-import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
 import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-providers/entry';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
+import LoadingIndicator from './ui/LoadingIndicator';
 import {
   getEmailProviders,
   deleteEmailProvider,
-  testEmailProviderConnection
+  testEmailProviderConnection,
+  retryMicrosoftSubscriptionRenewal
 } from '../lib/actions/email-actions/emailProviderActions';
 import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 
@@ -53,6 +55,10 @@ export interface MicrosoftEmailProviderConfig {
   access_token?: string;
   refresh_token?: string;
   token_expires_at?: string;
+  webhook_subscription_id?: string;
+  webhook_verification_token?: string; // Added to match database
+  webhook_expires_at?: string;
+  last_subscription_renewal?: string; // Added to match database
   created_at: string;
   updated_at: string;
 }
@@ -204,6 +210,20 @@ function EmailProviderConfigurationContent({
     }
   };
 
+  const handleRetryRenewal = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      const result = await retryMicrosoftSubscriptionRenewal(provider.id);
+      if (result.success) {
+        await loadProviders();
+      } else {
+        setError(result.message || 'Renewal failed');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
@@ -241,10 +261,11 @@ function EmailProviderConfigurationContent({
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="flex items-center space-x-2">
-          <Clock className="h-4 w-4 animate-spin" />
-          <span>Loading email providers...</span>
-        </div>
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading email providers..."
+          spinnerProps={{ size: 'md' }}
+        />
       </div>
     );
   }
@@ -283,6 +304,7 @@ function EmailProviderConfigurationContent({
           onTestConnection={handleTestConnection}
           onRefresh={loadProviders}
           onRefreshWatchSubscription={handleRefreshWatchSubscription}
+          onRetryRenewal={handleRetryRenewal}
           onAddClick={() => setWizardOpen(true)}
         />
 

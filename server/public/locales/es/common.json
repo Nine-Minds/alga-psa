@@ -757,169 +757,63 @@
       "scheduleEntryCreated": "Entrada de programación creada correctamente"
     }
   },
-  "surveys": {
-    "common": {
-      "loading": "Cargando..."
+  "sessionManagement": {
+    "title": "Sesiones activas",
+    "description": "Administre sus sesiones de inicio de sesión activas en todos los dispositivos (máximo 5 sesiones)",
+    "states": {
+      "loading": "Cargando sesiones...",
+      "noSessions": "No se encontraron sesiones activas"
     },
-    "settings": {
-      "tabLabel": "Encuestas",
-      "title": "Encuestas de satisfacción del cliente",
-      "subtitle": "Configura modelos, desencadenadores y envíos para recopilar comentarios tras el cierre de los tickets.",
-      "tabs": {
-        "templates": "Modelos",
-        "triggers": "Desencadenadores"
-      },
-      "templateList": {
-        "title": "Modelos de encuesta",
-        "description": "Gestiona los mensajes y las escalas que se envían a tus clientes.",
-        "createButton": "Nuevo modelo",
-        "emptyTitle": "Todavía no hay modelos de encuesta",
-        "emptyDescription": "Crea tu primer modelo para definir el texto y la escala de la encuesta.",
-        "table": {
-          "name": "Modelo",
-          "rating": "Escala",
-          "status": "Estado",
-          "updated": "Actualizado",
-          "actions": "Acciones"
-        },
-        "defaultBadge": "Predeterminado",
-        "status": {
-          "enabled": "Activo",
-          "disabled": "Inactivo"
-        },
-        "toasts": {
-          "created": "Modelo creado",
-          "updated": "Modelo actualizado",
-          "deleted": "Modelo eliminado",
-          "setDefault": "Modelo predeterminado actualizado",
-          "error": "No se pudo guardar el modelo",
-          "deleteError": "No se pudo eliminar el modelo"
-        },
-        "deleteConfirm": "¿Eliminar este modelo? Las invitaciones ya enviadas no se verán afectadas.",
-        "errors": {
-          "load": "No se pudieron cargar las plantillas de encuestas."
-        }
-      },
-      "templateForm": {
-        "titleCreate": "Crear modelo de encuesta",
-        "titleEdit": "Editar modelo de encuesta",
-        "labels": {
-          "name": "Nombre del modelo",
-          "ratingType": "Tipo de escala",
-          "ratingScale": "Escala de puntuación",
-          "ratingLabels": "Etiquetas de la escala",
-          "promptText": "Pregunta de la encuesta",
-          "commentPrompt": "Pregunta de comentarios",
-          "thankYouText": "Mensaje de agradecimiento",
-          "isDefault": "Definir como modelo predeterminado",
-          "enabled": "Modelo activo"
-        },
-        "placeholders": {
-          "ratingLabels": "Ejemplo:\n1 = Muy insatisfecho\n2 = Insatisfecho\n3 = Neutral\n4 = Satisfecho\n5 = Muy satisfecho"
-        },
-        "help": {
-          "ratingLabels": "Indica una etiqueta por puntuación usando «valor = etiqueta» en líneas separadas."
-        },
-        "ratingTypes": {
-          "stars": "Estrellas",
-          "numbers": "Números",
-          "emojis": "Emojis"
-        },
-        "actions": {
-          "create": "Crear modelo",
-          "save": "Guardar cambios",
-          "delete": "Eliminar modelo"
-        }
-      },
-      "triggerList": {
-        "title": "Desencadenadores de encuesta",
-        "description": "Envía invitaciones automáticamente cuando los tickets o proyectos finalicen.",
-        "createButton": "Nuevo desencadenador",
-        "emptyTitle": "No hay desencadenadores configurados",
-        "emptyDescription": "Crea un desencadenador para enviar encuestas al cerrar tickets o proyectos.",
-        "table": {
-          "template": "Modelo",
-          "type": "Desencadenador",
-          "conditions": "Condiciones",
-          "status": "Estado",
-          "updated": "Actualizado",
-          "actions": "Acciones"
-        },
-        "conditions": {
-          "boards": "Tableros",
-          "statuses": "Estados",
-          "priorities": "Prioridades",
-          "any": "Cualquiera"
-        },
-        "status": {
-          "enabled": "Activo",
-          "disabled": "Inactivo"
-        },
-        "toasts": {
-          "created": "Desencadenador creado",
-          "updated": "Desencadenador actualizado",
-          "deleted": "Desencadenador eliminado",
-          "error": "No se pudo guardar el desencadenador",
-          "deleteError": "No se pudo eliminar el desencadenador"
-        },
-        "deleteConfirm": "¿Eliminar este desencadenador? Las invitaciones ya programadas seguirán enviándose.",
-        "errors": {
-          "load": "No se pudieron cargar los desencadenadores de encuestas."
-        }
-      },
-      "triggerForm": {
-        "titleCreate": "Crear desencadenador de encuesta",
-        "titleEdit": "Editar desencadenador de encuesta",
-        "labels": {
-          "template": "Modelo de encuesta",
-          "triggerType": "Tipo de desencadenador",
-          "boardIds": "ID de tableros",
-          "statusIds": "ID de estados",
-          "priorities": "Prioridades",
-          "enabled": "Desencadenador activo"
-        },
-        "placeholders": {
-          "boardIds": "Seleccionar tablero",
-          "statusIds": "Agregar estado",
-          "priorities": "Agregar prioridad"
-        },
-        "help": {
-          "conditions": "Deja un campo vacío para aceptar cualquier valor."
-        },
-        "actions": {
-          "create": "Crear desencadenador",
-          "save": "Guardar cambios",
-          "delete": "Eliminar desencadenador"
-        },
-        "triggerTypes": {
-          "ticket_closed": "Ticket cerrado",
-          "project_completed": "Proyecto finalizado"
-        },
-        "errors": {
-          "reference": "No se pudieron cargar las opciones del desencadenador. Vuelve a intentarlo."
-        },
-        "noTemplates": "Crea una plantilla de encuesta antes de agregar desencadenadores.",
-        "prioritiesMixed": "Los tableros seleccionados usan diferentes tipos de prioridad. Se muestran todas las prioridades."
-      },
-      "response": {
-        "invalidTitle": "Encuesta no disponible",
-        "invalidMessage": "Este enlace de comentarios ya no es válido o ya se ha utilizado.",
-        "ratingPrompt": "¿Cómo fue tu experiencia?",
-        "ratingAssistive": "Selecciona una puntuación del 1 al {{scale}}",
-        "commentLabel": "Comentarios adicionales (opcional)",
-        "submitButton": "Enviar comentarios",
-        "submitting": "Enviando comentarios…",
-        "submittedTitle": "¡Gracias por tu respuesta!",
-        "submittedMessage": "{{thankYouText}}",
-        "retryButton": "Intentar de nuevo",
-        "ratingSubmitted": "Comentarios enviados",
-        "errorMessage": "No pudimos registrar tus comentarios. Inténtalo de nuevo.",
-        "selectRatingError": "Selecciona una puntuación antes de enviar.",
-        "supportMessage": "Si tienes preguntas, ponte en contacto con tu técnico."
-      }
+    "labels": {
+      "unknownDevice": "Dispositivo desconocido",
+      "currentSession": "Sesión actual",
+      "yourSession": "Tu sesión",
+      "lastActive": "Última actividad"
     },
-    "response": {
-      "pageTitle": "Encuesta de satisfacción del cliente"
+    "loginMethods": {
+      "password": "Contraseña",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Interno",
+      "client": "Cliente"
+    },
+    "actions": {
+      "logout": "Cerrar sesión",
+      "revoke": "Revocar",
+      "revoking": "Revocando...",
+      "loggingOut": "Cerrando sesión...",
+      "logoutFromOther": "Cerrar sesión de {{count}} otro dispositivo{{count, plural, one {} other {s}}}"
+    },
+    "confirmations": {
+      "logoutCurrent": "Esto cerrará tu sesión actual. ¿Estás seguro?",
+      "logoutAllOther": "Esto cerrará tu sesión de todos los demás dispositivos. ¿Estás seguro?"
+    },
+    "prompts": {
+      "enter2FA": "Por favor ingresa tu código 2FA:"
+    },
+    "messages": {
+      "loggingOut": "Cerrando sesión...",
+      "sessionRevoked": "Sesión revocada exitosamente"
+    },
+    "warnings": {
+      "oauthLogout": "Esto te desconectará solo de Alga PSA. Permanecerás conectado a {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Error al obtener las sesiones",
+      "loadFailed": "Error al cargar las sesiones activas",
+      "revokeFailed": "Error al revocar la sesión",
+      "revokeAllFailed": "Error al revocar las sesiones",
+      "logoutAllFailed": "Error al cerrar sesión de otros dispositivos",
+      "adminAccessRequired": "Permisos insuficientes para ver todas las sesiones"
+    },
+    "admin": {
+      "title": "Todas las sesiones de usuarios",
+      "description": "{{sessionCount}} sesiones activas de {{userCount}} usuarios",
+      "searchPlaceholder": "Buscar por nombre de usuario, correo electrónico, dispositivo o dirección IP...",
+      "noResults": "No se encontraron sesiones que coincidan con tu búsqueda"
     }
   },
   "projects": {

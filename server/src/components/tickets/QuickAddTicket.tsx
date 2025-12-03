@@ -71,6 +71,7 @@ interface QuickAddTicketProps {
   };
   prefilledDescription?: string;
   isEmbedded?: boolean;
+  assetId?: string;
 }
 
 export function QuickAddTicket({
@@ -81,7 +82,8 @@ export function QuickAddTicket({
   prefilledClient,
   prefilledContact,
   prefilledDescription,
-  isEmbedded = false
+  isEmbedded = false,
+  assetId
 }: QuickAddTicketProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -465,6 +467,10 @@ export function QuickAddTicket({
         }
       }
 
+      if (assetId) {
+        formData.append('asset_id', assetId);
+      }
+
       // Add ITIL Impact and Urgency for calculation (if provided)
       if (itilImpact) {
         formData.append('itil_impact', itilImpact.toString());
@@ -533,8 +539,9 @@ export function QuickAddTicket({
         id={`${id}-dialog`}
         isOpen={open}
         onClose={handleClose}
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl max-h-[90vh]"
         title="Add Ticket"
+        allowOverflow
       >
         <DialogContent>
           {isLoading ? (

@@ -4,6 +4,11 @@
 
 The current EE Runner can serve static bundles, but executing dynamic JavaScript-based WebAssembly components fails because we do not yet supply the Wasmtime host plumbing that `componentize-js` expects. The runner must evolve into a capability-rich runtime that safely executes customer extensions, exposing the `alga:extension/*` interfaces while enforcing time, memory, and logging requirements.
 
+Status update (2025-11-21):
+- Runner now executes Component Model artifacts via Wasmtime; host APIs (context, logging, http.fetch, storage.kv, secrets) implemented in `ee/runner/src/engine/host_api.rs` and backed by install-scoped config/providers/secretEnvelope.
+- Gateway sends componentized execute envelopes (no handler path) to `/v1/execute` with `content_hash`, `version_id`, config, providers, and secret envelopes.
+- Remaining work: align WIT surface and capability list with manifest schema, add pool/limit tuning docs, and wire install_id propagation from gateway (open item A1 in alignment plan).
+
 ## Goals
 
 1. Ship a Wasmtime-backed execution layer that instantiates Component Model artifacts produced by `componentize-js`.
@@ -96,7 +101,7 @@ We can now execute `componentize-js` artifacts in-process and inside the runner 
    - [ ] Capture proxy invocations (route, status) and extend structured logging so operators can audit service proxy usage without exposing payloads.
 
 5. **Developer experience**
-   - [x] Provide Vitest-friendly mock hosts in `@alga/extension-runtime` so SDK samples run without the runner.
+   - [x] Provide Vitest-friendly mock hosts in `@alga-psa/extension-runtime` so SDK samples run without the runner.
    - [ ] Update SDK docs/tutorials to reference the new service proxy sample and outline the end-to-end flow (component → runner → Alga API → UI proxy).
 
 Keep this checklist synchronized with the master metadata plan as we close the remaining gaps.

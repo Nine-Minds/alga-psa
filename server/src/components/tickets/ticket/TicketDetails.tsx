@@ -34,7 +34,7 @@ import AssociatedAssets from "server/src/components/assets/AssociatedAssets";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { findUserById, getAllUsers, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
+import { findUserById, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
 import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
@@ -47,6 +47,7 @@ import { getAllPriorities } from "server/src/lib/actions/priorityActions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
 import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions";
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
+import ClientDetails from "server/src/components/clients/ClientDetails";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
 import { Button } from "server/src/components/ui/Button";
@@ -462,19 +463,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
     }, []);
 
-    const handleClientClick = async () => {
-        if (ticket.client_id) {
-            try {
-                const client = await getClientById(ticket.client_id);
-                if (client) {
-                    // Client details functionality has been moved to contacts
-                    console.log('Client:', client.client_name);
-                } else {
-                    console.error('Client not found');
-                }
-            } catch (error) {
-                console.error('Error fetching client details:', error);
-            }
+    const handleClientClick = () => {
+        if (client) {
+            openDrawer(
+                <ClientDetails
+                    client={client}
+                    isInDrawer={true}
+                    quickView={true}
+                />
+            );
         } else {
             console.log('No client associated with this ticket');
         }
@@ -483,13 +480,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleContactClick = () => {
         if (contactInfo && client) {
             openDrawer(
-                <ContactDetailsView 
+                <ContactDetailsView
                     initialContact={{
                         ...contactInfo,
                         client_id: client.client_id
                     }}
                     clients={[client]}
                     isInDrawer={true}
+                    clientReadOnly={true}
                 />
             );
         } else {
@@ -1383,7 +1381,7 @@ const handleClose = () => {
                             />
                         </Suspense>
                         
-                        {/* Assets - commented out for now
+                        {/* Associated Assets - with Remote Access for RMM-managed devices */}
                         {ticket.client_id && ticket.ticket_id && (
                             <div className="mt-6" id="associated-assets-container">
                                 <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
@@ -1396,7 +1394,6 @@ const handleClose = () => {
                                 </Suspense>
                             </div>
                         )}
-                        */}
                     </div>
                 </div>
             </div>

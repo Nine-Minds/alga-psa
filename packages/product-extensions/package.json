@@ -4,7 +4,9 @@
   "type": "module",
   "exports": {
     "./ee/entry": "./ee/entry.tsx",
-    "./oss/entry": "./oss/entry.tsx"
+    "./oss/entry": "./oss/entry.tsx",
+    "./ee/ExtensionIframe": "./ee/ExtensionIframe.tsx",
+    "./ee/DockerExtensionIframe": "./ee/DockerExtensionIframe.tsx"
   },
   "dependencies": {},
   "devDependencies": {}
