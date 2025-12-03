@@ -6,15 +6,13 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical, Download, Eye, Mail } from 'lucide-react';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import { CustomTabs } from 'server/src/components/ui/CustomTabs';
+import { MoreVertical, Download, Eye, Mail, CreditCard, X } from 'lucide-react';
 import {
   getClientInvoices,
-  getClientInvoiceById,
   downloadClientInvoicePdf,
-  sendClientInvoiceEmail
+  sendClientInvoiceEmail,
 } from 'server/src/lib/actions/client-portal-actions/client-billing';
+import ClientInvoicePreview from './ClientInvoicePreview';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -23,6 +21,7 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import toast from 'react-hot-toast';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number) => string;
@@ -41,8 +40,9 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeJobs, setActiveJobs] = useState<Set<string>>(new Set());
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
+  const [downloadingInvoices, setDownloadingInvoices] = useState<Set<string>>(new Set());
+  const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set());
 
   const selectedInvoiceId = searchParams?.get('invoiceId');
 
@@ -99,28 +99,73 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
 
   const handleDownloadPdf = async (invoiceId: string) => {
     setError(null);
+    setDownloadingInvoices(prev => new Set(prev).add(invoiceId));
+
     try {
-      const { jobId } = await downloadClientInvoicePdf(invoiceId);
-      if (jobId) {
-        setActiveJobs(prev => new Set(prev).add(jobId));
+      toast.success(t('billing.invoice.downloadStarted', 'Preparing PDF download...'));
+      const result = await downloadClientInvoicePdf(invoiceId);
+
+      if (result.success && result.fileId) {
+        // Trigger download
+        const downloadUrl = `/api/documents/download/${result.fileId}`;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(t('billing.invoice.downloadComplete', 'PDF downloaded successfully.'));
+      } else {
+        toast.error(result.error || t('billing.invoice.downloadFailed', 'Failed to download PDF.'));
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      setError(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+      toast.error(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+    } finally {
+      setDownloadingInvoices(prev => {
+        const next = new Set(prev);
+        next.delete(invoiceId);
+        return next;
+      });
     }
   };
 
   const handleSendEmail = async (invoiceId: string) => {
     setError(null);
+    setSendingEmails(prev => new Set(prev).add(invoiceId));
+
     try {
-      const { jobId } = await sendClientInvoiceEmail(invoiceId);
-      if (jobId) {
-        setActiveJobs(prev => new Set(prev).add(jobId));
+      toast.success(t('billing.invoice.emailStarted', 'Sending invoice email...'));
+      const result = await sendClientInvoiceEmail(invoiceId);
+
+      if (result.success) {
+        toast.success(t('billing.invoice.emailSent', 'Invoice email sent successfully.'));
+      } else {
+        toast.error(result.error || t('billing.invoice.sendEmailFailed', 'Failed to send email.'));
       }
     } catch (error) {
       console.error('Failed to send email:', error);
-      setError(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+      toast.error(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+    } finally {
+      setSendingEmails(prev => {
+        const next = new Set(prev);
+        next.delete(invoiceId);
+        return next;
+      });
     }
+  };
+
+  const handlePayInvoice = (invoiceId: string) => {
+    router.push(`/client-portal/billing/invoices/${invoiceId}/pay`);
+  };
+
+  // Check if invoice can be paid (finalized and not fully paid)
+  const canPayInvoice = (invoice: InvoiceViewModel): boolean => {
+    // Must be finalized
+    if (!invoice.finalized_at) return false;
+    // Check if already paid (total matches credit_applied or has paid status)
+    if (invoice.credit_applied >= invoice.total) return false;
+    return true;
   };
 
   // Memoize the columns to prevent unnecessary re-creation
@@ -171,6 +216,19 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`pay-invoice-${record.invoice_number}-menu-item`}
+              disabled={!canPayInvoice(record)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (canPayInvoice(record)) {
+                  handlePayInvoice(record.invoice_id);
+                }
+              }}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              {t('billing.invoice.pay', 'Pay Now')}
+            </DropdownMenuItem>
             <DropdownMenuItem
               id={`view-invoice-${record.invoice_number}-menu-item`}
               onClick={(e) => {
@@ -246,104 +304,63 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
 
       {selectedInvoice && (
         <div className="mt-8">
-          <h3 className="text-xl font-semibold mb-4">{t('billing.invoice.details', 'Invoice Details')}</h3>
-          <div className="border rounded-lg p-6 bg-white shadow-sm">
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.number', 'Invoice Number')}</h4>
-                <p className="text-lg font-medium">{selectedInvoice.invoice_number}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.date', 'Invoice Date')}</h4>
-                <p className="text-lg">{formatDate(selectedInvoice.invoice_date)}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.status', 'Status')}</h4>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  selectedInvoice.finalized_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {selectedInvoice.finalized_at ? t('billing.invoice.finalized', 'Finalized') : t('billing.invoice.draft', 'Draft')}
-                </span>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.dueDate', 'Due Date')}</h4>
-                <p className="text-lg">{formatDate(selectedInvoice.due_date)}</p>
-              </div>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold">
+              {t('billing.invoice.details', 'Invoice Details')} - {selectedInvoice.invoice_number}
+            </h3>
+            <Button
+              id="close-invoice-details"
+              variant="ghost"
+              size="sm"
+              onClick={() => updateUrlParams({ invoiceId: null })}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
 
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">{t('billing.invoice.lineItems', 'Line Items')}</h4>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.description', 'Description')}</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.quantity', 'Quantity')}</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.unitPrice', 'Unit Price')}</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.total', 'Total')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {selectedInvoice.invoice_charges && selectedInvoice.invoice_charges.length > 0 ? (
-                      selectedInvoice.invoice_charges.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="px-3 py-2">{item.description}</td>
-                          <td className="px-3 py-2">{item.quantity}</td>
-                          <td className="px-3 py-2">${(item.unit_price / 100).toFixed(2)}</td>
-                          <td className="px-3 py-2">${(item.total_price / 100).toFixed(2)}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
-                          {t('billing.invoice.noLineItems', 'No line items available')}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+            {/* Invoice Preview using same renderer as MSP portal */}
+            <ClientInvoicePreview
+              invoiceId={selectedInvoice.invoice_id}
+              className="p-4"
+            />
 
-            <div className="flex justify-between border-t pt-4">
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.subtotal', 'Subtotal')}</h4>
-                <p className="text-lg">${(selectedInvoice.subtotal / 100).toFixed(2)}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.tax', 'Tax')}</h4>
-                <p className="text-lg">${(selectedInvoice.tax / 100).toFixed(2)}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.total', 'Total')}</h4>
-                <p className="text-lg font-bold">${(selectedInvoice.total / 100).toFixed(2)}</p>
-              </div>
-            </div>
-            
             {/* Show credit information if credits were applied */}
             {selectedInvoice.credit_applied > 0 && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-md">
+              <div className="mx-4 mb-4 p-4 bg-blue-50 rounded-md">
                 <p className="text-blue-800">
                   Credit Applied: ${(selectedInvoice.credit_applied / 100).toFixed(2)}
                 </p>
               </div>
             )}
-            
-            <div className="mt-6 flex justify-end space-x-3">
+
+            {/* Action buttons */}
+            <div className="p-4 border-t bg-gray-50 flex justify-end space-x-3">
               <Button
                 id={`send-email-invoice-${selectedInvoice.invoice_number}`}
                 variant="outline"
+                disabled={sendingEmails.has(selectedInvoice.invoice_id)}
                 onClick={() => handleSendEmail(selectedInvoice.invoice_id)}
               >
                 <Mail className="mr-2 h-4 w-4" />
-                Send as Email
+                {sendingEmails.has(selectedInvoice.invoice_id) ? 'Sending...' : 'Send as Email'}
               </Button>
               <Button
                 id={`download-invoice-${selectedInvoice.invoice_number}`}
+                variant="outline"
+                disabled={downloadingInvoices.has(selectedInvoice.invoice_id)}
                 onClick={() => handleDownloadPdf(selectedInvoice.invoice_id)}
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download PDF
+                {downloadingInvoices.has(selectedInvoice.invoice_id) ? 'Preparing...' : 'Download PDF'}
+              </Button>
+              <Button
+                id={`pay-invoice-${selectedInvoice.invoice_number}`}
+                disabled={!canPayInvoice(selectedInvoice)}
+                onClick={() => handlePayInvoice(selectedInvoice.invoice_id)}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Pay Now
               </Button>
             </div>
           </div>

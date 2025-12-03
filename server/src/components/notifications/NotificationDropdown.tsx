@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CheckCheck, RefreshCw, Loader2, WifiOff, AlertCircle } from 'lucide-react';
+import { CheckCheck, RefreshCw, WifiOff, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import Spinner from 'server/src/components/ui/Spinner';
 import { NotificationItem } from './NotificationItem';
 import type { InternalNotification } from 'server/src/lib/models/internalNotification';
 import { useActivityDrawer } from 'server/src/components/user-activities/ActivityDrawerProvider';
@@ -174,7 +175,7 @@ export function NotificationDropdown({
               title="Mark all as read"
             >
               {isMarkingAllAsRead ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Spinner size="sm" className="scale-75" />
               ) : (
                 <CheckCheck className="w-3 h-3" />
               )}
@@ -204,7 +205,7 @@ export function NotificationDropdown({
       <div className="flex-1 overflow-y-auto">
         {isLoading && notifications.length === 0 ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <Spinner size="md" className="text-gray-400" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">

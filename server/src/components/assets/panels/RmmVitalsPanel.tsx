@@ -1,7 +1,8 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
-import { Group, Text, Stack, Button, Loader } from '@mantine/core';
+import { Group, Text, Stack, Button } from '@mantine/core';
 import { RefreshCw, WifiOff } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
 import { RmmCachedData } from '../../../interfaces/asset.interfaces';
 import { StatusBadge } from '../shared/StatusBadge';
 import { formatRelativeDateTime } from '../../../lib/utils/dateTimeUtils';
@@ -65,7 +66,7 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
             id="refresh-rmm-vitals-btn"
             variant="subtle" 
             size="xs" 
-            leftSection={isRefreshing ? <Loader size={12} /> : <RefreshCw size={12} />}
+            leftSection={isRefreshing ? <Spinner size="sm" className="scale-75" /> : <RefreshCw size={12} />}
             onClick={onRefresh}
             disabled={isRefreshing}
           >
