@@ -1,4 +1,5 @@
 import { Client, Connection, WorkflowHandle } from '@temporalio/client';
+import { Duration } from '@temporalio/common';
 import logger from '@shared/core/logger';
 import { JobStatus } from 'server/src/types/job';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
@@ -120,6 +121,13 @@ export class TemporalJobRunner implements IJobRunner {
     // job workflow activities.
   }
 
+  /**
+   * Check if a handler is registered for a job type
+   */
+  hasHandler(jobName: string): boolean {
+    return this.handlers.has(jobName);
+  }
+
   async scheduleJob<T extends BaseJobData>(
     jobName: string,
     data: T,
@@ -127,6 +135,13 @@ export class TemporalJobRunner implements IJobRunner {
   ): Promise<ScheduleJobResult> {
     if (!data.tenantId) {
       throw new Error('tenantId is required in job data');
+    }
+
+    // Validate handler exists (handlers are registered in the worker, but we track them here too)
+    if (!this.handlers.has(jobName)) {
+      logger.warn(
+        `No handler registered locally for job type: ${jobName}. Ensure the Temporal worker has the handler registered.`
+      );
     }
 
     // Create job record in database
@@ -292,12 +307,10 @@ export class TemporalJobRunner implements IJobRunner {
       }
 
       // Create a new schedule
+      const scheduleSpec = this.parseScheduleSpec(interval);
       await this.client.schedule.create({
         scheduleId,
-        spec: {
-          // Parse interval string to cron or interval
-          intervals: this.parseInterval(interval),
-        },
+        spec: scheduleSpec,
         action: {
           type: 'startWorkflow',
           workflowType: 'genericJobWorkflow',
@@ -490,7 +503,11 @@ export class TemporalJobRunner implements IJobRunner {
   async isHealthy(): Promise<boolean> {
     try {
       // Simple health check - try to list workflows
-      await this.client.workflow.list({ pageSize: 1 }).next();
+      const iterable = this.client.workflow.list({ pageSize: 1 });
+      // Get first item from async iterable
+      for await (const _ of iterable) {
+        break; // Just need to verify we can iterate
+      }
       return true;
     } catch {
       return false;
@@ -605,38 +622,51 @@ export class TemporalJobRunner implements IJobRunner {
 
   /**
    * Parse an interval string to Temporal schedule spec
+   * Supports both cron expressions and interval strings
    */
-  private parseInterval(interval: string): Array<{ every: string }> {
-    // Handle common interval formats
+  private parseScheduleSpec(interval: string): {
+    intervals?: Array<{ every: Duration }>;
+    cronExpressions?: string[];
+  } {
+    // Check if this is a cron expression (5 or 6 space-separated parts)
+    const cronParts = interval.trim().split(/\s+/);
+    if (cronParts.length >= 5 && cronParts.length <= 6) {
+      // Looks like a cron expression
+      // Temporal uses standard cron format: minute hour day-of-month month day-of-week
+      logger.info('Using cron expression for schedule', { cronExpression: interval });
+      return {
+        cronExpressions: [interval],
+      };
+    }
+
+    // Handle common interval formats like "24 hours", "30 minutes"
     const match = interval.match(/^(\d+)\s*(hours?|minutes?|days?|seconds?)$/i);
     if (match) {
       const value = parseInt(match[1], 10);
       const unit = match[2].toLowerCase();
 
-      let ms: number;
+      let duration: string;
       if (unit.startsWith('second')) {
-        ms = value * 1000;
+        duration = `${value}s`;
       } else if (unit.startsWith('minute')) {
-        ms = value * 60 * 1000;
+        duration = `${value}m`;
       } else if (unit.startsWith('hour')) {
-        ms = value * 60 * 60 * 1000;
+        duration = `${value}h`;
       } else if (unit.startsWith('day')) {
-        ms = value * 24 * 60 * 60 * 1000;
+        duration = `${value * 24}h`;
       } else {
-        ms = value * 60 * 60 * 1000; // Default to hours
+        duration = `${value}h`; // Default to hours
       }
 
-      return [{ every: `${ms}ms` }];
-    }
-
-    // Handle cron-like expressions - default to daily
-    if (interval.includes('*') || interval.includes(' ')) {
-      // For cron expressions, default to 24 hours
-      return [{ every: '24h' }];
+      return {
+        intervals: [{ every: duration as Duration }],
+      };
     }
 
     // Default: treat as a duration string that Temporal understands
-    return [{ every: interval }];
+    return {
+      intervals: [{ every: interval as Duration }],
+    };
   }
 
   /**

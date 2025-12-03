@@ -151,6 +151,23 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     this.jobRunner = null;
     this.initializationPromise = null;
     PgBossJobRunner.reset();
+
+    // Reset TemporalJobRunner if available (EE only)
+    if (isEnterprise) {
+      try {
+        // Dynamic import to avoid bundling EE code in CE
+        import('@ee/lib/jobs/runners/TemporalJobRunner')
+          .then(({ TemporalJobRunner }) => {
+            TemporalJobRunner.reset();
+          })
+          .catch(() => {
+            // TemporalJobRunner not available, ignore
+          });
+      } catch {
+        // Ignore errors during reset
+      }
+    }
+
     JobRunnerFactory.factoryInstance = null;
   }
 

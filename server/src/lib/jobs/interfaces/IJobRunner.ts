@@ -81,7 +81,7 @@ export interface JobStatusInfo {
 /**
  * Base job data that all jobs must include
  */
-export interface BaseJobData {
+export interface BaseJobData extends Record<string, unknown> {
   /** Tenant ID is required for all jobs */
   tenantId: string;
   /** Optional job service ID for tracking */

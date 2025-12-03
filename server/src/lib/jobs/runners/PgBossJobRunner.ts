@@ -130,7 +130,11 @@ export class PgBossJobRunner implements IJobRunner {
     this.handlers.set(config.name, config);
 
     // Register with PG Boss
-    void this.boss.work<T>(config.name, async (jobs: Job<T>[]) => {
+    // Note: expireInSeconds is set per job when sending, not in work options
+    void this.boss.work<T>(
+      config.name,
+      {},
+      async (jobs: Job<T>[]) => {
       for (const job of jobs) {
         const startTime = Date.now();
         const jobData = job.data;
@@ -188,9 +192,17 @@ export class PgBossJobRunner implements IJobRunner {
           throw error;
         }
       }
-    });
+    }
+    );
 
     logger.info(`Registered job handler: ${config.name}`);
+  }
+
+  /**
+   * Check if a handler is registered for a job type
+   */
+  hasHandler(jobName: string): boolean {
+    return this.handlers.has(jobName);
   }
 
   async scheduleJob<T extends BaseJobData>(
@@ -200,6 +212,13 @@ export class PgBossJobRunner implements IJobRunner {
   ): Promise<ScheduleJobResult> {
     if (!data.tenantId) {
       throw new Error('tenantId is required in job data');
+    }
+
+    // Validate handler exists
+    if (!this.handlers.has(jobName)) {
+      throw new Error(
+        `No handler registered for job type: ${jobName}. Register a handler before scheduling jobs.`
+      );
     }
 
     // Create job record in database
@@ -233,10 +252,18 @@ export class PgBossJobRunner implements IJobRunner {
       throw new Error('tenantId is required in job data');
     }
 
+    // Validate handler exists
+    if (!this.handlers.has(jobName)) {
+      throw new Error(
+        `No handler registered for job type: ${jobName}. Register a handler before scheduling jobs.`
+      );
+    }
+
     // Create job record in database
     const jobRecord = await this.createJobRecord(jobName, data, options);
 
     // Schedule with PG Boss
+    await this.boss.createQueue(jobName);
     const externalId = await this.boss.send(
       jobName,
       { ...data, jobServiceId: jobRecord.jobId },
@@ -264,11 +291,11 @@ export class PgBossJobRunner implements IJobRunner {
       throw new Error('tenantId is required in job data');
     }
 
-    // Convert cron expression to interval for PG Boss
-    let pgBossInterval = interval;
-    if (/(^|\s)\*/.test(interval)) {
-      // Any cron expression is coerced to daily interval
-      pgBossInterval = '24 hours';
+    // Validate handler exists
+    if (!this.handlers.has(jobName)) {
+      throw new Error(
+        `No handler registered for job type: ${jobName}. Register a handler before scheduling jobs.`
+      );
     }
 
     // Create singleton key for recurring jobs
@@ -286,26 +313,73 @@ export class PgBossJobRunner implements IJobRunner {
       },
     });
 
-    // Schedule with PG Boss
-    const externalId = await this.boss.send(
-      jobName,
-      { ...data, jobServiceId: jobRecord.jobId },
-      {
-        startAfter: pgBossInterval,
-        retryLimit: 3,
-        retryBackoff: true,
-        singletonKey,
+    // Ensure queue exists
+    await this.boss.createQueue(jobName);
+
+    // Check if this is a cron expression (contains spaces or asterisks)
+    const isCronExpression = /\s/.test(interval) || interval.includes('*');
+
+    let externalId: string | null = null;
+
+    if (isCronExpression) {
+      // Use PG Boss schedule() for cron-based recurring jobs
+      // The schedule name is the singletonKey to ensure uniqueness per tenant
+      try {
+        await this.boss.schedule(
+          singletonKey,
+          interval,
+          { ...data, jobServiceId: jobRecord.jobId },
+          {
+            retryLimit: 3,
+            retryBackoff: true,
+          }
+        );
+        externalId = singletonKey;
+        logger.info('Created cron schedule for recurring job', {
+          jobName,
+          singletonKey,
+          cronExpression: interval,
+        });
+      } catch (error) {
+        // Schedule may already exist, which is okay
+        if (
+          error instanceof Error &&
+          error.message.includes('already exists')
+        ) {
+          logger.info('Recurring job schedule already exists', {
+            jobName,
+            singletonKey,
+          });
+          externalId = singletonKey;
+        } else {
+          throw error;
+        }
       }
-    );
+    } else {
+      // For interval strings like "24 hours", use send() with startAfter
+      // This creates a one-time delayed job (handler should reschedule if needed)
+      externalId = await this.boss.send(
+        jobName,
+        { ...data, jobServiceId: jobRecord.jobId },
+        {
+          startAfter: interval,
+          retryLimit: 3,
+          retryBackoff: true,
+          singletonKey,
+        }
+      );
+
+      if (!externalId) {
+        logger.info('Recurring job already exists (singleton)', {
+          jobName,
+          singletonKey,
+        });
+      }
+    }
 
     // Update job record with external ID
     if (externalId) {
       await this.updateJobExternalId(jobRecord.jobId, externalId, data.tenantId);
-    } else {
-      logger.info('Recurring job already exists', {
-        jobName,
-        singletonKey,
-      });
     }
 
     return {
@@ -316,12 +390,12 @@ export class PgBossJobRunner implements IJobRunner {
 
   async cancelJob(jobId: string, tenantId: string): Promise<boolean> {
     try {
-      // Get the external ID from our database
+      // Get the external ID and job type from our database
       const { knex } = await createTenantKnex();
       const job = await runWithTenant(tenantId, async () => {
         return knex('jobs')
           .where({ job_id: jobId, tenant: tenantId })
-          .first('external_id', 'status');
+          .first('external_id', 'status', 'type');
       });
 
       if (!job) {
@@ -339,8 +413,9 @@ export class PgBossJobRunner implements IJobRunner {
       }
 
       // Cancel in PG Boss if we have an external ID
-      if (job.external_id) {
-        await this.boss.cancel(job.external_id);
+      // pg-boss cancel() requires both queue name (type) and job ID (external_id)
+      if (job.external_id && job.type) {
+        await this.boss.cancel(job.type, job.external_id);
       }
 
       // Update our database
