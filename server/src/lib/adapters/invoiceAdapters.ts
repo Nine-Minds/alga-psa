@@ -71,6 +71,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         tax: Number(dbData.tax ?? 0),
         total: Number(dbData.total ?? 0),
         taxSource: dbData.tax_source || 'internal',
+        currencyCode: (dbData as any).currency_code || (dbData as any).currencyCode || 'USD',
         // notes: dbData.notes, // Add if needed
       };
     }

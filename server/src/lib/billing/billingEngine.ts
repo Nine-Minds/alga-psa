@@ -160,6 +160,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
+          currency_code: client?.default_currency_code || 'USD',
           error: `Billing cycle ${billingCycleId} not found for client ${clientId}`
         };
       }
@@ -174,7 +175,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          currency_code: client.default_currency_code || 'USD'
+          currency_code: client?.default_currency_code || 'USD'
         };
       }
 
@@ -206,7 +207,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          currency_code: client.default_currency_code || 'USD',
+          currency_code: client?.default_currency_code || 'USD',
           error: `Billing cycle ${billingCycleId} has invalid dates (no period dates or effective date)`
         };
       }
@@ -225,7 +226,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          currency_code: client.default_currency_code || 'USD',
+          currency_code: client?.default_currency_code || 'USD',
           error: validationResult.error
         };
       }
@@ -250,7 +251,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          currency_code: client.default_currency_code || 'USD',
+          currency_code: client?.default_currency_code || 'USD',
           error: plansError
         };
       }
@@ -270,7 +271,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          currency_code: client.default_currency_code || 'USD',
+          currency_code: client?.default_currency_code || 'USD',
           error: `Billing Error: Client ${clientId} has active contracts in multiple currencies (${uniqueCurrencies.join(', ')}). Mixed currency billing is not supported.`
         };
       }
@@ -279,7 +280,7 @@ export class BillingEngine {
       // Priority: Contract Currency > Client Default > USD
       const billingCurrency = uniqueCurrencies.length === 1 
         ? uniqueCurrencies[0] 
-        : (client.default_currency_code || 'USD');
+        : (client?.default_currency_code || 'USD');
       
       console.log(`[BillingEngine] Resolved billing currency: ${billingCurrency}`);
 

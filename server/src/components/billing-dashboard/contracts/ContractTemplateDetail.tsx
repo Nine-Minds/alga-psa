@@ -169,6 +169,7 @@ const ContractTemplateDetail: React.FC = () => {
     contract_name: '',
     contract_description: '',
     billing_frequency: 'monthly',
+    currency_code: 'USD',
   });
   const [isSavingBasics, setIsSavingBasics] = useState(false);
   const [basicsError, setBasicsError] = useState<string | null>(null);
@@ -389,6 +390,7 @@ const ContractTemplateDetail: React.FC = () => {
         contract_name: '',
         contract_description: '',
         billing_frequency: 'monthly',
+        currency_code: 'USD',
       });
       return;
     }
@@ -397,6 +399,7 @@ const ContractTemplateDetail: React.FC = () => {
       contract_name: contract.contract_name ?? '',
       contract_description: contract.contract_description ?? '',
       billing_frequency: contract.billing_frequency ?? 'monthly',
+      currency_code: contract.currency_code ?? 'USD',
     });
   }, [contract]);
 
