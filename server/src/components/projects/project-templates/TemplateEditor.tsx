@@ -416,6 +416,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           priority_id: taskData.priority_id,
           assigned_to: taskData.assigned_to,
           template_status_mapping_id: statusMappingIdToUse,
+          service_id: taskData.service_id,
         });
         setTasks((prev) => [...prev, newTask]);
         taskId = newTask.template_task_id;
@@ -1158,7 +1159,8 @@ function TaskCard({
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={`${styles.taskCard} relative bg-white border border-gray-200 rounded-lg p-3 shadow-sm transition-all duration-200 flex flex-col gap-1 ${
+      onClick={() => onEdit(task)}
+      className={`${styles.taskCard} relative bg-white border border-gray-200 rounded-lg p-3 shadow-sm transition-all duration-200 flex flex-col gap-1 cursor-pointer hover:border-gray-300 ${
         isDragging ? styles.dragging : ''
       }`}
     >

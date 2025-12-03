@@ -37,6 +37,7 @@ export interface IProjectTemplateTask extends TenantEntity {
   assigned_to?: string;
   template_status_mapping_id?: string;
   order_key?: string;
+  service_id?: string | null; // Service for time entry prefill
 }
 
 export interface IProjectTemplateDependency extends TenantEntity {

@@ -69,6 +69,10 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
       this.on('project_phases.project_id', '=', 'projects.project_id')
           .andOn('project_phases.tenant', '=', 'projects.tenant');
     })
+    .leftJoin('service_catalog', function() {
+      this.on('project_tasks.service_id', '=', 'service_catalog.service_id')
+          .andOn('project_tasks.tenant', '=', 'service_catalog.tenant');
+    })
     .where({ 'project_tasks.tenant': tenant })
     .select(
       'task_id as work_item_id',
@@ -76,6 +80,8 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
       'project_tasks.description',
       'projects.project_name as project_name',
       'project_phases.phase_name as phase_name',
+      'project_tasks.service_id',
+      'service_catalog.service_name',
       db.raw("'project_task' as type")
     );
 

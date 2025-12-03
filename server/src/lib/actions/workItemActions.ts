@@ -365,7 +365,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('t.closed_at::timestamp with time zone as due_date'),
          db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
-         'tr.additional_user_ids as additional_user_ids'
+         'tr.additional_user_ids as additional_user_ids',
+         db.raw('NULL::uuid as service_id')
        );
 
       let projectTasksQuery = db('project_tasks as pt')
@@ -493,7 +494,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('pt.due_date::timestamp with time zone as due_date'),
          db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
          db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
-         'tr.additional_user_ids as additional_user_ids'
+         'tr.additional_user_ids as additional_user_ids',
+         'pt.service_id'
        );
 
 
@@ -558,7 +560,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db.raw('NULL::timestamp with time zone as due_date'),
           db.raw("u_adhoc_assignee.first_name || ' ' || u_adhoc_assignee.last_name as assigned_to_name"),
           'sea.assigned_user_ids as assigned_user_ids',
-          db.raw('NULL::uuid[] as additional_user_ids')
+          db.raw('NULL::uuid[] as additional_user_ids'),
+          db.raw('NULL::uuid as service_id')
         );
     }
 
@@ -598,7 +601,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db.raw('NULL::timestamp with time zone as due_date'),
           db.raw("u_interaction_assignee.first_name || ' ' || u_interaction_assignee.last_name as assigned_to_name"),
           db.raw('ARRAY[i.user_id] as assigned_user_ids'),
-          db.raw('ARRAY[]::uuid[] as additional_user_ids')
+          db.raw('ARRAY[]::uuid[] as additional_user_ids'),
+          db.raw('NULL::uuid as service_id')
         );
 
       // Apply filters
@@ -709,7 +713,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         additional_user_ids: item.additional_user_ids || [],
         assigned_user_ids: item.assigned_user_ids || [],
         scheduled_start: item.scheduled_start,
-        scheduled_end: item.scheduled_end
+        scheduled_end: item.scheduled_end,
+        service_id: item.service_id
       };
 
       // Add interaction type if it's an interaction

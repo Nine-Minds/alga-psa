@@ -26,7 +26,7 @@ export interface IExtendedWorkItem extends IWorkItem {
   ticket_number?: string;
   title?: string;
   client_id?: string;
-  client_name?: string;
+  client_name?: string | null;
   status_name?: string;
   board_name?: string;
   assigned_to_name?: string;
@@ -37,6 +37,8 @@ export interface IExtendedWorkItem extends IWorkItem {
   project_name?: string;
   phase_name?: string;
   task_name?: string;
+  service_id?: string | null;
+  service_name?: string | null;
   
   // Interaction specific fields
   interaction_type?: string;

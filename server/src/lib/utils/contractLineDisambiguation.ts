@@ -95,6 +95,14 @@ export async function getEligibleContractLines(
       this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id')
           .andOn('contract_line_services.tenant', '=', 'contract_lines.tenant');
     })
+    .leftJoin('client_contracts', function() {
+      this.on('client_contract_lines.client_contract_id', '=', 'client_contracts.client_contract_id')
+          .andOn('client_contracts.tenant', '=', 'client_contract_lines.tenant');
+    })
+    .leftJoin('contracts', function() {
+      this.on('client_contracts.contract_id', '=', 'contracts.contract_id')
+          .andOn('contracts.tenant', '=', 'client_contracts.tenant');
+    })
     .leftJoin('contract_line_service_configuration as bucket_config', function() {
       this.on('bucket_config.contract_line_id', '=', 'contract_lines.contract_line_id')
           .andOn('bucket_config.tenant', '=', 'contract_lines.tenant')
@@ -144,6 +152,7 @@ export async function getEligibleContractLines(
     'client_contract_lines.*',
     'contract_lines.contract_line_type',
     'contract_lines.contract_line_name',
+    'contracts.contract_name',
     'bucket_config.config_id as bucket_config_id',
     'bucket_details.total_minutes as bucket_total_minutes',
     'bucket_details.overage_rate as bucket_overage_rate',
@@ -257,13 +266,14 @@ export async function getEligibleContractLinesForUI(
   client_contract_line_id: string;
   contract_line_name: string;
   contract_line_type: string;
+  contract_name?: string;
   start_date: string;
   end_date: string | null;
   has_bucket_overlay: boolean;
   bucket_overlay?: EligibleContractLine['bucket_overlay'];
 }>> {
   const { knex, tenant } = await createTenantKnex();
-  
+
   if (!tenant) {
     throw new Error("Tenant context not found");
   }
@@ -280,6 +290,7 @@ export async function getEligibleContractLinesForUI(
         client_contract_line_id: contractLine.client_contract_line_id,
         contract_line_name: contractLine.contract_line_name || 'Unnamed Contract Line',
         contract_line_type: contractLine.contract_line_type,
+        contract_name: contractLine.contract_name,
         start_date: contractLine.start_date,
         end_date: contractLine.end_date,
         has_bucket_overlay: hasBucketOverlay,

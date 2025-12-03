@@ -99,6 +99,7 @@ export const applyTemplateSchema = z.object({
     copyTasks: z.boolean().default(true),
     copyDependencies: z.boolean().default(true),
     copyChecklists: z.boolean().default(true),
+    copyServices: z.boolean().default(true),
     assignmentOption: z.enum(['none', 'primary', 'all']).default('primary')
   }).optional()
 });
