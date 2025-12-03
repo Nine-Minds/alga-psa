@@ -3,7 +3,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Users, UsersRound, Ticket, FolderKanban, MessageSquare, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
 import CustomTabs, { TabContent, TabGroup } from "server/src/components/ui/CustomTabs";
@@ -174,12 +174,12 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Users",
-      icon: Users,
+      icon: UserCog,
       content: <UserManagement />,
     },
     {
       label: "Teams",
-      icon: UsersRound,
+      icon: Users,
       content: (
         <Card>
           <CardHeader>
@@ -196,7 +196,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Ticketing",
-      icon: Ticket,
+      icon: MessageSquare,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
           <TicketingSettings />
@@ -205,12 +205,12 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Projects",
-      icon: FolderKanban,
+      icon: Layers,
       content: <ProjectSettings />,
     },
     {
       label: "Interactions",
-      icon: MessageSquare,
+      icon: Handshake,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
           <InteractionSettings />

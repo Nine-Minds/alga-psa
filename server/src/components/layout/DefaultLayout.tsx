@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
@@ -20,14 +21,51 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [drawerContent] = useState<React.ReactNode>(null);
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
   const [disableTransition, setDisableTransition] = useState(true);
+  const pathname = usePathname();
+
+  // Track if we're on settings page and if collapse was auto-triggered
+  const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
+  const wasAutoCollapsedRef = useRef(false);
+  const prevIsOnSettingsRef = useRef(isOnSettingsPage);
 
   useEffect(() => {
     setDisableTransition(false);
   }, []);
 
+  // Auto-collapse sidebar when entering settings page, restore when leaving
+  // Only applies if user's preference is expanded (initialSidebarCollapsed === false)
+  useEffect(() => {
+    const wasOnSettings = prevIsOnSettingsRef.current;
+
+    // Entering settings page
+    if (isOnSettingsPage && !wasOnSettings) {
+      // Only auto-collapse if user's preference is expanded
+      if (!initialSidebarCollapsed && !sidebarCollapsed) {
+        wasAutoCollapsedRef.current = true;
+        setSidebarCollapsedState(true);
+      }
+    }
+    // Leaving settings page
+    else if (!isOnSettingsPage && wasOnSettings) {
+      // Only restore if we auto-collapsed (user didn't manually toggle)
+      if (wasAutoCollapsedRef.current) {
+        setSidebarCollapsedState(false);
+      }
+      wasAutoCollapsedRef.current = false;
+    }
+
+    prevIsOnSettingsRef.current = isOnSettingsPage;
+  }, [isOnSettingsPage, initialSidebarCollapsed]);
+
   const setSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
     setSidebarCollapsedState(prev => {
       const newValue = typeof value === 'function' ? value(prev) : value;
+
+      // If user manually toggles while on settings, clear auto-collapse flag
+      // so we don't override their preference when leaving
+      if (isOnSettingsPage) {
+        wasAutoCollapsedRef.current = false;
+      }
 
       // Save using the helper
       savePreference('sidebar_collapsed', String(newValue));
