@@ -712,11 +712,11 @@ export async function calculateAndDistributeTax(
   console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
   
   // Fetch invoice to get currency_code
-  const invoice = await tx('invoices')
+  const invoiceForCurrency = await tx('invoices')
     .select('currency_code')
     .where({ invoice_id: invoiceId, tenant })
     .first();
-  const currencyCode = invoice?.currency_code || 'USD';
+  const currencyCode = invoiceForCurrency?.currency_code || 'USD';
 
   const invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
     .where({ invoice_id: invoiceId, tenant })
