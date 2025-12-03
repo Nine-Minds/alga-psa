@@ -9,8 +9,8 @@
 
 import React, { useState } from 'react';
 import { Shield, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
-import { Button } from '../../../../../server/src/components/ui/Button';
-import type { Asset, WorkstationAsset, ServerAsset } from '../../../../../server/src/interfaces/asset.interfaces';
+import { Button } from '@/components/ui/Button';
+import type { Asset, WorkstationAsset, ServerAsset } from '@/interfaces/asset.interfaces';
 
 interface AssetPatchStatusSectionProps {
   asset: Asset;

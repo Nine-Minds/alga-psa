@@ -563,6 +563,15 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- IPINFO INTEGRATION ----------------
+          {{- if .Values.secrets.IPINFO_API_TOKEN }}
+          - name: IPINFO_API_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: IPINFO_API_TOKEN
+          {{- end }}
+
           # ----------- SECRET PROVIDER ----------------
           # Composite secret provider configuration
           - name: SECRET_READ_CHAIN

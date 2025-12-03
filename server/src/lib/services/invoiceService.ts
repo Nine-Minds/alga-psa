@@ -650,6 +650,64 @@ export async function calculateAndDistributeTax(
   taxService: TaxService,
   tenant: string
 ): Promise<number> {
+  // Check invoice tax source before calculating
+  const invoice = await tx('invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .select('tax_source')
+    .first();
+
+  const taxSource = invoice?.tax_source || 'internal';
+  console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has tax_source: ${taxSource}`);
+
+  // Handle external tax sources
+  if (taxSource === 'external') {
+    // For external tax source, use external_tax_amount values
+    console.log(`[calculateAndDistributeTax] Using external tax amounts for invoice ${invoiceId}`);
+
+    // Copy external_tax_amount to tax_amount and update total_price
+    const items = await tx('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant })
+      .select('item_id', 'net_amount', 'external_tax_amount');
+
+    for (const item of items) {
+      const externalTax = Number(item.external_tax_amount || 0);
+      const netAmount = Number(item.net_amount || 0);
+      await tx('invoice_charges')
+        .where({ item_id: item.item_id, tenant })
+        .update({
+          tax_amount: externalTax,
+          total_price: netAmount + externalTax
+        });
+    }
+
+    // Return total external tax
+    const totalExternalTax = items.reduce((sum, item) => sum + Number(item.external_tax_amount || 0), 0);
+    console.log(`[calculateAndDistributeTax] External tax total: ${totalExternalTax}`);
+    return totalExternalTax;
+  }
+
+  if (taxSource === 'pending_external') {
+    // For pending external tax, use zero tax (external tax not yet imported)
+    console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has pending external tax - using zero tax`);
+
+    const items = await tx('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant })
+      .select('item_id', 'net_amount');
+
+    for (const item of items) {
+      const netAmount = Number(item.net_amount || 0);
+      await tx('invoice_charges')
+        .where({ item_id: item.item_id, tenant })
+        .update({
+          tax_amount: 0,
+          total_price: netAmount
+        });
+    }
+
+    return 0;
+  }
+
+  // Internal tax calculation (default)
   // 1. Fetch all relevant data
   console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
   const invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure

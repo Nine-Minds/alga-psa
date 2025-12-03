@@ -24,7 +24,7 @@ import {
   RmmProvider,
   RmmAgentStatus,
   RmmStorageInfo,
-} from '../../../../../../../server/src/interfaces/asset.interfaces';
+} from '@/interfaces/asset.interfaces';
 
 /**
  * Asset type mapping from NinjaOne node class

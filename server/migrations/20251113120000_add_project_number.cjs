@@ -1,4 +1,37 @@
 /**
+ * Check if we're running on a Citus distributed database cluster.
+ * @param { import("knex").Knex } knex
+ * @returns { Promise<boolean> }
+ */
+async function isCitusCluster(knex) {
+  try {
+    const result = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) as has_citus
+    `);
+    return result.rows[0]?.has_citus === true;
+  } catch (error) {
+    // If the query fails, assume not Citus
+    return false;
+  }
+}
+
+/**
+ * Wait for distributed changes to propagate across Citus shards.
+ * Only waits if running on a Citus cluster; skips on standard PostgreSQL.
+ * @param { import("knex").Knex } knex
+ * @param { number } ms - milliseconds to wait
+ * @param { string } message - log message
+ */
+async function waitForCitusPropagation(knex, ms, message) {
+  if (await isCitusCluster(knex)) {
+    console.log(message);
+    await new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+/**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
@@ -98,9 +131,8 @@ exports.up = async function(knex) {
     console.log(`  ✅ Completed tenant ${tenant}\n`);
   }
 
-  // Wait for Citus to propagate changes across all shards
-  console.log('Waiting for distributed changes to propagate...');
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  // Wait for Citus to propagate changes across all shards (only if Citus)
+  await waitForCitusPropagation(knex, 5000, 'Waiting for distributed changes to propagate...');
 
   // Force a fresh query by using raw SQL to avoid any query caching
   const nullProjects = await knex.raw(`
@@ -147,9 +179,8 @@ exports.up = async function(knex) {
       }
     }
 
-    // Wait for Citus to propagate retry changes
-    console.log('Waiting for distributed retry changes to propagate...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait for Citus to propagate retry changes (only if Citus)
+    await waitForCitusPropagation(knex, 5000, 'Waiting for distributed retry changes to propagate...');
 
     // Final verification with raw SQL
     const finalNullProjects = await knex.raw(`
@@ -177,9 +208,8 @@ exports.up = async function(knex) {
   `);
 
   if (isNullable.rows[0]?.is_nullable === 'YES') {
-    // Extra wait before ALTER TABLE to ensure all shards are consistent
-    console.log('Final wait before setting NOT NULL constraint...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Extra wait before ALTER TABLE to ensure all shards are consistent (only if Citus)
+    await waitForCitusPropagation(knex, 3000, 'Final wait before setting NOT NULL constraint...');
 
     // One final check right before ALTER TABLE - query actual rows to force distributed check
     const lastCheckRows = await knex.raw(`
@@ -215,8 +245,8 @@ exports.up = async function(knex) {
         console.log(`  ✓ ${projectNumber}: ${project.project_name}`);
       }
 
-      // Wait and check again
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Wait and check again (only if Citus)
+      await waitForCitusPropagation(knex, 5000, 'Waiting for final backfill to propagate...');
 
       const finalFinalCheck = await knex.raw(`
         SELECT COUNT(*) as count

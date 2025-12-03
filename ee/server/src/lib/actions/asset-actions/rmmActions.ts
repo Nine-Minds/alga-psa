@@ -9,13 +9,13 @@
  * @see ee/docs/plans/asset-detail-view-enhancement.md §1.4.3
  */
 
-import { createTenantKnex } from '../../../../../../server/src/lib/db';
+import { createTenantKnex } from '@/lib/db';
 import {
   RmmCachedData,
   RmmStorageInfo,
   RmmProvider,
   RmmAgentStatus,
-} from '../../../../../../server/src/interfaces/asset.interfaces';
+} from '@/interfaces/asset.interfaces';
 import { syncSingleDeviceByAssetId } from '../../integrations/ninjaone/sync/syncEngine';
 import { createNinjaOneClient } from '../../integrations/ninjaone/ninjaOneClient';
 

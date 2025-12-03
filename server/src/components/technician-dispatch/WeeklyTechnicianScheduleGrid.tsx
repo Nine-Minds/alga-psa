@@ -9,7 +9,7 @@ import withDragAndDrop, { withDragAndDropProps } from 'react-big-calendar/lib/ad
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { CalendarStyleProvider } from 'server/src/components/schedule/CalendarStyleProvider';
 import { isWorkingHour } from './utils';
 
@@ -21,7 +21,7 @@ interface WeeklyTechnicianScheduleGridProps {
   date: Date;
   primaryTechnicianId: string | null;
   comparisonTechnicianIds: string[];
-  allTechnicians: IUserWithRoles[];
+  allTechnicians: IUser[];
   events: IScheduleEntry[];
   onNavigate: (newDate: Date, view: string, action: string) => void;
   onViewChange: (view: string) => void;
@@ -48,7 +48,7 @@ const TechnicianSidebar = ({
   onResetSelections,
   onSelectAll
 }: { 
-  technicians: IUserWithRoles[]; 
+  technicians: IUser[];
   primaryTechnicianId: string | null;
   comparisonTechnicianIds: string[];
   onSetFocus?: (technicianId: string) => void;
@@ -194,7 +194,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
     });
     return sortedUuids
         .map(uuid => allTechnicians.find(tech => tech.user_id === uuid))
-        .filter(tech => tech !== undefined) as IUserWithRoles[];
+        .filter(tech => tech !== undefined) as IUser[];
   }, [primaryTechnicianId, comparisonTechnicianIds, allTechnicians]);
 
   const filteredEvents = useMemo(() => {

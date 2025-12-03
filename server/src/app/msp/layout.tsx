@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
-import { getSession } from "server/src/lib/auth/getSession";
+import { redirect } from "next/navigation";
+import { getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
 import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
 import { MspLayoutClient } from "./MspLayoutClient";
 
@@ -8,7 +9,22 @@ export default async function MspLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession();
+  // Use full auth with revocation check so terminated sessions cannot keep browsing
+  const session = await getSessionWithRevocationCheck();
+
+  // If session is null, redirect to signin
+  // Don't include error parameter to avoid redirect loops
+  if (!session) {
+    console.log('[msp-layout] No session found, redirecting to signin');
+    redirect('/auth/msp/signin');
+  }
+
+  // Check if user is trying to access wrong portal
+  if (session.user.user_type === 'client') {
+    console.log('[msp-layout] Client user trying to access MSP portal, redirecting to switch prompt');
+    redirect('/auth/msp/signin');
+  }
+
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';

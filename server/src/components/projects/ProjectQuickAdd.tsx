@@ -17,8 +17,8 @@ import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
-import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
 
 interface ProjectQuickAddProps {
@@ -33,7 +33,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]); 
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -52,7 +52,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
     const fetchData = async () => {
       try {
         const [allUsers, projectStatuses, projectTaskStatuses] = await Promise.all([
-          getAllUsers(),
+          getAllUsersBasic(),
           getProjectStatuses(),
           getTenantProjectStatuses()
         ]);

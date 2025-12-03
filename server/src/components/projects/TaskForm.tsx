@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
@@ -62,7 +62,7 @@ interface TaskFormProps {
   onSubmit: (task: IProjectTask | null) => void;
   projectStatuses: ProjectStatus[];
   defaultStatus?: ProjectStatus;
-  users: IUserWithRoles[];
+  users: IUser[];
   mode: 'create' | 'edit';
   onPhaseChange: (phaseId: string) => void;
   inDrawer?: boolean;

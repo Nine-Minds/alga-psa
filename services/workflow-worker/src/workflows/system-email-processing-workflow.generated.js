@@ -104,14 +104,28 @@ async function execute(context) {
      */
     const handleEmailReply = async (emailData, existingTicket, actions, parsedBody) => {
         const commentContent = parsedBody.sanitizedHtml || parsedBody.sanitizedText || emailData.body.html || emailData.body.text;
-        const commentFormat = parsedBody.sanitizedHtml
-            ? 'html'
-            : (parsedBody.sanitizedText ? 'text' : (emailData.body.html ? 'html' : 'text'));
+        // Convert HTML to BlockNote blocks
+        let blockContent = commentContent;
+        if (parsedBody.sanitizedHtml || emailData.body.html) {
+            try {
+                const conversionResult = await actions.convert_html_to_blocks({
+                    html: parsedBody.sanitizedHtml || emailData.body.html
+                });
+                if (conversionResult.success && conversionResult.blocks) {
+                    blockContent = JSON.stringify(conversionResult.blocks);
+                }
+            }
+            catch (error) {
+                console.warn('Failed to convert HTML to blocks for reply, falling back to raw content');
+            }
+        }
         // Add email as comment to existing ticket
         await actions.create_comment_from_email({
             ticket_id: existingTicket.ticketId,
-            content: commentContent,
-            format: commentFormat,
+            content: blockContent,
+            // format is optional, but if we send BlockNote JSON, the system likely detects it or we can omit format
+            // If it's blocks, we can set format to 'blocknote' if supported, or just let the system handle it.
+            // Looking at blocknoteUtils, it tries to parse JSON.
             source: 'email',
             author_type: 'contact', // Reply from the client
             metadata: parsedBody.metadata
@@ -277,21 +291,8 @@ async function execute(context) {
         console.log('Attempting to match email sender to existing client');
         let matchedClient = await findExactEmailMatch(emailData.from.email, actions);
         if (!matchedClient) {
-            // No exact match found - create human task for manual matching
-            console.log('No exact email match found, creating human task for manual client selection');
-            const taskResult = await actions.createTaskAndWaitForResult({
-                taskType: 'match_email_to_client',
-                title: `Match Email to Client: ${emailData.subject}`,
-                description: `Please match this email from ${emailData.from.email} (${emailData.from.name || 'No name'}) to a client. Email snippet: ${(parsedEmailBody.sanitizedText || emailData.body.text || '').substring(0, 200)}...`
-            });
-            if (taskResult.success && taskResult.resolutionData) {
-                matchedClient = await processClientMatchingResult(taskResult.resolutionData, emailData, actions);
-                data.set('matchedClient', matchedClient);
-            }
-            else {
-                console.warn('Manual client matching was not completed successfully');
-                // Continue without client match - ticket will be created without client association
-            }
+            // No exact match found - log and continue to ticket creation (will use catch-all defaults)
+            console.log('No exact email match found; creating ticket using defaults (no client association)');
         }
         else {
             console.log(`Found exact email match: ${matchedClient.clientName}`);
@@ -373,12 +374,24 @@ async function execute(context) {
             console.log(`Processed ${emailData.attachments.length} attachments`);
         }
         // Step 6: Create initial comment with original email content
+        const initialCommentContent = parsedEmailBody.sanitizedHtml || parsedEmailBody.sanitizedText || emailData.body.html || emailData.body.text;
+        let initialBlockContent = initialCommentContent;
+        if (parsedEmailBody.sanitizedHtml || emailData.body.html) {
+            try {
+                const conversionResult = await actions.convert_html_to_blocks({
+                    html: parsedEmailBody.sanitizedHtml || emailData.body.html
+                });
+                if (conversionResult.success && conversionResult.blocks) {
+                    initialBlockContent = JSON.stringify(conversionResult.blocks);
+                }
+            }
+            catch (error) {
+                console.warn('Failed to convert HTML to blocks for new ticket, falling back to raw content');
+            }
+        }
         await actions.create_comment_from_email({
             ticket_id: ticketResult.ticket_id,
-            content: parsedEmailBody.sanitizedHtml || parsedEmailBody.sanitizedText || emailData.body.html || emailData.body.text,
-            format: parsedEmailBody.sanitizedHtml
-                ? 'html'
-                : (parsedEmailBody.sanitizedText ? 'text' : (emailData.body.html ? 'html' : 'text')),
+            content: initialBlockContent,
             source: 'email',
             author_type: 'internal',
             metadata: parsedEmailBody.metadata

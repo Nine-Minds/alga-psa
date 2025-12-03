@@ -3,7 +3,7 @@
 import React from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AutomationProps } from '../../types/ui-reflection/types';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, ChevronDown } from 'lucide-react';
 
 export interface TabContent {
   label: string;
@@ -11,8 +11,14 @@ export interface TabContent {
   icon?: LucideIcon | React.ReactNode;
 }
 
+export interface TabGroup {
+  title?: string;
+  tabs: TabContent[];
+}
+
 export interface CustomTabsProps {
   tabs: TabContent[];
+  groups?: TabGroup[];
   defaultTab?: string;
   onTabChange?: (tabValue: string) => void;
   tabStyles?: {
@@ -32,6 +38,7 @@ export interface CustomTabsProps {
 
 export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   tabs,
+  groups,
   defaultTab,
   onTabChange,
   tabStyles,
@@ -39,15 +46,68 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   idPrefix,
   orientation = 'horizontal',
 }) => {
-  const [value, setValue] = React.useState(defaultTab || tabs[0].label);
+  // Use groups if provided, otherwise fall back to flat tabs
+  const allTabs = React.useMemo(() => {
+    if (groups && groups.length > 0) {
+      return groups.flatMap(group => group.tabs);
+    }
+    return tabs;
+  }, [tabs, groups]);
+
+  const [value, setValue] = React.useState(defaultTab || allTabs[0].label);
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
+
+  // Track expanded state for each section (default to all expanded)
+  const [expandedSections, setExpandedSections] = React.useState<Record<number, boolean>>(() => {
+    if (groups && groups.length > 0) {
+      return groups.reduce((acc, _, index) => {
+        acc[index] = true; // Default to expanded
+        return acc;
+      }, {} as Record<number, boolean>);
+    }
+    return {};
+  });
+
+  const toggleSection = React.useCallback((groupIndex: number) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [groupIndex]: !prev[groupIndex]
+    }));
+  }, []);
 
   React.useEffect(() => {
     if (defaultTab) {
       setValue(defaultTab);
+      // Auto-expand the section containing the default tab
+      if (groups && groups.length > 0) {
+        groups.forEach((group, groupIndex) => {
+          if (group.tabs.some(tab => tab.label === defaultTab)) {
+            setExpandedSections(prev => ({
+              ...prev,
+              [groupIndex]: true
+            }));
+          }
+        });
+      }
     }
-  }, [defaultTab]);
+  }, [defaultTab, groups]);
+
+  // Auto-expand section when a tab within it becomes active
+  React.useEffect(() => {
+    if (groups && groups.length > 0 && value) {
+      groups.forEach((group, groupIndex) => {
+        if (group.tabs.some(tab => tab.label === value)) {
+          setExpandedSections(prev => {
+            if (prev[groupIndex] === false) {
+              return { ...prev, [groupIndex]: true };
+            }
+            return prev;
+          });
+        }
+      });
+    }
+  }, [value, groups]);
 
   const defaultRootClass = orientation === 'vertical'
     ? 'md:grid md:grid-cols-[220px_minmax(0,1fr)] gap-6'
@@ -65,6 +125,9 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     ? ''
     : 'data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600';
 
+  // Render grouped tabs if groups are provided and orientation is vertical
+  const renderGroupedTabs = groups && groups.length > 0 && orientation === 'vertical';
+
   return (
     <Tabs.Root 
       className={`${defaultRootClass} ${tabStyles?.root || ''}`} 
@@ -76,52 +139,82 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
       }}
     >
       <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
-        {tabs.map((tab, index): JSX.Element => {
-          const icon = tab.icon;
-          const hasIcon = !!icon;
-          const iconClassName = hasIcon 
-            ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
-            : '';
-          
-          // Render icon based on type
-          let iconElement: React.ReactNode = null;
-          if (hasIcon) {
-            // First check if it's a valid React element (already rendered JSX)
-            if (React.isValidElement(icon)) {
-              iconElement = icon;
-            } 
-            // Then check if it's a component type (function constructor like LucideIcon)
-            else if (typeof icon === 'function') {
-              try {
-                iconElement = React.createElement(icon as LucideIcon, { className: 'h-4 w-4 shrink-0' });
-              } catch (error) {
-                // If createElement fails, don't render the icon
-                console.warn('Error creating icon element:', error);
-                iconElement = null;
-              }
-            }
-            // Otherwise, it's a primitive or other React node
-            else if (icon !== null && icon !== undefined && (typeof icon === 'string' || typeof icon === 'number')) {
-              iconElement = <span className="shrink-0">{icon}</span>;
-            }
-            // If it's something else we can't handle, don't render it
-          }
-          
-          return (
-            <Tabs.Trigger
-              key={tab.label}
-              id={`${prefix}-trigger-${index}`}
-              className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
-              value={tab.label}
-            >
-              {iconElement}
-              {tab.label}
-            </Tabs.Trigger>
-          );
-        })}
+        {renderGroupedTabs ? (
+          groups.map((group, groupIndex) => {
+            const isExpanded = expandedSections[groupIndex] !== false; // Default to true
+            return (
+              <div key={groupIndex} className="space-y-1">
+                {group.title && (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(groupIndex)}
+                    className="w-full px-3 pt-4 pb-2 first:pt-0 flex items-center gap-2 group transition-opacity"
+                  >
+                    <ChevronDown 
+                      className={`h-3 w-3 text-primary-600 group-hover:text-yellow-500 transition-all duration-200 ${isExpanded ? '' : '-rotate-90'}`}
+                    />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 group-hover:text-yellow-500 transition-colors duration-200">
+                      {group.title}
+                    </p>
+                  </button>
+                )}
+                {isExpanded && group.tabs.map((tab, tabIndex): JSX.Element => {
+                  const IconComponent = tab.icon;
+                  const hasIcon = !!IconComponent;
+                  const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
+                  const globalIndex = groups.slice(0, groupIndex).reduce((acc, g) => acc + g.tabs.length, 0) + tabIndex;
+                  const isIconComponent = typeof IconComponent === 'function';
+                  return (
+                    <Tabs.Trigger
+                      key={tab.label}
+                      id={`${prefix}-trigger-${globalIndex}`}
+                      className={`${defaultTriggerClass} ${iconClassName} ml-4 ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
+                      value={tab.label}
+                    >
+                      {IconComponent && (
+                        isIconComponent ? (
+                          <IconComponent className="h-4 w-4 shrink-0" />
+                        ) : (
+                          <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
+                        )
+                      )}
+                      {tab.label}
+                    </Tabs.Trigger>
+                  );
+                })}
+              </div>
+            );
+          })
+        ) : (
+          allTabs.map((tab, index): JSX.Element => {
+            const IconComponent = tab.icon;
+            const hasIcon = !!IconComponent;
+            const iconClassName = hasIcon 
+              ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
+              : '';
+            const isIconComponent = typeof IconComponent === 'function';
+            return (
+              <Tabs.Trigger
+                key={tab.label}
+                id={`${prefix}-trigger-${index}`}
+                className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
+                value={tab.label}
+              >
+                {IconComponent && (
+                  isIconComponent ? (
+                    <IconComponent className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
+                  )
+                )}
+                {tab.label}
+              </Tabs.Trigger>
+            );
+          })
+        )}
         {extraContent}
       </Tabs.List>
-      {tabs.map((tab, index): JSX.Element => (
+      {allTabs.map((tab, index): JSX.Element => (
         <Tabs.Content 
           key={tab.label}
           id={`${prefix}-content-${index}`}

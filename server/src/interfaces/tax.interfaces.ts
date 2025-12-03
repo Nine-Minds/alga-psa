@@ -6,6 +6,7 @@ export interface IClientTaxSettings extends TenantEntity {
   client_id: string;
   tax_rate_id?: string; // Made optional for backward compatibility with tests
   is_reverse_charge_applicable: boolean;
+  tax_source_override?: TaxSource | null; // Per-client override of tenant tax source setting
   tax_components?: ITaxComponent[];
   tax_rate_thresholds?: ITaxRateThreshold[];
   tax_holidays?: ITaxHoliday[];
@@ -57,7 +58,8 @@ export interface ITaxRateThreshold extends TenantEntity {
 
 export interface ITaxHoliday extends TenantEntity {
   tax_holiday_id: string;
-  tax_component_id: string;
+  tax_rate_id: string;
+  tax_component_id?: string; // Optional - for per-component holidays (future feature)
   start_date: ISO8601String;
   end_date: ISO8601String;
   description?: string;
@@ -86,4 +88,52 @@ export interface IClientTaxRateAssociation extends TenantEntity {
   location_id: string | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
+}
+
+// Tax source types for external tax delegation
+// Note: The adapter is determined automatically based on which accounting system
+// the invoice is exported to (from tenant_external_entity_mappings), not configured here
+export type TaxSource = 'internal' | 'external' | 'pending_external';
+
+// Tenant-level tax delegation settings
+export interface ITenantTaxSettings {
+  /** Default tax calculation source for new invoices */
+  default_tax_source: TaxSource;
+  /** Whether clients can override the default tax source */
+  allow_external_tax_override: boolean;
+}
+
+// Client-level tax source override (extends IClientTaxSettings)
+export interface IClientTaxSourceSettings {
+  /** Per-client override of tenant tax source setting */
+  tax_source_override?: TaxSource;
+}
+
+// External tax import tracking
+export interface IExternalTaxImport extends TenantEntity {
+  import_id: string;
+  invoice_id: string;
+  adapter_type: string;
+  external_invoice_ref?: string;
+  imported_at: ISO8601String;
+  imported_by?: string;
+  import_status: 'success' | 'failed' | 'partial';
+  original_internal_tax?: number;
+  imported_external_tax?: number;
+  tax_difference?: number;
+  metadata?: Record<string, unknown>;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
+// Result of importing tax from external system
+export interface IExternalTaxImportResult {
+  success: boolean;
+  import_id?: string;
+  invoice_id: string;
+  original_tax: number;
+  imported_tax: number;
+  difference: number;
+  charges_updated: number;
+  error?: string;
 }

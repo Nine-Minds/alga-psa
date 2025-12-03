@@ -14,7 +14,7 @@ import { getTicketById } from "server/src/lib/actions/ticket-actions/ticketActio
 import { getTaskWithDetails } from "server/src/lib/actions/project-actions/projectTaskActions";
 import { getTaskDetails } from "server/src/lib/actions/workflow-actions/taskInboxActions";
 import { getScheduleEntries } from "server/src/lib/actions/scheduleActions";
-import { getCurrentUser, getAllUsers } from "server/src/lib/actions/user-actions/userActions";
+import { getCurrentUser, getAllUsersBasic } from "server/src/lib/actions/user-actions/userActions";
 import { getTimeEntryById, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
 import TicketDetails from "server/src/components/tickets/ticket/TicketDetails";
 import TaskEdit from "server/src/components/projects/TaskEdit";
@@ -232,7 +232,7 @@ export function ActivityDetailViewerDrawer({
         case ActivityType.PROJECT_TASK: {
           const taskData = await getTaskWithDetails(activityId, currentUser);
           // Get users for the TaskEdit component
-          const users = await getAllUsers();
+          const users = await getAllUsersBasic();
           
           setContent(
             <div className="h-full">
@@ -287,7 +287,7 @@ export function ActivityDetailViewerDrawer({
           }
           
           // Get users for the EntryPopup
-          const users = await getAllUsers();
+          const users = await getAllUsersBasic();
           const currentUser = await getCurrentUser();
           
           setContent(
@@ -643,7 +643,7 @@ export function ActivityDetailViewerDrawer({
                   try {
                     setIsLoading(true);
                     const taskData = await getTaskWithDetails(taskId, currentUser);
-                    const users = await getAllUsers();
+                    const users = await getAllUsersBasic();
 
                     setContent(
                       <div className="h-full flex flex-col">

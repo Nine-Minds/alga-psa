@@ -10,6 +10,8 @@ import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
+import { TaxSourceSettings } from 'server/src/components/settings/tax/TaxSourceSettings';
+import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {

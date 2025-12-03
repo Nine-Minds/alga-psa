@@ -1,7 +1,7 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getAsset, getAssetSummaryMetrics } from '../lib/actions/asset-actions/assetActions';
-import { getAssetRmmData, refreshAssetRmmData } from '../../../ee/server/src/lib/actions/asset-actions/rmmActions';
+import { getAssetRmmData, refreshAssetRmmData } from '@ee/lib/actions/asset-actions/rmmActions';
 import { toast } from 'react-hot-toast';
 
 export function useAssetDetail(assetId: string) {

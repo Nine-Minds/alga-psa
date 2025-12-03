@@ -2,20 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { DatePicker } from 'server/src/components/ui/DatePicker';import { Dialog, DialogContent, DialogDescription } from 'server/src/components/ui/Dialog';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { Dialog, DialogContent, DialogDescription } from 'server/src/components/ui/Dialog';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate, confirmDeleteTaxRate, DeleteTaxRateResult } from 'server/src/lib/actions/taxRateActions';
 import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
 import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import { ITaxRegion, ITaxRate as FullTaxRate } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { toPlainDate, parseDateSafe } from 'server/src/lib/utils/dateTimeUtils';
 import { Temporal } from '@js-temporal/polyfill';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Layers, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -23,6 +24,8 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { TaxRateDetailPanel } from './TaxRateDetailPanel';
+import { Badge } from 'server/src/components/ui/Badge';
 
 const TaxRates: React.FC = () => {
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -39,6 +42,7 @@ const TaxRates: React.FC = () => {
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewingTaxRate, setViewingTaxRate] = useState<ITaxRate | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -190,14 +194,41 @@ const TaxRates: React.FC = () => {
   };
 
 
+  const handleViewDetails = (taxRate: ITaxRate) => {
+    setViewingTaxRate(taxRate);
+  };
+
+  const handleBackToList = async () => {
+    setViewingTaxRate(null);
+    await fetchTaxRates(); // Refresh the list in case changes were made
+  };
+
   const columns: ColumnDefinition<ITaxRate>[] = [
     {
       title: 'Region',
-      dataIndex: 'region_code', // Changed from region
-      render: (value) => taxRegions.find(r => r.region_code === value)?.region_name || value || 'N/A' // Display name or code
+      dataIndex: 'region_code',
+      render: (value) => taxRegions.find(r => r.region_code === value)?.region_name || value || 'N/A'
     },
-    { title: 'Tax Percentage', dataIndex: 'tax_percentage', render: (value) => `${value}%` },
-    { title: 'Description', dataIndex: 'description' },
+    {
+      title: 'Tax Percentage',
+      dataIndex: 'tax_percentage',
+      render: (value) => `${value}%`
+    },
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      render: (value, record) => (
+        <div className="flex items-center gap-2">
+          {value || '-'}
+          {(record as unknown as FullTaxRate).is_composite && (
+            <Badge variant="outline" className="text-xs">
+              <Layers className="h-3 w-3 mr-1" />
+              Composite
+            </Badge>
+          )}
+        </div>
+      )
+    },
     {
       title: 'Start Date',
       dataIndex: 'start_date',
@@ -227,6 +258,16 @@ const TaxRates: React.FC = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
+              id={`view-tax-rate-details-${record.tax_rate_id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleViewDetails(record);
+              }}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Advanced Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem
               id={`edit-tax-rate-${record.tax_rate_id}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -249,6 +290,18 @@ const TaxRates: React.FC = () => {
       ),
     },
   ];
+
+  // If viewing a tax rate, show the detail panel
+  if (viewingTaxRate) {
+    return (
+      <div className="space-y-4">
+        <TaxRateDetailPanel
+          taxRate={viewingTaxRate as unknown as FullTaxRate}
+          onBack={handleBackToList}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

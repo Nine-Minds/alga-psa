@@ -1,13 +1,14 @@
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
-import { MoreVertical, Pencil, Trash2, ExternalLink, Shield } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, ExternalLink, Shield, ShieldOff } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { IClient } from "server/src/interfaces/client.interfaces";
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { TagManager } from 'server/src/components/tags';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface ClientGridCardProps {
     client: IClient;
@@ -86,6 +87,14 @@ const ClientGridCard = ({
                                 <Shield className="h-3 w-3 text-purple-600 mr-1" />
                                 <span className="text-xs text-purple-700 font-medium">Default</span>
                             </div>
+                        )}
+                        {client.is_tax_exempt && (
+                            <Tooltip content="This client is tax exempt - no taxes will be applied to their invoices">
+                                <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100">
+                                    <ShieldOff className="h-3 w-3 text-amber-600 mr-1" />
+                                    <span className="text-xs text-amber-700 font-medium">Tax Exempt</span>
+                                </div>
+                            </Tooltip>
                         )}
                     </h2>
                     <div className="text-sm text-gray-600 mt-1 space-y-0.5">
