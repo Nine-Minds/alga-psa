@@ -70,6 +70,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         subtotal: Number(dbData.subtotal ?? 0),
         tax: Number(dbData.tax ?? 0),
         total: Number(dbData.total ?? 0),
+        taxSource: dbData.tax_source || 'internal',
         // notes: dbData.notes, // Add if needed
       };
     }

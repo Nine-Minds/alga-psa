@@ -10,6 +10,7 @@ import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
+import { getInitialInvoiceTaxSource } from 'server/src/lib/actions/taxSourceActions';
 
 export interface ManualInvoiceItem { // Add export
   service_id: string;
@@ -43,6 +44,9 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
   const invoiceNumber = await generateInvoiceNumber();
   const invoiceId = uuidv4();
 
+  // Determine tax source based on client settings
+  const taxSource = await getInitialInvoiceTaxSource(clientId);
+
   // Set invoice type based on isPrepayment flag
   const invoice = {
     invoice_id: invoiceId,
@@ -57,7 +61,8 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     total_amount: 0,
     credit_applied: 0,
     is_manual: true,
-    is_prepayment: isPrepayment || false
+    is_prepayment: isPrepayment || false,
+    tax_source: taxSource
   };
 
   return await knex.transaction(async (trx) => {

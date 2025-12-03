@@ -1261,4 +1261,105 @@ describe('Billing Invoice Tax Calculations', () => {
     expect(Number(invoiceRow!.tax)).toBe(2450);
     expect(Number(invoiceRow!.total_amount)).toBe(32450);
   });
+
+  it('should apply reverse charge (zero tax) even when regionCode is provided', async () => {
+    // This test verifies that reverse charge takes precedence over region-based tax calculation.
+    // Previously, reverse charge was only checked when NO regionCode was provided,
+    // but billing always provides a regionCode, effectively breaking reverse charge.
+
+    // Create client with a tax region
+    const clientId = await context.createEntity<IClient>('clients', {
+      client_name: 'Reverse Charge Test Client',
+      billing_cycle: 'monthly',
+      client_id: uuidv4(),
+      region_code: 'US-NY', // Client has a tax region
+      is_tax_exempt: false, // NOT tax exempt - reverse charge is different
+      credit_balance: 0,
+      url: '',
+      is_inactive: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString()
+    }, 'client_id');
+
+    // Ensure tax region exists with active tax rate
+    await context.db('tax_regions').insert({
+      tenant: context.tenantId,
+      region_code: 'US-NY',
+      region_name: 'New York',
+      is_active: true
+    }).onConflict(['tenant', 'region_code']).ignore();
+
+    const nyTaxRate = await context.db('tax_rates')
+      .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
+      .first('tax_rate_id');
+
+    if (!nyTaxRate) {
+      throw new Error('Expected active NY tax rate to be present from default configuration');
+    }
+
+    const nyTaxRateId = nyTaxRate.tax_rate_id as string;
+
+    // Set up client tax settings WITH REVERSE CHARGE ENABLED
+    await context.db('client_tax_settings').insert({
+      client_id: clientId,
+      tenant: context.tenantId,
+      is_reverse_charge_applicable: true // This is the key setting
+    });
+
+    // Set up client tax rate relationship (would normally cause tax to be applied)
+    await context.db('client_tax_rates').insert({
+      client_tax_rates_id: uuidv4(),
+      client_id: clientId,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_default: true,
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now()
+    });
+
+    // Create a taxable service
+    const taxableService = await createTestService(context, {
+      service_name: 'Reverse Charge Taxable Service',
+      billing_method: 'fixed',
+      default_rate: 10000, // $100.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      tax_rate_id: nyTaxRateId
+    });
+
+    // Generate a manual invoice - this WILL pass regionCode internally
+    const manualInvoice = await generateManualInvoice({
+      clientId: clientId,
+      items: [
+        {
+          service_id: taxableService,
+          description: 'Service for reverse charge client',
+          quantity: 1,
+          rate: 10000 // $100.00
+        }
+      ]
+    });
+
+    await finalizeInvoice(manualInvoice.invoice_id);
+
+    const invoice = await context.db('invoices')
+      .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
+      .first();
+
+    expect(invoice).not.toBeNull();
+
+    // CRITICAL: Despite having a valid tax region and tax rate configured,
+    // reverse charge should result in ZERO tax
+    expect(Number(invoice!.subtotal)).toBe(10000); // $100.00
+    expect(Number(invoice!.tax)).toBe(0);          // $0.00 - reverse charge!
+    expect(Number(invoice!.total_amount)).toBe(10000); // $100.00
+
+    // Verify the invoice charge also has zero tax
+    const invoiceItems = await context.db('invoice_charges')
+      .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId });
+
+    expect(invoiceItems).toHaveLength(1);
+    expect(Number(invoiceItems[0].net_amount)).toBe(10000);
+    expect(Number(invoiceItems[0].tax_amount)).toBe(0); // Zero tax due to reverse charge
+  });
 });
