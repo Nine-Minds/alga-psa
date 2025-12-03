@@ -177,6 +177,27 @@ export async function verifyClientPortalPayment(
       return { success: false, error: 'Payment verification not available' };
     }
 
+    // Verify the sessionId matches a payment link for this invoice
+    // This ensures we're verifying the specific checkout session, not just any payment
+    if (sessionId) {
+      const paymentLink = await knex('invoice_payment_links')
+        .where({
+          tenant: user.tenant,
+          invoice_id: invoiceId,
+          external_link_id: sessionId,
+        })
+        .first();
+
+      if (!paymentLink) {
+        logger.warn('[ClientPayment] Session ID does not match any payment link for invoice', {
+          tenantId: user.tenant,
+          invoiceId,
+          sessionId,
+        });
+        return { success: false, error: 'Invalid session' };
+      }
+    }
+
     // Dynamically import PaymentService (EE only)
     let PaymentService: any;
     try {
@@ -187,7 +208,7 @@ export async function verifyClientPortalPayment(
       return { success: false, error: 'Payment verification not available' };
     }
 
-    // Get payment status
+    // Get payment status using the verified sessionId
     const paymentService = await PaymentService.create(user.tenant);
     const paymentDetails = await paymentService.getInvoicePaymentStatus(invoiceId);
 

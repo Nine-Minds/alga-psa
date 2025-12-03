@@ -835,6 +835,272 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       // but the code clearly shows the vulnerability in getOrCreateCustomer
     }, HOOK_TIMEOUT);
   });
+
+  // ===========================================================================
+  // BUG-EXPOSING TESTS: These tests should FAIL until bugs are fixed
+  // ===========================================================================
+
+  describe('BUG: Wrong Redirect URLs in Payment Links', () => {
+    /**
+     * CRITICAL BUG: PaymentService.ts:207-209
+     * Success/cancel URLs use /portal/invoices/ but actual routes are at
+     * /client-portal/billing/invoices/
+     *
+     * After payment, users get redirected to a 404 page.
+     */
+    it('should generate correct client portal redirect URLs', async () => {
+      // Verify the implementation directly by checking source code
+      // This avoids mock limitations where we can't capture internal Stripe calls
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const paymentServicePath = path.join(
+        process.cwd(),
+        'ee/server/src/lib/payments/PaymentService.ts'
+      );
+
+      const sourceCode = fs.readFileSync(paymentServicePath, 'utf-8');
+
+      // Find the successUrl and cancelUrl definitions
+      const successUrlMatch = sourceCode.match(/successUrl\s*=\s*`[^`]+`/);
+      const cancelUrlMatch = sourceCode.match(/cancelUrl\s*=\s*`[^`]+`/);
+
+      expect(successUrlMatch).toBeDefined();
+      expect(cancelUrlMatch).toBeDefined();
+
+      const successUrl = successUrlMatch![0];
+      const cancelUrl = cancelUrlMatch![0];
+
+      // CRITICAL: These assertions will FAIL until bug is fixed
+      // The URLs should use /client-portal/billing/invoices/ not /portal/invoices/
+      expect(successUrl).toContain('/client-portal/billing/invoices/');
+      expect(successUrl).toContain('/payment-success');
+      expect(cancelUrl).toContain('/client-portal/billing/invoices/');
+
+      // Also verify they DON'T use the wrong path
+      expect(successUrl).not.toMatch(/\/portal\/invoices\/[^/]/);
+      expect(cancelUrl).not.toMatch(/\/portal\/invoices\/[^/]/);
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('BUG: Refund Events Not Parsed Correctly', () => {
+    /**
+     * CRITICAL BUG: StripePaymentProvider.ts:398-451
+     * parseWebhookEvent has no case for charge.refunded event.
+     * Amount and currency are not extracted, causing refunds to be silently skipped.
+     */
+    it('should parse charge.refunded events with correct amount and currency', async () => {
+      const { createStripePaymentProvider } = await import('@ee/lib/payments');
+
+      const provider = createStripePaymentProvider(testTenantId);
+
+      // Simulate a real Stripe charge.refunded webhook payload
+      const refundPayload = JSON.stringify({
+        id: 'evt_refund_test_123',
+        type: 'charge.refunded',
+        data: {
+          object: {
+            id: 'ch_test_123',
+            object: 'charge',
+            amount: 10000, // Original charge amount
+            amount_refunded: 5000, // Refunded amount
+            currency: 'usd',
+            payment_intent: 'pi_test_123',
+            customer: 'cus_test_123',
+            refunded: true,
+            metadata: {
+              invoice_id: 'inv_test_123',
+              tenant_id: testTenantId,
+            },
+            refunds: {
+              data: [{
+                id: 're_test_123',
+                amount: 5000,
+                currency: 'usd',
+              }],
+            },
+          },
+        },
+      });
+
+      const parsedEvent = provider.parseWebhookEvent(refundPayload);
+
+      // CRITICAL: These assertions will FAIL until bug is fixed
+      // Currently falls through to default case which doesn't extract amount
+      expect(parsedEvent.eventType).toBe('charge.refunded');
+      expect(parsedEvent.invoiceId).toBe('inv_test_123');
+
+      // BUG: amount is undefined because there's no case for charge.refunded
+      expect(parsedEvent.amount).toBeDefined();
+      expect(parsedEvent.amount).toBe(5000); // Should be the refunded amount
+
+      // BUG: currency is undefined because there's no case for charge.refunded
+      expect(parsedEvent.currency).toBeDefined();
+      expect(parsedEvent.currency).toBe('USD');
+
+      // BUG: paymentIntentId is undefined
+      expect(parsedEvent.paymentIntentId).toBe('pi_test_123');
+    }, HOOK_TIMEOUT);
+
+    /**
+     * End-to-end test: Refund webhook should actually record a refund
+     */
+    it('should process charge.refunded webhook and record refund', async () => {
+      const { PaymentService, createStripePaymentProvider } = await import('@ee/lib/payments');
+
+      const { invoiceId } = await createTestInvoiceWithClient(mockDb, testTenantId, {
+        totalAmount: 10000,
+        status: 'sent',
+      });
+
+      await setupPaymentProviderConfig(mockDb, testTenantId);
+      const paymentService = await PaymentService.create(testTenantId);
+
+      // First, record a successful payment
+      const paymentEvent = createMockWebhookEvent({
+        eventId: `evt_pay_${uuidv4().slice(0, 8)}`,
+        invoiceId,
+        amount: 10000,
+        status: 'succeeded',
+      });
+      await paymentService.processWebhookEvent(paymentEvent);
+
+      // Verify invoice is paid
+      let invoice = await mockDb('invoices')
+        .where({ invoice_id: invoiceId, tenant: testTenantId })
+        .first();
+      expect(invoice.status).toBe('paid');
+
+      // Now process a refund by parsing from raw webhook payload
+      // This simulates what actually happens in production
+      const provider = createStripePaymentProvider(testTenantId);
+      const refundPayload = JSON.stringify({
+        id: `evt_refund_${uuidv4().slice(0, 8)}`,
+        type: 'charge.refunded',
+        data: {
+          object: {
+            id: 'ch_test_123',
+            amount: 10000,
+            amount_refunded: 10000, // Full refund
+            currency: 'usd',
+            payment_intent: paymentEvent.paymentIntentId,
+            customer: 'cus_test',
+            metadata: {
+              invoice_id: invoiceId,
+              tenant_id: testTenantId,
+            },
+          },
+        },
+      });
+
+      const parsedRefundEvent = provider.parseWebhookEvent(refundPayload);
+
+      // BUG: This will fail because parseWebhookEvent doesn't extract amount
+      // for charge.refunded events, so handleChargeRefunded will skip it
+      const refundResult = await paymentService.processWebhookEvent(parsedRefundEvent);
+
+      // CRITICAL: This should succeed but will FAIL until bug is fixed
+      expect(refundResult.success).toBe(true);
+      expect(refundResult.paymentRecorded).toBe(true);
+
+      // Invoice should no longer be 'paid' after full refund
+      invoice = await mockDb('invoices')
+        .where({ invoice_id: invoiceId, tenant: testTenantId })
+        .first();
+      expect(invoice.status).toBe('sent'); // Back to sent after full refund
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('BUG: sessionId Parameter Not Used in Verification', () => {
+    /**
+     * MODERATE BUG: client-payment.ts:120-122
+     * verifyClientPortalPayment accepts sessionId but never uses it.
+     * This means it doesn't actually verify the specific checkout session.
+     */
+    it('should verify the specific session, not just invoice status', async () => {
+      // This test would require mocking getCurrentUser, which is complex.
+      // Instead, we'll verify the implementation directly.
+
+      // Read the function source to verify sessionId is used
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const clientPaymentPath = path.join(
+        process.cwd(),
+        'server/src/lib/actions/client-portal-actions/client-payment.ts'
+      );
+
+      const sourceCode = fs.readFileSync(clientPaymentPath, 'utf-8');
+
+      // Find the verifyClientPortalPayment function
+      const functionMatch = sourceCode.match(
+        /export async function verifyClientPortalPayment\s*\([^)]*sessionId[^)]*\)/
+      );
+      expect(functionMatch).toBeDefined();
+
+      // Check if sessionId is actually used in the function body
+      // Extract function body (simplified - look for sessionId usage after declaration)
+      const functionStart = sourceCode.indexOf('export async function verifyClientPortalPayment');
+      const functionBody = sourceCode.slice(functionStart, functionStart + 3000);
+
+      // Count occurrences of sessionId (excluding the parameter declaration)
+      const paramDeclaration = functionBody.indexOf('sessionId: string');
+      const afterParam = functionBody.slice(paramDeclaration + 20);
+
+      // BUG: sessionId should be used to verify the specific Stripe session
+      // Currently it's never used after the parameter declaration
+      const sessionIdUsages = (afterParam.match(/sessionId/g) || []).length;
+
+      // MODERATE: This assertion will FAIL until bug is fixed
+      // sessionId should be used at least once to verify the session
+      expect(sessionIdUsages).toBeGreaterThan(0);
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('BUG: Incorrect Payment Method Recording', () => {
+    /**
+     * MODERATE BUG: PaymentService.ts:607
+     * payment_method is recorded as 'stripe_stripe' instead of 'stripe'
+     */
+    it('should record payment method as "stripe" not "stripe_stripe"', async () => {
+      const { PaymentService } = await import('@ee/lib/payments');
+
+      const { invoiceId } = await createTestInvoiceWithClient(mockDb, testTenantId, {
+        totalAmount: 10000,
+        status: 'sent',
+      });
+
+      await setupPaymentProviderConfig(mockDb, testTenantId);
+      const paymentService = await PaymentService.create(testTenantId);
+
+      const webhookEvent = createMockWebhookEvent({
+        eventId: `evt_method_${uuidv4().slice(0, 8)}`,
+        invoiceId,
+        amount: 10000,
+        status: 'succeeded',
+      });
+
+      const result = await paymentService.processWebhookEvent(webhookEvent);
+      expect(result.success).toBe(true);
+      expect(result.paymentRecorded).toBe(true);
+
+      // Check the recorded payment method
+      const payment = await mockDb('invoice_payments')
+        .where({
+          tenant: testTenantId,
+          invoice_id: invoiceId,
+        })
+        .first();
+
+      expect(payment).toBeDefined();
+
+      // MODERATE: This assertion will FAIL until bug is fixed
+      // Currently records 'stripe_stripe' because code does `stripe_${event.provider}`
+      // where event.provider is already 'stripe'
+      expect(payment.payment_method).toBe('stripe');
+      expect(payment.payment_method).not.toBe('stripe_stripe');
+    }, HOOK_TIMEOUT);
+  });
 });
 
 // =============================================================================

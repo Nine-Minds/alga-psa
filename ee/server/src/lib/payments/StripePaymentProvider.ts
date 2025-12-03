@@ -442,6 +442,18 @@ export class StripePaymentProvider implements PaymentProvider {
         break;
       }
 
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge;
+        invoiceId = charge.metadata?.invoice_id;
+        // Use amount_refunded to get the refunded amount
+        amount = charge.amount_refunded;
+        currency = charge.currency?.toUpperCase();
+        customerId = charge.customer as string;
+        paymentIntentId = charge.payment_intent as string;
+        status = charge.refunded ? 'refunded' : 'partially_refunded';
+        break;
+      }
+
       default:
         // For other events, try to extract common fields
         const obj = event.data.object as any;

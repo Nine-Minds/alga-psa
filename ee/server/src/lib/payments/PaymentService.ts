@@ -203,10 +203,10 @@ export class PaymentService {
     const effectiveExpirationHours = Math.min(settings.paymentLinkExpirationHours, STRIPE_MAX_EXPIRATION_HOURS);
     const expiresAt = new Date(Date.now() + effectiveExpirationHours * 60 * 60 * 1000);
 
-    // Build success URL
+    // Build success URL - must match client portal routes
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const successUrl = `${baseUrl}/portal/invoices/${invoiceId}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${baseUrl}/portal/invoices/${invoiceId}`;
+    const successUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}`;
 
     // Create payment link
     const request: CreatePaymentLinkRequest = {
@@ -604,7 +604,7 @@ export class PaymentService {
           tenant: this.tenantId,
           invoice_id: event.invoiceId,
           amount: event.amount,
-          payment_method: `stripe_${event.provider}`,
+          payment_method: event.provider, // Provider is already 'stripe'
           payment_date: new Date(),
           reference_number: event.paymentIntentId,
           notes: `Stripe payment via ${event.eventType}`,
