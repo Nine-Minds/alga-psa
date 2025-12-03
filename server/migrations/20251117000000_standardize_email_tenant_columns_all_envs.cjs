@@ -89,14 +89,23 @@ exports.up = async function(knex) {
         console.log(`  - Dropped unique constraint ${constraint.conname} from ${tableName}`);
       }
 
-      // Drop indexes that reference tenant_id (after constraints are dropped)
+      // Drop indexes that reference tenant_id (but not those backed by constraints, which are already dropped)
+      // Filter out indexes that are automatically created by constraints
       const indexes = await knex.raw(`
-        SELECT indexname, indexdef
-        FROM pg_indexes
-        WHERE schemaname = 'public'
-        AND tablename = ?
-        AND indexdef LIKE '%tenant_id%'
-      `, [tableName]);
+        SELECT i.indexname, i.indexdef
+        FROM pg_indexes i
+        WHERE i.schemaname = 'public'
+        AND i.tablename = ?
+        AND i.indexdef LIKE '%tenant_id%'
+        AND NOT EXISTS (
+          SELECT 1 FROM pg_constraint con
+          JOIN pg_class rel ON rel.oid = con.conrelid
+          JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+          WHERE nsp.nspname = 'public'
+          AND rel.relname = ?
+          AND con.conname = i.indexname
+        )
+      `, [tableName, tableName]);
 
       for (const idx of indexes.rows) {
         await knex.raw(`DROP INDEX IF EXISTS ${idx.indexname}`);
