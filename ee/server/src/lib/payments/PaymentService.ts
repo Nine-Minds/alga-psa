@@ -45,8 +45,8 @@ interface InvoiceData {
  * Client data needed for payment operations.
  */
 interface ClientData {
-  company_id: string;
-  company_name: string;
+  client_id: string;
+  client_name: string;
   billing_email?: string;
   location_email?: string;
 }
@@ -193,12 +193,15 @@ export class PaymentService {
 
     const clientEmail = client.billing_email || client.location_email;
     if (!clientEmail) {
-      throw new Error(`No email address for client: ${client.company_name}`);
+      throw new Error(`No email address for client: ${client.client_name}`);
     }
 
     // Get payment settings for expiration
     const settings = await this.getPaymentSettings();
-    const expiresAt = new Date(Date.now() + settings.paymentLinkExpirationHours * 60 * 60 * 1000);
+    // Stripe Checkout Sessions have a max expiration of 24 hours
+    const STRIPE_MAX_EXPIRATION_HOURS = 24;
+    const effectiveExpirationHours = Math.min(settings.paymentLinkExpirationHours, STRIPE_MAX_EXPIRATION_HOURS);
+    const expiresAt = new Date(Date.now() + effectiveExpirationHours * 60 * 60 * 1000);
 
     // Build success URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -211,14 +214,14 @@ export class PaymentService {
       amount: invoice.total_amount,
       currency: invoice.currency || 'USD',
       description: `Invoice ${invoice.invoice_number}`,
-      clientId: client.company_id,
+      clientId: client.client_id,
       clientEmail,
-      clientName: client.company_name,
+      clientName: client.client_name,
       metadata: {
         tenant_id: this.tenantId,
         invoice_id: invoiceId,
         invoice_number: invoice.invoice_number,
-        client_id: client.company_id,
+        client_id: client.client_id,
       },
       expiresAt,
       successUrl,
@@ -345,6 +348,9 @@ export class PaymentService {
       case 'checkout.session.expired':
         return this.handleCheckoutExpired(event);
 
+      case 'charge.refunded':
+        return this.handleChargeRefunded(event);
+
       default:
         logger.debug('[PaymentService] Unhandled webhook event type', {
           tenantId: this.tenantId,
@@ -432,6 +438,110 @@ export class PaymentService {
   }
 
   /**
+   * Handles charge.refunded event - records refunds and updates invoice status.
+   */
+  private async handleChargeRefunded(event: PaymentWebhookEvent): Promise<WebhookProcessingResult> {
+    if (!event.invoiceId || !event.amount) {
+      logger.warn('[PaymentService] Refund event missing invoice_id or amount', {
+        tenantId: this.tenantId,
+        eventId: event.eventId,
+      });
+      return { success: true, paymentRecorded: false };
+    }
+
+    const invoice = await this.getInvoice(event.invoiceId);
+    if (!invoice) {
+      throw new Error(`Invoice not found: ${event.invoiceId}`);
+    }
+
+    // Record the refund using a transaction
+    const refundId = await this.knex.transaction(async (trx) => {
+      // Insert refund record (negative amount to indicate refund)
+      const [refund] = await trx('invoice_payments')
+        .insert({
+          tenant: this.tenantId,
+          invoice_id: event.invoiceId,
+          amount: -event.amount!, // Negative amount for refund
+          payment_method: `stripe_refund`,
+          payment_date: new Date(),
+          reference_number: event.paymentIntentId || event.eventId,
+          notes: `Stripe refund via ${event.eventType}`,
+          status: 'refunded',
+        })
+        .returning('payment_id');
+
+      // Calculate net payments after refund
+      const totalPayments = await trx('invoice_payments')
+        .where({
+          tenant: this.tenantId,
+          invoice_id: event.invoiceId,
+        })
+        .sum('amount as total')
+        .first();
+
+      const netPaid = parseInt(totalPayments?.total || '0', 10);
+
+      // Update invoice status based on net payment
+      let newStatus = invoice.status;
+      if (netPaid <= 0) {
+        // Full refund or overpayment refunded - back to sent
+        newStatus = 'sent';
+      } else if (netPaid < invoice.total_amount) {
+        // Partial refund - partially applied
+        newStatus = 'partially_applied';
+      }
+      // If netPaid >= total_amount, stay as 'paid'
+
+      if (newStatus !== invoice.status) {
+        await trx('invoices')
+          .where({
+            tenant: this.tenantId,
+            invoice_id: event.invoiceId,
+          })
+          .update({
+            status: newStatus,
+            updated_at: trx.fn.now(),
+          });
+      }
+
+      // Record refund transaction
+      await recordTransaction(
+        trx,
+        {
+          clientId: invoice.client_id,
+          invoiceId: event.invoiceId,
+          amount: -event.amount!,
+          type: 'refund',
+          description: `Refund issued via Stripe - ${event.paymentIntentId || event.eventId}`,
+          metadata: {
+            payment_provider: 'stripe',
+            stripe_event_id: event.eventId,
+            currency: event.currency,
+          },
+        },
+        this.tenantId
+      );
+
+      logger.info('[PaymentService] Refund recorded', {
+        tenantId: this.tenantId,
+        invoiceId: event.invoiceId,
+        refundId: refund.payment_id,
+        amount: event.amount,
+        newStatus,
+      });
+
+      return refund.payment_id;
+    });
+
+    return {
+      success: true,
+      paymentRecorded: true,
+      paymentId: refundId,
+      invoiceId: event.invoiceId,
+    };
+  }
+
+  /**
    * Records a payment from a webhook event.
    */
   private async recordPaymentFromWebhook(event: PaymentWebhookEvent): Promise<WebhookProcessingResult> {
@@ -444,8 +554,50 @@ export class PaymentService {
       throw new Error(`Invoice not found: ${event.invoiceId}`);
     }
 
-    // Use transaction for atomicity
+    // Validate invoice status - reject payments for non-payable invoices
+    const nonPayableStatuses = ['cancelled', 'draft', 'void'];
+    if (nonPayableStatuses.includes(invoice.status)) {
+      return {
+        success: false,
+        paymentRecorded: false,
+        error: `Cannot accept payment for invoice with status: ${invoice.status}`,
+      };
+    }
+
+    // Validate currency matches
+    const invoiceCurrency = (invoice.currency || 'USD').toUpperCase();
+    const paymentCurrency = (event.currency || 'USD').toUpperCase();
+    if (invoiceCurrency !== paymentCurrency) {
+      return {
+        success: false,
+        paymentRecorded: false,
+        error: `Currency mismatch: invoice is ${invoiceCurrency}, payment is ${paymentCurrency}`,
+      };
+    }
+
+    // Validate amount - warn if significantly different from expected
+    // For now, we allow partial payments but log a warning for mismatches
+    if (event.amount > invoice.total_amount * 1.01) { // Allow 1% tolerance for rounding
+      logger.warn('[PaymentService] Payment amount exceeds invoice total', {
+        tenantId: this.tenantId,
+        invoiceId: event.invoiceId,
+        paymentAmount: event.amount,
+        invoiceTotal: invoice.total_amount,
+      });
+    }
+
+    // Use transaction for atomicity with row locking to prevent race conditions
     const paymentId = await this.knex.transaction(async (trx) => {
+      // Lock the invoice row to prevent concurrent payment processing
+      // This ensures only one webhook at a time can update the invoice status
+      await trx('invoices')
+        .where({
+          tenant: this.tenantId,
+          invoice_id: event.invoiceId,
+        })
+        .forUpdate()
+        .first();
+
       // Insert payment record
       const [payment] = await trx('invoice_payments')
         .insert({
@@ -459,7 +611,7 @@ export class PaymentService {
         })
         .returning('payment_id');
 
-      // Calculate total payments
+      // Calculate total payments (now safe due to row lock)
       const totalPayments = await trx('invoice_payments')
         .where({
           tenant: this.tenantId,
@@ -562,9 +714,9 @@ export class PaymentService {
    * Gets a client by ID.
    */
   private async getClient(clientId: string): Promise<ClientData | null> {
-    const result = await this.knex<ClientData>('companies')
+    const result = await this.knex<ClientData>('clients')
       .where('tenant', this.tenantId)
-      .where('company_id', clientId)
+      .where('client_id', clientId)
       .first();
     return result || null;
   }

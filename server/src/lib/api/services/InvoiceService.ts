@@ -36,6 +36,7 @@ import {
   SendInvoice,
   ApplyCredit,
   InvoicePayment,
+  InvoiceRefund,
   InvoiceFilter,
   BulkInvoiceStatusUpdate,
   BulkInvoiceSend,
@@ -720,14 +721,18 @@ export class InvoiceService extends BaseService<IInvoice> {
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .sum('amount as total_paid');
 
-      const totalPaid = payments[0]?.total_paid || 0;
+      const totalPayments = Number(payments[0]?.total_paid || 0);
+
+      // Include credits in total paid calculation
+      const creditApplied = Number(invoice.credit_applied || 0);
+      const totalPaid = totalPayments + creditApplied;
 
       // Update invoice status
       let newStatus = invoice.status;
       if (totalPaid >= invoice.total_amount) {
         newStatus = 'paid';
       } else if (totalPaid > 0) {
-        newStatus = 'partially_applied'; // Using schema-defined status
+        newStatus = 'partially_applied';
       }
 
       await trx('invoices')
@@ -808,12 +813,22 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Update invoice credit applied
       const newCreditApplied = (invoice.credit_applied || 0) + data.credit_amount;
-      const newTotal = invoice.total_amount - newCreditApplied;
 
-      // Update invoice status
+      // Calculate total payments to determine correct status
+      const payments = await trx('invoice_payments')
+        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+        .sum('amount as total_paid');
+      const totalPayments = Number(payments[0]?.total_paid || 0);
+
+      // Total paid includes both credits and payments
+      const totalPaid = newCreditApplied + totalPayments;
+
+      // Update invoice status based on total paid
       let newStatus = invoice.status;
-      if (newTotal <= 0) {
+      if (totalPaid >= invoice.total_amount) {
         newStatus = 'paid';
+      } else if (totalPaid > 0 && invoice.status !== 'cancelled') {
+        newStatus = 'partially_applied';
       }
 
       await trx('invoices')
@@ -843,6 +858,113 @@ export class InvoiceService extends BaseService<IInvoice> {
           invoiceId: data.invoice_id,
           creditAmount: data.credit_amount,
           newTotal,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      return this.getById(data.invoice_id, context) as Promise<IInvoice>;
+    });
+  }
+
+  /**
+   * Record a refund for an invoice payment
+   * This handles non-Stripe refunds (manual refunds, check refunds, etc.)
+   */
+  async recordRefund(data: InvoiceRefund, context: ServiceContext): Promise<IInvoice> {
+    await this.validatePermissions(context, 'invoice', 'refund');
+
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const invoice = await trx('invoices')
+        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+        .first();
+
+      if (!invoice) {
+        throw new Error('Invoice not found');
+      }
+
+      // Validate refund amount
+      if (data.refund_amount <= 0) {
+        throw new Error('Refund amount must be positive');
+      }
+
+      // Calculate current payments
+      const payments = await trx('invoice_payments')
+        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+        .sum('amount as total_paid');
+      const totalPayments = Number(payments[0]?.total_paid || 0);
+
+      if (data.refund_amount > totalPayments) {
+        throw new Error('Refund amount cannot exceed total payments');
+      }
+
+      // Insert refund as negative payment
+      const refundData = {
+        payment_id: uuidv4(),
+        invoice_id: data.invoice_id,
+        amount: -data.refund_amount, // Negative amount for refund
+        payment_method: 'refund',
+        payment_date: new Date().toISOString().split('T')[0],
+        reference_number: data.reference_number,
+        notes: data.reason,
+        status: 'refunded',
+        created_by: context.userId,
+        tenant: context.tenant,
+        created_at: new Date()
+      };
+
+      await trx('invoice_payments').insert(refundData);
+
+      // Calculate net payments after refund
+      const netPayments = await trx('invoice_payments')
+        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+        .sum('amount as total_paid');
+      const netPaid = Number(netPayments[0]?.total_paid || 0);
+
+      // Include credits in total paid
+      const creditApplied = Number(invoice.credit_applied || 0);
+      const totalPaid = netPaid + creditApplied;
+
+      // Update invoice status based on net paid amount
+      let newStatus: string;
+      if (totalPaid <= 0) {
+        newStatus = 'sent'; // Back to sent after full refund
+      } else if (totalPaid >= invoice.total_amount) {
+        newStatus = 'paid';
+      } else {
+        newStatus = 'partially_applied';
+      }
+
+      await trx('invoices')
+        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+        .update({
+          status: newStatus,
+          updated_by: context.userId,
+          updated_at: new Date()
+        });
+
+      // Audit log
+      await auditLog(trx, {
+        userId: context.userId,
+        operation: 'UPDATE',
+        tableName: 'invoices',
+        recordId: data.invoice_id,
+        changedData: { status: newStatus, refund_amount: data.refund_amount },
+        details: { action: 'invoice.refund_recorded', reason: data.reason }
+      });
+
+      // Publish event
+      await publishEvent({
+        eventType: 'INVOICE_REFUND_RECORDED',
+        payload: {
+          tenantId: context.tenant,
+          invoiceId: data.invoice_id,
+          refundAmount: data.refund_amount,
+          reason: data.reason,
+          netPaid,
+          newStatus,
           userId: context.userId,
           timestamp: new Date().toISOString()
         }
@@ -1404,9 +1526,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     const validTransitions: Record<string, string[]> = {
       'draft': ['sent', 'cancelled'],
       'sent': ['paid', 'partially_applied', 'overdue', 'cancelled'],
-      'partially_applied': ['paid', 'overdue', 'cancelled'],
+      'partially_applied': ['paid', 'sent', 'overdue', 'cancelled'], // 'sent' for full refund
       'overdue': ['paid', 'partially_applied', 'cancelled'],
-      'paid': [],
+      'paid': ['partially_applied', 'sent'], // Allow refund transitions
       'cancelled': [],
       'pending': ['sent', 'cancelled'],
       'prepayment': ['paid', 'cancelled']
