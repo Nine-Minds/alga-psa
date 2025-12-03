@@ -870,7 +870,15 @@ export async function hardDeleteInvoice(invoiceId: string) {
       })
       .delete();
 
-    // 10. Delete invoice record
+    // 10. Nullify invoice_id in payment_webhook_events
+    const hasPaymentWebhookEvents = await trx.schema.hasTable('payment_webhook_events');
+    if (hasPaymentWebhookEvents) {
+      await trx('payment_webhook_events')
+        .where({ invoice_id: invoiceId, tenant })
+        .update({ invoice_id: null });
+    }
+
+    // 11. Delete invoice record
     await trx('invoices')
       .where({
         invoice_id: invoiceId,
