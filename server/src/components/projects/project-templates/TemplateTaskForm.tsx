@@ -191,6 +191,7 @@ export function TemplateTaskForm({
                 Service (for time entries)
               </Label>
               <CustomSelect
+                id="template-task-service-select"
                 value={serviceId}
                 onValueChange={setServiceId}
                 options={[

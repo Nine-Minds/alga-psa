@@ -7,8 +7,9 @@
  * the service_id for automatic time entry service prefill.
  *
  * - Column is nullable with default NULL (existing rows get NULL automatically)
- * - Foreign key references service_catalog with Citus-style ['tenant', 'service_id'] order
- * - ON DELETE SET NULL ensures template tasks aren't orphaned if a service is deleted
+ * - Foreign key references service_catalog
+ * - Index added for efficient lookups
+ * - Service deletion handling is done in application code
  */
 
 exports.up = function(knex) {
@@ -19,8 +20,7 @@ exports.up = function(knex) {
     // Multi-tenant foreign key - Citus style: ['tenant', 'service_id'] order
     table.foreign(['tenant', 'service_id'])
       .references(['tenant', 'service_id'])
-      .inTable('service_catalog')
-      .onDelete('SET NULL');
+      .inTable('service_catalog');
 
     // Index for lookups (same column order)
     table.index(['tenant', 'service_id'], 'idx_project_template_tasks_tenant_service');

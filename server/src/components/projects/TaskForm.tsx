@@ -980,6 +980,7 @@ export default function TaskForm({
               Service (for time entries)
             </label>
             <CustomSelect
+              id="task-service-select"
               value={selectedServiceId || ''}
               onValueChange={(value) => setSelectedServiceId(value || null)}
               options={[
