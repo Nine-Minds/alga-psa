@@ -17,7 +17,7 @@ export interface TabGroup {
 }
 
 export interface CustomTabsProps {
-  tabs: TabContent[];
+  tabs?: TabContent[];
   groups?: TabGroup[];
   defaultTab?: string;
   onTabChange?: (tabValue: string) => void;
@@ -51,10 +51,14 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     if (groups && groups.length > 0) {
       return groups.flatMap(group => group.tabs);
     }
-    return tabs;
+    return tabs || [];
   }, [tabs, groups]);
 
-  const [value, setValue] = React.useState(defaultTab || allTabs[0].label);
+  const [value, setValue] = React.useState(() => {
+    if (defaultTab) return defaultTab;
+    if (allTabs && allTabs.length > 0) return allTabs[0].label;
+    return '';
+  });
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
 
@@ -127,6 +131,11 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
 
   // Render grouped tabs if groups are provided and orientation is vertical
   const renderGroupedTabs = groups && groups.length > 0 && orientation === 'vertical';
+
+  // Early return if no tabs are available (after all hooks)
+  if (allTabs.length === 0) {
+    return null;
+  }
 
   return (
     <Tabs.Root 
