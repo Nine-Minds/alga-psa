@@ -42,6 +42,7 @@ export interface ContractWizardData {
   end_date?: string;
   description?: string;
   billing_frequency: string;
+  currency_code: string;
   po_number?: string;
   po_amount?: number;
   po_required?: boolean;
@@ -115,6 +116,7 @@ export function ContractWizard({
     end_date: undefined,
     description: '',
     billing_frequency: 'monthly',
+    currency_code: 'USD',
     fixed_services: [],
     fixed_base_rate: undefined,
     enable_proration: true,
@@ -158,6 +160,7 @@ export function ContractWizard({
       end_date: undefined,
       description: '',
       billing_frequency: 'monthly',
+      currency_code: 'USD',
       fixed_services: [],
       fixed_base_rate: undefined,
       enable_proration: true,
@@ -236,6 +239,7 @@ export function ContractWizard({
     minimum_billable_time: wizardData.minimum_billable_time,
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,
+    currency_code: wizardData.currency_code,
     template_id: wizardData.template_id,
   });
 

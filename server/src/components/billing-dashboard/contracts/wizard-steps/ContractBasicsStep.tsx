@@ -12,6 +12,7 @@ import { ContractWizardData } from '../ContractWizard';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
 import {
   Calendar,
   Building2,
@@ -21,6 +22,7 @@ import {
   Repeat,
   Info,
   Sparkles,
+  Coins,
 } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
@@ -190,7 +192,15 @@ export function ContractBasicsStep({
           id="contract-basics-client-picker"
           clients={clients}
           selectedClientId={data.client_id || data.company_id || null}
-          onSelect={(id) => updateData({ client_id: id || '', company_id: id || '' })}
+          onSelect={(id) => {
+            const selectedClient = clients.find((c) => c.client_id === id);
+            const clientCurrency = selectedClient?.default_currency_code || data.currency_code;
+            updateData({
+              client_id: id || '',
+              company_id: id || '',
+              currency_code: clientCurrency,
+            });
+          }}
           filterState={filterState}
           onFilterStateChange={setFilterState}
           clientTypeFilter={clientTypeFilter}
@@ -242,6 +252,24 @@ export function ContractBasicsStep({
           className="w-full"
         />
         <p className="text-xs text-gray-500">How often should this contract be billed?</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="currency" className="flex items-center gap-2">
+          <Coins className="h-4 w-4" />
+          Currency *
+        </Label>
+        <CustomSelect
+          id="currency"
+          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+          onValueChange={(value: string) => updateData({ currency_code: value })}
+          value={data.currency_code}
+          placeholder="Select currency"
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500">
+          Currency for this contract. Defaults to the client's preferred currency.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -348,7 +376,9 @@ export function ContractBasicsStep({
             <div className="space-y-2">
               <Label htmlFor="po_amount">PO Amount</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  {getCurrencySymbol(data.currency_code)}
+                </span>
                 <Input
                   id="po_amount"
                   type="text"
@@ -402,6 +432,11 @@ export function ContractBasicsStep({
                 ?.label || data.billing_frequency}
             </p>
             <p>
+              <strong>Currency:</strong>{' '}
+              {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
+                data.currency_code}
+            </p>
+            <p>
               <strong>Period:</strong>{' '}
               {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}
               {data.end_date
@@ -421,6 +456,7 @@ export function ContractBasicsStep({
                 {data.po_amount && (
                   <p>
                     <strong>PO Amount:</strong>{' '}
+                    {getCurrencySymbol(data.currency_code)}
                     {(data.po_amount / 100).toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,

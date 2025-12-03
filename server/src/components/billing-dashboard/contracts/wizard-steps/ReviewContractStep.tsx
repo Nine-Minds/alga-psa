@@ -8,7 +8,7 @@ import {
   Building2,
   FileText,
   Calendar,
-  DollarSign,
+  Coins,
   Clock,
   Package,
   Activity,
@@ -16,6 +16,7 @@ import {
   FileCheck,
   Repeat,
 } from 'lucide-react';
+import { getCurrencySymbol, CURRENCY_OPTIONS } from 'server/src/constants/currency';
 import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 import { getClients } from 'server/src/lib/actions/clientAction';
@@ -48,9 +49,11 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     void loadClientName();
   }, [data.client_id, data.company_id]);
 
+  const currencySymbol = getCurrencySymbol(data.currency_code);
+
   const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return '$0.00';
-    return `$${(cents / 100).toFixed(2)}`;
+    if (!cents) return `${currencySymbol}0.00`;
+    return `${currencySymbol}${(cents / 100).toFixed(2)}`;
   };
 
   const formatBucketSummary = (
@@ -140,6 +143,17 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </div>
           </div>
           <div className="flex items-start gap-2">
+            <Coins className="h-4 w-4 mt-0.5 text-gray-400" />
+            <div>
+              <p className="text-gray-600">Currency</p>
+              <p className="font-medium">
+                {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
+                  data.currency_code ||
+                  'Not specified'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
             <Calendar className="h-4 w-4 mt-0.5 text-gray-400" />
             <div>
               <p className="text-gray-600">Start Date</p>
@@ -193,7 +207,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-gray-400" />
+              <Coins className="h-4 w-4 text-gray-400" />
               <span className="font-medium">Monthly Base Rate:</span>
               <span>{formatCurrency(data.fixed_base_rate)}</span>
             </div>

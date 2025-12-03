@@ -54,6 +54,7 @@ export type ContractTemplateWizardSubmission = {
   contract_name: string;
   description?: string;
   billing_frequency?: string;
+  currency_code: string;
   fixed_services: TemplateFixedServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
   usage_services?: TemplateUsageServiceInput[];
@@ -100,6 +101,7 @@ export type ClientContractWizardSubmission = {
   company_id: string;
   start_date: string;
   billing_frequency?: string;
+  currency_code: string;
   end_date?: string;
   po_required?: boolean;
   po_number?: string;
@@ -205,6 +207,7 @@ export async function createContractTemplateFromWizard(
       template_name: submission.contract_name,
       template_description: submission.description ?? null,
       default_billing_frequency: submission.billing_frequency ?? 'monthly',
+      currency_code: submission.currency_code,
       template_status: isDraft ? 'draft' : 'published',
       template_metadata: null,
       created_at: nowIso,
@@ -566,6 +569,7 @@ export async function createClientContractFromWizard(
       contract_name: submission.contract_name,
       contract_description: submission.description ?? null,
       billing_frequency: submission.billing_frequency ?? 'monthly',
+      currency_code: submission.currency_code,
       is_active: !isDraft,
       status: isDraft ? 'draft' : 'active',
       is_template: false,
