@@ -16,7 +16,7 @@ import {
   TimeSheetStatus, 
   ITimeEntryWithWorkItemString 
 } from 'server/src/interfaces/timeEntry.interfaces';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
@@ -29,7 +29,7 @@ interface TimeEntryDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (timeEntry: Omit<ITimeEntry, 'tenant'>) => Promise<void>;
-  workItem: Omit<IWorkItem, 'tenant'>;
+  workItem: Omit<IExtendedWorkItem, 'tenant'>;
   date: Date;
   existingEntries?: ITimeEntryWithWorkItem[];
   timePeriod: ITimePeriodView;

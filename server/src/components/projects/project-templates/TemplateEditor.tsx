@@ -416,6 +416,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           priority_id: taskData.priority_id,
           assigned_to: taskData.assigned_to,
           template_status_mapping_id: statusMappingIdToUse,
+          service_id: taskData.service_id,
         });
         setTasks((prev) => [...prev, newTask]);
         taskId = newTask.template_task_id;

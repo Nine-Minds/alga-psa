@@ -26,6 +26,9 @@ interface EligiblePlanUI {
 /**
  * ContractInfoBanner displays information about which contract will be used
  * for a time entry. This is a read-only informational component.
+ *
+ * Note: This component only renders when serviceId is provided. If no service
+ * is selected, the parent should not render this component.
  */
 const ContractInfoBanner = memo(function ContractInfoBanner({
   workItemId,
@@ -43,9 +46,23 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
     loading?: boolean;
   }>({ loading: true });
 
+  // Track the serviceId that was used for the last fetch to prevent unnecessary reloads
+  const [lastFetchedServiceId, setLastFetchedServiceId] = useState<string | null | undefined>(undefined);
+
   useEffect(() => {
+    // Don't fetch if no service is selected - banner shouldn't show in this case
+    if (!serviceId) {
+      setContractInfo({ loading: false, noContract: true });
+      return;
+    }
+
+    // If we already fetched for this serviceId, don't show loading state again
+    const shouldShowLoading = lastFetchedServiceId !== serviceId;
+
     const fetchContractInfo = async () => {
-      setContractInfo({ loading: true });
+      if (shouldShowLoading) {
+        setContractInfo({ loading: true });
+      }
 
       // Get client ID if not provided
       let clientId = propClientId;
@@ -57,8 +74,9 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
         }
       }
 
-      if (!clientId || !serviceId) {
+      if (!clientId) {
         setContractInfo({ noContract: true, loading: false });
+        setLastFetchedServiceId(serviceId);
         return;
       }
 
@@ -94,15 +112,18 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
             loading: false
           });
         }
+        setLastFetchedServiceId(serviceId);
       } catch (error) {
         console.error('Error fetching contract info:', error);
         setContractInfo({ noContract: true, loading: false });
+        setLastFetchedServiceId(serviceId);
       }
     };
 
     fetchContractInfo();
-  }, [workItemId, workItemType, serviceId, entryDate, propClientId]);
+  }, [workItemId, workItemType, serviceId, entryDate, propClientId, lastFetchedServiceId]);
 
+  // Don't render anything if loading
   if (contractInfo.loading) {
     return (
       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md animate-pulse">
@@ -111,6 +132,7 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
     );
   }
 
+  // Show "no contract" message only when we have a service but couldn't find a matching contract
   if (contractInfo.noContract) {
     return (
       <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">

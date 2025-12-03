@@ -49,7 +49,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/compone
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
-import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { IExtendedWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
@@ -761,18 +761,19 @@ export default function TaskForm({
         return;
       }
 
-      const workItem: Omit<IWorkItem, 'tenant'> & {
-        project_name?: string;
-        phase_name?: string;
-        task_name?: string;
-      } = {
+      // Get the service name for the selected service
+      const selectedService = availableServices.find(s => s.service_id === selectedServiceId);
+
+      const workItem: Omit<IExtendedWorkItem, 'tenant'> = {
         work_item_id: task.task_id,
         type: 'project_task' as WorkItemType,
         name: `${task.task_name}`,
         description: '',  // Don't copy task description to time entry notes
         project_name: phase.phase_name, // Using phase name as a placeholder
         phase_name: phase.phase_name,
-        task_name: task.task_name
+        task_name: task.task_name,
+        service_id: selectedServiceId || task.service_id || null,
+        service_name: selectedService?.service_name || null,
       };
 
       openDrawer(

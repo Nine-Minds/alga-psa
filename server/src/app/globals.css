@@ -396,7 +396,7 @@ body,
 .ProseMirror:focus {
     outline: none !important;
     border: none !important;
-  box-shadow: none !important;
+    box-shadow: none !important;
 }
 
 /* Add this to your globals.css file */

@@ -424,21 +424,6 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
         </div>
 
-        {/* Service Prefill Indicator - only shown for new entries with prefilled service */}
-        {isNewEntry && entry?._isServicePrefilled && (
-          <div className="p-3 bg-green-50 border border-green-100 rounded-md">
-            <div className="flex items-center">
-              <Info className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-              <p className="text-sm text-green-700">
-                Service prefilled from task configuration.
-                {entry?._serviceOverridden && (
-                  <span className="text-yellow-600 ml-1">(Modified)</span>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Contract Info Banner - shows which contract will be used */}
         {entry?.work_item_id && entry?.service_id && (
           <ContractInfoBanner

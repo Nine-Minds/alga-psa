@@ -298,6 +298,7 @@ export async function applyTemplate(
       copyTasks?: boolean;
       copyDependencies?: boolean;
       copyChecklists?: boolean;
+      copyServices?: boolean;
       assignmentOption?: 'none' | 'primary' | 'all';
     };
   }
@@ -319,6 +320,7 @@ export async function applyTemplate(
     copyTasks: validatedData.options?.copyTasks ?? true,
     copyDependencies: validatedData.options?.copyDependencies ?? true,
     copyChecklists: validatedData.options?.copyChecklists ?? true,
+    copyServices: validatedData.options?.copyServices ?? true,
     assignmentOption: validatedData.options?.assignmentOption ?? 'primary'
   };
 
@@ -483,7 +485,7 @@ export async function applyTemplate(
             custom_name: templateStatus.custom_status_name,
             display_order: templateStatus.display_order,
             is_visible: true,
-            is_standard: templateStatus.status_id ? true : false
+            is_standard: false  // Custom statuses from the statuses table are never standard
           })
           .returning('*');
 
@@ -584,7 +586,7 @@ export async function applyTemplate(
           project_status_mapping_id: taskStatusMappingId,
           assigned_to: taskAssignedTo,
           due_date: dueDate,
-          service_id: templateTask.service_id || null
+          service_id: options.copyServices ? (templateTask.service_id || null) : null
         })
         .returning('*');
 

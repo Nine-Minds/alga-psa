@@ -14,8 +14,10 @@ import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getServices } from 'server/src/lib/actions/serviceActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IStatus } from 'server/src/interfaces/status.interface';
+import { IService } from 'server/src/interfaces/billing.interfaces';
 
 const STEPS = [
   'Template Basics',
@@ -56,6 +58,7 @@ export interface TemplateTask {
   assigned_to?: string; // Primary user ID to assign task to
   additional_agents?: string[]; // Additional user IDs
   template_status_mapping_id?: string; // Which status column this task should start in
+  service_id?: string; // Service for time entry prefill
   order_number: number;
 }
 
@@ -105,6 +108,7 @@ export function TemplateCreationWizard({
     Array<{ priority_id: string; priority_name: string }>
   >([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [services, setServices] = useState<IService[]>([]);
 
   const [wizardData, setWizardData] = useState<TemplateWizardData>({
     template_name: '',
@@ -122,15 +126,16 @@ export function TemplateCreationWizard({
       return;
     }
 
-    // Load task statuses (for Kanban board), task types, priorities, and users
+    // Load task statuses (for Kanban board), task types, priorities, users, and services
     const loadData = async () => {
       try {
         setIsLoadingStatuses(true);
-        const [statuses, types, priorities, allUsers] = await Promise.all([
+        const [statuses, types, priorities, allUsers, servicesResponse] = await Promise.all([
           getTenantProjectStatuses(), // Project task statuses for Kanban board
           getTaskTypes(),
           getAllPriorities('project_task'),
           getAllUsers(true, 'internal'), // Load internal users only
+          getServices(1, 999), // Load all services
         ]);
         console.log('[TemplateCreationWizard] Loaded statuses:', statuses);
         setAvailableStatuses(
@@ -155,6 +160,7 @@ export function TemplateCreationWizard({
         console.log('Loaded priorities for project_task:', mappedPriorities);
         setPriorities(mappedPriorities);
         setUsers(allUsers);
+        setServices(servicesResponse.services);
       } catch (error) {
         console.error('Failed to load wizard data', error);
         setErrors({ [currentStep]: 'Failed to load required data' });
@@ -315,6 +321,7 @@ export function TemplateCreationWizard({
             priorities={priorities}
             availableStatuses={availableStatuses}
             users={users}
+            services={services}
           />
         );
       case 4:

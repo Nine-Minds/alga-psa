@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 
 interface MetaLinesProps {
-  clientName?: string;
+  clientName?: string | null;
   assignedToName?: string;
   dueDate?: Date | string;
   assignedUserIds?: string[];

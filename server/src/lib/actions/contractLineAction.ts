@@ -375,20 +375,25 @@ export async function deleteContractLine(planId: string): Promise<void> {
             }
 
             // Check if plan is associated with any contracts and fetch associated clients
-            const contractsWithClients = await trx('contract_line_mappings as clm')
-                .join('contracts as c', 'clm.contract_id', 'c.contract_id')
+            // After migration 20251028090000, data is stored directly in contract_lines
+            const contractsWithClients = await trx('contract_lines as cl')
+                .join('contracts as c', function() {
+                    this.on('cl.contract_id', '=', 'c.contract_id')
+                        .andOn('cl.tenant', '=', 'c.tenant');
+                })
                 .leftJoin('client_contracts as cc', function() {
                     this.on('c.contract_id', '=', 'cc.contract_id')
                         .andOn('cc.is_active', '=', trx.raw('?', [true]));
                 })
-                .leftJoin('clients as cl', function() {
-                    this.on('cc.client_id', '=', 'cl.client_id')
-                        .andOn('cl.tenant', '=', trx.raw('?', [tenant]));
+                .leftJoin('clients as cli', function() {
+                    this.on('cc.client_id', '=', 'cli.client_id')
+                        .andOn('cli.tenant', '=', trx.raw('?', [tenant]));
                 })
-                .where('clm.contract_line_id', planId)
-                .where('clm.tenant', tenant)
-                .select('c.contract_name', 'cl.client_name', 'c.contract_id')
-                .orderBy(['c.contract_name', 'cl.client_name']);
+                .where('cl.contract_line_id', planId)
+                .where('cl.tenant', tenant)
+                .whereNotNull('cl.contract_id')
+                .select('c.contract_name', 'cli.client_name', 'c.contract_id')
+                .orderBy(['c.contract_name', 'cli.client_name']);
 
             if (contractsWithClients.length > 0) {
                 // Group clients by contract

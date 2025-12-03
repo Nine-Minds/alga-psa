@@ -144,6 +144,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
               priority_id: task.priority_id || null,
               assigned_to: task.assigned_to || null,
               template_status_mapping_id: templateStatusMappingId || null,
+              service_id: task.service_id || null,
               order_key: orderKeys[i],
             })
             .returning('*');
@@ -323,6 +324,7 @@ export async function updateTemplateFromEditor(
               priority_id: task.priority_id || null,
               assigned_to: task.assigned_to || null,
               template_status_mapping_id: templateStatusMappingId || null,
+              service_id: task.service_id || null,
               order_key: orderKeys[i],
             })
             .returning('*');
@@ -479,6 +481,9 @@ export async function saveTemplateAsNew(
           duration_days: task.duration_days,
           task_type_key: task.task_type_key,
           priority_id: task.priority_id,
+          assigned_to: task.assigned_to,
+          template_status_mapping_id: task.template_status_mapping_id,
+          service_id: task.service_id || null,
           order_key: task.order_key,
         })
         .returning('*');

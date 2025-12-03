@@ -6,6 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import { Plus, Copy, Trash } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { IProjectTemplate } from 'server/src/interfaces/projectTemplate.interfaces';
 import { toast } from 'react-hot-toast';
@@ -13,6 +14,9 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { getTemplates, getTemplateCategories, deleteTemplate } from 'server/src/lib/actions/project-actions/projectTemplateActions';
 import CreateTemplateDialog from 'server/src/components/projects/project-templates/CreateTemplateDialog';
 import AddTemplateDialog from 'server/src/components/projects/project-templates/AddTemplateDialog';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+
+const PROJECT_TEMPLATES_PAGE_SIZE_KEY = 'project_templates_page_size';
 
 interface ProjectTemplatesListProps {
   initialTemplates: IProjectTemplate[];
@@ -28,6 +32,20 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
   const [loading, setLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const {
+    value: pageSize,
+    setValue: setPageSize
+  } = useUserPreference<number>(PROJECT_TEMPLATES_PAGE_SIZE_KEY, {
+    defaultValue: 10,
+    localStorageKey: PROJECT_TEMPLATES_PAGE_SIZE_KEY,
+  });
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     loadData();
@@ -71,13 +89,13 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
       title: 'Name',
       dataIndex: 'template_name',
       render: (value, row) => (
-        <button
+        <Link
           id={`view-template-${row.template_id}`}
-          onClick={() => router.push(`/msp/projects/templates/${row.template_id}`)}
+          href={`/msp/projects/templates/${row.template_id}`}
           className="text-blue-600 hover:underline"
         >
           {value as string}
-        </button>
+        </Link>
       )
     },
     {
@@ -199,7 +217,10 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
           data={templates}
           columns={columns}
           pagination={true}
-          pageSize={10}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onItemsPerPageChange={handlePageSizeChange}
         />
       )}
       </div>
