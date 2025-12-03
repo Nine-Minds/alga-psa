@@ -12,6 +12,7 @@ import { ContractWizardData } from '../ContractWizard';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
 import {
   Calendar,
   Building2,
@@ -21,6 +22,7 @@ import {
   Repeat,
   Info,
   Sparkles,
+  Coins,
 } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
@@ -98,15 +100,14 @@ export function ContractBasicsStep({
 
   useEffect(() => {
     const checkActiveContract = async () => {
-      const clientId = data.client_id || data.company_id;
-      if (!clientId || data.is_draft) {
+      if (!data.client_id || data.is_draft) {
         setClientHasActiveContract(false);
         return;
       }
 
       setCheckingActiveContract(true);
       try {
-        const hasActive = await checkClientHasActiveContract(clientId, data.contract_id);
+        const hasActive = await checkClientHasActiveContract(data.client_id, data.contract_id);
         setClientHasActiveContract(hasActive);
       } catch (error) {
         console.error('Error checking for active contract:', error);
@@ -117,7 +118,7 @@ export function ContractBasicsStep({
     };
 
     void checkActiveContract();
-  }, [data.client_id, data.company_id, data.is_draft, data.contract_id]);
+  }, [data.client_id, data.is_draft, data.contract_id]);
 
   const templateOptions = templates.map((template) => ({
     value: template.contract_id,
@@ -189,8 +190,15 @@ export function ContractBasicsStep({
         <ClientPicker
           id="contract-basics-client-picker"
           clients={clients}
-          selectedClientId={data.client_id || data.company_id || null}
-          onSelect={(id) => updateData({ client_id: id || '', company_id: id || '' })}
+          selectedClientId={data.client_id || null}
+          onSelect={(id) => {
+            const selectedClient = clients.find((c) => c.client_id === id);
+            const clientCurrency = selectedClient?.default_currency_code || data.currency_code;
+            updateData({
+              client_id: id || '',
+              currency_code: clientCurrency,
+            });
+          }}
           filterState={filterState}
           onFilterStateChange={setFilterState}
           clientTypeFilter={clientTypeFilter}
@@ -198,7 +206,7 @@ export function ContractBasicsStep({
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
         />
-        {!(data.client_id || data.company_id) && (
+        {!data.client_id && (
           <p className="text-xs text-gray-500">Choose the client this contract is for.</p>
         )}
         {clientHasActiveContract && !data.is_draft && (
@@ -242,6 +250,24 @@ export function ContractBasicsStep({
           className="w-full"
         />
         <p className="text-xs text-gray-500">How often should this contract be billed?</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="currency" className="flex items-center gap-2">
+          <Coins className="h-4 w-4" />
+          Currency *
+        </Label>
+        <CustomSelect
+          id="currency"
+          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+          onValueChange={(value: string) => updateData({ currency_code: value })}
+          value={data.currency_code}
+          placeholder="Select currency"
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500">
+          Currency for this contract. Defaults to the client's preferred currency.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -348,7 +374,9 @@ export function ContractBasicsStep({
             <div className="space-y-2">
               <Label htmlFor="po_amount">PO Amount</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  {getCurrencySymbol(data.currency_code)}
+                </span>
                 <Input
                   id="po_amount"
                   type="text"
@@ -384,14 +412,13 @@ export function ContractBasicsStep({
         )}
       </div>
 
-      {(data.client_id || data.company_id) && data.contract_name && data.start_date && (
+      {data.client_id && data.contract_name && data.start_date && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <h4 className="text-sm font-semibold text-blue-900 mb-2">Contract Summary</h4>
           <div className="text-sm text-blue-800 space-y-1">
             <p>
               <strong>Client:</strong>{' '}
-              {clients.find((c) => c.client_id === (data.client_id || data.company_id))
-                ?.client_name || 'Not selected'}
+              {clients.find((c) => c.client_id === data.client_id)?.client_name || 'Not selected'}
             </p>
             <p>
               <strong>Contract:</strong> {data.contract_name}
@@ -400,6 +427,11 @@ export function ContractBasicsStep({
               <strong>Billing Frequency:</strong>{' '}
               {BILLING_FREQUENCY_OPTIONS.find((opt) => opt.value === data.billing_frequency)
                 ?.label || data.billing_frequency}
+            </p>
+            <p>
+              <strong>Currency:</strong>{' '}
+              {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
+                data.currency_code}
             </p>
             <p>
               <strong>Period:</strong>{' '}
@@ -421,6 +453,7 @@ export function ContractBasicsStep({
                 {data.po_amount && (
                   <p>
                     <strong>PO Amount:</strong>{' '}
+                    {getCurrencySymbol(data.currency_code)}
                     {(data.po_amount / 100).toLocaleString('en-US', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,

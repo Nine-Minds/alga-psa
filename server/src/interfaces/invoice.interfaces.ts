@@ -13,6 +13,7 @@ export interface IInvoice extends TenantEntity {
   subtotal: number;
   tax: number;
   total_amount: number;
+  currency_code: string;
   status: InvoiceStatus;
   invoice_number: string;
   finalized_at?: DateValue;
@@ -368,6 +369,7 @@ export interface InvoiceViewModel {
   invoice_id: string;
   due_date: DateValue;
   status: InvoiceStatus;
+  currencyCode: string;
   subtotal: number;
   tax: number;
   total: number;

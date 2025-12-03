@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { TemplateWizardData } from '../TemplateWizard';
 import { Badge } from 'server/src/components/ui/Badge';
+import { getCurrencySymbol, CURRENCY_OPTIONS } from 'server/src/constants/currency';
 
 interface TemplateReviewContractStepProps {
   data: TemplateWizardData;
@@ -13,6 +14,8 @@ interface TemplateReviewContractStepProps {
 export function TemplateReviewContractStep({
   data,
 }: TemplateReviewContractStepProps) {
+  const currencySymbol = getCurrencySymbol(data.currency_code);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Review Template</h3>
@@ -34,6 +37,14 @@ export function TemplateReviewContractStep({
                 <span className="text-gray-600">Billing Frequency</span>
                 <span className="font-medium text-gray-900">
                   {data.billing_frequency ? data.billing_frequency.replace(/_/g, ' ') : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Currency</span>
+                <span className="font-medium text-gray-900">
+                  {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
+                    data.currency_code ||
+                    '—'}
                 </span>
               </div>
               <div>
@@ -58,7 +69,7 @@ export function TemplateReviewContractStep({
                   <div className="pb-3 mb-3 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Recurring Base Rate</span>
-                      <span className="font-semibold text-gray-900">${(data.fixed_base_rate / 100).toFixed(2)}</span>
+                      <span className="font-semibold text-gray-900">{currencySymbol}{(data.fixed_base_rate / 100).toFixed(2)}</span>
                     </div>
                     {data.enable_proration && (
                       <div className="text-xs text-gray-600 mt-1">
@@ -78,7 +89,7 @@ export function TemplateReviewContractStep({
                       <span>Quantity Guidance: {service.quantity ?? 1}</span>
                       {service.bucket_overlay && (
                         <span>
-                          Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage $
+                          Bucket: {service.bucket_overlay.total_minutes ?? 0} minutes · Overage {currencySymbol}
                           {((service.bucket_overlay.overage_rate ?? 0) / 100).toFixed(2)}
                         </span>
                       )}
@@ -109,11 +120,11 @@ export function TemplateReviewContractStep({
                     </p>
                     <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
                       {service.hourly_rate !== undefined && (
-                        <span>Suggested Rate: ${(service.hourly_rate / 100).toFixed(2)}/hr</span>
+                        <span>Suggested Rate: {currencySymbol}{(service.hourly_rate / 100).toFixed(2)}/hr</span>
                       )}
                       {service.bucket_overlay && (
                         <span>
-                          Bucket: {((service.bucket_overlay.total_minutes ?? 0) / 60).toFixed(2)} hours · Overage $
+                          Bucket: {((service.bucket_overlay.total_minutes ?? 0) / 60).toFixed(2)} hours · Overage {currencySymbol}
                           {((service.bucket_overlay.overage_rate ?? 0) / 100).toFixed(2)}/hr
                         </span>
                       )}
@@ -141,11 +152,11 @@ export function TemplateReviewContractStep({
                     <div className="text-xs text-gray-600 flex flex-wrap gap-3 mt-2">
                       <span>Unit: {service.unit_of_measure || 'Not specified'}</span>
                       {service.unit_rate !== undefined && (
-                        <span>Suggested Rate: ${(service.unit_rate / 100).toFixed(2)}/{service.unit_of_measure || 'unit'}</span>
+                        <span>Suggested Rate: {currencySymbol}{(service.unit_rate / 100).toFixed(2)}/{service.unit_of_measure || 'unit'}</span>
                       )}
                       {service.bucket_overlay && (
                         <span>
-                          Bucket: {service.bucket_overlay.total_minutes ?? 0} units · Overage $
+                          Bucket: {service.bucket_overlay.total_minutes ?? 0} units · Overage {currencySymbol}
                           {((service.bucket_overlay.overage_rate ?? 0) / 100).toFixed(2)}/unit
                         </span>
                       )}

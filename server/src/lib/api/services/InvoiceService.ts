@@ -1139,6 +1139,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         tax: Number(invoiceRecord.tax ?? 0),
         total: Number(invoiceRecord.total_amount ?? 0),
         total_amount: Number(invoiceRecord.total_amount ?? 0),
+        currencyCode: invoiceRecord.currency_code || 'USD',
         invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
           item_id: item.item_id,
           invoice_id: invoiceId,

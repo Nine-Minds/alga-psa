@@ -34,7 +34,7 @@ export function generateLayout(dataString: string): string {
 
   // --- Build Layout ---
   const headerSection = createHeaderSection_StdDefault(viewModel);
-  const itemsResult = createItemsSection_StdDefault(viewModel.items);
+  const itemsResult = createItemsSection_StdDefault(viewModel.items, viewModel.currencyCode);
   const itemsSection = itemsResult.section;
   const derivedSubtotal = itemsResult.subtotal;
 
@@ -48,7 +48,7 @@ export function generateLayout(dataString: string): string {
     displayTotal = displaySubtotal + displayTax;
   }
 
-  const totalsSection = createTotalsSection_StdDefault(displaySubtotal, displayTax, displayTotal);
+  const totalsSection = createTotalsSection_StdDefault(displaySubtotal, displayTax, displayTotal, viewModel.currencyCode);
 
   // Create Notes Section with Thank You message
   const notesContent = new Array<LayoutElement>();
@@ -182,7 +182,7 @@ class ItemsSectionResult {
     constructor(section: SectionElement, subtotal: f64) { this.section = section; this.subtotal = subtotal; }
 }
 
-function createItemsSection_StdDefault(items: Array<InvoiceItem>): ItemsSectionResult {
+function createItemsSection_StdDefault(items: Array<InvoiceItem>, currencyCode: string): ItemsSectionResult {
     // DSL: section items grid 12 x 10 {
     //          list invoice_charges group by category {
     //              field description at 1 1 span 6 1
@@ -239,8 +239,8 @@ function createItemsSection_StdDefault(items: Array<InvoiceItem>): ItemsSectionR
         if (categoryItems) {
             for (let j = 0; j < categoryItems.length; j++) {
                 const item = categoryItems[j];
-                const formattedUnitPrice = formatCurrency(item.unitPrice);
-                const formattedTotal = formatCurrency(item.total);
+                const formattedUnitPrice = formatCurrency(item.unitPrice, currencyCode);
+                const formattedTotal = formatCurrency(item.total, currencyCode);
                 
                 // Description column with left padding
                 const defaultStyleForRow = new PartialStyle();
@@ -359,7 +359,7 @@ function createItemTableHeaderRow_StdDefault(): RowElement {
     return headerRow;
 }
 
-function createTotalsSection_StdDefault(subtotal: f64, tax: f64, total: f64): SectionElement {
+function createTotalsSection_StdDefault(subtotal: f64, tax: f64, total: f64, currencyCode: string): SectionElement {
     // DSL: section summary grid 12 x 4 {
     //          text "Subtotal" at 8 1 span 2 1
     //          field subtotal at 10 1 span 3 1
@@ -387,14 +387,14 @@ function createTotalsSection_StdDefault(subtotal: f64, tax: f64, total: f64): Se
     applyStyle(labelCol, instantiateStyle(totalsLabelStyle));
 
     // Use bold font for the total value
-    const totalValue = new TextElement(formatCurrency(total));
+    const totalValue = new TextElement(formatCurrency(total, currencyCode));
     const totalValueStyle = new PartialStyle();
     totalValueStyle.fontWeight = "bold";
     applyStyle(totalValue, instantiateStyle(totalValueStyle));
     
     const valueCol = new ColumnElement([
-        new TextElement(formatCurrency(subtotal)),
-        new TextElement(formatCurrency(tax)),
+        new TextElement(formatCurrency(subtotal, currencyCode)),
+        new TextElement(formatCurrency(tax, currencyCode)),
         totalValue
     ]);
     valueCol.span = 3;
