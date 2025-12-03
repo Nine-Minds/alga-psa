@@ -148,14 +148,14 @@ export default function PaymentSuccessContent({
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/client-portal/billing">
-              <Button variant="outline">
+              <Button variant="outline" id="payment-success-back-button">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Billing
               </Button>
             </Link>
             {status === 'success' && (
               <Link href={`/client-portal/billing`}>
-                <Button>
+                <Button id="payment-success-view-invoices-button">
                   <FileText className="h-4 w-4 mr-2" />
                   View Invoices
                 </Button>
@@ -163,7 +163,7 @@ export default function PaymentSuccessContent({
             )}
             {status === 'failed' && (
               <Link href={`/client-portal/billing/invoices/${invoiceId}/pay`}>
-                <Button>
+                <Button id="payment-success-try-again-button">
                   Try Again
                 </Button>
               </Link>

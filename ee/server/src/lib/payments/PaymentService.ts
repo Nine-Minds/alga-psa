@@ -551,24 +551,22 @@ export class PaymentService {
    * Gets an invoice by ID.
    */
   private async getInvoice(invoiceId: string): Promise<InvoiceData | null> {
-    return this.knex<InvoiceData>('invoices')
-      .where({
-        tenant: this.tenantId,
-        invoice_id: invoiceId,
-      })
+    const result = await this.knex<InvoiceData>('invoices')
+      .where('tenant', this.tenantId)
+      .where('invoice_id', invoiceId)
       .first();
+    return result || null;
   }
 
   /**
    * Gets a client by ID.
    */
   private async getClient(clientId: string): Promise<ClientData | null> {
-    return this.knex<ClientData>('companies')
-      .where({
-        tenant: this.tenantId,
-        company_id: clientId,
-      })
+    const result = await this.knex<ClientData>('companies')
+      .where('tenant', this.tenantId)
+      .where('company_id', clientId)
       .first();
+    return result || null;
   }
 
   /**
@@ -599,14 +597,15 @@ export class PaymentService {
    * Gets the active payment link for an invoice.
    */
   async getActivePaymentLink(invoiceId: string): Promise<IInvoicePaymentLink | null> {
-    return this.knex<IInvoicePaymentLink>('invoice_payment_links')
+    const result = await this.knex<IInvoicePaymentLink>('invoice_payment_links')
       .where({
         tenant: this.tenantId,
         invoice_id: invoiceId,
         status: 'active',
       })
       .where('expires_at', '>', new Date().toISOString())
-      .first() || null;
+      .first();
+    return result || null;
   }
 
   /**

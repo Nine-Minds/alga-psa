@@ -501,8 +501,8 @@ export class StripePaymentProvider implements PaymentProvider {
         ? new Date(paymentIntent.created * 1000)
         : undefined,
       paymentMethodType: charge?.payment_method_details?.type,
-      cardLast4: charge?.payment_method_details?.card?.last4,
-      cardBrand: charge?.payment_method_details?.card?.brand,
+      cardLast4: charge?.payment_method_details?.card?.last4 ?? undefined,
+      cardBrand: charge?.payment_method_details?.card?.brand ?? undefined,
       receiptUrl: charge?.receipt_url || undefined,
       metadata: paymentIntent.metadata,
     };

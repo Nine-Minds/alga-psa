@@ -62,7 +62,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         <div className="flex items-center space-x-4">
           <div className="p-3 rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
             {loading ? (
-              <Spinner size="md" style={{ color: 'rgb(var(--color-primary-500))' }} />
+              <Spinner size="md" className="text-[rgb(var(--color-primary-500))]" />
             ) : (
               <Icon className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
             )}

@@ -17,7 +17,7 @@ export interface TabGroup {
 }
 
 export interface CustomTabsProps {
-  tabs: TabContent[];
+  tabs?: TabContent[];
   groups?: TabGroup[];
   defaultTab?: string;
   onTabChange?: (tabValue: string) => void;
@@ -51,10 +51,10 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     if (groups && groups.length > 0) {
       return groups.flatMap(group => group.tabs);
     }
-    return tabs;
+    return tabs || [];
   }, [tabs, groups]);
 
-  const [value, setValue] = React.useState(defaultTab || allTabs[0].label);
+  const [value, setValue] = React.useState(defaultTab || (allTabs.length > 0 ? allTabs[0].label : ''));
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
 
