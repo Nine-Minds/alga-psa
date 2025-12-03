@@ -75,6 +75,7 @@ const ContractTemplateModel = {
         template_name: payload.template_name,
         template_description: payload.template_description ?? null,
         default_billing_frequency: payload.default_billing_frequency,
+        currency_code: payload.currency_code ?? 'USD',
         template_status: payload.template_status ?? 'draft',
         template_metadata: payload.template_metadata ?? null,
       })

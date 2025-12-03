@@ -12,6 +12,7 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { BucketOverlayFields } from '../../BucketOverlayFields';
 import { Plus, X, Activity } from 'lucide-react';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
 
 interface TemplateHourlyServicesStepProps {
@@ -207,7 +208,9 @@ export function TemplateHourlyServicesStep({
                     Hourly Rate (Optional)
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      {getCurrencySymbol(data.currency_code)}
+                    </span>
                     <Input
                       id={`template-hourly-rate-${index}`}
                       type="text"

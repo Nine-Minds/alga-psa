@@ -19,11 +19,12 @@ exports.up = function(knex) {
         table.uuid('notes_document_id').nullable();
 
         // Add composite foreign key constraint including tenant for proper multi-tenant isolation
+        // Note: ON DELETE SET NULL is not supported by Citus when distribution key (tenant)
+        // is included in the FK. Document deletion cleanup must be handled in application code.
         table
             .foreign(['tenant', 'notes_document_id'])
             .references(['tenant', 'document_id'])
-            .inTable('documents')
-            .onDelete('SET NULL');
+            .inTable('documents');
 
         // Add index for efficient lookups
         table.index(['tenant', 'notes_document_id'], 'idx_assets_notes_document');

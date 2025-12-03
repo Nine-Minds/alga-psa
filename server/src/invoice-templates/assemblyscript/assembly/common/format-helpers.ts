@@ -1,5 +1,7 @@
+import { getCurrencySymbol } from "./currency";
+
 // Format currency values (input is in cents)
-export function formatCurrency(valueInCents: f64): string {
+export function formatCurrency(valueInCents: f64, currencyCode: string = "USD"): string {
   // Convert cents to dollars
   const dollars = valueInCents / 100;
   
@@ -8,7 +10,9 @@ export function formatCurrency(valueInCents: f64): string {
   const intPart = i32(Math.floor(rounded));
   const fracPart = i32(Math.round((rounded - f64(intPart)) * 100));
   
-  let result = "$" + intPart.toString();
+  const symbol = getCurrencySymbol(currencyCode);
+
+  let result = symbol + intPart.toString();
   
   if (fracPart < 10) {
     result += ".0" + fracPart.toString();
