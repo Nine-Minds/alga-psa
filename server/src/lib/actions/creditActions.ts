@@ -265,6 +265,9 @@ export async function createPrepaymentInvoice(
         
         console.log('createPrepaymentInvoice: Final expiration date to use:', expirationDate);
 
+        // Get client's currency
+        const clientCurrency = client.default_currency_code || 'USD';
+
         // Create the prepayment invoice
         const [createdInvoice] = await trx('invoices')
             .insert({
@@ -279,7 +282,8 @@ export async function createPrepaymentInvoice(
                 invoice_number: await generateInvoiceNumber(),
                 billing_period_start: new Date().toISOString(),
                 billing_period_end: new Date().toISOString(),
-                credit_applied: 0
+                credit_applied: 0,
+                currency_code: clientCurrency
             })
             .returning('*');
 
@@ -344,7 +348,8 @@ export async function createPrepaymentInvoice(
                 created_at: new Date().toISOString(),
                 balance_after: newBalance,
                 tenant,
-                expiration_date: expirationDate
+                expiration_date: expirationDate,
+                currency_code: clientCurrency
             });
             console.log('createPrepaymentInvoice: Transaction created successfully');
         } catch (error) {
@@ -379,7 +384,8 @@ export async function createPrepaymentInvoice(
                 created_at: new Date().toISOString(),
                 expiration_date: expirationDate,
                 is_expired: false,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
+                currency_code: clientCurrency
             });
             console.log('createPrepaymentInvoice: Credit tracking entry created successfully');
             
@@ -434,18 +440,20 @@ export async function applyCreditToInvoice(
     if (!tenant) throw new Error('No tenant found');
     
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Check if the invoice already has credit applied
+        // Check if the invoice already has credit applied and get its currency
         const invoice = await trx('invoices')
             .where({
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('credit_applied')
+            .select('credit_applied', 'currency_code')
             .first();
-        
+
         if (!invoice) {
             throw new Error(`Invoice ${invoiceId} not found`);
         }
+
+        const invoiceCurrency = invoice.currency_code || 'USD';
         
         // Check if credit has already been applied to this invoice
         const existingCreditAllocations = await trx('credit_allocations')
@@ -500,13 +508,14 @@ export async function applyCreditToInvoice(
             return;
         }
         
-        // Get all active credit tracking entries for this client
+        // Get all active credit tracking entries for this client in the same currency as the invoice
         const now = new Date().toISOString();
         const creditEntries = await trx('credit_tracking')
             .where({
                 client_id: clientId,
                 tenant,
-                is_expired: false
+                is_expired: false,
+                currency_code: invoiceCurrency // Only get credits in the same currency
             })
             .where(function() {
                 this.whereNull('expiration_date')
@@ -517,8 +526,23 @@ export async function applyCreditToInvoice(
                 { column: 'expiration_date', order: 'asc', nulls: 'last' }, // Prioritize credits with expiration dates (oldest first)
                 { column: 'created_at', order: 'asc' } // For credits with same expiration date or no expiration, use FIFO
             ]);
-        
+
         if (creditEntries.length === 0) {
+            // Check if there are credits in other currencies
+            const otherCurrencyCredits = await trx('credit_tracking')
+                .where({
+                    client_id: clientId,
+                    tenant,
+                    is_expired: false
+                })
+                .whereNot('currency_code', invoiceCurrency)
+                .where('remaining_amount', '>', 0)
+                .first();
+
+            if (otherCurrencyCredits) {
+                throw new Error(`No ${invoiceCurrency} credits available. Credits exist in other currencies but cannot be applied to ${invoiceCurrency} invoices.`);
+            }
+
             console.log(`No valid credit entries found for client ${clientId}`);
             return;
         }
@@ -579,7 +603,8 @@ export async function applyCreditToInvoice(
             created_at: now,
             balance_after: newBalance,
             tenant,
-            metadata: { applied_credits: appliedCredits }
+            metadata: { applied_credits: appliedCredits },
+            currency_code: invoiceCurrency
         }).returning('*');
 
         // Create credit allocation record
@@ -659,7 +684,7 @@ export async function getCreditHistory(
                 client_id: clientId,
                 tenant
             })
-            .whereIn('type', ['credit', 'prepayment', 'credit_application', 'credit_refund'])
+            .whereIn('type', ['credit', 'prepayment', 'credit_application', 'credit_refund', 'credit_issuance'])
             .orderBy('created_at', 'desc');
 
         if (startDate) {

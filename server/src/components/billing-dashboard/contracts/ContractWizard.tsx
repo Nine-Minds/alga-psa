@@ -35,8 +35,7 @@ export interface BucketOverlayInput {
 }
 
 export interface ContractWizardData {
-  company_id: string;
-  client_id?: string;
+  client_id: string;
   contract_name: string;
   start_date: string;
   end_date?: string;
@@ -109,7 +108,6 @@ export function ContractWizard({
   const [isTemplateLoading, startTemplateTransition] = useTransition();
 
   const [wizardData, setWizardData] = useState<ContractWizardData>({
-    company_id: '',
     client_id: '',
     contract_name: '',
     start_date: '',
@@ -153,7 +151,6 @@ export function ContractWizard({
 
   const resetWizard = () => {
     setWizardData({
-      company_id: '',
       client_id: '',
       contract_name: '',
       start_date: '',
@@ -222,7 +219,7 @@ export function ContractWizard({
   const buildSubmissionData = (): ClientContractWizardSubmission => ({
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
-    company_id: wizardData.company_id || wizardData.client_id || '',
+    client_id: wizardData.client_id || '',
     start_date: wizardData.start_date,
     end_date: wizardData.end_date,
     po_required: wizardData.po_required,
@@ -248,7 +245,7 @@ export function ContractWizard({
 
     switch (stepIndex) {
       case 0:
-        if (!(wizardData.client_id || wizardData.company_id)) {
+        if (!wizardData.client_id) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Client is required' }));
           return false;
         }
@@ -361,7 +358,7 @@ export function ContractWizard({
       return;
     }
 
-    if (!(wizardData.client_id || wizardData.company_id)) {
+    if (!wizardData.client_id) {
       setErrors((prev) => ({
         ...prev,
         [currentStep]: 'Select a client before saving as draft',
@@ -378,8 +375,7 @@ export function ContractWizard({
       const draftData: ContractWizardData = {
         ...wizardData,
         contract_id: result.contract_id,
-        company_id: wizardData.company_id || wizardData.client_id || '',
-        client_id: wizardData.client_id || wizardData.company_id || '',
+        client_id: wizardData.client_id || '',
         is_draft: true,
       };
 

@@ -30,24 +30,23 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
 
   useEffect(() => {
     const loadClientName = async () => {
-      const clientId = data.client_id || data.company_id;
-      if (!clientId) {
+      if (!data.client_id) {
         setClientName('Not selected');
         return;
       }
 
       try {
         const clients = await getClients();
-        const match = clients.find((client) => client.id === clientId);
-        setClientName(match?.name || clientId);
+        const match = clients.find((client) => client.id === data.client_id);
+        setClientName(match?.name || data.client_id);
       } catch (error) {
         console.error('Error loading client name:', error);
-        setClientName(clientId);
+        setClientName(data.client_id);
       }
     };
 
     void loadClientName();
-  }, [data.client_id, data.company_id]);
+  }, [data.client_id]);
 
   const currencySymbol = getCurrencySymbol(data.currency_code);
 

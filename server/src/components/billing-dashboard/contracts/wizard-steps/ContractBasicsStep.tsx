@@ -100,15 +100,14 @@ export function ContractBasicsStep({
 
   useEffect(() => {
     const checkActiveContract = async () => {
-      const clientId = data.client_id || data.company_id;
-      if (!clientId || data.is_draft) {
+      if (!data.client_id || data.is_draft) {
         setClientHasActiveContract(false);
         return;
       }
 
       setCheckingActiveContract(true);
       try {
-        const hasActive = await checkClientHasActiveContract(clientId, data.contract_id);
+        const hasActive = await checkClientHasActiveContract(data.client_id, data.contract_id);
         setClientHasActiveContract(hasActive);
       } catch (error) {
         console.error('Error checking for active contract:', error);
@@ -119,7 +118,7 @@ export function ContractBasicsStep({
     };
 
     void checkActiveContract();
-  }, [data.client_id, data.company_id, data.is_draft, data.contract_id]);
+  }, [data.client_id, data.is_draft, data.contract_id]);
 
   const templateOptions = templates.map((template) => ({
     value: template.contract_id,
@@ -191,13 +190,12 @@ export function ContractBasicsStep({
         <ClientPicker
           id="contract-basics-client-picker"
           clients={clients}
-          selectedClientId={data.client_id || data.company_id || null}
+          selectedClientId={data.client_id || null}
           onSelect={(id) => {
             const selectedClient = clients.find((c) => c.client_id === id);
             const clientCurrency = selectedClient?.default_currency_code || data.currency_code;
             updateData({
               client_id: id || '',
-              company_id: id || '',
               currency_code: clientCurrency,
             });
           }}
@@ -208,7 +206,7 @@ export function ContractBasicsStep({
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
         />
-        {!(data.client_id || data.company_id) && (
+        {!data.client_id && (
           <p className="text-xs text-gray-500">Choose the client this contract is for.</p>
         )}
         {clientHasActiveContract && !data.is_draft && (
@@ -414,14 +412,13 @@ export function ContractBasicsStep({
         )}
       </div>
 
-      {(data.client_id || data.company_id) && data.contract_name && data.start_date && (
+      {data.client_id && data.contract_name && data.start_date && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
           <h4 className="text-sm font-semibold text-blue-900 mb-2">Contract Summary</h4>
           <div className="text-sm text-blue-800 space-y-1">
             <p>
               <strong>Client:</strong>{' '}
-              {clients.find((c) => c.client_id === (data.client_id || data.company_id))
-                ?.client_name || 'Not selected'}
+              {clients.find((c) => c.client_id === data.client_id)?.client_name || 'Not selected'}
             </p>
             <p>
               <strong>Contract:</strong> {data.contract_name}

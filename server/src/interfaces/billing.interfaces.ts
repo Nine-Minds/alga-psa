@@ -405,6 +405,7 @@ export interface ITransaction extends TenantEntity {
   balance_after: number;
   expiration_date?: ISO8601String;
   related_transaction_id?: string;
+  currency_code: string;
 }
 
 export interface ICreditTracking extends TenantEntity {
@@ -418,6 +419,7 @@ export interface ICreditTracking extends TenantEntity {
   expiration_date?: ISO8601String;
   is_expired: boolean;
   updated_at?: ISO8601String;
+  currency_code: string;
 }
 
 export interface ICreditExpirationSettings {
