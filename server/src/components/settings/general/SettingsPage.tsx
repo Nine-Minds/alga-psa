@@ -397,6 +397,7 @@ const SettingsPage = (): JSX.Element =>  {
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
       <CustomTabs
+        tabs={[]}
         groups={tabGroups}
         defaultTab={activeTab}
         onTabChange={handleTabChange}

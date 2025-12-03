@@ -334,6 +334,10 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     setValidationErrors([]);
 
     try {
+      // Get currency code from client or editing contract
+      const selectedClient = clients.find(c => c.client_id === clientId);
+      const currencyCode = editingContract?.currency_code || selectedClient?.default_currency_code || 'USD';
+
       // Create the contract (without client-specific fields)
       const contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'> = {
         contract_name: contractName,
@@ -342,6 +346,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         is_active: saveAsActive,
         status: (saveAsActive ? 'active' : 'draft') as 'active' | 'draft',
         is_template: false,
+        currency_code: currencyCode,
       };
 
       let contract;

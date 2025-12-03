@@ -145,6 +145,9 @@
       ],
       "@alga-psa/product-extension-actions": [
         "../packages/product-extension-actions/src/index.ts"
+      ],
+      "server/src/*": [
+        "src/*"
       ]
     }
   },

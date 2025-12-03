@@ -25,12 +25,10 @@ import {
   getDetailedContractLines,
   updateContractLineRate,
 } from 'server/src/lib/actions/contractActions';
-import {
-  getContractLineServicesWithConfigurations,
-  getTemplateLineServicesWithConfigurations,
-} from 'server/src/lib/actions/contractLineServiceActions';
+import { getContractLineServicesWithConfigurations, getTemplateLineServicesWithConfigurations } from 'server/src/lib/actions/contractLineServiceActions';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
 
@@ -99,6 +97,7 @@ type BasicsFormState = {
   contract_name: string;
   contract_description: string;
   billing_frequency: string;
+  currency_code: string;
 };
 
 type GuidanceFormState = {
@@ -170,6 +169,7 @@ const ContractTemplateDetail: React.FC = () => {
     contract_name: '',
     contract_description: '',
     billing_frequency: 'monthly',
+    currency_code: 'USD',
   });
   const [isSavingBasics, setIsSavingBasics] = useState(false);
   const [basicsError, setBasicsError] = useState<string | null>(null);
@@ -240,6 +240,7 @@ const ContractTemplateDetail: React.FC = () => {
         contract_name: contract.contract_name ?? '',
         contract_description: contract.contract_description ?? '',
         billing_frequency: contract.billing_frequency ?? 'monthly',
+        currency_code: contract.currency_code ?? 'USD',
       });
     }
   }, [contract]);
@@ -389,6 +390,7 @@ const ContractTemplateDetail: React.FC = () => {
         contract_name: '',
         contract_description: '',
         billing_frequency: 'monthly',
+        currency_code: 'USD',
       });
       return;
     }
@@ -397,6 +399,7 @@ const ContractTemplateDetail: React.FC = () => {
       contract_name: contract.contract_name ?? '',
       contract_description: contract.contract_description ?? '',
       billing_frequency: contract.billing_frequency ?? 'monthly',
+      currency_code: contract.currency_code ?? 'USD',
     });
   }, [contract]);
 
@@ -436,6 +439,7 @@ const ContractTemplateDetail: React.FC = () => {
           ? basicsForm.contract_description.trim()
           : null,
         billing_frequency: basicsForm.billing_frequency,
+        currency_code: basicsForm.currency_code,
       });
 
       if (contract.contract_id) {
@@ -677,17 +681,31 @@ const ContractTemplateDetail: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="template-billing-frequency-inline">Recommended Billing Frequency *</Label>
-                  <CustomSelect
-                    id="template-billing-frequency-inline"
-                    options={BILLING_FREQUENCY_OPTIONS}
-                    value={basicsForm.billing_frequency}
-                    onValueChange={(value) =>
-                      setBasicsForm((prev) => ({ ...prev, billing_frequency: value }))
-                    }
-                    placeholder="Select billing cadence"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="template-billing-frequency-inline">Recommended Billing Frequency *</Label>
+                    <CustomSelect
+                      id="template-billing-frequency-inline"
+                      options={BILLING_FREQUENCY_OPTIONS}
+                      value={basicsForm.billing_frequency}
+                      onValueChange={(value) =>
+                        setBasicsForm((prev) => ({ ...prev, billing_frequency: value }))
+                      }
+                      placeholder="Select billing cadence"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="template-currency-code-inline">Currency</Label>
+                    <CustomSelect
+                      id="template-currency-code-inline"
+                      options={CURRENCY_OPTIONS}
+                      value={basicsForm.currency_code}
+                      onValueChange={(value) =>
+                        setBasicsForm((prev) => ({ ...prev, currency_code: value }))
+                      }
+                      placeholder="Select currency"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">

@@ -602,6 +602,7 @@ export default class Invoice {
         invoice_date: invoice.invoice_date, // Keep as DateValue
         due_date: invoice.due_date,         // Keep as DateValue
         status: invoice.status,
+        currencyCode: invoice.currency_code || 'USD',
         subtotal: subtotal,
         tax: tax,
         total: totalAmount, // Use totalAmount which includes tax

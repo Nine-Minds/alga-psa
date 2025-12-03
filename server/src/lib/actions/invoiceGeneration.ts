@@ -222,6 +222,7 @@ async function adaptToWasmViewModel(
     invoiceNumber: 'PREVIEW',
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
+    currencyCode: billingResult.currency_code || 'USD',
     customer: {
       name: client?.client_name || 'N/A',
       address: client?.location_address || 'N/A',
@@ -787,6 +788,7 @@ export async function createInvoiceFromBillingResult(
     credit_applied: 0,
     billing_cycle_id,
     tenant,
+    currency_code: billingResult.currency_code || 'USD',
     is_manual: false,
     // Add billing period dates to ensure validation works correctly
     billing_period_start: toPlainDate(cycleStart),

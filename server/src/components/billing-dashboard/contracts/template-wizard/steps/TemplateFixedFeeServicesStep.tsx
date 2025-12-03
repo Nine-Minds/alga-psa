@@ -7,7 +7,8 @@ import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Package, DollarSign } from 'lucide-react';
+import { Plus, X, Package, Coins } from 'lucide-react';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { TemplateWizardData } from '../TemplateWizard';
@@ -159,11 +160,13 @@ export function TemplateFixedFeeServicesStep({
         {data.fixed_services.length > 0 && (
           <div className="space-y-2">
             <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+              <Coins className="h-4 w-4" />
               Recurring Base Rate (Optional)
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                {getCurrencySymbol(data.currency_code)}
+              </span>
               <Input
                 id="fixed_base_rate"
                 type="text"

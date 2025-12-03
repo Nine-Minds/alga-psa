@@ -99,13 +99,13 @@ exports.up = async function(knex) {
     await knex.schema.createTable('external_tax_imports', (table) => {
       table.uuid('import_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable().references('tenant').inTable('tenants');
-      table.uuid('invoice_id').notNullable().references('invoice_id').inTable('invoices');
+      // Note: invoice_id FK added below with composite key (tenant, invoice_id)
+      table.uuid('invoice_id').notNullable();
       table.string('adapter_type', 50).notNullable();
       table.string('external_invoice_ref', 255).nullable();
       table.timestamp('imported_at', { useTz: true }).defaultTo(knex.fn.now());
       // imported_by is nullable and references users(user_id) within the same tenant
-      // Note: No foreign key constraint since users table has composite primary key (tenant, user_id)
-      // Referential integrity is maintained at application level
+      // Note: FK constraint added below since users table has composite primary key (tenant, user_id)
       table.uuid('imported_by').nullable();
       table.string('import_status', 20).defaultTo('success');
       table.integer('original_internal_tax').nullable();
@@ -118,6 +118,16 @@ exports.up = async function(knex) {
       table.index('invoice_id', 'idx_external_tax_imports_invoice');
       table.index('tenant', 'idx_external_tax_imports_tenant');
     });
+
+    // Add composite foreign key constraint for invoice_id
+    // Since invoices table has composite primary key (tenant, invoice_id), we need to reference both
+    await knex.raw(`
+      ALTER TABLE external_tax_imports
+      ADD CONSTRAINT external_tax_imports_invoice_id_foreign
+      FOREIGN KEY (tenant, invoice_id)
+      REFERENCES invoices(tenant, invoice_id)
+      ON DELETE CASCADE
+    `);
 
     // Add composite foreign key constraint for imported_by
     // Since users table has composite primary key (tenant, user_id), we need to reference both
