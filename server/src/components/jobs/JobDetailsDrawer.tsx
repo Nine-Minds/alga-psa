@@ -41,7 +41,11 @@ const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ jobId, onClose }) =
                   failed: 0,
                   pending: 0,
                   active: 0,
-                  queued: 0
+                  queued: 0,
+                  byRunner: {
+                    pgboss: 0,
+                    temporal: 0
+                  }
                 }} />
               </div>
               
