@@ -840,13 +840,19 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+      // Calculate remaining balance after credit application
+      const remainingBalance = invoice.total_amount - totalPaid;
+
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
         operation: 'UPDATE',
         tableName: 'invoices',
         recordId: data.invoice_id,
-        changedData: { total_amount: newTotal },
+        changedData: { 
+          credit_applied: newCreditApplied,
+          status: newStatus
+        },
         details: { action: 'invoice.credit_applied', credit_amount: data.credit_amount }
       });
 
@@ -857,7 +863,9 @@ export class InvoiceService extends BaseService<IInvoice> {
           tenantId: context.tenant,
           invoiceId: data.invoice_id,
           creditAmount: data.credit_amount,
-          newTotal,
+          newCreditApplied,
+          remainingBalance,
+          newStatus,
           userId: context.userId,
           timestamp: new Date().toISOString()
         }

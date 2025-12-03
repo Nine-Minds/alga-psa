@@ -505,13 +505,18 @@ export class PaymentService {
       }
 
       // Record refund transaction
+      // Determine if it's a full or partial refund
+      const refundAmount = Math.abs(event.amount!);
+      const isFullRefund = refundAmount >= invoice.total_amount;
+      const refundType: 'refund_full' | 'refund_partial' = isFullRefund ? 'refund_full' : 'refund_partial';
+      
       await recordTransaction(
         trx,
         {
           clientId: invoice.client_id,
           invoiceId: event.invoiceId,
           amount: -event.amount!,
-          type: 'refund',
+          type: refundType,
           description: `Refund issued via Stripe - ${event.paymentIntentId || event.eventId}`,
           metadata: {
             payment_provider: 'stripe',
