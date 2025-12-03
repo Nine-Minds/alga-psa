@@ -974,6 +974,29 @@ export default function TaskForm({
             />
           </div>
 
+          {/* Service (for time entry prefill) - right under description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Service (for time entries)
+            </label>
+            <CustomSelect
+              value={selectedServiceId || ''}
+              onValueChange={(value) => setSelectedServiceId(value || null)}
+              options={[
+                { value: '', label: 'No service' },
+                ...availableServices.map(s => ({
+                  value: s.service_id,
+                  label: s.service_name
+                }))
+              ]}
+              placeholder="Select service for time entry prefill..."
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              When set, this service will be automatically selected when creating time entries from this task.
+            </p>
+          </div>
+
           {/* 2 Column Grid Section */}
           <div className="grid grid-cols-2 gap-4">
             {/* Row 1: Task Type and Priority */}
@@ -1003,30 +1026,7 @@ export default function TaskForm({
               />
             </div>
 
-            {/* Row 2: Service (for time entry prefill) */}
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Service (for time entries)
-              </label>
-              <CustomSelect
-                value={selectedServiceId || ''}
-                onValueChange={(value) => setSelectedServiceId(value || null)}
-                options={[
-                  { value: '', label: 'No service' },
-                  ...availableServices.map(s => ({
-                    value: s.service_id,
-                    label: s.service_name
-                  }))
-                ]}
-                placeholder="Select service for time entry prefill..."
-                className="w-full"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                When set, this service will be automatically selected when creating time entries from this task.
-              </p>
-            </div>
-
-            {/* Row 3: Move To and Duplicate To (Edit mode only) */}
+            {/* Row 2: Move To and Duplicate To (Edit mode only) */}
             {mode === 'edit' && (
               <>
                 <div>

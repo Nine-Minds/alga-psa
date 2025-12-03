@@ -4,7 +4,6 @@ import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { withTransaction } from '@alga-psa/shared/db';
-import { createProject } from './projectActions';
 import {
   IProjectTemplate,
   IProjectTemplateWithDetails,
@@ -13,6 +12,10 @@ import {
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import { addDays } from 'date-fns';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import ProjectModel from 'server/src/lib/models/project';
+import { SharedNumberingService } from '@shared/services/numberingService';
+import { getProjectStatuses } from './projectActions';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { validateData } from 'server/src/lib/utils/validation';
 import {
@@ -50,6 +53,8 @@ export async function createTemplateFromProject(
     copyStatuses?: boolean;
     copyTasks?: boolean;
     copyAssignments?: boolean;
+    copyChecklists?: boolean;
+    copyServices?: boolean;
   }
 ): Promise<string> {
   const currentUser = await getCurrentUser();
@@ -62,7 +67,9 @@ export async function createTemplateFromProject(
     copyPhases: options?.copyPhases ?? true,
     copyStatuses: options?.copyStatuses ?? true,
     copyTasks: options?.copyTasks ?? true,
-    copyAssignments: options?.copyAssignments ?? false
+    copyAssignments: options?.copyAssignments ?? false,
+    copyChecklists: options?.copyChecklists ?? true,
+    copyServices: options?.copyServices ?? true
   };
 
   const { knex, tenant } = await createTenantKnex();
@@ -204,7 +211,7 @@ export async function createTemplateFromProject(
           template_status_mapping_id: templateStatusMappingId || null,
           order_key: task.order_key,
           duration_days,
-          service_id: task.service_id || null
+          service_id: copyOptions.copyServices ? (task.service_id || null) : null
         })
         .returning('*');
 
@@ -257,23 +264,25 @@ export async function createTemplateFromProject(
         }
       }
 
-      // Copy checklists
-      const checklists = await trx('task_checklist_items')
-        .where('tenant', tenant)
-        .whereIn('task_id', taskIds);
+      // Copy checklists (if enabled)
+      if (copyOptions.copyChecklists) {
+        const checklists = await trx('task_checklist_items')
+          .where('tenant', tenant)
+          .whereIn('task_id', taskIds);
 
-      for (const item of checklists) {
-        const newTaskId = taskMap.get(item.task_id);
+        for (const item of checklists) {
+          const newTaskId = taskMap.get(item.task_id);
 
-        if (newTaskId) {
-          await trx('project_template_checklist_items')
-            .insert({
-              tenant,
-              template_task_id: newTaskId,
-              item_name: item.item_name,
-              description: item.description,
-              order_number: item.order_number
-            });
+          if (newTaskId) {
+            await trx('project_template_checklist_items')
+              .insert({
+                tenant,
+                template_task_id: newTaskId,
+                item_name: item.item_name,
+                description: item.description,
+                order_number: item.order_number
+              });
+          }
         }
       }
     }
@@ -326,7 +335,7 @@ export async function applyTemplate(
 
   const { knex, tenant } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+  const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'create', trx);
 
     // Verify template exists
@@ -338,49 +347,48 @@ export async function applyTemplate(
       throw new Error('Template not found');
     }
 
-    // 1. Pre-load template statuses to determine what to pass to createProject
+    // 1. Pre-load template statuses
     const templateStatuses = options.copyStatuses
       ? await trx('project_template_status_mappings')
           .where({ template_id: templateId, tenant })
           .orderBy('display_order')
       : [];
 
-    // Determine which status IDs to pass to createProject
-    // If copying template statuses that reference existing statuses, pass those IDs
-    // Otherwise, get minimal default statuses
-    let selectedStatusIds: string[] | undefined;
-
-    if (options.copyStatuses && templateStatuses.length > 0) {
-      // For templates with statuses, we'll handle them manually after project creation
-      // Pass undefined to let createProject create defaults, which we'll replace
-      selectedStatusIds = undefined;
-    } else {
-      // When not copying statuses, get just the first few default statuses
-      // to avoid creating 20+ status mappings
-      const defaultStatuses = await trx('statuses')
-        .where({ tenant, status_type: 'project_task' })
-        .orderBy('order_number')
-        .limit(5);  // Limit to a reasonable number of default statuses
-
-      if (defaultStatuses.length > 0) {
-        selectedStatusIds = defaultStatuses.map(s => s.status_id);
-      }
+    // 2. Create project directly (no need to call createProject which has extra overhead)
+    // Get project statuses for the project status field
+    const projectStatuses = await getProjectStatuses();
+    if (projectStatuses.length === 0) {
+      throw new Error('No project statuses found');
     }
+    const defaultProjectStatus = projectStatuses[0];
 
-    // 2. Create project (using existing createProject function)
-    const newProject = await createProject({
+    // Generate project number and WBS code
+    const projectNumber = await SharedNumberingService.getNextNumber(
+      'PROJECT',
+      { knex: trx, tenant: tenant! }
+    );
+    const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
+
+    console.log(`[applyTemplate] Creating project "${validatedData.project_name}" with number ${projectNumber}`);
+
+    // Create the project record
+    const newProject = await ProjectModel.create(trx, {
       project_name: validatedData.project_name,
       client_id: validatedData.client_id,
       assigned_to: validatedData.assigned_to ? String(validatedData.assigned_to) : null,
       start_date: validatedData.start_date ? new Date(String(validatedData.start_date)) : null,
       end_date: null,
       description: template.description || null,
-      status: 'not_started',
+      status: defaultProjectStatus.status_id,
+      status_name: defaultProjectStatus.name,
+      is_closed: defaultProjectStatus.is_closed,
       is_inactive: false,
-      tenant: tenant || undefined
-    }, selectedStatusIds);
+      wbs_code: wbsCode,
+      project_number: projectNumber
+    });
 
     const newProjectId = newProject.project_id;
+    console.log(`[applyTemplate] Created project ${newProjectId}`);
 
     // 3. Load template phases (only if copyPhases is enabled)
     const templatePhases = options.copyPhases
@@ -441,11 +449,7 @@ export async function applyTemplate(
     const templateStatusToProjectStatusMap = new Map<string, string>(); // template_status_mapping_id → project_status_mapping_id
 
     if (options.copyStatuses && templateStatuses.length > 0) {
-      // Remove default status mappings created by createProject
-      await trx('project_status_mappings')
-        .where({ project_id: newProjectId, tenant })
-        .delete();
-
+      // No need to delete - we passed empty array to createProject so no status mappings were created
       // Add template status mappings and build mapping
       console.log(`[applyTemplate] Creating ${templateStatuses.length} status mappings from template`);
       for (const templateStatus of templateStatuses) {
@@ -453,28 +457,40 @@ export async function applyTemplate(
 
         // If it's a custom status (no status_id), create a new status first
         if (!templateStatus.status_id && templateStatus.custom_status_name) {
-          // Get next order number for the new status
-          const maxOrder = await trx('statuses')
-            .where({ tenant, status_type: 'project_task' })
-            .max('order_number as max')
-            .first();
-          const orderNumber = (maxOrder?.max ?? 0) + 1;
+          try {
+            // Get next order number for the new status
+            const maxOrder = await trx('statuses')
+              .where({ tenant, status_type: 'project_task' })
+              .max('order_number as max')
+              .first();
+            const orderNumber = (maxOrder?.max ?? 0) + 1;
 
-          const [newStatus] = await trx('statuses')
-            .insert({
-              tenant,
-              item_type: 'project_task',
-              status_type: 'project_task',
-              name: templateStatus.custom_status_name,
-              color: templateStatus.custom_status_color || '#6B7280',
-              is_closed: false,
-              order_number: orderNumber,
-              created_at: new Date().toISOString()
-            })
-            .returning('*');
+            console.log(`[applyTemplate] Creating custom status: "${templateStatus.custom_status_name}" with order_number=${orderNumber}`);
 
-          statusIdToUse = newStatus.status_id;
-          console.log(`[applyTemplate] Created custom status: "${newStatus.name}" (${newStatus.color}) → status_id=${newStatus.status_id}`);
+            const insertResult = await trx('statuses')
+              .insert({
+                tenant,
+                item_type: 'project_task',
+                status_type: 'project_task',
+                name: templateStatus.custom_status_name,
+                color: templateStatus.custom_status_color || '#6B7280',
+                is_closed: false,
+                order_number: orderNumber,
+                created_at: new Date().toISOString()
+              })
+              .returning('*');
+
+            if (!insertResult || insertResult.length === 0) {
+              throw new Error(`Failed to create custom status "${templateStatus.custom_status_name}" - insert returned empty result`);
+            }
+
+            const newStatus = insertResult[0];
+            statusIdToUse = newStatus.status_id;
+            console.log(`[applyTemplate] Created custom status: "${newStatus.name}" (${newStatus.color}) → status_id=${newStatus.status_id}`);
+          } catch (statusError) {
+            console.error(`[applyTemplate] Error creating custom status "${templateStatus.custom_status_name}":`, statusError);
+            throw statusError;
+          }
         }
 
         const [newMapping] = await trx('project_status_mappings')
@@ -502,13 +518,31 @@ export async function applyTemplate(
         }
       }
     } else {
-      // Not copying statuses or template has no statuses - use what createProject created
-      const defaultStatus = await trx('project_status_mappings')
-        .where({ project_id: newProjectId, tenant })
-        .orderBy('display_order')
-        .first();
+      // Not copying statuses from template - create default status mappings
+      console.log(`[applyTemplate] Creating default status mappings`);
+      const defaultStatuses = await trx('statuses')
+        .where({ tenant, status_type: 'project_task' })
+        .orderBy('order_number')
+        .limit(5);  // Limit to a reasonable number of default statuses
 
-      firstStatusMappingId = defaultStatus?.project_status_mapping_id;
+      for (let i = 0; i < defaultStatuses.length; i++) {
+        const status = defaultStatuses[i];
+        const [newMapping] = await trx('project_status_mappings')
+          .insert({
+            tenant,
+            project_id: newProjectId,
+            status_id: status.status_id,
+            custom_name: null,
+            display_order: i + 1,
+            is_visible: true,
+            is_standard: false
+          })
+          .returning('*');
+
+        if (!firstStatusMappingId) {
+          firstStatusMappingId = newMapping.project_status_mapping_id;
+        }
+      }
     }
 
     // 6. Create tasks (only if copyTasks is enabled)
@@ -693,6 +727,20 @@ export async function applyTemplate(
 
     return newProjectId;
   });
+
+  // Publish project created event AFTER transaction commits successfully
+  // This ensures we don't publish events for projects that fail to be created
+  await publishEvent({
+    eventType: 'PROJECT_CREATED',
+    payload: {
+      tenantId: tenant!,
+      projectId: projectId,
+      userId: currentUser.user_id,
+      timestamp: new Date().toISOString()
+    }
+  });
+
+  return projectId;
 }
 
 /**

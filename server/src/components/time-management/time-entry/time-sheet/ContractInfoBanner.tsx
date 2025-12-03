@@ -84,11 +84,17 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
         const plans = await getEligibleContractLinesForUI(clientId, serviceId) as EligiblePlanUI[];
         const date = entryDate || new Date();
 
-        // Filter by date
+        // Filter by date (compare date parts only, ignoring time/timezone)
         const eligiblePlans = plans.filter(plan => {
           const start = new Date(plan.start_date as string);
           const end = plan.end_date ? new Date(plan.end_date as string) : null;
-          return start <= date && (!end || end >= date);
+
+          // Compare only the date parts (year, month, day) to avoid timezone issues
+          const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          const startOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+          const endOnly = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
+
+          return startOnly <= dateOnly && (!endOnly || endOnly >= dateOnly);
         });
 
         if (eligiblePlans.length === 0) {

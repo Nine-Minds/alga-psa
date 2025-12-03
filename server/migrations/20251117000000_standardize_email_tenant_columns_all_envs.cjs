@@ -64,21 +64,8 @@ exports.up = async function(knex) {
         continue;
       }
 
-      // Drop indexes that reference tenant_id
-      const indexes = await knex.raw(`
-        SELECT indexname, indexdef
-        FROM pg_indexes
-        WHERE schemaname = 'public'
-        AND tablename = ?
-        AND indexdef LIKE '%tenant_id%'
-      `, [tableName]);
-
-      for (const idx of indexes.rows) {
-        await knex.raw(`DROP INDEX IF EXISTS ${idx.indexname}`);
-        console.log(`  - Dropped index ${idx.indexname} from ${tableName}`);
-      }
-
-      // Drop any unique constraints that reference tenant_id
+      // Drop any unique constraints that reference tenant_id FIRST
+      // (unique constraints create backing indexes that can't be dropped directly)
       const uniqueConstraints = await knex.raw(`
         SELECT con.conname
         FROM pg_constraint con
@@ -100,6 +87,20 @@ exports.up = async function(knex) {
       for (const constraint of uniqueConstraints.rows) {
         await knex.raw(`ALTER TABLE ${tableName} DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
         console.log(`  - Dropped unique constraint ${constraint.conname} from ${tableName}`);
+      }
+
+      // Drop indexes that reference tenant_id (after constraints are dropped)
+      const indexes = await knex.raw(`
+        SELECT indexname, indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+        AND tablename = ?
+        AND indexdef LIKE '%tenant_id%'
+      `, [tableName]);
+
+      for (const idx of indexes.rows) {
+        await knex.raw(`DROP INDEX IF EXISTS ${idx.indexname}`);
+        console.log(`  - Dropped index ${idx.indexname} from ${tableName}`);
       }
 
       // Drop any foreign key constraints that reference tenant_id

@@ -5,7 +5,7 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
-import { Plus, Copy, Trash } from 'lucide-react';
+import { Plus, Trash, MoreVertical, Pencil, Play, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { IProjectTemplate } from 'server/src/interfaces/projectTemplate.interfaces';
@@ -14,6 +14,13 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { getTemplates, getTemplateCategories, deleteTemplate } from 'server/src/lib/actions/project-actions/projectTemplateActions';
 import CreateTemplateDialog from 'server/src/components/projects/project-templates/CreateTemplateDialog';
 import AddTemplateDialog from 'server/src/components/projects/project-templates/AddTemplateDialog';
+import { ApplyTemplateDialog } from 'server/src/components/projects/project-templates/ApplyTemplateDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from 'server/src/components/ui/DropdownMenu';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
 
 const PROJECT_TEMPLATES_PAGE_SIZE_KEY = 'project_templates_page_size';
@@ -32,6 +39,8 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
   const [loading, setLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
+  const [selectedTemplateForApply, setSelectedTemplateForApply] = useState<IProjectTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const {
@@ -84,15 +93,22 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
     }
   }
 
+  function handleApply(template: IProjectTemplate) {
+    setSelectedTemplateForApply(template);
+    setShowApplyDialog(true);
+  }
+
   const columns: ColumnDefinition<IProjectTemplate>[] = [
     {
       title: 'Name',
       dataIndex: 'template_name',
+      width: '25%',
       render: (value, row) => (
         <Link
           id={`view-template-${row.template_id}`}
           href={`/msp/projects/templates/${row.template_id}`}
-          className="text-blue-600 hover:underline"
+          className="text-blue-600 hover:underline block truncate"
+          title={value as string}
         >
           {value as string}
         </Link>
@@ -101,7 +117,12 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
     {
       title: 'Description',
       dataIndex: 'description',
-      render: (value) => (value as string) || '-'
+      width: '30%',
+      render: (value) => (
+        <span className="block truncate" title={(value as string) || ''}>
+          {(value as string) || '-'}
+        </span>
+      )
     },
     {
       title: 'Category',
@@ -125,18 +146,37 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
       title: 'Actions',
       dataIndex: 'template_id',
       render: (_value, row) => (
-        <Button
-          id={`delete-template-${row.template_id}`}
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDelete(row.template_id);
-          }}
-          label="Delete"
-        >
-          <Trash className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id={`template-actions-${row.template_id}`}
+              variant="ghost"
+              size="sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem
+              onClick={() => router.push(`/msp/projects/templates/${row.template_id}`)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleApply(row)}>
+              <Play className="mr-2 h-4 w-4" />
+              Apply Template
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleDelete(row.template_id)}
+              className="text-red-600"
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )
     }
   ];
@@ -163,23 +203,50 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
         />
       )}
 
+      <ApplyTemplateDialog
+        open={showApplyDialog}
+        onClose={() => {
+          setShowApplyDialog(false);
+          setSelectedTemplateForApply(null);
+        }}
+        onSuccess={(projectId) => {
+          setShowApplyDialog(false);
+          setSelectedTemplateForApply(null);
+          loadData(); // Refresh to update use_count
+          router.push(`/msp/projects/${projectId}`);
+        }}
+        initialTemplateId={selectedTemplateForApply?.template_id}
+      />
+
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Project Templates</h1>
           <div className="flex gap-2">
             <Button
-              id="add-template"
-              onClick={() => setShowAddDialog(true)}
+              id="apply-template"
+              onClick={() => {
+                setSelectedTemplateForApply(null);
+                setShowApplyDialog(true);
+              }}
               variant="outline"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Play className="h-4 w-4 mr-2" />
+              Apply Template
+            </Button>
+            <Button
+              id="add-template"
+              onClick={() => setShowAddDialog(true)}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
               Add Template
             </Button>
             <Button
               id="create-template-from-project"
               onClick={() => setShowCreateDialog(true)}
+              variant="default"
             >
-              <Copy className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               Create from Project
             </Button>
           </div>

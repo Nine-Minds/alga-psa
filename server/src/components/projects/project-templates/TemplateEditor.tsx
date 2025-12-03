@@ -1159,7 +1159,8 @@ function TaskCard({
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={`${styles.taskCard} relative bg-white border border-gray-200 rounded-lg p-3 shadow-sm transition-all duration-200 flex flex-col gap-1 ${
+      onClick={() => onEdit(task)}
+      className={`${styles.taskCard} relative bg-white border border-gray-200 rounded-lg p-3 shadow-sm transition-all duration-200 flex flex-col gap-1 cursor-pointer hover:border-gray-300 ${
         isDragging ? styles.dragging : ''
       }`}
     >

@@ -201,6 +201,26 @@ export function TemplateTasksStep({
                           />
                         </div>
 
+                        <div>
+                          <Label>Service (for time entries)</Label>
+                          <CustomSelect
+                            value={task.service_id || ''}
+                            onValueChange={(value) =>
+                              updateTask(task.temp_id, { service_id: value || undefined })
+                            }
+                            options={[
+                              { value: '', label: 'No service' },
+                              ...services.map((s) => ({
+                                value: s.service_id,
+                                label: s.service_name,
+                              })),
+                            ]}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Auto-fills service when creating time entries from tasks.
+                          </p>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label>Estimated Hours</Label>
@@ -323,26 +343,6 @@ export function TemplateTasksStep({
                             })}
                             placeholder="Select status column"
                           />
-                        </div>
-
-                        <div>
-                          <Label>Service (for time entries)</Label>
-                          <CustomSelect
-                            value={task.service_id || ''}
-                            onValueChange={(value) =>
-                              updateTask(task.temp_id, { service_id: value || undefined })
-                            }
-                            options={[
-                              { value: '', label: 'No service' },
-                              ...services.map((s) => ({
-                                value: s.service_id,
-                                label: s.service_name,
-                              })),
-                            ]}
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Auto-fills service when creating time entries from tasks.
-                          </p>
                         </div>
 
                         <div>

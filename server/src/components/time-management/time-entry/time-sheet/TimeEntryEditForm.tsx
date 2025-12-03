@@ -395,7 +395,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       <div className="border p-4 rounded space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Service <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700">Service</label>
             <CustomSelect
               value={entry?.service_id || ''}
               onValueChange={(value) => {

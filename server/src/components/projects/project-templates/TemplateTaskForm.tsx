@@ -143,7 +143,7 @@ export function TemplateTaskForm({
       isOpen={open}
       onClose={onClose}
       title={task ? 'Edit Task' : 'Add Task'}
-      className="max-w-lg"
+      className="max-w-2xl"
       id="template-task-form-dialog"
       allowOverflow
     >
@@ -183,6 +183,28 @@ export function TemplateTaskForm({
                 rows={3}
                 disabled={isSubmitting}
               />
+            </div>
+
+            {/* Service (for time entry prefill) - right under description */}
+            <div>
+              <Label htmlFor="task-service" className="block text-sm font-medium text-gray-700 mb-1">
+                Service (for time entries)
+              </Label>
+              <CustomSelect
+                value={serviceId}
+                onValueChange={setServiceId}
+                options={[
+                  { value: '', label: 'No service' },
+                  ...availableServices.map((s) => ({
+                    value: s.service_id,
+                    label: s.service_name,
+                  })),
+                ]}
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                When set, this service will be automatically selected when creating time entries from tasks created using this template.
+              </p>
             </div>
 
             {/* Status Column */}
@@ -317,28 +339,6 @@ export function TemplateTaskForm({
               )}
               <p className="text-xs text-gray-500 mt-1">
                 Additional team members to assign to this task
-              </p>
-            </div>
-
-            {/* Service (for time entry prefill) */}
-            <div>
-              <Label htmlFor="task-service" className="block text-sm font-medium text-gray-700 mb-1">
-                Service (for time entries)
-              </Label>
-              <CustomSelect
-                value={serviceId}
-                onValueChange={setServiceId}
-                options={[
-                  { value: '', label: 'No service' },
-                  ...availableServices.map((s) => ({
-                    value: s.service_id,
-                    label: s.service_name,
-                  })),
-                ]}
-                disabled={isSubmitting}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                When set, this service will be automatically selected when creating time entries from tasks created using this template.
               </p>
             </div>
           </div>
