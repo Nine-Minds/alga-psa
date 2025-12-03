@@ -26,7 +26,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   // Track if we're on settings page and if collapse was auto-triggered
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
   const wasAutoCollapsedRef = useRef(false);
-  const prevIsOnSettingsRef = useRef(isOnSettingsPage);
+  const prevIsOnSettingsRef = useRef(false); // Start false to trigger on initial load
 
   useEffect(() => {
     setDisableTransition(false);
@@ -37,10 +37,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   useEffect(() => {
     const wasOnSettings = prevIsOnSettingsRef.current;
 
-    // Entering settings page
+    // Entering settings page (or initial load on settings page)
     if (isOnSettingsPage && !wasOnSettings) {
       // Only auto-collapse if user's preference is expanded
-      if (!initialSidebarCollapsed && !sidebarCollapsed) {
+      if (!initialSidebarCollapsed) {
         wasAutoCollapsedRef.current = true;
         setSidebarCollapsedState(true);
       }
@@ -172,7 +172,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               rightSidebarOpen={rightSidebarOpen}
               setRightSidebarOpen={setRightSidebarOpen}
             />
-            <main className="flex-1 overflow-hidden flex pt-2 px-3">
+            <main className={`flex-1 overflow-hidden flex ${isOnSettingsPage ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               <RightSidebar
                 isOpen={rightSidebarOpen}
