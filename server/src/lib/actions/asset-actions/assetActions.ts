@@ -1221,7 +1221,12 @@ async function fetchAssetMaintenanceReport(
             ...record,
             performed_at: typeof record.performed_at === 'string'
                 ? record.performed_at
-                : new Date(record.performed_at).toISOString()
+                : new Date(record.performed_at).toISOString(),
+            created_at: typeof record.created_at === 'string'
+                ? record.created_at
+                : record.created_at instanceof Date
+                    ? record.created_at.toISOString()
+                    : new Date(record.created_at).toISOString()
         }))
     };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Asset, AssetAssociation, AssetListResponse } from '../../interfaces/asset.interfaces';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../../lib/actions/asset-actions/assetActions';
 import { Button } from '../../components/ui/Button';
@@ -12,6 +12,13 @@ import { RmmStatusIndicator } from './RmmStatusIndicator';
 import { RemoteAccessButton } from './RemoteAccessButton';
 import { SearchInput } from '../../components/ui/SearchInput';
 import Pagination from '../../components/ui/Pagination';
+import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
+import {
+    ASSET_DRAWER_TABS,
+    type AssetDrawerTab,
+    type AssetDrawerServerData,
+    tabToPanelParam,
+} from './AssetDetailDrawer.types';
 
 interface AssociatedAssetsProps {
     id: string;
@@ -44,6 +51,15 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
 
     // Track already-associated asset IDs to filter them out
     const [associatedAssetIds, setAssociatedAssetIds] = useState<Set<string>>(new Set());
+
+    // Asset detail drawer state
+    const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [activeDrawerTab, setActiveDrawerTab] = useState<AssetDrawerTab>(ASSET_DRAWER_TABS.OVERVIEW);
+    const [drawerData, setDrawerData] = useState<AssetDrawerServerData>({ asset: null });
+    const [drawerError, setDrawerError] = useState<string | null>(null);
+    const [drawerLoading, setDrawerLoading] = useState(false);
+    const drawerFetchRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         loadAssociatedAssets();
@@ -80,6 +96,87 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
             setIsLoadingAssets(false);
         }
     }, [clientId, currentPage, pageSize, searchTerm, associatedAssetIds]);
+
+    // Drawer data loading
+    const loadDrawerData = useCallback(async (assetId: string, tab: AssetDrawerTab) => {
+        drawerFetchRef.current?.abort();
+        const controller = new AbortController();
+        drawerFetchRef.current = controller;
+
+        setDrawerLoading(true);
+        setDrawerError(null);
+
+        try {
+            const response = await fetch(`/api/assets/${assetId}/detail?panel=${tabToPanelParam(tab)}`, {
+                signal: controller.signal,
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load');
+            }
+
+            type DrawerResponse = {
+                data?: AssetDrawerServerData;
+                error?: string | null;
+            };
+            const payload = (await response.json()) as DrawerResponse;
+            if (controller.signal.aborted) {
+                return;
+            }
+            setDrawerData(payload.data ?? { asset: null });
+            setDrawerError(payload.error ?? null);
+        } catch (error) {
+            if (controller.signal.aborted) {
+                return;
+            }
+            console.error('Failed to load asset drawer data', error);
+            setDrawerData({ asset: null });
+            setDrawerError('Unable to load asset details right now. Please try again.');
+        } finally {
+            if (!controller.signal.aborted) {
+                setDrawerLoading(false);
+            }
+        }
+    }, []);
+
+    // Cleanup drawer fetch on unmount
+    useEffect(() => {
+        return () => {
+            drawerFetchRef.current?.abort();
+        };
+    }, []);
+
+    const openDrawerForAsset = useCallback((asset: Asset, tab?: AssetDrawerTab) => {
+        const nextTab = tab ?? ASSET_DRAWER_TABS.OVERVIEW;
+        if (drawerAssetId !== asset.asset_id) {
+            setDrawerAssetId(asset.asset_id);
+        }
+        if (!isDrawerOpen) {
+            setIsDrawerOpen(true);
+        }
+        if (activeDrawerTab !== nextTab) {
+            setActiveDrawerTab(nextTab);
+        }
+        void loadDrawerData(asset.asset_id, nextTab);
+    }, [activeDrawerTab, drawerAssetId, isDrawerOpen, loadDrawerData]);
+
+    const handleDrawerClose = useCallback(() => {
+        setIsDrawerOpen(false);
+        setDrawerAssetId(null);
+        setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
+        setDrawerData({ asset: null });
+        setDrawerError(null);
+        drawerFetchRef.current?.abort();
+    }, []);
+
+    const handleDrawerTabChange = useCallback((tab: AssetDrawerTab) => {
+        if (activeDrawerTab !== tab) {
+            setActiveDrawerTab(tab);
+        }
+        if (drawerAssetId) {
+            void loadDrawerData(drawerAssetId, tab);
+        }
+    }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
     const loadAssociatedAssets = async () => {
         try {
@@ -282,9 +379,19 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                             >
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-lg font-semibold text-gray-900 truncate">
-                                            {association.asset?.name}
-                                        </span>
+                                        {association.asset ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => openDrawerForAsset(association.asset!)}
+                                                className="text-lg font-semibold text-primary-600 hover:text-primary-700 hover:underline truncate transition-colors text-left"
+                                            >
+                                                {association.asset.name}
+                                            </button>
+                                        ) : (
+                                            <span className="text-lg font-semibold text-gray-900 truncate">
+                                                Unknown Asset
+                                            </span>
+                                        )}
                                         {association.asset && (
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
@@ -344,31 +451,18 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                     title="Add Asset"
                 >
                     <div className="space-y-4" style={{ minWidth: '700px' }}>
-                        {/* Search and relationship type row */}
-                        <div className="flex gap-4 items-end">
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Search Assets
-                                </label>
-                                <SearchInput
-                                    id={`${id}-search`}
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    placeholder="Search by name, tag, or serial..."
-                                    className="w-full"
-                                />
-                            </div>
-                            <div className="w-48">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Relationship Type
-                                </label>
-                                <CustomSelect
-                                    options={relationshipOptions}
-                                    value={defaultRelationshipType}
-                                    onValueChange={(value) => setDefaultRelationshipType(value as 'affected' | 'related')}
-                                    placeholder="Select type..."
-                                />
-                            </div>
+                        {/* Search input */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Search Assets
+                            </label>
+                            <SearchInput
+                                id={`${id}-search`}
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                placeholder="Search by name, tag, or serial..."
+                                className="w-full"
+                            />
                         </div>
 
                         {/* Asset selection table */}
@@ -505,6 +599,22 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                         </div>
                     </div>
                 </Dialog>
+
+                <AssetDetailDrawerClient
+                    isOpen={isDrawerOpen}
+                    selectedAssetId={drawerAssetId}
+                    activeTab={activeDrawerTab}
+                    asset={drawerData.asset}
+                    maintenanceReport={drawerData.maintenanceReport}
+                    maintenanceHistory={drawerData.maintenanceHistory}
+                    history={drawerData.history}
+                    tickets={drawerData.tickets}
+                    documents={drawerData.documents}
+                    error={drawerError}
+                    isLoading={drawerLoading}
+                    onClose={handleDrawerClose}
+                    onTabChange={handleDrawerTabChange}
+                />
             </div>
         </ReflectionContainer>
     );
