@@ -12,15 +12,12 @@ import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
-import GenerateInvoices from './GenerateInvoices';
 import UsageTracking from './UsageTracking';
-import CreditManagement from './CreditManagement';
-import CreditReconciliation from './CreditReconciliation';
-import ContractsHub from './ContractsHub';
+import TemplatesTab from './contracts/TemplatesTab';
+import ClientContractsTab from './contracts/ClientContractsTab';
 import ContractDetailSwitcher from './contracts/ContractDetailSwitcher';
-import { ContractLineTypeRouter } from './contract-lines/ContractLineTypeRouter';
 import { ContractLinePresetTypeRouter } from './contract-lines/ContractLinePresetTypeRouter';
-import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
+import BackNav from 'server/src/components/ui/BackNav';
 import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
@@ -42,40 +39,24 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
   const handleTabChange = (value: string) => {
     const tabValue = value as BillingTabValue;
-    // Only keep the tab parameter, clearing any other state
     const params = new URLSearchParams();
     params.set('tab', tabValue);
 
     if (value === 'invoicing') {
-      // When switching TO invoicing, use sessionStorage or default (ignore URL subtab from previous tab)
+      // When switching TO invoicing, use sessionStorage or default
       const savedSubtab = typeof window !== 'undefined' ? sessionStorage.getItem('invoicing-subtab') : null;
       const subtab = savedSubtab || 'generate';
       params.set('subtab', subtab);
-    } else if (value === 'contracts') {
-      // When switching TO contracts, use sessionStorage or default (ignore URL subtab from previous tab)
-      const savedSubtab = typeof window !== 'undefined' ? sessionStorage.getItem('contracts-subtab') : null;
-      const subtab = savedSubtab || 'templates';
-      params.set('subtab', subtab);
     } else {
-      // When switching AWAY from invoicing or contracts, save the current subtab to sessionStorage
+      // When switching AWAY from invoicing, save the current subtab to sessionStorage
       const currentTab = searchParams?.get('tab');
       const currentSubtab = searchParams?.get('subtab');
-      if (currentSubtab && typeof window !== 'undefined') {
-        if (currentTab === 'invoicing') {
-          sessionStorage.setItem('invoicing-subtab', currentSubtab);
-        } else if (currentTab === 'contracts') {
-          sessionStorage.setItem('contracts-subtab', currentSubtab);
-        }
+      if (currentSubtab && typeof window !== 'undefined' && currentTab === 'invoicing') {
+        sessionStorage.setItem('invoicing-subtab', currentSubtab);
       }
-      // Don't include subtab in URL for non-invoicing/contracts tabs
     }
 
-    // If we're on a contract line detail page and switching tabs, go back to the main billing dashboard
-    if (searchParams?.has('contractLineId')) {
-      router.push(`/msp/billing?${params.toString()}`);
-    } else {
-      router.push(`/msp/billing?${params.toString()}`);
-    }
+    router.push(`/msp/billing?${params.toString()}`);
   };
 
   // Get current tab from URL or default to overview
@@ -83,11 +64,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const availableValues = tabDefinitions.map((tab) => tab.value);
   const currentTab = availableValues.includes(requestedTab as BillingTabValue)
     ? (requestedTab as BillingTabValue)
-    : tabDefinitions[0]?.value ?? 'contracts';
+    : tabDefinitions[0]?.value ?? 'contract-templates';
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Billing Dashboard</h1>
+    <div className="h-full overflow-y-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Billing</h1>
 
       {/* Beta Warning Banner */}
       <div className="bg-blue-50 border-l-4 border-blue-500 px-4 py-3 rounded mb-4" role="alert">
@@ -114,23 +95,16 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         onValueChange={handleTabChange}
         className="w-full"
       >
-        <Tabs.List className="flex border-b mb-4">
-          {tabDefinitions.map((tab): JSX.Element => (
-            <Tabs.Trigger
-              key={tab.value}
-              value={tab.value}
-              className="px-4 py-2 focus:outline-none transition-colors data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 text-gray-500 hover:text-gray-700"
-            >
-              {tab.label}
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
 
-        <Tabs.Content value="contracts">
+        <Tabs.Content value="contract-templates">
+          <TemplatesTab />
+        </Tabs.Content>
+
+        <Tabs.Content value="client-contracts">
           {searchParams?.has('contractId') ? (
             <ContractDetailSwitcher />
           ) : (
-            <ContractsHub />
+            <ClientContractsTab />
           )}
         </Tabs.Content>
 

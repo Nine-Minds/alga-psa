@@ -90,7 +90,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
 
   const templateColumns: ColumnDefinition<IContract>[] = [
     {
-      title: 'Contract Name',
+      title: 'Template Name',
       dataIndex: 'contract_name',
     },
     {

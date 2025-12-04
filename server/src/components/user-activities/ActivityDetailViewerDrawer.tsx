@@ -8,7 +8,8 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { useActivitiesCache } from "server/src/hooks/useActivitiesCache";
 import { getConsolidatedTicketData } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
 import { useTenant } from "server/src/components/TenantProvider";
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { Button } from 'server/src/components/ui/Button';
 import Spinner from 'server/src/components/ui/Spinner';
 import { getTicketById } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTaskWithDetails } from "server/src/lib/actions/project-actions/projectTaskActions";
@@ -98,15 +99,14 @@ function DocumentViewerEditor({
       <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           {showBackButton && onBack ? (
-            <button
+            <Button
+              id="back-to-notification"
+              variant="soft"
               onClick={onBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Notification
-            </button>
+            </Button>
           ) : (
             <h2 className="text-xl font-semibold">{documentName || (isEditMode ? 'Edit Document' : 'Document Viewer')}</h2>
           )}
@@ -592,15 +592,14 @@ export function ActivityDetailViewerDrawer({
                     setContent(
                       <div className="h-full flex flex-col">
                         <div className="flex-shrink-0 border-b border-gray-200 px-4 py-3">
-                          <button
+                          <Button
+                            id="back-to-notification-from-ticket"
+                            variant="soft"
                             onClick={() => setContent(currentNotificationContent)}
-                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
                           >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            Back to Notification
-                          </button>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            ← Back to Notification
+                          </Button>
                         </div>
                         <div className="flex-1 overflow-hidden">
                           <TicketDetails
@@ -648,15 +647,14 @@ export function ActivityDetailViewerDrawer({
                     setContent(
                       <div className="h-full flex flex-col">
                         <div className="flex-shrink-0 border-b border-gray-200 px-4 py-3">
-                          <button
+                          <Button
+                            id="back-to-notification-from-task"
+                            variant="soft"
                             onClick={() => setContent(currentNotificationContent)}
-                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
                           >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Notification
-                          </button>
+                          </Button>
                         </div>
                         <div className="flex-1 overflow-hidden">
                           <TaskEdit

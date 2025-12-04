@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
@@ -21,23 +21,17 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [drawerContent] = useState<React.ReactNode>(null);
   const pathname = usePathname();
 
-  // Track if we're on settings page
+  // Track page type for sidebar mode switching
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
+  const isOnBillingPage = pathname?.startsWith('/msp/billing') ?? false;
 
-  // Standard sidebar state - just use the initial preference
+  // Determine sidebar mode based on current route
+  const sidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : 'main';
+
+  // Sidebar collapsed state
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
 
   const [disableTransition, setDisableTransition] = useState(true);
-
-  // Track current collapsed state in a ref for use in effects
-  const sidebarCollapsedRef = useRef(sidebarCollapsed);
-  useEffect(() => {
-    sidebarCollapsedRef.current = sidebarCollapsed;
-  }, [sidebarCollapsed]);
-
-  // Track if we auto-collapsed on settings entry (to restore on leave)
-  const wasAutoCollapsedRef = useRef(false);
-  const prevIsOnSettingsRef = useRef(isOnSettingsPage);
 
   // Enable transitions after initial render
   useEffect(() => {
@@ -47,43 +41,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Auto-collapse sidebar when entering settings page, restore when leaving
-  useEffect(() => {
-    const wasOnSettings = prevIsOnSettingsRef.current;
-
-    // Entering settings page
-    if (isOnSettingsPage && !wasOnSettings) {
-      // Only auto-collapse if sidebar is currently expanded
-      if (!sidebarCollapsedRef.current) {
-        wasAutoCollapsedRef.current = true;
-        setSidebarCollapsedState(true);
-      }
-    }
-    // Leaving settings page
-    else if (!isOnSettingsPage && wasOnSettings) {
-      // Only restore if we auto-collapsed (user didn't manually toggle while on settings)
-      if (wasAutoCollapsedRef.current) {
-        setSidebarCollapsedState(false);
-      }
-      wasAutoCollapsedRef.current = false;
-    }
-
-    prevIsOnSettingsRef.current = isOnSettingsPage;
-  }, [isOnSettingsPage]);
-
   const setSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
     setSidebarCollapsedState(prev => {
       const newValue = typeof value === 'function' ? value(prev) : value;
-
-      // If user manually toggles while on settings, clear auto-collapse flag
-      // so we don't override their preference when leaving
-      if (isOnSettingsPage) {
-        wasAutoCollapsedRef.current = false;
-      }
-
-      // Save using the helper
       savePreference('sidebar_collapsed', String(newValue));
-
       return newValue;
     });
   };
@@ -178,6 +139,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
             disableTransition={disableTransition}
+            mode={sidebarMode}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header
@@ -186,7 +148,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               rightSidebarOpen={rightSidebarOpen}
               setRightSidebarOpen={setRightSidebarOpen}
             />
-            <main className={`flex-1 overflow-hidden flex ${isOnSettingsPage ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
+            <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               <RightSidebar
                 isOpen={rightSidebarOpen}

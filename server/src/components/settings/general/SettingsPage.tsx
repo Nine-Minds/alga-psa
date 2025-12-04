@@ -1,12 +1,11 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import SettingsSidebar from "server/src/components/layout/SettingsSidebar";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
 import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
@@ -101,13 +100,6 @@ const SettingsPage = (): JSX.Element =>  {
     ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
   }), [isEEAvailable]);
 
-  const labelToSlugMap = useMemo<Record<string, string>>(() => (
-    Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>)
-  ), [slugToLabelMap]);
-
   const initialTabLabel = useMemo(() => {
     const mappedLabel = tabParam
       ? slugToLabelMap[tabParam.toLowerCase()]
@@ -120,7 +112,7 @@ const SettingsPage = (): JSX.Element =>  {
   const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
   const hydrationReadyRef = useRef(false);
 
-  // Handle client-side initialization
+  // Handle client-side initialization and URL changes
   useEffect(() => {
     hydrationReadyRef.current = true;
 
@@ -128,23 +120,6 @@ const SettingsPage = (): JSX.Element =>  {
 
     setActiveTab((prev) => (prev === targetLabel ? prev : targetLabel));
   }, [initialTabLabel]);
-
-  const handleTabChange = useCallback((tab: string) => {
-    if (!hydrationReadyRef.current) {
-      return;
-    }
-
-    setActiveTab(tab);
-
-    const urlSlug = labelToSlugMap[tab];
-    const newUrl = urlSlug && urlSlug !== 'general'
-      ? `/msp/settings?tab=${urlSlug}`
-      : '/msp/settings';
-
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', newUrl);
-    }
-  }, [labelToSlugMap]);
 
   const baseTabContent: TabContent[] = [
     {
@@ -348,18 +323,9 @@ const SettingsPage = (): JSX.Element =>  {
   const activeTabContent = allTabs.find(tab => tab.label === activeTab);
 
   return (
-    <div className="flex h-full">
-      {/* Settings sidebar - navigation panel */}
-      <SettingsSidebar
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
-
-      {/* Content area */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
-        {activeTabContent?.content}
-      </div>
+    <div className="h-full overflow-y-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
+      {activeTabContent?.content}
     </div>
   );
 };

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AutomationProps } from '../../types/ui-reflection/types';
+import { Button } from './Button';
 
 interface BackNavProps extends AutomationProps {
   children: React.ReactNode;
@@ -11,19 +12,18 @@ interface BackNavProps extends AutomationProps {
 export default function BackNav({ children, href }: BackNavProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   return (
-    <button
+    <Button
       id="back-navigation-button"
-      type="button"
-      className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+      variant="soft"
       onClick={() => {
         if (href) {
           // Check if there are returnFilters in the current URL
           // NOTE: This filter persistence works even when tickets are opened in new tabs,
           // as the returnFilters query param is preserved in the URL
           const returnFilters = searchParams.get('returnFilters');
-          
+
           if (returnFilters && href === '/msp/tickets') {
             // Decode the filters and append them to the tickets URL
             const filtersQuery = decodeURIComponent(returnFilters);
@@ -38,6 +38,6 @@ export default function BackNav({ children, href }: BackNavProps) {
       }}
     >
       {children}
-    </button>
+    </Button>
   );
 }
