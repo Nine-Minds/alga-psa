@@ -455,38 +455,53 @@ export async function applyTemplate(
       for (const templateStatus of templateStatuses) {
         let statusIdToUse = templateStatus.status_id;
 
-        // If it's a custom status (no status_id), create a new status first
+        // If it's a custom status (no status_id), look for existing or create a new status
         if (!templateStatus.status_id && templateStatus.custom_status_name) {
           try {
-            // Get next order number for the new status
-            const maxOrder = await trx('statuses')
-              .where({ tenant, status_type: 'project_task' })
-              .max('order_number as max')
-              .first();
-            const orderNumber = (maxOrder?.max ?? 0) + 1;
-
-            console.log(`[applyTemplate] Creating custom status: "${templateStatus.custom_status_name}" with order_number=${orderNumber}`);
-
-            const insertResult = await trx('statuses')
-              .insert({
+            // First, check if a status with this name already exists for the tenant
+            const existingStatus = await trx('statuses')
+              .where({
                 tenant,
-                item_type: 'project_task',
                 status_type: 'project_task',
-                name: templateStatus.custom_status_name,
-                color: templateStatus.custom_status_color || '#6B7280',
-                is_closed: false,
-                order_number: orderNumber,
-                created_at: new Date().toISOString()
+                name: templateStatus.custom_status_name
               })
-              .returning('*');
+              .first();
 
-            if (!insertResult || insertResult.length === 0) {
-              throw new Error(`Failed to create custom status "${templateStatus.custom_status_name}" - insert returned empty result`);
+            if (existingStatus) {
+              // Reuse existing status
+              statusIdToUse = existingStatus.status_id;
+              console.log(`[applyTemplate] Using existing status: "${existingStatus.name}" → status_id=${existingStatus.status_id}`);
+            } else {
+              // Get next order number for the new status
+              const maxOrder = await trx('statuses')
+                .where({ tenant, status_type: 'project_task' })
+                .max('order_number as max')
+                .first();
+              const orderNumber = (maxOrder?.max ?? 0) + 1;
+
+              console.log(`[applyTemplate] Creating custom status: "${templateStatus.custom_status_name}" with order_number=${orderNumber}`);
+
+              const insertResult = await trx('statuses')
+                .insert({
+                  tenant,
+                  item_type: 'project_task',
+                  status_type: 'project_task',
+                  name: templateStatus.custom_status_name,
+                  color: templateStatus.custom_status_color || '#6B7280',
+                  is_closed: false,
+                  order_number: orderNumber,
+                  created_at: new Date().toISOString()
+                })
+                .returning('*');
+
+              if (!insertResult || insertResult.length === 0) {
+                throw new Error(`Failed to create custom status "${templateStatus.custom_status_name}" - insert returned empty result`);
+              }
+
+              const newStatus = insertResult[0];
+              statusIdToUse = newStatus.status_id;
+              console.log(`[applyTemplate] Created custom status: "${newStatus.name}" (${newStatus.color}) → status_id=${newStatus.status_id}`);
             }
-
-            const newStatus = insertResult[0];
-            statusIdToUse = newStatus.status_id;
-            console.log(`[applyTemplate] Created custom status: "${newStatus.name}" (${newStatus.color}) → status_id=${newStatus.status_id}`);
           } catch (statusError) {
             console.error(`[applyTemplate] Error creating custom status "${templateStatus.custom_status_name}":`, statusError);
             throw statusError;
