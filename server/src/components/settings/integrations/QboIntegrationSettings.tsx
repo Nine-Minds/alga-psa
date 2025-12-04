@@ -285,7 +285,7 @@ const QboIntegrationSettings: React.FC = () => {
 
           {shouldShowConnectInfo ? (
             <p className="text-sm text-muted-foreground" id="qbo-connect-info-text">
-              Clicking &lsquo;Connect to QuickBooks Online&rsquo; opens Intuit authorisation in a new window. You&rsquo;ll
+              Clicking &lsquo;Connect to QuickBooks Online&rsquo; opens Intuit authorization in a new window. You&rsquo;ll
               return here once the connection completes.
             </p>
           ) : null}
@@ -336,9 +336,6 @@ const QboIntegrationSettings: React.FC = () => {
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground text-center sm:text-right">
-            Need help? Review the QuickBooks onboarding guide before inviting finance to export invoices.
-          </p>
         </CardFooter>
       </Card>
 
