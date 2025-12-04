@@ -9,6 +9,7 @@ import {
   bottomMenuItems as defaultBottomMenuItems,
   navigationSections as defaultNavigationSections,
   settingsNavigationSections,
+  billingNavigationSections,
   MenuItem,
   NavigationSection,
   NavMode
@@ -47,6 +48,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
   const isSettingsMode = mode === 'settings';
+  const isBillingMode = mode === 'billing';
+  const isSubMode = isSettingsMode || isBillingMode;
 
   const isActive = (path: string) => {
     if (!path) {
@@ -63,6 +66,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       // For settings mode, if no tab param in target, match when current URL also has no tab
       if (isSettingsMode && targetPath === '/msp/settings') {
         return !searchParams?.get('tab') || searchParams?.get('tab') === 'general';
+      }
+      // For billing mode, if no tab param in target, match when current URL also has no tab
+      if (isBillingMode && targetPath === '/msp/billing') {
+        return !searchParams?.get('tab') || searchParams?.get('tab') === 'contracts';
       }
       return true;
     }
@@ -160,11 +167,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   // Determine which sections to render based on mode
   const sectionsToRender: NavigationSection[] = isSettingsMode
     ? settingsNavigationSections
-    : (menuSections ?? defaultNavigationSections);
+    : isBillingMode
+      ? billingNavigationSections
+      : (menuSections ?? defaultNavigationSections);
+
+  // Determine automation ID based on mode
+  const sidebarAutomationId = isSettingsMode
+    ? 'settings-sidebar'
+    : isBillingMode
+      ? 'billing-sidebar'
+      : 'main-sidebar';
 
   return (
     <aside
-      data-automation-id={isSettingsMode ? 'settings-sidebar' : 'main-sidebar'}
+      data-automation-id={sidebarAutomationId}
       className={`bg-sidebar-bg text-sidebar-text h-screen flex flex-col relative ${
         disableTransition ? '' : 'transition-all duration-300 ease-in-out'
       } ${sidebarOpen ? 'w-64' : 'w-16'}`}
@@ -188,16 +204,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>AlgaPSA</span>
       </a>
 
-      {/* Back to Main button - only shown in settings mode */}
-      {isSettingsMode && (
+      {/* Back to Main button - shown in settings and billing modes */}
+      {isSubMode && (
         <div className="px-2 py-2">
           {sidebarOpen ? (
             <button
               id="settings-back-to-main-button"
               onClick={handleBackToMain}
-              className="w-full px-3 py-2 flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 hover:bg-white/10 rounded-md transition-colors"
+              className="w-full px-3 py-2 flex items-center gap-2 text-base text-purple-400 hover:text-purple-300 hover:bg-white/10 rounded-md transition-colors"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
               <span>Back to Main</span>
             </button>
           ) : (
@@ -250,16 +266,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       */}
 
-      <nav className={`${isSettingsMode ? 'mt-2' : 'mt-4'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
-        {sectionsToRender.map((section) => (
+      <nav className={`${isSubMode ? 'mt-2' : 'mt-4'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
+        {sectionsToRender.map((section, sectionIndex) => (
           <div key={section.title || 'nav-section'} className="px-2">
             {sidebarOpen && section.title ? (
-              <p className="text-xs uppercase tracking-wide text-gray-400 px-2 mb-2 mt-4 first:mt-0" aria-label={section.title}>
+              <p className={`text-xs uppercase tracking-wide text-gray-400 px-2 mb-2 ${sectionIndex === 0 ? 'mt-0' : 'mt-6'}`} aria-label={section.title}>
                 {section.title}
               </p>
             ) : (
               !sidebarOpen && section.title ? (
-                <div className="h-px bg-gray-700 my-3" aria-hidden="true" />
+                <div className={`h-px bg-gray-700 ${sectionIndex === 0 ? 'mt-0 mb-3' : 'my-3'}`} aria-hidden="true" />
               ) : null
             )}
             <ul className="space-y-1">
@@ -268,7 +284,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ))}
         {/* Extension navigation items - only in main mode */}
-        {!isSettingsMode && (
+        {!isSubMode && (
           <div className="mt-4 border-t border-gray-700 pt-4 px-2">
             <DynamicNavigationSlot collapsed={!sidebarOpen} />
           </div>
@@ -276,7 +292,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Bottom menu items - only in main mode */}
-      {!isSettingsMode && (
+      {!isSubMode && (
         <div className="mt-auto">
           <ul className="space-y-1">
             {bottomMenuItems.map((item):JSX.Element => (

@@ -21,8 +21,12 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [drawerContent] = useState<React.ReactNode>(null);
   const pathname = usePathname();
 
-  // Track if we're on settings page (for sidebar mode switching)
+  // Track page type for sidebar mode switching
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
+  const isOnBillingPage = pathname?.startsWith('/msp/billing') ?? false;
+
+  // Determine sidebar mode based on current route
+  const sidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : 'main';
 
   // Sidebar collapsed state
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
@@ -135,7 +139,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
             disableTransition={disableTransition}
-            mode={isOnSettingsPage ? 'settings' : 'main'}
+            mode={sidebarMode}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header
@@ -144,7 +148,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               rightSidebarOpen={rightSidebarOpen}
               setRightSidebarOpen={setRightSidebarOpen}
             />
-            <main className={`flex-1 overflow-hidden flex ${isOnSettingsPage ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
+            <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               <RightSidebar
                 isOpen={rightSidebarOpen}

@@ -6,12 +6,17 @@ import {
   Bell,
   Building2,
   Calendar,
+  CalendarClock,
   CheckCircle,
   Clock,
   CreditCard,
   Download,
+  FileBarChart,
+  FileOutput,
+  FileSignature,
   FileText,
   FolderGit2,
+  Gauge,
   Globe,
   Handshake,
   HelpCircle,
@@ -19,12 +24,18 @@ import {
   Layers,
   Layout,
   LayoutDashboard,
+  LayoutTemplate,
+  ListTree,
   Mail,
   MapPin,
   MessageSquare,
   Monitor,
+  Package,
+  Percent,
   Plug,
   Puzzle,
+  Receipt,
+  ReceiptText,
   Rocket,
   Settings,
   Shield,
@@ -39,7 +50,7 @@ import {
 import { billingTabDefinitions } from '../components/billing-dashboard/billingTabsConfig';
 
 // Navigation modes for the unified sidebar
-export type NavMode = 'main' | 'settings';
+export type NavMode = 'main' | 'settings' | 'billing';
 
 export interface MenuItem {
   name: string;
@@ -133,11 +144,7 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Billing',
         icon: CreditCard,
-        subItems: billingTabDefinitions.map(({ label, icon, href }) => ({
-          name: label,
-          icon,
-          href
-        }))
+        href: '/msp/billing'
       },
       {
         name: 'Schedule',
@@ -279,6 +286,41 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Import/Export', icon: Download, href: '/msp/settings?tab=import-export' },
       { name: 'Integrations', icon: Plug, href: '/msp/settings?tab=integrations' },
       { name: 'Extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },
+    ]
+  }
+];
+
+// Billing navigation sections - used when sidebar is in 'billing' mode
+export const billingNavigationSections: NavigationSection[] = [
+  {
+    title: 'Contracts',
+    items: [
+      { name: 'Contract Templates', icon: LayoutTemplate, href: '/msp/billing?tab=contract-templates' },
+      { name: 'Client Contracts', icon: FileSignature, href: '/msp/billing?tab=client-contracts' },
+      { name: 'Contract Line Presets', icon: ListTree, href: '/msp/billing?tab=contract-lines' },
+    ]
+  },
+  {
+    title: 'Invoicing',
+    items: [
+      { name: 'Invoicing', icon: Receipt, href: '/msp/billing?tab=invoicing' },
+      { name: 'Invoice Templates', icon: ReceiptText, href: '/msp/billing?tab=invoice-templates' },
+      { name: 'Billing Cycles', icon: CalendarClock, href: '/msp/billing?tab=billing-cycles' },
+    ]
+  },
+  {
+    title: 'Pricing',
+    items: [
+      { name: 'Service Catalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
+      { name: 'Tax Rates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
+    ]
+  },
+  {
+    title: 'Tracking & Reports',
+    items: [
+      { name: 'Usage Tracking', icon: Gauge, href: '/msp/billing?tab=usage-tracking' },
+      { name: 'Reports', icon: FileBarChart, href: '/msp/billing?tab=reports' },
+      { name: 'Accounting Exports', icon: FileOutput, href: '/msp/billing?tab=accounting-exports' },
     ]
   }
 ];
