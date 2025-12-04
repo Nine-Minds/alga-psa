@@ -2,7 +2,6 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { Hash, DollarSign, Clock, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -63,25 +62,9 @@ const PaymentSettingsSkeleton: React.FC = () => {
   );
 };
 
-// Dynamically import PaymentSettings using the packages pattern
-// The webpack alias @product/billing/entry will resolve to either EE or OSS version
+// Dynamically import PaymentSettings (EE feature)
 const PaymentSettings = dynamic(
-  () => import('@product/billing/entry').then(mod => {
-    const PaymentSettingsExport = mod.PaymentSettings;
-    const result = PaymentSettingsExport();
-    
-    // EE version: result is a Promise that resolves to the module
-    // OSS version: result is JSX directly
-    if (result instanceof Promise || (result && typeof result === 'object' && 'then' in result && typeof (result as any).then === 'function')) {
-      // EE: unwrap the promise and get the component
-      return (result as unknown as Promise<any>).then(componentModule => ({
-        default: componentModule.default || componentModule.PaymentSettings || componentModule
-      }));
-    } else {
-      // OSS: result is JSX, wrap it in a component function
-      return Promise.resolve({ default: () => result });
-    }
-  }),
+  () => import('@ee/components/settings/billing/PaymentSettings'),
   {
     loading: () => <PaymentSettingsSkeleton />,
     ssr: false,
@@ -89,37 +72,48 @@ const PaymentSettings = dynamic(
 );
 
 const BillingSettings: React.FC = () => {
-  const tabs: TabContent[] = [
+  const tabContent: TabContent[] = [
     {
-      label: 'Invoice Numbering',
-      icon: <Hash className="w-4 h-4" />,
+      label: 'General',
       content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Numbering</CardTitle>
-            <CardDescription>
-              Customize how invoice numbers are generated and displayed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <NumberingSettings entityType="INVOICE" />
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          {/* Invoice Numbering Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice Numbering</CardTitle>
+              <CardDescription>
+                Customize how invoice numbers are generated and displayed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NumberingSettings entityType="INVOICE" />
+            </CardContent>
+          </Card>
+
+          <ZeroDollarInvoiceSettings />
+          <CreditExpirationSettings />
+        </div>
       ),
     },
     {
-      label: 'Zero Dollar Invoices',
-      icon: <DollarSign className="w-4 h-4" />,
-      content: <ZeroDollarInvoiceSettings />,
-    },
-    {
-      label: 'Credit Expiration',
-      icon: <Clock className="w-4 h-4" />,
-      content: <CreditExpirationSettings />,
+      label: 'Tax',
+      content: (
+        <div className="space-y-6">
+          <TaxSourceSettings />
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax Regions</CardTitle>
+              <CardDescription>Manage tax regions and related settings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TaxRegionsManager />
+            </CardContent>
+          </Card>
+        </div>
+      ),
     },
     {
       label: 'Payment Settings',
-      icon: <CreditCard className="w-4 h-4" />,
       content: (
         <Card>
           <CardHeader>
@@ -137,9 +131,11 @@ const BillingSettings: React.FC = () => {
   ];
 
   return (
-    <div>
-      <CustomTabs tabs={tabs} defaultTab="Invoice Numbering" />
-    </div>
+    <CustomTabs
+      tabs={tabContent}
+      defaultTab="General"
+      orientation="horizontal"
+    />
   );
 };
 
