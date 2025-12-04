@@ -20,7 +20,6 @@ import { Asset, AssetListResponse, ClientMaintenanceSummary } from 'server/src/i
 import { getClientMaintenanceSummaries, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddAsset } from './QuickAddAsset';
-import { AssetActionRail } from './AssetActionRail';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
@@ -624,11 +623,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   return (
     <div className="relative p-6">
-      <div className="flex flex-col xl:flex-row gap-6">
-        <div className="xl:w-60 flex-shrink-0">
-          <AssetActionRail />
-        </div>
-        <div className="flex-1 space-y-6">
+      <div className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Asset Workspace</h1>
@@ -982,7 +977,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               onRowClick={(asset) => openDrawerForAsset(asset)}
             />
           </Card>
-        </div>
       </div>
       <AssetCommandPalette
         isOpen={isCommandPaletteOpen}

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { Card } from 'server/src/components/ui/Card';
+import { Badge } from 'server/src/components/ui/Badge';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import {
@@ -614,17 +615,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             <div className="flex items-center gap-4">
               <Button
                 id="back-to-templates"
-                variant="ghost"
+                variant="soft"
                 onClick={() => router.push('/msp/projects/templates')}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                  <FileText className="h-4 w-4" />
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
                   Template
-                </div>
+                </Badge>
                 <h1 className="text-2xl font-bold">{template.template_name}</h1>
               </div>
             </div>

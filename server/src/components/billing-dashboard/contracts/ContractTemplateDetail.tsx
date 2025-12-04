@@ -563,13 +563,13 @@ const ContractTemplateDetail: React.FC = () => {
       <div className="p-6 space-y-4">
         <Button
           id="back-to-contracts-error"
-          variant="outline"
+          variant="soft"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts&subtab=client-contracts')}
-          className="gap-2 hover:bg-gray-50"
+          onClick={() => router.push('/msp/billing?tab=contract-templates')}
+          className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Contracts
+          ← Back to Templates
         </Button>
         <Alert variant="destructive">
           <AlertDescription>{error || 'Contract template not found'}</AlertDescription>
@@ -585,13 +585,13 @@ const ContractTemplateDetail: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               id="back-to-contracts"
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => router.push('/msp/billing?tab=contracts&subtab=client-contracts')}
-              className="gap-2 hover:bg-gray-50"
+              onClick={() => router.push('/msp/billing?tab=contract-templates')}
+              className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Contracts
+              Back to Templates
             </Button>
             <Badge
               className={(() => {
@@ -609,7 +609,7 @@ const ContractTemplateDetail: React.FC = () => {
             >
               {humanize(contract.status)}
             </Badge>
-            <Badge className="border border-blue-200 bg-blue-50 text-blue-800">Template</Badge>
+            <Badge variant="secondary">Template</Badge>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Heading as="h2" size="7" className="text-gray-900">

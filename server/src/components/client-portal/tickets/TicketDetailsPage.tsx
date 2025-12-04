@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { TicketDetails } from './TicketDetails';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { Button } from 'server/src/components/ui/Button';
 
 export function TicketDetailsPage() {
   const params = useParams();
@@ -17,14 +18,15 @@ export function TicketDetailsPage() {
 
   return (
     <div className="w-full">
-      <button
+      <Button
         id="back-to-tickets-button"
+        variant="soft"
         onClick={handleClose}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-2 text-sm"
+        className="mb-2"
       >
-        <ArrowLeft className="h-4 w-4" />
-        {t('tickets.backToTickets', 'Back to Tickets')}
-      </button>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        {t('tickets.backToTickets', '← Back to Tickets')}
+      </Button>
       {/* Render TicketDetails as a standalone component */}
       <TicketDetails
         ticketId={ticketId}

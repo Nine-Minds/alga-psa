@@ -15,7 +15,6 @@ import {
   FileOutput,
   FileSignature,
   FileText,
-  FolderGit2,
   Gauge,
   Globe,
   Handshake,
@@ -40,7 +39,6 @@ import {
   Settings,
   Shield,
   SlidersHorizontal,
-  UploadCloud,
   User,
   UserCog,
   Users,
@@ -63,15 +61,6 @@ export interface MenuItem {
 export interface NavigationSection {
   title: string;
   items: MenuItem[];
-}
-
-export interface AssetActionItem {
-  id: string;
-  label: string;
-  description: string;
-  href?: string;
-  icon: ElementType;
-  onClickEvent?: string;
 }
 
 export const navigationSections: NavigationSection[] = [
@@ -125,13 +114,7 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Assets',
         icon: Monitor,
-        href: '/msp/assets',
-        subItems: [
-          { name: 'Workspace', icon: Layout, href: '/msp/assets' },
-          { name: 'Maintenance Plans', icon: Clock, href: '/msp/assets/maintenance' },
-          { name: 'Lifecycle Policies', icon: Shield, href: '/msp/assets/policies' },
-          { name: 'Automation Rules', icon: Workflow, href: '/msp/assets/automation' },
-        ]
+        href: '/msp/assets'
       },
       {
         name: 'Time Management',
@@ -189,41 +172,6 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/jobs'
       }
     ]
-  }
-];
-
-export const assetActionItems: AssetActionItem[] = [
-  {
-    id: 'asset-imports',
-    label: 'Bulk Imports',
-    description: 'Ingest large datasets with mapping templates',
-    icon: UploadCloud,
-    href: '/msp/assets/imports',
-    onClickEvent: 'asset_action_imports'
-  },
-  {
-    id: 'asset-automation',
-    label: 'Automation Rules',
-    description: 'Configure lifecycle automations & escalations',
-    icon: Workflow,
-    href: '/msp/assets/automation',
-    onClickEvent: 'asset_action_automation'
-  },
-  {
-    id: 'asset-policies',
-    label: 'Lifecycle Policies',
-    description: 'Apply standardized lifecycle and compliance policies',
-    icon: Shield,
-    href: '/msp/assets/policies',
-    onClickEvent: 'asset_action_policies'
-  },
-  {
-    id: 'asset-integrations',
-    label: 'Connector Setup',
-    description: 'Manage RMM integrations and discovery connectors',
-    icon: FolderGit2,
-    href: '/msp/assets/integrations',
-    onClickEvent: 'asset_action_integrations'
   }
 ];
 

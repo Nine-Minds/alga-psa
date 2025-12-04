@@ -64,7 +64,7 @@ export function TaskInbox({ className = '' }: TaskInboxProps) {
           <div>
             <Button
               id="back-to-task-list"
-              variant="outline"
+              variant="soft"
               className="mb-4"
               onClick={() => setSelectedTaskId(null)}
             >
