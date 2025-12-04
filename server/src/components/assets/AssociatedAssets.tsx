@@ -10,9 +10,8 @@ import { toast } from 'react-hot-toast';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import { RemoteAccessButton } from './RemoteAccessButton';
-import { DataTable } from '../../components/ui/DataTable';
-import { ColumnDefinition } from '../../interfaces/dataTable.interfaces';
 import { SearchInput } from '../../components/ui/SearchInput';
+import Pagination from '../../components/ui/Pagination';
 
 interface AssociatedAssetsProps {
     id: string;
@@ -21,12 +20,19 @@ interface AssociatedAssetsProps {
     clientId: string;
 }
 
+interface SelectedAsset {
+    asset: Asset;
+    relationshipType: 'affected' | 'related';
+}
+
 export default function AssociatedAssets({ id, entityId, entityType, clientId }: AssociatedAssetsProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [selectedAssetId, setSelectedAssetId] = useState<string>('');
-    const [relationshipType, setRelationshipType] = useState<'affected' | 'related'>('affected');
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
+
+    // Multi-select state for asset selection
+    const [selectedAssets, setSelectedAssets] = useState<Map<string, SelectedAsset>>(new Map());
+    const [defaultRelationshipType, setDefaultRelationshipType] = useState<'affected' | 'related'>('affected');
 
     // Pagination and search state for asset selection
     const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
@@ -78,7 +84,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                     asset_id: asset.asset_id,
                     entity_id: entityId,
                     entity_type: entityType,
-                    relationship_type: relationshipType,
+                    relationship_type: 'affected',
                     created_by: 'system',
                     created_at: new Date().toISOString(),
                     asset: asset
@@ -94,26 +100,31 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
         }
     };
 
-    const handleAddAsset = async () => {
-        if (!selectedAssetId) {
-            toast.error('Please select an asset');
+    const handleAddAssets = async () => {
+        if (selectedAssets.size === 0) {
+            toast.error('Please select at least one asset');
             return;
         }
 
         try {
-            await createAssetAssociation({
-                asset_id: selectedAssetId,
-                entity_id: entityId,
-                entity_type: entityType,
-                relationship_type: relationshipType
-            });
+            // Create associations for all selected assets
+            const promises = Array.from(selectedAssets.values()).map(({ asset, relationshipType }) =>
+                createAssetAssociation({
+                    asset_id: asset.asset_id,
+                    entity_id: entityId,
+                    entity_type: entityType,
+                    relationship_type: relationshipType
+                })
+            );
 
-            toast.success('Asset associated successfully');
+            await Promise.all(promises);
+
+            toast.success(`${selectedAssets.size} asset(s) associated successfully`);
             handleCloseDialog();
             loadAssociatedAssets();
         } catch (error) {
-            console.error('Error associating asset:', error);
-            toast.error('Failed to associate asset');
+            console.error('Error associating assets:', error);
+            toast.error('Failed to associate assets');
         }
     };
 
@@ -130,28 +141,79 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
 
     const handleCloseDialog = () => {
         setIsAddDialogOpen(false);
-        setSelectedAssetId('');
+        setSelectedAssets(new Map());
         setSearchTerm('');
         setCurrentPage(1);
+        setDefaultRelationshipType('affected');
     };
 
     const handleOpenDialog = () => {
         setIsAddDialogOpen(true);
         setCurrentPage(1);
         setSearchTerm('');
+        setSelectedAssets(new Map());
     };
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
-        setCurrentPage(1); // Reset to first page when searching
+        setCurrentPage(1);
     };
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
     };
 
-    const handleRowClick = (asset: Asset) => {
-        setSelectedAssetId(asset.asset_id);
+    const handleAssetToggle = (asset: Asset) => {
+        setSelectedAssets(prev => {
+            const newMap = new Map(prev);
+            if (newMap.has(asset.asset_id)) {
+                newMap.delete(asset.asset_id);
+            } else {
+                newMap.set(asset.asset_id, { asset, relationshipType: defaultRelationshipType });
+            }
+            return newMap;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (areAllCurrentPageSelected()) {
+            // Deselect all on current page
+            setSelectedAssets(prev => {
+                const newMap = new Map(prev);
+                availableAssets.forEach(asset => newMap.delete(asset.asset_id));
+                return newMap;
+            });
+        } else {
+            // Select all on current page
+            setSelectedAssets(prev => {
+                const newMap = new Map(prev);
+                availableAssets.forEach(asset => {
+                    if (!newMap.has(asset.asset_id)) {
+                        newMap.set(asset.asset_id, { asset, relationshipType: defaultRelationshipType });
+                    }
+                });
+                return newMap;
+            });
+        }
+    };
+
+    const handleRelationshipTypeChange = (assetId: string, type: 'affected' | 'related') => {
+        setSelectedAssets(prev => {
+            const newMap = new Map(prev);
+            const existing = newMap.get(assetId);
+            if (existing) {
+                newMap.set(assetId, { ...existing, relationshipType: type });
+            }
+            return newMap;
+        });
+    };
+
+    const areAllCurrentPageSelected = () => {
+        return availableAssets.length > 0 && availableAssets.every(asset => selectedAssets.has(asset.asset_id));
+    };
+
+    const areSomeCurrentPageSelected = () => {
+        return availableAssets.some(asset => selectedAssets.has(asset.asset_id)) && !areAllCurrentPageSelected();
     };
 
     const relationshipOptions: SelectOption[] = [
@@ -159,58 +221,11 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
         { label: 'Related', value: 'related' }
     ];
 
-    // Column definitions for the asset selection table
-    const assetColumns: ColumnDefinition<Asset>[] = [
-        {
-            title: '',
-            dataIndex: 'asset_id',
-            width: '40px',
-            render: (value: string) => (
-                <input
-                    type="radio"
-                    name="selected-asset"
-                    checked={selectedAssetId === value}
-                    onChange={() => setSelectedAssetId(value)}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500"
-                />
-            )
-        },
-        {
-            title: 'Name',
-            dataIndex: 'name',
-            render: (value: string, record: Asset) => (
-                <div className="flex items-center gap-2">
-                    <span className="font-medium">{value}</span>
-                    <RmmStatusIndicator asset={record} size="sm" />
-                </div>
-            )
-        },
-        {
-            title: 'Asset Tag',
-            dataIndex: 'asset_tag'
-        },
-        {
-            title: 'Type',
-            dataIndex: 'asset_type',
-            render: (value: string) => (
-                <span className="capitalize">{value.replace('_', ' ')}</span>
-            )
-        },
-        {
-            title: 'Status',
-            dataIndex: 'status',
-            render: (value: string) => (
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                    value === 'active' ? 'bg-green-100 text-green-800' :
-                    value === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                    value === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                }`}>
-                    {value}
-                </span>
-            )
-        }
-    ];
+    const getSelectedAssetNames = () => {
+        return Array.from(selectedAssets.values()).map(({ asset }) => asset.name).join(', ');
+    };
+
+    const totalPages = Math.ceil(totalAssets / pageSize);
 
     return (
         <ReflectionContainer id={id} label="Associated Assets">
@@ -276,8 +291,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                     onClose={handleCloseDialog}
                     title="Add Asset"
                 >
-                    <div className="space-y-4 min-w-[600px]">
-                        {/* Search input */}
+                    <div className="space-y-4" style={{ minWidth: '700px' }}>
+                        {/* Search and relationship type row */}
                         <div className="flex gap-4 items-end">
                             <div className="flex-1">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -297,8 +312,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                                 </label>
                                 <CustomSelect
                                     options={relationshipOptions}
-                                    value={relationshipType}
-                                    onValueChange={(value) => setRelationshipType(value as 'affected' | 'related')}
+                                    value={defaultRelationshipType}
+                                    onValueChange={(value) => setDefaultRelationshipType(value as 'affected' | 'related')}
                                     placeholder="Select type..."
                                 />
                             </div>
@@ -315,29 +330,112 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                                     {searchTerm ? 'No assets found matching your search' : 'No assets available for this client'}
                                 </div>
                             ) : (
-                                <DataTable
-                                    id={`${id}-asset-table`}
-                                    data={availableAssets}
-                                    columns={assetColumns}
-                                    pagination={true}
-                                    currentPage={currentPage}
-                                    pageSize={pageSize}
-                                    totalItems={totalAssets}
-                                    onPageChange={handlePageChange}
-                                    onRowClick={handleRowClick}
-                                />
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left w-10">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={areAllCurrentPageSelected()}
+                                                    ref={(el) => {
+                                                        if (el) el.indeterminate = areSomeCurrentPageSelected();
+                                                    }}
+                                                    onChange={handleSelectAll}
+                                                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                />
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Name
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Asset Tag
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Type
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Status
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {availableAssets.map((asset) => {
+                                            const isSelected = selectedAssets.has(asset.asset_id);
+                                            const selectedData = selectedAssets.get(asset.asset_id);
+                                            return (
+                                                <tr
+                                                    key={asset.asset_id}
+                                                    className={`hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-primary-50' : ''}`}
+                                                    onClick={() => handleAssetToggle(asset)}
+                                                >
+                                                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => handleAssetToggle(asset)}
+                                                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-gray-900">{asset.name}</span>
+                                                            <RmmStatusIndicator asset={asset} size="sm" />
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-600">
+                                                        {asset.asset_tag}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-600 capitalize">
+                                                        {asset.asset_type.replace('_', ' ')}
+                                                    </td>
+                                                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                                        {isSelected ? (
+                                                            <CustomSelect
+                                                                options={relationshipOptions}
+                                                                value={selectedData?.relationshipType || 'affected'}
+                                                                onValueChange={(value) => handleRelationshipTypeChange(asset.asset_id, value as 'affected' | 'related')}
+                                                                placeholder="Type..."
+                                                            />
+                                                        ) : (
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                                asset.status === 'active' ? 'bg-purple-100 text-purple-800' :
+                                                                asset.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                                                                asset.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                                {asset.status}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             )}
                         </div>
 
-                        {/* Selected asset indicator */}
-                        {selectedAssetId && (
-                            <div className="p-2 bg-primary-50 rounded-md text-sm text-primary-700">
-                                Selected: {availableAssets.find(a => a.asset_id === selectedAssetId)?.name || 'Asset'}
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <Pagination
+                                id={`${id}-pagination`}
+                                currentPage={currentPage}
+                                totalItems={totalAssets}
+                                itemsPerPage={pageSize}
+                                onPageChange={handlePageChange}
+                                variant="compact"
+                            />
+                        )}
+
+                        {/* Selected assets indicator */}
+                        {selectedAssets.size > 0 && (
+                            <div className="p-3 bg-primary-50 rounded-lg text-sm text-primary-700">
+                                <span className="font-medium">Selected:</span> {getSelectedAssetNames()}
                             </div>
                         )}
 
                         {/* Action buttons */}
-                        <div className="flex justify-end space-x-2 pt-2 border-t">
+                        <div className="flex justify-end space-x-3 pt-2">
                             <Button
                                 id='cancel-button'
                                 variant="outline"
@@ -347,10 +445,10 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                             </Button>
                             <Button
                                 id='confirm-add-asset-button'
-                                onClick={handleAddAsset}
-                                disabled={!selectedAssetId}
+                                onClick={handleAddAssets}
+                                disabled={selectedAssets.size === 0}
                             >
-                                Add Asset
+                                Add Asset{selectedAssets.size > 1 ? 's' : ''}
                             </Button>
                         </div>
                     </div>
