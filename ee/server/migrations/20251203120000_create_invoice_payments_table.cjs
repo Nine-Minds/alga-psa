@@ -32,8 +32,8 @@ exports.up = async function up(knex) {
       table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
       table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
 
-      table.foreign('tenant').references('tenants.tenant').onDelete('CASCADE');
-      table.foreign('invoice_id').references('invoices.invoice_id').onDelete('CASCADE');
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
+      table.foreign(['tenant', 'invoice_id']).references(['tenant', 'invoice_id']).inTable('invoices').onDelete('CASCADE');
     })
   );
 
