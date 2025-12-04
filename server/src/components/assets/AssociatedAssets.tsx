@@ -42,6 +42,9 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoadingAssets, setIsLoadingAssets] = useState(false);
 
+    // Track already-associated asset IDs to filter them out
+    const [associatedAssetIds, setAssociatedAssetIds] = useState<Set<string>>(new Set());
+
     useEffect(() => {
         loadAssociatedAssets();
     }, [entityId, clientId]);
@@ -51,7 +54,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
         if (isAddDialogOpen) {
             loadAvailableAssets();
         }
-    }, [isAddDialogOpen, currentPage, searchTerm, clientId]);
+    }, [isAddDialogOpen, currentPage, searchTerm, clientId, associatedAssetIds]);
 
     const loadAvailableAssets = useCallback(async () => {
         try {
@@ -62,20 +65,29 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                 limit: pageSize,
                 search: searchTerm || undefined
             });
-            setAvailableAssets(response.assets);
-            setTotalAssets(response.total);
+            // Filter out already-associated assets
+            const filteredAssets = response.assets.filter(
+                asset => !associatedAssetIds.has(asset.asset_id)
+            );
+            setAvailableAssets(filteredAssets);
+            // Adjust total count (approximate - server-side filtering would be more accurate)
+            const alreadyAssociatedOnPage = response.assets.length - filteredAssets.length;
+            setTotalAssets(Math.max(0, response.total - associatedAssetIds.size));
         } catch (error) {
             console.error('Error loading available assets:', error);
             toast.error('Failed to load available assets');
         } finally {
             setIsLoadingAssets(false);
         }
-    }, [clientId, currentPage, pageSize, searchTerm]);
+    }, [clientId, currentPage, pageSize, searchTerm, associatedAssetIds]);
 
     const loadAssociatedAssets = async () => {
         try {
             setIsLoading(true);
             const assets = await listEntityAssets(entityId, entityType);
+
+            // Track associated asset IDs to filter them from available list
+            setAssociatedAssetIds(new Set(assets.map(a => a.asset_id)));
 
             // Create associations with assets
             const associations: AssetAssociation[] = await Promise.all(
@@ -107,19 +119,29 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
         }
 
         try {
-            // Create associations for all selected assets
-            const promises = Array.from(selectedAssets.values()).map(({ asset, relationshipType }) =>
-                createAssetAssociation({
-                    asset_id: asset.asset_id,
-                    entity_id: entityId,
-                    entity_type: entityType,
-                    relationship_type: relationshipType
-                })
+            // Create associations for all selected assets, tracking successes and failures
+            const results = await Promise.allSettled(
+                Array.from(selectedAssets.values()).map(({ asset, relationshipType }) =>
+                    createAssetAssociation({
+                        asset_id: asset.asset_id,
+                        entity_id: entityId,
+                        entity_type: entityType,
+                        relationship_type: relationshipType
+                    })
+                )
             );
 
-            await Promise.all(promises);
+            const succeeded = results.filter(r => r.status === 'fulfilled').length;
+            const failed = results.filter(r => r.status === 'rejected').length;
 
-            toast.success(`${selectedAssets.size} asset(s) associated successfully`);
+            if (succeeded > 0 && failed === 0) {
+                toast.success(`${succeeded} asset(s) associated successfully`);
+            } else if (succeeded > 0 && failed > 0) {
+                toast.success(`${succeeded} asset(s) associated successfully, ${failed} failed (may already be associated)`);
+            } else {
+                toast.error('Failed to associate assets - they may already be associated');
+            }
+
             handleCloseDialog();
             loadAssociatedAssets();
         } catch (error) {
