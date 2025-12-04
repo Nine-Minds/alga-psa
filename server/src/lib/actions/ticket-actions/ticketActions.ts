@@ -61,6 +61,8 @@ interface CreateTicketFromAssetData {
     title: string;
     description: string;
     priority_id: string;
+    status_id: string;
+    board_id: string;
     asset_id: string;
     client_id: string;
 }

@@ -35,6 +35,8 @@ export const createTicketFromAssetSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string(),
   priority_id: z.string().uuid('Priority ID must be a valid UUID'),
+  status_id: z.string().uuid('Status ID must be a valid UUID'),
+  board_id: z.string().uuid('Board ID must be a valid UUID'),
   asset_id: z.string().uuid('Asset ID must be a valid UUID'),
   client_id: z.string().uuid('Client ID must be a valid UUID')
 });
@@ -128,6 +130,8 @@ export interface CreateTicketFromAssetInput {
   title: string;
   description: string;
   priority_id: string;
+  status_id: string;
+  board_id: string;
   asset_id: string;
   client_id: string;
 }
@@ -762,19 +766,14 @@ export class TicketModel {
 
     const validatedData = validation.data;
 
-    // Get default status for tickets
-    const defaultStatusId = await this.getDefaultStatusId(tenant, trx);
-    if (!defaultStatusId) {
-      throw new Error('No default status found for tickets');
-    }
-
-    // Convert to CreateTicketInput format
+    // Convert to CreateTicketInput format using the provided status_id and board_id
     const createTicketInput: CreateTicketInput = {
       title: validatedData.title,
       description: validatedData.description,
       priority_id: validatedData.priority_id,
       client_id: validatedData.client_id,
-      status_id: defaultStatusId,
+      status_id: validatedData.status_id,
+      board_id: validatedData.board_id,
       entered_by: enteredBy,
       attributes: {
         created_from_asset: validatedData.asset_id
@@ -1146,8 +1145,10 @@ export class TicketModel {
 
   /**
    * Get default status ID for tickets
+   * Falls back to the first available ticket status if no default is explicitly set
    */
   static async getDefaultStatusId(tenant: string, trx: Knex.Transaction): Promise<string | null> {
+    // First try to find an explicitly marked default status
     const defaultStatus = await trx('statuses')
       .where({
         tenant,
@@ -1156,7 +1157,20 @@ export class TicketModel {
       })
       .first();
 
-    return defaultStatus?.status_id || null;
+    if (defaultStatus?.status_id) {
+      return defaultStatus.status_id;
+    }
+
+    // Fall back to the first ticket status ordered by order_number
+    const firstStatus = await trx('statuses')
+      .where({
+        tenant,
+        item_type: 'ticket'
+      })
+      .orderBy('order_number', 'asc')
+      .first();
+
+    return firstStatus?.status_id || null;
   }
 
   /**

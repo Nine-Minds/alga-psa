@@ -1390,6 +1390,7 @@ const handleClose = () => {
                                         entityId={ticket.ticket_id}
                                         entityType="ticket"
                                         clientId={ticket.client_id}
+                                        defaultBoardId={ticket.board_id}
                                     />
                                 </Suspense>
                             </div>

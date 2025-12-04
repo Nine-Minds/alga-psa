@@ -753,6 +753,14 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
         if (validatedParams.status) {
             baseQuery.where('assets.status', validatedParams.status);
         }
+        if (validatedParams.search) {
+            const searchTerm = `%${validatedParams.search}%`;
+            baseQuery.where(function() {
+                this.whereILike('assets.name', searchTerm)
+                    .orWhereILike('assets.asset_tag', searchTerm)
+                    .orWhereILike('assets.serial_number', searchTerm);
+            });
+        }
 
         // Get total count
         const [{ count }] = await baseQuery.clone().count('* as count');
@@ -1213,7 +1221,12 @@ async function fetchAssetMaintenanceReport(
             ...record,
             performed_at: typeof record.performed_at === 'string'
                 ? record.performed_at
-                : new Date(record.performed_at).toISOString()
+                : new Date(record.performed_at).toISOString(),
+            created_at: typeof record.created_at === 'string'
+                ? record.created_at
+                : record.created_at instanceof Date
+                    ? record.created_at.toISOString()
+                    : new Date(record.created_at).toISOString()
         }))
     };
 
@@ -1579,7 +1592,15 @@ export async function createAssetAssociation(data: CreateAssetAssociationRequest
             revalidatePath(`/projects/${data.entity_id}`);
         }
 
-        return validateData(assetAssociationSchema, association);
+        // Convert Date to ISO string for schema validation
+        const sanitizedAssociation = {
+            ...association,
+            created_at: association.created_at instanceof Date
+                ? association.created_at.toISOString()
+                : association.created_at
+        };
+
+        return validateData(assetAssociationSchema, sanitizedAssociation);
     } catch (error) {
         console.error('Error creating asset association:', error);
         throw new Error('Failed to create asset association');

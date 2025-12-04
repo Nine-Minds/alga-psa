@@ -1,13 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Asset } from 'server/src/interfaces/asset.interfaces';
+import { IPriority } from 'server/src/interfaces/ticket.interfaces';
+import { IStatus } from 'server/src/interfaces/status.interface';
+import { IBoard } from 'server/src/interfaces/board.interface';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { createTicketFromAsset } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
+import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -16,14 +22,25 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 
 interface CreateTicketFromAssetButtonProps {
     asset: Asset;
+    defaultBoardId?: string;
+    variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+    size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export default function CreateTicketFromAssetButton({ asset }: CreateTicketFromAssetButtonProps) {
+export default function CreateTicketFromAssetButton({ asset, defaultBoardId, variant = 'secondary', size = 'sm' }: CreateTicketFromAssetButtonProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [title, setTitle] = useState(`Issue with ${asset.name}`);
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('');
+    const [status, setStatus] = useState('');
+    const [board, setBoard] = useState(defaultBoardId || '');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [priorities, setPriorities] = useState<IPriority[]>([]);
+    const [statuses, setStatuses] = useState<IStatus[]>([]);
+    const [boards, setBoards] = useState<IBoard[]>([]);
+    const [isLoadingPriorities, setIsLoadingPriorities] = useState(false);
+    const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
+    const [isLoadingBoards, setIsLoadingBoards] = useState(false);
     const router = useRouter();
 
     const updateDialog = useRegisterUIComponent({
@@ -34,15 +51,98 @@ export default function CreateTicketFromAssetButton({ asset }: CreateTicketFromA
         open: isDialogOpen
     });
 
-    const priorityOptions: SelectOption[] = [
-        { value: 'high', label: 'High' },
-        { value: 'medium', label: 'Medium' },
-        { value: 'low', label: 'Low' }
-    ];
+    // Load priorities, statuses, and boards when dialog opens
+    useEffect(() => {
+        if (isDialogOpen) {
+            // Load priorities
+            if (priorities.length === 0) {
+                setIsLoadingPriorities(true);
+                getAllPriorities('ticket')
+                    .then((fetchedPriorities) => {
+                        setPriorities(fetchedPriorities);
+                    })
+                    .catch((error) => {
+                        console.error('Error loading priorities:', error);
+                        toast.error('Failed to load priorities');
+                    })
+                    .finally(() => {
+                        setIsLoadingPriorities(false);
+                    });
+            }
+
+            // Load statuses
+            if (statuses.length === 0) {
+                setIsLoadingStatuses(true);
+                getTicketStatuses()
+                    .then((fetchedStatuses) => {
+                        setStatuses(fetchedStatuses);
+                        // Auto-select the default status if available
+                        const defaultStatus = fetchedStatuses.find(s => s.is_default);
+                        if (defaultStatus && !status) {
+                            setStatus(defaultStatus.status_id);
+                        } else if (fetchedStatuses.length > 0 && !status) {
+                            // Fall back to first status
+                            setStatus(fetchedStatuses[0].status_id);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error loading statuses:', error);
+                        toast.error('Failed to load statuses');
+                    })
+                    .finally(() => {
+                        setIsLoadingStatuses(false);
+                    });
+            }
+
+            // Load boards
+            if (boards.length === 0) {
+                setIsLoadingBoards(true);
+                getAllBoards(false) // false = only active boards
+                    .then((fetchedBoards) => {
+                        setBoards(fetchedBoards);
+                        // If defaultBoardId is set and valid, use it; otherwise select default board
+                        if (!board) {
+                            if (defaultBoardId && fetchedBoards.some(b => b.board_id === defaultBoardId)) {
+                                setBoard(defaultBoardId);
+                            } else {
+                                const defaultBoard = fetchedBoards.find(b => b.is_default);
+                                if (defaultBoard) {
+                                    setBoard(defaultBoard.board_id);
+                                } else if (fetchedBoards.length > 0) {
+                                    setBoard(fetchedBoards[0].board_id);
+                                }
+                            }
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error loading boards:', error);
+                        toast.error('Failed to load boards');
+                    })
+                    .finally(() => {
+                        setIsLoadingBoards(false);
+                    });
+            }
+        }
+    }, [isDialogOpen, priorities.length, statuses.length, boards.length, status, board, defaultBoardId]);
+
+    const priorityOptions: SelectOption[] = priorities.map((p) => ({
+        value: p.priority_id,
+        label: p.priority_name
+    }));
+
+    const statusOptions: SelectOption[] = statuses.map((s) => ({
+        value: s.status_id,
+        label: s.name
+    }));
+
+    const boardOptions: SelectOption[] = boards.map((b) => ({
+        value: b.board_id,
+        label: b.board_name
+    }));
 
     const handleSubmit = async () => {
-        if (!title.trim() || !description.trim() || !priority) {
-            toast.error('Please fill in all required fields');
+        if (!title.trim() || !priority || !status || !board) {
+            toast.error('Please fill in title, board, status, and priority');
             return;
         }
 
@@ -59,6 +159,8 @@ export default function CreateTicketFromAssetButton({ asset }: CreateTicketFromA
                 title,
                 description,
                 priority_id: priority,
+                status_id: status,
+                board_id: board,
                 asset_id: asset.asset_id,
                 client_id: asset.client_id
             }, currentUser);
@@ -81,7 +183,8 @@ export default function CreateTicketFromAssetButton({ asset }: CreateTicketFromA
             <Button
                 {...withDataAutomationId({ id: 'create-ticket-button' })}
                 onClick={() => setIsDialogOpen(true)}
-                variant="outline"
+                variant={variant}
+                size={size}
             >
                 Create Ticket
             </Button>
@@ -111,12 +214,33 @@ export default function CreateTicketFromAssetButton({ asset }: CreateTicketFromA
                     />
 
                     <CustomSelect
+                        {...withDataAutomationId({ id: 'ticket-board-select' })}
+                        label="Board"
+                        options={boardOptions}
+                        value={board}
+                        onValueChange={setBoard}
+                        placeholder={isLoadingBoards ? "Loading boards..." : "Select board..."}
+                        disabled={isLoadingBoards}
+                    />
+
+                    <CustomSelect
+                        {...withDataAutomationId({ id: 'ticket-status-select' })}
+                        label="Status"
+                        options={statusOptions}
+                        value={status}
+                        onValueChange={setStatus}
+                        placeholder={isLoadingStatuses ? "Loading statuses..." : "Select status..."}
+                        disabled={isLoadingStatuses}
+                    />
+
+                    <CustomSelect
                         {...withDataAutomationId({ id: 'ticket-priority-select' })}
                         label="Priority"
                         options={priorityOptions}
                         value={priority}
                         onValueChange={setPriority}
-                        placeholder="Select priority..."
+                        placeholder={isLoadingPriorities ? "Loading priorities..." : "Select priority..."}
+                        disabled={isLoadingPriorities}
                     />
 
                     <div {...withDataAutomationId({ id: 'ticket-form-actions' })} className="mt-4 flex justify-end space-x-2">
