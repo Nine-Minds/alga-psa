@@ -184,6 +184,7 @@ export function ContractWizard({
       contract_name: snapshot.contract_name ?? prev.contract_name,
       description: snapshot.description ?? prev.description,
       billing_frequency: snapshot.billing_frequency ?? prev.billing_frequency,
+      currency_code: snapshot.currency_code ?? prev.currency_code,
       fixed_services: snapshot.fixed_services ?? [],
       fixed_base_rate: snapshot.fixed_base_rate,
       enable_proration: snapshot.enable_proration ?? prev.enable_proration,
