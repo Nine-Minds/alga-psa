@@ -2,7 +2,11 @@
 {{- if and (not (include "sebastian.hostedEnvEnabled" .)) (or (not (hasKey $hp "enabled")) $hp.enabled) }}
 {{- $ns := include "sebastian.namespace" . -}}
 {{- $existing := (lookup "apps/v1" "Deployment" $ns "hocuspocus") -}}
-{{- $owned := and $existing (eq (get $existing.metadata.annotations "meta.helm.sh/release-name") .Release.Name) -}}
+{{- $annotations := dict -}}
+{{- if and $existing $existing.metadata $existing.metadata.annotations -}}
+{{- $annotations = $existing.metadata.annotations -}}
+{{- end -}}
+{{- $owned := and $existing (eq (get $annotations "meta.helm.sh/release-name") .Release.Name) -}}
 {{- if or (not $existing) $owned }}
 apiVersion: apps/v1
 kind: Deployment
