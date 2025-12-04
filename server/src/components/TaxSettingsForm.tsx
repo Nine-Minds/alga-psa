@@ -402,25 +402,27 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Apply Reverse Charge</span>
-                <Tooltip content="Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.">
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                </Tooltip>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {taxSettings.is_reverse_charge_applicable ? 'Enabled' : 'Disabled'}
-                </span>
-                <Switch
-                  id="reverseCharge"
-                  checked={taxSettings.is_reverse_charge_applicable}
-                  onCheckedChange={(checked) =>
-                    setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: checked })
-                  }
-                  disabled={isSubmitting}
-                />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Apply Reverse Charge</span>
+                  <Tooltip content="Reverse charge shifts the tax liability from the seller to the buyer. Common in B2B transactions across borders.">
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </Tooltip>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {taxSettings.is_reverse_charge_applicable ? 'Enabled' : 'Disabled'}
+                  </span>
+                  <Switch
+                    id="reverseCharge"
+                    checked={taxSettings.is_reverse_charge_applicable}
+                    onCheckedChange={(checked) =>
+                      setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: checked })
+                    }
+                    disabled={isSubmitting}
+                  />
+                </div>
               </div>
             </div>
 
