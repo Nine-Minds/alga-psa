@@ -410,6 +410,8 @@ export class TicketService extends BaseService<ITicket> {
           title: data.title,
           description: data.description || '',
           priority_id: data.priority_id,
+          status_id: data.status_id,
+          board_id: data.board_id,
           asset_id: data.asset_id,
           client_id: data.client_id
         },

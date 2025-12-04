@@ -106,9 +106,9 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                                 setBoard(defaultBoardId);
                             } else {
                                 const defaultBoard = fetchedBoards.find(b => b.is_default);
-                                if (defaultBoard) {
+                                if (defaultBoard && defaultBoard.board_id) {
                                     setBoard(defaultBoard.board_id);
-                                } else if (fetchedBoards.length > 0) {
+                                } else if (fetchedBoards.length > 0 && fetchedBoards[0].board_id) {
                                     setBoard(fetchedBoards[0].board_id);
                                 }
                             }
@@ -135,10 +135,12 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         label: s.name
     }));
 
-    const boardOptions: SelectOption[] = boards.map((b) => ({
-        value: b.board_id,
-        label: b.board_name
-    }));
+    const boardOptions: SelectOption[] = boards
+        .filter((b) => b.board_id && b.board_name)
+        .map((b) => ({
+            value: b.board_id!,
+            label: b.board_name!
+        }));
 
     const handleSubmit = async () => {
         if (!title.trim() || !priority || !status || !board) {
