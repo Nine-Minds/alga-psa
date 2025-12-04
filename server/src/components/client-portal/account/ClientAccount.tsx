@@ -21,10 +21,11 @@ export default function ClientAccount() {
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const formatCurrency = useCallback((amount: number | string | null | undefined) => {
+  // Note: Invoice amounts are stored in cents, so we divide by 100
+  const formatCurrency = useCallback((amountInCents: number | string | null | undefined) => {
     try {
-      const n = typeof amount === 'string' ? Number(amount) : (amount ?? 0);
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n as number);
+      const n = typeof amountInCents === 'string' ? Number(amountInCents) : (amountInCents ?? 0);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((n as number) / 100);
     } catch {
       return '$0.00';
     }

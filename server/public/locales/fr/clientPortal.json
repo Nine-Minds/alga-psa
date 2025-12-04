@@ -217,6 +217,7 @@
       "dueDate": "Date d'échéance",
       "dueDateText": "Échéance le {{date}}",
       "noDueDate": "Pas de date d'échéance",
+      "allPaid": "Toutes les factures payées",
       "amount": "Montant",
       "status": "Statut",
       "paid": "Payée",

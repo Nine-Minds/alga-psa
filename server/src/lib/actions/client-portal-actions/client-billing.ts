@@ -91,7 +91,9 @@ export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
 
   try {
     // Directly fetch only invoices for the current client
-    return await fetchInvoicesByClient(session.user.clientId);
+    const invoices = await fetchInvoicesByClient(session.user.clientId);
+    // Filter out draft invoices - only finalized invoices should be visible in client portal
+    return invoices.filter(invoice => invoice.status !== 'draft');
   } catch (error) {
     console.error('Error fetching client invoices:', error);
     throw new Error('Failed to fetch invoices');
@@ -123,7 +125,7 @@ export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceVi
   const knex = await getConnection(session.user.tenant);
   
   try {
-    // Verify the invoice belongs to the client
+    // Verify the invoice belongs to the client and is not a draft
     const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
         .where({
@@ -131,9 +133,10 @@ export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceVi
           client_id: session.user.clientId,
           tenant: session.user.tenant
         })
+        .whereNot('status', 'draft')
         .first();
     });
-    
+
     if (!invoiceCheck) {
       throw new Error('Invoice not found or access denied');
     }
@@ -171,7 +174,7 @@ export async function getClientInvoiceLineItems(invoiceId: string) {
   const knex = await getConnection(session.user.tenant);
   
   try {
-    // Verify the invoice belongs to the client
+    // Verify the invoice belongs to the client and is not a draft
     const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
         .where({
@@ -179,9 +182,10 @@ export async function getClientInvoiceLineItems(invoiceId: string) {
           client_id: session.user.clientId,
           tenant: session.user.tenant
         })
+        .whereNot('status', 'draft')
         .first();
     });
-    
+
     if (!invoiceCheck) {
       throw new Error('Invoice not found or access denied');
     }
@@ -247,7 +251,7 @@ export async function downloadClientInvoicePdf(invoiceId: string): Promise<Downl
   const knex = await getConnection(session.user.tenant);
 
   try {
-    // Verify the invoice belongs to the client
+    // Verify the invoice belongs to the client and is not a draft
     const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
         .where({
@@ -255,6 +259,7 @@ export async function downloadClientInvoicePdf(invoiceId: string): Promise<Downl
           client_id: session.user.clientId,
           tenant: session.user.tenant
         })
+        .whereNot('status', 'draft')
         .first();
     });
 
@@ -316,7 +321,7 @@ export async function sendClientInvoiceEmail(invoiceId: string): Promise<SendEma
   const knex = await getConnection(session.user.tenant);
 
   try {
-    // Verify the invoice belongs to the client
+    // Verify the invoice belongs to the client and is not a draft
     const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
         .where({
@@ -324,6 +329,7 @@ export async function sendClientInvoiceEmail(invoiceId: string): Promise<SendEma
           client_id: session.user.clientId,
           tenant: session.user.tenant
         })
+        .whereNot('status', 'draft')
         .first();
     });
 

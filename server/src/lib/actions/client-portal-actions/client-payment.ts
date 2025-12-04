@@ -9,6 +9,8 @@
 
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getConnection } from 'server/src/lib/db/db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import logger from '@alga-psa/shared/core/logger';
 
 /**
@@ -33,30 +35,49 @@ export async function getClientPortalInvoicePaymentLink(
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Verify the user has access to this invoice (via their company)
-    const knex = await getConnection();
-    const invoice = await knex('invoices')
-      .where({
-        tenant: user.tenant,
-        invoice_id: invoiceId,
-      })
-      .first();
+    // Client portal users must have a contact_id
+    if (!(user as any).contact_id) {
+      return { success: false, error: 'User not associated with a contact' };
+    }
+
+    const knex = await getConnection(user.tenant);
+
+    // Get the user's client_id from their contact and verify invoice access
+    const { contact, invoice } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const contactResult = await trx('contacts')
+        .where({
+          tenant: user.tenant,
+          contact_name_id: (user as any).contact_id,
+        })
+        .select('client_id')
+        .first();
+
+      const invoiceResult = await trx('invoices')
+        .where({
+          tenant: user.tenant,
+          invoice_id: invoiceId,
+        })
+        .first();
+
+      return { contact: contactResult, invoice: invoiceResult };
+    });
+
+    if (!contact?.client_id) {
+      return { success: false, error: 'Contact not associated with a client' };
+    }
 
     if (!invoice) {
       return { success: false, error: 'Invoice not found' };
     }
 
-    // Verify the invoice belongs to a company the user is associated with
-    const userCompany = await knex('user_companies')
-      .where({
-        tenant: user.tenant,
-        user_id: user.user_id,
-        company_id: invoice.client_id,
-      })
-      .first();
-
-    if (!userCompany) {
+    // Verify the invoice belongs to the user's client
+    if (invoice.client_id !== contact.client_id) {
       return { success: false, error: 'Access denied' };
+    }
+
+    // Check if invoice is a draft (not finalized)
+    if (invoice.status === 'draft') {
+      return { success: false, error: 'Invoice not available' };
     }
 
     // Check if invoice is already paid
@@ -132,30 +153,43 @@ export async function verifyClientPortalPayment(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const knex = await getConnection();
+    // Client portal users must have a contact_id
+    if (!(user as any).contact_id) {
+      return { success: false, error: 'User not associated with a contact' };
+    }
 
-    // Verify the user has access to this invoice
-    const invoice = await knex('invoices')
-      .where({
-        tenant: user.tenant,
-        invoice_id: invoiceId,
-      })
-      .first();
+    const knex = await getConnection(user.tenant);
+
+    // Get the user's client_id from their contact and verify invoice access
+    const { contact, invoice } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const contactResult = await trx('contacts')
+        .where({
+          tenant: user.tenant,
+          contact_name_id: (user as any).contact_id,
+        })
+        .select('client_id')
+        .first();
+
+      const invoiceResult = await trx('invoices')
+        .where({
+          tenant: user.tenant,
+          invoice_id: invoiceId,
+        })
+        .first();
+
+      return { contact: contactResult, invoice: invoiceResult };
+    });
+
+    if (!contact?.client_id) {
+      return { success: false, error: 'Contact not associated with a client' };
+    }
 
     if (!invoice) {
       return { success: false, error: 'Invoice not found' };
     }
 
-    // Verify user has access via company
-    const userCompany = await knex('user_companies')
-      .where({
-        tenant: user.tenant,
-        user_id: user.user_id,
-        company_id: invoice.client_id,
-      })
-      .first();
-
-    if (!userCompany) {
+    // Verify user has access via their client
+    if (invoice.client_id !== contact.client_id) {
       return { success: false, error: 'Access denied' };
     }
 
@@ -180,13 +214,15 @@ export async function verifyClientPortalPayment(
     // Verify the sessionId matches a payment link for this invoice
     // This ensures we're verifying the specific checkout session, not just any payment
     if (sessionId) {
-      const paymentLink = await knex('invoice_payment_links')
-        .where({
-          tenant: user.tenant,
-          invoice_id: invoiceId,
-          external_link_id: sessionId,
-        })
-        .first();
+      const paymentLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('invoice_payment_links')
+          .where({
+            tenant: user.tenant,
+            invoice_id: invoiceId,
+            external_link_id: sessionId,
+          })
+          .first();
+      });
 
       if (!paymentLink) {
         logger.warn('[ClientPayment] Session ID does not match any payment link for invoice', {

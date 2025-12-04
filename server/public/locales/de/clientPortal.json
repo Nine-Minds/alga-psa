@@ -217,6 +217,7 @@
       "dueDate": "Fälligkeitsdatum",
       "dueDateText": "Fällig am {{date}}",
       "noDueDate": "Kein Fälligkeitsdatum",
+      "allPaid": "Alle Rechnungen bezahlt",
       "amount": "Betrag",
       "status": "Status",
       "paid": "Bezahlt",
