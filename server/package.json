@@ -25,6 +25,8 @@
     "start": "next start",
     "start:next": "next start",
     "start:express": "tsx index.ts",
+    "start:https": "tsx https-server.ts",
+    "dev:https": "tsx https-server.ts",
     "lint": "next lint",
     "test": "vitest",
     "test:watch": "vitest --watch",
