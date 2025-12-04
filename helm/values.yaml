@@ -333,6 +333,14 @@ microsoft_integration:
   # OAuth redirect URI configured in the app registration
   redirect_uri: ""
 
+# NinjaOne RMM Integration
+ninjaone_integration:
+  enabled: false
+  client_id: ""
+  client_secret: ""
+  # Optional: specify default region (US, US2, EU, OC, CA)
+  default_region: "US"
+
 # Secret Provider Configuration
 # Controls how secrets are read and written across different providers
 secrets:
