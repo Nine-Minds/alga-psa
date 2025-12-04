@@ -397,7 +397,7 @@ async function listSsoAssignableUsersForTenant(
   const searchTerm = params.search?.trim();
 
   const baseQuery = adminDb(USER_TABLE)
-    .where({ tenant: params.tenant, user_type: 'internal' });
+    .where({ tenant: params.tenant, user_type: 'internal', is_inactive: false });
 
   if (searchTerm) {
     const pattern = `%${searchTerm}%`;
