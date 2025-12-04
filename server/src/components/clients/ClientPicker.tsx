@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Input } from '../ui/Input';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import { Button } from '../ui/Button';
@@ -71,7 +72,10 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedClient = useMemo(() =>
     clients.find((c) => c.client_id === selectedClientId),
@@ -99,23 +103,80 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   }, [clients, filterState, clientTypeFilter, searchTerm]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (!isOpen) return;
-      
       const target = event.target as Node;
-      const isSelectElement = target.nodeName === 'SELECT';
+      
+      // Check if click is inside the dropdown portal or the trigger button
       const isInsideDropdown = dropdownRef.current?.contains(target);
-      const isButton = (target as Element).tagName === 'BUTTON';
+      const isInsideButton = buttonRef.current?.contains(target);
+      const isSelectElement = target.nodeName === 'SELECT';
       
       // Don't close if clicking select elements or buttons inside the dropdown
-      if (!isInsideDropdown && !isSelectElement && !isButton) {
+      if (!isInsideDropdown && !isInsideButton && !isSelectElement) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // Use capture phase to handle events before they reach other handlers
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true);
+    };
   }, [isOpen]);
+
+  // Calculate dropdown position for portal rendering
+  const updateDropdownPosition = useCallback(() => {
+    if (!buttonRef.current) return;
+
+    const buttonRect = buttonRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const margin = 16; // 1rem margin
+    
+    // Calculate dropdown width (match button width, with min/max constraints)
+    const dropdownWidth = Math.min(400, Math.max(buttonRect.width, 250));
+    
+    // Calculate available space on both sides
+    const spaceOnRight = viewportWidth - buttonRect.right;
+    const spaceOnLeft = buttonRect.left;
+    
+    // Determine horizontal position
+    let left = buttonRect.left;
+    
+    // If dropdown would overflow on the right, align to the right edge of button
+    if (buttonRect.left + dropdownWidth > viewportWidth - margin) {
+      // Check if aligning to right would work better
+      if (spaceOnLeft > spaceOnRight) {
+        left = Math.max(margin, buttonRect.right - dropdownWidth);
+      } else {
+        // Constrain to viewport
+        left = Math.max(margin, viewportWidth - dropdownWidth - margin);
+      }
+    }
+    
+    setDropdownCoords({
+      top: buttonRect.bottom + 4,
+      left,
+      width: dropdownWidth
+    });
+  }, []);
+
+  // Calculate dropdown position when it opens
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownPosition();
+
+      // Update position on scroll and resize
+      window.addEventListener('scroll', updateDropdownPosition, true);
+      window.addEventListener('resize', updateDropdownPosition);
+
+      return () => {
+        window.removeEventListener('scroll', updateDropdownPosition, true);
+        window.removeEventListener('resize', updateDropdownPosition);
+      };
+    }
+  }, [isOpen, updateDropdownPosition]);
 
   const handleSelect = (clientId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -230,11 +291,12 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     <ReflectionContainer id={`${id}`} label="Client Picker">
       <div
         className={`${fitContent ? 'inline-flex' : 'w-full'} rounded-md relative ${className}`}
-        ref={dropdownRef}
+        ref={containerRef}
         {...withDataAutomationId({ id })}
         data-automation-type={dataAutomationType}
       >
         <Button
+          ref={buttonRef}
           variant="outline"
           onClick={(e) => {
             e.preventDefault();
@@ -265,109 +327,121 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
           <ChevronDown className="h-4 w-4 text-gray-500" />
         </Button>
 
-        {isOpen && (
+        {/* Dropdown - Using portal to escape overflow:hidden containers */}
+        {isOpen && typeof document !== 'undefined' && createPortal(
           <div
-            className="absolute z-[200] bg-white border rounded-md shadow-lg mt-1" 
+            ref={dropdownRef}
+            className="fixed z-[10000] pointer-events-auto"
             style={{
-              top: '100%',
-              left: 0,
-              minWidth: '100%',
-              width: 'max-content',
-              maxWidth: '400px' // Prevent extremely wide dropdowns
+              top: `${dropdownCoords.top}px`,
+              left: `${dropdownCoords.left}px`,
+              width: `${dropdownCoords.width}px`,
             }}
             onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
-            <ReflectionContainer id={`${id}-dropdown`} label="Client Picker Dropdown">
-              <div className="p-3 space-y-3 bg-white">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="w-full">
-                    <CustomSelect
-                      value={filterState}
-                      onValueChange={handleFilterStateChange}
-                      options={opts}
-                      placeholder="Filter by status"
-                      label="Status Filter"
-                    />
+            <div className="bg-white border rounded-md shadow-lg overflow-hidden w-full">
+              <ReflectionContainer id={`${id}-dropdown`} label="Client Picker Dropdown">
+                <div className="p-3 space-y-3 bg-white">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="w-full">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status Filter
+                      </label>
+                    </div>
+                    <div className="w-full">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Client Type Filter
+                      </label>
+                    </div>
+                    <div className="w-full">
+                      <CustomSelect
+                        value={filterState}
+                        onValueChange={handleFilterStateChange}
+                        options={opts}
+                        placeholder="Filter by status"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <CustomSelect
+                        id={`${id}-type-filter`}
+                        value={clientTypeFilter}
+                        onValueChange={handleClientTypeFilterChange}
+                        options={clientTypes}
+                        placeholder="Filter by client type"
+                      />
+                    </div>
                   </div>
-                  <div className="w-full">
-                    <CustomSelect
-                      id={`${id}-type-filter`}
-                      value={clientTypeFilter}
-                      onValueChange={handleClientTypeFilterChange}
-                      options={clientTypes}
-                      placeholder="Filter by client type"
-                      label="Client Type Filter"
+                  <div className="whitespace-nowrap">
+                    <Input
+                      id={`${id}-search`}
+                      placeholder="Search clients..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSearchTerm(e.target.value);
+                      }}
+                      label="Search Clients"
                     />
                   </div>
                 </div>
-                <div className="whitespace-nowrap">
-                  <Input
-                    id={`${id}-search`}
-                    placeholder="Search clients..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setSearchTerm(e.target.value);
-                    }}
-                    label="Search Clients"
-                  />
-                </div>
-              </div>
-              <div 
-                className="border-t bg-white max-h-[300px] overflow-y-auto"
-                role="listbox"
-                aria-label="Clients"
-              >
-                {/* Add clear/none option */}
-                <OptionButton
-                  id={`${id}-client-picker-none`}
-                  label="None"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onSelect(null);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full justify-start px-2 py-2 cursor-pointer hover:bg-gray-100 ${
-                    !selectedClientId ? 'bg-blue-100 hover:bg-blue-200' : ''
-                  }`}
+                <div 
+                  className="border-t bg-white max-h-[300px] overflow-y-auto"
+                  role="listbox"
+                  aria-label="Clients"
                 >
-                  <div className="flex items-center space-x-2 flex-grow">
-                    <span className="text-gray-500 italic">No Client</span>
-                  </div>
-                </OptionButton>
-                {isOpen && filteredClients.length === 0 ? (
-                  <div className="px-4 py-2 text-gray-500">No clients found</div>
-                ) : (
-                  filteredClients.map((client): JSX.Element => (
-                    <OptionButton
-                      key={client.client_id}
-                      id={`${id}-client-picker-client-${client.client_id}`}
-                      label={client.client_name}
-                      onClick={(e) => handleSelect(client.client_id, e)}
-                      className={`w-full justify-start px-2 py-2 cursor-pointer hover:bg-gray-100 ${
-                        client.client_id === selectedClientId ? 'bg-blue-100 hover:bg-blue-200' : ''
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2 flex-grow">
-                        <ClientAvatar
-                          clientId={client.client_id}
-                          clientName={client.client_name}
-                          logoUrl={client.logoUrl ?? null}
-                          size="sm"
-                        />
-                        <span>{client.client_name}</span>
-                        {client.is_inactive && <span className="ml-auto pl-2 text-xs text-gray-500">(Inactive)</span>}
-                        <span className="ml-2 text-xs text-gray-500">
-                          ({client.client_type === 'company' ? 'Company' : 'Individual'})
-                        </span>
-                      </div>
-                    </OptionButton>
-                  ))
-                )}
-              </div>
-            </ReflectionContainer>
-          </div>
+                  {/* Add clear/none option */}
+                  <OptionButton
+                    id={`${id}-client-picker-none`}
+                    label="None"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onSelect(null);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full justify-start px-2 py-2 cursor-pointer hover:bg-gray-100 ${
+                      !selectedClientId ? 'bg-blue-100 hover:bg-blue-200' : ''
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2 flex-grow">
+                      <span className="text-gray-500 italic">No Client</span>
+                    </div>
+                  </OptionButton>
+                  {isOpen && filteredClients.length === 0 ? (
+                    <div className="px-4 py-2 text-gray-500">No clients found</div>
+                  ) : (
+                    filteredClients.map((client): JSX.Element => (
+                      <OptionButton
+                        key={client.client_id}
+                        id={`${id}-client-picker-client-${client.client_id}`}
+                        label={client.client_name}
+                        onClick={(e) => handleSelect(client.client_id, e)}
+                        className={`w-full justify-start px-2 py-2 cursor-pointer hover:bg-gray-100 ${
+                          client.client_id === selectedClientId ? 'bg-blue-100 hover:bg-blue-200' : ''
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 flex-grow">
+                          <ClientAvatar
+                            clientId={client.client_id}
+                            clientName={client.client_name}
+                            logoUrl={client.logoUrl ?? null}
+                            size="sm"
+                          />
+                          <span>{client.client_name}</span>
+                          {client.is_inactive && <span className="ml-auto pl-2 text-xs text-gray-500">(Inactive)</span>}
+                          <span className="ml-2 text-xs text-gray-500">
+                            ({client.client_type === 'company' ? 'Company' : 'Individual'})
+                          </span>
+                        </div>
+                      </OptionButton>
+                    ))
+                  )}
+                </div>
+              </ReflectionContainer>
+            </div>
+          </div>,
+          document.body
         )}
       </div>
     </ReflectionContainer >
