@@ -135,10 +135,12 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         label: s.name
     }));
 
-    const boardOptions: SelectOption[] = boards.map((b) => ({
-        value: b.board_id,
-        label: b.board_name
-    }));
+    const boardOptions: SelectOption[] = boards
+        .filter((b) => b.board_id && b.board_name)
+        .map((b) => ({
+            value: b.board_id!,
+            label: b.board_name!
+        }));
 
     const handleSubmit = async () => {
         if (!title.trim() || !priority || !status || !board) {
