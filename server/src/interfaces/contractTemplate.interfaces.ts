@@ -8,6 +8,7 @@ export interface IContractTemplate extends TenantEntity {
   template_name: string;
   template_description?: string | null;
   default_billing_frequency: string;
+  currency_code: string;
   template_status: TemplateStatus;
   template_metadata?: Record<string, unknown> | null;
   created_at?: ISO8601String;

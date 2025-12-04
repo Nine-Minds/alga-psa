@@ -32,6 +32,7 @@ export interface TemplateWizardData {
   contract_name: string;
   description?: string;
   billing_frequency: string;
+  currency_code: string;
   fixed_base_rate?: number;
   enable_proration?: boolean;
   fixed_services: Array<{
@@ -74,6 +75,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     contract_name: '',
     description: '',
     billing_frequency: 'monthly',
+    currency_code: 'USD',
     fixed_services: [],
     hourly_services: [],
     usage_services: [],
@@ -85,6 +87,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         contract_name: '',
         description: '',
         billing_frequency: 'monthly',
+        currency_code: 'USD',
         fixed_services: [],
         hourly_services: [],
         usage_services: [],
@@ -105,6 +108,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     minimum_billable_time: wizardData.minimum_billable_time,
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,
+    currency_code: wizardData.currency_code,
   });
 
   const updateData = (data: Partial<TemplateWizardData>) => {
@@ -220,6 +224,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         contract_name: '',
         description: '',
         billing_frequency: 'monthly',
+        currency_code: 'USD',
         fixed_services: [],
         hourly_services: [],
         usage_services: [],

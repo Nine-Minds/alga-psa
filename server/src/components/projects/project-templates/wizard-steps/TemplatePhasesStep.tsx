@@ -5,12 +5,41 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Trash2, Edit2, Check, X, GripVertical, Layers } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, GripVertical, Layers, Calculator } from 'lucide-react';
 import { TemplateWizardData, TemplatePhase } from '../TemplateCreationWizard';
 
 interface TemplatePhasesStepProps {
   data: TemplateWizardData;
   updateData: (data: Partial<TemplateWizardData>) => void;
+}
+
+// Calculate the suggested start offset for a new phase based on previous phases
+function calculateNextOffset(phases: TemplatePhase[]): number {
+  if (phases.length === 0) return 0;
+
+  // Sort phases by order_number to get the last phase
+  const sortedPhases = [...phases].sort((a, b) => a.order_number - b.order_number);
+  const lastPhase = sortedPhases[sortedPhases.length - 1];
+
+  // New phase offset = last phase's offset + last phase's duration (if set)
+  return lastPhase.start_offset_days + (lastPhase.duration_days || 0);
+}
+
+// Recalculate all offsets based on order and durations
+function recalculateAllOffsets(phases: TemplatePhase[]): TemplatePhase[] {
+  const sortedPhases = [...phases].sort((a, b) => a.order_number - b.order_number);
+  let runningOffset = 0;
+
+  return sortedPhases.map((phase, index) => {
+    const updatedPhase = {
+      ...phase,
+      start_offset_days: runningOffset,
+      order_number: index, // Ensure order_number is sequential
+    };
+    // Add this phase's duration to get the next phase's offset
+    runningOffset += phase.duration_days || 0;
+    return updatedPhase;
+  });
 }
 
 export function TemplatePhasesStep({
@@ -20,20 +49,30 @@ export function TemplatePhasesStep({
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [saveAttempted, setSaveAttempted] = useState<Set<string>>(new Set());
+  const [showRecalculateHint, setShowRecalculateHint] = useState(false);
 
   const addPhase = () => {
+    // Calculate suggested offset based on previous phases
+    const suggestedOffset = calculateNextOffset(data.phases);
+
     const newPhase: TemplatePhase = {
       temp_id: `temp_${Date.now()}`,
       phase_name: '',
       description: '',
       duration_days: undefined,
-      start_offset_days: 0,
+      start_offset_days: suggestedOffset,
       order_number: data.phases.length,
     };
     updateData({
       phases: [...data.phases, newPhase],
     });
     setEditingPhaseId(newPhase.temp_id);
+  };
+
+  const handleRecalculateOffsets = () => {
+    const recalculated = recalculateAllOffsets(data.phases);
+    updateData({ phases: recalculated });
+    setShowRecalculateHint(false);
   };
 
   const removePhase = (temp_id: string) => {
@@ -80,6 +119,10 @@ export function TemplatePhasesStep({
   };
 
   const handleDragEnd = () => {
+    // Show hint to recalculate offsets after reordering
+    if (draggedIndex !== null && data.phases.length > 1) {
+      setShowRecalculateHint(true);
+    }
     setDraggedIndex(null);
   };
 
@@ -293,13 +336,61 @@ export function TemplatePhasesStep({
         )}
       </div>
 
+      {/* Recalculate offsets hint - shown after reordering */}
+      {showRecalculateHint && data.phases.length > 1 && (
+        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-sm text-amber-800">
+            Phases reordered. Would you like to recalculate offsets based on phase order and durations?
+          </p>
+          <div className="flex gap-2">
+            <Button
+              id="recalculate-offsets"
+              size="sm"
+              variant="outline"
+              onClick={handleRecalculateOffsets}
+            >
+              <Calculator className="w-4 h-4 mr-1" />
+              Recalculate
+            </Button>
+            <Button
+              id="dismiss-recalculate"
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowRecalculateHint(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Always show recalculate button when there are multiple phases */}
+      {!showRecalculateHint && data.phases.length > 1 && (
+        <div className="flex justify-end">
+          <Button
+            id="recalculate-offsets-manual"
+            size="sm"
+            variant="ghost"
+            onClick={handleRecalculateOffsets}
+            className="text-gray-600"
+          >
+            <Calculator className="w-4 h-4 mr-1" />
+            Recalculate Offsets
+          </Button>
+        </div>
+      )}
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-medium text-blue-900 mb-2">About Phase Timing</h4>
         <p className="text-sm text-blue-800">
           <strong>Start Offset:</strong> Days after the project start date when this phase begins.
+          New phases auto-calculate their offset based on preceding phases.
           <br />
-          <strong>Duration:</strong> How long this phase typically takes. Both are optional but help
-          with project planning.
+          <strong>Duration:</strong> How long this phase typically takes. Used to calculate the next
+          phase's offset.
+          <br />
+          <strong>Tip:</strong> After reordering phases, use "Recalculate Offsets" to update timing
+          based on the new order.
         </p>
       </div>
     </div>

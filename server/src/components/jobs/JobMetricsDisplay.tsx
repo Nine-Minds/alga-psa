@@ -11,10 +11,18 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
     ? Math.round((metrics.completed / metrics.total) * 100)
     : 0;
 
+  const isMixedRunners = metrics.byRunner && metrics.byRunner.pgboss > 0 && metrics.byRunner.temporal > 0;
+  
+  let totalLabel = 'Total Jobs';
+  if (metrics.byRunner && !isMixedRunners) {
+    if (metrics.byRunner.pgboss > 0) totalLabel = 'Total Jobs (PG Boss)';
+    if (metrics.byRunner.temporal > 0) totalLabel = 'Total Jobs (Temporal)';
+  }
+
   const metricsData = [
     {
       id: 'total-jobs-metric',
-      label: 'Total Jobs',
+      label: totalLabel,
       value: metrics.total,
       icon: ListChecks,
       color: 'text-[rgb(var(--color-text-700))]',
@@ -62,6 +70,32 @@ export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
       bgColor: 'bg-[rgb(var(--color-secondary-50))]',
       iconColor: 'text-[rgb(var(--color-secondary-500))]'
     });
+  }
+
+  if (metrics.byRunner && isMixedRunners) {
+    if (metrics.byRunner.pgboss > 0) {
+      metricsData.push({
+        id: 'pgboss-metric',
+        label: 'PG Boss',
+        value: metrics.byRunner.pgboss,
+        icon: ListChecks,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+        iconColor: 'text-blue-500'
+      });
+    }
+
+    if (metrics.byRunner.temporal > 0) {
+      metricsData.push({
+        id: 'temporal-metric',
+        label: 'Temporal',
+        value: metrics.byRunner.temporal,
+        icon: Activity,
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50',
+        iconColor: 'text-purple-500'
+      });
+    }
   }
 
   return (

@@ -1497,8 +1497,12 @@ export class ContractLineService extends BaseService<IContractLine> {
     }
 
     // Check if plan is associated with any contracts and fetch associated clients
-    const contractsWithClients = await knex('contract_line_mappings as clm')
-      .join('contracts as c', 'clm.contract_id', 'c.contract_id')
+    // After migration 20251028090000, data is stored directly in contract_lines
+    const contractsWithClients = await knex('contract_lines as clx')
+      .join('contracts as c', function() {
+        this.on('clx.contract_id', '=', 'c.contract_id')
+          .andOn('clx.tenant', '=', 'c.tenant');
+      })
       .leftJoin('client_contracts as cc', function() {
         this.on('c.contract_id', '=', 'cc.contract_id')
           .andOn('cc.is_active', '=', knex.raw('?', [true]));
@@ -1507,8 +1511,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         this.on('cc.client_id', '=', 'cl.client_id')
           .andOn('cl.tenant', '=', knex.raw('?', [context.tenant]));
       })
-      .where('clm.contract_line_id', planId)
-      .where('clm.tenant', context.tenant)
+      .where('clx.contract_line_id', planId)
+      .where('clx.tenant', context.tenant)
+      .whereNotNull('clx.contract_id')
       .select('c.contract_name', 'cl.client_name', 'c.contract_id')
       .orderBy(['c.contract_name', 'cl.client_name']);
 

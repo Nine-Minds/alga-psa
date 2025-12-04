@@ -8,7 +8,7 @@ import { LucideIcon, ChevronDown } from 'lucide-react';
 export interface TabContent {
   label: string;
   content: React.ReactNode;
-  icon?: LucideIcon;
+  icon?: LucideIcon | React.ReactNode;
 }
 
 export interface TabGroup {
@@ -17,7 +17,7 @@ export interface TabGroup {
 }
 
 export interface CustomTabsProps {
-  tabs: TabContent[];
+  tabs?: TabContent[];
   groups?: TabGroup[];
   defaultTab?: string;
   onTabChange?: (tabValue: string) => void;
@@ -51,10 +51,14 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     if (groups && groups.length > 0) {
       return groups.flatMap(group => group.tabs);
     }
-    return tabs;
+    return tabs || [];
   }, [tabs, groups]);
 
-  const [value, setValue] = React.useState(defaultTab || allTabs[0].label);
+  const [value, setValue] = React.useState(() => {
+    if (defaultTab) return defaultTab;
+    if (allTabs && allTabs.length > 0) return allTabs[0].label;
+    return '';
+  });
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
 
@@ -128,6 +132,11 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   // Render grouped tabs if groups are provided and orientation is vertical
   const renderGroupedTabs = groups && groups.length > 0 && orientation === 'vertical';
 
+  // Early return if no tabs are available (after all hooks)
+  if (allTabs.length === 0) {
+    return null;
+  }
+
   return (
     <Tabs.Root 
       className={`${defaultRootClass} ${tabStyles?.root || ''}`} 
@@ -150,10 +159,10 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                     onClick={() => toggleSection(groupIndex)}
                     className="w-full px-3 pt-4 pb-2 first:pt-0 flex items-center gap-2 group transition-opacity"
                   >
-                    <ChevronDown 
-                      className={`h-3 w-3 text-primary-600 group-hover:text-yellow-500 transition-all duration-200 ${isExpanded ? '' : '-rotate-90'}`}
+                    <ChevronDown
+                      className={`h-3 w-3 text-primary-600 transition-all duration-200 ${isExpanded ? '' : '-rotate-90'}`}
                     />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 group-hover:text-yellow-500 transition-colors duration-200">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 transition-colors duration-200">
                       {group.title}
                     </p>
                   </button>
@@ -163,6 +172,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                   const hasIcon = !!IconComponent;
                   const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
                   const globalIndex = groups.slice(0, groupIndex).reduce((acc, g) => acc + g.tabs.length, 0) + tabIndex;
+                  const isIconComponent = typeof IconComponent === 'function';
                   return (
                     <Tabs.Trigger
                       key={tab.label}
@@ -170,7 +180,13 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                       className={`${defaultTriggerClass} ${iconClassName} ml-4 ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
                       value={tab.label}
                     >
-                      {IconComponent && <IconComponent className="h-4 w-4 shrink-0" />}
+                      {IconComponent && (
+                        isIconComponent ? (
+                          <IconComponent className="h-4 w-4 shrink-0" />
+                        ) : (
+                          <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
+                        )
+                      )}
                       {tab.label}
                     </Tabs.Trigger>
                   );
@@ -185,6 +201,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
             const iconClassName = hasIcon 
               ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
               : '';
+            const isIconComponent = typeof IconComponent === 'function';
             return (
               <Tabs.Trigger
                 key={tab.label}
@@ -192,7 +209,13 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                 className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
                 value={tab.label}
               >
-                {IconComponent && <IconComponent className="h-4 w-4 shrink-0" />}
+                {IconComponent && (
+                  isIconComponent ? (
+                    <IconComponent className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
+                  )
+                )}
                 {tab.label}
               </Tabs.Trigger>
             );

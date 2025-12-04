@@ -44,14 +44,14 @@ export class TaxService {
     }
   }
 
-  async calculateTax(clientId: string, netAmount: number, date: ISO8601String, regionCode?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
+  async calculateTax(clientId: string, netAmount: number, date: ISO8601String, regionCode?: string, is_taxable: boolean = true, currencyCode?: string): Promise<ITaxCalculationResult> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
       throw new Error('Tenant context is required for tax calculation');
     }
 
-    console.log(`Calculating tax for client ${clientId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}`);
+    console.log(`Calculating tax for client ${clientId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}, currency ${currencyCode}`);
 
     // Check if client is tax exempt
     const client = await knex('clients')
@@ -94,6 +94,13 @@ export class TaxService {
         .andWhere(function() {
           this.whereNull('end_date')
             .orWhere('end_date', '>', date);
+        })
+        .andWhere(function() {
+          // Currency check: Match specific currency or allow universal (null)
+          this.whereNull('currency_code');
+          if (currencyCode) {
+            this.orWhere('currency_code', currencyCode);
+          }
         })
         .select('tax_percentage'); // Select only the percentage
 
@@ -167,6 +174,12 @@ export class TaxService {
       .andWhere(function() {
         this.whereNull('end_date')
           .orWhere('end_date', '>', date);
+      })
+      .andWhere(function() {
+        this.whereNull('currency_code');
+        if (currencyCode) {
+          this.orWhere('currency_code', currencyCode);
+        }
       })
       .first();
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Text } from '@radix-ui/themes';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
@@ -99,9 +100,11 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="mt-6">
       <div>
-        <h3 className="text-lg font-medium mb-4">Zero-Dollar Invoice Settings</h3>
+        <Text as="div" size="3" mb="4" weight="medium" className="text-gray-900">
+          Zero-Dollar Invoice Settings
+        </Text>
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
             <Switch

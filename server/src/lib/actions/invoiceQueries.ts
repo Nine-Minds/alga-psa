@@ -52,7 +52,8 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
-    invoice_charges: [] // Empty array initially
+    invoice_charges: [], // Empty array initially
+    currencyCode: invoice.currency_code || 'USD'
   };
 }
 

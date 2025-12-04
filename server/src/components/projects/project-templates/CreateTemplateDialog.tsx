@@ -35,7 +35,9 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
     copyPhases: true,
     copyStatuses: true,
     copyTasks: true,
-    copyAssignments: false
+    copyAssignments: false,
+    copyChecklists: true,
+    copyServices: true
   });
 
   useEffect(() => {
@@ -196,12 +198,36 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
                   id="copy-tasks"
                   label="Copy project tasks"
                   checked={copyOptions.copyTasks}
-                  onChange={(e) => setCopyOptions({ ...copyOptions, copyTasks: e.target.checked })}
+                  onChange={(e) => {
+                    setCopyOptions({
+                      ...copyOptions,
+                      copyTasks: e.target.checked,
+                      // Disable dependent options if tasks are disabled
+                      copyChecklists: e.target.checked ? copyOptions.copyChecklists : false,
+                      copyServices: e.target.checked ? copyOptions.copyServices : false,
+                      copyAssignments: e.target.checked ? copyOptions.copyAssignments : false
+                    });
+                  }}
+                />
+                <Checkbox
+                  id="copy-checklists"
+                  label="Copy task checklists"
+                  checked={copyOptions.copyChecklists}
+                  disabled={!copyOptions.copyTasks}
+                  onChange={(e) => setCopyOptions({ ...copyOptions, copyChecklists: e.target.checked })}
+                />
+                <Checkbox
+                  id="copy-services"
+                  label="Copy task services"
+                  checked={copyOptions.copyServices}
+                  disabled={!copyOptions.copyTasks}
+                  onChange={(e) => setCopyOptions({ ...copyOptions, copyServices: e.target.checked })}
                 />
                 <Checkbox
                   id="copy-assignments"
                   label="Copy task assignments"
                   checked={copyOptions.copyAssignments}
+                  disabled={!copyOptions.copyTasks}
                   onChange={(e) => setCopyOptions({ ...copyOptions, copyAssignments: e.target.checked })}
                 />
               </div>

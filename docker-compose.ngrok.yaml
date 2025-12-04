@@ -21,6 +21,14 @@ volumes:
     name: ${COMPOSE_PROJECT_NAME:-alga}_ngrok_data
 
 services:
+  # Init container to fix volume permissions (runs as root, exits immediately)
+  ngrok-init:
+    image: alpine:latest
+    volumes:
+      - ngrok-data:/ngrok:rw
+    command: sh -c "rm -f /ngrok/url /ngrok/updated_at 2>/dev/null; chmod 777 /ngrok && echo '[ngrok-init] Volume ready'"
+    restart: "no"
+
   ngrok:
     image: ngrok/ngrok:latest
     restart: unless-stopped
@@ -35,9 +43,6 @@ services:
     command:
       - -c
       - |
-        # Ensure ngrok volume has write permissions
-        chmod 777 /ngrok 2>/dev/null || true
-
         export NGROK_AUTHTOKEN=$$(cat /run/secrets/ngrok_authtoken)
         while true; do
           echo "[ngrok] Starting tunnel to server:3000..."
@@ -58,7 +63,10 @@ services:
           sleep 10
         done
     depends_on:
-      - server
+      ngrok-init:
+        condition: service_completed_successfully
+      server:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4040/api/tunnels"]
       interval: 5s

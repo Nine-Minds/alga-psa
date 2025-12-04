@@ -86,6 +86,7 @@ export interface IBillingResult extends TenantEntity {
   discounts: IDiscount[];
   adjustments: IAdjustment[];
   finalAmount: number;
+  currency_code: string;
 }
 
 export interface IClientContractLine extends TenantEntity {
@@ -99,6 +100,7 @@ export interface IClientContractLine extends TenantEntity {
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
+  currency_code?: string;
   custom_rate?: number;
   client_contract_id?: string; // Reference to the client contract assignment
   template_contract_id?: string;
@@ -403,6 +405,7 @@ export interface ITransaction extends TenantEntity {
   balance_after: number;
   expiration_date?: ISO8601String;
   related_transaction_id?: string;
+  currency_code: string;
 }
 
 export interface ICreditTracking extends TenantEntity {
@@ -416,6 +419,7 @@ export interface ICreditTracking extends TenantEntity {
   expiration_date?: ISO8601String;
   is_expired: boolean;
   updated_at?: ISO8601String;
+  currency_code: string;
 }
 
 export interface ICreditExpirationSettings {

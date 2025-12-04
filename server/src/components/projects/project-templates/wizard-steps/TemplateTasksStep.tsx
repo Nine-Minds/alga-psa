@@ -11,6 +11,7 @@ import { TemplateWizardData, TemplateTask, TemplateChecklistItem } from '../Temp
 import UserPicker from 'server/src/components/ui/UserPicker';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IService } from 'server/src/interfaces/billing.interfaces';
 
 interface TemplateTasksStepProps {
   data: TemplateWizardData;
@@ -19,6 +20,7 @@ interface TemplateTasksStepProps {
   priorities: Array<{ priority_id: string; priority_name: string }>;
   availableStatuses: Array<{ status_id: string; name: string; color?: string; is_closed?: boolean }>;
   users: IUserWithRoles[];
+  services: IService[];
 }
 
 export function TemplateTasksStep({
@@ -28,6 +30,7 @@ export function TemplateTasksStep({
   priorities,
   availableStatuses,
   users,
+  services,
 }: TemplateTasksStepProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(
     data.phases[0]?.temp_id || null
@@ -196,6 +199,26 @@ export function TemplateTasksStep({
                             placeholder="Describe what needs to be done..."
                             rows={2}
                           />
+                        </div>
+
+                        <div>
+                          <Label>Service (for time entries)</Label>
+                          <CustomSelect
+                            value={task.service_id || ''}
+                            onValueChange={(value) =>
+                              updateTask(task.temp_id, { service_id: value || undefined })
+                            }
+                            options={[
+                              { value: '', label: 'No service' },
+                              ...services.map((s) => ({
+                                value: s.service_id,
+                                label: s.service_name,
+                              })),
+                            ]}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Auto-fills service when creating time entries from tasks.
+                          </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">

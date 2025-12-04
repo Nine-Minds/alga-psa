@@ -10,6 +10,7 @@ import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '../ui/ContactPicker';
+import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
 
 interface BillingConfigFormProps {
     billingConfig: {
@@ -21,6 +22,7 @@ interface BillingConfigFormProps {
         billing_contact_id?: string;
         billing_email?: string;
         region_code?: string | null; // Added for tax region
+        default_currency_code?: string | null; // Added
     };
     handleSelectChange: (name: string) => (value: string) => void;
     clientId: string;
@@ -130,12 +132,15 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2 col-span-2">
-                <Text as="div" size="2" mb="1" weight="medium">
+            <div className="col-span-2">
+                <Text as="div" size="3" mb="4" weight="medium" className="text-gray-900">
                     Billing Contact Information
                 </Text>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
+                        <label className="block text-sm font-medium mb-1 text-gray-700">
+                            Billing Contact
+                        </label>
                         <ContactPicker
                             id="client-billing-contact-select"
                             contacts={contacts}
@@ -182,6 +187,15 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     onValueChange={handleSelectChange('invoice_template_id')}
                     options={templateOptions}
                     disabled={isLoadingTemplates} // Use renamed state
+                />
+            </div>
+
+            <div className="space-y-2">
+                <CustomSelect
+                    label="Default Currency"
+                    value={billingConfig.default_currency_code || 'USD'}
+                    onValueChange={handleSelectChange('default_currency_code')}
+                    options={CURRENCY_OPTIONS}
                 />
             </div>
 

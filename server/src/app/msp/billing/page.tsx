@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import BillingDashboard from '../../../components/billing-dashboard/BillingDashboard';
 import { getServices } from '../../../lib/actions/serviceActions';
 
@@ -11,9 +11,11 @@ const BillingPage = async () => {
     : (servicesResponse.services || []);
 
   return (
-    <BillingDashboard
-      initialServices={services}
-    />
+    <Suspense fallback={<div className="p-4">Loading billing dashboard...</div>}>
+      <BillingDashboard
+        initialServices={services}
+      />
+    </Suspense>
   );
 };
 

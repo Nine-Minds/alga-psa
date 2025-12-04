@@ -10,6 +10,39 @@ import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { JobStatus } from 'server/src/types/job';
 import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
+import logger from '@alga-psa/shared/core/logger';
+
+/**
+ * Dynamically imports the PaymentService (EE only).
+ * Returns null if not available (CE edition).
+ */
+async function getPaymentService(tenantId: string): Promise<any | null> {
+  const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  if (!isEE) return null;
+
+  try {
+    const { PaymentService } = await import('@ee/lib/payments');
+    return PaymentService.create(tenantId);
+  } catch (error) {
+    logger.debug('[InvoiceEmailHandler] PaymentService not available', { error });
+    return null;
+  }
+}
+
+/**
+ * Gets the tenant company name for email templates.
+ */
+async function getTenantCompanyName(tenantId: string): Promise<string> {
+  try {
+    const knex = await getConnection();
+    const tenant = await knex('tenants')
+      .where({ tenant: tenantId })
+      .first();
+    return tenant?.company_name || 'Your Company';
+  } catch {
+    return 'Your Company';
+  }
+}
 
 export interface InvoiceEmailJobData extends Record<string, unknown> {
   jobServiceId: string;
@@ -197,6 +230,41 @@ export class InvoiceEmailHandler {
           await fs.writeFile(tempPath, buffer);
 
           try {
+            // Try to generate a payment link if PaymentService is available
+            let paymentLinkUrl: string | undefined;
+            if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
+              try {
+                const paymentService = await getPaymentService(tenantId);
+                if (paymentService) {
+                  const hasProvider = await paymentService.hasEnabledProvider();
+                  if (hasProvider) {
+                    const settings = await paymentService.getPaymentSettings();
+                    if (settings.paymentLinksInEmails) {
+                      const paymentLink = await paymentService.getOrCreatePaymentLink(invoiceId);
+                      if (paymentLink) {
+                        paymentLinkUrl = paymentLink.url;
+                        logger.info('[InvoiceEmailHandler] Generated payment link', {
+                          tenantId,
+                          invoiceId,
+                          paymentLinkId: paymentLink.paymentLinkId,
+                        });
+                      }
+                    }
+                  }
+                }
+              } catch (paymentError) {
+                // Don't fail the email if payment link generation fails
+                logger.warn('[InvoiceEmailHandler] Failed to generate payment link', {
+                  tenantId,
+                  invoiceId,
+                  error: paymentError instanceof Error ? paymentError.message : 'Unknown error',
+                });
+              }
+            }
+
+            // Get tenant company name for email template
+            const companyName = await getTenantCompanyName(tenantId);
+
             // Send email using the new email service
             const success = await emailService.sendInvoiceEmail(
               {
@@ -209,7 +277,11 @@ export class InvoiceEmailHandler {
                   address: client.location_address || ''
                 }
               },
-              tempPath
+              tempPath,
+              {
+                paymentLink: paymentLinkUrl,
+                companyName,
+              }
             );
 
             if (!success) {

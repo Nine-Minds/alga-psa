@@ -21,6 +21,11 @@ interface QuickAddServiceProps {
   onServiceAdded: () => void;
   allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]; // Updated billing methods
   onServiceTypesChange: () => void; // Add callback to refresh service types
+  // Optional controlled mode props for quick create integration
+  isOpen?: boolean;
+  onClose?: () => void;
+  // Optional ID for the trigger button (to avoid duplicate IDs when multiple instances exist)
+  triggerId?: string;
 }
 
 // Updated interface to use custom_service_type_id
@@ -57,8 +62,25 @@ const BILLING_METHOD_OPTIONS = [
   { value: 'usage', label: 'Usage Based' }
 ];
 
-export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange }: QuickAddServiceProps) { // Destructure new prop
-  const [open, setOpen] = useState(false)
+export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange, isOpen, onClose, triggerId = 'add-service' }: QuickAddServiceProps) {
+  // Support both controlled (isOpen/onClose) and uncontrolled (internal state) modes
+  const isControlled = isOpen !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  // In controlled mode, use external state; in uncontrolled mode, use internal state
+  const dialogOpen = isControlled ? isOpen : internalOpen;
+
+  // Handler for closing the dialog - resets form state and calls appropriate close handler
+  const handleDialogClose = () => {
+    setRateInput('');
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
+    if (isControlled && onClose) {
+      onClose();
+    } else {
+      setInternalOpen(false);
+    }
+  };
   const [triggerButton, setTriggerButton] = useState<HTMLButtonElement | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
@@ -205,7 +227,10 @@ await createService(submitData);
 console.log('[QuickAddService] Service created successfully');
 
       onServiceAdded()
-      setOpen(false)
+      // Close dialog - in controlled mode this is handled by parent via onServiceAdded callback
+      if (!isControlled) {
+        setInternalOpen(false);
+      }
       // Reset form
       setServiceData({
         service_name: '',
@@ -239,21 +264,19 @@ console.log('[QuickAddService] Service created successfully');
 
   return (
     <>
-      <Button 
-        ref={setTriggerButton}
-        id='add-service' 
-        onClick={() => setOpen(true)}
-      >
-        Add Service
-      </Button>
+      {/* Only render trigger button in uncontrolled mode */}
+      {!isControlled && (
+        <Button
+          ref={setTriggerButton}
+          id={triggerId}
+          onClick={() => setInternalOpen(true)}
+        >
+          Add Service
+        </Button>
+      )}
       <Dialog
-        isOpen={open}
-        onClose={() => {
-          setOpen(false);
-          setRateInput('');
-          setHasAttemptedSubmit(false);
-          setValidationErrors([]);
-        }}
+        isOpen={dialogOpen}
+        onClose={handleDialogClose}
         title="Add New Service"
         className="max-w-[550px]"
       >
@@ -557,12 +580,7 @@ console.log('[QuickAddService] Service created successfully');
             )}
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button id='cancel-button' type="button" variant="outline" onClick={() => {
-                setOpen(false);
-                setRateInput('');
-                setHasAttemptedSubmit(false);
-                setValidationErrors([]);
-              }}>
+              <Button id='cancel-button' type="button" variant="outline" onClick={handleDialogClose}>
                 Cancel
               </Button>
               <Button id='save-button' type="submit" className={!serviceData.service_name || !serviceData.custom_service_type_id || !serviceData.default_rate || !serviceData.billing_method ? 'opacity-50' : ''}>Save Service</Button>

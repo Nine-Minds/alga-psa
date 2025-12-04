@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import Spinner from 'server/src/components/ui/Spinner';
 
 import { Button } from 'server/src/components/ui/Button';
 
@@ -133,7 +133,7 @@ export default function PortalSessionHandoff({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-6 py-24">
       <div className="flex items-center gap-3 rounded-lg bg-white px-6 py-5 shadow-md">
-        <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+        <Spinner size="sm" className="text-indigo-600" />
         <div>
           <p className="text-sm font-medium text-gray-900">Preparing your secure session</p>
           <p className="text-sm text-gray-500">Hold tight—this usually takes just a second.</p>
