@@ -107,3 +107,15 @@ Render MICROSOFT_OAUTH_* env vars using the microsoft_integration config.
   value: "{{ .Values.microsoft_integration.client_secret }}"
 {{- end }}
 {{- end }}
+
+{{/* Render NINJAONE_OAUTH_* env vars from ninjaone_integration config */}}
+{{- define "sebastian.ninjaonetOAuthEnv" -}}
+{{- if and .Values.ninjaone_integration.enabled .Values.ninjaone_integration.client_id }}
+- name: NINJAONE_OAUTH_CLIENT_ID
+  value: "{{ .Values.ninjaone_integration.client_id }}"
+{{- end }}
+{{- if and .Values.ninjaone_integration.enabled .Values.ninjaone_integration.client_secret }}
+- name: NINJAONE_OAUTH_CLIENT_SECRET
+  value: "{{ .Values.ninjaone_integration.client_secret }}"
+{{- end }}
+{{- end }}

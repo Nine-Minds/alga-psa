@@ -523,6 +523,25 @@ spec:
           # Note: XERO_REDIRECT_URI is now derived from APP_BASE_URL in the application code
           {{- end }}
 
+          # ----------- NINJAONE INTEGRATION ----------------
+          {{- if .Values.ninjaone_integration.enabled }}
+          {{- if .Values.ninjaone_integration.client_id }}
+          - name: NINJAONE_CLIENT_ID
+            value: "{{ .Values.ninjaone_integration.client_id }}"
+          {{- end }}
+          {{- if .Values.ninjaone_integration.client_secret }}
+          - name: NINJAONE_CLIENT_SECRET
+            value: "{{ .Values.ninjaone_integration.client_secret }}"
+          {{- end }}
+          {{- if .Values.ninjaone_integration.default_region }}
+          - name: NINJAONE_DEFAULT_REGION
+            value: "{{ .Values.ninjaone_integration.default_region }}"
+          {{- end }}
+          {{- with include "sebastian.ninjaonetOAuthEnv" . }}
+{{ . | nindent 10 }}
+          {{- end }}
+          {{- end }}
+
           # ----------- STRIPE INTEGRATION ----------------
           # Sensitive keys (read from secrets via secret provider)
           {{- if .Values.secrets.stripe_secret_key }}
