@@ -179,36 +179,9 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
     }
   };
 
-  // Handle reverse charge update
-  const handleReverseChargeUpdate = async () => {
-    if (!taxSettings) return;
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const updatedSettings = await updateClientTaxSettings(clientId, taxSettings);
-      setTaxSettings(updatedSettings);
-      setOriginalSettings(JSON.parse(JSON.stringify(updatedSettings)));
-      setSuccessMessage('Reverse charge setting updated successfully');
-    } catch (err) {
-      // Revert on error
-      if (originalSettings) {
-        setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
-      }
-      setError(err instanceof Error ? err.message : 'Failed to update reverse charge setting');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Check if tax exempt settings have changed
   const hasTaxExemptChanges = isTaxExempt !== originalTaxExempt ||
     taxExemptionCertificate !== originalCertificate;
-
-  // Check if reverse charge settings have changed
-  const hasReverseChargeChanges = taxSettings && originalSettings &&
-    taxSettings.is_reverse_charge_applicable !== originalSettings.is_reverse_charge_applicable;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -451,35 +424,6 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
                   />
                 </div>
               </div>
-
-              {hasReverseChargeChanges && (
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    id="cancel-reverse-charge-changes-button"
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (originalSettings) {
-                        setTaxSettings(JSON.parse(JSON.stringify(originalSettings)));
-                        setError(null);
-                      }
-                    }}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    id="save-reverse-charge-button"
-                    type="button"
-                    size="sm"
-                    onClick={handleReverseChargeUpdate}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
-              )}
             </div>
 
             <div className="border-t border-gray-200 pt-6">
