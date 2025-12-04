@@ -21,12 +21,12 @@ const TimeEntrySettings: React.FC = () => {
   const tabContent: TabContent[] = [
     {
       label: "Time Period Settings",
-      icon: Settings,
+      icon: <Settings className="w-4 h-4" />,
       content: <TimePeriodSettings />,
     },
     {
       label: "Time Periods",
-      icon: Calendar,
+      icon: <Calendar className="w-4 h-4" />,
       content: <TimePeriodList />,
     },
   ];
