@@ -1,20 +1,21 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Asset, AssetAssociation } from '../../interfaces/asset.interfaces';
-import { listEntityAssets, getAsset, createAssetAssociation, removeAssetAssociation, listAssets } from '../../lib/actions/asset-actions/assetActions';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Asset, AssetAssociation, AssetListResponse } from '../../interfaces/asset.interfaces';
+import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../../lib/actions/asset-actions/assetActions';
 import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import CustomSelect, { SelectOption } from '../../components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { DataTable } from '../../components/ui/DataTable';
+import { ColumnDefinition } from '../../interfaces/dataTable.interfaces';
+import { SearchInput } from '../../components/ui/SearchInput';
 
 interface AssociatedAssetsProps {
-    id: string; // Made required since it's needed for reflection registration
+    id: string;
     entityId: string;
     entityType: 'ticket' | 'project';
     clientId: string;
@@ -25,33 +26,51 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
     const [selectedAssetId, setSelectedAssetId] = useState<string>('');
     const [relationshipType, setRelationshipType] = useState<'affected' | 'related'>('affected');
     const [isLoading, setIsLoading] = useState(true);
-    const [availableAssets, setAvailableAssets] = useState<SelectOption[]>([]);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
+
+    // Pagination and search state for asset selection
+    const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
+    const [totalAssets, setTotalAssets] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(10);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isLoadingAssets, setIsLoadingAssets] = useState(false);
 
     useEffect(() => {
         loadAssociatedAssets();
-        loadAvailableAssets();
     }, [entityId, clientId]);
 
-    const loadAvailableAssets = async () => {
+    // Load available assets when dialog opens or search/pagination changes
+    useEffect(() => {
+        if (isAddDialogOpen) {
+            loadAvailableAssets();
+        }
+    }, [isAddDialogOpen, currentPage, searchTerm, clientId]);
+
+    const loadAvailableAssets = useCallback(async () => {
         try {
-            const response = await listAssets({ client_id: clientId });
-            const options = response.assets.map((asset): SelectOption => ({
-                value: asset.asset_id,
-                label: `${asset.name} (${asset.asset_tag})`
-            }));
-            setAvailableAssets(options);
+            setIsLoadingAssets(true);
+            const response: AssetListResponse = await listAssets({
+                client_id: clientId,
+                page: currentPage,
+                limit: pageSize,
+                search: searchTerm || undefined
+            });
+            setAvailableAssets(response.assets);
+            setTotalAssets(response.total);
         } catch (error) {
             console.error('Error loading available assets:', error);
             toast.error('Failed to load available assets');
+        } finally {
+            setIsLoadingAssets(false);
         }
-    };
+    }, [clientId, currentPage, pageSize, searchTerm]);
 
     const loadAssociatedAssets = async () => {
         try {
             setIsLoading(true);
             const assets = await listEntityAssets(entityId, entityType);
-            
+
             // Create associations with assets
             const associations: AssetAssociation[] = await Promise.all(
                 assets.map(async (asset): Promise<AssetAssociation> => ({
@@ -60,8 +79,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                     entity_id: entityId,
                     entity_type: entityType,
                     relationship_type: relationshipType,
-                    created_by: 'system', // This should come from the actual association data
-                    created_at: new Date().toISOString(), // This should come from the actual association data
+                    created_by: 'system',
+                    created_at: new Date().toISOString(),
                     asset: asset
                 }))
             );
@@ -90,8 +109,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
             });
 
             toast.success('Asset associated successfully');
-            setIsAddDialogOpen(false);
-            setSelectedAssetId('');
+            handleCloseDialog();
             loadAssociatedAssets();
         } catch (error) {
             console.error('Error associating asset:', error);
@@ -110,9 +128,88 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
         }
     };
 
+    const handleCloseDialog = () => {
+        setIsAddDialogOpen(false);
+        setSelectedAssetId('');
+        setSearchTerm('');
+        setCurrentPage(1);
+    };
+
+    const handleOpenDialog = () => {
+        setIsAddDialogOpen(true);
+        setCurrentPage(1);
+        setSearchTerm('');
+    };
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+        setCurrentPage(1); // Reset to first page when searching
+    };
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handleRowClick = (asset: Asset) => {
+        setSelectedAssetId(asset.asset_id);
+    };
+
     const relationshipOptions: SelectOption[] = [
         { label: 'Affected', value: 'affected' },
         { label: 'Related', value: 'related' }
+    ];
+
+    // Column definitions for the asset selection table
+    const assetColumns: ColumnDefinition<Asset>[] = [
+        {
+            title: '',
+            dataIndex: 'asset_id',
+            width: '40px',
+            render: (value: string) => (
+                <input
+                    type="radio"
+                    name="selected-asset"
+                    checked={selectedAssetId === value}
+                    onChange={() => setSelectedAssetId(value)}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                />
+            )
+        },
+        {
+            title: 'Name',
+            dataIndex: 'name',
+            render: (value: string, record: Asset) => (
+                <div className="flex items-center gap-2">
+                    <span className="font-medium">{value}</span>
+                    <RmmStatusIndicator asset={record} size="sm" />
+                </div>
+            )
+        },
+        {
+            title: 'Asset Tag',
+            dataIndex: 'asset_tag'
+        },
+        {
+            title: 'Type',
+            dataIndex: 'asset_type',
+            render: (value: string) => (
+                <span className="capitalize">{value.replace('_', ' ')}</span>
+            )
+        },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            render: (value: string) => (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    value === 'active' ? 'bg-green-100 text-green-800' :
+                    value === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                    value === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                }`}>
+                    {value}
+                </span>
+            )
+        }
     ];
 
     return (
@@ -123,7 +220,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                     <Button
                         id='add-asset-button'
                         variant="outline"
-                        onClick={() => setIsAddDialogOpen(true)}
+                        onClick={handleOpenDialog}
                     >
                         Add Asset
                     </Button>
@@ -152,7 +249,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 ml-2">
-                                    {/* Show remote access button for RMM-managed assets */}
                                     {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
                                         <RemoteAccessButton
                                             asset={association.asset}
@@ -177,33 +273,82 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                 <Dialog
                     id={`${id}-dialog`}
                     isOpen={isAddDialogOpen}
-                    onClose={() => setIsAddDialogOpen(false)}
+                    onClose={handleCloseDialog}
                     title="Add Asset"
                 >
-                    <div className="space-y-4">
-                        <CustomSelect
-                            options={availableAssets}
-                            value={selectedAssetId}
-                            onValueChange={setSelectedAssetId}
-                            placeholder="Select an asset..."
-                        />
-                        <CustomSelect
-                            options={relationshipOptions}
-                            value={relationshipType}
-                            onValueChange={(value) => setRelationshipType(value as 'affected' | 'related')}
-                            placeholder="Select relationship type..."
-                        />
-                        <div className="flex justify-end space-x-2">
+                    <div className="space-y-4 min-w-[600px]">
+                        {/* Search input */}
+                        <div className="flex gap-4 items-end">
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Search Assets
+                                </label>
+                                <SearchInput
+                                    id={`${id}-search`}
+                                    value={searchTerm}
+                                    onChange={handleSearchChange}
+                                    placeholder="Search by name, tag, or serial..."
+                                    className="w-full"
+                                />
+                            </div>
+                            <div className="w-48">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Relationship Type
+                                </label>
+                                <CustomSelect
+                                    options={relationshipOptions}
+                                    value={relationshipType}
+                                    onValueChange={(value) => setRelationshipType(value as 'affected' | 'related')}
+                                    placeholder="Select type..."
+                                />
+                            </div>
+                        </div>
+
+                        {/* Asset selection table */}
+                        <div className="border rounded-lg overflow-hidden">
+                            {isLoadingAssets ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    Loading assets...
+                                </div>
+                            ) : availableAssets.length === 0 ? (
+                                <div className="p-8 text-center text-gray-500">
+                                    {searchTerm ? 'No assets found matching your search' : 'No assets available for this client'}
+                                </div>
+                            ) : (
+                                <DataTable
+                                    id={`${id}-asset-table`}
+                                    data={availableAssets}
+                                    columns={assetColumns}
+                                    pagination={true}
+                                    currentPage={currentPage}
+                                    pageSize={pageSize}
+                                    totalItems={totalAssets}
+                                    onPageChange={handlePageChange}
+                                    onRowClick={handleRowClick}
+                                />
+                            )}
+                        </div>
+
+                        {/* Selected asset indicator */}
+                        {selectedAssetId && (
+                            <div className="p-2 bg-primary-50 rounded-md text-sm text-primary-700">
+                                Selected: {availableAssets.find(a => a.asset_id === selectedAssetId)?.name || 'Asset'}
+                            </div>
+                        )}
+
+                        {/* Action buttons */}
+                        <div className="flex justify-end space-x-2 pt-2 border-t">
                             <Button
                                 id='cancel-button'
                                 variant="outline"
-                                onClick={() => setIsAddDialogOpen(false)}
+                                onClick={handleCloseDialog}
                             >
                                 Cancel
                             </Button>
                             <Button
-                                id='add-asset-button'
+                                id='confirm-add-asset-button'
                                 onClick={handleAddAsset}
+                                disabled={!selectedAssetId}
                             >
                                 Add Asset
                             </Button>

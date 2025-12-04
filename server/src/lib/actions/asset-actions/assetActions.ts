@@ -753,6 +753,14 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
         if (validatedParams.status) {
             baseQuery.where('assets.status', validatedParams.status);
         }
+        if (validatedParams.search) {
+            const searchTerm = `%${validatedParams.search}%`;
+            baseQuery.where(function() {
+                this.whereILike('assets.name', searchTerm)
+                    .orWhereILike('assets.asset_tag', searchTerm)
+                    .orWhereILike('assets.serial_number', searchTerm);
+            });
+        }
 
         // Get total count
         const [{ count }] = await baseQuery.clone().count('* as count');
