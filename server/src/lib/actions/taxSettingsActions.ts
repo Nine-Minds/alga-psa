@@ -54,7 +54,13 @@ export async function updateClientTaxSettings(
       });
         // Removed transaction logic for components, thresholds, holidays (Phase 1.2)
 
-        return await getClientTaxSettings(clientId);
+        // Fetch updated settings within the same transaction to ensure we get the updated data
+        const updatedSettings = await trx<IClientTaxSettings>('client_tax_settings')
+          .where('client_id', clientId)
+          .andWhere('tenant', tenant!)
+          .first();
+
+        return updatedSettings || null;
       } catch (error) {
         console.error('Error updating client tax settings:', error);
       
