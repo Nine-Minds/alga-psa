@@ -81,9 +81,12 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     );
     if (unpaidInvoices.length === 0) return null;
     // Sort by due_date ascending (nearest due first)
+    // due_date is DateValue type, convert to string first
     return unpaidInvoices.sort((a, b) => {
-      const dateA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
-      const dateB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+      const dateStrA = a.due_date ? String(a.due_date) : '';
+      const dateStrB = b.due_date ? String(b.due_date) : '';
+      const dateA = dateStrA ? new Date(dateStrA).getTime() : Infinity;
+      const dateB = dateStrB ? new Date(dateStrB).getTime() : Infinity;
       return dateA - dateB;
     })[0];
   }, [invoices]);
