@@ -328,7 +328,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         </Button>
 
         {/* Dropdown - Using portal to escape overflow:hidden containers */}
-        {isOpen && typeof document !== 'undefined' && createPortal(
+        {isOpen && createPortal(
           <div
             ref={dropdownRef}
             className="fixed z-[10000] pointer-events-auto"
