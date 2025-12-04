@@ -62,9 +62,25 @@ const PaymentSettingsSkeleton: React.FC = () => {
   );
 };
 
-// Dynamically import PaymentSettings (EE feature)
+// Dynamic import for PaymentSettings using the packages pattern
+// The webpack alias @product/billing/entry will resolve to either EE or OSS version
 const PaymentSettings = dynamic(
-  () => import('@ee/components/settings/billing/PaymentSettings'),
+  () => import('@product/billing/entry').then(mod => {
+    const PaymentSettingsExport = mod.PaymentSettings;
+    const result = PaymentSettingsExport();
+    
+    // EE version: result is a Promise that resolves to the module
+    // OSS version: result is JSX directly
+    if (result instanceof Promise || (result && typeof result === 'object' && 'then' in result && typeof (result as any).then === 'function')) {
+      // EE: unwrap the promise and get the component
+      return (result as unknown as Promise<any>).then(componentModule => ({
+        default: componentModule.default || componentModule.PaymentSettings || componentModule
+      }));
+    } else {
+      // OSS: result is JSX, wrap it in a component function
+      return Promise.resolve({ default: () => result });
+    }
+  }),
   {
     loading: () => <PaymentSettingsSkeleton />,
     ssr: false,
