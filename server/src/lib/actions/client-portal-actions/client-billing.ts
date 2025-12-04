@@ -93,7 +93,8 @@ export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
     // Directly fetch only invoices for the current client
     const invoices = await fetchInvoicesByClient(session.user.clientId);
     // Filter out draft invoices - only finalized invoices should be visible in client portal
-    return invoices.filter(invoice => invoice.status !== 'draft');
+    // An invoice is finalized when finalized_at is set (not null)
+    return invoices.filter(invoice => invoice.finalized_at != null);
   } catch (error) {
     console.error('Error fetching client invoices:', error);
     throw new Error('Failed to fetch invoices');

@@ -47,8 +47,7 @@ interface InvoiceData {
 interface ClientData {
   client_id: string;
   client_name: string;
-  billing_email?: string;
-  location_email?: string;
+  billing_location_email?: string;
 }
 
 export class PaymentService {
@@ -191,9 +190,9 @@ export class PaymentService {
       throw new Error(`Client not found: ${invoice.client_id}`);
     }
 
-    const clientEmail = client.billing_email || client.location_email;
+    const clientEmail = client.billing_location_email;
     if (!clientEmail) {
-      throw new Error(`No email address for client: ${client.client_name}`);
+      throw new Error(`No billing email address for client: ${client.client_name}. Please set an email on the billing location.`);
     }
 
     // Get payment settings for expiration
@@ -716,14 +715,39 @@ export class PaymentService {
   }
 
   /**
-   * Gets a client by ID.
+   * Gets a client by ID with billing location email.
+   * Email is fetched from the billing location (is_billing_address=true) or
+   * falls back to the default location (is_default=true).
    */
   private async getClient(clientId: string): Promise<ClientData | null> {
-    const result = await this.knex<ClientData>('clients')
+    // Get client basic info
+    const client = await this.knex('clients')
       .where('tenant', this.tenantId)
       .where('client_id', clientId)
+      .select('client_id', 'client_name')
       .first();
-    return result || null;
+
+    if (!client) {
+      return null;
+    }
+
+    // Get email from billing location or default location
+    const location = await this.knex('client_locations')
+      .where('tenant', this.tenantId)
+      .where('client_id', clientId)
+      .where(function() {
+        this.where('is_billing_address', true)
+            .orWhere('is_default', true);
+      })
+      .orderByRaw('is_billing_address DESC, is_default DESC')
+      .select('email')
+      .first();
+
+    return {
+      client_id: client.client_id,
+      client_name: client.client_name,
+      billing_location_email: location?.email || undefined,
+    };
   }
 
   /**

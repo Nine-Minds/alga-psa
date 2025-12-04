@@ -129,7 +129,13 @@ export async function getClientPortalInvoicePaymentLink(
       data: { paymentUrl: paymentLink.url },
     };
   } catch (error) {
-    logger.error('[ClientPayment] Failed to get payment link', { error, invoiceId });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error('[ClientPayment] Failed to get payment link', {
+      errorMessage,
+      errorStack,
+      invoiceId
+    });
     return { success: false, error: 'Failed to get payment link' };
   }
 }

@@ -540,6 +540,66 @@ export async function getStripeWebhookUrlAction(): Promise<PaymentActionResult<{
 }
 
 /**
+ * Saves a manually configured webhook secret for Stripe.
+ * Used when automatic webhook configuration fails and user sets up webhook manually in Stripe Dashboard.
+ */
+export async function saveStripeWebhookSecretAction(
+  webhookSecret: string
+): Promise<PaymentActionResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user?.tenant) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Validate webhook secret format
+    if (!webhookSecret.startsWith('whsec_')) {
+      return { success: false, error: 'Invalid webhook secret format (should start with whsec_)' };
+    }
+
+    const knex = await getConnection();
+    const secretProvider = await getSecretProviderInstance();
+
+    // Check if Stripe is configured
+    const config = await knex<IPaymentProviderConfig>('payment_provider_configs')
+      .where({
+        tenant: user.tenant,
+        provider_type: 'stripe',
+      })
+      .first();
+
+    if (!config) {
+      return { success: false, error: 'Stripe not configured. Please connect Stripe first.' };
+    }
+
+    // Store the webhook secret
+    await secretProvider.setTenantSecret(
+      user.tenant,
+      'stripe_payment_webhook_secret',
+      webhookSecret
+    );
+
+    // Update the config to point to the webhook secret
+    await knex('payment_provider_configs')
+      .where({ config_id: config.config_id })
+      .update({
+        webhook_secret_vault_path: `tenant/${user.tenant}/stripe_payment_webhook_secret`,
+        updated_at: knex.fn.now(),
+      });
+
+    logger.info('[PaymentActions] Webhook secret saved manually', {
+      tenantId: user.tenant,
+      userId: user.user_id,
+    });
+
+    return { success: true };
+  } catch (error) {
+    logger.error('[PaymentActions] Failed to save webhook secret', { error });
+    return { success: false, error: 'Failed to save webhook secret' };
+  }
+}
+
+/**
  * Gets the Stripe publishable key for client-side initialization.
  */
 export async function getStripePublishableKeyAction(): Promise<PaymentActionResult<{ publishableKey: string }>> {
