@@ -45,13 +45,10 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
     );
   }
 
-  return (
-      <Link
-        prefetch={false}
-        href={item.href || '#'}
-        className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
-        data-automation-id={`sidebar-menu-${id}`}
-      >
+  const isExternalLink = item.href?.startsWith('http://') || item.href?.startsWith('https://');
+
+  const linkContent = (
+    <>
       <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
       {sidebarOpen && (
         <>
@@ -61,6 +58,31 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
           )}
         </>
       )}
+    </>
+  );
+
+  if (isExternalLink) {
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`flex items-center px-4 py-2 hover:bg-[#2a2b32]`}
+        data-automation-id={`sidebar-menu-${id}`}
+      >
+        {linkContent}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      prefetch={false}
+      href={item.href || '#'}
+      className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
+      data-automation-id={`sidebar-menu-${id}`}
+    >
+      {linkContent}
     </Link>
   );
 };
