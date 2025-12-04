@@ -1579,7 +1579,15 @@ export async function createAssetAssociation(data: CreateAssetAssociationRequest
             revalidatePath(`/projects/${data.entity_id}`);
         }
 
-        return validateData(assetAssociationSchema, association);
+        // Convert Date to ISO string for schema validation
+        const sanitizedAssociation = {
+            ...association,
+            created_at: association.created_at instanceof Date
+                ? association.created_at.toISOString()
+                : association.created_at
+        };
+
+        return validateData(assetAssociationSchema, sanitizedAssociation);
     } catch (error) {
         console.error('Error creating asset association:', error);
         throw new Error('Failed to create asset association');
