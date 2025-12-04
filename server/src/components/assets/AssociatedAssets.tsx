@@ -13,6 +13,7 @@ import { RemoteAccessButton } from './RemoteAccessButton';
 import { SearchInput } from '../../components/ui/SearchInput';
 import Pagination from '../../components/ui/Pagination';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
+import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
 import {
     ASSET_DRAWER_TABS,
     type AssetDrawerTab,
@@ -25,6 +26,7 @@ interface AssociatedAssetsProps {
     entityId: string;
     entityType: 'ticket' | 'project';
     clientId: string;
+    defaultBoardId?: string;
 }
 
 interface SelectedAsset {
@@ -32,7 +34,7 @@ interface SelectedAsset {
     relationshipType: 'affected' | 'related';
 }
 
-export default function AssociatedAssets({ id, entityId, entityType, clientId }: AssociatedAssetsProps) {
+export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId }: AssociatedAssetsProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
@@ -352,9 +354,27 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
     const visibleAssets = isExpanded ? associatedAssets : associatedAssets.slice(0, INITIAL_DISPLAY_COUNT);
     const hiddenCount = associatedAssets.length - INITIAL_DISPLAY_COUNT;
 
+    const getAssetTypeIcon = (type: string) => {
+        const iconProps = { className: 'h-4 w-4 text-gray-600' };
+        switch (type.toLowerCase()) {
+            case 'workstation':
+                return <Monitor {...iconProps} />;
+            case 'server':
+                return <Server {...iconProps} />;
+            case 'mobile_device':
+                return <Smartphone {...iconProps} />;
+            case 'printer':
+                return <Printer {...iconProps} />;
+            case 'network_device':
+                return <Network {...iconProps} />;
+            default:
+                return <Boxes {...iconProps} />;
+        }
+    };
+
     return (
         <ReflectionContainer id={id} label="Associated Assets">
-            <div className="space-y-3">
+            <div className="space-y-3 mb-8">
                 <div className="flex justify-between items-center">
                     <h3 className="text-xl font-semibold text-gray-900">Associated Assets</h3>
                     <Button
@@ -375,32 +395,76 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                         {visibleAssets.map((association): JSX.Element => (
                             <div
                                 key={`${association.asset_id}-${association.entity_id}`}
-                                className="flex justify-between items-center p-4 bg-white border border-gray-200 rounded-lg"
+                                className="flex justify-between items-center p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        {association.asset ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => openDrawerForAsset(association.asset!)}
-                                                className="text-lg font-semibold text-primary-600 hover:text-primary-700 hover:underline truncate transition-colors text-left"
-                                            >
-                                                {association.asset.name}
-                                            </button>
-                                        ) : (
-                                            <span className="text-lg font-semibold text-gray-900 truncate">
-                                                Unknown Asset
-                                            </span>
-                                        )}
-                                        {association.asset && (
-                                            <RmmStatusIndicator asset={association.asset} size="sm" />
-                                        )}
+                                <div className="flex-1 min-w-0 flex items-center gap-4">
+                                    {/* Asset Tag */}
+                                    <div className="flex-shrink-0">
+                                        <span className="font-mono text-sm text-gray-600">
+                                            {association.asset?.asset_tag || 'N/A'}
+                                        </span>
                                     </div>
-                                    <div className="text-sm text-gray-500 mt-0.5">
-                                        {association.asset?.asset_tag} • {association.relationship_type}
+                                    
+                                    {/* Asset Type with Icon */}
+                                    {association.asset && (
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <div className="p-1.5 bg-gray-50 rounded-lg border border-gray-100">
+                                                {getAssetTypeIcon(association.asset.asset_type)}
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-700">
+                                                {association.asset.asset_type.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                            </span>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Status Badge */}
+                                    {association.asset && (
+                                        <div className="flex-shrink-0">
+                                            <span
+                                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                    association.asset.status === 'active'
+                                                        ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-600/20'
+                                                        : association.asset.status === 'inactive'
+                                                        ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-600/20'
+                                                        : 'bg-amber-100 text-amber-700 ring-1 ring-amber-600/20'
+                                                }`}
+                                            >
+                                                <span
+                                                    className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                                        association.asset.status === 'active' ? 'bg-emerald-500' : association.asset.status === 'inactive' ? 'bg-gray-500' : 'bg-amber-500'
+                                                    }`}
+                                                ></span>
+                                                {association.asset.status.charAt(0).toUpperCase() + association.asset.status.slice(1)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Asset Name and Relationship */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            {association.asset ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openDrawerForAsset(association.asset!)}
+                                                    className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline truncate transition-colors text-left"
+                                                >
+                                                    {association.asset.name}
+                                                </button>
+                                            ) : (
+                                                <span className="text-sm font-medium text-gray-900 truncate">
+                                                    Unknown Asset
+                                                </span>
+                                            )}
+                                            {association.asset && (
+                                                <RmmStatusIndicator asset={association.asset} size="sm" />
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-0.5 capitalize">
+                                            {association.relationship_type}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 ml-4">
+                                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                                     {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
                                         <RemoteAccessButton
                                             asset={association.asset}
@@ -614,6 +678,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                     isLoading={drawerLoading}
                     onClose={handleDrawerClose}
                     onTabChange={handleDrawerTabChange}
+                    defaultBoardId={defaultBoardId}
                 />
             </div>
         </ReflectionContainer>
