@@ -249,11 +249,17 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
 
     const totalPages = Math.ceil(totalAssets / pageSize);
 
+    // Condensed list - show first 2 by default, expandable
+    const INITIAL_DISPLAY_COUNT = 2;
+    const [isExpanded, setIsExpanded] = useState(false);
+    const visibleAssets = isExpanded ? associatedAssets : associatedAssets.slice(0, INITIAL_DISPLAY_COUNT);
+    const hiddenCount = associatedAssets.length - INITIAL_DISPLAY_COUNT;
+
     return (
         <ReflectionContainer id={id} label="Associated Assets">
-            <div className="space-y-4">
+            <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">Associated Assets</h3>
+                    <h3 className="text-xl font-semibold text-gray-900">Associated Assets</h3>
                     <Button
                         id='add-asset-button'
                         variant="outline"
@@ -264,28 +270,30 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                 </div>
 
                 {isLoading ? (
-                    <div>Loading assets...</div>
+                    <div className="text-gray-500">Loading assets...</div>
                 ) : associatedAssets.length === 0 ? (
                     <div className="text-gray-500">No assets associated</div>
                 ) : (
                     <div className="space-y-2">
-                        {associatedAssets.map((association): JSX.Element => (
+                        {visibleAssets.map((association): JSX.Element => (
                             <div
                                 key={`${association.asset_id}-${association.entity_id}`}
-                                className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm"
+                                className="flex justify-between items-center p-4 bg-white border border-gray-200 rounded-lg"
                             >
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-medium truncate">{association.asset?.name}</span>
+                                        <span className="text-lg font-semibold text-gray-900 truncate">
+                                            {association.asset?.name}
+                                        </span>
                                         {association.asset && (
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
                                     </div>
-                                    <div className="text-sm text-gray-500">
+                                    <div className="text-sm text-gray-500 mt-0.5">
                                         {association.asset?.asset_tag} • {association.relationship_type}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 ml-2">
+                                <div className="flex items-center gap-2 ml-4">
                                     {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
                                         <RemoteAccessButton
                                             asset={association.asset}
@@ -295,15 +303,37 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId }:
                                     )}
                                     <Button
                                         id={`remove-asset-${association.asset_id}`}
-                                        variant="ghost"
+                                        variant="outline"
                                         size="sm"
                                         onClick={() => handleRemoveAsset(association.asset_id)}
+                                        className="text-gray-600 hover:text-gray-900"
                                     >
-                                        Remove
+                                        <span className="mr-1">×</span> Remove
                                     </Button>
                                 </div>
                             </div>
                         ))}
+
+                        {/* Expandable section for additional assets */}
+                        {hiddenCount > 0 && (
+                            <button
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                className="flex items-center gap-1 px-4 py-3 w-full text-left text-primary-600 hover:text-primary-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                <span className="text-lg">+</span>
+                                <span className="underline">
+                                    {isExpanded ? 'Show less' : `${hiddenCount} more asset${hiddenCount !== 1 ? 's' : ''}`}
+                                </span>
+                                <svg
+                                    className={`w-4 h-4 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        )}
                     </div>
                 )}
 
