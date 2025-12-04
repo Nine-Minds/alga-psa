@@ -217,6 +217,7 @@
       "dueDate": "Fecha de vencimiento",
       "dueDateText": "Vence el {{date}}",
       "noDueDate": "Sin fecha de vencimiento",
+      "allPaid": "Todas las facturas pagadas",
       "amount": "Importe",
       "status": "Estado",
       "paid": "Pagada",
