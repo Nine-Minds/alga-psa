@@ -31,6 +31,7 @@ import {
   disconnectStripeAction,
   updatePaymentSettingsAction,
   testStripeConnectionAction,
+  saveStripeWebhookSecretAction,
 } from '@ee/lib/actions/payment-actions';
 import type { PaymentSettings as PaymentSettingsType } from 'server/src/interfaces/payment.interfaces';
 
@@ -169,6 +170,10 @@ export const PaymentSettings: React.FC = () => {
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [secretKey, setSecretKey] = useState('');
   const [publishableKey, setPublishableKey] = useState('');
+
+  // Form state for webhook secret
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [savingWebhookSecret, setSavingWebhookSecret] = useState(false);
 
   // Load current configuration
   const loadConfig = useCallback(async () => {
@@ -321,6 +326,35 @@ export const PaymentSettings: React.FC = () => {
     }
   };
 
+  // Save webhook secret
+  const handleSaveWebhookSecret = async () => {
+    if (!webhookSecret) {
+      toast.error('Please enter a webhook secret');
+      return;
+    }
+
+    if (!webhookSecret.startsWith('whsec_')) {
+      toast.error('Webhook secret should start with whsec_');
+      return;
+    }
+
+    setSavingWebhookSecret(true);
+    try {
+      const result = await saveStripeWebhookSecretAction(webhookSecret);
+      if (result.success) {
+        toast.success('Webhook secret saved successfully');
+        setWebhookSecret('');
+        await loadConfig();
+      } else {
+        toast.error(result.error || 'Failed to save webhook secret');
+      }
+    } catch (error) {
+      toast.error('Failed to save webhook secret');
+    } finally {
+      setSavingWebhookSecret(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -437,6 +471,39 @@ export const PaymentSettings: React.FC = () => {
                     <p className="text-xs text-amber-500 mt-2">
                       Subscribe to: {config.webhook_events?.join(', ')}
                     </p>
+
+                    {/* Webhook Secret Input */}
+                    <div className="mt-4 pt-3 border-t border-amber-200">
+                      <Label htmlFor="webhookSecret" className="text-amber-700">
+                        Webhook Signing Secret
+                      </Label>
+                      <p className="text-xs text-amber-600 mb-2">
+                        After creating the webhook in Stripe, paste the signing secret here (starts with whsec_)
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          id="webhookSecret"
+                          type="password"
+                          placeholder="whsec_..."
+                          value={webhookSecret}
+                          onChange={(e) => setWebhookSecret(e.target.value)}
+                          className="font-mono text-xs bg-white"
+                        />
+                        <Button
+                          id="save-webhook-secret"
+                          variant="default"
+                          size="sm"
+                          onClick={handleSaveWebhookSecret}
+                          disabled={savingWebhookSecret || !webhookSecret}
+                        >
+                          {savingWebhookSecret ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            'Save'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

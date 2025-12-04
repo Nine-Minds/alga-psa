@@ -57,10 +57,11 @@ async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentCo
   if (config?.credentials_vault_path) {
     // Use tenant-specific credentials from vault
     const secretKey = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_secret_key');
-    const webhookSecret = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_webhook_secret');
     const publishableKey = config.configuration?.publishable_key as string;
 
-    if (secretKey && webhookSecret && publishableKey) {
+    if (secretKey && publishableKey) {
+      // Webhook secret is optional - only needed for verifying incoming webhooks
+      const webhookSecret = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_webhook_secret') || '';
       return { secretKey, webhookSecret, publishableKey };
     }
   }

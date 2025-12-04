@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getClientPortalInvoicePaymentLink } from 'server/src/lib/actions/client-portal-actions/client-payment';
+import { PaymentRedirect } from './PaymentRedirect';
 
 interface PayInvoicePageProps {
   params: {
@@ -23,8 +24,8 @@ export default async function PayInvoicePage({ params }: PayInvoicePageProps) {
     const result = await getClientPortalInvoicePaymentLink(invoiceId);
 
     if (result.success && result.data?.paymentUrl) {
-      // Redirect to Stripe Checkout
-      redirect(result.data.paymentUrl);
+      // Use client component for external redirect (handles URLs with fragments properly)
+      return <PaymentRedirect url={result.data.paymentUrl} />;
     }
 
     // If no payment URL, redirect back to billing with message
