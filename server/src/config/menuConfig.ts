@@ -2,7 +2,6 @@
 
 import type { ElementType } from 'react';
 import {
-  AlertTriangle,
   BarChart3,
   Bell,
   Building2,
@@ -10,27 +9,37 @@ import {
   CheckCircle,
   Clock,
   CreditCard,
+  Download,
   FileText,
   FolderGit2,
+  Globe,
+  Handshake,
   HelpCircle,
   Home,
   Layers,
   Layout,
   LayoutDashboard,
+  Mail,
   MapPin,
   MessageSquare,
   Monitor,
+  Plug,
+  Puzzle,
   Rocket,
   Settings,
   Shield,
   SlidersHorizontal,
   UploadCloud,
   User,
+  UserCog,
   Users,
   Workflow,
   Star
 } from 'lucide-react';
 import { billingTabDefinitions } from '../components/billing-dashboard/billingTabsConfig';
+
+// Navigation modes for the unified sidebar
+export type NavMode = 'main' | 'settings';
 
 export interface MenuItem {
   name: string;
@@ -228,4 +237,48 @@ export const bottomMenuItems: MenuItem[] = [
     ]
   },
   { name: 'Support', icon: HelpCircle, href: 'https://www.nineminds.com/support' },
+];
+
+// Settings navigation sections - used when sidebar is in 'settings' mode
+// These correspond to the settings tabs in SettingsPage
+export const settingsNavigationSections: NavigationSection[] = [
+  {
+    title: 'Organization & Access',
+    items: [
+      { name: 'General', icon: Settings, href: '/msp/settings?tab=general' },
+      { name: 'Users', icon: UserCog, href: '/msp/settings?tab=users' },
+      { name: 'Teams', icon: Users, href: '/msp/settings?tab=teams' },
+      { name: 'Client Portal', icon: Globe, href: '/msp/settings?tab=client-portal' },
+    ]
+  },
+  {
+    title: 'Work Management',
+    items: [
+      { name: 'Ticketing', icon: MessageSquare, href: '/msp/settings?tab=ticketing' },
+      { name: 'Projects', icon: Layers, href: '/msp/settings?tab=projects' },
+      { name: 'Interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },
+    ]
+  },
+  {
+    title: 'Time & Billing',
+    items: [
+      { name: 'Time Entry', icon: Clock, href: '/msp/settings?tab=time-entry' },
+      { name: 'Billing', icon: CreditCard, href: '/msp/settings?tab=billing' },
+    ]
+  },
+  {
+    title: 'Communication',
+    items: [
+      { name: 'Notifications', icon: Bell, href: '/msp/settings?tab=notifications' },
+      { name: 'Email', icon: Mail, href: '/msp/settings?tab=email' },
+    ]
+  },
+  {
+    title: 'Data & Integration',
+    items: [
+      { name: 'Import/Export', icon: Download, href: '/msp/settings?tab=import-export' },
+      { name: 'Integrations', icon: Plug, href: '/msp/settings?tab=integrations' },
+      { name: 'Extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },
+    ]
+  }
 ];
