@@ -103,7 +103,7 @@ export default function ProjectInfo({
       {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
-          <BackNav href="/msp/projects">Back to Projects</BackNav>
+          <BackNav href="/msp/projects">← Back to Projects</BackNav>
 
           {/* Project number */}
           <span className="text-sm font-medium text-gray-600">

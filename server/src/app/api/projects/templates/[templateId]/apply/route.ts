@@ -26,8 +26,10 @@ export async function POST(
 
     return NextResponse.json({ project_id: projectId }, { status: 201 });
   } catch (error) {
+    console.error('[applyTemplate API] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to apply template';
     return NextResponse.json(
-      { error: 'Failed to apply template' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

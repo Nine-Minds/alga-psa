@@ -143,9 +143,11 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   return (
     <Card>
        <CardHeader>
-         <BackNav> {/* Remove onClick prop */}
-           &larr; Back to Templates List
-         </BackNav>
+         <div className="flex items-center">
+           <BackNav>
+             ← Back to Templates List
+           </BackNav>
+         </div>
          <h2 className="text-xl font-semibold mt-2">{isNewTemplate ? 'Create New Invoice Template' : `Edit Template: ${template?.name || templateId}`}</h2>
        </CardHeader>
        <CardContent>
