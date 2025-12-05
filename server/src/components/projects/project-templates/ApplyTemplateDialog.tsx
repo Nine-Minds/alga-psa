@@ -13,6 +13,8 @@ import { IClient } from 'server/src/interfaces/client.interfaces';
 import { useToast } from 'server/src/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import { getTemplates, applyTemplate } from 'server/src/lib/actions/project-actions/projectTemplateActions';
+import { getAllClients } from 'server/src/lib/actions/clientActions';
 
 interface ApplyTemplateDialogProps {
   open: boolean;
@@ -75,21 +77,15 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
 
   async function loadData() {
     try {
-      const [templatesRes, clientsRes] = await Promise.all([
-        fetch('/api/projects/templates'),
-        fetch('/api/clients')
+      const [templatesData, clientsData] = await Promise.all([
+        getTemplates(),
+        getAllClients()
       ]);
-
-      if (!templatesRes.ok || !clientsRes.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const templatesData = await templatesRes.json();
-      const clientsData = await clientsRes.json();
 
       setTemplates(templatesData);
       setClients(clientsData);
     } catch (error) {
+      console.error('[ApplyTemplateDialog] Failed to load data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load data',
@@ -113,32 +109,20 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
     try {
       setLoading(true);
 
-      const response = await fetch(`/api/projects/templates/${formData.template_id}/apply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          project_name: formData.project_name,
-          client_id: formData.client_id,
-          start_date: startDate?.toISOString(),
-          assigned_to: formData.assigned_to || undefined,
-          options: {
-            copyPhases: options.copyPhases,
-            copyStatuses: options.copyStatuses,
-            copyTasks: options.copyTasks,
-            copyChecklists: options.copyChecklists,
-            copyServices: options.copyServices,
-            assignmentOption: options.assignmentOption
-          }
-        })
+      const projectId = await applyTemplate(formData.template_id, {
+        project_name: formData.project_name,
+        client_id: formData.client_id,
+        start_date: startDate?.toISOString(),
+        assigned_to: formData.assigned_to || undefined,
+        options: {
+          copyPhases: options.copyPhases,
+          copyStatuses: options.copyStatuses,
+          copyTasks: options.copyTasks,
+          copyChecklists: options.copyChecklists,
+          copyServices: options.copyServices,
+          assignmentOption: options.assignmentOption
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create project from template');
-      }
-
-      const { project_id } = await response.json();
 
       toast({
         title: 'Success',
@@ -147,14 +131,15 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
 
       onClose();
       if (onSuccess) {
-        onSuccess(project_id);
+        onSuccess(projectId);
       } else {
-        router.push(`/msp/projects/${project_id}`);
+        router.push(`/msp/projects/${projectId}`);
       }
     } catch (error) {
+      console.error('[ApplyTemplateDialog] Error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create project from template',
+        description: error instanceof Error ? error.message : 'Failed to create project from template',
         variant: 'destructive'
       });
     } finally {

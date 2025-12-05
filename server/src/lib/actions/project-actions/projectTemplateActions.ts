@@ -621,8 +621,8 @@ export async function applyTemplate(
       }
       // If assignmentOption is 'none', taskAssignedTo remains null
 
-      const [newTask] = await trx('project_tasks')
-        .insert({
+      try {
+        const taskInsertData = {
           tenant,
           phase_id: newPhaseId,
           task_name: templateTask.task_name,
@@ -636,10 +636,18 @@ export async function applyTemplate(
           assigned_to: taskAssignedTo,
           due_date: dueDate,
           service_id: options.copyServices ? (templateTask.service_id || null) : null
-        })
-        .returning('*');
+        };
+        console.log(`[applyTemplate] Inserting task:`, JSON.stringify(taskInsertData, null, 2));
 
-      taskMap.set(templateTask.template_task_id, newTask.task_id);
+        const [newTask] = await trx('project_tasks')
+          .insert(taskInsertData)
+          .returning('*');
+
+        taskMap.set(templateTask.template_task_id, newTask.task_id);
+      } catch (taskError) {
+        console.error(`[applyTemplate] Failed to insert task "${templateTask.task_name}":`, taskError);
+        throw taskError;
+      }
       }
 
       // Copy additional agent assignments (only if assignmentOption is 'all')
