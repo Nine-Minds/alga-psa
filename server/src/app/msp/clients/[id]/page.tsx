@@ -30,7 +30,7 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
     ]);
 
     return (
-      <div className="mx-auto px-4">
+      <div className="w-full px-4">
         <ClientDetails
           client={client}
           documents={documents}

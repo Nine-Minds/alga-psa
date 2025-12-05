@@ -36,6 +36,7 @@ import { AnalyticsEvents } from '../analytics/events';
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
 import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateActions';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getInitialInvoiceTaxSource, shouldUseTaxDelegation } from 'server/src/lib/actions/taxSourceActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
@@ -374,8 +375,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         let description = charge.serviceName;
         if (isBucketCharge(charge)) {
           const hoursIncluded = charge.hoursUsed - charge.overageHours;
+          const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
           if (charge.overageHours > 0) {
-            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ $${(charge.overageRate / 100).toFixed(2)}/hr)`;
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/hr)`;
           } else {
             description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
           }

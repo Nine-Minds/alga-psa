@@ -100,7 +100,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           {nextInvoice ? (
             <>
               <p className="mt-2 text-3xl font-semibold">
-                {nextInvoice.total_amount ? formatCurrency(nextInvoice.total_amount) : '$0.00'}
+                {formatCurrency(nextInvoice.total_amount ?? 0)}
               </p>
               <p className="mt-1 text-sm text-gray-500">
                 {nextInvoice.due_date ? t('billing.invoice.dueDateText', { date: formatDate(nextInvoice.due_date) }) : t('billing.invoice.noDueDate')}

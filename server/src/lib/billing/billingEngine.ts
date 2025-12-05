@@ -44,6 +44,7 @@ import contractLine from '../models/contractLine';
 import service from '../models/service';
 import { TaxService } from '../services/taxService';
 import { ClientContractServiceConfigurationService } from '../services/clientContractServiceConfigurationService';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 // Workflow imports removed as event emission is moved back to the calling action
 
 export class BillingEngine {
@@ -325,13 +326,13 @@ export class BillingEngine {
         console.log(`License charges: ${licenseCharges.length}`);
 
         const totalBeforeProration = fixedPriceCharges.reduce((sum: number, charge: IFixedPriceCharge) => sum + charge.total, 0);
-        console.log(`Total fixed charges before proration: $${(totalBeforeProration / 100).toFixed(2)} (${totalBeforeProration} cents)`);
+        console.log(`Total fixed charges before proration: ${getCurrencySymbol(billingCurrency)}${(totalBeforeProration / 100).toFixed(2)} (${totalBeforeProration} cents)`);
 
         // Only prorate fixed price charges
         const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, clientContractLine.start_date, clientContractLine.end_date, cycle);
 
         const totalAfterProration = proratedFixedCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0);
-        console.log(`Total fixed charges after proration: $${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`);
+        console.log(`Total fixed charges after proration: ${getCurrencySymbol(billingCurrency)}${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`);
 
         // Combine all charges without prorating time-based or usage-based charges
         totalCharges = totalCharges.concat(
@@ -344,23 +345,24 @@ export class BillingEngine {
         );
 
         console.log('Total charges breakdown:');
+        const currencySymbol = getCurrencySymbol(billingCurrency);
         proratedFixedCharges.forEach((charge: IBillingCharge) => {
-          console.log(`fixed - ${charge.serviceName}: $${(charge.total / 100).toFixed(2)}`);
+          console.log(`fixed - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`);
         });
         timeBasedCharges.forEach((charge: ITimeBasedCharge) => {
-          console.log(`hourly - ${charge.serviceName}: $${charge.total}`);
+          console.log(`hourly - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`);
         });
         usageBasedCharges.forEach((charge: IUsageBasedCharge) => {
-          console.log(`usage - ${charge.serviceName}: $${charge.total}`);
+          console.log(`usage - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`);
         });
         bucketPlanCharges.forEach((charge: IBucketCharge) => {
-          console.log(`bucket - ${charge.serviceName}: $${charge.total}`);
+          console.log(`bucket - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`);
         });
         productCharges.forEach((charge: IProductCharge) => {
-          console.log(`product - ${charge.serviceName}: $${charge.total}`);
+          console.log(`product - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`);
         });
         licenseCharges.forEach((charge: ILicenseCharge) => {
-          console.log(`license - ${charge.serviceName}: $${charge.total}`);
+          console.log(`license - ${charge.serviceName}: ${currencySymbol}${(charge.total / 100).toFixed(2)}`);
         });
 
         console.log('Total charges:', totalCharges);
@@ -383,7 +385,7 @@ export class BillingEngine {
 
       console.log(`Discounts applied: ${finalCharges.discounts.length}`);
       console.log(`Adjustments applied: ${finalCharges.adjustments.length}`);
-      console.log(`Final amount after discounts and adjustments: $${(finalCharges.finalAmount / 100).toFixed(2)} (${finalCharges.finalAmount} cents)`);
+      console.log(`Final amount after discounts and adjustments: ${getCurrencySymbol(billingCurrency)}${(finalCharges.finalAmount / 100).toFixed(2)} (${finalCharges.finalAmount} cents)`);
 
       return finalCharges;
     } catch (err) {

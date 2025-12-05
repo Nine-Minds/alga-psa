@@ -4,6 +4,7 @@ import { createTenantKnex } from '../db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/shared/db';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 
 export interface ClientProfile {
   name: string;
@@ -590,8 +591,9 @@ export async function getActiveServices(): Promise<Service[]> {
     const status = determineServiceStatus(service.start_date, service.end_date);
 
     // Format rate display
-    const rateDisplay = rate ? 
-      `$${(rate / 100).toFixed(2)}${service.billing_frequency ? ` per ${service.billing_frequency.toLowerCase()}` : ''}` : 
+    const currencySymbol = getCurrencySymbol('USD'); // TODO: Get currency from contract when available
+    const rateDisplay = rate ?
+      `${currencySymbol}${(rate / 100).toFixed(2)}${service.billing_frequency ? ` per ${service.billing_frequency.toLowerCase()}` : ''}` :
       'Contact for pricing';
 
     // Format quantity display
@@ -601,7 +603,7 @@ export async function getActiveServices(): Promise<Service[]> {
 
     // Format bucket display using new fields
     const bucketDisplay = service.psbc_total_hours ? // Use new field
-      `${service.psbc_total_hours} hours${service.psbc_overage_rate ? ` (+$${(service.psbc_overage_rate / 100).toFixed(2)}/hr overage)` : ''}` : // Use new field
+      `${service.psbc_total_hours} hours${service.psbc_overage_rate ? ` (+${currencySymbol}${(service.psbc_overage_rate / 100).toFixed(2)}/hr overage)` : ''}` : // Use new field
       'N/A';
 
     // Format billing display
@@ -628,7 +630,7 @@ export async function getActiveServices(): Promise<Service[]> {
       bucket: isBucketPlan && service.psbc_total_hours ? { // Check new field
         totalHours: service.psbc_total_hours.toString(), // Use new field
         overageRate: service.psbc_overage_rate ? // Use new field
-          `$${(service.psbc_overage_rate / 100).toFixed(2)}` :
+          `${currencySymbol}${(service.psbc_overage_rate / 100).toFixed(2)}` :
           'N/A',
         // periodStart/End are derived from the client_contract_line dates
         periodStart: formatDate(service.start_date),
@@ -725,13 +727,14 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
       );
   });
 
+  const currencySymbol = getCurrencySymbol('USD'); // TODO: Get currency from contract when available
   return plans.map((plan): ServicePlan => ({
     id: plan.id,
     name: plan.name,
     description: plan.description || '',
     rate: {
       amount: plan.default_rate.toString(),
-      displayAmount: `$${(plan.default_rate / 100).toFixed(2)}/mo`
+      displayAmount: `${currencySymbol}${(plan.default_rate / 100).toFixed(2)}/mo`
     },
     isCurrentPlan: plan.id === currentService.contract_line_id
   }));

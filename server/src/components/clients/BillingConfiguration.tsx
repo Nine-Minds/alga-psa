@@ -30,6 +30,7 @@ import ClientPlanDisambiguationGuide from './ClientPlanDisambiguationGuide';
 import ClientContractAssignment from './ClientContractAssignment'; // Added import
 import { IClientTaxRateAssociation } from 'server/src/interfaces/tax.interfaces';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { toast } from 'react-hot-toast';
 
 interface BillingConfigurationProps {
     client: IClient;
@@ -57,6 +58,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         billing_contact_id: client.billing_contact_id || '',
         billing_email: client.billing_email || '',
         region_code: client.region_code || null, // Added region_code from client data
+        default_currency_code: client.default_currency_code || null, // Added default_currency_code
     });
 
     const [contractLines, setContractLines] = useState<IContractLine[]>([]);
@@ -190,6 +192,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 billing_cycle,
                 invoice_template_id,
                 region_code, // Added region_code
+                default_currency_code, // Added default_currency_code
                 ...rest
             } = billingConfig;
 
@@ -201,16 +204,20 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 invoice_delivery_method,
                 billing_contact_id,  // Pass through as-is, updateClient will handle empty strings
                 billing_email,
-                region_code // Pass region_code to onSave
+                region_code, // Pass region_code to onSave
+                default_currency_code // Pass default_currency_code to onSave
             });
 
             // Save template selection separately using the dedicated function
             if (invoice_template_id !== client.invoice_template_id) {
                 await setClientTemplate(client.client_id, invoice_template_id || null);
             }
+
+            toast.success('Billing configuration saved successfully');
         } catch (error) {
             console.error('Error saving billing configuration:', error);
             setErrorMessage('Failed to save billing configuration');
+            toast.error('Failed to save billing configuration');
         }
     };
 
@@ -224,8 +231,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
+            toast.success('Contract line updated successfully');
         } catch (error) {
             setErrorMessage('Failed to update contract line. Please try again.');
+            toast.error('Failed to update contract line');
         }
     };
 
@@ -239,8 +248,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
+            toast.success('Service category updated successfully');
         } catch (error) {
             setErrorMessage('Failed to update service category. Please try again.');
+            toast.error('Failed to update service category');
         }
     };
 
@@ -254,8 +265,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
+            toast.success('Contract line added successfully');
         } catch (error: any) {
             setErrorMessage(error.message || 'Failed to add contract line. Please try again.');
+            toast.error(error.message || 'Failed to add contract line');
         }
     };
 
@@ -275,9 +288,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setClientContractLines(updatedContractLinesWithStringDates);
+            toast.success('Contract line removed successfully');
         } catch (error: any) {
             // Display the actual error message from the server if available
             setErrorMessage(error.message || 'Failed to remove contract line. Please try again.');
+            toast.error(error.message || 'Failed to remove contract line');
         } finally {
             setContractLineToDelete(null);
         }
@@ -313,9 +328,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 setClientContractLines(updatedContractLinesWithStringDates);
                 setEditingContractLine(null);
                 setErrorMessage(null);
+                toast.success('Contract line saved successfully');
             } catch (error: any) {
                 // Display the actual error message from the server if available
                 setErrorMessage(error.message || 'Failed to save changes. Please try again.');
+                toast.error(error.message || 'Failed to save changes');
             }
         }
     };
@@ -357,9 +374,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
             setErrorMessage(null);
+            toast.success('Service added successfully');
         } catch (error) {
             console.error('Error creating service:', error);
             setErrorMessage('Failed to add service. Please try again.');
+            toast.error('Failed to add service');
         }
     };
 
@@ -369,8 +388,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const servicesResponse = await getServices();
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
+            toast.success('Service updated successfully');
         } catch (error) {
             setErrorMessage('Failed to update service. Please try again.');
+            toast.error('Failed to update service');
         }
     };
 
@@ -380,8 +401,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const servicesResponse = await getServices();
             // Extract the services array from the paginated response
             setServices(Array.isArray(servicesResponse) ? servicesResponse : (servicesResponse.services || []));
+            toast.success('Service deleted successfully');
         } catch (error) {
             setErrorMessage('Failed to delete service. Please try again.');
+            toast.error('Failed to delete service');
         }
     };
 
@@ -399,10 +422,12 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const updatedClientTaxRates = await getClientTaxRates(client.client_id);
             setClientTaxRates(updatedClientTaxRates);
             setErrorMessage(null); // Clear any previous errors
+            toast.success('Default tax rate assigned successfully');
         } catch (error: any) {
             console.error('Failed to assign default tax rate:', error);
             // Set specific error message from the action if available
             setErrorMessage(error.message || 'Failed to assign default tax rate. Please try again.');
+            toast.error(error.message || 'Failed to assign default tax rate');
             // Re-throw or handle as needed if parent component needs to know
             throw error;
         }
@@ -418,9 +443,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             const updatedClientTaxRates = await getClientTaxRates(client.client_id);
             setClientTaxRates(updatedClientTaxRates);
             setErrorMessage(null); // Clear any previous errors
+            toast.success('Default tax rate changed successfully');
         } catch (error: any) {
             console.error('Failed to change default tax rate:', error);
             setErrorMessage(error.message || 'Failed to change default tax rate. Please try again.');
+            toast.error(error.message || 'Failed to change default tax rate');
             throw error; // Re-throw so the child component knows it failed
         }
     };
@@ -430,11 +457,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         try {
             const updatedTaxRates = await getTaxRates();
             setTaxRates(updatedTaxRates);
-            // Optionally clear error message if needed
-            // setErrorMessage(null);
+            toast.success('Tax rate created successfully');
         } catch (error) {
             console.error('Failed to refetch tax rates after creation:', error);
             setErrorMessage('Failed to refresh tax rates list.');
+            toast.error('Failed to refresh tax rates list');
         }
     };
 
