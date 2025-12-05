@@ -286,7 +286,7 @@ function TaskCard({ task }: { task: IProjectTemplateTask }) {
       <div className="flex items-center justify-between text-xs text-gray-500">
         {task.estimated_hours && (
           <span className="bg-gray-100 px-2 py-1 rounded">
-            {task.estimated_hours}h
+            {Number(task.estimated_hours) / 60}h
           </span>
         )}
         {task.task_type_key && (

@@ -138,7 +138,8 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
               description: task.description || null,
-              estimated_hours: task.estimated_hours || null,
+              // Convert from hours (wizard UI) to minutes (storage)
+              estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
               task_type_key: task.task_type_key || 'task',
               priority_id: task.priority_id || null,
@@ -318,7 +319,8 @@ export async function updateTemplateFromEditor(
               template_phase_id: templatePhaseId,
               task_name: task.task_name,
               description: task.description || null,
-              estimated_hours: task.estimated_hours || null,
+              // Convert from hours (wizard UI) to minutes (storage)
+              estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
               task_type_key: task.task_type_key || 'task',
               priority_id: task.priority_id || null,
