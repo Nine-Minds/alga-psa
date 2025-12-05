@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 type DebugEvent = {
   ts?: string;
@@ -20,6 +20,8 @@ type DebugEvent = {
 };
 
 type EventWithId = DebugEvent & { __id: string };
+
+type StreamMode = 'sse' | 'polling';
 
 function classifyLine(e: DebugEvent): { label: string; className: string } {
   const stream = e.stream || 'log';
@@ -96,6 +98,7 @@ export default function ExtensionDebugPage({
   // The backend derives the effective tenant from the authenticated session.
   const [installId, setInstallId] = useState<string>(searchParams.get('installId') || '');
   const [requestId, setRequestId] = useState<string>(searchParams.get('requestId') || '');
+  const [tenantId, setTenantId] = useState<string>(searchParams.get('tenantId') || '');
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -104,9 +107,13 @@ export default function ExtensionDebugPage({
   const [showLogs, setShowLogs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<EventWithId[]>([]);
+  const [streamMode, setStreamMode] = useState<StreamMode>('sse');
+  const [sseAvailable, setSseAvailable] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastPollIdRef = useRef<string>('0');
 
   const effectiveInstallId = useMemo(
     () => installId.trim() || undefined,
@@ -115,6 +122,10 @@ export default function ExtensionDebugPage({
   const effectiveRequestId = useMemo(
     () => requestId.trim() || undefined,
     [requestId],
+  );
+  const effectiveTenantId = useMemo(
+    () => tenantId.trim() || undefined,
+    [tenantId],
   );
 
   // Keep URL query params in sync for shareable links
@@ -126,8 +137,9 @@ export default function ExtensionDebugPage({
     };
     setOrDelete('installId', effectiveInstallId);
     setOrDelete('requestId', effectiveRequestId);
+    setOrDelete('tenantId', effectiveTenantId);
     router.replace(url.pathname + url.search, { scroll: false });
-  }, [effectiveInstallId, effectiveRequestId, router]);
+  }, [effectiveInstallId, effectiveRequestId, effectiveTenantId, router]);
 
   // Auto-scroll
   useEffect(() => {
@@ -144,6 +156,10 @@ export default function ExtensionDebugPage({
         esRef.current.close();
         esRef.current = null;
       }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     };
   }, []);
 
@@ -158,22 +174,112 @@ export default function ExtensionDebugPage({
     [events, showStdout, showStderr, showLogs],
   );
 
-  const startStream = () => {
+  const addEvents = useCallback((newEvents: DebugEvent[]) => {
+    setEvents((prev) => {
+      const eventsWithIds: EventWithId[] = newEvents.map((data) => ({
+        ...data,
+        __id:
+          (data.requestId || '') +
+          ':' +
+          (data.ts || '') +
+          ':' +
+          Math.random().toString(36).slice(2),
+      }));
+      const next = [...prev, ...eventsWithIds];
+      if (next.length > 2000) {
+        return next.slice(next.length - 2000);
+      }
+      return next;
+    });
+  }, []);
+
+  const startPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+    lastPollIdRef.current = '0';
+
+    const poll = async () => {
+      try {
+        const url = buildStreamUrl(extensionId, {
+          installId: effectiveInstallId || null,
+          requestId: effectiveRequestId || null,
+          tenantId: effectiveTenantId || null,
+        });
+
+        console.log('[ext-debug] polling', url, 'lastId:', lastPollIdRef.current);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lastId: lastPollIdRef.current }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          throw new Error(errorBody.error || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('[ext-debug] poll response:', data.events?.length || 0, 'events, lastId:', data.lastId);
+
+        if (data.events && data.events.length > 0) {
+          addEvents(data.events);
+        }
+        if (data.lastId) {
+          lastPollIdRef.current = data.lastId;
+        }
+      } catch (err: any) {
+        console.error('[ext-debug] poll error', err);
+        // Don't disconnect on transient errors, just log
+      }
+    };
+
+    // Initial poll
+    void poll();
+
+    // Poll every 2 seconds
+    pollIntervalRef.current = setInterval(poll, 2000);
+  }, [extensionId, effectiveInstallId, effectiveRequestId, effectiveTenantId, addEvents]);
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+
+  const startStream = (mode?: StreamMode) => {
+    const useMode = mode ?? streamMode;
+
+    // Cleanup any existing connections
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;
     }
+    stopPolling();
 
     setEvents([]);
     setError(null);
     setConnecting(true);
     setConnected(false);
+    lastPollIdRef.current = '0';
 
+    if (useMode === 'polling') {
+      // Use polling mode
+      startPolling();
+      setConnecting(false);
+      setConnected(true);
+      return;
+    }
+
+    // SSE mode
     try {
       const url = buildStreamUrl(extensionId, {
         // Tenant is enforced server-side from the authenticated session.
         installId: effectiveInstallId || null,
         requestId: effectiveRequestId || null,
+        tenantId: effectiveTenantId || null,
       });
 
       const es = new EventSource(url);
@@ -187,18 +293,15 @@ export default function ExtensionDebugPage({
       es.onerror = () => {
         setConnecting(false);
         setConnected(false);
-        // Provide a more actionable message when the upstream debug stream is unavailable.
-        setError(
-          [
-            'Unable to connect to the extension debug stream.',
-            'Common causes:',
-            '• The extension runner is not running or not reachable from this environment.',
-            '• RUNNER_BASE_URL / debug stream configuration is missing or incorrect.',
-            '• The runner was started without debug streaming enabled.',
-          ].join(' ')
-        );
         es.close();
         esRef.current = null;
+
+        // Auto-fallback to polling if SSE fails
+        setSseAvailable(false);
+        setStreamMode('polling');
+        setError(
+          'SSE connection failed. Falling back to polling mode. Click "Start stream" to continue with polling.'
+        );
       };
 
       es.onmessage = (event) => {
@@ -243,6 +346,7 @@ export default function ExtensionDebugPage({
       esRef.current.close();
       esRef.current = null;
     }
+    stopPolling();
     setConnected(false);
     setConnecting(false);
   };
@@ -284,6 +388,18 @@ export default function ExtensionDebugPage({
           />
         </div>
 
+        <div className="flex flex-col">
+          <label className="text-xs font-medium text-slate-600">
+            Tenant ID (optional, admin override)
+          </label>
+          <input
+            className="px-2 py-1 text-xs rounded border border-slate-200"
+            value={tenantId}
+            onChange={(e) => setTenantId(e.target.value)}
+            placeholder="Override tenant context"
+          />
+        </div>
+
         <div className="flex flex-col min-w-[200px]">
           <label className="text-xs font-medium text-slate-600">
             Request ID (optional, client-side filter)
@@ -297,9 +413,21 @@ export default function ExtensionDebugPage({
         </div>
 
         <div className="flex items-center gap-2">
+          <select
+            value={streamMode}
+            onChange={(e) => setStreamMode(e.target.value as StreamMode)}
+            disabled={connecting || connected}
+            className="px-2 py-1.5 text-xs rounded border border-slate-200 bg-white"
+            title={!sseAvailable ? 'SSE unavailable - using polling' : 'Select connection mode'}
+          >
+            <option value="sse" disabled={!sseAvailable}>
+              SSE {!sseAvailable && '(unavailable)'}
+            </option>
+            <option value="polling">Polling</option>
+          </select>
           <button
             type="button"
-            onClick={startStream}
+            onClick={() => startStream()}
             disabled={connecting || connected}
             className={`px-3 py-1.5 rounded text-xs font-medium text-white
               ${
@@ -384,7 +512,11 @@ export default function ExtensionDebugPage({
                   : 'bg-slate-400'
               }`}
             />
-            {connected ? 'connected' : connecting ? 'connecting' : 'idle'}
+            {connected
+              ? `${streamMode === 'polling' ? 'polling' : 'connected'}`
+              : connecting
+              ? 'connecting'
+              : 'idle'}
           </span>
         </div>
       </div>
