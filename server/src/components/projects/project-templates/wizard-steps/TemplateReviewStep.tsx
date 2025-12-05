@@ -12,8 +12,9 @@ interface TemplateReviewStepProps {
 export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewStepProps) {
   const totalTasks = data.tasks.length;
   const totalChecklistItems = data.checklist_items.length;
+  // Convert from minutes (storage) to hours (display)
   const totalEstimatedHours = data.tasks.reduce(
-    (sum, task) => sum + (task.estimated_hours || 0),
+    (sum, task) => sum + (task.estimated_hours ? Number(task.estimated_hours) / 60 : 0),
     0
   );
 
@@ -176,7 +177,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                                   <span className="font-medium">{task.task_name}</span>
                                   {task.estimated_hours && (
                                     <span className="text-gray-500 ml-2">
-                                      ({task.estimated_hours}h)
+                                      ({Number(task.estimated_hours) / 60}h)
                                     </span>
                                   )}
                                   {taskChecklists.length > 0 && (
@@ -257,7 +258,7 @@ export function TemplateReviewStep({ data, availableStatuses }: TemplateReviewSt
                                           {(task.estimated_hours || taskChecklists.length > 0) && (
                                             <div className="flex gap-2 text-gray-500">
                                               {task.estimated_hours && (
-                                                <span>{task.estimated_hours}h</span>
+                                                <span>{Number(task.estimated_hours) / 60}h</span>
                                               )}
                                               {taskChecklists.length > 0 && (
                                                 <span>{taskChecklists.length} items</span>

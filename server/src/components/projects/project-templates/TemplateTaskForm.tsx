@@ -79,7 +79,8 @@ export function TemplateTaskForm({
       if (task) {
         setTaskName(task.task_name || '');
         setDescription(task.description || '');
-        setEstimatedHours(task.estimated_hours?.toString() || '');
+        // Convert from minutes (storage) to hours (display)
+        setEstimatedHours(task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '');
         setDurationDays(task.duration_days?.toString() || '');
         setTaskTypeKey(task.task_type_key || '');
         setPriorityId(task.priority_id || '');
@@ -123,7 +124,8 @@ export function TemplateTaskForm({
       await onSave({
         task_name: taskName.trim(),
         description: description.trim() || undefined,
-        estimated_hours: estimatedHours ? parseFloat(estimatedHours) : undefined,
+        // Convert from hours (display) to minutes (storage)
+        estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
         duration_days: durationDays ? parseInt(durationDays) : undefined,
         task_type_key: taskTypeKey || undefined,
         priority_id: priorityId || undefined,

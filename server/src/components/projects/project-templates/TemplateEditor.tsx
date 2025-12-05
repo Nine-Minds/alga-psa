@@ -1246,7 +1246,7 @@ function TaskCard({
           {task.estimated_hours && (
             <span className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded">
               <Clock className="w-3 h-3" />
-              {task.estimated_hours}h
+              {Number(task.estimated_hours) / 60}h
             </span>
           )}
           {task.duration_days && (
