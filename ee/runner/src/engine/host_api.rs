@@ -476,18 +476,22 @@ impl logging::HostWithStore for HasSelf<HostState> {
             let state = access.get();
             (state.context.providers.clone(), state.context.clone())
         });
-        async move {
-            if has_capability(&providers, CAP_LOG_EMIT) {
-                tracing::info!(
-                    target: "ext",
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "{message}"
-                );
+        // Spawn the async work as a background task so it actually executes.
+        // The WASM component model calls this synchronously and doesn't poll the future,
+        // so we must spawn to ensure the logging actually happens.
+        if has_capability(&providers, CAP_LOG_EMIT) {
+            tracing::info!(
+                target: "ext",
+                tenant = ?ctx.tenant_id,
+                extension = ?ctx.extension_id,
+                request_id = ?ctx.request_id,
+                "{message}"
+            );
+            tokio::spawn(async move {
                 crate::engine::debug::emit_log(&ctx, tracing::Level::INFO, &message).await;
-            }
+            });
         }
+        std::future::ready(())
     }
 
     fn log_warn<T>(
@@ -498,18 +502,20 @@ impl logging::HostWithStore for HasSelf<HostState> {
             let state = access.get();
             (state.context.providers.clone(), state.context.clone())
         });
-        async move {
-            if has_capability(&providers, CAP_LOG_EMIT) {
-                tracing::warn!(
-                    target: "ext",
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "{message}"
-                );
+        // Spawn the async work as a background task so it actually executes.
+        if has_capability(&providers, CAP_LOG_EMIT) {
+            tracing::warn!(
+                target: "ext",
+                tenant = ?ctx.tenant_id,
+                extension = ?ctx.extension_id,
+                request_id = ?ctx.request_id,
+                "{message}"
+            );
+            tokio::spawn(async move {
                 crate::engine::debug::emit_log(&ctx, tracing::Level::WARN, &message).await;
-            }
+            });
         }
+        std::future::ready(())
     }
 
     fn log_error<T>(
@@ -520,18 +526,20 @@ impl logging::HostWithStore for HasSelf<HostState> {
             let state = access.get();
             (state.context.providers.clone(), state.context.clone())
         });
-        async move {
-            if has_capability(&providers, CAP_LOG_EMIT) {
-                tracing::error!(
-                    target: "ext",
-                    tenant = ?ctx.tenant_id,
-                    extension = ?ctx.extension_id,
-                    request_id = ?ctx.request_id,
-                    "{message}"
-                );
+        // Spawn the async work as a background task so it actually executes.
+        if has_capability(&providers, CAP_LOG_EMIT) {
+            tracing::error!(
+                target: "ext",
+                tenant = ?ctx.tenant_id,
+                extension = ?ctx.extension_id,
+                request_id = ?ctx.request_id,
+                "{message}"
+            );
+            tokio::spawn(async move {
                 crate::engine::debug::emit_log(&ctx, tracing::Level::ERROR, &message).await;
-            }
+            });
         }
+        std::future::ready(())
     }
 }
 
