@@ -40,7 +40,12 @@ impl RedisPublisher {
         let stream = self.stream_name(event);
         let mut conn = self.conn.lock().await;
         let mut cmd = redis::cmd("XADD");
+        // MAXLEN must come before the entry ID (*) per Redis XADD syntax:
+        // XADD key [MAXLEN [~|=] threshold] * field value [field value ...]
         cmd.arg(&stream)
+            .arg("MAXLEN")
+            .arg("~")
+            .arg(self.max_len)
             .arg("*")
             .arg("ts")
             .arg(&event.ts)
@@ -69,7 +74,6 @@ impl RedisPublisher {
         cmd.arg("message").arg(&event.message);
         cmd.arg("truncated")
             .arg(if event.truncated { "1" } else { "0" });
-        cmd.arg("MAXLEN").arg("~").arg(self.max_len);
         cmd.query_async(&mut *conn).await
     }
 }
