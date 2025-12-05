@@ -178,11 +178,22 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  let webhookSecretStatus = 'missing';
+  try {
+    const { getStripeService } = await import('@ee/lib/stripe/StripeService');
+    const stripeService = getStripeService();
+    if (stripeService.config?.webhookSecret) {
+      webhookSecretStatus = 'configured';
+    }
+  } catch {
+    webhookSecretStatus = 'missing';
+  }
+
   return NextResponse.json({
     status: 'ok',
     message: 'Stripe webhook endpoint is active',
     timestamp: new Date().toISOString(),
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ? 'configured' : 'missing',
+    webhookSecret: webhookSecretStatus,
     edition: 'enterprise',
   });
 }

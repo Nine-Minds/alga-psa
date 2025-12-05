@@ -73,15 +73,9 @@ async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentCo
   }
 
   let webhookSecret = await secretProvider.getAppSecret('stripe_payment_webhook_secret');
-  if (!webhookSecret && process.env.STRIPE_PAYMENT_WEBHOOK_SECRET) {
-    webhookSecret = process.env.STRIPE_PAYMENT_WEBHOOK_SECRET;
-  }
   // Fall back to the main webhook secret if payment-specific not set
   if (!webhookSecret) {
     webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
-    if (!webhookSecret && process.env.STRIPE_WEBHOOK_SECRET) {
-      webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    }
   }
 
   let publishableKey = await secretProvider.getAppSecret('stripe_publishable_key');

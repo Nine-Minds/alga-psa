@@ -219,21 +219,64 @@ export async function connectStripeAction(
       );
 
       if (existingEndpoint) {
-        // Webhook already exists - update it with correct events
-        logger.info('[PaymentActions] Found existing webhook endpoint, updating events', {
-          endpointId: existingEndpoint.id,
-          tenantId: user.tenant,
-        });
+        // Check if we already have the secret stored in the vault
+        const existingSecret = await secretProvider.getTenantSecret(
+          user.tenant,
+          'stripe_payment_webhook_secret'
+        );
 
-        await stripe.webhookEndpoints.update(existingEndpoint.id, {
-          enabled_events: STRIPE_WEBHOOK_EVENTS,
-          description: `Alga PSA payment webhook for tenant ${user.tenant}`,
-        });
+        if (existingSecret) {
+          // We have the secret - just update the webhook events
+          logger.info('[PaymentActions] Found existing webhook endpoint with stored secret, updating events', {
+            endpointId: existingEndpoint.id,
+            tenantId: user.tenant,
+          });
 
-        webhookEndpointId = existingEndpoint.id;
-        // Note: We can't retrieve the secret for an existing webhook
-        // User would need to delete and recreate if secret is lost
-        webhookConfigured = true;
+          await stripe.webhookEndpoints.update(existingEndpoint.id, {
+            enabled_events: STRIPE_WEBHOOK_EVENTS,
+            description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+          });
+
+          webhookEndpointId = existingEndpoint.id;
+          webhookSecret = existingSecret;
+          webhookConfigured = true;
+        } else {
+          // No secret stored - delete and recreate to get a fresh secret
+          logger.info('[PaymentActions] Found existing webhook endpoint but no stored secret, recreating', {
+            endpointId: existingEndpoint.id,
+            tenantId: user.tenant,
+          });
+
+          await stripe.webhookEndpoints.del(existingEndpoint.id);
+
+          const webhookEndpoint = await stripe.webhookEndpoints.create({
+            url: webhookUrl,
+            enabled_events: STRIPE_WEBHOOK_EVENTS,
+            description: `Alga PSA payment webhook for tenant ${user.tenant}`,
+            metadata: {
+              tenant_id: user.tenant,
+              created_by: 'alga-psa',
+            },
+          });
+
+          webhookEndpointId = webhookEndpoint.id;
+          webhookSecret = webhookEndpoint.secret || null;
+          webhookConfigured = true;
+
+          // Store the webhook secret
+          if (webhookSecret) {
+            await secretProvider.setTenantSecret(
+              user.tenant,
+              'stripe_payment_webhook_secret',
+              webhookSecret
+            );
+          }
+
+          logger.info('[PaymentActions] Webhook endpoint recreated successfully', {
+            endpointId: webhookEndpointId,
+            tenantId: user.tenant,
+          });
+        }
       } else {
         // Create new webhook endpoint
         logger.info('[PaymentActions] Creating new Stripe webhook endpoint', {
