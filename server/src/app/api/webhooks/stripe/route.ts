@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import logger from '@alga-psa/shared/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
 /**
  * POST /api/webhooks/stripe
@@ -180,9 +181,9 @@ export async function GET(req: NextRequest) {
 
   let webhookSecretStatus = 'missing';
   try {
-    const { getStripeService } = await import('@ee/lib/stripe/StripeService');
-    const stripeService = getStripeService();
-    if (stripeService.config?.webhookSecret) {
+    const secretProvider = await getSecretProviderInstance();
+    const webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
+    if (webhookSecret) {
       webhookSecretStatus = 'configured';
     }
   } catch {
