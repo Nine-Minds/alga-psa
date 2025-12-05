@@ -263,7 +263,7 @@ export function FixedPresetConfiguration({
                       }
                     }}
                     placeholder="0.00"
-                    className="pl-7"
+                    className="pl-10"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">

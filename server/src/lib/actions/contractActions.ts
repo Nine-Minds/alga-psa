@@ -593,6 +593,68 @@ export async function getContractSummary(contractId: string): Promise<IContractS
   }
 }
 
+export interface CurrencyChangeCheck {
+  canChange: boolean;
+  reason?: string;
+}
+
+export async function canContractCurrencyBeChanged(contractId: string): Promise<CurrencyChangeCheck> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    // Check if this is a template - templates can always have currency changed
+    const templateRecord = await knex('contract_templates')
+      .where({ tenant, template_id: contractId })
+      .first();
+
+    if (templateRecord) {
+      return { canChange: true };
+    }
+
+    // For client contracts, check if there are any invoices
+    const clientContracts = await knex('client_contracts')
+      .where({ tenant, contract_id: contractId })
+      .select('client_contract_id', 'client_id');
+
+    if (clientContracts.length === 0) {
+      // No client assignments yet, can change
+      return { canChange: true };
+    }
+
+    const clientContractIds = clientContracts.map(cc => cc.client_contract_id);
+    const clientIds = clientContracts.map(cc => cc.client_id);
+
+    // Check for invoices linked to these clients
+    const invoiceCount = await knex('invoices')
+      .where({ tenant })
+      .whereIn('client_id', clientIds)
+      .count('invoice_id as count')
+      .first();
+
+    if (invoiceCount && Number(invoiceCount.count) > 0) {
+      return {
+        canChange: false,
+        reason: 'Client has existing invoices. Currency cannot be changed after invoices have been generated.'
+      };
+    }
+
+    return { canChange: true };
+  } catch (error) {
+    console.error(`Error checking currency change for contract ${contractId}:`, error);
+    // Default to allowing change for new contracts without billing data
+    // The worst case is they change currency on an empty contract
+    return { canChange: true };
+  }
+}
+
 export async function checkClientHasActiveContract(clientId: string, excludeContractId?: string): Promise<boolean> {
   const session = await getSession();
   if (!session?.user?.id) {

@@ -86,7 +86,7 @@ export function ContractLineEditDialog({ line, onClose, onSave }: ContractLineEd
                     const value = parseFloat(e.target.value);
                     setRate(Number.isNaN(value) ? 0 : value);
                   }}
-                  className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>

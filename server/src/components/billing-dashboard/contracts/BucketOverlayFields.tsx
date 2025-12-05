@@ -160,7 +160,7 @@ export function BucketOverlayFields({
               }
             }}
             placeholder="0.00"
-            className="pl-7"
+            className="pl-10"
             disabled={disabled}
           />
         </div>

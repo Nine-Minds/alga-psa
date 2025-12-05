@@ -712,7 +712,7 @@ const ContractDetail: React.FC = () => {
       <div className="flex flex-col gap-4">
         <Button
           id="back-to-contracts"
-          variant="ghost"
+          variant="soft"
           size="sm"
           onClick={() => router.push('/msp/billing?tab=client-contracts')}
           className="gap-2 self-start"
@@ -933,6 +933,10 @@ const ContractDetail: React.FC = () => {
                           className={hasAttemptedSubmit && !editBillingFrequency ? 'ring-1 ring-red-500' : ''}
                         />
                       </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Currency</span>
+                      <span className="font-medium">{contract.currency_code || 'USD'}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Created</span>
@@ -1268,7 +1272,7 @@ const ContractDetail: React.FC = () => {
                                         }
                                       }}
                                       placeholder="0.00"
-                                      className="pl-7"
+                                      className="pl-10"
                                       disabled={!editData.po_required}
                                     />
                                   </div>

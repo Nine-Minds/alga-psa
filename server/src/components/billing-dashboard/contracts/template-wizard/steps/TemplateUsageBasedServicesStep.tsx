@@ -258,7 +258,7 @@ export function TemplateUsageBasedServicesStep({
                           }
                         }}
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                       />
                     </div>
                     <p className="text-xs text-gray-500">Suggested rate when creating contracts</p>

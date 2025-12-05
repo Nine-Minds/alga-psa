@@ -622,7 +622,7 @@ export function HourlyPlanConfiguration({
                                         }}
                                         placeholder="0.00"
                                         disabled={saving}
-                                        className={`pl-7 ${planValidationErrors.overtimeRate ? 'border-red-500' : ''}`}
+                                        className={`pl-10 ${planValidationErrors.overtimeRate ? 'border-red-500' : ''}`}
                                       />
                                     </div>
                                     {planValidationErrors.overtimeRate && <p className="text-sm text-red-500 mt-1">{planValidationErrors.overtimeRate}</p>}

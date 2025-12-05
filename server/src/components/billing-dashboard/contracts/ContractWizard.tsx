@@ -81,6 +81,7 @@ type TemplateOption = {
   contract_name: string;
   contract_description?: string | null;
   billing_frequency?: string | null;
+  currency_code?: string | null;
 };
 
 interface ContractWizardProps {
@@ -106,6 +107,7 @@ export function ContractWizard({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [isTemplateLoading, startTemplateTransition] = useTransition();
+  const latestTemplateRequestRef = React.useRef<string | null>(null);
 
   const [wizardData, setWizardData] = useState<ContractWizardData>({
     client_id: '',
@@ -168,6 +170,7 @@ export function ContractWizard({
       template_id: undefined,
     });
     setSelectedTemplateId(null);
+    latestTemplateRequestRef.current = null;
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
@@ -197,6 +200,8 @@ export function ContractWizard({
 
   const handleTemplateSelect = (templateId: string | null) => {
     setSelectedTemplateId(templateId);
+    latestTemplateRequestRef.current = templateId;
+
     if (!templateId) {
       setTemplateError(null);
       updateData({ template_id: undefined });
@@ -207,12 +212,17 @@ export function ContractWizard({
     startTemplateTransition(async () => {
       try {
         const snapshot = await getContractTemplateSnapshotForClientWizard(templateId);
-        applyTemplateSnapshot(snapshot, templateId);
+        // Only apply if this is still the selected template (prevents race conditions)
+        if (latestTemplateRequestRef.current === templateId) {
+          applyTemplateSnapshot(snapshot, templateId);
+        }
       } catch (error) {
         console.error('Failed to load template snapshot', error);
-        setTemplateError(
-          error instanceof Error ? error.message : 'Failed to load template details'
-        );
+        if (latestTemplateRequestRef.current === templateId) {
+          setTemplateError(
+            error instanceof Error ? error.message : 'Failed to load template details'
+          );
+        }
       }
     });
   };
@@ -260,6 +270,10 @@ export function ContractWizard({
         }
         if (!wizardData.start_date) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Start date is required' }));
+          return false;
+        }
+        if (wizardData.end_date && wizardData.start_date > wizardData.end_date) {
+          setErrors((prev) => ({ ...prev, [stepIndex]: 'End date must be after start date' }));
           return false;
         }
         return true;

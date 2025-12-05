@@ -225,7 +225,7 @@ export function ServiceHourlyConfigForm({
             onBlur={handleHourlyRateBlur} // Process value and update parent on blur
             placeholder="0.00"
             disabled={disabled}
-            className={`pl-7 ${validationErrors.hourly_rate ? 'border-red-500' : ''}`}
+            className={`pl-10 ${validationErrors.hourly_rate ? 'border-red-500' : ''}`}
           />
         </div>
         {validationErrors.hourly_rate && (
@@ -329,7 +329,7 @@ export function ServiceHourlyConfigForm({
                              onBlur={handleNewRateInputBlur}
                              placeholder="0.00"
                              disabled={disabled}
-                             className={`pl-7 mt-1 ${userTypeError ? 'border-red-500' : ''}`}
+                             className={`pl-10 mt-1 ${userTypeError ? 'border-red-500' : ''}`}
                          />
                        </div>
                    </div>

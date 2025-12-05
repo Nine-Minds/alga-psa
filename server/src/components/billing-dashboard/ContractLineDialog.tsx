@@ -667,7 +667,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         }
                       }}
                       placeholder="0.00"
-                      className="pl-7"
+                      className="pl-10"
                     />
                   </div>
                   <p className="text-xs text-gray-500">
@@ -872,7 +872,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                           }
                         }}
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                       />
                     </div>
                     <p className="text-xs text-gray-500">
@@ -1189,7 +1189,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                             }
                           }}
                           placeholder="0.00"
-                          className="pl-7"
+                          className="pl-10"
                         />
                       </div>
                       <p className="text-xs text-gray-500">Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.</p>

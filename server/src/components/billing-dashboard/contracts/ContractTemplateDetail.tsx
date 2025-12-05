@@ -825,6 +825,10 @@ const ContractTemplateDetail: React.FC = () => {
                 <span className="font-medium">{humanize(contract.billing_frequency)}</span>
               </div>
               <div className="flex items-center justify-between">
+                <span>Currency</span>
+                <span className="font-medium">{contract.currency_code ?? 'USD'}</span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span>Contract Lines</span>
                 <span className="font-medium">{summary?.contractLineCount ?? templateLines.length}</span>
               </div>

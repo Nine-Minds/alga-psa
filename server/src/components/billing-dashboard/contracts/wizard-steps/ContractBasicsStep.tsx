@@ -33,6 +33,7 @@ type TemplateOption = {
   contract_name: string;
   contract_description?: string | null;
   billing_frequency?: string | null;
+  currency_code?: string | null;
 };
 
 interface ContractBasicsStepProps {
@@ -62,8 +63,17 @@ export function ContractBasicsStep({
   isTemplateLoading,
   templateError,
 }: ContractBasicsStepProps) {
-  const [clients, setClients] = useState<IClient[]>([]);
+  const [allClients, setAllClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
+
+  // Get the selected template to access its currency
+  const selectedTemplate = templates.find((t) => t.contract_id === selectedTemplateId);
+  const templateCurrency = selectedTemplate?.currency_code;
+
+  // Filter clients by template currency when a template is selected
+  const clients = templateCurrency
+    ? allClients.filter((c) => (c.default_currency_code || 'USD') === templateCurrency)
+    : allClients;
   const [poAmountInput, setPoAmountInput] = useState<string>('');
   const [clientHasActiveContract, setClientHasActiveContract] = useState(false);
   const [checkingActiveContract, setCheckingActiveContract] = useState(false);
@@ -76,7 +86,7 @@ export function ContractBasicsStep({
     const loadClients = async () => {
       try {
         const fetchedClients = await getAllClients();
-        setClients(fetchedClients);
+        setAllClients(fetchedClients);
       } catch (error) {
         console.error('Error loading clients:', error);
       } finally {
@@ -99,35 +109,45 @@ export function ContractBasicsStep({
   }, [data.start_date, data.end_date]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Reset immediately when client changes to clear stale error messages
+    setClientHasActiveContract(false);
+
     const checkActiveContract = async () => {
       if (!data.client_id || data.is_draft) {
-        setClientHasActiveContract(false);
         return;
       }
 
       setCheckingActiveContract(true);
       try {
         const hasActive = await checkClientHasActiveContract(data.client_id, data.contract_id);
-        setClientHasActiveContract(hasActive);
+        if (!cancelled) {
+          setClientHasActiveContract(hasActive);
+        }
       } catch (error) {
         console.error('Error checking for active contract:', error);
-        setClientHasActiveContract(false);
+        if (!cancelled) {
+          setClientHasActiveContract(false);
+        }
       } finally {
-        setCheckingActiveContract(false);
+        if (!cancelled) {
+          setCheckingActiveContract(false);
+        }
       }
     };
 
     void checkActiveContract();
+
+    return () => {
+      cancelled = true;
+    };
   }, [data.client_id, data.is_draft, data.contract_id]);
 
   const templateOptions = templates.map((template) => ({
     value: template.contract_id,
     label: template.contract_name,
   }));
-
-  const selectedTemplate = selectedTemplateId
-    ? templates.find((template) => template.contract_id === selectedTemplateId)
-    : undefined;
 
   return (
     <div className="space-y-6" data-automation-id="contract-basics-step">
@@ -175,6 +195,10 @@ export function ContractBasicsStep({
                 ? selectedTemplate.billing_frequency.replace(/_/g, ' ')
                 : 'Not specified'}
             </p>
+            <p>
+              <span className="font-semibold text-purple-700">Currency:</span>{' '}
+              {selectedTemplate.currency_code || 'USD'}
+            </p>
             {selectedTemplate.contract_description && (
               <p className="text-gray-700">{selectedTemplate.contract_description}</p>
             )}
@@ -193,11 +217,18 @@ export function ContractBasicsStep({
           selectedClientId={data.client_id || null}
           onSelect={(id) => {
             const selectedClient = clients.find((c) => c.client_id === id);
-            const clientCurrency = selectedClient?.default_currency_code || data.currency_code;
-            updateData({
-              client_id: id || '',
-              currency_code: clientCurrency,
-            });
+            // Only update currency if no template is selected
+            if (selectedTemplateId) {
+              // Template is selected - don't change currency
+              updateData({ client_id: id || '' });
+            } else {
+              // No template - use client's default currency
+              const clientCurrency = selectedClient?.default_currency_code || data.currency_code;
+              updateData({
+                client_id: id || '',
+                currency_code: clientCurrency,
+              });
+            }
           }}
           filterState={filterState}
           onFilterStateChange={setFilterState}
@@ -206,8 +237,13 @@ export function ContractBasicsStep({
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
         />
-        {!data.client_id && (
+        {!data.client_id && !templateCurrency && (
           <p className="text-xs text-gray-500">Choose the client this contract is for.</p>
+        )}
+        {templateCurrency && (
+          <p className="text-xs text-gray-500">
+            Showing only clients with {templateCurrency} as their default currency (matching the template).
+          </p>
         )}
         {clientHasActiveContract && !data.is_draft && (
           <p className="text-sm text-red-600">
@@ -255,18 +291,15 @@ export function ContractBasicsStep({
       <div className="space-y-2">
         <Label htmlFor="currency" className="flex items-center gap-2">
           <Coins className="h-4 w-4" />
-          Currency *
+          Currency
         </Label>
-        <CustomSelect
-          id="currency"
-          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
-          onValueChange={(value: string) => updateData({ currency_code: value })}
-          value={data.currency_code}
-          placeholder="Select currency"
-          className="w-full"
-        />
+        <div className="flex items-center h-10 px-3 bg-gray-50 border rounded-md text-sm">
+          {CURRENCY_OPTIONS.find((c) => c.value === data.currency_code)?.label || data.currency_code || 'USD'}
+        </div>
         <p className="text-xs text-gray-500">
-          Currency for this contract. Defaults to the client's preferred currency.
+          {selectedTemplateId
+            ? 'Currency is set by the template.'
+            : 'Currency is based on the client\'s default currency.'}
         </p>
       </div>
 
@@ -307,7 +340,12 @@ export function ContractBasicsStep({
           className="w-full"
           clearable
         />
-        <p className="text-xs text-gray-500">Leave blank for an ongoing contract.</p>
+        {endDate && startDate && endDate < startDate && (
+          <p className="text-xs text-red-600">End date must be after start date</p>
+        )}
+        {!(endDate && startDate && endDate < startDate) && (
+          <p className="text-xs text-gray-500">Leave blank for an ongoing contract.</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -401,7 +439,7 @@ export function ContractBasicsStep({
                     }
                   }}
                   placeholder="0.00"
-                  className="pl-7"
+                  className="pl-10"
                 />
               </div>
               <p className="text-xs text-gray-500">
