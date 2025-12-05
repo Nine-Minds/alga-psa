@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { updateMessageAction } from '../../lib/chat-actions/chatActions';
 import Image from 'next/image';
+import { X } from 'lucide-react';
 import './feedback.css';
 
 type FeedbackProps = {
@@ -126,13 +127,8 @@ const Feedback: React.FC<FeedbackProps> = ({ messageId, role }) => {
         <div className="alert-container">
           <p className="alert-text">{alertMessage}</p>
           <button className="alert-close" onClick={handleAlertClose}>
-            <Image
-              src="/x.png"
-              alt="close"
-              width={16}
-              height={16}
-            />
-          </ button>
+            <X size={16} />
+          </button>
         </div>
       </div>}
 

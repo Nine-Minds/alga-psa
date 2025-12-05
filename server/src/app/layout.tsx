@@ -37,10 +37,10 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       images: [
         {
-          url: "https://strapi-marketing-website-uploads.s3.us-east-1.amazonaws.com/Blog_Updates_Thumbnail_1250_x_720_px_3_53750d92c3.png",
-          width: 1200,
-          height: 630,
-          alt: "Sebastian Application",
+          url: "/images/avatar-purple-background.png",
+          width: 400,
+          height: 400,
+          alt: "AlgaPSA",
         },
       ],
     },
