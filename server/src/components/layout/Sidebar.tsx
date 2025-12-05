@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
@@ -46,6 +46,35 @@ const Sidebar: React.FC<SidebarProps> = ({
   const searchParams = useSearchParams();
   const router = useRouter();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+
+  // Track mode changes for transition animation
+  const prevModeRef = useRef<NavMode>(mode);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState<'in' | 'out'>('in');
+
+  useEffect(() => {
+    if (prevModeRef.current !== mode) {
+      // Mode has changed - trigger transition animation
+      setTransitionDirection('out');
+      setIsTransitioning(true);
+
+      // After the exit animation, switch direction for enter animation
+      const exitTimer = setTimeout(() => {
+        setTransitionDirection('in');
+      }, 150);
+
+      // Complete the transition
+      const enterTimer = setTimeout(() => {
+        setIsTransitioning(false);
+        prevModeRef.current = mode;
+      }, 400);
+
+      return () => {
+        clearTimeout(exitTimer);
+        clearTimeout(enterTimer);
+      };
+    }
+  }, [mode]);
 
   const isSettingsMode = mode === 'settings';
   const isBillingMode = mode === 'billing';
@@ -206,7 +235,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Back to Main button - shown in settings and billing modes */}
       {isSubMode && (
-        <div className="px-2 py-2">
+        <div
+          className={`px-2 py-2 transition-all duration-200 ease-out ${
+            isTransitioning
+              ? transitionDirection === 'out'
+                ? 'opacity-0 translate-x-[-10px]'
+                : 'opacity-100 translate-x-0'
+              : 'opacity-100 translate-x-0'
+          }`}
+        >
           {sidebarOpen ? (
             <button
               id="settings-back-to-main-button"
@@ -267,6 +304,15 @@ const Sidebar: React.FC<SidebarProps> = ({
       */}
 
       <nav className={`${isSubMode ? 'mt-2' : 'mt-4'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
+        <div
+          className={`transition-all duration-200 ease-out ${
+            isTransitioning
+              ? transitionDirection === 'out'
+                ? 'opacity-0 translate-x-[-10px]'
+                : 'opacity-100 translate-x-0'
+              : 'opacity-100 translate-x-0'
+          }`}
+        >
         {sectionsToRender.map((section, sectionIndex) => (
           <div key={section.title || 'nav-section'} className="px-2">
             {sidebarOpen && section.title ? (
@@ -289,11 +335,20 @@ const Sidebar: React.FC<SidebarProps> = ({
             <DynamicNavigationSlot collapsed={!sidebarOpen} />
           </div>
         )}
+        </div>
       </nav>
 
       {/* Bottom menu items - only in main mode */}
       {!isSubMode && (
-        <div className="mt-auto">
+        <div
+          className={`mt-auto transition-all duration-200 ease-out ${
+            isTransitioning
+              ? transitionDirection === 'out'
+                ? 'opacity-0 translate-x-[-10px]'
+                : 'opacity-100 translate-x-0'
+              : 'opacity-100 translate-x-0'
+          }`}
+        >
           <ul className="space-y-1">
             {bottomMenuItems.map((item):JSX.Element => (
               <li key={item.name}>
