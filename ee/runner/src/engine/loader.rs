@@ -1,7 +1,7 @@
 // Wasmtime engine configuration, module fetch/cache, and instantiation
 use crate::engine::stderr_pipe::StderrPipe;
 use crate::models::{
-    ExecuteRequest as ModelExecuteRequest, ExecuteResponse as ModelExecuteResponse,
+    ExecuteRequest as ModelExecuteRequest, ExecuteResponse as ModelExecuteResponse, UserInfo,
 };
 use anyhow::Context;
 use once_cell::sync::Lazy;
@@ -63,6 +63,7 @@ pub struct HostExecutionContext {
     pub config: HashMap<String, String>,
     pub providers: HashSet<String>,
     pub secrets: Option<SecretMaterial>,
+    pub user: Option<UserInfo>,
 }
 
 #[derive(Clone, Default)]

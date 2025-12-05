@@ -7,6 +7,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from '../../../../../lib/extensions/runner/backend';
+import { createTenantKnex } from 'server/src/lib/db';
 export const dynamic = 'force-dynamic';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -116,7 +117,13 @@ function actionForMethod(method: Method): 'read' | 'write' {
   return method === 'GET' ? 'read' : 'write';
 }
 
-async function assertAccess(tenantId: string, method: Method): Promise<void> {
+interface UserAccessResult {
+  user_id: string;
+  user_email: string;
+  user_name: string;
+}
+
+async function assertAccess(tenantId: string, method: Method): Promise<UserAccessResult | null> {
   const currentUser = await getCurrentUser();
   if (!currentUser || !currentUser.tenant) {
     throw new AccessError(401, 'Unauthorized');
@@ -129,6 +136,27 @@ async function assertAccess(tenantId: string, method: Method): Promise<void> {
   const allowed = await hasPermission(currentUser, 'extension', requiredAction);
   if (!allowed) {
     throw new AccessError(403, 'Forbidden');
+  }
+
+  // Return user info for the extension context
+  return {
+    user_id: currentUser.user_id,
+    user_email: currentUser.email || '',
+    user_name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
+  };
+}
+
+async function getTenantCompanyName(tenantId: string): Promise<string> {
+  try {
+    const { knex } = await createTenantKnex();
+    const tenant = await knex('tenants')
+      .select('client_name')
+      .where('tenant', tenantId)
+      .first();
+    return tenant?.client_name || '';
+  } catch (err) {
+    console.error('[ext-gateway] Failed to fetch tenant company name:', err);
+    return '';
   }
 }
 
@@ -162,7 +190,7 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
     const tenantId = await getTenantFromAuth(req);
     if (!tenantId) return json(401, { error: 'Unauthorized' });
 
-    await assertAccess(tenantId, method);
+    const userInfo = await assertAccess(tenantId, method);
 
     const installConfig = await loadInstallConfigCached(tenantId, extensionId);
     if (!installConfig) return json(404, { error: 'Extension not installed' });
@@ -175,6 +203,12 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
     if (!endpoint) return json(404, { error: 'Endpoint not found' });
 
     const timeoutMs = getTimeoutMs();
+
+    // Fetch tenant company name for user context (only if user info is available)
+    let companyName = '';
+    if (userInfo) {
+      companyName = await getTenantCompanyName(tenantId);
+    }
 
     // Body handling
     const bodyBuf = method === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
@@ -199,6 +233,12 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
       endpoint: endpoint.handler, // handler id/path inside the bundle
       providers: installConfig.providers,
       secret_envelope: installConfig.secretEnvelope ?? undefined,
+      user: userInfo ? {
+        user_id: userInfo.user_id,
+        user_email: userInfo.user_email,
+        user_name: userInfo.user_name,
+        company_name: companyName,
+      } : undefined,
     };
 
     const backend = getRunnerBackend();
