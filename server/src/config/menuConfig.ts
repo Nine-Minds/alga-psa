@@ -2,6 +2,7 @@
 
 import type { ElementType } from 'react';
 import {
+  AtSign,
   BarChart3,
   Bell,
   Building2,
@@ -203,7 +204,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'General', icon: Settings, href: '/msp/settings?tab=general' },
       { name: 'Users', icon: UserCog, href: '/msp/settings?tab=users' },
       { name: 'Teams', icon: Users, href: '/msp/settings?tab=teams' },
-      { name: 'Client Portal', icon: Globe, href: '/msp/settings?tab=client-portal' },
+      { name: 'Client Portal', icon: AtSign, href: '/msp/settings?tab=client-portal' },
     ]
   },
   {

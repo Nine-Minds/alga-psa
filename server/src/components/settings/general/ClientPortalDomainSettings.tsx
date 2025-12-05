@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Globe } from 'lucide-react';
+import { AtSign } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Badge } from 'server/src/components/ui/Badge';
@@ -33,7 +33,7 @@ const ClientPortalDomainSettings = () => {
       <CardHeader>
         <CardTitle>
           <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
+            <AtSign className="h-5 w-5" />
             Custom Domain
             <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
               Enterprise
