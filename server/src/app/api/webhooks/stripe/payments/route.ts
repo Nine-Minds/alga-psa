@@ -27,7 +27,7 @@ import { getSecretProviderInstance } from '@alga-psa/shared/core';
  *    - payment_intent.succeeded
  *    - payment_intent.payment_failed
  *    - checkout.session.expired
- * 4. Copy webhook signing secret to STRIPE_PAYMENT_WEBHOOK_SECRET env var
+ * 4. Store webhook signing secret in the secret provider
  */
 
 async function getWebhookSecret(): Promise<string> {
@@ -35,16 +35,10 @@ async function getWebhookSecret(): Promise<string> {
 
   // Try payment-specific webhook secret first
   let webhookSecret = await secretProvider.getAppSecret('stripe_payment_webhook_secret');
-  if (!webhookSecret && process.env.STRIPE_PAYMENT_WEBHOOK_SECRET) {
-    webhookSecret = process.env.STRIPE_PAYMENT_WEBHOOK_SECRET;
-  }
 
   // Fall back to main webhook secret if payment-specific not set
   if (!webhookSecret) {
     webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
-    if (!webhookSecret && process.env.STRIPE_WEBHOOK_SECRET) {
-      webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    }
   }
 
   if (!webhookSecret) {
