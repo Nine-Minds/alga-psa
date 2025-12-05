@@ -86,7 +86,7 @@ exports.up = async function(knex) {
       .where({ tenant })
       .whereNotNull('estimated_hours')
       .update({
-        estimated_hours: knex.raw('ROUND(estimated_hours * 60)')
+        estimated_hours: knex.raw('estimated_hours * 60')
       });
 
     if (result > 0) {
