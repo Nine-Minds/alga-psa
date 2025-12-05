@@ -247,6 +247,12 @@ runner:
     redisUrlSecret:
       name: ""
       key: ""
+    # Optional: source Redis password from a secret (injected into URL at runtime)
+    redisPasswordSecret:
+      name: ""    # e.g., redis-credentials
+      key: ""     # e.g., REDIS_PASSWORD
+    # Optional: Redis username (defaults to "default" if password is set)
+    redisUsername: ""
     streamPrefix: "ext-debug:"
     maxLen: 2000
 

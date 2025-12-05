@@ -448,6 +448,17 @@ spec:
           - name: RUNNER_DEBUG_REDIS_MAXLEN
             value: "{{ .debugStream.maxLen }}"
           {{- end }}
+          {{- if and .debugStream.redisPasswordSecret (hasKey .debugStream.redisPasswordSecret "name") (hasKey .debugStream.redisPasswordSecret "key") (.debugStream.redisPasswordSecret.name) (.debugStream.redisPasswordSecret.key) }}
+          - name: RUNNER_DEBUG_REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .debugStream.redisPasswordSecret.name | quote }}
+                key: {{ .debugStream.redisPasswordSecret.key | quote }}
+          {{- end }}
+          {{- if .debugStream.redisUsername }}
+          - name: RUNNER_DEBUG_REDIS_USERNAME
+            value: "{{ .debugStream.redisUsername }}"
+          {{- end }}
           {{- end }}
           {{- end }}
 
