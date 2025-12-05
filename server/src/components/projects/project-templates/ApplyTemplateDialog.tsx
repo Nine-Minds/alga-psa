@@ -14,7 +14,7 @@ import { useToast } from 'server/src/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { getTemplates, applyTemplate } from 'server/src/lib/actions/project-actions/projectTemplateActions';
-import { getAllClients } from 'server/src/lib/actions/clientActions';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 
 interface ApplyTemplateDialogProps {
   open: boolean;
