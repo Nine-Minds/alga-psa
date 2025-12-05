@@ -77,13 +77,34 @@ impl RedisPublisher {
 static PUBLISHER: OnceCell<Option<Arc<RedisPublisher>>> = OnceCell::new();
 
 pub async fn init_from_env() {
-    let url = match std::env::var("RUNNER_DEBUG_REDIS_URL") {
+    let mut url = match std::env::var("RUNNER_DEBUG_REDIS_URL") {
         Ok(v) if !v.is_empty() => v,
         _ => {
             let _ = PUBLISHER.set(None);
             return;
         }
     };
+
+    // Inject password into URL if provided via separate env var.
+    // This allows sourcing the password from a Kubernetes secret without
+    // needing to construct the full URL with embedded credentials.
+    if let Ok(password) = std::env::var("RUNNER_DEBUG_REDIS_PASSWORD") {
+        if !password.is_empty() {
+            match url::Url::parse(&url) {
+                Ok(mut parsed) => {
+                    let username = std::env::var("RUNNER_DEBUG_REDIS_USERNAME")
+                        .unwrap_or_else(|_| "default".to_string());
+                    let _ = parsed.set_username(&username);
+                    let _ = parsed.set_password(Some(&password));
+                    url = parsed.to_string();
+                    tracing::info!("injected redis credentials into debug stream URL");
+                }
+                Err(e) => {
+                    tracing::warn!(error=%e, "failed to parse RUNNER_DEBUG_REDIS_URL for credential injection");
+                }
+            }
+        }
+    }
 
     let stream_prefix = std::env::var("RUNNER_DEBUG_REDIS_STREAM_PREFIX")
         .unwrap_or_else(|_| "ext-debug:".to_string());
