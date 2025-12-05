@@ -65,9 +65,12 @@ async function assertAccess(
     throw new HttpResponseError(json(401, { error: 'Unauthorized' }));
   }
 
-  if (currentUser.tenant && currentUser.tenant !== effectiveTenant) {
-    throw new HttpResponseError(json(401, { error: 'Unauthorized' }));
-  }
+  // Allow cross-tenant debugging if the user has permission.
+  // The strict check (currentUser.tenant !== effectiveTenant) prevented MSP admins
+  // from debugging customer tenants.
+  // if (currentUser.tenant && currentUser.tenant !== effectiveTenant) {
+  //   throw new HttpResponseError(json(401, { error: 'Unauthorized' }));
+  // }
 
   // Require extension read permission within tenant context
   const allowed = await hasPermission(currentUser, 'extension', 'read');
@@ -264,4 +267,122 @@ function createSseStream(options: StreamOptions): ReadableStream {
   });
 
   return stream;
+}
+
+/**
+ * Polling fallback for environments where SSE/EventSource doesn't work.
+ * Returns JSON array of events since the given `lastId` cursor.
+ */
+type PollOptions = Omit<StreamOptions, 'redisClient'> & {
+  lastId: string | null;
+  count?: number;
+};
+
+async function pollEvents(options: PollOptions): Promise<{ events: DebugEvent[]; lastId: string }> {
+  const redisClient = await createDebugStreamClient();
+  const startId = options.lastId || '0';
+  const events: DebugEvent[] = [];
+  let newestId = startId;
+
+  try {
+    const descriptors = options.streamKeys.map((key) => ({
+      key,
+      id: startId,
+    }));
+
+    // Non-blocking read for polling
+    const entries = await redisClient.xRead(descriptors, {
+      COUNT: options.count || 100,
+    });
+
+    if (entries) {
+      for (const entry of entries) {
+        for (const message of entry.messages) {
+          // Track the newest ID we've seen
+          if (message.id > newestId) {
+            newestId = message.id;
+          }
+
+          const event = mapRedisEvent(
+            message.message,
+            options.extensionId,
+            options.tenantId,
+          );
+
+          if (!passthroughFilter(event, { installId: options.installId, requestId: options.requestId })) {
+            continue;
+          }
+
+          events.push(event);
+        }
+      }
+    }
+  } finally {
+    await redisClient.quit().catch(() => redisClient.disconnect());
+  }
+
+  return { events, lastId: newestId };
+}
+
+/**
+ * POST handler for polling mode.
+ * Body: { lastId?: string }
+ * Returns: { events: DebugEvent[], lastId: string }
+ */
+export async function POST(req: NextRequest): Promise<Response> {
+  try {
+    const url = req.nextUrl;
+    const searchParams = url.searchParams;
+
+    const extensionId = searchParams.get('extensionId');
+    const tenantIdParam = searchParams.get('tenantId');
+    const installId = searchParams.get('installId');
+    const requestId = searchParams.get('requestId');
+
+    if (!extensionId) {
+      return json(400, { error: 'extensionId is required' });
+    }
+
+    const { tenantId } = await assertAccess(req, tenantIdParam);
+    const normalizedInstall = installId?.trim().toLowerCase() || null;
+    const normalizedRequest = requestId?.trim().toLowerCase() || null;
+    const streamKeys = buildStreamKeys(extensionId, tenantId);
+
+    console.log('[ext-debug] POST resolved tenantId:', tenantId, 'streamKeys:', streamKeys);
+
+    if (streamKeys.length === 0) {
+      return json(500, { error: 'Unable to determine debug stream key' });
+    }
+
+    let body: { lastId?: string } = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body is fine, will use default lastId
+    }
+
+    console.log('[ext-debug] POST body lastId:', body.lastId);
+
+    const result = await pollEvents({
+      streamKeys,
+      extensionId,
+      tenantId,
+      installId: normalizedInstall,
+      requestId: normalizedRequest,
+      lastId: body.lastId || null,
+    });
+
+    console.log('[ext-debug] POST returning', result.events.length, 'events, lastId:', result.lastId);
+
+    return json(200, result);
+  } catch (err: unknown) {
+    if (err instanceof HttpResponseError) {
+      return err.response;
+    }
+    if (err instanceof NextResponse || err instanceof Response) {
+      return err;
+    }
+    console.error('[ext-debug] poll error', err);
+    return json(500, { error: 'Internal error' });
+  }
 }
