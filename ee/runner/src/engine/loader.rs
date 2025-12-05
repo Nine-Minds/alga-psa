@@ -431,9 +431,22 @@ impl ModuleLoader {
                 v
             }
             Err(e) => {
+                // Log the error for server-side observability
                 tracing::error!(request_id=%request_id, error_debug=?e, "Extension handler execution failed");
                 tracing::error!(request_id=%request_id, error_display=%e.to_string(), "Handler error details");
-                return Err(e.into());
+
+                // Emit the error to the debug hub so it appears in the extension debug console
+                let context = store.data().context.clone();
+                let error_msg = format!("WASM execution error: {}", e);
+                crate::engine::debug::emit_log(&context, tracing::Level::ERROR, &error_msg).await;
+
+                // Return a graceful error response instead of propagating the error
+                return Ok(ModelExecuteResponse {
+                    status: 500,
+                    headers: std::collections::HashMap::new(),
+                    body_b64: None,
+                    error: Some(error_msg),
+                });
             }
         };
 
