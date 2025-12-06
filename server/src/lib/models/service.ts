@@ -30,6 +30,7 @@ const baseServiceSchema = z.object({
   default_rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ),
+  currency_code: z.string().length(3).default('USD'), // ISO 4217 currency code (e.g., 'USD', 'EUR')
   unit_of_measure: z.string(),
   category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
   tax_rate_id: z.union([z.string().uuid(), z.null()]).optional(), // Accept string, null, or undefined
@@ -111,6 +112,7 @@ const Service = {
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          'sc.currency_code',
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
@@ -163,6 +165,7 @@ const Service = {
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          'sc.currency_code',
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
@@ -241,6 +244,7 @@ const Service = {
       custom_service_type_id: validatedData.custom_service_type_id,
       billing_method: validatedData.billing_method,
       default_rate: validatedData.default_rate,
+      currency_code: validatedData.currency_code ?? 'USD', // Default to USD if not specified
       unit_of_measure: validatedData.unit_of_measure,
       category_id: validatedData.category_id ?? null, // category_id is string | null in IService
       tax_rate_id: validatedData.tax_rate_id ?? null, // Corrected: Use tax_rate_id
@@ -273,6 +277,7 @@ const Service = {
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          'sc.currency_code',
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
@@ -358,6 +363,7 @@ const Service = {
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          'sc.currency_code',
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',
@@ -521,6 +527,7 @@ const Service = {
           'sc.custom_service_type_id',
           'sc.billing_method',
           knexOrTrx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          'sc.currency_code',
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.description',

@@ -82,6 +82,7 @@ export const ServiceForm: React.FC = () => {
       const baseData = {
         service_name: serviceName,
         default_rate: parseFloat(defaultRate) || 0,
+        currency_code: 'USD', // Default to USD; TODO: add currency selector to form
         unit_of_measure: unitOfMeasure,
         category_id: null,
         billing_method: billingMethod,

@@ -123,6 +123,7 @@ export async function getServices(
               'sc.custom_service_type_id',
               'sc.billing_method',
               trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+              'sc.currency_code',
               'sc.unit_of_measure',
               'sc.category_id',
               'sc.tenant',
@@ -225,6 +226,8 @@ export async function createService(
             default_rate: typeof serviceData.default_rate === 'string'
                 ? parseFloat(serviceData.default_rate) || 0
                 : serviceData.default_rate,
+            // Use provided currency_code or default to USD
+            currency_code: serviceData.currency_code || 'USD',
             // Explicitly handle tax_rate_id to ensure it's null rather than undefined
             tax_rate_id: serviceData.tax_rate_id || null,
         };

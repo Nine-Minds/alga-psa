@@ -35,7 +35,10 @@ const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   contract_name: template.template_name,
   contract_description: template.template_description ?? undefined,
   billing_frequency: template.default_billing_frequency,
-  currency_code: template.currency_code,
+  // currency_code removed from templates - templates are now currency-neutral
+  // When converting to contract, we use USD as default. Actual contract currency
+  // is set from client's default_currency_code when creating a real contract.
+  currency_code: 'USD',
   is_active: template.template_status === 'published',
   status: template.template_status,
   is_template: true,
@@ -341,9 +344,8 @@ export async function updateContract(
       if (typeof updateData.billing_frequency === 'string') {
         templateUpdates.default_billing_frequency = updateData.billing_frequency;
       }
-      if (typeof updateData.currency_code === 'string') {
-        templateUpdates.currency_code = updateData.currency_code;
-      }
+      // currency_code removed from templates - templates are now currency-neutral
+      // Currency is inherited from the client when a contract is created
       if (updateData.status && ['draft', 'published', 'archived'].includes(updateData.status)) {
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }

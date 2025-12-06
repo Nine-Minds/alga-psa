@@ -54,7 +54,8 @@ export type ContractTemplateWizardSubmission = {
   contract_name: string;
   description?: string;
   billing_frequency?: string;
-  currency_code: string;
+  // currency_code removed - templates are now currency-neutral
+  // Currency is inherited from the client when a contract is created from this template
   fixed_services: TemplateFixedServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
   usage_services?: TemplateUsageServiceInput[];
@@ -123,7 +124,8 @@ export type ClientTemplateSnapshot = {
   contract_name?: string;
   description?: string | null;
   billing_frequency?: string | null;
-  currency_code?: string;
+  // currency_code removed - templates are now currency-neutral
+  // Currency is inherited from the client when a contract is created from this template
   fixed_services?: ClientFixedServiceInput[];
   fixed_base_rate?: number;
   enable_proration?: boolean;
@@ -208,7 +210,7 @@ export async function createContractTemplateFromWizard(
       template_name: submission.contract_name,
       template_description: submission.description ?? null,
       default_billing_frequency: submission.billing_frequency ?? 'monthly',
-      currency_code: submission.currency_code,
+      // currency_code removed - templates are now currency-neutral
       template_status: isDraft ? 'draft' : 'published',
       template_metadata: null,
       created_at: nowIso,
@@ -619,7 +621,7 @@ export async function createClientContractFromWizard(
     if (allServiceIds.length > 0) {
       const services = await trx('service_catalog')
         .whereIn('service_id', allServiceIds)
-        .select('service_id', 'service_name', 'billing_method');
+        .select('service_id', 'service_name', 'billing_method', 'currency_code');
 
       const validateBillingMethod = (
         expected: 'fixed' | 'hourly' | 'usage',
@@ -634,6 +636,21 @@ export async function createClientContractFromWizard(
           }
         }
       };
+
+      // Validate service currencies match contract currency
+      const contractCurrency = submission.currency_code || 'USD';
+      const mismatchedServices = services.filter(
+        (s) => s.currency_code && s.currency_code !== contractCurrency
+      );
+      if (mismatchedServices.length > 0) {
+        const mismatchedNames = mismatchedServices
+          .map((s) => `"${s.service_name}" (${s.currency_code})`)
+          .join(', ');
+        throw new Error(
+          `Cannot create contract in ${contractCurrency}: The following services have different currencies: ${mismatchedNames}. ` +
+          `All services must have the same currency as the contract.`
+        );
+      }
 
       validateBillingMethod('fixed', filteredFixedServices);
       validateBillingMethod('hourly', filteredHourlyServices);
@@ -1046,7 +1063,7 @@ export async function getContractTemplateSnapshotForClientWizard(
     contract_name: template.template_name,
     description: template.template_description,
     billing_frequency: template.default_billing_frequency,
-    currency_code: template.currency_code,
+    // currency_code removed - templates are now currency-neutral
     fixed_services: fixedServices,
     fixed_base_rate: fixedBaseRateCents,
     enable_proration: enableProration,

@@ -9,6 +9,7 @@ import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServ
 import { Switch } from 'server/src/components/ui/Switch'
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
 import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions'
+import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITaxRegion
@@ -35,6 +36,7 @@ interface ServiceFormData {
   custom_service_type_id: string; // Required for form state
   billing_method: 'fixed' | 'hourly' | 'usage' | '';
   default_rate: number;
+  currency_code: string; // Currency of the default_rate (ISO 4217 code)
   unit_of_measure: string;
   tax_rate_id?: string | null;
   description?: string | null;
@@ -101,6 +103,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     custom_service_type_id: '',
     billing_method: '',
     default_rate: 0,
+    currency_code: 'USD', // Default to USD
     unit_of_measure: '',
     // is_taxable and region_code removed
     tax_rate_id: null, // Added
@@ -207,6 +210,7 @@ const baseData = {
   service_name: serviceData.service_name,
   billing_method: serviceData.billing_method as 'fixed' | 'hourly' | 'usage', // Cast to remove empty string type
   default_rate: serviceData.default_rate,
+  currency_code: serviceData.currency_code, // Include currency code
   unit_of_measure: serviceData.unit_of_measure,
   // is_taxable and region_code removed
   tax_rate_id: serviceData.tax_rate_id || null, // Added tax_rate_id
@@ -237,6 +241,7 @@ console.log('[QuickAddService] Service created successfully');
         custom_service_type_id: '',
         billing_method: '',
         default_rate: 0,
+        currency_code: 'USD', // Reset to default USD
         unit_of_measure: '',
         description: '',
         // is_taxable and region_code removed
@@ -355,6 +360,19 @@ console.log('[QuickAddService] Service created successfully');
             </div>
 
             <div>
+              <Label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-1">Currency *</Label>
+              <CustomSelect
+                id="currency"
+                options={CURRENCY_OPTIONS.map(c => ({ value: c.value, label: c.label }))}
+                value={serviceData.currency_code}
+                onValueChange={(value) => setServiceData({ ...serviceData, currency_code: value })}
+                placeholder="Select currency..."
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">The currency for this service&apos;s rate</p>
+            </div>
+
+            <div>
               <Label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</Label>
               <Input
                 id="description"
@@ -369,7 +387,7 @@ console.log('[QuickAddService] Service created successfully');
               <div>
                 <Label htmlFor="fixedRate" className="block text-sm font-medium text-gray-700 mb-1">Monthly Base Rate *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(serviceData.currency_code)}</span>
                   <Input
                     id="fixedRate"
                     type="text"
@@ -406,7 +424,7 @@ console.log('[QuickAddService] Service created successfully');
               <div>
                 <Label htmlFor="hourlyRate" className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(serviceData.currency_code)}</span>
                   <Input
                     id="hourlyRate"
                     type="text"
@@ -444,7 +462,7 @@ console.log('[QuickAddService] Service created successfully');
                 <div>
                   <Label htmlFor="unitRate" className="block text-sm font-medium text-gray-700 mb-1">Unit Rate *</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(serviceData.currency_code)}</span>
                     <Input
                       id="unitRate"
                       type="text"

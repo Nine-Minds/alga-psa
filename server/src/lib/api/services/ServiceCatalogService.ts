@@ -70,6 +70,7 @@ export class ServiceCatalogService implements ControllerBaseService {
     void context;
     let dataSanitized = {
       category_id: data.category_id ?? null,
+      currency_code: data.currency_code ?? 'USD', // Default to USD if not provided
       ...data,
     }
     return await createService(dataSanitized);

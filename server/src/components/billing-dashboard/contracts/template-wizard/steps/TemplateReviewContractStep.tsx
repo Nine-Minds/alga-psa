@@ -14,7 +14,8 @@ interface TemplateReviewContractStepProps {
 export function TemplateReviewContractStep({
   data,
 }: TemplateReviewContractStepProps) {
-  const currencySymbol = getCurrencySymbol(data.currency_code);
+  // Templates are currency-neutral; USD shown as default display currency
+  const currencySymbol = getCurrencySymbol('USD');
 
   return (
     <div className="space-y-4">
@@ -39,14 +40,8 @@ export function TemplateReviewContractStep({
                   {data.billing_frequency ? data.billing_frequency.replace(/_/g, ' ') : '—'}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Currency</span>
-                <span className="font-medium text-gray-900">
-                  {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
-                    data.currency_code ||
-                    '—'}
-                </span>
-              </div>
+              {/* Currency removed - templates are now currency-neutral.
+                  Currency is inherited from the client when a contract is created. */}
               <div>
                 <span className="text-gray-600 block mb-1">Internal Notes</span>
                 <p className="text-gray-900">

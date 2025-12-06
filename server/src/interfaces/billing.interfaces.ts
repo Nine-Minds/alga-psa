@@ -163,6 +163,7 @@ export interface IService extends TenantEntity {
   custom_service_type_id: string;   // FK to service_types (now required)
   billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Billing method specific to this service instance (Now required)
   default_rate: number;
+  currency_code: string; // Currency of the default_rate (ISO 4217 code, e.g., 'USD', 'EUR')
   category_id: string | null;
   unit_of_measure: string;
   tax_rate_id?: string | null; // Added: FK to tax_rates table

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
 // Import action to get tax rates
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
@@ -345,7 +346,12 @@ const ServiceCatalogManager: React.FC = () => {
       {
         title: 'Default Rate',
         dataIndex: 'default_rate',
-        render: (value) => `$${(value / 100).toFixed(2)}`,
+        render: (value, record) => `${getCurrencySymbol(record.currency_code)}${(value / 100).toFixed(2)}`,
+      },
+      {
+        title: 'Currency',
+        dataIndex: 'currency_code',
+        render: (value) => value || 'USD',
       },
       // Category column hidden - using Service Types for organization
       // {
@@ -607,12 +613,25 @@ const ServiceCatalogManager: React.FC = () => {
                 onChange={(e) => setEditingService({ ...editingService!, description: e.target.value })}
               />
             </div>
+            {/* Currency Selector */}
+            <div>
+              <label htmlFor="edit-currency" className="block text-sm font-medium text-gray-700 mb-1">Currency *</label>
+              <CustomSelect
+                id="edit-currency"
+                options={CURRENCY_OPTIONS.map(c => ({ value: c.value, label: c.label }))}
+                value={editingService?.currency_code || 'USD'}
+                onValueChange={(value) => setEditingService({ ...editingService!, currency_code: value })}
+                placeholder="Select currency..."
+              />
+              <p className="text-xs text-gray-500 mt-1">The currency for this service&apos;s rate</p>
+            </div>
+
             {/* Conditional Rate Fields Based on Billing Method */}
             {editingService?.billing_method === 'fixed' && (
               <div>
                 <label htmlFor="fixed-rate" className="block text-sm font-medium text-gray-700 mb-1">Monthly Base Rate *</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(editingService?.currency_code || 'USD')}</span>
                   <Input
                     id="fixed-rate"
                     type="text"
@@ -652,7 +671,7 @@ const ServiceCatalogManager: React.FC = () => {
               <div>
                 <label htmlFor="hourly-rate" className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(editingService?.currency_code || 'USD')}</span>
                   <Input
                     id="hourly-rate"
                     type="text"
@@ -693,7 +712,7 @@ const ServiceCatalogManager: React.FC = () => {
                 <div>
                   <label htmlFor="unit-rate" className="block text-sm font-medium text-gray-700 mb-1">Unit Rate *</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(editingService?.currency_code || 'USD')}</span>
                     <Input
                       id="unit-rate"
                       type="text"
