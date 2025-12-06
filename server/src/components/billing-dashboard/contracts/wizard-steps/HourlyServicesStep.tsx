@@ -8,7 +8,8 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Clock, DollarSign } from 'lucide-react';
+import { Plus, X, Clock, Coins } from 'lucide-react';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
@@ -124,9 +125,11 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     updateData({ hourly_services: next });
   };
 
+  const currencySymbol = getCurrencySymbol(data.currency_code);
+
   const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return '$0.00';
-    return `$${(cents / 100).toFixed(2)}`;
+    if (!cents) return `${currencySymbol}0.00`;
+    return `${currencySymbol}${(cents / 100).toFixed(2)}`;
   };
 
   return (
@@ -217,11 +220,13 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
 
               <div className="space-y-2">
                 <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
-                  <DollarSign className="h-3 w-3" />
+                  <Coins className="h-3 w-3" />
                   Hourly Rate
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    {currencySymbol}
+                  </span>
                   <Input
                     id={`hourly-rate-${index}`}
                     type="text"

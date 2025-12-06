@@ -36,6 +36,7 @@ import { AnalyticsEvents } from '../analytics/events';
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
 import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateActions';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { getInitialInvoiceTaxSource, shouldUseTaxDelegation } from 'server/src/lib/actions/taxSourceActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -221,6 +222,7 @@ async function adaptToWasmViewModel(
     invoiceNumber: 'PREVIEW',
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
+    currencyCode: billingResult.currency_code || 'USD',
     customer: {
       name: client?.client_name || 'N/A',
       address: client?.location_address || 'N/A',
@@ -769,6 +771,10 @@ export async function createInvoiceFromBillingResult(
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
+  // Determine tax source for this invoice based on client/tenant settings
+  const taxSource = await getInitialInvoiceTaxSource(clientId);
+  const useTaxDelegation = await shouldUseTaxDelegation(clientId);
+
   // Create base invoice object
   const invoiceData = {
     client_id: clientId,
@@ -782,10 +788,13 @@ export async function createInvoiceFromBillingResult(
     credit_applied: 0,
     billing_cycle_id,
     tenant,
+    currency_code: billingResult.currency_code || 'USD',
     is_manual: false,
     // Add billing period dates to ensure validation works correctly
     billing_period_start: toPlainDate(cycleStart),
-    billing_period_end: toPlainDate(cycleEnd)
+    billing_period_end: toPlainDate(cycleEnd),
+    // Tax source: 'internal', 'pending_external', or 'external'
+    tax_source: taxSource
   };
 
   let newInvoice: IInvoice | null = null;

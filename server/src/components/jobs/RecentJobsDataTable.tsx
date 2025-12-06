@@ -112,6 +112,26 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       ),
     },
     {
+      title: 'Runner',
+      dataIndex: 'runner_type',
+      render: (runner: string, record: JobRecord) => (
+        <div className="flex flex-col items-start">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            runner === 'temporal' 
+              ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+              : 'bg-blue-100 text-blue-700 border border-blue-200'
+          }`}>
+            {runner === 'temporal' ? 'Temporal' : 'PG Boss'}
+          </span>
+          {record.external_id && (
+            <span className="text-[10px] text-[rgb(var(--color-text-400))] font-mono mt-0.5" title={record.external_id}>
+              ID: {record.external_id.slice(0, 8)}...
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       title: 'Status',
       dataIndex: 'status',
       render: (status: string) => <StatusBadge status={status} />,

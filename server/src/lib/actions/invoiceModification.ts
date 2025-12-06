@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
 import { getSession } from 'server/src/lib/auth/getSession';
+import { validateInvoiceFinalization } from 'server/src/lib/actions/taxSourceActions';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -62,6 +63,12 @@ export async function finalizeInvoiceWithKnex(
   userId: string
 ): Promise<void> {
   let invoice: any;
+
+  // Validate tax source before finalization
+  const taxValidation = await validateInvoiceFinalization(invoiceId);
+  if (!taxValidation.canFinalize) {
+    throw new Error(taxValidation.error || 'Invoice cannot be finalized');
+  }
 
   // First transaction to update invoice status
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -863,7 +870,15 @@ export async function hardDeleteInvoice(invoiceId: string) {
       })
       .delete();
 
-    // 10. Delete invoice record
+    // 10. Nullify invoice_id in payment_webhook_events
+    const hasPaymentWebhookEvents = await trx.schema.hasTable('payment_webhook_events');
+    if (hasPaymentWebhookEvents) {
+      await trx('payment_webhook_events')
+        .where({ invoice_id: invoiceId, tenant })
+        .update({ invoice_id: null });
+    }
+
+    // 11. Delete invoice record
     await trx('invoices')
       .where({
         invoice_id: invoiceId,

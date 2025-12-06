@@ -5,13 +5,14 @@ import { IClient, IProject, IUserWithRoles } from 'server/src/interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Save } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import { Button } from 'server/src/components/ui/Button';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { TagManager } from 'server/src/components/tags';
 import { toast } from 'react-hot-toast';
+import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 
 interface ProjectInfoProps {
   project: IProject;
@@ -45,6 +46,7 @@ export default function ProjectInfo({
   const { openDrawer, closeDrawer } = useDrawer();
 
   const [currentProject, setCurrentProject] = useState(project);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [projectMetrics, setProjectMetrics] = useState<{
     taskCompletionPercentage: number;
     hoursCompletionPercentage: number;
@@ -101,7 +103,7 @@ export default function ProjectInfo({
       {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
-          <BackNav href="/msp/projects">Back to Projects</BackNav>
+          <BackNav href="/msp/projects">← Back to Projects</BackNav>
 
           {/* Project number */}
           <span className="text-sm font-medium text-gray-600">
@@ -119,15 +121,26 @@ export default function ProjectInfo({
             />
           )}
         </div>
-        <Button
-          id="edit-project-button"
-          variant="outline"
-          size="sm"
-          onClick={handleEditClick}
-        >
-          <Edit2 className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            id="save-as-template-button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTemplateDialog(true)}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save as Template
+          </Button>
+          <Button
+            id="edit-project-button"
+            variant="outline"
+            size="sm"
+            onClick={handleEditClick}
+          >
+            <Edit2 className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+        </div>
       </div>
       
       {/* Second line: Project metadata */}
@@ -176,6 +189,18 @@ export default function ProjectInfo({
           </div>
         )}
       </div>
+
+      {/* Template Dialog */}
+      {showTemplateDialog && (
+        <CreateTemplateDialog
+          onClose={() => setShowTemplateDialog(false)}
+          initialProjectId={currentProject.project_id}
+          onTemplateCreated={(templateId) => {
+            setShowTemplateDialog(false);
+            toast.success('Template created successfully');
+          }}
+        />
+      )}
     </div>
   );
 }

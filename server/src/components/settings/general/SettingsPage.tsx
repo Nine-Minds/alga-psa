@@ -1,20 +1,16 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
-import CreditExpirationSettings from '../billing/CreditExpirationSettings';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { Input } from "server/src/components/ui/Input";
-import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
 import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
-import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
-import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
@@ -26,15 +22,13 @@ const TeamManagement = dynamic(() => import('server/src/components/settings/gene
   loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
   ssr: false
 });
-import InteractionTypesSettings from 'server/src/components/settings/general/InteractionTypeSettings';
+import InteractionSettings from 'server/src/components/settings/general/InteractionSettings';
 import TimeEntrySettings from 'server/src/components/settings/time-entry/TimeEntrySettings';
 import BillingSettings from 'server/src/components/settings/billing/BillingSettings'; // Import the new component
 import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
 import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
-import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
-import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
-import XeroIntegrationSettings from '../integrations/XeroIntegrationSettings';
+import IntegrationsSettingsPage from '../integrations/IntegrationsSettingsPage';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from 'server/src/components/settings/import-export/ImportExportSettings';
 // Extensions are only available in Enterprise Edition
@@ -50,8 +44,6 @@ import ProjectSettings from './ProjectSettings';
 const SettingsPage = (): JSX.Element =>  {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const billingFeatureFlag = useFeatureFlag('billing-enabled');
-  const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -60,7 +52,15 @@ const SettingsPage = (): JSX.Element =>  {
   const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
     import('@product/settings-extensions/entry').then(mod => mod.DynamicExtensionsComponent),
     {
-      loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
+      loading: () => (
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator 
+            layout="stacked" 
+            text="Loading extensions..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      ),
       ssr: false
     }
   ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
@@ -69,7 +69,15 @@ const SettingsPage = (): JSX.Element =>  {
   const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
     import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as any),
     {
-      loading: () => <div className="text-center py-8 text-gray-500">Loading installer...</div>,
+      loading: () => (
+        <div className="flex items-center justify-center py-8">
+          <LoadingIndicator 
+            layout="stacked" 
+            text="Loading installer..."
+            spinnerProps={{ size: 'md' }}
+          />
+        </div>
+      ),
       ssr: false
     }
   ) : () => null;
@@ -82,23 +90,15 @@ const SettingsPage = (): JSX.Element =>  {
     teams: 'Teams',
     ticketing: 'Ticketing',
     projects: 'Projects',
-    'interaction-types': 'Interaction Types',
+    interactions: 'Interactions',
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
     billing: 'Billing',
     'import-export': 'Import/Export',
-    tax: 'Tax',
     email: 'Email',
     integrations: 'Integrations',
     ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
   }), [isEEAvailable]);
-
-  const labelToSlugMap = useMemo<Record<string, string>>(() => (
-    Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>)
-  ), [slugToLabelMap]);
 
   const initialTabLabel = useMemo(() => {
     const mappedLabel = tabParam
@@ -112,7 +112,7 @@ const SettingsPage = (): JSX.Element =>  {
   const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
   const hydrationReadyRef = useRef(false);
 
-  // Handle client-side initialization
+  // Handle client-side initialization and URL changes
   useEffect(() => {
     hydrationReadyRef.current = true;
 
@@ -121,26 +121,10 @@ const SettingsPage = (): JSX.Element =>  {
     setActiveTab((prev) => (prev === targetLabel ? prev : targetLabel));
   }, [initialTabLabel]);
 
-  const handleTabChange = useCallback((tab: string) => {
-    if (!hydrationReadyRef.current) {
-      return;
-    }
-
-    setActiveTab(tab);
-
-    const urlSlug = labelToSlugMap[tab];
-    const newUrl = urlSlug && urlSlug !== 'general'
-      ? `/msp/settings?tab=${urlSlug}`
-      : '/msp/settings';
-
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', newUrl);
-    }
-  }, [labelToSlugMap]);
-
   const baseTabContent: TabContent[] = [
     {
       label: "General",
+      icon: Settings,
       content: (
         <Card>
           <CardHeader>
@@ -157,21 +141,24 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Client Portal",
+      icon: Globe,
       content: <ClientPortalSettings />,
     },
     {
       label: "Users",
+      icon: UserCog,
       content: <UserManagement />,
     },
     {
       label: "Teams",
+      icon: Users,
       content: (
         <Card>
           <CardHeader>
             <CardTitle>Team Management</CardTitle>
             <CardDescription>Manage teams and team members</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-visible">
             <Suspense fallback={<SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />}>
               <TeamManagement />
             </Suspense>
@@ -181,6 +168,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Ticketing",
+      icon: MessageSquare,
       content: (
         <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
           <TicketingSettings />
@@ -189,18 +177,26 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Projects",
+      icon: Layers,
       content: <ProjectSettings />,
     },
     {
-      label: "Interaction Types",
-      content: <InteractionTypesSettings />,
+      label: "Interactions",
+      icon: Handshake,
+      content: (
+        <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
+          <InteractionSettings />
+        </Suspense>
+      ),
     },
     {
       label: "Notifications",
+      icon: Bell,
       content: <NotificationsTab />,
     },
     {
       label: "Time Entry",
+      icon: Clock,
       content: (
         <Card>
           <CardHeader>
@@ -215,6 +211,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Billing",
+      icon: CreditCard,
       content: (
         <Card>
           <CardHeader>
@@ -229,26 +226,12 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Import/Export",
+      icon: Download,
       content: <ImportExportSettings />,
     },
     {
-      label: "Tax",
-      content: isBillingEnabled ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tax Settings</CardTitle>
-            <CardDescription>Manage tax regions and related settings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TaxRegionsManager />
-          </CardContent>
-        </Card>
-      ) : (
-        <FeaturePlaceholder />
-      ),
-    },
-    {
       label: "Email",
+      icon: Mail,
       content: (
         <Card>
           <CardHeader>
@@ -261,117 +244,88 @@ const SettingsPage = (): JSX.Element =>  {
         </Card>
       ),
     },
-    { // Add the new Integrations tab definition
+    { // Integrations tab with category-based organization
       label: "Integrations",
-      content: (
-        <div className="space-y-6">
-          <Alert variant="info">
-            <AlertDescription>
-              QuickBooks Online and Xero integrations are available to testers only. Expect missing pieces while we iterate, and please work in a sandbox environment when evaluating. We appreciate your feedback as we move toward general availability.
-            </AlertDescription>
-          </Alert>
-
-          {/* QuickBooks Online Integration */}
-          <QboIntegrationSettings />
-
-          {/* Xero Integration */}
-          <XeroIntegrationSettings />
-
-          {/* Inbound Email Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Inbound Email Integration</CardTitle>
-              <CardDescription>
-                Configure email providers to automatically process incoming emails into tickets
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EmailProviderConfiguration />
-            </CardContent>
-          </Card>
-        </div>
-      ),
+      icon: Plug,
+      content: <IntegrationsSettingsPage />,
     }
   ];
 
   // Always include an "Extensions" tab.
   // - EE: full Manage + Install sub-tabs
   // - OSS: enterprise-only stub
-  const tabContent: TabContent[] = [
-    ...baseTabContent,
-    {
-      label: "Extensions",
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Extension Management</CardTitle>
-            <CardDescription>
-              Install, configure, and manage extensions to extend Alga PSA functionality.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isEEAvailable ? (
-              <div className="space-y-4">
-                <CustomTabs
-                  tabs={[
-                    {
-                      label: "Manage",
-                      content: (
-                        <div className="py-2 space-y-3">
-                          {/* Primary extensions management grid */}
-                          <DynamicExtensionsComponent />
-                          {/* Global debug console link for the Service Proxy Demo extension */}
-                          <div className="flex items-center justify-end gap-2 text-[10px]">
-                            <span className="text-slate-500">
-                              Need extension logs?
-                            </span>
-                            <Link
-                              href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                              Open Service Proxy Demo Debug Console
-                            </Link>
-                          </div>
+  const extensionsTab: TabContent = {
+    label: "Extensions",
+    icon: Puzzle,
+    content: (
+      <Card>
+        <CardHeader>
+          <CardTitle>Extension Management</CardTitle>
+          <CardDescription>
+            Install, configure, and manage extensions to extend Alga PSA functionality.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isEEAvailable ? (
+            <div className="space-y-4">
+              <CustomTabs
+                tabs={[
+                  {
+                    label: "Manage",
+                    content: (
+                      <div className="py-2 space-y-3">
+                        {/* Primary extensions management grid */}
+                        <DynamicExtensionsComponent />
+                        {/* Global debug console link for the Service Proxy Demo extension */}
+                        <div className="flex items-center justify-end gap-2 text-[10px]">
+                          <span className="text-slate-500">
+                            Need extension logs?
+                          </span>
+                          <Link
+                            href="/msp/extensions/d773f8f7-c46d-4c9d-a79b-b55903dd5074/debug"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 transition-colors"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Open Service Proxy Demo Debug Console
+                          </Link>
                         </div>
-                      )
-                    },
-                    {
-                      label: "Install",
-                      content: (
-                        <div className="py-2">
-                          {/* EE server-actions installer, styled with standard UI */}
-                          <DynamicInstallComponent />
-                        </div>
-                      )
-                    }
-                  ] as TabContent[]}
-                  defaultTab="Manage"
-                />
-              </div>
-            ) : (
-              <div className="text-center py-10">
-                <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
-                <p className="text-sm text-gray-600 mt-2">
-                  Extensions are available in the Enterprise edition of Alga PSA.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ),
-    }
-  ];
+                      </div>
+                    )
+                  },
+                  {
+                    label: "Install",
+                    content: (
+                      <div className="py-2">
+                        {/* EE server-actions installer, styled with standard UI */}
+                        <DynamicInstallComponent />
+                      </div>
+                    )
+                  }
+                ] as TabContent[]}
+                defaultTab="Manage"
+              />
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
+              <p className="text-sm text-gray-600 mt-2">
+                Extensions are available in the Enterprise edition of Alga PSA.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    ),
+  };
 
+  // Create a map of tab content by label for easy lookup
+  const allTabs = [...baseTabContent, extensionsTab];
+  const activeTabContent = allTabs.find(tab => tab.label === activeTab);
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="h-full overflow-y-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
-      <CustomTabs
-        tabs={tabContent}
-        defaultTab={activeTab}
-        onTabChange={handleTabChange}
-      />
+      {activeTabContent?.content}
     </div>
   );
 };

@@ -160,6 +160,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
+          currency_code: client?.default_currency_code || 'USD',
           error: `Billing cycle ${billingCycleId} not found for client ${clientId}`
         };
       }
@@ -173,7 +174,8 @@ export class BillingEngine {
           totalAmount: 0,
           discounts: [],
           adjustments: [],
-          finalAmount: 0
+          finalAmount: 0,
+          currency_code: client?.default_currency_code || 'USD'
         };
       }
 
@@ -205,6 +207,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
+          currency_code: client?.default_currency_code || 'USD',
           error: `Billing cycle ${billingCycleId} has invalid dates (no period dates or effective date)`
         };
       }
@@ -223,6 +226,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
+          currency_code: client?.default_currency_code || 'USD',
           error: validationResult.error
         };
       }
@@ -247,9 +251,38 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
+          currency_code: client?.default_currency_code || 'USD',
           error: plansError
         };
       }
+
+      // --- Currency Validation Logic ---
+      // Extract unique currency codes from active contracts
+      const uniqueCurrencies = Array.from(new Set(
+        clientContractLines
+          .map(line => line.currency_code)
+          .filter((code): code is string => !!code) // Filter out null/undefined
+      ));
+
+      if (uniqueCurrencies.length > 1) {
+        return {
+          charges: [],
+          totalAmount: 0,
+          discounts: [],
+          adjustments: [],
+          finalAmount: 0,
+          currency_code: client?.default_currency_code || 'USD',
+          error: `Billing Error: Client ${clientId} has active contracts in multiple currencies (${uniqueCurrencies.join(', ')}). Mixed currency billing is not supported.`
+        };
+      }
+
+      // Determine the billing currency for this cycle
+      // Priority: Contract Currency > Client Default > USD
+      const billingCurrency = uniqueCurrencies.length === 1 
+        ? uniqueCurrencies[0] 
+        : (client?.default_currency_code || 'USD');
+      
+      console.log(`[BillingEngine] Resolved billing currency: ${billingCurrency}`);
 
       if (clientContractLines.length === 0) {
         return {
@@ -258,6 +291,7 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
+          currency_code: billingCurrency,
           error: `No active contract lines found for client ${clientId} in the given period`
         };
       }
@@ -340,7 +374,8 @@ export class BillingEngine {
           totalAmount,
           discounts: [],
           adjustments: [],
-          finalAmount: totalAmount
+          finalAmount: totalAmount,
+          currency_code: billingCurrency
         },
         clientId,
         billingPeriod
@@ -359,6 +394,7 @@ export class BillingEngine {
         discounts: [],
         adjustments: [],
         finalAmount: 0,
+        currency_code: 'USD', // Default on error
         error: err instanceof Error ? err.message : 'An error occurred while calculating billing'
       };
     }
@@ -434,6 +470,7 @@ export class BillingEngine {
         'cl.billing_cycle_alignment as contract_line_billing_cycle_alignment',
         'cc.contract_id',
         'c.contract_name',
+        'c.currency_code',
         'pricing.custom_rate as pricing_custom_rate',
         'terms.billing_frequency as term_billing_frequency',
         'terms.billing_timing as term_billing_timing'
@@ -991,7 +1028,14 @@ export class BillingEngine {
           if (effectiveTaxRegion) {
             // Use TaxService to calculate tax
             // allocatedAmount is already in cents
-            const taxResult = await taxServiceInstance.calculateTax(client.client_id, allocatedAmount, billingPeriod.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(
+              client.client_id, 
+              allocatedAmount, 
+              billingPeriod.endDate, 
+              effectiveTaxRegion,
+              true,
+              clientContractLine.currency_code || 'USD'
+            );
             taxRate = taxResult.taxRate;
             taxAmount = taxResult.taxAmount;
             console.log(`[DEBUG] Service ${service.service_id} - Tax calculated (TaxService): Rate=${taxRate}, Amount=${taxAmount}, Base=${allocatedAmount}, Region=${effectiveTaxRegion}`); // DEBUG LOG
@@ -1142,7 +1186,14 @@ export class BillingEngine {
           if (effectiveTaxRegion) {
             // Use TaxService instance if available, or instantiate if needed
             const taxServiceInstance = new TaxService(); // Assuming it's okay to instantiate here
-            const taxResult = await taxServiceInstance.calculateTax(client.client_id, charge.total, billingPeriod.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(
+              client.client_id, 
+              charge.total, 
+              billingPeriod.endDate, 
+              effectiveTaxRegion,
+              true,
+              clientContractLine.currency_code || 'USD'
+            );
             charge.tax_rate = taxResult.taxRate;
             charge.tax_amount = taxResult.taxAmount;
           } else {
@@ -1413,7 +1464,14 @@ export class BillingEngine {
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id, 
+            total, 
+            billingPeriod.endDate, 
+            effectiveTaxRegion,
+            true,
+            clientContractLine.currency_code || 'USD'
+          );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1582,7 +1640,14 @@ export class BillingEngine {
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id, 
+            total, 
+            billingPeriod.endDate, 
+            effectiveTaxRegion,
+            true,
+            clientContractLine.currency_code || 'USD'
+          );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1660,7 +1725,14 @@ export class BillingEngine {
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id, 
+            total, 
+            billingPeriod.endDate, 
+            effectiveTaxRegion,
+            true,
+            clientContractLine.currency_code || 'USD'
+          );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1735,7 +1807,14 @@ export class BillingEngine {
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(
+            client.client_id, 
+            total, 
+            billingPeriod.endDate, 
+            effectiveTaxRegion,
+            true,
+            clientContractLine.currency_code || 'USD'
+          );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1880,7 +1959,14 @@ export class BillingEngine {
         if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
           try {
             const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(
+              client.client_id, 
+              total, 
+              billingPeriod.endDate, 
+              effectiveTaxRegion,
+              true,
+              contractLine.currency_code || 'USD'
+            );
             taxRate = taxResult.taxRate;
             taxAmount = taxResult.taxAmount;
           } catch (error) {

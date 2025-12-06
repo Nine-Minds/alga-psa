@@ -10,10 +10,10 @@ export default function BackButton() {
   return (
     <Button
       id="back-to-credits-button"
-      variant="outline"
+      variant="soft"
       onClick={() => router.push('/msp/billing?tab=credits')}
     >
-      <ArrowLeft className="mr-2 h-4 w-4" /> Back to Credits
+      <ArrowLeft className="mr-2 h-4 w-4" /> ← Back to Credits
     </Button>
   );
 }

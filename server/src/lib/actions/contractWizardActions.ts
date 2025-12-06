@@ -54,6 +54,7 @@ export type ContractTemplateWizardSubmission = {
   contract_name: string;
   description?: string;
   billing_frequency?: string;
+  currency_code: string;
   fixed_services: TemplateFixedServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
   usage_services?: TemplateUsageServiceInput[];
@@ -97,9 +98,10 @@ type ClientUsageServiceInput = {
 export type ClientContractWizardSubmission = {
   contract_name: string;
   description?: string;
-  company_id: string;
+  client_id: string;
   start_date: string;
   billing_frequency?: string;
+  currency_code: string;
   end_date?: string;
   po_required?: boolean;
   po_number?: string;
@@ -121,6 +123,7 @@ export type ClientTemplateSnapshot = {
   contract_name?: string;
   description?: string | null;
   billing_frequency?: string | null;
+  currency_code?: string;
   fixed_services?: ClientFixedServiceInput[];
   fixed_base_rate?: number;
   enable_proration?: boolean;
@@ -205,6 +208,7 @@ export async function createContractTemplateFromWizard(
       template_name: submission.contract_name,
       template_description: submission.description ?? null,
       default_billing_frequency: submission.billing_frequency ?? 'monthly',
+      currency_code: submission.currency_code,
       template_status: isDraft ? 'draft' : 'published',
       template_metadata: null,
       created_at: nowIso,
@@ -558,6 +562,30 @@ export async function createClientContractFromWizard(
     }
     const endDate = normalizeDateOnly(submission.end_date) ?? null;
 
+    // Check for existing active contracts in different currencies
+    const newCurrency = submission.currency_code || 'USD';
+    const existingContracts = await trx('contracts as c')
+      .join('client_contracts as cc', function() {
+        this.on('cc.contract_id', '=', 'c.contract_id')
+          .andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({
+        'cc.client_id': submission.client_id,
+        'cc.tenant': tenant,
+        'cc.is_active': true,
+        'c.is_active': true
+      })
+      .whereNot('c.currency_code', newCurrency)
+      .select('c.contract_id', 'c.contract_name', 'c.currency_code')
+      .first();
+
+    if (existingContracts) {
+      throw new Error(
+        `Client already has an active contract in ${existingContracts.currency_code} ("${existingContracts.contract_name}"). ` +
+        `Cannot create a contract in ${newCurrency}. Mixed-currency contracts for the same client are not supported.`
+      );
+    }
+
     const now = new Date();
     const contractId = uuidv4();
     await trx('contracts').insert({
@@ -566,6 +594,7 @@ export async function createClientContractFromWizard(
       contract_name: submission.contract_name,
       contract_description: submission.description ?? null,
       billing_frequency: submission.billing_frequency ?? 'monthly',
+      currency_code: submission.currency_code,
       is_active: !isDraft,
       status: isDraft ? 'draft' : 'active',
       is_template: false,
@@ -797,7 +826,7 @@ export async function createClientContractFromWizard(
     await trx('client_contracts').insert({
       tenant,
       client_contract_id: clientContractId,
-      client_id: submission.company_id,
+      client_id: submission.client_id,
       contract_id: contractId,
       start_date: startDate,
       end_date: endDate,
@@ -813,7 +842,7 @@ export async function createClientContractFromWizard(
     if (createdContractLineIds.length > 0) {
       await replicateContractLinesToClient(trx, {
         tenant,
-        clientId: submission.company_id,
+        clientId: submission.client_id,
         clientContractId,
         contractLineIds: createdContractLineIds,
         startDate,
@@ -1017,6 +1046,7 @@ export async function getContractTemplateSnapshotForClientWizard(
     contract_name: template.template_name,
     description: template.template_description,
     billing_frequency: template.default_billing_frequency,
+    currency_code: template.currency_code,
     fixed_services: fixedServices,
     fixed_base_rate: fixedBaseRateCents,
     enable_proration: enableProration,

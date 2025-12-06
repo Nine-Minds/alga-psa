@@ -1,12 +1,13 @@
 'use server';
 
 import { createTenantKnex } from '../db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { WorkflowTriggerModel } from '../../models/workflowTrigger';
 import { WorkflowEventMappingModel } from '../../models/workflowEventMapping';
 import { EventCatalogModel } from '../../models/eventCatalog';
-import { 
-  IWorkflowTrigger, 
-  ICreateWorkflowTrigger, 
+import {
+  IWorkflowTrigger,
+  ICreateWorkflowTrigger,
   IUpdateWorkflowTrigger,
   IWorkflowEventMapping,
   ICreateWorkflowEventMapping
@@ -25,16 +26,18 @@ export async function getWorkflowTriggers(params: {
   offset?: number;
 }): Promise<IWorkflowTrigger[]> {
   const { tenant, eventType, limit, offset } = params;
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Get all workflow triggers
-  const triggers = await WorkflowTriggerModel.getAll(knex, tenant, {
-    eventType,
-    limit,
-    offset
+  const triggers = await withTransaction(knex, async (trx) => {
+    return await WorkflowTriggerModel.getAll(trx, tenant, {
+      eventType,
+      limit,
+      offset
+    });
   });
-  
+
   return triggers;
 }
 
@@ -49,12 +52,14 @@ export async function getWorkflowTriggerById(params: {
   tenant: string;
 }): Promise<IWorkflowTrigger | null> {
   const { triggerId, tenant } = params;
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Get the workflow trigger
-  const trigger = await WorkflowTriggerModel.getById(knex, triggerId, tenant);
-  
+  const trigger = await withTransaction(knex, async (trx) => {
+    return await WorkflowTriggerModel.getById(trx, triggerId, tenant);
+  });
+
   return trigger;
 }
 
@@ -66,17 +71,19 @@ export async function getWorkflowTriggerById(params: {
  */
 export async function createWorkflowTrigger(params: ICreateWorkflowTrigger): Promise<IWorkflowTrigger> {
   const { knex } = await createTenantKnex();
-  
+
   // Verify that the event type exists in the event catalog
-  const eventCatalogEntry = await EventCatalogModel.getByEventType(knex, params.event_type, params.tenant);
-  
-  if (!eventCatalogEntry) {
-    throw new Error(`Event type "${params.event_type}" not found in the event catalog`);
-  }
-  
-  // Create the workflow trigger
-  const trigger = await WorkflowTriggerModel.create(knex, params);
-  
+  const trigger = await withTransaction(knex, async (trx) => {
+    const eventCatalogEntry = await EventCatalogModel.getByEventType(trx, params.event_type, params.tenant);
+
+    if (!eventCatalogEntry) {
+      throw new Error(`Event type "${params.event_type}" not found in the event catalog`);
+    }
+
+    // Create the workflow trigger
+    return await WorkflowTriggerModel.create(trx, params);
+  });
+
   return trigger;
 }
 
@@ -92,28 +99,30 @@ export async function updateWorkflowTrigger(params: {
   data: IUpdateWorkflowTrigger;
 }): Promise<IWorkflowTrigger | null> {
   const { triggerId, tenant, data } = params;
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Get the workflow trigger
-  const trigger = await WorkflowTriggerModel.getById(knex, triggerId, tenant);
-  
-  if (!trigger) {
-    throw new Error(`Workflow trigger with ID "${triggerId}" not found`);
-  }
-  
-  // If the event type is being updated, verify that it exists in the event catalog
-  if (data.event_type && data.event_type !== trigger.event_type) {
-    const eventCatalogEntry = await EventCatalogModel.getByEventType(knex, data.event_type, tenant);
-    
-    if (!eventCatalogEntry) {
-      throw new Error(`Event type "${data.event_type}" not found in the event catalog`);
+  const updatedTrigger = await withTransaction(knex, async (trx) => {
+    const trigger = await WorkflowTriggerModel.getById(trx, triggerId, tenant);
+
+    if (!trigger) {
+      throw new Error(`Workflow trigger with ID "${triggerId}" not found`);
     }
-  }
-  
-  // Update the workflow trigger
-  const updatedTrigger = await WorkflowTriggerModel.update(knex, triggerId, tenant, data);
-  
+
+    // If the event type is being updated, verify that it exists in the event catalog
+    if (data.event_type && data.event_type !== trigger.event_type) {
+      const eventCatalogEntry = await EventCatalogModel.getByEventType(trx, data.event_type, tenant);
+
+      if (!eventCatalogEntry) {
+        throw new Error(`Event type "${data.event_type}" not found in the event catalog`);
+      }
+    }
+
+    // Update the workflow trigger
+    return await WorkflowTriggerModel.update(trx, triggerId, tenant, data);
+  });
+
   return updatedTrigger;
 }
 
@@ -128,22 +137,24 @@ export async function deleteWorkflowTrigger(params: {
   tenant: string;
 }): Promise<boolean> {
   const { triggerId, tenant } = params;
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Get the workflow trigger
-  const trigger = await WorkflowTriggerModel.getById(knex, triggerId, tenant);
-  
-  if (!trigger) {
-    throw new Error(`Workflow trigger with ID "${triggerId}" not found`);
-  }
-  
-  // Delete all event mappings for the trigger
-  await WorkflowEventMappingModel.deleteAllForTrigger(knex, triggerId);
-  
-  // Delete the workflow trigger
-  const result = await WorkflowTriggerModel.delete(knex, triggerId, tenant);
-  
+  const result = await withTransaction(knex, async (trx) => {
+    const trigger = await WorkflowTriggerModel.getById(trx, triggerId, tenant);
+
+    if (!trigger) {
+      throw new Error(`Workflow trigger with ID "${triggerId}" not found`);
+    }
+
+    // Delete all event mappings for the trigger
+    await WorkflowEventMappingModel.deleteAllForTrigger(trx, triggerId);
+
+    // Delete the workflow trigger
+    return await WorkflowTriggerModel.delete(trx, triggerId, tenant);
+  });
+
   return result;
 }
 
@@ -157,12 +168,14 @@ export async function getWorkflowEventMappings(params: {
   triggerId: string;
 }): Promise<IWorkflowEventMapping[]> {
   const { triggerId } = params;
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Get all event mappings for the trigger
-  const mappings = await WorkflowEventMappingModel.getAllForTrigger(knex, triggerId);
-  
+  const mappings = await withTransaction(knex, async (trx) => {
+    return await WorkflowEventMappingModel.getAllForTrigger(trx, triggerId);
+  });
+
   return mappings;
 }
 
@@ -174,10 +187,12 @@ export async function getWorkflowEventMappings(params: {
  */
 export async function createWorkflowEventMapping(params: ICreateWorkflowEventMapping): Promise<IWorkflowEventMapping> {
   const { knex } = await createTenantKnex();
-  
+
   // Create the workflow event mapping
-  const mapping = await WorkflowEventMappingModel.create(knex, params);
-  
+  const mapping = await withTransaction(knex, async (trx) => {
+    return await WorkflowEventMappingModel.create(trx, params);
+  });
+
   return mapping;
 }
 
@@ -191,16 +206,18 @@ export async function createWorkflowEventMappings(params: {
   mappings: ICreateWorkflowEventMapping[];
 }): Promise<IWorkflowEventMapping[]> {
   const { mappings } = params;
-  
+
   if (mappings.length === 0) {
     return [];
   }
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Create the workflow event mappings
-  const createdMappings = await WorkflowEventMappingModel.createMany(knex, mappings);
-  
+  const createdMappings = await withTransaction(knex, async (trx) => {
+    return await WorkflowEventMappingModel.createMany(trx, mappings);
+  });
+
   return createdMappings;
 }
 
@@ -214,12 +231,14 @@ export async function deleteWorkflowEventMapping(params: {
   mappingId: string;
 }): Promise<boolean> {
   const { mappingId } = params;
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Delete the workflow event mapping
-  const result = await WorkflowEventMappingModel.delete(knex, mappingId);
-  
+  const result = await withTransaction(knex, async (trx) => {
+    return await WorkflowEventMappingModel.delete(trx, mappingId);
+  });
+
   return result;
 }
 
@@ -233,11 +252,13 @@ export async function deleteAllWorkflowEventMappings(params: {
   triggerId: string;
 }): Promise<number> {
   const { triggerId } = params;
-  
+
   const { knex } = await createTenantKnex();
-  
+
   // Delete all event mappings for the trigger
-  const result = await WorkflowEventMappingModel.deleteAllForTrigger(knex, triggerId);
-  
+  const result = await withTransaction(knex, async (trx) => {
+    return await WorkflowEventMappingModel.deleteAllForTrigger(trx, triggerId);
+  });
+
   return result;
 }

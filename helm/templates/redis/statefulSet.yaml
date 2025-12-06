@@ -1,7 +1,11 @@
 {{- if .Values.redis.enabled }}
 {{- $ns := include "sebastian.namespace" . -}}
 {{- $existing := (lookup "apps/v1" "StatefulSet" $ns "redis") -}}
-{{- $owned := and $existing (eq (get $existing.metadata.annotations "meta.helm.sh/release-name") .Release.Name) -}}
+{{- $annotations := dict -}}
+{{- if and $existing $existing.metadata $existing.metadata.annotations -}}
+{{- $annotations = $existing.metadata.annotations -}}
+{{- end -}}
+{{- $owned := and $existing (eq (get $annotations "meta.helm.sh/release-name") .Release.Name) -}}
 {{- if or (not $existing) $owned }}
 apiVersion: apps/v1
 kind: StatefulSet
@@ -47,7 +51,7 @@ spec:
         - name: redis-data
           mountPath: /data
         {{- end }}
-      
+
       {{- if .Values.devEnv.enabled }}
       {{- with .Values.devEnv.nodeSelector }}
       nodeSelector:
@@ -65,6 +69,6 @@ spec:
           {{- end }}
       {{- end }}
 
-  
+
 {{- end }}
 {{- end }}

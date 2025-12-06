@@ -24,6 +24,7 @@ import { InternalNotificationPreferences } from 'server/src/components/settings/
 import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
+import SessionManagement from '../security/SessionManagement';
 import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
@@ -53,15 +54,15 @@ export default function UserProfile({ userId }: UserProfileProps) {
   
   // Determine initial tab from URL or default to "Profile"
   const initialTab = useMemo(() => {
-    const validTabs = ['Profile', 'Notifications', 'Calendar'];
+    const validTabs = ['Profile', 'Security', 'API Keys', 'Notifications', 'Calendar'];
     return tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
   }, [tabParam]);
-  
+
   const [activeTab, setActiveTab] = useState<string>(initialTab);
-  
+
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const validTabs = ['Profile', 'Notifications', 'Calendar'];
+    const validTabs = ['Profile', 'Security', 'API Keys', 'Notifications', 'Calendar'];
     const targetTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
@@ -398,7 +399,12 @@ export default function UserProfile({ userId }: UserProfileProps) {
     },
     {
       label: "Security",
-      content: <PasswordChangeForm />,
+      content: (
+        <div className="space-y-6">
+          <PasswordChangeForm />
+          <SessionManagement />
+        </div>
+      ),
     },
     {
       label: "API Keys",

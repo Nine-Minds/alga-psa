@@ -6,7 +6,8 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { FileText, Repeat, StickyNote } from 'lucide-react';
+import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
+import { FileText, Repeat, StickyNote, Coins } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateWizard';
 
 interface TemplateContractBasicsStepProps {
@@ -85,6 +86,23 @@ export function TemplateContractBasicsStep({
         <p className="text-xs text-gray-500">
           Sets the default cadence when the template is applied. It can still be adjusted per
           client.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="template-currency" className="flex items-center gap-2">
+          <Coins className="h-4 w-4" />
+          Default Currency *
+        </Label>
+        <CustomSelect
+          id="template-currency"
+          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+          value={data.currency_code}
+          onValueChange={(value) => updateData({ currency_code: value })}
+          placeholder="Select currency"
+        />
+        <p className="text-xs text-gray-500">
+          Sets the default currency for this template. Can be overridden when applied to a client.
         </p>
       </div>
     </div>

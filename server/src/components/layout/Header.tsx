@@ -77,6 +77,12 @@ const quickCreateOptions: QuickCreateOption[] = [
     label: 'Asset',
     description: 'Add a new device to your workspace',
     type: 'asset'
+  },
+  {
+    id: 'create-service',
+    label: 'Service',
+    description: 'Add a new billable service',
+    type: 'service'
   }
 ];
 

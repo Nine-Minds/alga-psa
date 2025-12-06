@@ -20,6 +20,7 @@ import {
   TenantEmailTemplate 
 } from "server/src/lib/models/notification";
 import { getCurrentTenant } from "server/src/lib/tenant-client";
+import LoadingIndicator from "server/src/components/ui/LoadingIndicator";
 
 export function EmailTemplates() {
   const [templates, setTemplates] = useState<{
@@ -120,7 +121,15 @@ export function EmailTemplates() {
   }
 
   if (!templates || !tenant) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading email templates..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   // Group templates by category and name

@@ -44,14 +44,14 @@ export class TaxService {
     }
   }
 
-  async calculateTax(clientId: string, netAmount: number, date: ISO8601String, regionCode?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
+  async calculateTax(clientId: string, netAmount: number, date: ISO8601String, regionCode?: string, is_taxable: boolean = true, currencyCode?: string): Promise<ITaxCalculationResult> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
       throw new Error('Tenant context is required for tax calculation');
     }
 
-    console.log(`Calculating tax for client ${clientId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}`);
+    console.log(`Calculating tax for client ${clientId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}, currency ${currencyCode}`);
 
     // Check if client is tax exempt
     const client = await knex('clients')
@@ -71,6 +71,14 @@ export class TaxService {
       return { taxAmount: 0, taxRate: 0 };
     }
 
+    // Check reverse charge applicability BEFORE any tax calculation
+    // Reverse charge shifts tax liability to the buyer (common in B2B cross-border transactions)
+    const taxSettings = await this.getClientTaxSettings(clientId);
+    if (taxSettings.is_reverse_charge_applicable) {
+      console.log(`Reverse charge is applicable for client ${clientId}. Returning zero tax.`);
+      return { taxAmount: 0, taxRate: 0 };
+    }
+
     // If regionCode is provided, use that to calculate tax directly, handling composite rates.
     if (regionCode) {
       console.log(`Calculating tax directly for regionCode: ${regionCode}, amount: ${netAmount}, date: ${date}`);
@@ -86,6 +94,13 @@ export class TaxService {
         .andWhere(function() {
           this.whereNull('end_date')
             .orWhere('end_date', '>', date);
+        })
+        .andWhere(function() {
+          // Currency check: Match specific currency or allow universal (null)
+          this.whereNull('currency_code');
+          if (currencyCode) {
+            this.orWhere('currency_code', currencyCode);
+          }
         })
         .select('tax_percentage'); // Select only the percentage
 
@@ -125,12 +140,7 @@ export class TaxService {
     // Fallback: Get the client's default tax rate if no regionCode provided
     console.log(`No regionCode provided, fetching default tax rate for client ${clientId}`);
 
-    // Check reverse charge applicability first (still on client_tax_settings)
-    const taxSettings = await this.getClientTaxSettings(clientId); // Fetch settings for reverse charge check
-    if (taxSettings.is_reverse_charge_applicable) {
-      console.log(`Reverse charge is applicable for client ${clientId}. Returning zero tax.`);
-      return { taxAmount: 0, taxRate: 0 };
-    }
+    // Note: Reverse charge was already checked at the top of this method
 
     // Find the default tax rate association
     const defaultRateAssoc = await knex('client_tax_rates')
@@ -164,6 +174,12 @@ export class TaxService {
       .andWhere(function() {
         this.whereNull('end_date')
           .orWhere('end_date', '>', date);
+      })
+      .andWhere(function() {
+        this.whereNull('currency_code');
+        if (currencyCode) {
+          this.orWhere('currency_code', currencyCode);
+        }
       })
       .first();
 
@@ -281,7 +297,8 @@ export class TaxService {
   }
 
   private async calculateComponentTax(component: ITaxComponent, amount: number, date: ISO8601String): Promise<number> {
-    const holiday = await this.getApplicableTaxHoliday(component.tax_component_id, date);
+    // Check for tax holidays - currently at tax_rate level (per-component holidays planned for future)
+    const holiday = await this.getApplicableTaxHoliday(component.tax_rate_id, date);
     if (holiday) {
       return 0; // No tax during holiday
     }
@@ -296,12 +313,11 @@ export class TaxService {
     return true;
   }
 
-  private async getApplicableTaxHoliday(taxComponentId: string, date: ISO8601String): Promise<ITaxHoliday | undefined> {
-    const { knex } = await createTenantKnex();
-    const holidays = await ClientTaxSettings.getTaxHolidays(taxComponentId);
+  private async getApplicableTaxHoliday(taxRateId: string, date: ISO8601String): Promise<ITaxHoliday | undefined> {
+    const holidays = await ClientTaxSettings.getTaxHolidays(taxRateId);
     const currentDate = new Date(date);
 
-    return holidays.find(holiday => 
+    return holidays.find(holiday =>
       new Date(holiday.start_date) <= currentDate && new Date(holiday.end_date) >= currentDate
     );
   }

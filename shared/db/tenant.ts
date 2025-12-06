@@ -33,7 +33,8 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
     max: 50,
     idleTimeoutMillis: 30000,
     reapIntervalMillis: 1000,
-    createTimeoutMillis: 30000,
+    createTimeoutMillis: 3000, // REDUCED from 30s to 3s - fail fast instead of hanging
+    acquireTimeoutMillis: 5000, // Max 5s to acquire connection from pool
     destroyTimeoutMillis: 5000,
     afterCreate: (conn, done) => {
       conn.on('error', (err: Error) => {

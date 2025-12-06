@@ -333,6 +333,14 @@ microsoft_integration:
   # OAuth redirect URI configured in the app registration
   redirect_uri: ""
 
+# NinjaOne RMM Integration
+ninjaone_integration:
+  enabled: false
+  client_id: ""
+  client_secret: ""
+  # Optional: specify default region (US, US2, EU, OC, CA)
+  default_region: "US"
+
 # Secret Provider Configuration
 # Controls how secrets are read and written across different providers
 secrets:
@@ -468,4 +476,16 @@ istio:
     # Optional CIDR ranges to bypass Envoy egress (string). Leave empty to disable.
     excludeOutboundIPRanges: ""
     # Optional CIDR ranges to allow via Envoy only (string). Leave empty to disable.
+    includeOutboundIPRanges: ""
+
+# Hosted Environment Configuration
+# Used for cloud-hosted environments (different from dev environments)
+hostedEnv:
+  enabled: false
+  namespace: ""
+  codeServer:
+    enabled: false
+    service:
+      type: "ClusterIP"
+      port: 8080
     includeOutboundIPRanges: ""

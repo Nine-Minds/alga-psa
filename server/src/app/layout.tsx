@@ -15,6 +15,8 @@ import { getServerLocale } from "../lib/i18n/server";
 import { cookies, headers } from 'next/headers';
 import { getTenantBrandingByDomain } from "../lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { generateBrandingStyles } from "../lib/branding/generateBrandingStyles";
+import { MantineProvider } from '@mantine/core';
+import '@mantine/core/styles.css';
 
 // Removed Google Fonts to avoid network fetch during build
 const inter = { className: "" } as const;
@@ -35,10 +37,10 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       images: [
         {
-          url: "https://strapi-marketing-website-uploads.s3.us-east-1.amazonaws.com/Blog_Updates_Thumbnail_1250_x_720_px_3_53750d92c3.png",
-          width: 1200,
-          height: 630,
-          alt: "Sebastian Application",
+          url: "/images/avatar-purple-background.png",
+          width: 400,
+          height: 400,
+          alt: "AlgaPSA",
         },
       ],
     },
@@ -49,21 +51,23 @@ async function MainContent({ children }: { children: React.ReactNode }) {
   const tenant = await getCurrentTenant();
   return (
     <TenantProvider tenant={tenant}>
-      <ThemeProvider>
-        <Theme>
-          <DynamicExtensionProvider>
-            <ClientUIStateProvider
-              initialPageState={{
-                id: 'msp-application',
-                title: 'MSP Application',
-                components: []
-              }}
-            >
-              {children}
-            </ClientUIStateProvider>
-          </DynamicExtensionProvider>
-        </Theme>
-      </ThemeProvider>
+      <MantineProvider>
+        <ThemeProvider>
+          <Theme>
+            <DynamicExtensionProvider>
+              <ClientUIStateProvider
+                initialPageState={{
+                  id: 'msp-application',
+                  title: 'MSP Application',
+                  components: []
+                }}
+              >
+                {children}
+              </ClientUIStateProvider>
+            </DynamicExtensionProvider>
+          </Theme>
+        </ThemeProvider>
+      </MantineProvider>
     </TenantProvider>
   );
 }

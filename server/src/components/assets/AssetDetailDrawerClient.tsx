@@ -30,6 +30,10 @@ import { Clock3, Copy, FileText, Layers, Link as LinkIcon, ListChecks, Settings2
 import AssetDocuments from './AssetDocuments';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
+import { RemoteAccessButton } from './RemoteAccessButton';
+import { AssetAlertsSection } from './AssetAlertsSection';
+import { AssetPatchStatusSection } from './AssetPatchStatusSection';
+import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
 
 interface AssetDetailDrawerClientProps {
@@ -46,6 +50,7 @@ interface AssetDetailDrawerClientProps {
   isLoading?: boolean;
   onClose: () => void;
   onTabChange: (tab: AssetDrawerTab) => void;
+  defaultBoardId?: string;
 }
 
 const TAB_ORDER: AssetDrawerTab[] = [
@@ -76,6 +81,7 @@ export function AssetDetailDrawerClient({
   isLoading = false,
   onClose,
   onTabChange,
+  defaultBoardId,
 }: AssetDetailDrawerClientProps) {
   const router = useRouter();
   const desiredTab = activeTab;
@@ -147,6 +153,7 @@ export function AssetDetailDrawerClient({
           router,
           statusBadge,
           onClose,
+          defaultBoardId,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
         return renderMaintenanceTab({
@@ -220,9 +227,10 @@ type OverviewTabProps = {
   router: ReturnType<typeof useRouter>;
   statusBadge: ReactNode;
   onClose: () => void;
+  defaultBoardId?: string;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -240,11 +248,14 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
           <Button id="asset-drawer-open-record" variant="secondary" size="sm" className="gap-2" onClick={() => router.push(`/msp/assets/${asset.asset_id}`)}>
             <FileText className="h-4 w-4" /> Open asset record
           </Button>
-          <CreateTicketFromAssetButton asset={asset} />
+          {asset.rmm_provider && asset.rmm_device_id && (
+            <RemoteAccessButton asset={asset} variant="secondary" size="sm" />
+          )}
+          <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="secondary" size="sm" />
           <DeleteAssetButton
             assetId={asset.asset_id}
             assetName={asset.name}
-            variant="ghost"
+            variant="accent"
             size="sm"
             label="Delete"
             onDeleted={onClose}
@@ -287,6 +298,15 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
         <SectionTitle icon={<Settings2 className="h-4 w-4" />} title="Asset summary" />
         <InfoGrid asset={asset} />
       </Card>
+
+      {/* RMM Alerts Section - Shows active alerts for RMM-managed assets */}
+      <AssetAlertsSection asset={asset} />
+
+      {/* RMM Patch Status Section - Shows patch compliance for workstations/servers */}
+      <AssetPatchStatusSection asset={asset} />
+
+      {/* RMM Software Inventory - Shows installed software for workstations/servers */}
+      <AssetSoftwareInventory asset={asset} />
 
       {history && history.length > 0 && (
         <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-history' })}>
@@ -364,7 +384,7 @@ function renderTicketsTab({ tickets }: TicketsTabProps) {
       {tickets.map(ticket => (
         <Card key={`${ticket.ticket_id}-${ticket.linked_at}`} className="p-4" {...withDataAutomationId({ id: `asset-linked-ticket-${ticket.ticket_id}` })}>
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-1">
+            <div className="space-y-1 flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900">{ticket.title}</p>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge id={`ticket-status-${ticket.ticket_id}`} variant="outline" className="text-xs">
@@ -375,14 +395,14 @@ function renderTicketsTab({ tickets }: TicketsTabProps) {
                     {ticket.priority_name}
                   </Badge>
                 )}
-                <span className="text-xs text-gray-500">Linked {formatRelative(ticket.linked_at)}</span>
               </div>
+              <span className="text-xs text-gray-500">Linked {formatRelative(ticket.linked_at)}</span>
               <div className="text-xs text-gray-500">
                 {ticket.client_name && <span>Client: {ticket.client_name}</span>}
                 {ticket.assigned_to_name && <span className="ml-2">Assignee: {ticket.assigned_to_name}</span>}
               </div>
             </div>
-            <Button id={`asset-ticket-open-${ticket.ticket_id}`} variant="ghost" size="sm" className="gap-2 self-start" onClick={() => window.open(`/msp/tickets/${ticket.ticket_id}`, '_blank', 'noopener,noreferrer')}>
+            <Button id={`asset-ticket-open-${ticket.ticket_id}`} variant="ghost" size="sm" className="gap-2 self-start flex-shrink-0 whitespace-nowrap" onClick={() => window.open(`/msp/tickets/${ticket.ticket_id}`, '_blank', 'noopener,noreferrer')}>
               <LinkIcon className="h-4 w-4" /> Open ticket
             </Button>
           </div>

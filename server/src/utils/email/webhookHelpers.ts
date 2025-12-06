@@ -4,6 +4,59 @@
 
 import { createHmac } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
+import fs from 'fs';
+import logger from '@shared/core/logger';
+
+// Path to ngrok URL file (written by ngrok-sync container)
+const NGROK_URL_FILE = '/app/ngrok/url';
+
+// Check if running in development mode
+const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
+
+/**
+ * Get the webhook base URL dynamically.
+ * Priority:
+ *   1. Ngrok URL from file (development mode only, for local tunneling)
+ *   2. Environment variables (NGROK_URL, NEXT_PUBLIC_BASE_URL, NEXTAUTH_URL, etc.)
+ *   3. Default localhost
+ * 
+ * This function provides the same dynamic URL resolution as ninjaone webhooks,
+ * allowing ngrok URLs to be automatically detected in development environments.
+ */
+export function getWebhookBaseUrl(fallbackEnvVars?: string[]): string {
+  // In development mode, check for ngrok URL file first
+  if (isDevelopment) {
+    try {
+      if (fs.existsSync(NGROK_URL_FILE)) {
+        const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+        if (ngrokUrl) {
+          logger.debug('[Webhook] Using ngrok URL from file', { url: ngrokUrl });
+          return ngrokUrl;
+        }
+      }
+    } catch (error) {
+      // Ignore file read errors, fall back to env vars
+      logger.debug('[Webhook] Could not read ngrok URL file, using environment variables');
+    }
+  }
+
+  // Fall back to environment variables
+  const envVars = fallbackEnvVars || [
+    'NGROK_URL',
+    'NEXT_PUBLIC_BASE_URL',
+    'NEXTAUTH_URL',
+    'PUBLIC_WEBHOOK_BASE_URL'
+  ];
+
+  for (const envVar of envVars) {
+    const value = process.env[envVar];
+    if (value) {
+      return value;
+    }
+  }
+
+  return 'http://localhost:3000';
+}
 
 /**
  * Generate a secure client state for Microsoft webhook validation

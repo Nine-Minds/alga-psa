@@ -1,5 +1,6 @@
 'use server';
 import { createTenantKnex } from "server/src/lib/db";
+import { withTransaction } from '@shared/db';
 import { getCurrentUser } from "./user-actions/userActions";
 import { z } from "zod";
 import { logger } from "@alga-psa/shared/core";
@@ -282,50 +283,50 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
   if (!user) {
     throw new Error("User not authenticated");
   }
-  
+
   const { knex } = await createTenantKnex();
-  
+
   try {
-    // Get workflow registration to verify it exists
-    const registration = await knex('workflow_registrations')
-      .where({
-        registration_id: id,
-        tenant: user.tenant
-      })
-      .first();
-    
-    if (!registration) {
-      throw new Error(`Workflow with ID ${id} not found`);
-    }
-    
-    // Get all versions for the workflow
-    const versions = await knex('workflow_registration_versions')
-      .where({
-        registration_id: id,
-        tenant: user.tenant
-      })
-      .select(
-        'version_id',
-        'version',
-        'is_current',
-        'created_at',
-        'created_by'
-      )
-      .orderBy('created_at', 'desc');
-    
-    // Map to version data
-    return versions.map(version => ({
-      versionId: version.version_id,
-      version: version.version,
-      isCurrent: version.is_current,
-      createdAt: version.created_at,
-      createdBy: version.created_by
-    }));
+    return await withTransaction(knex, async (trx) => {
+      // Get workflow registration to verify it exists
+      const registration = await trx('workflow_registrations')
+        .where({
+          registration_id: id,
+          tenant: user.tenant
+        })
+        .first();
+
+      if (!registration) {
+        throw new Error(`Workflow with ID ${id} not found`);
+      }
+
+      // Get all versions for the workflow
+      const versions = await trx('workflow_registration_versions')
+        .where({
+          registration_id: id,
+          tenant: user.tenant
+        })
+        .select(
+          'version_id',
+          'version',
+          'is_current',
+          'created_at',
+          'created_by'
+        )
+        .orderBy('created_at', 'desc');
+
+      // Map to version data
+      return versions.map(version => ({
+        versionId: version.version_id,
+        version: version.version,
+        isCurrent: version.is_current,
+        createdAt: version.created_at,
+        createdBy: version.created_by
+      }));
+    });
   } catch (error) {
     logger.error(`Error getting workflow versions for ${id}:`, error);
     throw error;
-  } finally {
-    // Connection will be released automatically
   }
 }
 
@@ -421,64 +422,63 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
  * @returns Workflow data
  */
 export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFlag> { // Updated return type
-  let knexInstance;
   try {
     // Get current user
     const user = await getCurrentUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
+
     // Create Knex instance
     const { knex } = await createTenantKnex();
-    
-    // Use the model to get the workflow, which handles system/tenant logic
-    const result = await WorkflowRegistrationModel.getById(knex, user.tenant, id);
-    
-    if (!result) {
-      throw new Error(`Workflow with ID ${id} not found`);
-    }
-    
-    // Fetch the current version's code separately
-    const currentVersion = await knex('workflow_registration_versions')
-      .where({
-        registration_id: id,
-        tenant: user.tenant,
-        is_current: true,
-      })
-      .select('code')
-      .first();
 
-    if (!currentVersion && !result.isSystemManaged) { // System workflows might not have a version initially? Or handle differently?
-      // If it's not a system workflow and has no current version, something is wrong
-      logger.warn(`Workflow ${id} has no current version, but registration exists.`);
-      // Depending on requirements, you might throw an error or return default code
-    }
+    return await withTransaction(knex, async (trx) => {
+      // Use the model to get the workflow, which handles system/tenant logic
+      const result = await WorkflowRegistrationModel.getById(trx, user.tenant, id);
 
-    const workflowCode = currentVersion?.code || ''; // Use empty string if no code found
+      if (!result) {
+        throw new Error(`Workflow with ID ${id} not found`);
+      }
 
-    // Return workflow data
-    return {
-      id: result.registration_id,
-      name: result.name,
-      description: result.description,
-      version: result.version,
-      tags: Array.isArray(result.tags) // Check if it's already an array
-        ? result.tags
-        : typeof result.tags === 'string' // Check if it's a string
-            ? ((result.tags as string).startsWith('[') // Check if it's a JSON array string
-                ? JSON.parse(result.tags)
-                : (result.tags as string).split(',').map((tag: string) => tag.trim()).filter(Boolean)) // Otherwise, assume comma-separated
-            : [], // Default to empty array if null or other type
-      isActive: result.status === 'active',
-      code: workflowCode, // Use code from the version table
-      isSystemManaged: result.isSystemManaged, // Add the flag
-    };
+      // Fetch the current version's code separately
+      const currentVersion = await trx('workflow_registration_versions')
+        .where({
+          registration_id: id,
+          tenant: user.tenant,
+          is_current: true,
+        })
+        .select('code')
+        .first();
+
+      if (!currentVersion && !result.isSystemManaged) { // System workflows might not have a version initially? Or handle differently?
+        // If it's not a system workflow and has no current version, something is wrong
+        logger.warn(`Workflow ${id} has no current version, but registration exists.`);
+        // Depending on requirements, you might throw an error or return default code
+      }
+
+      const workflowCode = currentVersion?.code || ''; // Use empty string if no code found
+
+      // Return workflow data
+      return {
+        id: result.registration_id,
+        name: result.name,
+        description: result.description,
+        version: result.version,
+        tags: Array.isArray(result.tags) // Check if it's already an array
+          ? result.tags
+          : typeof result.tags === 'string' // Check if it's a string
+              ? ((result.tags as string).startsWith('[') // Check if it's a JSON array string
+                  ? JSON.parse(result.tags)
+                  : (result.tags as string).split(',').map((tag: string) => tag.trim()).filter(Boolean)) // Otherwise, assume comma-separated
+              : [], // Default to empty array if null or other type
+        isActive: result.status === 'active',
+        code: workflowCode, // Use code from the version table
+        isSystemManaged: result.isSystemManaged, // Add the flag
+      };
+    });
   } catch (error) {
     logger.error(`Error getting workflow ${id}:`, error);
     throw error;
-  } finally {
-    // Connection will be released automatically
   }
 }
 
@@ -494,120 +494,118 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
  * @returns Array of workflow data
  */
 export async function getAllWorkflows(includeInactive: boolean = false): Promise<WorkflowDataWithSystemFlag[]> {
-  let knexInstance;
   try {
     console.log(`getAllWorkflows called with includeInactive=${includeInactive}`);
 
     // Create Knex instance
     const { knex, tenant } = await createTenantKnex();
-    knexInstance = knex;
 
-    // Fetch tenant workflows
-    let tenantWorkflowsQuery = knex('workflow_registrations as wr')
-      .join('workflow_registration_versions as wrv', function() {
-        this.on('wrv.registration_id', '=', 'wr.registration_id')
-            .andOn('wrv.tenant', '=', 'wr.tenant')
-            .andOn('wrv.is_current', '=', knex.raw('true'));
-      })
-      .where('wr.tenant', tenant)
-      .select(
-        'wr.registration_id',
-        'wr.name',
-        'wr.description',
-        'wr.category',
-        'wr.tags',
-        'wr.status',
-        'wr.source_template_id',
-        'wr.created_by',
-        'wr.created_at',
-        'wr.updated_at',
-        'wrv.version',
-        'wrv.code',
-        knex.raw('false as "isSystemManaged"') // Explicitly mark as not system managed
-      );
+    return await withTransaction(knex, async (trx) => {
+      // Fetch tenant workflows
+      let tenantWorkflowsQuery = trx('workflow_registrations as wr')
+        .join('workflow_registration_versions as wrv', function() {
+          this.on('wrv.registration_id', '=', 'wr.registration_id')
+              .andOn('wrv.tenant', '=', 'wr.tenant')
+              .andOn('wrv.is_current', '=', trx.raw('true'));
+        })
+        .where('wr.tenant', tenant)
+        .select(
+          'wr.registration_id',
+          'wr.name',
+          'wr.description',
+          'wr.category',
+          'wr.tags',
+          'wr.status',
+          'wr.source_template_id',
+          'wr.created_by',
+          'wr.created_at',
+          'wr.updated_at',
+          'wrv.version',
+          'wrv.code',
+          trx.raw('false as "isSystemManaged"') // Explicitly mark as not system managed
+        );
 
-    if (!includeInactive) {
-      console.log('Filtering tenant workflows to show only active');
-      tenantWorkflowsQuery = tenantWorkflowsQuery.andWhere('wr.status', 'active');
-    }
-
-    const tenantWorkflows = await tenantWorkflowsQuery;
-
-    // Fetch system workflows
-    let systemWorkflowsQuery = knex('system_workflow_registrations as swr')
-      .join('system_workflow_registration_versions as swrv', function() {
-        this.on('swrv.registration_id', '=', 'swr.registration_id')
-            .andOn('swrv.is_current', '=', knex.raw('true'));
-      })
-      .select(
-        'swr.registration_id',
-        'swr.name',
-        'swr.description',
-        'swr.category',
-        'swr.tags',
-        'swr.status',
-        'swr.source_template_id',
-        'swr.created_by',
-        'swr.created_at',
-        'swr.updated_at',
-        'swrv.version',
-        'swrv.code',
-        knex.raw('true as "isSystemManaged"') // Explicitly mark as system managed
-      );
-
-    if (!includeInactive) {
-      console.log('Filtering system workflows to show only active');
-      systemWorkflowsQuery = systemWorkflowsQuery.andWhere('swr.status', 'active');
-    }
-
-    const systemWorkflows = await systemWorkflowsQuery;
-
-    // Combine and process the results
-    const allWorkflowsData = [...tenantWorkflows, ...systemWorkflows];
-
-    console.log(`Fetched ${tenantWorkflows.length} tenant and ${systemWorkflows.length} system workflows. Total: ${allWorkflowsData.length}`);
-
-    // Map to the desired output format
-    const workflows: WorkflowDataWithSystemFlag[] = allWorkflowsData.map(data => {
-      // Safely parse tags
-      let parsedTags: string[] = [];
-      if (Array.isArray(data.tags)) {
-        parsedTags = data.tags;
-      } else if (typeof data.tags === 'string') {
-        const tagsString = data.tags as string; // Explicit cast
-        if (tagsString.startsWith('[')) {
-          try { parsedTags = JSON.parse(tagsString); } catch (e) { /* ignore parse error */ }
-        } else {
-          parsedTags = tagsString.split(',').map((tag: string) => tag.trim()).filter(Boolean);
-        }
+      if (!includeInactive) {
+        console.log('Filtering tenant workflows to show only active');
+        tenantWorkflowsQuery = tenantWorkflowsQuery.andWhere('wr.status', 'active');
       }
 
-      return {
-        registration_id: data.registration_id,
-        id: data.registration_id,
-        name: data.name,
-        description: data.description,
-        version: data.version,
-        tags: parsedTags,
-        isActive: data.status === 'active',
-        code: data.code,
-        category: data.category,
-        status: data.status,
-        source_template_id: data.source_template_id,
-        created_by: data.created_by,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        isSystemManaged: data.isSystemManaged,
-      };
-    });
+      const tenantWorkflows = await tenantWorkflowsQuery;
 
-    console.log(`Returning ${workflows.length} workflows`);
-    return workflows;
+      // Fetch system workflows
+      let systemWorkflowsQuery = trx('system_workflow_registrations as swr')
+        .join('system_workflow_registration_versions as swrv', function() {
+          this.on('swrv.registration_id', '=', 'swr.registration_id')
+              .andOn('swrv.is_current', '=', trx.raw('true'));
+        })
+        .select(
+          'swr.registration_id',
+          'swr.name',
+          'swr.description',
+          'swr.category',
+          'swr.tags',
+          'swr.status',
+          'swr.source_template_id',
+          'swr.created_by',
+          'swr.created_at',
+          'swr.updated_at',
+          'swrv.version',
+          'swrv.code',
+          trx.raw('true as "isSystemManaged"') // Explicitly mark as system managed
+        );
+
+      if (!includeInactive) {
+        console.log('Filtering system workflows to show only active');
+        systemWorkflowsQuery = systemWorkflowsQuery.andWhere('swr.status', 'active');
+      }
+
+      const systemWorkflows = await systemWorkflowsQuery;
+
+      // Combine and process the results
+      const allWorkflowsData = [...tenantWorkflows, ...systemWorkflows];
+
+      console.log(`Fetched ${tenantWorkflows.length} tenant and ${systemWorkflows.length} system workflows. Total: ${allWorkflowsData.length}`);
+
+      // Map to the desired output format
+      const workflows: WorkflowDataWithSystemFlag[] = allWorkflowsData.map(data => {
+        // Safely parse tags
+        let parsedTags: string[] = [];
+        if (Array.isArray(data.tags)) {
+          parsedTags = data.tags;
+        } else if (typeof data.tags === 'string') {
+          const tagsString = data.tags as string; // Explicit cast
+          if (tagsString.startsWith('[')) {
+            try { parsedTags = JSON.parse(tagsString); } catch (e) { /* ignore parse error */ }
+          } else {
+            parsedTags = tagsString.split(',').map((tag: string) => tag.trim()).filter(Boolean);
+          }
+        }
+
+        return {
+          registration_id: data.registration_id,
+          id: data.registration_id,
+          name: data.name,
+          description: data.description,
+          version: data.version,
+          tags: parsedTags,
+          isActive: data.status === 'active',
+          code: data.code,
+          category: data.category,
+          status: data.status,
+          source_template_id: data.source_template_id,
+          created_by: data.created_by,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          isSystemManaged: data.isSystemManaged,
+        };
+      });
+
+      console.log(`Returning ${workflows.length} workflows`);
+      return workflows;
+    });
   } catch (error) {
     logger.error("Error getting all workflows:", error);
     throw error;
-  } finally {
-    // Connection release is handled by the pool
   }
 }
 
@@ -668,42 +666,44 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
 export async function updateWorkflowStatus(id: string, isActive: boolean): Promise<boolean> {
   try {
     console.log(`updateWorkflowStatus called with id=${id}, isActive=${isActive}`);
-    
+
     // Get current user
     const user = await getCurrentUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
+
     // Create Knex instance
     const { knex } = await createTenantKnex();
-    
-    // Get current status for logging
-    const currentWorkflow = await knex('workflow_registrations')
-      .where({
-        registration_id: id,
-        tenant: user.tenant,
-      })
-      .first();
-    
-    console.log(`Current workflow status: ${currentWorkflow?.status}`);
-    
-    // Update workflow status
-    const newStatus = isActive ? 'active' : 'inactive';
-    console.log(`Setting workflow status to: ${newStatus}`);
-    
-    const updated = await knex('workflow_registrations')
-      .where({
-        registration_id: id,
-        tenant: user.tenant,
-      })
-      .update({
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      });
-    
-    console.log(`Updated ${updated} workflow(s)`);
-    return updated > 0;
+
+    return await withTransaction(knex, async (trx) => {
+      // Get current status for logging
+      const currentWorkflow = await trx('workflow_registrations')
+        .where({
+          registration_id: id,
+          tenant: user.tenant,
+        })
+        .first();
+
+      console.log(`Current workflow status: ${currentWorkflow?.status}`);
+
+      // Update workflow status
+      const newStatus = isActive ? 'active' : 'inactive';
+      console.log(`Setting workflow status to: ${newStatus}`);
+
+      const updated = await trx('workflow_registrations')
+        .where({
+          registration_id: id,
+          tenant: user.tenant,
+        })
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        });
+
+      console.log(`Updated ${updated} workflow(s)`);
+      return updated > 0;
+    });
   } catch (error) {
     logger.error(`Error updating workflow status for ${id}:`, error);
     throw error;
@@ -717,27 +717,22 @@ export async function updateWorkflowStatus(id: string, isActive: boolean): Promi
  * @returns Test result
  */
 export async function testWorkflow(code: string): Promise<{ success: boolean; output: string; warnings?: string[] }> {
-  let knexInstance;
   try {
     // Get current user
     const user = await getCurrentUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
-    // Create Knex instance - we might need it for future operations
-    const { knex } = await createTenantKnex();
-    knexInstance = knex;
-    
+
     // Validate workflow code
     const validation = validateWorkflowCode('async function execute(context) {\n' + code + '\n}');
-    
+
     // Check for security issues
     const securityWarnings = checkWorkflowSecurity(code);
-    
+
     // Combine all warnings
     const allWarnings = [...validation.warnings, ...securityWarnings];
-    
+
     if (!validation.valid) {
       return {
         success: false,
@@ -745,7 +740,7 @@ export async function testWorkflow(code: string): Promise<{ success: boolean; ou
         warnings: allWarnings.length > 0 ? allWarnings : undefined
       };
     }
-    
+
     // We no longer need to extract metadata from the code
     // Just return success since the validation passed
     return {
@@ -756,11 +751,6 @@ export async function testWorkflow(code: string): Promise<{ success: boolean; ou
   } catch (error) {
     logger.error("Error testing workflow:", error);
     throw error;
-  } finally {
-    // Release the knex connection to prevent connection pool exhaustion
-    if (knexInstance) {
-      await knexInstance.destroy();
-    }
   }
 }
 
@@ -793,21 +783,19 @@ export async function executeWorkflowTest(
   eventPayload: any,
   workflowId: string
 ): Promise<WorkflowTestResult> {
-  let knexInstance; // Declare knexInstance here to be accessible in finally
   try {
     // Get current user
     const user = await getCurrentUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
-    
+
     // Create Knex instance
     const { knex, tenant } = await createTenantKnex();
-    
-    knexInstance = knex; // Assign the created instance
+
     // First validate the workflow code
     const testResult = await testWorkflow(code);
-    
+
     if (!testResult.success) {
       return {
         success: false,
@@ -815,124 +803,117 @@ export async function executeWorkflowTest(
         warnings: testResult.warnings
       };
     }
-    
-    // Get the existing workflow registration and its current version
-    const workflowRegistration = await knex('workflow_registrations as wr')
-      .join('workflow_registration_versions as wrv', function() {
-        this.on('wrv.registration_id', '=', 'wr.registration_id')
-            .andOn('wrv.is_current', '=', knex.raw('true'));
-      })
-      .where({
-        'wr.registration_id': workflowId,
-        'wr.tenant': tenant
-      })
-      .select('wr.*', 'wrv.version_id')
-      .first();
-      
-    if (!workflowRegistration) {
-      return {
-        success: false,
-        message: "Could not find the workflow registration",
-        warnings: testResult.warnings
-      };
-    }
-    
-    // Find or create an event catalog entry for this event type
-    try {
-      // First check if the event exists using the exact event name as the event_type
-      let eventCatalogEntry = await EventCatalogModel.getByEventType(knex, eventName, tenant || '');
-      
-      if (!eventCatalogEntry) {
-        // Also check if there's an existing CUSTOM_EVENT entry with this name
-        const existingCustomEvent = await knex('event_catalog')
-          .where({
-            name: eventName,
-            tenant: tenant || ''
-          })
-          .first();
-          
-        if (existingCustomEvent) {
-          eventCatalogEntry = existingCustomEvent;
-        } else {
-          // Create a new event catalog entry
-          eventCatalogEntry = await EventCatalogModel.create(knex, {
-            event_type: getEventType(eventName), // Use the helper function
-            name: eventName,
-            description: `Test event for workflow test`,
-            category: 'test',
-            payload_schema: {
-              type: 'object',
-              properties: {
-                tenantId: { type: 'string' }
+
+    return await withTransaction(knex, async (trx) => {
+      // Get the existing workflow registration and its current version
+      const workflowRegistration = await trx('workflow_registrations as wr')
+        .join('workflow_registration_versions as wrv', function() {
+          this.on('wrv.registration_id', '=', 'wr.registration_id')
+              .andOn('wrv.is_current', '=', trx.raw('true'));
+        })
+        .where({
+          'wr.registration_id': workflowId,
+          'wr.tenant': tenant
+        })
+        .select('wr.*', 'wrv.version_id')
+        .first();
+
+      if (!workflowRegistration) {
+        return {
+          success: false,
+          message: "Could not find the workflow registration",
+          warnings: testResult.warnings
+        };
+      }
+
+      // Find or create an event catalog entry for this event type
+      try {
+        // First check if the event exists using the exact event name as the event_type
+        let eventCatalogEntry = await EventCatalogModel.getByEventType(trx, eventName, tenant || '');
+
+        if (!eventCatalogEntry) {
+          // Also check if there's an existing CUSTOM_EVENT entry with this name
+          const existingCustomEvent = await trx('event_catalog')
+            .where({
+              name: eventName,
+              tenant: tenant || ''
+            })
+            .first();
+
+          if (existingCustomEvent) {
+            eventCatalogEntry = existingCustomEvent;
+          } else {
+            // Create a new event catalog entry
+            eventCatalogEntry = await EventCatalogModel.create(trx, {
+              event_type: getEventType(eventName), // Use the helper function
+              name: eventName,
+              description: `Test event for workflow test`,
+              category: 'test',
+              payload_schema: {
+                type: 'object',
+                properties: {
+                  tenantId: { type: 'string' }
+                },
+                required: ['tenantId']
               },
-              required: ['tenantId']
-            },
-            tenant: tenant || ''
-          });
+              tenant: tenant || ''
+            });
+          }
         }
+      } catch (error) {
+        // If there's an error like a unique constraint violation, we can continue
+        // since we just need a valid event type to exist, not necessarily create a new one
+        logger.warn("Error handling event catalog entry, continuing with workflow test:", error);
       }
-    } catch (error) {
-      // If there's an error like a unique constraint violation, we can continue
-      // since we just need a valid event type to exist, not necessarily create a new one
-      logger.warn("Error handling event catalog entry, continuing with workflow test:", error);
-    }
-    
 
+      // Submit the event to trigger the workflow
+      const eventResult = await submitWorkflowEventAction({
+        event_name: eventName,
+        event_type: getEventType(eventName),
+        tenant: tenant || '',
+        payload: {
+          ...eventPayload,
+          tenantId: tenant,
+          userId: user.user_id,
+          workflowId: workflowId,
+          versionId: workflowRegistration.version_id,
+          isTestEvent: true // Add flag to indicate this is a test event
+        }
+      });
 
-    // Submit the event to trigger the workflow
-    const eventResult = await submitWorkflowEventAction({
-      event_name: eventName,
-      event_type: getEventType(eventName),
-      tenant: tenant || '',
-      payload: {
-        ...eventPayload,
-        tenantId: tenant,
-        userId: user.user_id,
-        workflowId: workflowId,
-        versionId: workflowRegistration.version_id,
-        isTestEvent: true // Add flag to indicate this is a test event
+      if (eventResult.status === 'error') {
+        return {
+          success: false,
+          message: `Error submitting event: ${eventResult.message}`,
+          warnings: testResult.warnings
+        };
       }
-    });
-    
-    if (eventResult.status === 'error') {
+
+      // Query for the workflow execution using the version_id
+      // This should work now that we have the version_id column
+      const executions = await trx('workflow_executions')
+        .where({
+          'tenant': tenant,
+          'version_id': workflowRegistration.version_id,
+          'workflow_type': 'tenant'
+        })
+        .orderBy('created_at', 'desc')
+        .limit(1);
+
+      const executionId = executions.length > 0 ? executions[0].execution_id : undefined;
+
       return {
-        success: false,
-        message: `Error submitting event: ${eventResult.message}`,
+        success: true,
+        executionId,
+        message: `Workflow test started successfully. The event has been published to trigger the workflow.`,
         warnings: testResult.warnings
       };
-    }
-    
-    // Query for the workflow execution using the version_id
-    // This should work now that we have the version_id column
-    const executions = await knex('workflow_executions')
-      .where({
-        'tenant': tenant,
-        'version_id': workflowRegistration.version_id,
-        'workflow_type': 'tenant'
-      })
-      .orderBy('created_at', 'desc')
-      .limit(1);
-      
-    const executionId = executions.length > 0 ? executions[0].execution_id : undefined;
-    
-    return {
-      success: true,
-      executionId,
-      message: `Workflow test started successfully. The event has been published to trigger the workflow.`,
-      warnings: testResult.warnings
-    };
+    });
   } catch (error) {
     logger.error("Error executing workflow test:", error);
     return {
       success: false,
       message: error instanceof Error ? error.message : String(error)
     };
-  } finally {
-    // Release the knex connection
-    // Note: knexInstance might not be declared if an error occurs before its assignment.
-    // Check if knexInstance was assigned before attempting to destroy it.
-    if (typeof knexInstance !== 'undefined' && knexInstance) {
-      await knexInstance.destroy();
-    }
   }
-} // <-- Added missing closing brace for the function
+}

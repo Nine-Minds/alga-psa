@@ -4,6 +4,8 @@ import crypto from 'node:crypto';
 import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
 import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gateway/registry';
 import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/extensions/gateway/headers';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -85,6 +87,45 @@ async function resolveInstallContext(tenantId: string, extensionId: string): Pro
   };
 }
 
+interface UserInfo {
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  company_name: string;
+}
+
+async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !currentUser.tenant || currentUser.tenant !== tenantId) {
+      return null;
+    }
+
+    // Fetch tenant company name
+    let companyName = '';
+    try {
+      const { knex } = await createTenantKnex();
+      const tenant = await knex('tenants')
+        .select('client_name')
+        .where('tenant', tenantId)
+        .first();
+      companyName = tenant?.client_name || '';
+    } catch (err) {
+      console.error('[api/ext] Failed to fetch tenant company name:', err);
+    }
+
+    return {
+      user_id: currentUser.user_id,
+      user_email: currentUser.email || '',
+      user_name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
+      company_name: companyName,
+    };
+  } catch (err) {
+    console.error('[api/ext] Failed to get user info:', err);
+    return null;
+  }
+}
+
 function normalizeOrigin(value: string | null): string | null {
   if (!value) return null;
   try {
@@ -158,6 +199,9 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     console.log('[api/ext] tenant resolved', { tenantId, extensionId, method });
     await assertAccess(tenantId, extensionId, method, path);
 
+    // Get user info for extension context
+    const userInfo = await getUserInfo(tenantId);
+
     const install = await resolveInstallContext(tenantId, extensionId);
     if (!install) {
       return applyCorsHeaders(NextResponse.json({ error: 'not_installed' }, { status: 404 }), corsOrigin);
@@ -210,6 +254,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           limits: { timeout_ms: timeoutMs },
           ...(providers?.length ? { providers } : {}),
           ...(secretEnvelope ? { secret_envelope: secretEnvelope } : {}),
+          ...(userInfo ? { user: userInfo } : {}),
         }),
         signal: controller.signal,
       });

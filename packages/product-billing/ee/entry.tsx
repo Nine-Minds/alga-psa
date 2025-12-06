@@ -1,24 +1,25 @@
 // EE implementation for Billing features
-// This will import the actual implementation from the ee/ directory
+// Re-exports OSS stubs for features not yet implemented,
+// and actual EE implementations for features that exist
 
-// These would eventually be the actual EE component imports:
-// export { BillingDashboard } from '../../../ee/server/src/components/billing/BillingDashboard';
-// export { InvoiceTemplates } from '../../../ee/server/src/components/billing/InvoiceTemplates';
-// export { PaymentProcessing } from '../../../ee/server/src/components/billing/PaymentProcessing';
-// export { BillingReports } from '../../../ee/server/src/components/billing/BillingReports';
+// Import OSS stubs for features not yet implemented in EE
+export {
+  BillingDashboard,
+  InvoiceTemplates,
+  PaymentProcessing,
+  BillingReports
+} from '../oss/entry';
 
-// For now, placeholder dynamic imports
-export const BillingDashboard = () => import('../../../ee/server/src/components/billing/BillingDashboard.js');
-export const InvoiceTemplates = () => import('../../../ee/server/src/components/billing/InvoiceTemplates.js');
-export const PaymentProcessing = () => import('../../../ee/server/src/components/billing/PaymentProcessing.js');
-export const BillingReports = () => import('../../../ee/server/src/components/billing/BillingReports.js');
+// PaymentSettings is implemented in EE - use dynamic import
+export const PaymentSettings = () => import('../../../ee/server/src/components/settings/billing/PaymentSettings');
 
 // Default export
 const billing = {
-  BillingDashboard: () => import('../../../ee/server/src/components/billing/BillingDashboard.js'),
-  InvoiceTemplates: () => import('../../../ee/server/src/components/billing/InvoiceTemplates.js'),
-  PaymentProcessing: () => import('../../../ee/server/src/components/billing/PaymentProcessing.js'),
-  BillingReports: () => import('../../../ee/server/src/components/billing/BillingReports.js'),
+  BillingDashboard: async () => (await import('../oss/entry')).BillingDashboard,
+  InvoiceTemplates: async () => (await import('../oss/entry')).InvoiceTemplates,
+  PaymentProcessing: async () => (await import('../oss/entry')).PaymentProcessing,
+  BillingReports: async () => (await import('../oss/entry')).BillingReports,
+  PaymentSettings: () => import('../../../ee/server/src/components/settings/billing/PaymentSettings'),
 };
 
 export default billing;

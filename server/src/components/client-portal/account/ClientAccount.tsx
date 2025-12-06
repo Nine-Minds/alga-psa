@@ -6,6 +6,7 @@ import { Table } from 'server/src/components/ui/Table';
 import { getClientClient } from 'server/src/lib/actions/client-portal-actions/client-client';
 import { getClientContractLine, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
@@ -20,10 +21,11 @@ export default function ClientAccount() {
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const formatCurrency = useCallback((amount: number | string | null | undefined) => {
+  // Note: Invoice amounts are stored in cents, so we divide by 100
+  const formatCurrency = useCallback((amountInCents: number | string | null | undefined) => {
     try {
-      const n = typeof amount === 'string' ? Number(amount) : (amount ?? 0);
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n as number);
+      const n = typeof amountInCents === 'string' ? Number(amountInCents) : (amountInCents ?? 0);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((n as number) / 100);
     } catch {
       return '$0.00';
     }
@@ -78,10 +80,12 @@ export default function ClientAccount() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Card id="client-details-card" className="p-6"><div>{t('common.loading')}</div></Card>
-        <Card id="contract-line-card" className="p-6"><div>{t('common.loading')}</div></Card>
-        <Card className="p-6"><div>{t('common.loading')}</div></Card>
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text={t('common.loading')}
+          spinnerProps={{ size: 'md' }}
+        />
       </div>
     );
   }

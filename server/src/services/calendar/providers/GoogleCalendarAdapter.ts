@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { CalendarProviderService } from '../CalendarProviderService';
+import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
 
 /**
  * Google Calendar API adapter for calendar synchronization
@@ -431,8 +432,16 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const vendorConfig = this.config.provider_config || {};
+      // Use dynamic URL resolution (checks ngrok file in development mode)
+      const baseUrl = getWebhookBaseUrl([
+        'CALENDAR_WEBHOOK_BASE_URL',
+        'GOOGLE_CALENDAR_WEBHOOK_BASE_URL',
+        'NGROK_URL',
+        'NEXT_PUBLIC_BASE_URL',
+        'NEXTAUTH_URL'
+      ]);
       const webhookUrl = vendorConfig.webhookNotificationUrl || 
-        `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/calendar/webhooks/google`;
+        `${baseUrl}/api/calendar/webhooks/google`;
 
       // Google Calendar uses push notifications via Pub/Sub
       // The Pub/Sub setup should be done separately (similar to Gmail)

@@ -111,10 +111,16 @@ export class EmailService {
     invoice: InvoiceViewModel & {
       contact?: { name: string; address: string };
       recipientEmail: string;
+      tenantId?: string;
     },
-    pdfPath: string
+    pdfPath: string,
+    options?: {
+      paymentLink?: string;
+      companyName?: string;
+    }
   ) {
-    const template = await this.getInvoiceEmailTemplate();
+    const hasPaymentLink = !!options?.paymentLink;
+    const template = await this.getInvoiceEmailTemplate(hasPaymentLink);
     const attachments = [{
       filename: `invoice_${invoice.invoice_number}.pdf`,
       path: pdfPath,
@@ -123,28 +129,60 @@ export class EmailService {
 
     return this.send({
       to: invoice.recipientEmail,
-      subject: template.subject.replace('{{invoice_number}}', invoice.invoice_number),
-      html: this.renderInvoiceTemplate(template.body, invoice),
+      subject: template.subject
+        .replace('{{invoice_number}}', invoice.invoice_number)
+        .replace('{{company_name}}', options?.companyName || 'Your Company'),
+      html: this.renderInvoiceTemplate(template.body, invoice, options),
       attachments
     });
   }
 
-  private async getInvoiceEmailTemplate() {
-    // TODO: Fetch from database
+  private async getInvoiceEmailTemplate(hasPaymentLink: boolean = false) {
+    // TODO: Fetch from database based on tenant settings
+    const paymentSection = hasPaymentLink ? `
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="{{payment_link}}"
+             style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+            Pay Now - {{total_amount}}
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px; text-align: center;">
+          Or copy this link to pay: <a href="{{payment_link}}" style="color: #4f46e5;">{{payment_link}}</a>
+        </p>
+    ` : '';
+
     return {
-      subject: 'Invoice {{invoice_number}} from Your Company',
+      subject: 'Invoice {{invoice_number}} from {{company_name}}',
       body: `
-        <p>Dear {{client_name}},</p>
-        <p>Please find attached your invoice {{invoice_number}} for {{total_amount}}.</p>
-        <p>Thank you for your business!</p>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <p style="color: #374151; font-size: 16px;">Dear {{client_name}},</p>
+          <p style="color: #374151; font-size: 16px;">Please find attached your invoice <strong>{{invoice_number}}</strong> for <strong>{{total_amount}}</strong>.</p>
+          ${paymentSection}
+          <p style="color: #374151; font-size: 16px;">Thank you for your business!</p>
+          <p style="color: #374151; font-size: 16px;">Best regards,<br>{{company_name}}</p>
+        </div>
       `
     };
   }
 
-  private renderInvoiceTemplate(template: string, invoice: InvoiceViewModel) {
-    return template
+  private renderInvoiceTemplate(
+    template: string,
+    invoice: InvoiceViewModel,
+    options?: {
+      paymentLink?: string;
+      companyName?: string;
+    }
+  ) {
+    let result = template
       .replace(/{{client_name}}/g, invoice.client.name)
       .replace(/{{invoice_number}}/g, invoice.invoice_number)
-      .replace(/{{total_amount}}/g, `$${(invoice.total_amount / 100).toFixed(2)}`);
+      .replace(/{{total_amount}}/g, `$${(invoice.total_amount / 100).toFixed(2)}`)
+      .replace(/{{company_name}}/g, options?.companyName || 'Your Company');
+
+    if (options?.paymentLink) {
+      result = result.replace(/{{payment_link}}/g, options.paymentLink);
+    }
+
+    return result;
   }
 }

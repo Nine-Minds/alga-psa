@@ -17,9 +17,11 @@ interface ColorPickerProps {
   trigger: React.ReactNode;
   showTextColor?: boolean; // Make text color optional
   previewType?: 'tag' | 'circle'; // Choose preview style
+  colorMode?: 'tag' | 'solid'; // 'tag' for pastel bg+text pairs, 'solid' for saturated single colors
 }
 
-const PRESET_COLORS = [
+// Pastel colors with text pairs - good for tags/badges
+const TAG_PRESET_COLORS = [
   // Bright and distinct colors (Row 1)
   { background: '#FFE6E6', text: '#CC0000' }, // Bright Red
   { background: '#FFE0B3', text: '#FF6600' }, // Bright Orange
@@ -27,7 +29,7 @@ const PRESET_COLORS = [
   { background: '#E6FFE6', text: '#008000' }, // Bright Green
   { background: '#E6F3FF', text: '#0066CC' }, // Bright Blue
   { background: '#F0E6FF', text: '#6600CC' }, // Bright Purple
-  
+
   // Medium saturation colors (Row 2)
   { background: '#FFB3B3', text: '#990000' }, // Medium Red
   { background: '#FFCC99', text: '#CC4400' }, // Medium Orange
@@ -35,12 +37,44 @@ const PRESET_COLORS = [
   { background: '#99CCFF', text: '#003399' }, // Medium Blue
   { background: '#D9B3FF', text: '#4400AA' }, // Medium Purple
   { background: '#FFB3E6', text: '#990044' }, // Medium Pink
-  
+
   // Professional colors (Row 3)
   { background: '#E8F5E8', text: '#2D5016' }, // Forest Green
   { background: '#E8F4FD', text: '#1B4F72' }, // Steel Blue
   { background: '#FFF8E7', text: '#8B4513' }, // Warm Brown
   { background: '#F5F5F5', text: '#333333' }, // Light Gray
+];
+
+// Saturated solid colors - good for status columns, indicators, kanban boards
+// Export just the color values for external use (e.g., random selection)
+export const SOLID_COLORS = [
+  '#6B7280', // Gray
+  '#3B82F6', // Blue
+  '#10B981', // Emerald
+  '#F59E0B', // Amber
+  '#EF4444', // Red
+  '#8B5CF6', // Purple
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#F97316', // Orange
+  '#84CC16', // Lime
+  '#14B8A6', // Teal
+  '#A855F7', // Violet
+];
+
+const SOLID_PRESET_COLORS = [
+  { background: '#6B7280', text: '#FFFFFF' }, // Gray
+  { background: '#3B82F6', text: '#FFFFFF' }, // Blue
+  { background: '#10B981', text: '#FFFFFF' }, // Emerald
+  { background: '#F59E0B', text: '#FFFFFF' }, // Amber
+  { background: '#EF4444', text: '#FFFFFF' }, // Red
+  { background: '#8B5CF6', text: '#FFFFFF' }, // Purple
+  { background: '#EC4899', text: '#FFFFFF' }, // Pink
+  { background: '#06B6D4', text: '#FFFFFF' }, // Cyan
+  { background: '#F97316', text: '#FFFFFF' }, // Orange
+  { background: '#84CC16', text: '#FFFFFF' }, // Lime
+  { background: '#14B8A6', text: '#FFFFFF' }, // Teal
+  { background: '#A855F7', text: '#FFFFFF' }, // Violet
 ];
 
 const ColorPicker: React.FC<ColorPickerProps> = ({
@@ -50,7 +84,10 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   trigger,
   showTextColor = true,
   previewType = 'tag',
+  colorMode = 'tag',
 }) => {
+  // Select preset colors based on mode
+  const PRESET_COLORS = colorMode === 'solid' ? SOLID_PRESET_COLORS : TAG_PRESET_COLORS;
   const [isOpen, setIsOpen] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState(currentBackgroundColor || '');
   const [textColor, setTextColor] = useState(currentTextColor || '');

@@ -53,10 +53,22 @@ export const BillingReports = () => {
   );
 };
 
+export const PaymentSettings = () => {
+  return (
+    <div className="text-center py-8 text-muted-foreground">
+      <p className="text-lg font-medium">Enterprise Feature</p>
+      <p className="mt-2 text-sm">
+        Payment provider integration (Stripe) is available in the Enterprise edition of Alga PSA.
+      </p>
+    </div>
+  );
+};
+
 // Default export
 export default {
   BillingDashboard,
   InvoiceTemplates,
   PaymentProcessing,
   BillingReports,
+  PaymentSettings,
 };

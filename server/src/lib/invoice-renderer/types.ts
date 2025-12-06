@@ -6,6 +6,7 @@ export interface WasmInvoiceViewModel {
   invoiceNumber: string;
   issueDate: string; // Consider using ISO8601String or a specific date format
   dueDate: string;   // Consider using ISO8601String or a specific date format
+  currencyCode: string; // Added for multi-currency support
   customer: {
     name: string;
     address: string;
@@ -28,6 +29,7 @@ export interface WasmInvoiceViewModel {
   subtotal: number;
   tax: number;
   total: number;
+  taxSource?: 'internal' | 'external' | 'pending_external';
   notes?: string;
   // Add sample structure for side report data
   timeEntries?: Array<{

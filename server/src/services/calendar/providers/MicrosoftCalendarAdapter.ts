@@ -4,6 +4,7 @@ import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/cale
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { getAdminConnection } from '@shared/db';
 import { CalendarProviderService } from '../CalendarProviderService';
+import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
 
 /**
  * Microsoft Graph API adapter for calendar synchronization
@@ -428,7 +429,17 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const vendorConfig = this.config.provider_config || {};
-      const envWebhookBase = process.env.CALENDAR_WEBHOOK_BASE_URL || process.env.NEXTAUTH_URL;
+      
+      // Use dynamic URL resolution (checks ngrok file in development mode)
+      const envWebhookBase = getWebhookBaseUrl([
+        'CALENDAR_WEBHOOK_BASE_URL',
+        'CALENDAR_MICROSOFT_WEBHOOK_BASE_URL',
+        'MICROSOFT_CALENDAR_WEBHOOK_URL',
+        'NGROK_URL',
+        'PUBLIC_WEBHOOK_BASE_URL',
+        'NEXT_PUBLIC_BASE_URL',
+        'NEXTAUTH_URL'
+      ]);
 
       let webhookUrl = vendorConfig.webhookNotificationUrl?.trim();
       if (webhookUrl && !/^https:\/\//i.test(webhookUrl) && envWebhookBase) {

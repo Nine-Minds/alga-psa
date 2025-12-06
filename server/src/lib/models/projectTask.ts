@@ -47,6 +47,7 @@ const ProjectTaskModel = {
           ...taskData,
           task_id: uuidv4(),
           assigned_to: taskData.assigned_to === '' || taskData.assigned_to === null ? undefined : taskData.assigned_to,
+          service_id: taskData.service_id === '' ? null : (taskData.service_id || null),
           phase_id: phaseId,
           project_status_mapping_id: taskData.project_status_mapping_id,
           wbs_code: newWbsCode,
@@ -82,7 +83,8 @@ const ProjectTaskModel = {
         'project_status_mapping_id',
         'order_key',
         'priority_id',
-        'task_type_key'
+        'task_type_key',
+        'service_id'
       ];
       
       const finalTaskData: Partial<IProjectTask> = {
@@ -124,6 +126,9 @@ const ProjectTaskModel = {
               } else if (value instanceof Date || value === null) {
                 finalTaskData[typedKey] = value;
               }
+              break;
+            case 'service_id':
+              finalTaskData[typedKey] = (value === '' || value === undefined) ? null : value as string | null;
               break;
           }
         }

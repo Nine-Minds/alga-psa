@@ -13,6 +13,10 @@ export interface JobMetrics {
   pending: number;
   active: number;
   queued: number;
+  byRunner: {
+    pgboss: number;
+    temporal: number;
+  };
 }
 
 export interface JobRecord {
@@ -26,6 +30,9 @@ export interface JobRecord {
   processed_at?: Date;
   user_id?: string;
   details?: any[];
+  runner_type?: string;
+  external_id?: string;
+  external_run_id?: string;
 }
 
 export async function getQueueMetricsAction(): Promise<JobMetrics> {
@@ -38,13 +45,15 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
   const tenantFilter = { tenant };
 
   // Get counts for each job status scoped to the active tenant
-  const [total, completed, failed, pending, active, queued] = await Promise.all([
+  const [total, completed, failed, pending, active, queued, pgboss, temporal] = await Promise.all([
     knex('jobs').where(tenantFilter).count('*').first(),
     knex('jobs').where(tenantFilter).where({ status: JobStatus.Completed }).count('*').first(),
     knex('jobs').where(tenantFilter).where({ status: JobStatus.Failed }).count('*').first(),
     knex('jobs').where(tenantFilter).where({ status: JobStatus.Pending }).count('*').first(),
     knex('jobs').where(tenantFilter).where({ status: JobStatus.Active }).count('*').first(),
     knex('jobs').where(tenantFilter).where({ status: JobStatus.Queued }).count('*').first(),
+    knex('jobs').where(tenantFilter).where({ runner_type: 'pgboss' }).count('*').first(),
+    knex('jobs').where(tenantFilter).where({ runner_type: 'temporal' }).count('*').first(),
   ]);
 
   return {
@@ -54,6 +63,10 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
     pending: parseInt(String(pending?.count || '0'), 10),
     active: parseInt(String(active?.count || '0'), 10),
     queued: parseInt(String(queued?.count || '0'), 10),
+    byRunner: {
+      pgboss: parseInt(String(pgboss?.count || '0'), 10),
+      temporal: parseInt(String(temporal?.count || '0'), 10),
+    },
   };
 }
 

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../../ui/Button';
 import { Alert, AlertDescription } from '../../ui/Alert';
 import LoadingIndicator from '../../ui/LoadingIndicator';
+import { Link } from 'lucide-react';
 import { XeroMappingManager } from '../../integrations/xero/XeroMappingManager';
 import {
   getXeroConnectionStatus,
@@ -248,13 +249,11 @@ const XeroIntegrationSettings: React.FC = () => {
                 onClick={handleConnect}
                 disabled={isLoading || isRefreshing}
               >
+                <Link className="mr-2 h-4 w-4" />
                 Connect to Xero
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground text-center sm:text-right">
-            Need help? Review the Xero onboarding guide for connection setup steps.
-          </p>
         </CardFooter>
       </Card>
 

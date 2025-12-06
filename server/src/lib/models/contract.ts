@@ -101,6 +101,35 @@ const Contract = {
       }
 
       await db.transaction(async (trx) => {
+        // First get client_contract_ids that will be deleted
+        const clientContractIds = await trx('client_contracts')
+          .where({ contract_id: contractId, tenant })
+          .pluck('client_contract_id');
+
+        // Handle client_contract_lines deletion (FK constraints removed for Citus compatibility)
+        if (clientContractIds.length > 0) {
+          // Get client_contract_line_ids that will be deleted
+          const clientContractLineIds = await trx('client_contract_lines')
+            .where({ tenant })
+            .whereIn('client_contract_id', clientContractIds)
+            .pluck('client_contract_line_id');
+
+          // Clear contract_line_id in time_entries before deleting client_contract_lines
+          // (replaces ON DELETE SET NULL behavior)
+          if (clientContractLineIds.length > 0) {
+            await trx('time_entries')
+              .where({ tenant })
+              .whereIn('contract_line_id', clientContractLineIds)
+              .update({ contract_line_id: null });
+          }
+
+          // Delete client_contract_lines
+          await trx('client_contract_lines')
+            .where({ tenant })
+            .whereIn('client_contract_id', clientContractIds)
+            .delete();
+        }
+
         // Delete client contract assignments
         await trx('client_contracts')
           .where({ contract_id: contractId, tenant })

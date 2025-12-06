@@ -389,7 +389,8 @@ export async function getPresignedPutUrl(
   const cmd = new PutObjectCommand(input);
 
   try {
-    return await getSignedUrl(client, cmd, { expiresIn: expiresSeconds });
+    // Type assertion needed due to nested node_modules causing @smithy/types version mismatch
+    return await getSignedUrl(client as any, cmd as any, { expiresIn: expiresSeconds });
   } catch (e) {
     wrapAwsError(e, `getPresignedPutUrl(${key}) failed`);
   }
@@ -408,7 +409,8 @@ export async function getPresignedGetUrl(key: string, expiresSeconds: number, bu
   const cmd = new GetObjectCommand(input);
 
   try {
-    return await getSignedUrl(client, cmd, { expiresIn: expiresSeconds });
+    // Type assertion needed due to nested node_modules causing @smithy/types version mismatch
+    return await getSignedUrl(client as any, cmd as any, { expiresIn: expiresSeconds });
   } catch (e) {
     wrapAwsError(e, `getPresignedGetUrl(${key}) failed`);
   }

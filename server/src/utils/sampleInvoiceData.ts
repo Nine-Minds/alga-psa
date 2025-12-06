@@ -50,7 +50,8 @@ export const sampleInvoices: InvoiceViewModel[] = [
     },
     client_id: 'WNDR-001',
     credit_applied: 0,
-    is_manual: false
+    is_manual: false,
+    currencyCode: 'USD'
   },
   {
     invoice_id: uuidv4(),
@@ -99,6 +100,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
     },
     client_id: 'RQE-001',
     credit_applied: 0,
-    is_manual: false
+    is_manual: false,
+    currencyCode: 'USD'
   }
 ];

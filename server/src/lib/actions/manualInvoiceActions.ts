@@ -10,6 +10,7 @@ import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
+import { getInitialInvoiceTaxSource } from 'server/src/lib/actions/taxSourceActions';
 
 export interface ManualInvoiceItem { // Add export
   service_id: string;
@@ -28,6 +29,7 @@ interface ManualInvoiceRequest {
   items: ManualInvoiceItem[];
   expirationDate?: string; // Add expiration date for prepayments
   isPrepayment?: boolean;
+  currency_code?: string;
 }
 
 export async function generateManualInvoice(request: ManualInvoiceRequest): Promise<InvoiceViewModel> {
@@ -43,6 +45,9 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
   const invoiceNumber = await generateInvoiceNumber();
   const invoiceId = uuidv4();
 
+  // Determine tax source based on client settings
+  const taxSource = await getInitialInvoiceTaxSource(clientId);
+
   // Set invoice type based on isPrepayment flag
   const invoice = {
     invoice_id: invoiceId,
@@ -52,12 +57,14 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     due_date: currentDate, // You may want to calculate this based on payment terms
     invoice_number: invoiceNumber,
     status: 'draft',
+    currency_code: request.currency_code || client.default_currency_code || 'USD',
     subtotal: 0,
     tax: 0,
     total_amount: 0,
     credit_applied: 0,
     is_manual: true,
-    is_prepayment: isPrepayment || false
+    is_prepayment: isPrepayment || false,
+    tax_source: taxSource
   };
 
   return await knex.transaction(async (trx) => {
@@ -129,6 +136,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       invoice_date: Temporal.PlainDate.from(currentDate),
       due_date: Temporal.PlainDate.from(currentDate),
       status: 'draft',
+      currencyCode: invoice.currency_code,
       subtotal: Math.ceil(subtotal),
       tax: Math.ceil(computedTotalTax),
       total: Math.ceil(subtotal + computedTotalTax),
@@ -204,11 +212,12 @@ export async function updateManualInvoice(
       tenant
     );
 
-    // Update invoice updated_at timestamp
+    // Update invoice updated_at timestamp and currency if provided
     await trx('invoices')
       .where({ invoice_id: invoiceId })
       .update({
-        updated_at: currentDate
+        updated_at: currentDate,
+        ...(request.currency_code ? { currency_code: request.currency_code } : {})
       });
   });
 
@@ -251,6 +260,7 @@ export async function updateManualInvoice(
     invoice_date: toPlainDate(existingInvoice.invoice_date),
     due_date: toPlainDate(existingInvoice.due_date),
     status: existingInvoice.status,
+    currencyCode: updatedInvoice.currency_code,
     subtotal: updatedInvoice.subtotal,
     tax: updatedInvoice.tax,
     total: updatedInvoice.total_amount,

@@ -10,7 +10,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { Switch } from 'server/src/components/ui/Switch';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
+// CustomSelect removed - no longer needed as this component only manages ticket statuses
 import { toast } from 'react-hot-toast';
 import {
   DropdownMenu,
@@ -22,24 +22,17 @@ import { StatusDialog } from './dialogs/StatusDialog';
 import { StatusImportDialog } from './dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from './dialogs/ConflictResolutionDialog';
 import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
-import { useSearchParams } from 'next/navigation';
 
 interface StatusSettingsProps {
   initialStatusType?: string | null;
 }
 
 const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element => {
-  const searchParams = useSearchParams();
   const [statuses, setStatuses] = useState<IStatus[]>([]);
-  const [selectedStatusType, setSelectedStatusType] = useState<ItemType>(() => {
-    // Use initialStatusType if provided, otherwise default to 'ticket'
-    // Note: 'project' type moved to Settings > Projects > Project Statuses
-    const validTypes: ItemType[] = ['ticket', 'interaction'];
-    const typeFromUrl = initialStatusType || searchParams?.get('type');
-    return validTypes.includes(typeFromUrl as ItemType) ? (typeFromUrl as ItemType) : 'ticket';
-  });
+  // Note: This component now only manages ticket statuses
+  // 'project' type moved to Settings > Projects > Project Statuses
+  // 'interaction' type moved to Settings > Interactions > Interaction Statuses
+  const selectedStatusType: ItemType = 'ticket';
   const [userId, setUserId] = useState<string>('');
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [editingStatus, setEditingStatus] = useState<IStatus | null>(null);
@@ -233,166 +226,125 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
     }
   };
 
-  const getStatusColumns = (type: ItemType): ColumnDefinition<IStatus>[] => {
-    const baseColumns: ColumnDefinition<IStatus>[] = [
-      {
-        title: 'Name',
-        dataIndex: 'name',
-        width: '30%',
-      },
-      {
-        title: 'Status',
-        dataIndex: 'is_closed',
-        width: '25%',
-        render: (value, record) => (
-          <div className="flex items-center space-x-2 text-gray-500">
-            <span className="text-sm mr-2">
-              {record.is_closed ? 'Closed' : 'Open'}
-            </span>
-            <Switch
-              checked={record.is_closed}
-              onCheckedChange={() => updateStatusItem({ ...record, is_closed: !record.is_closed })}
-              className="data-[state=checked]:bg-primary-500"
-            />
-            <span className="text-xs text-gray-400 ml-2">
-              {record.is_closed
-                ? `${type === 'ticket' ? 'Tickets' : 'Interactions'} with this status will be marked as closed`
-                : `${type === 'ticket' ? 'Tickets' : 'Interactions'} with this status will remain open`
-              }
-            </span>
-          </div>
-        ),
-      }
-    ];
+  // Column definitions for ticket statuses
+  const statusColumns: ColumnDefinition<IStatus>[] = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      width: '30%',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'is_closed',
+      width: '25%',
+      render: (_value, record) => (
+        <div className="flex items-center space-x-2 text-gray-500">
+          <span className="text-sm mr-2">
+            {record.is_closed ? 'Closed' : 'Open'}
+          </span>
+          <Switch
+            checked={record.is_closed}
+            onCheckedChange={() => updateStatusItem({ ...record, is_closed: !record.is_closed })}
+            className="data-[state=checked]:bg-primary-500"
+          />
+          <span className="text-xs text-gray-400 ml-2">
+            {record.is_closed
+              ? 'Tickets with this status will be marked as closed'
+              : 'Tickets with this status will remain open'
+            }
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: 'Default',
+      dataIndex: 'is_default',
+      width: '25%',
+      render: (_value, record) => (
+        <div className="flex items-center space-x-2 text-gray-500">
+          <Switch
+            checked={record.is_default || false}
+            onCheckedChange={async (checked) => {
+              if (checked) {
+                try {
+                  // Update this status first
+                  await updateStatusItem({ ...record, is_default: true });
 
-    // Only add default column for ticket statuses
-    if (type === 'ticket') {
-      baseColumns.push({
-        title: 'Default',
-        dataIndex: 'is_default',
-        width: '25%',
-        render: (value, record) => (
-          <div className="flex items-center space-x-2 text-gray-500">
-            <Switch
-              checked={record.is_default || false}
-              onCheckedChange={async (checked) => {
-                if (checked) {
-                  try {
-                    // Update this status first
-                    await updateStatusItem({ ...record, is_default: true });
-                    
-                    // Update local state to reflect the change
-                    setStatuses(prevStatuses => 
-                      prevStatuses.map(status => ({
-                        ...status,
-                        is_default: status.status_id === record.status_id
-                      }))
-                    );
-                  } catch (error) {
-                    console.error('Error updating default status:', error);
-                    toast.error('Failed to update default status');
-                  }
-                } else {
-                  try {
-                    // Check if this is the last default status
-                    const defaultStatuses = statuses.filter(s => 
-                      s.status_id !== record.status_id && 
-                      s.is_default &&
-                      s.status_type === record.status_type
-                    );
-                    
-                    if (defaultStatuses.length === 0) {
-                      toast.error('Cannot remove default status from the last default status');
-                      return;
-                    }
-
-                    await updateStatusItem({ ...record, is_default: false });
-                    
-                    // Update local state
-                    setStatuses(prevStatuses => 
-                      prevStatuses.map(status => 
-                        status.status_id === record.status_id ? 
-                          { ...status, is_default: false } : 
-                          status
-                      )
-                    );
-                  } catch (error) {
-                    console.error('Error updating default status:', error);
-                    toast.error('Failed to update default status');
-                  }
+                  // Update local state to reflect the change
+                  setStatuses(prevStatuses =>
+                    prevStatuses.map(status => ({
+                      ...status,
+                      is_default: status.status_id === record.status_id
+                    }))
+                  );
+                } catch (error) {
+                  console.error('Error updating default status:', error);
+                  toast.error('Failed to update default status');
                 }
-              }}
-              className="data-[state=checked]:bg-primary-500"
-            />
-            <span className="text-xs text-gray-400 ml-2">
-              {record.is_default ? 'Default status for new tickets from client portal' : ''}
-            </span>
-          </div>
-        ),
-      });
-    }
+              } else {
+                try {
+                  // Check if this is the last default status
+                  const defaultStatuses = statuses.filter(s =>
+                    s.status_id !== record.status_id &&
+                    s.is_default &&
+                    s.status_type === record.status_type
+                  );
 
-    // Add Order column right before Actions
-    baseColumns.push({
+                  if (defaultStatuses.length === 0) {
+                    toast.error('Cannot remove default status from the last default status');
+                    return;
+                  }
+
+                  await updateStatusItem({ ...record, is_default: false });
+
+                  // Update local state
+                  setStatuses(prevStatuses =>
+                    prevStatuses.map(status =>
+                      status.status_id === record.status_id ?
+                        { ...status, is_default: false } :
+                        status
+                    )
+                  );
+                } catch (error) {
+                  console.error('Error updating default status:', error);
+                  toast.error('Failed to update default status');
+                }
+              }
+            }}
+            className="data-[state=checked]:bg-primary-500"
+          />
+          <span className="text-xs text-gray-400 ml-2">
+            {record.is_default ? 'Default status for new tickets from client portal' : ''}
+          </span>
+        </div>
+      ),
+    },
+    {
       title: 'Order',
       dataIndex: 'order_number',
       width: '10%',
       render: (value) => value || 0,
-    });
-
-    return baseColumns;
-  };
+    }
+  ];
 
   return (
     <div>
-      {selectedStatusType === 'ticket' && (
-        <div className="bg-blue-50 p-4 rounded-md mb-4">
-          <p className="text-sm text-blue-700">
-            <strong>Default Status:</strong> When clients create tickets through the client portal,
-            they will automatically be assigned the status marked as default. Only one status can
-            be set as default at a time.
-          </p>
-        </div>
-      )}
-      {selectedStatusType === 'interaction' && (
-        <div className="bg-blue-50 p-4 rounded-md mb-4">
-          <p className="text-sm text-blue-700">
-            <strong>Interaction Statuses:</strong> Track the state of customer interactions
-            such as calls, emails, and meetings.
-          </p>
-        </div>
-      )}
-      
+      <div className="bg-blue-50 p-4 rounded-md mb-4">
+        <p className="text-sm text-blue-700">
+          <strong>Default Status:</strong> When clients create tickets through the client portal,
+          they will automatically be assigned the status marked as default. Only one status can
+          be set as default at a time.
+        </p>
+      </div>
+
       {/* Statuses Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">
-            {selectedStatusType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Statuses
-          </h3>
-          <CustomSelect
-            value={selectedStatusType}
-            onValueChange={(value: string) => {
-              const newType = value as ItemType;
-              setSelectedStatusType(newType);
-              
-              // Update URL with new type parameter
-              const currentSearchParams = new URLSearchParams(window.location.search);
-              currentSearchParams.set('type', newType);
-              const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
-              window.history.pushState({}, '', newUrl);
-            }}
-            options={[
-              { value: 'ticket', label: 'Ticket Statuses' },
-              { value: 'interaction', label: 'Interaction Statuses' }
-            ]}
-            className="w-64"
-          />
-        </div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Ticket Statuses</h3>
         
         <DataTable
           id="statuses-table"
           data={statuses.filter(s => s.status_type === selectedStatusType).sort((a, b) => (a.order_number || 0) - (b.order_number || 0))}
-          columns={[...getStatusColumns(selectedStatusType), {
+          columns={[...statusColumns, {
             title: 'Actions',
             dataIndex: 'action',
             width: '10%',

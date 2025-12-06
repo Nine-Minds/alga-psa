@@ -14,6 +14,7 @@ import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
+import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
 import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
@@ -148,11 +149,13 @@ export async function initializeApp() {
     // Register cleanup handlers
     try {
       process.on('SIGTERM', async () => {
+        await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
       });
 
       process.on('SIGINT', async () => {
+        await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
       });
@@ -266,21 +269,22 @@ function logConfiguration() {
 
 // Helper function to initialize job scheduler
 async function initializeJobScheduler(storageService: StorageService) {
-  // Initialize job scheduler and register jobs
+  // Initialize the new job runner abstraction (handles all core handler registration)
+  try {
+    const jobRunner = await initializeJobRunner();
+    logger.info(`Job runner initialized: ${jobRunner.getRunnerType()}`);
+  } catch (error) {
+    logger.error('Failed to initialize new job runner abstraction:', error);
+    // Fall back to legacy scheduler
+  }
+
+  // Initialize legacy job scheduler for backward compatibility with custom jobs
   const jobService = await JobService.create();
   const jobScheduler: IJobScheduler = await JobScheduler.getInstance(jobService, storageService);
 
-  // Register invoice zip handler once during initialization
-  const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
-  jobScheduler.registerGenericJobHandler<InvoiceZipJobData>(
-    'invoice_zip',
-    (jobId, data: InvoiceZipJobData) =>
-      invoiceZipHandler.handleInvoiceZipJob(jobId, data)
-  );
-  logger.info('Registered invoice zip job handler');
-
-  // Initialize job handlers with storage service
-  await initializeScheduler(storageService);
+  // Note: Core handlers (invoice_zip, generate-invoice, etc.) are now registered
+  // via initializeJobRunner() above. The legacy scheduler is kept for custom
+  // app-specific jobs like billing cycles and time periods.
 
   // Register billing cycles job if it doesn't exist
   const existingBillingJobs = await jobScheduler.getJobs({ jobName: 'createClientContractLineCycles' });

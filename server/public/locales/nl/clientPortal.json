@@ -217,6 +217,7 @@
       "dueDate": "Vervaldatum",
       "dueDateText": "Vervalt op {{date}}",
       "noDueDate": "Geen vervaldatum",
+      "allPaid": "Alle facturen betaald",
       "amount": "Bedrag",
       "status": "Status",
       "paid": "Betaald",

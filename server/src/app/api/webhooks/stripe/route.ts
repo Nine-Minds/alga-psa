@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import logger from '@alga-psa/shared/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
 /**
  * POST /api/webhooks/stripe
@@ -178,11 +179,22 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  let webhookSecretStatus = 'missing';
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    const webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
+    if (webhookSecret) {
+      webhookSecretStatus = 'configured';
+    }
+  } catch {
+    webhookSecretStatus = 'missing';
+  }
+
   return NextResponse.json({
     status: 'ok',
     message: 'Stripe webhook endpoint is active',
     timestamp: new Date().toISOString(),
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ? 'configured' : 'missing',
+    webhookSecret: webhookSecretStatus,
     edition: 'enterprise',
   });
 }

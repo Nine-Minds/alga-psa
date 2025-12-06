@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { toPlainDate } from '../../lib/utils/dateTimeUtils';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { Input } from '../ui/Input';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
@@ -286,10 +287,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Ready to Invoice</h2>
             <div className="flex gap-4">
-              <input
+              <Input
+                id="filter-clients-input"
                 type="text"
                 placeholder="Filter clients..."
-                className="px-3 py-2 border rounded-md"
+                containerClassName=""
                 value={clientFilter}
                 onChange={(e) => setClientFilter(e.target.value)}
               />

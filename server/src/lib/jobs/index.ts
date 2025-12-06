@@ -24,6 +24,37 @@ import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
 import logger from '@shared/core/logger';
 
+// =============================================================================
+// NEW JOB RUNNER ABSTRACTION EXPORTS
+// =============================================================================
+// These exports provide the new abstraction layer that supports both PG Boss (CE)
+// and Temporal (EE) as backend job runners. The existing exports below are
+// maintained for backward compatibility.
+
+export * from './interfaces';
+export { JobRunnerFactory, getJobRunner } from './JobRunnerFactory';
+export { PgBossJobRunner } from './runners/PgBossJobRunner';
+export {
+  initializeJobRunner,
+  getJobRunnerInstance,
+  stopJobRunner,
+} from './initializeJobRunner';
+export {
+  JobHandlerRegistry,
+  registerJobHandler,
+  executeJobHandler,
+} from './jobHandlerRegistry';
+export {
+  registerAllJobHandlers,
+  getAvailableJobHandlers,
+} from './registerAllHandlers';
+
+// =============================================================================
+// LEGACY EXPORTS (Backward Compatibility)
+// =============================================================================
+// The following exports maintain backward compatibility with existing code.
+// New code should prefer using the IJobRunner interface via getJobRunner().
+
 // Initialize the job scheduler singleton
 let jobScheduler: IJobScheduler;
 
