@@ -1,0 +1,26 @@
+{
+  "name": "@alga/desktop-agent",
+  "version": "1.0.0",
+  "description": "Alga PSA Desktop Agent - Remote desktop support agent",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Alga PSA",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
