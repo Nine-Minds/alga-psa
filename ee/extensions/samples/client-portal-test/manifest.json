@@ -3,7 +3,7 @@
   "publisher": "Alga",
   "version": "1.3.0",
   "runtime": "wasm-js@1",
-  "capabilities": ["cap:context.read", "cap:log.emit", "cap:ui.proxy"],
+  "capabilities": ["cap:context.read", "cap:log.emit", "cap:ui.proxy", "cap:http.fetch", "cap:user.read"],
   "ui": {
     "type": "iframe",
     "entry": "ui/index.html",
