@@ -5,6 +5,7 @@ use crate::models::{
 };
 use crate::providers::{
     CAP_CONTEXT_READ, CAP_HTTP_FETCH, CAP_LOG_EMIT, CAP_SECRETS_GET, CAP_STORAGE_KV, CAP_UI_PROXY,
+    CAP_USER_READ,
 };
 use anyhow::{anyhow, Context};
 use base64::Engine as _;
@@ -26,9 +27,10 @@ use component::alga::extension::{
     storage::{self, StorageEntry, StorageError},
     types::{
         ContextData, ExecuteRequest as WitExecuteRequest, ExecuteResponse as WitExecuteResponse,
-        HttpHeader,
+        HttpHeader, UserData, UserError,
     },
     ui_proxy::{self, ProxyError},
+    user,
 };
 
 #[derive(Clone)]
@@ -1071,6 +1073,58 @@ fn map_proxy_status(status: StatusCode) -> ProxyError {
     }
 }
 
+impl user::HostWithStore for HasSelf<HostState> {
+    fn get_user<T>(
+        accessor: &Accessor<T, Self>,
+    ) -> impl std::future::Future<Output = Result<UserData, UserError>> + Send {
+        let (providers, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (state.context.providers.clone(), state.context.clone())
+        });
+
+        async move {
+            if !has_capability(&providers, CAP_USER_READ) {
+                tracing::warn!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "user capability denied - cap:user.read not granted"
+                );
+                return Err(UserError::NotAllowed);
+            }
+
+            let tenant = ctx.tenant_id.clone().unwrap_or_default();
+            let extension = ctx.extension_id.clone().unwrap_or_default();
+
+            match &ctx.user {
+                Some(user_info) => {
+                    tracing::info!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        user_id=%user_info.user_id,
+                        "user capability granted - returning user data"
+                    );
+                    Ok(UserData {
+                        tenant_id: tenant,
+                        company_name: user_info.company_name.clone(),
+                        user_id: user_info.user_id.clone(),
+                        user_email: user_info.user_email.clone(),
+                        user_name: user_info.user_name.clone(),
+                    })
+                }
+                None => {
+                    tracing::info!(
+                        tenant=%tenant,
+                        extension=%extension,
+                        "user capability granted but no user context available"
+                    );
+                    Err(UserError::NotAvailable)
+                }
+            }
+        }
+    }
+}
+
 impl types::Host for HostState {}
 impl context::Host for HostState {}
 impl secrets::Host for HostState {}
@@ -1078,6 +1132,7 @@ impl http::Host for HostState {}
 impl storage::Host for HostState {}
 impl logging::Host for HostState {}
 impl ui_proxy::Host for HostState {}
+impl user::Host for HostState {}
 
 #[cfg(test)]
 mod tests {

@@ -34,6 +34,14 @@ pub struct Limits {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct UserInfo {
+    pub user_id: String,
+    pub user_email: String,
+    pub user_name: String,
+    pub company_name: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ExecuteRequest {
     pub context: ExecuteContext,
     pub http: HttpPayload,
@@ -43,6 +51,8 @@ pub struct ExecuteRequest {
     pub secret_envelope: Option<SecretEnvelope>,
     #[serde(default)]
     pub providers: Vec<String>,
+    #[serde(default)]
+    pub user: Option<UserInfo>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

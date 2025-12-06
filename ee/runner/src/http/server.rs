@@ -313,6 +313,7 @@ async fn execute(
         config: req.context.config.clone(),
         providers: provider_set.clone(),
         secrets: secret_material,
+        user: req.user.clone(),
     };
 
     let exec_resp = match loader
