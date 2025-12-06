@@ -6,6 +6,11 @@ description = "Remote Desktop Agent for Alga PSA"
 authors = ["Alga PSA <engineering@alga.io>"]
 license = "Proprietary"
 
+[lib]
+name = "rd_agent"
+crate-type = ["cdylib", "staticlib", "rlib"]
+path = "src/lib.rs"
+
 [dependencies]
 # WebRTC
 webrtc = "0.11"
@@ -66,6 +71,20 @@ windows = { version = "0.58", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Gdi",
 ] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Core Graphics for screen capture and input injection
+core-graphics = "0.24"
+core-foundation = "0.10"
+# Block support for async callbacks
+block = "0.1"
+# Dispatch for GCD integration
+dispatch = "0.2"
+
+[features]
+default = []
+# Enable FFI exports for Swift integration
+ffi = []
 
 [profile.release]
 opt-level = 3

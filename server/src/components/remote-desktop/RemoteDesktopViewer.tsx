@@ -1,8 +1,18 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/Button';
-import { InputEvent } from '@/types/remoteDesktop';
+import {
+  InputEvent,
+  KeyEvent,
+  MouseButton,
+  SpecialKeyComboEvent,
+} from '@/types/remoteDesktop';
+import { KeyboardHandler } from './KeyboardHandler';
+import { SpecialKeysMenu } from './SpecialKeysMenu';
+
+// Lazy load RemoteTerminal to avoid loading xterm.js unless needed
+const RemoteTerminal = lazy(() => import('./RemoteTerminal'));
 
 interface RemoteDesktopViewerProps {
   sessionId: string;
@@ -30,6 +40,10 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [remoteResolution, setRemoteResolution] = useState<{ width: number; height: number } | null>(null);
+  const [keyboardFocused, setKeyboardFocused] = useState(false);
+  const [remoteOs, setRemoteOs] = useState<'windows' | 'macos'>('windows');
+  const [showTerminal, setShowTerminal] = useState(false);
+  const terminalDataChannelRef = useRef<RTCDataChannel | null>(null);
 
   // Initialize WebSocket and WebRTC connection
   useEffect(() => {
@@ -155,11 +169,14 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
       }
     };
 
-    // Handle incoming data channel (for input events)
+    // Handle incoming data channel (for input events and terminal)
     peerConnectionRef.current.ondatachannel = (event) => {
       console.log('Received data channel:', event.channel.label);
       if (event.channel.label === 'input') {
         dataChannelRef.current = event.channel;
+        setupDataChannel(event.channel);
+      } else if (event.channel.label === 'terminal') {
+        terminalDataChannelRef.current = event.channel;
         setupDataChannel(event.channel);
       }
     };
@@ -170,6 +187,13 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
     });
     dataChannelRef.current = inputChannel;
     setupDataChannel(inputChannel);
+
+    // Create data channel for terminal (as offerer)
+    const terminalChannel = peerConnectionRef.current.createDataChannel('terminal', {
+      ordered: true,
+    });
+    terminalDataChannelRef.current = terminalChannel;
+    setupDataChannel(terminalChannel);
   };
 
   const setupDataChannel = (channel: RTCDataChannel) => {
@@ -294,18 +318,32 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
     sendInputEvent({ type: 'MouseMove', x, y });
   }, [status, sendInputEvent, getScaledCoordinates]);
 
+  // Map browser button numbers to our MouseButton type
+  const getMouseButton = useCallback((buttonNumber: number): MouseButton => {
+    switch (buttonNumber) {
+      case 0: return 'left';
+      case 1: return 'middle';
+      case 2: return 'right';
+      case 3: return 'back';    // Mouse4 / XButton1
+      case 4: return 'forward'; // Mouse5 / XButton2
+      default: return 'left';
+    }
+  }, []);
+
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLVideoElement>) => {
     if (status !== 'connected') return;
     e.preventDefault();
-    const button = e.button === 0 ? 'left' : e.button === 2 ? 'right' : 'middle';
-    sendInputEvent({ type: 'MouseDown', button });
-  }, [status, sendInputEvent]);
+    const { x, y } = getScaledCoordinates(e);
+    const button = getMouseButton(e.button);
+    sendInputEvent({ type: 'MouseDown', button, x, y });
+  }, [status, sendInputEvent, getScaledCoordinates, getMouseButton]);
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLVideoElement>) => {
     if (status !== 'connected') return;
-    const button = e.button === 0 ? 'left' : e.button === 2 ? 'right' : 'middle';
-    sendInputEvent({ type: 'MouseUp', button });
-  }, [status, sendInputEvent]);
+    const { x, y } = getScaledCoordinates(e);
+    const button = getMouseButton(e.button);
+    sendInputEvent({ type: 'MouseUp', button, x, y });
+  }, [status, sendInputEvent, getScaledCoordinates, getMouseButton]);
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLVideoElement>) => {
     if (status !== 'connected') return;
@@ -314,25 +352,35 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
       type: 'MouseScroll',
       delta_x: Math.round(e.deltaX),
       delta_y: Math.round(e.deltaY),
+      deltaMode: e.deltaMode, // 0=pixels, 1=lines, 2=pages
     });
   }, [status, sendInputEvent]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  // Enhanced keyboard handler callback
+  const handleKeyEvent = useCallback((event: KeyEvent) => {
     if (status !== 'connected') return;
-    e.preventDefault();
-    sendInputEvent({ type: 'KeyDown', key: e.key });
+    sendInputEvent(event);
   }, [status, sendInputEvent]);
 
-  const handleKeyUp = useCallback((e: React.KeyboardEvent) => {
+  // Special keys menu handler
+  const handleSpecialKey = useCallback((event: SpecialKeyComboEvent) => {
     if (status !== 'connected') return;
-    e.preventDefault();
-    sendInputEvent({ type: 'KeyUp', key: e.key });
+    sendInputEvent(event);
   }, [status, sendInputEvent]);
+
+  // Focus handler for keyboard capture indicator
+  const handleKeyboardFocusChange = useCallback((focused: boolean) => {
+    setKeyboardFocused(focused);
+  }, []);
 
   const cleanup = () => {
     if (dataChannelRef.current) {
       dataChannelRef.current.close();
       dataChannelRef.current = null;
+    }
+    if (terminalDataChannelRef.current) {
+      terminalDataChannelRef.current.close();
+      terminalDataChannelRef.current = null;
     }
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
@@ -343,6 +391,15 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
       wsRef.current = null;
     }
   };
+
+  // Handle terminal toggle
+  const handleTerminalToggle = useCallback(() => {
+    setShowTerminal((prev) => !prev);
+  }, []);
+
+  const handleTerminalClose = useCallback(() => {
+    setShowTerminal(false);
+  }, []);
 
   const handleDisconnectClick = () => {
     cleanup();
@@ -402,9 +459,44 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
           <span className="text-xs text-gray-400">
             ({connectionState})
           </span>
+          {/* Keyboard focus indicator */}
+          {status === 'connected' && (
+            <span
+              className={`text-xs px-2 py-0.5 rounded ${
+                keyboardFocused
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-700 text-gray-400'
+              }`}
+            >
+              {keyboardFocused ? 'Keyboard Active' : 'Click to capture keyboard'}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Special Keys Menu */}
+          <SpecialKeysMenu
+            onSpecialKey={handleSpecialKey}
+            enabled={status === 'connected'}
+            targetOs={remoteOs}
+          />
+
+          {/* Terminal Toggle */}
+          <Button
+            onClick={handleTerminalToggle}
+            variant="ghost"
+            size="sm"
+            className={`text-gray-300 hover:text-white hover:bg-gray-800 ${
+              showTerminal ? 'bg-gray-800' : ''
+            }`}
+            title="Toggle Terminal"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Terminal
+          </Button>
+
           <Button
             onClick={toggleFullscreen}
             variant="ghost"
@@ -423,25 +515,83 @@ export const RemoteDesktopViewer: React.FC<RemoteDesktopViewerProps> = ({
         </div>
       </div>
 
-      {/* Video container */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className="max-w-full max-h-full cursor-default focus:outline-none"
-          style={{
-            objectFit: 'contain',
-          }}
-          onMouseMove={handleMouseMove}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onWheel={handleWheel}
-          onKeyDown={handleKeyDown}
-          onKeyUp={handleKeyUp}
-          tabIndex={0}
-          onContextMenu={(e) => e.preventDefault()}
-        />
+      {/* Main content area with video and optional terminal */}
+      <div className={`flex-1 flex flex-col overflow-hidden ${showTerminal ? 'h-full' : ''}`}>
+        {/* Video container */}
+        <div className={`flex items-center justify-center overflow-hidden ${showTerminal ? 'flex-1' : 'flex-1'}`}>
+          {/* KeyboardHandler for enhanced keyboard capture */}
+          <KeyboardHandler
+            onKeyEvent={handleKeyEvent}
+            enabled={status === 'connected' && !showTerminal}
+            targetRef={videoRef as React.RefObject<HTMLElement>}
+            onFocusChange={handleKeyboardFocusChange}
+          />
+
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="max-w-full max-h-full cursor-default focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{
+              objectFit: 'contain',
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onWheel={handleWheel}
+            tabIndex={0}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+        </div>
+
+        {/* Terminal panel */}
+        {showTerminal && terminalDataChannelRef.current && (
+          <div className="h-64 border-t border-gray-700 bg-black flex flex-col">
+            {/* Terminal header */}
+            <div className="flex items-center justify-between px-3 py-1 bg-gray-900 border-b border-gray-700">
+              <span className="text-xs font-medium text-gray-300">Terminal</span>
+              <button
+                onClick={handleTerminalClose}
+                className="text-gray-400 hover:text-white p-0.5 rounded hover:bg-gray-700"
+                title="Close terminal"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Terminal content */}
+            <div className="flex-1 overflow-hidden">
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-full text-gray-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mr-2" />
+                    Loading terminal...
+                  </div>
+                }
+              >
+                <RemoteTerminal
+                  dataChannel={terminalDataChannelRef.current}
+                  onClose={handleTerminalClose}
+                  className="h-full"
+                />
+              </Suspense>
+            </div>
+          </div>
+        )}
+
+        {/* Terminal placeholder when no data channel */}
+        {showTerminal && !terminalDataChannelRef.current && (
+          <div className="h-64 border-t border-gray-700 bg-gray-900 flex items-center justify-center">
+            <div className="text-center text-gray-400">
+              <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-sm">Terminal unavailable</p>
+              <p className="text-xs mt-1">Waiting for data channel connection...</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Loading overlay */}

@@ -171,7 +171,8 @@ export type InputEventType =
   | 'MouseUp'
   | 'MouseScroll'
   | 'KeyDown'
-  | 'KeyUp';
+  | 'KeyUp'
+  | 'SpecialKeyCombo';
 
 export interface MouseMoveEvent {
   type: 'MouseMove';
@@ -179,27 +180,60 @@ export interface MouseMoveEvent {
   y: number;
 }
 
+export type MouseButton = 'left' | 'right' | 'middle' | 'back' | 'forward';
+
 export interface MouseButtonEvent {
   type: 'MouseDown' | 'MouseUp';
-  button: 'left' | 'right' | 'middle';
+  button: MouseButton;
+  x?: number;
+  y?: number;
 }
 
 export interface MouseScrollEvent {
   type: 'MouseScroll';
   delta_x: number;
   delta_y: number;
+  deltaMode?: number; // 0 = pixels, 1 = lines, 2 = pages
 }
+
+// Enhanced keyboard event with full modifier and location support
+export interface KeyModifiers {
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean; // Windows/Cmd key
+}
+
+export type KeyLocation = 0 | 1 | 2 | 3; // 0=standard, 1=left, 2=right, 3=numpad
 
 export interface KeyEvent {
   type: 'KeyDown' | 'KeyUp';
-  key: string;
+  key: string;           // e.g., "a", "Enter", "F1"
+  code: string;          // e.g., "KeyA", "Enter", "F1"
+  modifiers: KeyModifiers;
+  location: KeyLocation;
+}
+
+// Special key combinations that can't be captured from browser
+export type SpecialKeyCombo =
+  | 'ctrl-alt-del'
+  | 'win-l'           // Lock screen
+  | 'win-r'           // Run dialog
+  | 'alt-tab'
+  | 'ctrl-shift-esc'  // Task Manager
+  | 'print-screen';
+
+export interface SpecialKeyComboEvent {
+  type: 'SpecialKeyCombo';
+  combo: SpecialKeyCombo;
 }
 
 export type InputEvent =
   | MouseMoveEvent
   | MouseButtonEvent
   | MouseScrollEvent
-  | KeyEvent;
+  | KeyEvent
+  | SpecialKeyComboEvent;
 
 // WebSocket authenticated connection types
 export interface AuthenticatedWSConnection {
@@ -209,4 +243,123 @@ export interface AuthenticatedWSConnection {
   agentId?: string;
   sessionId?: string;
   isAlive: boolean;
+}
+
+// Terminal/PTY message types (for browser <-> agent communication)
+export type TerminalMessageType =
+  | 'pty-start'
+  | 'pty-input'
+  | 'pty-output'
+  | 'pty-resize'
+  | 'pty-close'
+  | 'pty-error'
+  | 'pty-closed';
+
+export interface PtyStartMessage {
+  type: 'pty-start';
+  cols: number;
+  rows: number;
+  shell?: string; // Optional shell override
+}
+
+export interface PtyInputMessage {
+  type: 'pty-input';
+  data: number[]; // Byte array
+}
+
+export interface PtyOutputMessage {
+  type: 'pty-output';
+  data: number[]; // Byte array
+}
+
+export interface PtyResizeMessage {
+  type: 'pty-resize';
+  cols: number;
+  rows: number;
+}
+
+export interface PtyCloseMessage {
+  type: 'pty-close';
+}
+
+export interface PtyErrorMessage {
+  type: 'pty-error';
+  message: string;
+  code?: string;
+}
+
+export interface PtyClosedMessage {
+  type: 'pty-closed';
+  exitCode?: number;
+}
+
+export type TerminalMessage =
+  | PtyStartMessage
+  | PtyInputMessage
+  | PtyOutputMessage
+  | PtyResizeMessage
+  | PtyCloseMessage
+  | PtyErrorMessage
+  | PtyClosedMessage;
+
+// Enrollment code types
+export interface IEnrollmentCode {
+  tenant: string;
+  code_id: string;
+  company_id?: string;
+  code?: string; // Only returned on creation
+  code_hash: string;
+  created_by: string;
+  created_at: Date;
+  expires_at: Date;
+  usage_limit: number;
+  usage_count: number;
+  default_permissions: RemoteAccessPermission;
+  revoked_at?: Date;
+  revoked_by?: string;
+}
+
+export interface CreateEnrollmentCodeRequest {
+  company_id?: string;
+  expires_in_hours?: number;
+  usage_limit?: number;
+  permissions?: Partial<RemoteAccessPermission>;
+}
+
+export interface CreateEnrollmentCodeResponse {
+  code_id: string;
+  code: string; // Only returned once!
+  expires_at: Date;
+  usage_limit: number;
+  permissions: RemoteAccessPermission;
+}
+
+export interface EnrollAgentRequest {
+  enrollment_code: string;
+  machine_id: string;
+  hostname: string;
+  os_type: OSType;
+  os_version?: string;
+  agent_version: string;
+}
+
+export interface EnrollAgentResponse {
+  agent_id: string;
+  tenant_id: string;
+  connection_token?: string; // Only on new enrollment
+  signaling_server: string;
+  permissions: RemoteAccessPermission;
+  already_enrolled?: boolean;
+}
+
+// Permission types
+export interface RemoteAccessPermission {
+  canConnect: boolean;
+  canViewScreen: boolean;
+  canControlInput: boolean;
+  canAccessTerminal: boolean;
+  canTransferFiles: boolean;
+  canElevate: boolean;
+  requiresUserConsent: boolean;
+  sessionDurationLimit?: number;
 }

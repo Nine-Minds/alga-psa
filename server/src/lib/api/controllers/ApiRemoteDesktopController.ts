@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import {
   IRemoteAgent,
   IRemoteSession,
@@ -33,6 +34,13 @@ import {
 } from '../middleware/apiMiddleware';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { findUserByIdForApi } from '@/lib/actions/user-actions/findUserByIdForApi';
+import {
+  RemoteAccessPermission,
+  DEFAULT_PERMISSIONS,
+  sanitizePermissions,
+  validatePermissions,
+} from '@/lib/remote-desktop/permissions';
+import { getIceServersForSession } from '@/lib/remote-desktop/turn';
 
 export class ApiRemoteDesktopController {
 
@@ -596,6 +604,346 @@ export class ApiRemoteDesktopController {
             .update({ connection_token: newToken });
 
           return createSuccessResponse({ connection_token: newToken });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  // ========== Enrollment Code APIs ==========
+
+  /**
+   * Characters used for enrollment code generation (excludes confusing chars)
+   */
+  private static ENROLLMENT_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  /**
+   * Generate a human-readable enrollment code (ABC-123-XYZ format)
+   */
+  private generateEnrollmentCode(): string {
+    const chars = ApiRemoteDesktopController.ENROLLMENT_CODE_CHARS;
+    const segments: string[] = [];
+
+    for (let i = 0; i < 3; i++) {
+      let segment = '';
+      for (let j = 0; j < 3; j++) {
+        segment += chars[crypto.randomInt(chars.length)];
+      }
+      segments.push(segment);
+    }
+
+    return segments.join('-');
+  }
+
+  /**
+   * Hash an enrollment code for storage
+   */
+  private hashEnrollmentCode(code: string): string {
+    return crypto.createHash('sha256').update(code).digest('hex');
+  }
+
+  /**
+   * POST /api/v1/remote-desktop/enrollment-codes
+   * Generate a new enrollment code
+   */
+  createEnrollmentCode() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+        const userId = apiRequest.context.userId;
+        const body = await request.json();
+
+        const {
+          company_id,
+          expires_in_hours = 24,
+          usage_limit = 1,
+          permissions,
+        } = body;
+
+        // Validate expires_in_hours
+        if (expires_in_hours < 1 || expires_in_hours > 168) { // 1 hour to 7 days
+          throw new ValidationError('expires_in_hours must be between 1 and 168');
+        }
+
+        // Validate usage_limit
+        if (usage_limit < 1 || usage_limit > 100) {
+          throw new ValidationError('usage_limit must be between 1 and 100');
+        }
+
+        // Validate and sanitize permissions if provided
+        let defaultPermissions = DEFAULT_PERMISSIONS;
+        if (permissions) {
+          const permissionErrors = validatePermissions(permissions);
+          if (permissionErrors.length > 0) {
+            throw new ValidationError(`Invalid permissions: ${permissionErrors.join(', ')}`);
+          }
+          defaultPermissions = sanitizePermissions(permissions);
+        }
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          // If company_id provided, verify it exists
+          if (company_id) {
+            const company = await knex('companies')
+              .where({ tenant, company_id })
+              .first();
+            if (!company) {
+              throw new NotFoundError('Company not found');
+            }
+          }
+
+          const code = this.generateEnrollmentCode();
+          const codeHash = this.hashEnrollmentCode(code);
+          const expiresAt = new Date(Date.now() + expires_in_hours * 3600 * 1000);
+
+          const [enrollmentCode] = await knex('rd_enrollment_codes')
+            .insert({
+              tenant,
+              company_id: company_id || null,
+              code,
+              code_hash: codeHash,
+              created_by: userId,
+              expires_at: expiresAt,
+              usage_limit,
+              default_permissions: defaultPermissions,
+            })
+            .returning(['code_id', 'code', 'expires_at', 'usage_limit', 'default_permissions']);
+
+          return createSuccessResponse({
+            code_id: enrollmentCode.code_id,
+            code: enrollmentCode.code, // Only returned once!
+            expires_at: enrollmentCode.expires_at,
+            usage_limit: enrollmentCode.usage_limit,
+            permissions: enrollmentCode.default_permissions,
+          }, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/remote-desktop/enrollment-codes
+   * List enrollment codes
+   */
+  listEnrollmentCodes() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const { searchParams } = new URL(request.url);
+          const companyId = searchParams.get('company_id');
+          const includeExpired = searchParams.get('include_expired') === 'true';
+          const includeRevoked = searchParams.get('include_revoked') === 'true';
+          const page = parseInt(searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(searchParams.get('limit') || '25'), 100);
+          const offset = (page - 1) * limit;
+
+          let query = knex('rd_enrollment_codes')
+            .where({ tenant })
+            .select([
+              'code_id',
+              'company_id',
+              'created_by',
+              'created_at',
+              'expires_at',
+              'usage_limit',
+              'usage_count',
+              'default_permissions',
+              'revoked_at',
+              'revoked_by',
+            ])
+            .orderBy('created_at', 'desc');
+
+          let countQuery = knex('rd_enrollment_codes')
+            .where({ tenant })
+            .count('* as count');
+
+          if (companyId) {
+            query = query.where({ company_id: companyId });
+            countQuery = countQuery.where({ company_id: companyId });
+          }
+
+          if (!includeExpired) {
+            query = query.where('expires_at', '>', knex.fn.now());
+            countQuery = countQuery.where('expires_at', '>', knex.fn.now());
+          }
+
+          if (!includeRevoked) {
+            query = query.whereNull('revoked_at');
+            countQuery = countQuery.whereNull('revoked_at');
+          }
+
+          const [codes, countResult] = await Promise.all([
+            query.limit(limit).offset(offset),
+            countQuery.first(),
+          ]);
+
+          const total = parseInt((countResult as any)?.count || '0');
+
+          // Don't return the actual code, just the ID and metadata
+          return createPaginatedResponse(codes, total, page, limit);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * DELETE /api/v1/remote-desktop/enrollment-codes/:codeId
+   * Revoke an enrollment code
+   */
+  revokeEnrollmentCode() {
+    return async (request: NextRequest, context: { params: Promise<{ codeId: string }> }): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+        const userId = apiRequest.context.userId;
+        const { codeId } = await context.params;
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const code = await knex('rd_enrollment_codes')
+            .where({ tenant, code_id: codeId })
+            .first();
+
+          if (!code) {
+            throw new NotFoundError('Enrollment code not found');
+          }
+
+          if (code.revoked_at) {
+            throw new BadRequestError('Enrollment code already revoked');
+          }
+
+          await knex('rd_enrollment_codes')
+            .where({ tenant, code_id: codeId })
+            .update({
+              revoked_at: knex.fn.now(),
+              revoked_by: userId,
+            });
+
+          return createSuccessResponse({ message: 'Enrollment code revoked' });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  // ========== Agent Enrollment API ==========
+
+  /**
+   * POST /api/v1/remote-desktop/agents/enroll
+   * Enroll an agent using an enrollment code (no authentication required)
+   */
+  enrollAgent() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const body = await request.json();
+        const {
+          enrollment_code,
+          machine_id,
+          hostname,
+          os_type,
+          os_version,
+          agent_version,
+        } = body;
+
+        // Validate required fields
+        if (!enrollment_code || !machine_id || !hostname || !os_type || !agent_version) {
+          throw new ValidationError(
+            'Missing required fields: enrollment_code, machine_id, hostname, os_type, agent_version'
+          );
+        }
+
+        if (os_type !== 'windows' && os_type !== 'macos') {
+          throw new ValidationError('Invalid os_type. Must be "windows" or "macos"');
+        }
+
+        // Hash the code for lookup
+        const codeHash = this.hashEnrollmentCode(enrollment_code);
+
+        // Find and validate the enrollment code
+        const knex = await getConnection();
+
+        const enrollmentCode = await knex('rd_enrollment_codes')
+          .where({ code_hash: codeHash })
+          .where('expires_at', '>', knex.fn.now())
+          .whereRaw('usage_count < usage_limit')
+          .whereNull('revoked_at')
+          .first();
+
+        if (!enrollmentCode) {
+          throw new UnauthorizedError('Invalid or expired enrollment code');
+        }
+
+        const tenant = enrollmentCode.tenant;
+
+        return await runWithTenant(tenant, async () => {
+          const tenantKnex = await getConnection(tenant);
+
+          // Check if agent already exists with this machine_id
+          const existingAgent = await tenantKnex('rd_agents')
+            .where({ tenant, machine_id })
+            .first();
+
+          if (existingAgent) {
+            // If already enrolled, return existing agent info
+            return createSuccessResponse({
+              agent_id: existingAgent.agent_id,
+              tenant_id: tenant,
+              signaling_server: process.env.SIGNALING_SERVER_URL || '/ws/rd-signal',
+              permissions: existingAgent.permissions,
+              already_enrolled: true,
+            });
+          }
+
+          // Generate connection token
+          const connectionToken = `${tenant}:${uuidv4()}:${uuidv4()}`;
+
+          // Create agent record
+          const [agent] = await tenantKnex('rd_agents')
+            .insert({
+              tenant,
+              agent_name: hostname, // Default to hostname
+              hostname,
+              os_type,
+              os_version,
+              company_id: enrollmentCode.company_id,
+              agent_version,
+              status: 'offline',
+              metadata: { machine_id },
+              connection_token: connectionToken,
+              permissions: enrollmentCode.default_permissions,
+              enrolled_with_code_id: enrollmentCode.code_id,
+              enrolled_at: tenantKnex.fn.now(),
+              machine_id,
+              registered_at: tenantKnex.fn.now(),
+            })
+            .returning(['agent_id', 'permissions']);
+
+          // Increment usage count on enrollment code
+          await tenantKnex('rd_enrollment_codes')
+            .where({ tenant, code_id: enrollmentCode.code_id })
+            .increment('usage_count', 1);
+
+          return createSuccessResponse({
+            agent_id: agent.agent_id,
+            tenant_id: tenant,
+            connection_token: connectionToken,
+            signaling_server: process.env.SIGNALING_SERVER_URL || '/ws/rd-signal',
+            permissions: agent.permissions,
+          }, 201);
         });
       } catch (error) {
         return handleApiError(error);

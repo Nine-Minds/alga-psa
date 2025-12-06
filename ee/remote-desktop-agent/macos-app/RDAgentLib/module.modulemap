@@ -1,0 +1,5 @@
+module RDAgentLib {
+    header "../../include/rd_agent.h"
+    link "rd_agent"
+    export *
+}
