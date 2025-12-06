@@ -1,7 +1,7 @@
 # Remote Desktop Phase 3: Enterprise Features
 
 **Timeline:** Weeks 9-12
-**Status:** Planning
+**Status:** In Progress
 
 ## Prerequisites
 - ✅ Signaling server operational (Phase 1)
@@ -14,32 +14,35 @@
 Enable UAC/Secure Desktop capture via LocalSystem service in Session 0.
 
 ### Tasks
-- [ ] Create `server/windows-service` crate
-  - [ ] Add `windows-service` dependency to `Cargo.toml`
-  - [ ] Implement service control handler in `src/service.rs`
-  - [ ] Service lifecycle: start, stop, pause, continue
-- [ ] Session 0 isolation implementation
-  - [ ] Run as LocalSystem account
-  - [ ] Named pipe IPC: `\\.\pipe\alga-remote-desktop-service`
-  - [ ] Message protocol: `ServiceRequest`/`ServiceResponse` enums
-- [ ] UAC and Secure Desktop detection
-  - [ ] Monitor `WTS_SESSION_LOCK`/`WTS_SESSION_UNLOCK` events
-  - [ ] Hook `SwitchDesktop` API calls
-  - [ ] Capture secure desktop via DDA/GDI in Session 0
+- [x] Create `ee/remote-desktop-service` crate
+  - [x] Add `windows-service` dependency to `Cargo.toml`
+  - [x] Implement service control handler in `src/service.rs`
+  - [x] Service lifecycle: start, stop, pause, continue
+- [x] Session 0 isolation implementation
+  - [x] Run as LocalSystem account
+  - [x] Named pipe IPC: `\\.\pipe\alga-remote-desktop-service`
+  - [x] Message protocol: `ServiceRequest`/`ServiceResponse` enums
+- [x] UAC and Secure Desktop detection
+  - [x] Monitor `WTS_SESSION_LOCK`/`WTS_SESSION_UNLOCK` events
+  - [x] Desktop type detection via `GetUserObjectInformationW`
+  - [x] Capture secure desktop via DDA/GDI in Session 0
 - [ ] Service installer integration
   - [ ] `sc.exe create` wrapper in installer
   - [ ] Auto-start configuration
   - [ ] Service recovery options
 
 ### Files
-- `server/windows-service/Cargo.toml`
-- `server/windows-service/src/service.rs`
-- `server/windows-service/src/ipc.rs`
-- `ee/agents/windows/src/service_client.rs`
+- `ee/remote-desktop-service/Cargo.toml`
+- `ee/remote-desktop-service/src/service.rs`
+- `ee/remote-desktop-service/src/ipc.rs`
+- `ee/remote-desktop-service/src/pipe_server.rs`
+- `ee/remote-desktop-service/src/desktop.rs`
+- `ee/remote-desktop-service/src/capture.rs`
+- `ee/remote-desktop-agent/src/service_client.rs`
 
 ### Success Criteria
 - [ ] Service installs and starts automatically
-- [ ] User-mode agent connects via named pipe
+- [x] User-mode agent connects via named pipe
 - [ ] UAC prompts visible in remote session
 - [ ] No crashes on session switch
 
@@ -119,43 +122,50 @@ Production-ready installers and full permission model.
   - [ ] Choices.xml for configuration injection
 
 #### Permission Model
-- [ ] Database schema
+- [x] Database schema
   ```sql
-  CREATE TABLE remote_desktop_permissions (
+  CREATE TABLE rd_permissions (
     permission_id UUID PRIMARY KEY,
     tenant VARCHAR NOT NULL,
     user_id UUID REFERENCES users(user_id),
     role_id UUID REFERENCES roles(role_id),
     permission_type VARCHAR NOT NULL, -- 'view', 'control', 'admin'
-    resource_type VARCHAR, -- 'all', 'device_id', 'device_group'
+    resource_type VARCHAR, -- 'all', 'company', 'device', 'device_group'
     resource_id UUID,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_by UUID NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    is_active BOOLEAN DEFAULT TRUE
   );
   ```
-- [ ] API endpoints
-  - [ ] POST `/api/remote-desktop/permissions` - grant permission
-  - [ ] GET `/api/remote-desktop/permissions?user_id=...` - list
-  - [ ] DELETE `/api/remote-desktop/permissions/:id` - revoke
-- [ ] Permission checking middleware
-  - [ ] `server/src/permissions/remote_desktop.rs`
-  - [ ] Check before signaling connection
-  - [ ] Types: `view` (watch only), `control` (input), `admin` (manage agents)
+- [x] API endpoints
+  - [x] POST `/api/v1/remote-desktop/permissions` - grant permission
+  - [x] GET `/api/v1/remote-desktop/permissions` - list with filtering
+  - [x] GET `/api/v1/remote-desktop/permissions/check` - check user permission
+  - [x] PATCH `/api/v1/remote-desktop/permissions/:id` - update permission
+  - [x] DELETE `/api/v1/remote-desktop/permissions/:id` - revoke
+- [x] Permission checking logic
+  - [x] Permission hierarchy: admin > control > view
+  - [x] Resource scope: all > company > device
+  - [x] Expiration and active status support
 
 ### Files
-- `ee/installers/windows/Product.wxs`
-- `ee/installers/windows/sign.ps1`
-- `ee/installers/macos/build-pkg.sh`
-- `ee/installers/macos/scripts/postinstall`
-- `server/migrations/XXX_remote_desktop_permissions.sql`
-- `server/src/permissions/remote_desktop.rs`
-- `server/src/routes/remote_desktop_permissions.rs`
+- [ ] `ee/installers/windows/Product.wxs`
+- [ ] `ee/installers/windows/sign.ps1`
+- [ ] `ee/installers/macos/build-pkg.sh`
+- [ ] `ee/installers/macos/scripts/postinstall`
+- [x] `server/migrations/20251205150000_add_remote_desktop_permissions.cjs`
+- [x] `server/src/lib/api/controllers/ApiRemoteDesktopController.ts` (permission methods)
+- [x] `server/src/app/api/v1/remote-desktop/permissions/route.ts`
+- [x] `server/src/app/api/v1/remote-desktop/permissions/[permissionId]/route.ts`
+- [x] `server/src/app/api/v1/remote-desktop/permissions/check/route.ts`
 
 ### Success Criteria
 - [ ] MSI installs silently with parameters
 - [ ] PKG installs and agent starts automatically
 - [ ] Both installers properly signed and verified
-- [ ] Permissions enforced in signaling handshake
-- [ ] Non-admin users cannot access remote desktop without grant
+- [x] Permissions API fully implemented
+- [x] Permission check endpoint available for signaling integration
 
 ---
 
@@ -167,47 +177,51 @@ Compliance-ready audit trail and file transfer capability.
 ### Tasks
 
 #### Audit Logging
-- [ ] Database schema
+- [x] Database schema
   ```sql
-  CREATE TABLE remote_desktop_audit_logs (
+  CREATE TABLE rd_audit_logs (
     log_id UUID PRIMARY KEY,
     tenant VARCHAR NOT NULL,
     session_id UUID NOT NULL,
     user_id UUID NOT NULL,
-    device_id UUID NOT NULL,
-    event_type VARCHAR NOT NULL, -- 'session_start', 'session_end', 'input', 'file_upload', 'file_download'
+    agent_id UUID NOT NULL,
+    event_type VARCHAR NOT NULL, -- 'session_start', 'session_end', 'input_mouse', 'file_upload_start', etc.
     event_data JSONB,
     ip_address INET,
-    timestamp TIMESTAMPTZ DEFAULT NOW()
+    user_agent TEXT,
+    timestamp TIMESTAMPTZ(6) DEFAULT NOW()
   );
-  CREATE INDEX idx_audit_tenant_timestamp ON remote_desktop_audit_logs(tenant, timestamp DESC);
+  CREATE INDEX idx_rd_audit_logs_timestamp ON rd_audit_logs(tenant, timestamp DESC);
   ```
 - [ ] Logging integration
   - [ ] Log in signaling server on WebRTC connection
   - [ ] Log in agent on input events (batched every 5s)
-  - [ ] Log file transfers with checksums
-- [ ] Query API
-  - [ ] GET `/api/remote-desktop/audit?device_id=...&start=...&end=...`
-  - [ ] Pagination, filtering by event_type
-  - [ ] Export to CSV
+  - [x] Log file transfers with checksums
+- [x] Query API
+  - [x] GET `/api/v1/remote-desktop/audit-logs` - list with filtering
+  - [x] POST `/api/v1/remote-desktop/audit-logs` - create log entry
+  - [x] GET `/api/v1/remote-desktop/audit-logs/export` - export to CSV
 
 #### File Transfer
-- [ ] Protocol design
-  - [ ] Use WebRTC data channel (separate from terminal)
-  - [ ] Message types: `FileRequest`, `FileChunk`, `FileComplete`, `FileError`
-  - [ ] Chunking: 16KB chunks with sequence numbers
-- [ ] Agent implementation
-  - [ ] `ee/agents/common/src/file_transfer.rs`
-  - [ ] Upload: read local file, send chunks
-  - [ ] Download: receive chunks, write to temp, move on complete
-  - [ ] Resume: track completed chunks, request missing
-- [ ] Browser UI
-  - [ ] File upload button in toolbar
-  - [ ] Download files from agent via right-click menu
-  - [ ] Progress bar with cancel option
-- [ ] Security
-  - [ ] Path traversal prevention
-  - [ ] Size limits (default 1GB)
+- [x] Protocol design
+  - [x] Use WebRTC data channel (separate from terminal)
+  - [x] Message types: `FileRequest`, `FileChunk`, `FileComplete`, `FileError`, etc.
+  - [x] Chunking: 16KB chunks with sequence numbers
+- [x] Agent implementation
+  - [x] `ee/remote-desktop-agent/src/file_transfer/mod.rs`
+  - [x] `ee/remote-desktop-agent/src/file_transfer/protocol.rs`
+  - [x] `ee/remote-desktop-agent/src/file_transfer/transfer.rs`
+  - [x] Upload: read local file, send chunks with SHA-256 checksum
+  - [x] Download: receive chunks, write to temp, move on complete
+  - [x] Resume: track completed chunks, request missing
+- [x] Browser UI
+  - [x] `server/src/components/remote-desktop/FileTransfer.tsx`
+  - [x] File browser with directory navigation
+  - [x] Drag-and-drop upload support
+  - [x] Progress bar with cancel option
+- [x] Security
+  - [x] Path traversal prevention (canonical path validation)
+  - [x] Size limits (default 1GB, configurable)
   - [ ] Virus scanning hook (optional integration)
 
 #### Multi-Monitor Support

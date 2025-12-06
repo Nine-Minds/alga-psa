@@ -842,6 +842,599 @@ export class ApiRemoteDesktopController {
 
   // ========== Agent Enrollment API ==========
 
+  // ========== Permission APIs ==========
+
+  /**
+   * GET /api/v1/remote-desktop/permissions
+   * List remote desktop permissions for users/roles
+   */
+  listPermissions() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const { searchParams } = new URL(request.url);
+          const userId = searchParams.get('user_id');
+          const roleId = searchParams.get('role_id');
+          const permissionType = searchParams.get('permission_type');
+          const includeExpired = searchParams.get('include_expired') === 'true';
+          const includeInactive = searchParams.get('include_inactive') === 'true';
+          const page = parseInt(searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(searchParams.get('limit') || '25'), 100);
+          const offset = (page - 1) * limit;
+
+          let query = knex('rd_permissions')
+            .where({ tenant })
+            .orderBy('created_at', 'desc');
+
+          let countQuery = knex('rd_permissions')
+            .where({ tenant })
+            .count('* as count');
+
+          if (userId) {
+            query = query.where({ user_id: userId });
+            countQuery = countQuery.where({ user_id: userId });
+          }
+
+          if (roleId) {
+            query = query.where({ role_id: roleId });
+            countQuery = countQuery.where({ role_id: roleId });
+          }
+
+          if (permissionType) {
+            query = query.where({ permission_type: permissionType });
+            countQuery = countQuery.where({ permission_type: permissionType });
+          }
+
+          if (!includeExpired) {
+            query = query.where(function() {
+              this.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
+            });
+            countQuery = countQuery.where(function() {
+              this.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
+            });
+          }
+
+          if (!includeInactive) {
+            query = query.where({ is_active: true });
+            countQuery = countQuery.where({ is_active: true });
+          }
+
+          const [permissions, countResult] = await Promise.all([
+            query.limit(limit).offset(offset).select('*'),
+            countQuery.first(),
+          ]);
+
+          const total = parseInt((countResult as any)?.count || '0');
+
+          return createPaginatedResponse(permissions, total, page, limit);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * POST /api/v1/remote-desktop/permissions
+   * Grant a remote desktop permission to a user or role
+   */
+  createPermission() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+        const userId = apiRequest.context.userId;
+        const body = await request.json();
+
+        const {
+          user_id: targetUserId,
+          role_id: targetRoleId,
+          permission_type,
+          resource_type = 'all',
+          resource_id,
+          expires_in_days,
+        } = body;
+
+        // Must have exactly one of user_id or role_id
+        if ((!targetUserId && !targetRoleId) || (targetUserId && targetRoleId)) {
+          throw new ValidationError('Must provide exactly one of user_id or role_id');
+        }
+
+        // Validate permission_type
+        if (!['view', 'control', 'admin'].includes(permission_type)) {
+          throw new ValidationError('permission_type must be one of: view, control, admin');
+        }
+
+        // Validate resource_type
+        if (!['all', 'company', 'device', 'device_group'].includes(resource_type)) {
+          throw new ValidationError('resource_type must be one of: all, company, device, device_group');
+        }
+
+        // resource_id required for non-'all' resource types
+        if (resource_type !== 'all' && !resource_id) {
+          throw new ValidationError('resource_id is required when resource_type is not "all"');
+        }
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          // Verify target user exists
+          if (targetUserId) {
+            const user = await knex('users').where({ tenant, user_id: targetUserId }).first();
+            if (!user) {
+              throw new NotFoundError('Target user not found');
+            }
+          }
+
+          // Verify target role exists
+          if (targetRoleId) {
+            const role = await knex('roles').where({ tenant, role_id: targetRoleId }).first();
+            if (!role) {
+              throw new NotFoundError('Target role not found');
+            }
+          }
+
+          // Verify resource exists based on type
+          if (resource_type === 'device') {
+            const agent = await knex('rd_agents').where({ tenant, agent_id: resource_id }).first();
+            if (!agent) {
+              throw new NotFoundError('Device (agent) not found');
+            }
+          } else if (resource_type === 'company') {
+            const company = await knex('companies').where({ tenant, company_id: resource_id }).first();
+            if (!company) {
+              throw new NotFoundError('Company not found');
+            }
+          }
+
+          // Calculate expiration if provided
+          let expiresAt = null;
+          if (expires_in_days) {
+            expiresAt = new Date(Date.now() + expires_in_days * 24 * 3600 * 1000);
+          }
+
+          // Check for existing permission
+          const existingCondition: any = {
+            tenant,
+            permission_type,
+            resource_type,
+            is_active: true,
+          };
+
+          if (targetUserId) existingCondition.user_id = targetUserId;
+          if (targetRoleId) existingCondition.role_id = targetRoleId;
+          if (resource_id) existingCondition.resource_id = resource_id;
+
+          const existingPermission = await knex('rd_permissions')
+            .where(existingCondition)
+            .whereNull('expires_at')
+            .orWhere('expires_at', '>', knex.fn.now())
+            .first();
+
+          if (existingPermission) {
+            throw new BadRequestError('An active permission with these settings already exists');
+          }
+
+          const [permission] = await knex('rd_permissions')
+            .insert({
+              tenant,
+              user_id: targetUserId || null,
+              role_id: targetRoleId || null,
+              permission_type,
+              resource_type,
+              resource_id: resource_id || null,
+              created_by: userId,
+              expires_at: expiresAt,
+            })
+            .returning('*');
+
+          return createSuccessResponse(permission, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/remote-desktop/permissions/:permissionId
+   * Get a specific permission
+   */
+  getPermission() {
+    return async (request: NextRequest, context: { params: Promise<{ permissionId: string }> }): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+        const { permissionId } = await context.params;
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const permission = await knex('rd_permissions')
+            .where({ tenant, permission_id: permissionId })
+            .first();
+
+          if (!permission) {
+            throw new NotFoundError('Permission not found');
+          }
+
+          return createSuccessResponse(permission);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * DELETE /api/v1/remote-desktop/permissions/:permissionId
+   * Revoke a permission
+   */
+  deletePermission() {
+    return async (request: NextRequest, context: { params: Promise<{ permissionId: string }> }): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+        const { permissionId } = await context.params;
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const deleted = await knex('rd_permissions')
+            .where({ tenant, permission_id: permissionId })
+            .delete();
+
+          if (deleted === 0) {
+            throw new NotFoundError('Permission not found');
+          }
+
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * PATCH /api/v1/remote-desktop/permissions/:permissionId
+   * Update a permission (enable/disable, change expiration)
+   */
+  updatePermission() {
+    return async (request: NextRequest, context: { params: Promise<{ permissionId: string }> }): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+        const { permissionId } = await context.params;
+        const body = await request.json();
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const existing = await knex('rd_permissions')
+            .where({ tenant, permission_id: permissionId })
+            .first();
+
+          if (!existing) {
+            throw new NotFoundError('Permission not found');
+          }
+
+          const updateData: any = {};
+
+          if (typeof body.is_active === 'boolean') {
+            updateData.is_active = body.is_active;
+          }
+
+          if (body.expires_at !== undefined) {
+            updateData.expires_at = body.expires_at;
+          }
+
+          if (Object.keys(updateData).length === 0) {
+            throw new ValidationError('No valid fields to update');
+          }
+
+          const [updated] = await knex('rd_permissions')
+            .where({ tenant, permission_id: permissionId })
+            .update(updateData)
+            .returning('*');
+
+          return createSuccessResponse(updated);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/remote-desktop/permissions/check
+   * Check if a user has permission for a specific action/resource
+   */
+  checkPermission() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+
+        const { searchParams } = new URL(request.url);
+        const targetUserId = searchParams.get('user_id');
+        const permissionType = searchParams.get('permission_type');
+        const agentId = searchParams.get('agent_id');
+
+        if (!targetUserId || !permissionType) {
+          throw new ValidationError('user_id and permission_type are required');
+        }
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          // Get user's roles
+          const userRoles = await knex('user_roles')
+            .where({ tenant, user_id: targetUserId })
+            .select('role_id');
+          const roleIds = userRoles.map((r: any) => r.role_id);
+
+          // Get agent's company if checking device-specific
+          let agentCompanyId: string | null = null;
+          if (agentId) {
+            const agent = await knex('rd_agents')
+              .where({ tenant, agent_id: agentId })
+              .select('company_id')
+              .first();
+            agentCompanyId = agent?.company_id || null;
+          }
+
+          // Build permission check query
+          let query = knex('rd_permissions')
+            .where({ tenant, is_active: true })
+            .where(function() {
+              this.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
+            })
+            .where(function() {
+              // Check user permissions
+              this.where({ user_id: targetUserId })
+                // Or role permissions
+                .orWhereIn('role_id', roleIds);
+            });
+
+          // Check permission hierarchy (admin > control > view)
+          const permissionHierarchy = ['admin', 'control', 'view'];
+          const requiredLevel = permissionHierarchy.indexOf(permissionType);
+          const validTypes = permissionHierarchy.slice(0, requiredLevel + 1);
+          query = query.whereIn('permission_type', validTypes);
+
+          // Check resource scope
+          query = query.where(function() {
+            this.where({ resource_type: 'all' });
+
+            if (agentCompanyId) {
+              this.orWhere(function() {
+                this.where({ resource_type: 'company', resource_id: agentCompanyId });
+              });
+            }
+
+            if (agentId) {
+              this.orWhere(function() {
+                this.where({ resource_type: 'device', resource_id: agentId });
+              });
+            }
+          });
+
+          const permission = await query.first();
+
+          return createSuccessResponse({
+            has_permission: !!permission,
+            permission_type: permission?.permission_type || null,
+            resource_type: permission?.resource_type || null,
+          });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  // ========== Audit Log APIs ==========
+
+  /**
+   * GET /api/v1/remote-desktop/audit-logs
+   * Query audit logs with filtering
+   */
+  listAuditLogs() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const { searchParams } = new URL(request.url);
+          const sessionId = searchParams.get('session_id');
+          const userId = searchParams.get('user_id');
+          const agentId = searchParams.get('agent_id');
+          const eventType = searchParams.get('event_type');
+          const startDate = searchParams.get('start_date');
+          const endDate = searchParams.get('end_date');
+          const page = parseInt(searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 500);
+          const offset = (page - 1) * limit;
+
+          let query = knex('rd_audit_logs')
+            .where({ tenant })
+            .orderBy('timestamp', 'desc');
+
+          let countQuery = knex('rd_audit_logs')
+            .where({ tenant })
+            .count('* as count');
+
+          if (sessionId) {
+            query = query.where({ session_id: sessionId });
+            countQuery = countQuery.where({ session_id: sessionId });
+          }
+
+          if (userId) {
+            query = query.where({ user_id: userId });
+            countQuery = countQuery.where({ user_id: userId });
+          }
+
+          if (agentId) {
+            query = query.where({ agent_id: agentId });
+            countQuery = countQuery.where({ agent_id: agentId });
+          }
+
+          if (eventType) {
+            query = query.where({ event_type: eventType });
+            countQuery = countQuery.where({ event_type: eventType });
+          }
+
+          if (startDate) {
+            query = query.where('timestamp', '>=', new Date(startDate));
+            countQuery = countQuery.where('timestamp', '>=', new Date(startDate));
+          }
+
+          if (endDate) {
+            query = query.where('timestamp', '<=', new Date(endDate));
+            countQuery = countQuery.where('timestamp', '<=', new Date(endDate));
+          }
+
+          const [logs, countResult] = await Promise.all([
+            query.limit(limit).offset(offset).select('*'),
+            countQuery.first(),
+          ]);
+
+          const total = parseInt((countResult as any)?.count || '0');
+
+          return createPaginatedResponse(logs, total, page, limit);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * POST /api/v1/remote-desktop/audit-logs
+   * Create an audit log entry (called by agents/signaling server)
+   */
+  createAuditLog() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+        const body = await request.json();
+
+        const { session_id, user_id, agent_id, event_type, event_data, ip_address } = body;
+
+        if (!session_id || !user_id || !agent_id || !event_type) {
+          throw new ValidationError('Missing required fields: session_id, user_id, agent_id, event_type');
+        }
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          // Verify session exists
+          const session = await knex('rd_sessions')
+            .where({ tenant, session_id })
+            .first();
+
+          if (!session) {
+            throw new NotFoundError('Session not found');
+          }
+
+          const [log] = await knex('rd_audit_logs')
+            .insert({
+              tenant,
+              session_id,
+              user_id,
+              agent_id,
+              event_type,
+              event_data: event_data || {},
+              ip_address: ip_address || null,
+              user_agent: request.headers.get('user-agent') || null,
+            })
+            .returning('*');
+
+          return createSuccessResponse(log, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/remote-desktop/audit-logs/export
+   * Export audit logs as CSV
+   */
+  exportAuditLogs() {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(request);
+        const tenant = apiRequest.context.tenant;
+
+        return await runWithTenant(tenant, async () => {
+          const knex = await getConnection(tenant);
+
+          const { searchParams } = new URL(request.url);
+          const sessionId = searchParams.get('session_id');
+          const userId = searchParams.get('user_id');
+          const agentId = searchParams.get('agent_id');
+          const startDate = searchParams.get('start_date');
+          const endDate = searchParams.get('end_date');
+          const maxRows = Math.min(parseInt(searchParams.get('max_rows') || '10000'), 50000);
+
+          let query = knex('rd_audit_logs')
+            .where({ tenant })
+            .orderBy('timestamp', 'asc')
+            .limit(maxRows);
+
+          if (sessionId) query = query.where({ session_id: sessionId });
+          if (userId) query = query.where({ user_id: userId });
+          if (agentId) query = query.where({ agent_id: agentId });
+          if (startDate) query = query.where('timestamp', '>=', new Date(startDate));
+          if (endDate) query = query.where('timestamp', '<=', new Date(endDate));
+
+          const logs = await query.select('*');
+
+          // Convert to CSV
+          const headers = ['log_id', 'session_id', 'user_id', 'agent_id', 'event_type', 'timestamp', 'ip_address', 'event_data'];
+          const csv = [
+            headers.join(','),
+            ...logs.map((log: any) =>
+              headers.map(h => {
+                const value = h === 'event_data' ? JSON.stringify(log[h]) : log[h];
+                // Escape quotes and wrap in quotes if contains comma
+                const stringValue = String(value || '');
+                if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                  return `"${stringValue.replace(/"/g, '""')}"`;
+                }
+                return stringValue;
+              }).join(',')
+            ),
+          ].join('\n');
+
+          return new NextResponse(csv, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/csv',
+              'Content-Disposition': `attachment; filename=audit-logs-${new Date().toISOString().split('T')[0]}.csv`,
+            },
+          });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  // ========== Agent Enrollment API ==========
+
   /**
    * POST /api/v1/remote-desktop/agents/enroll
    * Enroll an agent using an enrollment code (no authentication required)

@@ -1,0 +1,74 @@
+[package]
+name = "rd-service"
+version = "0.1.0"
+edition = "2021"
+description = "Remote Desktop Windows Service for Alga PSA - Runs as LocalSystem in Session 0 for UAC/Secure Desktop support"
+authors = ["Alga PSA <engineering@alga.io>"]
+license = "Proprietary"
+
+[dependencies]
+# Windows service support
+windows-service = "0.7"
+
+# Windows API bindings
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_RemoteDesktop",
+    "Win32_System_StationsAndDesktops",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Security",
+    "Win32_System_Pipes",
+    "Win32_Storage_FileSystem",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_System_SystemServices",
+    "Win32_System_IO",
+] }
+
+# Async runtime
+tokio = { version = "1.40", features = ["full", "sync", "net", "io-util"] }
+futures = "0.3"
+
+# Serialization for IPC protocol
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# UUID generation
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# Configuration
+toml = "0.8"
+
+# Screen capture (for Session 0)
+scrap = "0.5"
+
+# Image encoding
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+
+# Base64 encoding
+base64 = "0.22"
+
+[features]
+default = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[[bin]]
+name = "alga-remote-desktop-service"
+path = "src/main.rs"
