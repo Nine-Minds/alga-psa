@@ -1,0 +1,42 @@
+# Remote Desktop Agent Configuration
+# This file should be configured during agent registration
+
+[agent]
+# Agent ID assigned during registration (UUID)
+agent_id = ""
+# User-friendly agent name
+agent_name = ""
+# Secure connection token for WebSocket auth
+connection_token = ""
+
+[server]
+# WebSocket signaling server URL
+signaling_url = "ws://localhost:3000/ws/rd-signal"
+# REST API URL for health checks and registration
+api_url = "http://localhost:3000/api/v1/remote-desktop"
+
+[capture]
+# Target frames per second for screen capture
+fps = 15
+# JPEG quality (0-100, higher = better quality, larger size)
+quality = 75
+# Maximum width for captured frames (0 = native resolution)
+max_width = 1920
+# Maximum height for captured frames (0 = native resolution)
+max_height = 1080
+
+[network]
+# STUN servers for WebRTC NAT traversal
+stun_servers = [
+    "stun:stun.l.google.com:19302",
+    "stun:stun1.l.google.com:19302"
+]
+# Reconnection settings
+reconnect_interval_ms = 5000
+max_reconnect_attempts = 10
+
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+# Log file path (empty = stdout only)
+file = ""

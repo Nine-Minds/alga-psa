@@ -1,0 +1,77 @@
+[package]
+name = "rd-agent"
+version = "0.1.0"
+edition = "2021"
+description = "Remote Desktop Agent for Alga PSA"
+authors = ["Alga PSA <engineering@alga.io>"]
+license = "Proprietary"
+
+[dependencies]
+# WebRTC
+webrtc = "0.11"
+
+# WebSocket client
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+tungstenite = "0.24"
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+futures = "0.3"
+futures-util = "0.3"
+
+# Screen capture
+scrap = "0.5"
+
+# Input injection
+enigo = { version = "0.3", features = ["serde"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# UUID generation
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# HTTP client for API calls
+reqwest = { version = "0.12", features = ["json", "native-tls"] }
+
+# Image encoding
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+
+# Base64 encoding
+base64 = "0.22"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# URL parsing
+url = "2.5"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[[bin]]
+name = "rd-agent"
+path = "src/main.rs"
