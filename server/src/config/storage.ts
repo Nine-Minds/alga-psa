@@ -38,9 +38,9 @@ async function buildStorageConfig(): Promise<StorageConfig> {
         process.env.STORAGE_LOCAL_BASE_PATH ||
         path.resolve(process.cwd(), 'tmp', 'storage');
 
+    // Allow all file types by default (use */* wildcard)
     const defaultLocalMimeTypes =
-        process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES ||
-        'image/*,application/pdf,text/plain,application/zip,video/*,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || '*/*';
 
     cachedConfig = {
         defaultProvider: process.env.STORAGE_DEFAULT_PROVIDER || 'local',
@@ -61,7 +61,7 @@ async function buildStorageConfig(): Promise<StorageConfig> {
                 secretKey: s3SecretKey,
                 endpoint: process.env.STORAGE_S3_ENDPOINT,
                 maxFileSize: Number(process.env.STORAGE_S3_MAX_FILE_SIZE || '524288000'), // 500MB
-                allowedMimeTypes: (process.env.STORAGE_S3_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,video/*').split(','),
+                allowedMimeTypes: (process.env.STORAGE_S3_ALLOWED_MIME_TYPES || '*/*').split(','),
                 retentionDays: parseInt(process.env.STORAGE_S3_RETENTION_DAYS || '30'),
             },
         },
@@ -91,15 +91,20 @@ export async function validateFileUpload(mimeType: string, fileSize: number): Pr
         throw new Error(`File size exceeds limit of ${provider.maxFileSize} bytes`);
     }
 
-    const isAllowedMimeType = provider.allowedMimeTypes.some(allowed => {
-        if (allowed.endsWith('/*')) {
-            const prefix = allowed.slice(0, -2);
-            return mimeType.startsWith(prefix);
-        }
-        return mimeType === allowed;
-    });
+    // Check if all file types are allowed (via */* wildcard)
+    const allowsAllTypes = provider.allowedMimeTypes.includes('*/*');
 
-    if (!isAllowedMimeType) {
-        throw new Error('File type not allowed');
+    if (!allowsAllTypes) {
+        const isAllowedMimeType = provider.allowedMimeTypes.some(allowed => {
+            if (allowed.endsWith('/*')) {
+                const prefix = allowed.slice(0, -2);
+                return mimeType.startsWith(prefix);
+            }
+            return mimeType === allowed;
+        });
+
+        if (!isAllowedMimeType) {
+            throw new Error('File type not allowed');
+        }
     }
 }
