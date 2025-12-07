@@ -35,6 +35,7 @@ import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from 'server/src/components/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
+import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import Documents from 'server/src/components/documents/Documents';
@@ -792,6 +793,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 </Alert>
               )}
 
+              {/* Contract identity - Details, Snapshot, Client */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
                   <CardHeader className="pb-3">
@@ -1040,6 +1042,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Contract Overview - What's included at a glance */}
+              <ContractOverview
+                contractId={contractId}
+                onNavigateToLines={() => handleTabChange('lines')}
+              />
 
               <Card>
                 <CardHeader className="pb-3">
