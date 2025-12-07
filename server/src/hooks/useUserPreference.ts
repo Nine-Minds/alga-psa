@@ -9,6 +9,10 @@ interface UseUserPreferenceOptions<T> {
   localStorageKey?: string;
   onError?: (error: Error) => void;
   debounceMs?: number;
+  /** If provided, skips getCurrentUser() call - use when userId is already known */
+  userId?: string;
+  /** If true, skips server fetch entirely - uses localStorage/defaults only */
+  skipServerFetch?: boolean;
 }
 
 interface UseUserPreferenceReturn<T> {
@@ -28,7 +32,9 @@ export function useUserPreference<T>(
     defaultValue,
     localStorageKey = preferenceKey,
     onError,
-    debounceMs = 500
+    debounceMs = 500,
+    userId: providedUserId,
+    skipServerFetch = false
   } = options;
 
   const { toast } = useToast();
@@ -69,6 +75,12 @@ export function useUserPreference<T>(
     // Only load from server after hydration
     if (!isHydrated) return;
 
+    // Skip server fetch if requested - use localStorage/defaults only
+    if (skipServerFetch) {
+      setIsLoading(false);
+      return;
+    }
+
     const loadPreference = async () => {
       // Cancel any pending operations
       if (abortControllerRef.current) {
@@ -80,11 +92,18 @@ export function useUserPreference<T>(
         setIsLoading(true);
         setError(null);
 
-        const user = await getCurrentUser();
-        setIsUserLoggedIn(!!user);
+        // Use provided userId if available, otherwise fetch current user
+        let userId: string | undefined = providedUserId;
+        if (!userId) {
+          const user = await getCurrentUser();
+          userId = user?.user_id;
+          setIsUserLoggedIn(!!user);
+        } else {
+          setIsUserLoggedIn(true);
+        }
 
-        if (user && !abortControllerRef.current.signal.aborted) {
-          const serverValue = await getUserPreference(user.user_id, preferenceKey);
+        if (userId && !abortControllerRef.current.signal.aborted) {
+          const serverValue = await getUserPreference(userId, preferenceKey);
 
           if (!abortControllerRef.current.signal.aborted) {
             if (serverValue !== null) {
@@ -130,25 +149,36 @@ export function useUserPreference<T>(
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [isHydrated, preferenceKey, localStorageKey, onError]);
+  }, [isHydrated, preferenceKey, localStorageKey, onError, providedUserId, skipServerFetch]);
 
   // Save preference with debouncing
   const savePreference = useCallback(async (newValue: T) => {
+    // Skip server sync if requested
+    if (skipServerFetch) {
+      return;
+    }
+
     // Skip if value hasn't changed
     if (lastSavedValueRef.current === newValue) {
       return;
     }
 
     try {
-      const user = await getCurrentUser();
-      if (user) {
-        await setUserPreference(user.user_id, preferenceKey, newValue);
+      // Use provided userId if available, otherwise fetch current user
+      let userId: string | undefined = providedUserId;
+      if (!userId) {
+        const user = await getCurrentUser();
+        userId = user?.user_id;
+      }
+
+      if (userId) {
+        await setUserPreference(userId, preferenceKey, newValue);
         lastSavedValueRef.current = newValue;
       }
     } catch (err) {
       const error = err as Error;
       setError(error);
-      
+
       // Show error toast
       toast({
         title: "Failed to save preference",
@@ -159,10 +189,10 @@ export function useUserPreference<T>(
       if (onError) {
         onError(error);
       }
-      
+
       throw error; // Re-throw for proper error propagation
     }
-  }, [preferenceKey, toast, onError]);
+  }, [preferenceKey, toast, onError, providedUserId, skipServerFetch]);
 
   // Set value with optimistic updates
   const setValue = useCallback((newValue: T | ((prev: T) => T)) => {

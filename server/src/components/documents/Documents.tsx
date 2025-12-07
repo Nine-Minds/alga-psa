@@ -117,44 +117,61 @@ const Documents = ({
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
 
 
-  // Folder functionality state (only used when no entity is specified)
-  // Use user preference for view mode with localStorage fallback
+  // Determine if we're in folder mode (no entity specified) early
+  // This affects whether we need user preferences
+  const inFolderMode = !entityId && !entityType;
+
+  // User preferences are only needed in folder mode (main Documents page)
+  // In entity mode (contract/ticket documents), we use simple defaults
   const {
-    value: viewMode,
-    setValue: setViewMode
+    value: folderViewMode,
+    setValue: setFolderViewMode
   } = useUserPreference<'grid' | 'list'>(
     DOCUMENT_VIEW_MODE_SETTING,
     {
       defaultValue: 'grid',
       localStorageKey: DOCUMENT_VIEW_MODE_SETTING,
-      debounceMs: 300
+      debounceMs: 300,
+      userId,
+      skipServerFetch: !inFolderMode // Only fetch from server in folder mode
     }
   );
 
-  // Use user preferences for page sizes (separate for grid and list views)
   const {
-    value: gridPageSize,
-    setValue: setGridPageSize
+    value: folderGridPageSize,
+    setValue: setFolderGridPageSize
   } = useUserPreference<number>(
     DOCUMENT_GRID_PAGE_SIZE_SETTING,
     {
       defaultValue: 9,
       localStorageKey: DOCUMENT_GRID_PAGE_SIZE_SETTING,
-      debounceMs: 300
+      debounceMs: 300,
+      userId,
+      skipServerFetch: !inFolderMode
     }
   );
 
   const {
-    value: listPageSize,
-    setValue: setListPageSize
+    value: folderListPageSize,
+    setValue: setFolderListPageSize
   } = useUserPreference<number>(
     DOCUMENT_LIST_PAGE_SIZE_SETTING,
     {
       defaultValue: 10,
       localStorageKey: DOCUMENT_LIST_PAGE_SIZE_SETTING,
-      debounceMs: 300
+      debounceMs: 300,
+      userId,
+      skipServerFetch: !inFolderMode
     }
   );
+
+  // In folder mode, use preferences; in entity mode, use defaults
+  const viewMode = inFolderMode ? folderViewMode : 'grid';
+  const setViewMode = setFolderViewMode;
+  const gridPageSize = inFolderMode ? folderGridPageSize : 9;
+  const setGridPageSize = setFolderGridPageSize;
+  const listPageSize = inFolderMode ? folderListPageSize : 10;
+  const setListPageSize = setFolderListPageSize;
 
   // Current page size based on view mode
   const pageSize = viewMode === 'grid' ? gridPageSize : listPageSize;
@@ -198,9 +215,6 @@ const Documents = ({
   // Preview modal for images/videos/PDFs
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
-
-  // Determine if we're in folder mode (no entity specified)
-  const inFolderMode = !entityId && !entityType;
 
   useEffect(() => {
     if (initialDocuments && initialDocuments.length > 0) {
