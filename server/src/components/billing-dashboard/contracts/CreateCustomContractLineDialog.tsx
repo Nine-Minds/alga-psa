@@ -35,6 +35,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('advance');
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -209,6 +210,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         contract_line_name: planName,
         contract_line_type: planType!,
         billing_frequency: billingFrequency,
+        billing_timing: billingTiming,
         services: serviceConfigs,
         ...(planType === 'Fixed' ? {
           base_rate: baseRate ?? null,
@@ -236,6 +238,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     setPlanName('');
     setPlanType(null);
     setBillingFrequency('monthly');
+    setBillingTiming('advance');
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);
@@ -293,7 +296,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       <div className="space-y-4">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>Fixed Fee Services:</strong> These services have a set recurring price.
+            <strong>Fixed Fee Services:</strong> The contract line's base rate (set below) is the billed amount.
+            Service quantity is used for <em>tax allocation</em> — it determines how the fixed fee is proportionally
+            attributed across services for tax calculations.
           </p>
         </div>
 
@@ -322,7 +327,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    Quantity
+                    Quantity (for tax allocation)
                   </Label>
                   <Input
                     id={`quantity-${index}`}
@@ -877,6 +882,21 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   placeholder="Select billing frequency"
                   className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
                 />
+              </div>
+              <div>
+                <Label htmlFor="billing-timing">Billing Timing</Label>
+                <CustomSelect
+                  id="billing-timing"
+                  value={billingTiming}
+                  onValueChange={(value) => setBillingTiming(value as 'arrears' | 'advance')}
+                  options={[
+                    { value: 'advance', label: 'Advance (bill at start of period)' },
+                    { value: 'arrears', label: 'Arrears (bill at end of period)' }
+                  ]}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Advance billing is typical for fixed fees; arrears for time/usage-based services.
+                </p>
               </div>
             </div>
           </section>

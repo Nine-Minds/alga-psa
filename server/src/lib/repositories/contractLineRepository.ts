@@ -267,6 +267,11 @@ async function cloneTemplateLineToContract(
     .where({ tenant, template_line_id: templateLineId })
     .first();
 
+  // Query template terms to get any overridden values
+  const templateTerms = await trx('contract_template_line_terms')
+    .where({ tenant, template_line_id: templateLineId })
+    .first();
+
   const now = trx.fn.now();
   const newContractLineId = uuidv4();
   const effectiveRate =
@@ -274,65 +279,34 @@ async function cloneTemplateLineToContract(
     templateLine.custom_rate ??
     (templateFixedConfig?.base_rate != null ? Number(templateFixedConfig.base_rate) : null);
 
+  // Insert directly into contract_lines with all values (terms columns are now inline)
   await trx('contract_lines').insert({
     tenant,
     contract_line_id: newContractLineId,
     contract_id: contractId,
     contract_line_name: templateLine.template_line_name,
     description: templateLine.description ?? null,
-    billing_frequency: templateLine.billing_frequency,
+    billing_frequency: templateTerms?.billing_frequency ?? templateLine.billing_frequency,
     is_custom: false,
     contract_line_type: templateLine.line_type ?? 'Fixed',
     service_category: templateLine.service_category ?? null,
     is_active: templateLine.is_active ?? true,
-    enable_overtime: templateLine.enable_overtime ?? false,
-    overtime_rate: templateLine.overtime_rate ?? null,
-    overtime_threshold: templateLine.overtime_threshold ?? null,
-    enable_after_hours_rate: templateLine.enable_after_hours_rate ?? false,
-    after_hours_multiplier: templateLine.after_hours_multiplier ?? null,
+    enable_overtime: templateTerms?.enable_overtime ?? templateLine.enable_overtime ?? false,
+    overtime_rate: templateTerms?.overtime_rate ?? templateLine.overtime_rate ?? null,
+    overtime_threshold: templateTerms?.overtime_threshold ?? templateLine.overtime_threshold ?? null,
+    enable_after_hours_rate: templateTerms?.enable_after_hours_rate ?? templateLine.enable_after_hours_rate ?? false,
+    after_hours_multiplier: templateTerms?.after_hours_multiplier ?? templateLine.after_hours_multiplier ?? null,
+    minimum_billable_time: templateTerms?.minimum_billable_time ?? templateLine.minimum_billable_time ?? null,
+    round_up_to_nearest: templateTerms?.round_up_to_nearest ?? templateLine.round_up_to_nearest ?? null,
     created_at: now,
     updated_at: now,
     is_template: false,
     custom_rate: effectiveRate,
     display_order: templateLine.display_order ?? 0,
-    billing_timing: templateLine.billing_timing ?? 'arrears',
+    billing_timing: templateTerms?.billing_timing ?? templateLine.billing_timing ?? 'arrears',
     enable_proration: templateFixedConfig?.enable_proration ?? false,
     billing_cycle_alignment: templateFixedConfig?.billing_cycle_alignment ?? 'start',
   });
-
-  const templateTerms = await trx('contract_template_line_terms')
-    .where({ tenant, template_line_id: templateLineId })
-    .first();
-
-  if (templateTerms) {
-    await trx('contract_line_template_terms')
-      .insert({
-        tenant,
-        contract_line_id: newContractLineId,
-        billing_frequency: templateTerms.billing_frequency ?? templateLine.billing_frequency ?? null,
-        enable_overtime: templateTerms.enable_overtime ?? templateLine.enable_overtime ?? false,
-        overtime_rate: templateTerms.overtime_rate ?? templateLine.overtime_rate ?? null,
-        overtime_threshold: templateTerms.overtime_threshold ?? templateLine.overtime_threshold ?? null,
-        enable_after_hours_rate: templateTerms.enable_after_hours_rate ?? templateLine.enable_after_hours_rate ?? false,
-        after_hours_multiplier: templateTerms.after_hours_multiplier ?? templateLine.after_hours_multiplier ?? null,
-        minimum_billable_time: templateTerms.minimum_billable_time ?? null,
-        round_up_to_nearest: templateTerms.round_up_to_nearest ?? null,
-        created_at: templateTerms.created_at ?? now,
-        updated_at: now,
-      })
-      .onConflict(['tenant', 'contract_line_id'])
-      .merge({
-        billing_frequency: templateTerms.billing_frequency ?? templateLine.billing_frequency ?? null,
-        enable_overtime: templateTerms.enable_overtime ?? templateLine.enable_overtime ?? false,
-        overtime_rate: templateTerms.overtime_rate ?? templateLine.overtime_rate ?? null,
-        overtime_threshold: templateTerms.overtime_threshold ?? templateLine.overtime_threshold ?? null,
-        enable_after_hours_rate: templateTerms.enable_after_hours_rate ?? templateLine.enable_after_hours_rate ?? false,
-        after_hours_multiplier: templateTerms.after_hours_multiplier ?? templateLine.after_hours_multiplier ?? null,
-        minimum_billable_time: templateTerms.minimum_billable_time ?? null,
-        round_up_to_nearest: templateTerms.round_up_to_nearest ?? null,
-        updated_at: now,
-      });
-  }
 
   const templateServices = await trx('contract_template_line_services')
     .where({ tenant, template_line_id: templateLineId });

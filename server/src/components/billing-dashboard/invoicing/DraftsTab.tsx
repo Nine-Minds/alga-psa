@@ -254,7 +254,11 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     {
       title: 'Amount',
       dataIndex: 'total_amount',
-      render: (value) => `$${(Number(value) / 100).toFixed(2)}`,
+      render: (value, record) => new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: record.currencyCode || 'USD',
+        minimumFractionDigits: 2
+      }).format(Number(value) / 100),
     },
     {
       title: 'Invoice Date',

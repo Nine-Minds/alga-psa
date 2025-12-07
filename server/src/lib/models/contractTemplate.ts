@@ -212,11 +212,6 @@ const ContractTemplateModel = {
           .whereIn('contract_line_id', lineIds)
           .delete();
 
-        await trx('contract_line_template_terms')
-          .where({ tenant })
-          .whereIn('contract_line_id', lineIds)
-          .delete();
-
         await trx('contract_lines')
           .where({ tenant })
           .whereIn('contract_line_id', lineIds)

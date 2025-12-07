@@ -31,12 +31,9 @@ export async function ensureTemplateLineSnapshot(
     throw new Error(`Base contract line ${contractLineId} not found for tenant ${tenant}`);
   }
 
-  const terms = await knex('contract_line_template_terms')
-    .where({ tenant, contract_line_id: contractLineId })
-    .first();
-
   const now = knex.fn.now();
 
+  // All terms columns are now stored directly on contract_lines
   await knex('contract_template_lines')
     .insert({
       tenant,
@@ -48,15 +45,13 @@ export async function ensureTemplateLineSnapshot(
       line_type: contractLine.contract_line_type ?? null,
       service_category: contractLine.service_category ?? null,
       is_active: contractLine.is_active ?? true,
-      enable_overtime: terms?.enable_overtime ?? contractLine.enable_overtime ?? false,
-      overtime_rate: terms?.overtime_rate ?? contractLine.overtime_rate ?? null,
-      overtime_threshold: terms?.overtime_threshold ?? contractLine.overtime_threshold ?? null,
-      enable_after_hours_rate:
-        terms?.enable_after_hours_rate ?? contractLine.enable_after_hours_rate ?? false,
-      after_hours_multiplier:
-        terms?.after_hours_multiplier ?? contractLine.after_hours_multiplier ?? null,
-      minimum_billable_time: terms?.minimum_billable_time ?? null,
-      round_up_to_nearest: terms?.round_up_to_nearest ?? null,
+      enable_overtime: contractLine.enable_overtime ?? false,
+      overtime_rate: contractLine.overtime_rate ?? null,
+      overtime_threshold: contractLine.overtime_threshold ?? null,
+      enable_after_hours_rate: contractLine.enable_after_hours_rate ?? false,
+      after_hours_multiplier: contractLine.after_hours_multiplier ?? null,
+      minimum_billable_time: contractLine.minimum_billable_time ?? null,
+      round_up_to_nearest: contractLine.round_up_to_nearest ?? null,
       created_at: contractLine.created_at ?? now,
       updated_at: now,
     })

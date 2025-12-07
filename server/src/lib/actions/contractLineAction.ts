@@ -32,42 +32,11 @@ export async function getContractLines(): Promise<IContractLine[]> {
             }
 
             const plans = await ContractLine.getAll(trx);
-            const ids = plans
-                .map((plan) => plan.contract_line_id)
-                .filter((id): id is string => Boolean(id));
-
-            let termsMap = new Map<string, { billing_timing: 'arrears' | 'advance' }>();
-            if (ids.length > 0) {
-                // Check if billing_timing column exists before querying it
-                const hasColumn = await trx.schema.hasColumn('contract_line_template_terms', 'billing_timing');
-
-                if (hasColumn) {
-                    const termRows = await trx('contract_line_template_terms')
-                        .where({ tenant })
-                        .whereIn('contract_line_id', ids)
-                        .select('contract_line_id', 'billing_timing');
-
-                    termsMap = new Map(
-                        termRows.map((row) => [
-                            row.contract_line_id,
-                            { billing_timing: (row.billing_timing ?? 'arrears') as 'arrears' | 'advance' },
-                        ])
-                    );
-                } else {
-                    // If column doesn't exist, add it with migration-like logic
-                    try {
-                        await trx.schema.alterTable('contract_line_template_terms', (table) => {
-                            table.string('billing_timing', 16).notNullable().defaultTo('arrears');
-                        });
-                    } catch (e) {
-                        // Column may already exist due to concurrent migrations, continue
-                    }
-                }
-            }
-
+            // billing_timing is stored directly on contract_lines (added in migration 20251025120000)
+            // No need to query a separate terms table
             const enrichedPlans = plans.map((plan) => ({
                 ...plan,
-                billing_timing: termsMap.get(plan.contract_line_id ?? '')?.billing_timing ?? 'arrears',
+                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
             }));
 
             return enrichedPlans;
@@ -137,14 +106,11 @@ export async function getContractLineById(planId: string): Promise<IContractLine
                 return null;
             }
 
-            const terms = await trx('contract_line_template_terms')
-                .where({ tenant, contract_line_id: planId })
-                .first();
-
+            // billing_timing is stored directly on contract_lines
             return {
                 ...plan,
-                billing_timing: (terms?.billing_timing ?? 'arrears') as 'arrears' | 'advance',
-            }; // The model method should return the plan with necessary fields
+                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+            };
         });
     } catch (error) {
         console.error(`Error fetching contract line with ID ${planId}:`, error);
@@ -246,13 +212,10 @@ export async function updateContractLine(
             // Ensure ContractLine.update handles empty updateData gracefully if all fields were removed
             const plan = await ContractLine.update(trx, planId, safeUpdateData);
 
-            const terms = await trx('contract_line_template_terms')
-                .where({ tenant, contract_line_id: planId })
-                .first();
-
+            // billing_timing is stored directly on contract_lines
             const enrichedPlan: IContractLine = {
                 ...plan,
-                billing_timing: (terms?.billing_timing ?? 'arrears') as 'arrears' | 'advance',
+                billing_timing: (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance',
             };
 
             // Track analytics
@@ -306,53 +269,21 @@ export async function upsertContractLineTerms(
             throw new Error('Advance billing is only supported for fixed contract lines.');
         }
 
-        const existingTerms = await trx('contract_line_template_terms')
+        // Update billing_timing directly on contract_lines table
+        // (migration 20251025120000 added this column)
+        await trx('contract_lines')
             .where({ tenant, contract_line_id: contractLineId })
-            .first();
-
-        const previousTiming = existingTerms?.billing_timing ?? 'arrears';
-        if (previousTiming !== billingTiming) {
-            const invoiceCountResult = await trx('invoice_charges')
-                .where({ tenant })
-                .where('client_contract_line_id', contractLineId)
-                .count<{ count: string }>('item_id as count')
-                .first();
-
-            if (Number(invoiceCountResult?.count ?? 0) > 0) {
-                throw new Error('Cannot change billing timing for a contract line that has invoiced activity.');
-            }
-        }
-
-        const now = trx.fn.now();
-        const insertPayload = {
-            tenant,
-            contract_line_id: contractLineId,
-            billing_timing: billingTiming,
-            billing_frequency: existingTerms?.billing_frequency ?? contractLine.billing_frequency ?? null,
-            enable_overtime: existingTerms?.enable_overtime ?? contractLine.enable_overtime ?? false,
-            overtime_rate: existingTerms?.overtime_rate ?? contractLine.overtime_rate ?? null,
-            overtime_threshold: existingTerms?.overtime_threshold ?? contractLine.overtime_threshold ?? null,
-            enable_after_hours_rate: existingTerms?.enable_after_hours_rate ?? contractLine.enable_after_hours_rate ?? false,
-            after_hours_multiplier: existingTerms?.after_hours_multiplier ?? contractLine.after_hours_multiplier ?? null,
-            minimum_billable_time: existingTerms?.minimum_billable_time ?? null,
-            round_up_to_nearest: existingTerms?.round_up_to_nearest ?? null,
-            created_at: existingTerms?.created_at ?? now,
-            updated_at: now,
-        };
-
-        await trx('contract_line_template_terms')
-            .insert(insertPayload)
-            .onConflict(['tenant', 'contract_line_id'])
-            .merge({
+            .update({
                 billing_timing: billingTiming,
-                updated_at: now,
+                updated_at: trx.fn.now(),
             });
 
+        // Also update contract_template_line_terms if this is a template line
         await trx('contract_template_line_terms')
             .where({ tenant, template_line_id: contractLineId })
             .update({
                 billing_timing: billingTiming,
-                updated_at: now,
+                updated_at: trx.fn.now(),
             });
     });
 }

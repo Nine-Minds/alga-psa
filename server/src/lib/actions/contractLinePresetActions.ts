@@ -661,6 +661,7 @@ export async function createCustomContractLine(
                 contract_line_name: input.contract_line_name,
                 contract_line_type: input.contract_line_type,
                 billing_frequency: input.billing_frequency,
+                billing_timing: input.billing_timing ?? 'advance',
                 service_category: undefined,
                 is_custom: true,  // Mark as custom since it's not from a preset
                 ...(input.contract_line_type === 'Hourly' ? {

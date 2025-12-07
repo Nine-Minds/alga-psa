@@ -423,92 +423,71 @@ export class BillingEngine {
     const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
     const tenant = this.tenant; // Capture tenant value here
 
-    const clientContractLines = await knex('client_contract_lines as ccl')
-      .leftJoin('contract_lines as cl', (join) => {
-        join
-          .on(
-            'cl.contract_line_id',
-            '=',
-            knex.raw('coalesce(ccl.contract_line_id, ccl.template_contract_line_id)')
-          )
-          .andOn('cl.tenant', '=', 'ccl.tenant');
-      })
-      .leftJoin('client_contracts as cc', function () {
-        this.on('ccl.client_contract_id', '=', 'cc.client_contract_id')
-          .andOn('cc.tenant', '=', 'ccl.tenant');
-      })
-      .leftJoin('contracts as c', (join) => {
-        join
-          .on('c.contract_id', '=', knex.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
+    console.log(`[BillingEngine] getClientContractLinesAndCycle called for client ${clientId}, period: ${billingPeriod.startDate} to ${billingPeriod.endDate}`);
+
+    // Query contract lines via client_contracts -> contracts -> contract_lines
+    // This replaces the old client_contract_lines-based query
+    const clientContractLines = await knex('client_contracts as cc')
+      .join('contracts as c', function () {
+        this.on('c.contract_id', '=', knex.raw('coalesce(cc.template_contract_id, cc.contract_id)'))
           .andOn('c.tenant', '=', 'cc.tenant');
       })
-      .leftJoin('client_contract_line_pricing as pricing', function () {
-        this.on('pricing.client_contract_line_id', '=', 'ccl.client_contract_line_id')
-          .andOn('pricing.tenant', '=', 'ccl.tenant');
-      })
-      .leftJoin('client_contract_line_terms as terms', function () {
-        this.on('terms.client_contract_line_id', '=', 'ccl.client_contract_line_id')
-          .andOn('terms.tenant', '=', 'ccl.tenant');
+      .join('contract_lines as cl', function () {
+        this.on('cl.contract_id', '=', 'c.contract_id')
+          .andOn('cl.tenant', '=', 'c.tenant');
       })
       .where({
-        'ccl.client_id': clientId,
-        'ccl.is_active': true,
-        'ccl.tenant': this.tenant
+        'cc.client_id': clientId,
+        'cc.is_active': true,
+        'cc.tenant': this.tenant
       })
-      .where('ccl.start_date', '<=', billingPeriod.endDate)
+      .where('cc.start_date', '<=', billingPeriod.endDate)
       .where(function (this: any) {
-        this.where('ccl.end_date', '>=', billingPeriod.startDate).orWhereNull('ccl.end_date');
+        this.where('cc.end_date', '>=', billingPeriod.startDate).orWhereNull('cc.end_date');
       })
       .select(
-        'ccl.*',
-        'cl.contract_line_name as template_contract_line_name',
-        'cl.contract_line_type',
-        'cl.billing_frequency as template_billing_frequency',
-        'cl.billing_timing as template_billing_timing',
-        'cl.custom_rate as contract_line_custom_rate',
-        'cl.enable_proration as contract_line_enable_proration',
-        'cl.billing_cycle_alignment as contract_line_billing_cycle_alignment',
-        'cc.contract_id',
+        // Map to IClientContractLine interface
+        'cl.contract_line_id as client_contract_line_id', // Use contract_line_id as the identifier
+        'cc.client_id',
+        'cl.contract_line_id',
+        'cl.service_category',
+        'cc.start_date',
+        'cc.end_date',
+        'cc.is_active',
+        'cc.client_contract_id',
+        'cc.template_contract_id',
+        'c.contract_id',
         'c.contract_name',
         'c.currency_code',
-        'pricing.custom_rate as pricing_custom_rate',
-        'terms.billing_frequency as term_billing_frequency',
-        'terms.billing_timing as term_billing_timing'
+        'cl.contract_line_name',
+        'cl.contract_line_type',
+        'cl.billing_frequency',
+        'cl.billing_timing',
+        'cl.custom_rate',
+        'cl.enable_proration',
+        'cl.billing_cycle_alignment',
+        knex.raw('cc.tenant as tenant')
       );
 
-    // Convert dates from the DB into plain ISO strings using our date utilities
+    console.log(`[BillingEngine] Found ${clientContractLines.length} contract lines for client ${clientId}:`, JSON.stringify(clientContractLines, null, 2));
+
+    // Convert dates from the DB into plain ISO strings and normalize values
     clientContractLines.forEach((plan: any) => {
       plan.start_date = toISODate(toPlainDate(plan.start_date));
       plan.end_date = plan.end_date ? toISODate(toPlainDate(plan.end_date)) : null;
-      plan.contract_line_name = plan.template_contract_line_name || plan.contract_line_name;
-      plan.billing_frequency = plan.term_billing_frequency || plan.template_billing_frequency || plan.billing_frequency;
-      const resolvedTiming = (plan.term_billing_timing ?? plan.template_billing_timing ?? plan.billing_timing ?? 'arrears') as 'arrears' | 'advance';
-      plan.billing_timing = resolvedTiming;
-      delete plan.term_billing_timing;
-      delete plan.template_billing_timing;
-      const pricingRate = plan.pricing_custom_rate;
-      const contractLineRate = plan.contract_line_custom_rate;
 
-      if (pricingRate !== null && pricingRate !== undefined) {
-        const parsedRate = typeof pricingRate === 'string' ? parseFloat(pricingRate) : Number(pricingRate);
+      // Normalize billing_timing default
+      plan.billing_timing = (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance';
+
+      // Convert custom_rate from dollars to cents if present
+      if (plan.custom_rate !== null && plan.custom_rate !== undefined) {
+        const parsedRate = typeof plan.custom_rate === 'string' ? parseFloat(plan.custom_rate) : Number(plan.custom_rate);
         plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate * 100) : null;
-      } else if (contractLineRate !== null && contractLineRate !== undefined) {
-        const parsedRate = typeof contractLineRate === 'string' ? parseFloat(contractLineRate) : Number(contractLineRate);
-        plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate * 100) : null;
-      } else {
-        plan.custom_rate = null;
       }
 
-      plan.enable_proration = plan.contract_line_enable_proration ?? plan.enable_proration ?? false;
-      plan.billing_cycle_alignment =
-        (plan.contract_line_billing_cycle_alignment as 'start' | 'end' | 'prorated' | undefined) ??
-        plan.billing_cycle_alignment ??
-        'start';
-
-      delete plan.pricing_custom_rate;
-      delete plan.contract_line_custom_rate;
-      delete plan.contract_line_enable_proration;
-      delete plan.contract_line_billing_cycle_alignment;
+      // Set defaults for proration and alignment
+      plan.enable_proration = plan.enable_proration ?? false;
+      plan.billing_cycle_alignment = (plan.billing_cycle_alignment as 'start' | 'end' | 'prorated' | undefined) ?? 'start';
     });
 
     return { clientContractLines, billingCycle };
@@ -2289,19 +2268,31 @@ export class BillingEngine {
     }
 
     const { startDate, endDate } = billingPeriod;
+    // Query discounts via client_contracts -> contracts -> contract_lines
+    // instead of the deprecated client_contract_lines table
     const discounts = await this.knex('discounts')
       .join('contract_line_discounts', function () {
         this.on('discounts.discount_id', '=', 'contract_line_discounts.discount_id')
           .andOn('contract_line_discounts.tenant', '=', 'discounts.tenant');
       })
-      .join('client_contract_lines', function (this: Knex.JoinClause) {
-        this.on('client_contract_lines.contract_line_id', '=', 'contract_line_discounts.contract_line_id')
-          .andOn('client_contract_lines.client_id', '=', 'contract_line_discounts.client_id')
-          .andOn('client_contract_lines.tenant', '=', 'contract_line_discounts.tenant');
+      .join('contract_lines as cl', function () {
+        this.on('cl.contract_line_id', '=', 'contract_line_discounts.contract_line_id')
+          .andOn('cl.tenant', '=', 'contract_line_discounts.tenant');
+      })
+      .join('contracts as c', function () {
+        this.on('c.contract_id', '=', 'cl.contract_id')
+          .andOn('c.tenant', '=', 'cl.tenant');
+      })
+      .join('client_contracts as cc', function () {
+        this.on('cc.tenant', '=', 'c.tenant')
+          .andOn(function () {
+            this.on('cc.template_contract_id', '=', 'c.contract_id')
+              .orOn('cc.contract_id', '=', 'c.contract_id');
+          });
       })
       .where({
-        'client_contract_lines.client_id': clientId,
-        'client_contract_lines.tenant': client.tenant,
+        'cc.client_id': clientId,
+        'cc.tenant': client.tenant,
         'discounts.is_active': true
       })
       .andWhere('discounts.start_date', '<=', endDate)
@@ -2309,7 +2300,8 @@ export class BillingEngine {
         this.whereNull('discounts.end_date')
           .orWhere('discounts.end_date', '>', startDate);
       })
-      .select('discounts.*');
+      .select('discounts.*')
+      .distinct();
 
     return discounts;
   }
