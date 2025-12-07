@@ -1,8 +1,8 @@
-# Service Catalog Currency & Contract Currency Inheritance Plan
+# Service Catalog Multi-Currency Pricing Plan
 
-**Date:** 2025-12-05
+**Date:** 2025-12-05 (Revised: 2025-12-06)
 **Author:** Claude (billing pod)
-**Status:** Complete
+**Status:** In Progress
 **Related:** [2025-11-17-multi-currency-billing-plan.md](./2025-11-17-multi-currency-billing-plan.md)
 
 ## Problem Statement
@@ -11,211 +11,333 @@ The current multi-currency implementation has a design conflict:
 
 1. **Contract Templates** have `currency_code` - intended to be inherited by contracts
 2. **Clients** have `default_currency_code` - the client's preferred billing currency
-3. **Services** in the service catalog have `default_rate` but **no currency context** - stored as plain integers without knowing the currency
-4. **Services are added to Contract Templates** - but when templates reference services with currency-agnostic rates, the currency of those rates is ambiguous
+3. **Services** in the service catalog have `default_rate` but **no currency context**
+4. **Services are added to Contract Templates** - but rates are currency-ambiguous
 
-When creating a contract, you must select a client. The client has a currency. If the template also has a currency, and services have no currency, there's ambiguity about which currency governs pricing.
-
-## Solution: Services Define Currency, Templates Become Currency-Neutral
+## Solution: Multi-Currency Pricing Per Service
 
 ### Design Principles
 
-1. **Services have explicit currency** - Each service's `default_rate` is tagged with a `currency_code`
+1. **Services support multiple currency/price pairs** - One service can have prices in USD, EUR, GBP, etc.
 2. **Templates are currency-neutral** - Templates define structure (services, billing frequency) but not currency
 3. **Contracts inherit currency from Client** - The contract's currency comes from `clients.default_currency_code`
-4. **Strict validation** - Block saving contracts if service currencies don't match the contract/client currency
+4. **Validation at contract creation** - If a service doesn't have a price in the required currency, show which services need updating
+5. **Simple default case** - Single-currency usage should be effortless (just add one price)
+
+### Mental Model
+
+```
+SERVICE: "Managed Workstation"
+  └── Prices:
+      ├── USD: $150.00
+      ├── EUR: €140.00
+      └── GBP: £120.00
+
+When creating a contract for a EUR client:
+  → System looks up EUR price for each service
+  → If any service lacks EUR price → Error listing services that need EUR pricing
+```
 
 ### Currency Flow
 
 ```
 SERVICE CATALOG
-  └── service_name: "Consulting"
-  └── default_rate: 15000 (150.00)
-  └── currency_code: "USD"  ← Explicit currency for this rate
+  └── service_name: "Managed Workstation"
+  └── service_prices (1:many)
+      ├── { currency_code: "USD", rate: 15000 }
+      ├── { currency_code: "EUR", rate: 14000 }
+      └── { currency_code: "GBP", rate: 12000 }
 
 CONTRACT TEMPLATE (currency-neutral)
   └── template_lines
       └── services (references service catalog)
-  └── NO currency_code (removed/deprecated)
+  └── NO currency_code
 
 CLIENT
   └── default_currency_code: "EUR"
 
 CONTRACT (created from template for client)
   └── currency_code: "EUR" (inherited from client)
-  └── VALIDATION: All referenced services must have currency_code = "EUR"
-      └── If mismatch → Block save with error
+  └── VALIDATION: All referenced services must have a EUR price
+      └── If missing → Error: "The following services need EUR pricing: [list]"
 ```
 
 ## Implementation Plan
 
 ### Phase 1: Database Schema Changes
 
-#### 1.1 Add `currency_code` to `service_catalog`
+#### 1.1 Create `service_prices` table
 
 ```sql
-ALTER TABLE service_catalog
-ADD COLUMN currency_code CHAR(3) NOT NULL DEFAULT 'USD';
+CREATE TABLE service_prices (
+  price_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant UUID NOT NULL REFERENCES tenants(tenant),
+  service_id UUID NOT NULL REFERENCES service_catalog(service_id),
+  currency_code CHAR(3) NOT NULL,
+  rate INTEGER NOT NULL,  -- Amount in minor units (cents)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
--- Backfill: All existing services are assumed to be USD
-UPDATE service_catalog SET currency_code = 'USD' WHERE currency_code IS NULL;
+  -- Each service can only have one price per currency
+  UNIQUE(tenant, service_id, currency_code)
+);
+
+-- Index for lookups
+CREATE INDEX idx_service_prices_service ON service_prices(service_id);
+CREATE INDEX idx_service_prices_currency ON service_prices(currency_code);
 ```
 
-#### 1.2 Remove/Deprecate `currency_code` from `contract_templates`
-
-Two options:
-- **Option A (Clean):** Remove the column entirely via migration
-- **Option B (Safe):** Keep column but stop using it, mark as deprecated
-
-Recommendation: **Option A** - Remove the column since it creates confusion and isn't needed.
+#### 1.2 Migrate existing `default_rate` data
 
 ```sql
-ALTER TABLE contract_templates DROP COLUMN currency_code;
+-- Move existing rates to service_prices table (assume USD)
+INSERT INTO service_prices (tenant, service_id, currency_code, rate)
+SELECT tenant, service_id, 'USD', default_rate
+FROM service_catalog
+WHERE default_rate IS NOT NULL AND default_rate > 0;
+```
+
+#### 1.3 Keep `default_rate` as convenience field (optional)
+
+For backward compatibility and simple queries, we can keep `default_rate` on `service_catalog` as a denormalized "primary" rate. Alternatively, remove it entirely and always join to `service_prices`.
+
+**Decision:** Keep `default_rate` for now as a convenience, but treat `service_prices` as the source of truth for multi-currency scenarios.
+
+#### 1.4 Remove `currency_code` from `contract_templates`
+
+```sql
+ALTER TABLE contract_templates DROP COLUMN IF EXISTS currency_code;
 ```
 
 ### Phase 2: Type/Interface Updates
 
-#### 2.1 Update `IService` interface
+#### 2.1 Create `IServicePrice` interface
 
-File: `server/src/lib/models/service.ts`
+```typescript
+interface IServicePrice {
+  price_id: string;
+  tenant: string;
+  service_id: string;
+  currency_code: string;
+  rate: number;
+  created_at: Date;
+  updated_at: Date;
+}
+```
+
+#### 2.2 Update `IService` interface
 
 ```typescript
 interface IService {
   service_id: string;
   service_name: string;
   // ... existing fields
-  default_rate: number;
-  currency_code: string;  // NEW: Currency of default_rate
+  default_rate: number;      // Convenience field (primary rate)
+  prices?: IServicePrice[];  // All currency/rate pairs
 }
 ```
 
-#### 2.2 Update `IContractTemplate` interface
+#### 2.3 Remove `currency_code` from `IContractTemplate`
 
-File: `server/src/lib/models/contractTemplate.ts`
+### Phase 3: Service Model Updates
 
-Remove `currency_code` from the interface.
+#### 3.1 Update service queries to include prices
 
-### Phase 3: Service Catalog Updates
+```typescript
+// When fetching a service, optionally include all prices
+async function getServiceWithPrices(serviceId: string): Promise<IService> {
+  const service = await getService(serviceId);
+  const prices = await knex('service_prices')
+    .where({ service_id: serviceId });
+  return { ...service, prices };
+}
 
-#### 3.1 Update service CRUD operations
+// Get price for specific currency
+async function getServicePrice(serviceId: string, currencyCode: string): Promise<number | null> {
+  const price = await knex('service_prices')
+    .where({ service_id: serviceId, currency_code: currencyCode })
+    .first();
+  return price?.rate ?? null;
+}
+```
 
-Files:
-- `server/src/lib/actions/serviceActions.ts`
-- `server/src/lib/services/serviceService.ts`
+#### 3.2 Create service price CRUD operations
 
-- Add `currency_code` to create/update operations
-- Default to tenant's base currency if not specified
+```typescript
+async function setServicePrice(
+  serviceId: string,
+  currencyCode: string,
+  rate: number
+): Promise<IServicePrice> {
+  // Upsert: insert or update if exists
+}
 
-#### 3.2 Update Service Catalog UI
+async function removeServicePrice(
+  serviceId: string,
+  currencyCode: string
+): Promise<void> {
+  // Delete specific currency price
+}
+```
 
-Files:
-- `server/src/components/services/ServiceForm.tsx` (or similar)
-- `server/src/components/services/ServiceCatalog.tsx` (or similar)
+### Phase 4: Service Catalog UI Updates
 
-- Add currency selector to service form
-- Display currency badge next to rates in service list
+#### 4.1 Design Goals
 
-### Phase 4: Contract Template Updates
+- **Simple case is simple**: Adding a single price should be as easy as before
+- **Multi-currency is accessible**: Easy to add additional currency prices
+- **Clear display**: Show all prices for a service at a glance
 
-#### 4.1 Remove currency from template forms
+#### 4.2 Service Form Updates
 
-Files:
-- `server/src/components/contracts/ContractTemplateForm.tsx` (or similar)
-- `server/src/lib/actions/contractTemplateActions.ts`
+**Option A: Inline Price List**
+```
+Service Name: [Managed Workstation]
+Service Type: [Recurring      v]
 
-- Remove currency selector from template creation/editing
-- Update any queries that reference `contract_templates.currency_code`
+Pricing:
+┌─────────────┬────────────────┬─────────┐
+│ Currency    │ Rate           │         │
+├─────────────┼────────────────┼─────────┤
+│ USD      v  │ $150.00        │ [Remove]│
+│ EUR      v  │ €140.00        │ [Remove]│
+├─────────────┴────────────────┴─────────┤
+│ [+ Add Currency]                       │
+└────────────────────────────────────────┘
+```
+
+**Option B: Primary + Additional**
+```
+Service Name: [Managed Workstation]
+Default Rate: [150.00] Currency: [USD v]
+
+Additional Pricing (optional):
+  EUR: [140.00]  [x]
+  GBP: [120.00]  [x]
+  [+ Add Currency]
+```
+
+**Recommendation:** Option A - Treats all currencies equally, cleaner mental model.
+
+#### 4.3 Service Catalog List View
+
+Show primary currency with indicator if multiple currencies exist:
+
+```
+┌──────────────────────┬──────────┬───────────┬──────────┐
+│ Service              │ Type     │ Rate      │ Actions  │
+├──────────────────────┼──────────┼───────────┼──────────┤
+│ Managed Workstation  │ Recurring│ $150 +2   │ Edit     │
+│ Server Monitoring    │ Recurring│ $200      │ Edit     │
+│ Consulting           │ Hourly   │ €175 +1   │ Edit     │
+└──────────────────────┴──────────┴───────────┴──────────┘
+
+"+2" indicates 2 additional currencies beyond the displayed one
+```
 
 ### Phase 5: Contract Creation Validation
 
-#### 5.1 Add currency validation when creating contracts
-
-Files:
-- `server/src/lib/actions/contractActions.ts`
-- `server/src/lib/billing/utils/templateClone.ts`
-
-Logic:
-1. Get client's `default_currency_code`
-2. Set contract's `currency_code` = client's currency
-3. For each service in the contract/template:
-   - Check if `service.currency_code` === `contract.currency_code`
-   - If ANY mismatch: **Block save with descriptive error**
+#### 5.1 Validation Logic
 
 ```typescript
-function validateContractServiceCurrencies(
-  contractCurrency: string,
-  services: IService[]
-): { valid: boolean; errors: string[] } {
-  const mismatched = services.filter(s => s.currency_code !== contractCurrency);
-  if (mismatched.length > 0) {
-    return {
-      valid: false,
-      errors: mismatched.map(s =>
-        `Service "${s.service_name}" is priced in ${s.currency_code}, but contract is in ${contractCurrency}`
-      )
-    };
-  }
-  return { valid: true, errors: [] };
+interface CurrencyValidationResult {
+  valid: boolean;
+  missingPrices: Array<{
+    service_id: string;
+    service_name: string;
+    required_currency: string;
+  }>;
+}
+
+function validateServicesHaveCurrency(
+  services: IService[],
+  requiredCurrency: string
+): CurrencyValidationResult {
+  const missing = services.filter(service => {
+    const hasPrice = service.prices?.some(p => p.currency_code === requiredCurrency);
+    return !hasPrice;
+  });
+
+  return {
+    valid: missing.length === 0,
+    missingPrices: missing.map(s => ({
+      service_id: s.service_id,
+      service_name: s.service_name,
+      required_currency: requiredCurrency
+    }))
+  };
 }
 ```
 
-#### 5.2 Update UI to show validation errors
+#### 5.2 Error Message
 
-- When user tries to save contract with mismatched currencies, show clear error message
-- Optionally: Show warning in template view if template contains services in multiple currencies
+When validation fails:
+
+```
+Cannot create contract in EUR. The following services do not have EUR pricing:
+
+• Managed Workstation
+• Server Monitoring
+• Help Desk Support
+
+Please add EUR prices to these services in the Service Catalog before creating this contract.
+```
 
 ### Phase 6: Testing
 
 #### 6.1 Unit Tests
 
+- Test service price CRUD operations
 - Test currency validation function
-- Test service CRUD with currency
+- Test getServicePrice returns correct currency
 
 #### 6.2 Integration Tests
 
-- Test contract creation blocks when service currency mismatches
-- Test contract creation succeeds when currencies match
-- Test backfill migration
+- Test contract creation succeeds when all services have required currency
+- Test contract creation fails with clear error when prices missing
+- Test migration correctly moves existing rates to service_prices
 
-## Files Modified
+## Files to Modify
 
 ### Database/Migrations
-- [x] `20251205130000_add_currency_to_service_catalog.cjs` - Adds currency_code to service_catalog
-- [x] `20251205130001_remove_currency_from_contract_templates.cjs` - Removes currency_code from contract_templates
+- [ ] `20251205130000_add_service_prices_table.cjs` - Create service_prices, migrate data
+- [ ] `20251205130001_remove_currency_from_contract_templates.cjs` - Remove currency_code (keep as-is)
 
 ### Types/Interfaces
-- [x] `server/src/interfaces/billing.interfaces.ts` - Added currency_code to IService
-- [x] `server/src/interfaces/contractTemplate.interfaces.ts` - Removed currency_code from IContractTemplate
-- [x] `server/src/lib/models/service.ts` - Updated schema and queries to include currency_code
-- [x] `server/src/lib/models/contractTemplate.ts` - Removed currency_code from insert
+- [ ] `server/src/interfaces/billing.interfaces.ts` - Add IServicePrice, update IService
+- [ ] `server/src/interfaces/contractTemplate.interfaces.ts` - Remove currency_code (already done)
 
-### Server Actions/Services
-- [x] `server/src/lib/actions/serviceActions.ts` - Handle currency in service CRUD
-- [x] `server/src/lib/actions/contractWizardActions.ts` - Added currency validation for services matching contract currency
+### Server Models/Actions
+- [ ] `server/src/lib/models/service.ts` - Add price queries
+- [ ] `server/src/lib/models/servicePrice.ts` - New model for service_prices
+- [ ] `server/src/lib/actions/serviceActions.ts` - Handle price CRUD
+- [ ] `server/src/lib/actions/contractWizardActions.ts` - Update validation
 
 ### UI Components
-- [x] `server/src/components/settings/billing/QuickAddService.tsx` - Added currency selector with dynamic currency symbol
-- [x] `server/src/components/settings/billing/ServiceCatalogManager.tsx` - Added currency column and edit currency selector
-- [x] `server/src/components/billing-dashboard/contracts/template-wizard/TemplateWizard.tsx` - Removed currency_code from wizard data
-- [x] `server/src/components/billing-dashboard/contracts/template-wizard/steps/TemplateContractBasicsStep.tsx` - Removed currency selector
+- [ ] `server/src/components/settings/billing/ServiceCatalogManager.tsx` - Multi-currency UI
+- [ ] `server/src/components/settings/billing/QuickAddService.tsx` - Multi-currency support
+- [ ] Service form component - Price list editor
 
-## Rollback Plan
+## Migration Strategy
 
-If issues arise:
-1. Revert migrations (add currency back to templates, remove from services)
-2. Revert code changes
-3. Services without currency will fall back to USD assumption
+Since this hasn't been deployed yet, we will:
+
+1. Replace the existing migration `20251205130000_add_currency_to_service_catalog.cjs` with new schema
+2. Keep `20251205130001_remove_currency_from_contract_templates.cjs` as-is
+3. Update all code to use new `service_prices` model
 
 ## Success Criteria
 
-- [x] All services have explicit `currency_code`
-- [x] Contract templates no longer have `currency_code`
-- [x] Contract creation fails with clear error if service currencies don't match client currency
-- [x] Existing contracts continue to work (backward compatible)
-- [x] UI shows currency information clearly on services
+- [ ] Services can have multiple currency/price pairs
+- [ ] Single-currency usage is simple (just add one price)
+- [ ] Contract templates no longer have `currency_code`
+- [ ] Contract creation validates services have required currency
+- [ ] Clear error messages list services needing price updates
+- [ ] UI displays all prices, easy to add/edit currencies
+- [ ] Existing contracts continue to work (backward compatible)
 
 ## Open Questions
 
-1. Should we allow tenant admins to bulk-update service currencies?
-2. Should we show a "compatible services" filter when adding services to contracts?
-3. Future: Multi-currency service pricing (same service, different rates per currency)?
+1. Should we show available currencies in contract creation UI (filter services)?
+2. Should we support "copy price from another currency" with exchange rate?
+3. Should we track price history for auditing?

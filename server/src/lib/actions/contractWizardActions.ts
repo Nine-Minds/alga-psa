@@ -621,7 +621,7 @@ export async function createClientContractFromWizard(
     if (allServiceIds.length > 0) {
       const services = await trx('service_catalog')
         .whereIn('service_id', allServiceIds)
-        .select('service_id', 'service_name', 'billing_method', 'currency_code');
+        .select('service_id', 'service_name', 'billing_method');
 
       const validateBillingMethod = (
         expected: 'fixed' | 'hourly' | 'usage',
@@ -637,18 +637,32 @@ export async function createClientContractFromWizard(
         }
       };
 
-      // Validate service currencies match contract currency
+      // Validate services have prices in the contract's currency
       const contractCurrency = submission.currency_code || 'USD';
-      const mismatchedServices = services.filter(
-        (s) => s.currency_code && s.currency_code !== contractCurrency
-      );
-      if (mismatchedServices.length > 0) {
-        const mismatchedNames = mismatchedServices
-          .map((s) => `"${s.service_name}" (${s.currency_code})`)
+
+      // Get services that have prices in the required currency
+      const servicesWithPrices = await trx('service_catalog as sc')
+        .whereIn('sc.service_id', allServiceIds)
+        .leftJoin('service_prices as sp', function() {
+          this.on('sc.service_id', '=', 'sp.service_id')
+              .andOn('sp.currency_code', '=', trx.raw('?', [contractCurrency]))
+              .andOn('sp.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .select(
+          'sc.service_id',
+          'sc.service_name',
+          'sp.price_id'
+        );
+
+      // Find services that don't have a price in the required currency
+      const missingPriceServices = servicesWithPrices.filter(s => !s.price_id);
+      if (missingPriceServices.length > 0) {
+        const missingNames = missingPriceServices
+          .map((s) => `"${s.service_name}"`)
           .join(', ');
         throw new Error(
-          `Cannot create contract in ${contractCurrency}: The following services have different currencies: ${mismatchedNames}. ` +
-          `All services must have the same currency as the contract.`
+          `Cannot create contract in ${contractCurrency}. The following services do not have ${contractCurrency} pricing: ${missingNames}. ` +
+          `Please add ${contractCurrency} prices to these services in the Service Catalog before creating this contract.`
         );
       }
 

@@ -8,7 +8,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrice } from 'server/src/lib/actions/serviceActions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
@@ -227,8 +227,14 @@ const submitData: CreateServiceInput = {
 
 console.log('[QuickAddService] Submitting service data:', submitData);
 console.log('[QuickAddService] Unit of measure value:', submitData.unit_of_measure);
-await createService(submitData);
-console.log('[QuickAddService] Service created successfully');
+const createdService = await createService(submitData);
+console.log('[QuickAddService] Service created successfully:', createdService);
+
+// Set the initial price for the service in the specified currency
+if (createdService?.service_id) {
+  await setServicePrice(createdService.service_id, serviceData.currency_code, serviceData.default_rate);
+  console.log(`[QuickAddService] Set price ${serviceData.default_rate} ${serviceData.currency_code} for service ${createdService.service_id}`);
+}
 
       onServiceAdded()
       // Close dialog - in controlled mode this is handled by parent via onServiceAdded callback

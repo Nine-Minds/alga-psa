@@ -3,16 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { TemplateWizardData, TemplateBucketOverlayInput } from '../TemplateWizard';
+import { TemplateWizardData } from '../TemplateWizard';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import { BucketOverlayFields } from '../../BucketOverlayFields';
 import { BarChart3, Plus, X } from 'lucide-react';
-import { getCurrencySymbol } from 'server/src/constants/currency';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
 
 interface TemplateUsageBasedServicesStepProps {
@@ -26,7 +23,6 @@ export function TemplateUsageBasedServicesStep({
 }: TemplateUsageBasedServicesStepProps) {
   const [services, setServices] = useState<IService[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
-  const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -48,16 +44,6 @@ export function TemplateUsageBasedServicesStep({
     void load();
   }, []);
 
-  useEffect(() => {
-    const inputs: Record<number, string> = {};
-    (data.usage_services ?? []).forEach((service, index) => {
-      if (service.unit_rate !== undefined) {
-        inputs[index] = (service.unit_rate / 100).toFixed(2);
-      }
-    });
-    setRateInputs(inputs);
-  }, [data.usage_services]);
-
   const serviceOptions = services.map((service) => ({
     value: service.service_id,
     label: service.service_name,
@@ -67,7 +53,7 @@ export function TemplateUsageBasedServicesStep({
     updateData({
       usage_services: [
         ...(data.usage_services ?? []),
-        { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: '', bucket_overlay: undefined },
+        { service_id: '', service_name: '', unit_of_measure: '' },
       ],
     });
   };
@@ -92,40 +78,6 @@ export function TemplateUsageBasedServicesStep({
   const handleUnitChange = (index: number, unit: string) => {
     const next = [...(data.usage_services ?? [])];
     next[index] = { ...next[index], unit_of_measure: unit };
-    updateData({ usage_services: next });
-  };
-
-  const getDefaultOverlay = (billingFrequency: string): TemplateBucketOverlayInput => ({
-    total_minutes: undefined,
-    overage_rate: undefined,
-    allow_rollover: false,
-    billing_period: billingFrequency as 'monthly' | 'weekly',
-  });
-
-  const toggleBucketOverlay = (index: number, enabled: boolean) => {
-    const next = [...(data.usage_services ?? [])];
-    if (enabled) {
-      next[index] = {
-        ...next[index],
-        bucket_overlay: next[index].bucket_overlay
-          ? { ...next[index].bucket_overlay }
-          : getDefaultOverlay(data.billing_frequency),
-      };
-    } else {
-      next[index] = { ...next[index], bucket_overlay: undefined };
-    }
-    updateData({ usage_services: next });
-  };
-
-  const updateBucketOverlay = (index: number, overlay: TemplateBucketOverlayInput) => {
-    const next = [...(data.usage_services ?? [])];
-    next[index] = { ...next[index], bucket_overlay: { ...overlay } };
-    updateData({ usage_services: next });
-  };
-
-  const handleRateChange = (index: number, cents: number | undefined) => {
-    const next = [...(data.usage_services ?? [])];
-    next[index] = { ...next[index], unit_rate: cents };
     updateData({ usage_services: next });
   };
 
@@ -168,13 +120,13 @@ export function TemplateUsageBasedServicesStep({
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Usage-Based Services</h3>
           <p className="text-sm text-gray-600">
-            Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.
+            Select services that are billed based on usage or consumption. Rates will be determined by the service's pricing in the client's currency when the contract is created.
           </p>
         </div>
 
         <div className="p-4 bg-accent-50 border border-accent-200 rounded-md mb-6">
           <p className="text-sm text-accent-900">
-            <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.
+            <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the service's unit rate to calculate the invoice amount.
           </p>
         </div>
 
@@ -210,77 +162,18 @@ export function TemplateUsageBasedServicesStep({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`template-unit-${index}`} className="text-sm">
-                      Unit of Measure (Optional)
-                    </Label>
-                    <Input
-                      id={`template-unit-${index}`}
-                      type="text"
-                      value={service.unit_of_measure ?? ''}
-                      onChange={(event) => handleUnitChange(index, event.target.value)}
-                      placeholder="e.g., GB, API call, user"
-                    />
-                    <p className="text-xs text-gray-500">Choose the unit this service bills on.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor={`template-usage-rate-${index}`} className="text-sm">
-                      Rate per Unit (Optional)
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                        {/* Templates are currency-neutral; USD shown as default display currency */}
-                        {getCurrencySymbol('USD')}
-                      </span>
-                      <Input
-                        id={`template-usage-rate-${index}`}
-                        type="text"
-                        inputMode="decimal"
-                        value={rateInputs[index] ?? ''}
-                        onChange={(event) => {
-                          const value = event.target.value.replace(/[^0-9.]/g, '');
-                          const decimalCount = (value.match(/\./g) || []).length;
-                          if (decimalCount <= 1) {
-                            setRateInputs((prev) => ({ ...prev, [index]: value }));
-                          }
-                        }}
-                        onBlur={() => {
-                          const inputValue = rateInputs[index] ?? '';
-                          if (inputValue.trim() === '' || inputValue === '.') {
-                            setRateInputs((prev) => ({ ...prev, [index]: '' }));
-                            handleRateChange(index, undefined);
-                          } else {
-                            const dollars = parseFloat(inputValue) || 0;
-                            const cents = Math.round(dollars * 100);
-                            handleRateChange(index, cents);
-                            setRateInputs((prev) => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
-                          }
-                        }}
-                        placeholder="0.00"
-                        className="pl-7"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">Suggested rate when creating contracts</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3 pt-2 border-t border-dashed border-secondary-100">
-                  <SwitchWithLabel
-                    label="Recommend bucket of consumption"
-                    checked={Boolean(service.bucket_overlay)}
-                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
+                <div className="space-y-2">
+                  <Label htmlFor={`template-unit-${index}`} className="text-sm">
+                    Unit of Measure (Optional)
+                  </Label>
+                  <Input
+                    id={`template-unit-${index}`}
+                    type="text"
+                    value={service.unit_of_measure ?? ''}
+                    onChange={(event) => handleUnitChange(index, event.target.value)}
+                    placeholder="e.g., GB, API call, user"
                   />
-                  {service.bucket_overlay && (
-                    <BucketOverlayFields
-                      mode="usage"
-                      value={service.bucket_overlay ?? getDefaultOverlay(data.billing_frequency)}
-                      onChange={(overlay) => updateBucketOverlay(index, overlay)}
-                      automationId={`template-usage-bucket-${index}`}
-                      billingFrequency={data.billing_frequency}
-                    />
-                  )}
+                  <p className="text-xs text-gray-500">Override the default unit of measure for this service.</p>
                 </div>
               </div>
 
@@ -290,7 +183,7 @@ export function TemplateUsageBasedServicesStep({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveService(index)}
-                className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-6 text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 <X className="h-4 w-4" />
               </Button>

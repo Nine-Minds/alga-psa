@@ -7,12 +7,12 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from 'server/src/lib/actions/serviceActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
 // Import action to get tax rates
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
-import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
+import { IService, IServiceCategory, IServiceType, IServicePrice } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType, IServicePrice
 // Import ITaxRate interface
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
@@ -75,6 +75,8 @@ const ServiceCatalogManager: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   // State for rate input (display value while typing)
   const [rateInput, setRateInput] = useState<string>('');
+  // State for editing prices (multi-currency support)
+  const [editingPrices, setEditingPrices] = useState<Array<{ currency_code: string; rate: number }>>([]);
   const filteredServices = services.filter(service => {
     // Filter by Service Type
     const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
@@ -226,34 +228,44 @@ const ServiceCatalogManager: React.FC = () => {
       setError('Service Type is required');
       return;
     }
-    
+
+    // Validate at least one price is set
+    if (editingPrices.length === 0) {
+      setError('At least one price is required');
+      return;
+    }
+
     // Store the current page before updating service and fetching new data
     const pageBeforeUpdate = currentPage;
     console.log(`Saving service changes from page: ${pageBeforeUpdate}`);
-    
+
     try {
       // Ensure editingService is not null and has an ID
       if (!editingService?.service_id) {
         setError('Cannot update service without an ID.');
         return;
       }
-      
+
       // First close the dialog to avoid UI jumps
       setIsEditDialogOpen(false);
       setEditingService(null);
-      
+      setEditingPrices([]);
+
       // Then update the service
       await updateService(editingService.service_id, editingService);
-      
+
+      // Update the service prices
+      await setServicePrices(editingService.service_id, editingPrices);
+
       // Fetch updated services with flag to preserve page
       await fetchServices(true);
-      
+
       // Force the page to stay at the previous value
       console.log(`Forcing page back to: ${pageBeforeUpdate}`);
       setTimeout(() => {
         setCurrentPage(pageBeforeUpdate);
       }, 50);
-      
+
       setError(null);
     } catch (error) {
       console.error('Error updating service:', error);
@@ -344,14 +356,26 @@ const ServiceCatalogManager: React.FC = () => {
         render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value,
       },
       {
-        title: 'Default Rate',
-        dataIndex: 'default_rate',
-        render: (value, record) => `${getCurrencySymbol(record.currency_code)}${(value / 100).toFixed(2)}`,
-      },
-      {
-        title: 'Currency',
-        dataIndex: 'currency_code',
-        render: (value) => value || 'USD',
+        title: 'Pricing',
+        dataIndex: 'prices',
+        render: (prices: IServicePrice[] | undefined, record) => {
+          if (!prices || prices.length === 0) {
+            // Fall back to default_rate if no prices exist
+            return `$${(record.default_rate / 100).toFixed(2)}`;
+          }
+          // Show primary price (first one, typically USD)
+          const primaryPrice = prices[0];
+          const primaryDisplay = `${getCurrencySymbol(primaryPrice.currency_code)}${(primaryPrice.rate / 100).toFixed(2)}`;
+          // Show indicator if there are additional currencies
+          if (prices.length > 1) {
+            return (
+              <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${(p.rate / 100).toFixed(2)}`).join('\n')}>
+                {primaryDisplay} <span className="text-xs text-gray-500">+{prices.length - 1}</span>
+              </span>
+            );
+          }
+          return primaryDisplay;
+        },
       },
       // Category column hidden - using Service Types for organization
       // {
@@ -443,7 +467,14 @@ const ServiceCatalogManager: React.FC = () => {
               id={`edit-service-${record.service_id}`}
               onClick={() => {
                 setEditingService(record);
-                setRateInput((record.default_rate / 100).toFixed(2));
+                // Initialize editingPrices from service prices or create default USD entry
+                const prices = record.prices && record.prices.length > 0
+                  ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
+                  : [{ currency_code: 'USD', rate: record.default_rate }];
+                setEditingPrices(prices);
+                // Set rate input for the first/primary price
+                const primaryRate = prices.length > 0 ? prices[0].rate : record.default_rate;
+                setRateInput((primaryRate / 100).toFixed(2));
                 setIsEditDialogOpen(true);
               }}
             >
@@ -613,139 +644,129 @@ const ServiceCatalogManager: React.FC = () => {
                 onChange={(e) => setEditingService({ ...editingService!, description: e.target.value })}
               />
             </div>
-            {/* Currency Selector */}
-            <div>
-              <label htmlFor="edit-currency" className="block text-sm font-medium text-gray-700 mb-1">Currency *</label>
-              <CustomSelect
-                id="edit-currency"
-                options={CURRENCY_OPTIONS.map(c => ({ value: c.value, label: c.label }))}
-                value={editingService?.currency_code || 'USD'}
-                onValueChange={(value) => setEditingService({ ...editingService!, currency_code: value })}
-                placeholder="Select currency..."
-              />
-              <p className="text-xs text-gray-500 mt-1">The currency for this service&apos;s rate</p>
+            {/* Multi-Currency Pricing Section */}
+            <div className="col-span-2 border rounded-lg p-4 bg-gray-50">
+              <div className="flex justify-between items-center mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Pricing *
+                  <span className="text-xs font-normal text-gray-500 ml-2">
+                    ({editingService?.billing_method === 'fixed' ? 'Monthly' : editingService?.billing_method === 'hourly' ? 'Per Hour' : 'Per Unit'})
+                  </span>
+                </label>
+                <Button
+                  id="add-currency-btn"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Find currencies not yet added
+                    const usedCurrencies = editingPrices.map(p => p.currency_code);
+                    const availableCurrency = CURRENCY_OPTIONS.find(c => !usedCurrencies.includes(c.value));
+                    if (availableCurrency) {
+                      setEditingPrices([...editingPrices, { currency_code: availableCurrency.value, rate: 0 }]);
+                    }
+                  }}
+                  disabled={editingPrices.length >= CURRENCY_OPTIONS.length}
+                >
+                  + Add Currency
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {editingPrices.map((price, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-32">
+                      <CustomSelect
+                        id={`edit-price-currency-${index}`}
+                        options={CURRENCY_OPTIONS.filter(c =>
+                          c.value === price.currency_code ||
+                          !editingPrices.some(p => p.currency_code === c.value)
+                        ).map(c => ({ value: c.value, label: c.label }))}
+                        value={price.currency_code}
+                        onValueChange={(value) => {
+                          const newPrices = [...editingPrices];
+                          newPrices[index] = { ...newPrices[index], currency_code: value };
+                          setEditingPrices(newPrices);
+                        }}
+                        placeholder="Currency"
+                      />
+                    </div>
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        {getCurrencySymbol(price.currency_code)}
+                      </span>
+                      <Input
+                        id={`edit-price-rate-${index}`}
+                        type="text"
+                        inputMode="decimal"
+                        value={index === 0 ? rateInput : (price.rate / 100).toFixed(2)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                          const decimalCount = (value.match(/\./g) || []).length;
+                          if (decimalCount <= 1) {
+                            if (index === 0) {
+                              setRateInput(value);
+                            } else {
+                              // For non-primary prices, update directly
+                              const dollars = parseFloat(value) || 0;
+                              const cents = Math.round(dollars * 100);
+                              const newPrices = [...editingPrices];
+                              newPrices[index] = { ...newPrices[index], rate: cents };
+                              setEditingPrices(newPrices);
+                            }
+                          }
+                        }}
+                        onBlur={() => {
+                          if (index === 0) {
+                            // Primary price - update both editingPrices and default_rate
+                            const dollars = parseFloat(rateInput) || 0;
+                            const cents = Math.round(dollars * 100);
+                            const newPrices = [...editingPrices];
+                            newPrices[0] = { ...newPrices[0], rate: cents };
+                            setEditingPrices(newPrices);
+                            if (editingService) {
+                              setEditingService({ ...editingService, default_rate: cents });
+                            }
+                            setRateInput((cents / 100).toFixed(2));
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="pl-7"
+                      />
+                    </div>
+                    {editingPrices.length > 1 && (
+                      <Button
+                        id={`remove-price-${index}`}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                        onClick={() => {
+                          const newPrices = editingPrices.filter((_, i) => i !== index);
+                          setEditingPrices(newPrices);
+                          // If removing the first price, update rateInput
+                          if (index === 0 && newPrices.length > 0) {
+                            setRateInput((newPrices[0].rate / 100).toFixed(2));
+                            if (editingService) {
+                              setEditingService({ ...editingService, default_rate: newPrices[0].rate });
+                            }
+                          }
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Add prices in multiple currencies. The first currency is the primary rate.
+              </p>
             </div>
 
-            {/* Conditional Rate Fields Based on Billing Method */}
-            {editingService?.billing_method === 'fixed' && (
-              <div>
-                <label htmlFor="fixed-rate" className="block text-sm font-medium text-gray-700 mb-1">Monthly Base Rate *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(editingService?.currency_code || 'USD')}</span>
-                  <Input
-                    id="fixed-rate"
-                    type="text"
-                    inputMode="decimal"
-                    value={rateInput}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '');
-                      const decimalCount = (value.match(/\./g) || []).length;
-                      if (decimalCount <= 1) {
-                        setRateInput(value);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (rateInput.trim() === '' || rateInput === '.') {
-                        setRateInput('');
-                        if (editingService) {
-                          setEditingService({ ...editingService, default_rate: 0 });
-                        }
-                      } else {
-                        const dollars = parseFloat(rateInput) || 0;
-                        const cents = Math.round(dollars * 100);
-                        if (editingService) {
-                          setEditingService({ ...editingService, default_rate: cents });
-                        }
-                        setRateInput((cents / 100).toFixed(2));
-                      }
-                    }}
-                    placeholder="0.00"
-                    className="pl-7"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">The monthly fee for this service</p>
-              </div>
-            )}
-
-            {editingService?.billing_method === 'hourly' && (
-              <div>
-                <label htmlFor="hourly-rate" className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(editingService?.currency_code || 'USD')}</span>
-                  <Input
-                    id="hourly-rate"
-                    type="text"
-                    inputMode="decimal"
-                    value={rateInput}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '');
-                      const decimalCount = (value.match(/\./g) || []).length;
-                      if (decimalCount <= 1) {
-                        setRateInput(value);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (rateInput.trim() === '' || rateInput === '.') {
-                        setRateInput('');
-                        if (editingService) {
-                          setEditingService({ ...editingService, default_rate: 0 });
-                        }
-                      } else {
-                        const dollars = parseFloat(rateInput) || 0;
-                        const cents = Math.round(dollars * 100);
-                        if (editingService) {
-                          setEditingService({ ...editingService, default_rate: cents });
-                        }
-                        setRateInput((cents / 100).toFixed(2));
-                      }
-                    }}
-                    placeholder="0.00"
-                    className="pl-7"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Rate charged per hour</p>
-              </div>
-            )}
-
+            {/* Unit of Measure for usage-based services */}
             {editingService?.billing_method === 'usage' && (
               <>
-                <div>
-                  <label htmlFor="unit-rate" className="block text-sm font-medium text-gray-700 mb-1">Unit Rate *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{getCurrencySymbol(editingService?.currency_code || 'USD')}</span>
-                    <Input
-                      id="unit-rate"
-                      type="text"
-                      inputMode="decimal"
-                      value={rateInput}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^0-9.]/g, '');
-                        const decimalCount = (value.match(/\./g) || []).length;
-                        if (decimalCount <= 1) {
-                          setRateInput(value);
-                        }
-                      }}
-                      onBlur={() => {
-                        if (rateInput.trim() === '' || rateInput === '.') {
-                          setRateInput('');
-                          if (editingService) {
-                            setEditingService({ ...editingService, default_rate: 0 });
-                          }
-                        } else {
-                          const dollars = parseFloat(rateInput) || 0;
-                          const cents = Math.round(dollars * 100);
-                          if (editingService) {
-                            setEditingService({ ...editingService, default_rate: cents });
-                          }
-                          setRateInput((cents / 100).toFixed(2));
-                        }
-                      }}
-                      placeholder="0.00"
-                      className="pl-7"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Price per unit</p>
-                </div>
                 <div>
                   <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
                   <Input
@@ -872,6 +893,7 @@ const ServiceCatalogManager: React.FC = () => {
               setIsEditDialogOpen(false);
               setEditingService(null);
               setRateInput('');
+              setEditingPrices([]);
             }}>Cancel</Button>
             <Button id='save-button' onClick={() => {
               // Just call handleUpdateService - it will close the dialog
