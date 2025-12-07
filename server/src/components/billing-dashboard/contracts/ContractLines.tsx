@@ -211,7 +211,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         const serviceId = serviceConfig.service.service_id;
 
         serviceConfigsData[serviceConfig.configuration.config_id] = {
-          quantity: serviceConfig.configuration.quantity,
+          quantity: serviceConfig.configuration.quantity ?? 1,
           custom_rate: serviceConfig.configuration.custom_rate,
           hourly_rate: serviceConfig.typeConfig?.hourly_rate,
           base_rate: serviceConfig.typeConfig?.base_rate,
@@ -684,39 +684,43 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                               {serviceConfig.configuration.configuration_type} Service
                                             </p>
                                           </div>
-                                          <Badge className="bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border-[rgb(var(--color-primary-200))]">
-                                            Qty: {isEditing ? (editData.quantity ?? serviceConfig.configuration.quantity ?? 1) : (serviceConfig.configuration.quantity || 1)}
-                                          </Badge>
+                                          {serviceConfig.configuration.configuration_type !== 'Hourly' && (
+                                            <Badge className="bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border-[rgb(var(--color-primary-200))]">
+                                              Qty: {isEditing ? (editData.quantity ?? serviceConfig.configuration.quantity ?? 1) : (serviceConfig.configuration.quantity || 1)}
+                                            </Badge>
+                                          )}
                                         </div>
                                       </div>
 
                                       <div className="grid gap-4 md:grid-cols-2">
-                                        {/* Quantity - all service types */}
-                                        <div>
-                                          <Label className="text-xs uppercase tracking-wide text-gray-500">
-                                            Quantity
-                                          </Label>
-                                          {isEditing ? (
-                                            <Input
-                                              id={`quantity-${serviceConfig.configuration.config_id}`}
-                                              type="number"
-                                              min="1"
-                                              value={editData.quantity ?? ''}
-                                              onChange={(e) => setEditServiceConfigs({
-                                                ...editServiceConfigs,
-                                                [configId]: {
-                                                  ...editData,
-                                                  quantity: e.target.value ? parseInt(e.target.value) : undefined
-                                                }
-                                              })}
-                                              className="mt-1"
-                                            />
-                                          ) : (
-                                            <p className="mt-1 text-sm text-gray-800 font-semibold">
-                                              {serviceConfig.configuration.quantity || 1}
-                                            </p>
-                                          )}
-                                        </div>
+                                        {/* Quantity - Fixed and Usage only (not used for Hourly billing) */}
+                                        {serviceConfig.configuration.configuration_type !== 'Hourly' && (
+                                          <div>
+                                            <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                              Quantity
+                                            </Label>
+                                            {isEditing ? (
+                                              <Input
+                                                id={`quantity-${serviceConfig.configuration.config_id}`}
+                                                type="number"
+                                                min="1"
+                                                value={editData.quantity ?? ''}
+                                                onChange={(e) => setEditServiceConfigs({
+                                                  ...editServiceConfigs,
+                                                  [configId]: {
+                                                    ...editData,
+                                                    quantity: e.target.value ? parseInt(e.target.value) : undefined
+                                                  }
+                                                })}
+                                                className="mt-1"
+                                              />
+                                            ) : (
+                                              <p className="mt-1 text-sm text-gray-800 font-semibold">
+                                                {serviceConfig.configuration.quantity || 1}
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
 
                                         {/* Rate field - varies by type */}
                                         <div>
