@@ -27,6 +27,7 @@ import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Badge } from 'server/src/components/ui/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
+import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
@@ -78,6 +79,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   const [lineServices, setLineServices] = useState<Record<string, ServiceConfiguration[]>>({});
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showCreateCustomDialog, setShowCreateCustomDialog] = useState(false);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [editLineData, setEditLineData] = useState<Partial<DetailedContractLineMapping>>({});
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
@@ -411,13 +413,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
               Manage the contract lines and services for this contract
             </p>
           </div>
-          <Button
-            id="add-contract-line-btn"
-            onClick={() => setShowAddDialog(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contract Lines
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              id="add-contract-line-from-preset-btn"
+              variant="outline"
+              onClick={() => setShowAddDialog(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add from Presets
+            </Button>
+            <Button
+              id="create-custom-contract-line-btn"
+              onClick={() => setShowCreateCustomDialog(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Custom
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -892,6 +904,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         onClose={() => setShowAddDialog(false)}
         contractId={contract.contract_id}
         onAdd={handleAddContractLines}
+      />
+
+      <CreateCustomContractLineDialog
+        isOpen={showCreateCustomDialog}
+        onClose={() => setShowCreateCustomDialog(false)}
+        contractId={contract.contract_id}
+        onCreated={handleAddContractLines}
       />
     </Card>
   );
