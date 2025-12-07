@@ -113,15 +113,16 @@ const ContractDetail: React.FC = () => {
 
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
+  // Sync tab state FROM URL changes (e.g., browser back/forward)
+  // Don't include activeTab in deps - handleTabChange handles state → URL direction
   useEffect(() => {
     const requested = searchParams?.get('contractView');
-    if (requested && validTabs.has(requested) && requested !== activeTab) {
+    if (requested && validTabs.has(requested)) {
       setActiveTab(requested);
-    }
-    if (!requested && activeTab !== 'edit') {
+    } else if (!requested) {
       setActiveTab('edit');
     }
-  }, [searchParams, activeTab, validTabs]);
+  }, [searchParams, validTabs]);
 
   const updateContractViewParam = useCallback((tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
