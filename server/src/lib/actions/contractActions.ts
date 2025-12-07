@@ -708,6 +708,7 @@ export interface IContractOverview {
   hasHourlyServices: boolean;
   hasUsageServices: boolean;
   hasFixedServices: boolean;
+  currencyCode: string;  // ISO currency code (e.g., 'USD', 'AUD')
 }
 
 /**
@@ -731,6 +732,18 @@ export async function getContractOverview(contractId: string): Promise<IContract
       .first();
 
     const isTemplate = Boolean(templateRecord);
+
+    // Get currency code - templates default to USD, contracts have their own currency
+    let currencyCode = 'USD';
+    if (!isTemplate) {
+      const contractRecord = await knex('contracts')
+        .where({ tenant, contract_id: contractId })
+        .select('currency_code')
+        .first();
+      if (contractRecord?.currency_code) {
+        currencyCode = contractRecord.currency_code;
+      }
+    }
 
     let contractLines: IContractLineOverview[] = [];
 
@@ -907,7 +920,8 @@ export async function getContractOverview(contractId: string): Promise<IContract
       serviceCount,
       hasFixedServices,
       hasHourlyServices,
-      hasUsageServices
+      hasUsageServices,
+      currencyCode
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);

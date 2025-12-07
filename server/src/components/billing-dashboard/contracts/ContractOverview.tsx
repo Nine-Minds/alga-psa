@@ -13,11 +13,11 @@ interface ContractOverviewProps {
   onNavigateToLines?: () => void;
 }
 
-const formatCurrency = (cents: number | null): string => {
+const formatCurrency = (cents: number | null, currencyCode: string = 'USD'): string => {
   if (cents === null) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: currencyCode,
     minimumFractionDigits: 2
   }).format(cents / 100);
 };
@@ -60,7 +60,8 @@ const ContractLineCard: React.FC<{
   line: IContractLineOverview;
   isExpanded: boolean;
   onToggle: () => void;
-}> = ({ line, isExpanded, onToggle }) => {
+  currencyCode: string;
+}> = ({ line, isExpanded, onToggle, currencyCode }) => {
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       <button
@@ -81,7 +82,7 @@ const ContractLineCard: React.FC<{
               {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
                 <>
                   <span>•</span>
-                  <span className="font-medium text-gray-700">{formatCurrency(line.base_rate)}</span>
+                  <span className="font-medium text-gray-700">{formatCurrency(line.base_rate, currencyCode)}</span>
                 </>
               )}
             </div>
@@ -117,7 +118,7 @@ const ContractLineCard: React.FC<{
                   )}
                   {service.custom_rate !== null && (
                     <span className="font-medium text-gray-700">
-                      {formatCurrency(service.custom_rate)}
+                      {formatCurrency(service.custom_rate, currencyCode)}
                       {line.contract_line_type === 'Hourly' && '/hr'}
                       {line.contract_line_type === 'Usage' && service.unit_of_measure && `/${service.unit_of_measure}`}
                     </span>
@@ -235,7 +236,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
             </div>
             <div className="text-xl font-bold text-green-900">
               {overview.totalEstimatedMonthlyValue !== null ? (
-                formatCurrency(overview.totalEstimatedMonthlyValue)
+                formatCurrency(overview.totalEstimatedMonthlyValue, overview.currencyCode)
               ) : (
                 <span className="text-base font-normal text-green-700">Variable</span>
               )}
@@ -318,6 +319,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   line={line}
                   isExpanded={expandedLines.has(line.contract_line_id)}
                   onToggle={() => toggleLine(line.contract_line_id)}
+                  currencyCode={overview.currencyCode}
                 />
               ))}
             </div>
