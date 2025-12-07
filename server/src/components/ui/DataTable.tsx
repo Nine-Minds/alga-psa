@@ -370,7 +370,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const total = totalItems ?? data.length;
   const totalPages = Math.ceil(total / currentPageSize);
 
-  // Manage sorting state
+  // Manage sorting state - filter to only include columns that exist
   const [sorting, setSorting] = React.useState<SortingState>(() => {
     if (manualSorting && sortBy) {
       return [{
@@ -379,7 +379,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       }];
     }
     if (initialSorting && initialSorting.length > 0) {
-      return initialSorting;
+      // Filter to only include sorting for columns that exist
+      return initialSorting.filter(sort =>
+        visibleColumnIds.includes(sort.id)
+      );
     }
     return [];
   });
@@ -398,9 +401,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   React.useEffect(() => {
     if (!manualSorting && initialSorting && initialSorting.length > 0) {
-      setSorting(prev => (prev.length === 0 ? initialSorting : prev));
+      // Filter to only include sorting for columns that exist
+      const validSorting = initialSorting.filter(sort =>
+        visibleColumnIds.includes(sort.id)
+      );
+      setSorting(prev => (prev.length === 0 ? validSorting : prev));
     }
-  }, [initialSorting, manualSorting]);
+  }, [initialSorting, manualSorting, visibleColumnIds]);
 
   const table = useReactTable({
     data,
