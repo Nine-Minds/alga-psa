@@ -350,9 +350,10 @@ const Service = {
     }
 
     try {
-      // Remove tenant and service_type_name from update data to prevent modification
+      // Remove tenant, service_type_name, and prices from update data to prevent modification
       // service_type_name is a virtual field from JOIN and doesn't exist in the table
-      const { tenant: _, service_type_name, ...updateData } = serviceData;
+      // prices is stored in a separate service_prices table
+      const { tenant: _, service_type_name, prices: _prices, ...updateData } = serviceData;
 
       // No need to handle type ID changes anymore
       const finalUpdateData: Partial<IService> = { ...updateData };

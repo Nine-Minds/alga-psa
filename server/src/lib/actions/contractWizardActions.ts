@@ -637,33 +637,62 @@ export async function createClientContractFromWizard(
         }
       };
 
-      // Validate services have prices in the contract's currency
+      // Validate services have prices in the contract's currency OR have custom rates specified
       const contractCurrency = submission.currency_code || 'USD';
 
-      // Get services that have prices in the required currency
-      const servicesWithPrices = await trx('service_catalog as sc')
-        .whereIn('sc.service_id', allServiceIds)
-        .leftJoin('service_prices as sp', function() {
-          this.on('sc.service_id', '=', 'sp.service_id')
-              .andOn('sp.currency_code', '=', trx.raw('?', [contractCurrency]))
-              .andOn('sp.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .select(
-          'sc.service_id',
-          'sc.service_name',
-          'sp.price_id'
-        );
+      // Build a map of services with custom rates (user-entered rates override the need for currency prices)
+      const servicesWithCustomRates = new Set<string>();
 
-      // Find services that don't have a price in the required currency
-      const missingPriceServices = servicesWithPrices.filter(s => !s.price_id);
-      if (missingPriceServices.length > 0) {
-        const missingNames = missingPriceServices
-          .map((s) => `"${s.service_name}"`)
-          .join(', ');
-        throw new Error(
-          `Cannot create contract in ${contractCurrency}. The following services do not have ${contractCurrency} pricing: ${missingNames}. ` +
-          `Please add ${contractCurrency} prices to these services in the Service Catalog before creating this contract.`
-        );
+      // Hourly services with hourly_rate specified
+      filteredHourlyServices.forEach(s => {
+        if (s.hourly_rate !== undefined && s.hourly_rate > 0) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
+
+      // Usage services with unit_rate specified
+      filteredUsageServices.forEach(s => {
+        if (s.unit_rate !== undefined && s.unit_rate > 0) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
+
+      // Fixed services with custom_rate specified (if supported)
+      filteredFixedServices.forEach(s => {
+        if ((s as any).custom_rate !== undefined && (s as any).custom_rate > 0) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
+
+      // Only check currency prices for services WITHOUT custom rates
+      const serviceIdsNeedingCurrencyCheck = allServiceIds.filter(id => !servicesWithCustomRates.has(id));
+
+      if (serviceIdsNeedingCurrencyCheck.length > 0) {
+        // Get services that have prices in the required currency
+        const servicesWithPrices = await trx('service_catalog as sc')
+          .whereIn('sc.service_id', serviceIdsNeedingCurrencyCheck)
+          .leftJoin('service_prices as sp', function() {
+            this.on('sc.service_id', '=', 'sp.service_id')
+                .andOn('sp.currency_code', '=', trx.raw('?', [contractCurrency]))
+                .andOn('sp.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .select(
+            'sc.service_id',
+            'sc.service_name',
+            'sp.price_id'
+          );
+
+        // Find services that don't have a price in the required currency AND don't have custom rates
+        const missingPriceServices = servicesWithPrices.filter(s => !s.price_id);
+        if (missingPriceServices.length > 0) {
+          const missingNames = missingPriceServices
+            .map((s) => `"${s.service_name}"`)
+            .join(', ');
+          throw new Error(
+            `Cannot create contract in ${contractCurrency}. The following services do not have ${contractCurrency} pricing and no custom rate was entered: ${missingNames}. ` +
+            `Please either add ${contractCurrency} prices to these services in the Service Catalog, or enter a custom rate in the wizard.`
+          );
+        }
       }
 
       validateBillingMethod('fixed', filteredFixedServices);

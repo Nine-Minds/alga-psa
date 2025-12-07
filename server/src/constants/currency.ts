@@ -6,12 +6,12 @@ export interface CurrencyOption {
 }
 
 export const CURRENCY_OPTIONS: CurrencyOption[] = [
-  { value: 'USD', label: 'USD - US Dollar', symbol: '$' },
-  { value: 'EUR', label: 'EUR - Euro', symbol: '€' },
-  { value: 'GBP', label: 'GBP - British Pound', symbol: '£' },
-  { value: 'CAD', label: 'CAD - Canadian Dollar', symbol: 'C$' },
-  { value: 'AUD', label: 'AUD - Australian Dollar', symbol: 'A$' },
-  { value: 'JPY', label: 'JPY - Japanese Yen', symbol: '¥' },
+  { value: 'USD', label: 'USD ($)', symbol: '$' },
+  { value: 'EUR', label: 'EUR (€)', symbol: '€' },
+  { value: 'GBP', label: 'GBP (£)', symbol: '£' },
+  { value: 'CAD', label: 'CAD (C$)', symbol: 'C$' },
+  { value: 'AUD', label: 'AUD (A$)', symbol: 'A$' },
+  { value: 'JPY', label: 'JPY (¥)', symbol: '¥' },
 ];
 
 export const getCurrencySymbol = (code: string): string => {

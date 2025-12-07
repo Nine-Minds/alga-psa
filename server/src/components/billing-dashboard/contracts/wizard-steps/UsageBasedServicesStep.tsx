@@ -82,11 +82,21 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
   const handleServiceChange = (index: number, serviceId: string) => {
     const service = services.find((s) => s.service_id === serviceId);
     const next = [...(data.usage_services ?? [])];
+
+    // Only auto-fill the rate if the service has a price in the contract's currency
+    let autoFillRate: number | undefined = undefined;
+    if (service?.prices && service.prices.length > 0) {
+      const matchingPrice = service.prices.find(p => p.currency_code === data.currency_code);
+      if (matchingPrice) {
+        autoFillRate = matchingPrice.rate;
+      }
+    }
+
     next[index] = {
       ...next[index],
       service_id: serviceId,
       service_name: service?.service_name || '',
-      unit_rate: service?.default_rate ?? next[index].unit_rate,
+      unit_rate: autoFillRate,
       unit_of_measure: service?.unit_of_measure || next[index].unit_of_measure || 'unit',
     };
     updateData({ usage_services: next });

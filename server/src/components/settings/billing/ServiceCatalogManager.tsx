@@ -35,6 +35,7 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 const BILLING_METHOD_OPTIONS = [
   { value: 'fixed', label: 'Fixed Fee' },
   { value: 'hourly', label: 'Hourly' },
+  { value: 'per_unit', label: 'Per Unit' },
   { value: 'usage', label: 'Usage Based' }
 ];
 
@@ -51,7 +52,7 @@ const ServiceCatalogManager: React.FC = () => {
   // Note: Categories are currently hidden in favor of using Service Types for organization
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'per_unit' | 'usage'; is_standard: boolean }[]>([]);
   // Use IService directly, extended with optional UI fields
   const [editingService, setEditingService] = useState<(IService & {
     sku?: string; // These might need to be added to IService if they are persisted
@@ -567,8 +568,14 @@ const ServiceCatalogManager: React.FC = () => {
                     ...record,
                     // sku: record.sku || '', // Example if sku was fetched
                   });
-                  // Initialize rate input with formatted value
-                  setRateInput((record.default_rate / 100).toFixed(2));
+                  // Initialize editingPrices from service prices or create default USD entry
+                  const prices = record.prices && record.prices.length > 0
+                    ? record.prices.map(p => ({ currency_code: p.currency_code, rate: p.rate }))
+                    : [{ currency_code: 'USD', rate: record.default_rate }];
+                  setEditingPrices(prices);
+                  // Set rate input for the first/primary price
+                  const primaryRate = prices.length > 0 ? prices[0].rate : record.default_rate;
+                  setRateInput((primaryRate / 100).toFixed(2));
                   setIsEditDialogOpen(true);
 
                   // Ensure the current page is preserved
@@ -630,7 +637,7 @@ const ServiceCatalogManager: React.FC = () => {
                 id="billing-method"
                 options={BILLING_METHOD_OPTIONS}
                 value={editingService?.billing_method || 'fixed'}
-                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'hourly' | 'usage' })}
+                onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'hourly' | 'per_unit' | 'usage' })}
                 placeholder="Select billing method..."
               />
             </div>
