@@ -301,10 +301,7 @@ const ContractDetail: React.FC = () => {
   };
 
   const handleDocumentCreated = async () => {
-    if (!contractId) {
-      return;
-    }
-
+    if (!contractId) return;
     try {
       const documentsData = await getDocumentsByContractId(contractId);
       setDocuments(documentsData || []);

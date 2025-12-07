@@ -116,6 +116,7 @@ const Documents = ({
   const [editedDocumentId, setEditedDocumentId] = useState<string | null>(null);
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
 
+
   // Folder functionality state (only used when no entity is specified)
   // Use user preference for view mode with localStorage fallback
   const {
@@ -207,64 +208,59 @@ const Documents = ({
     }
   }, [initialDocuments]);
 
-
-  const fetchDocuments = useCallback(async (page: number, searchTerm?: string) => {
-    // Folder mode: fetch by folder
-    if (inFolderMode) {
-      try {
-        // If showAllDocuments is true, pass includeSubfolders as true with null folder to show all documents
-        const includeSubfolders = filters?.showAllDocuments || false;
-        const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
-
-        const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, page, pageSize, filters);
-
-        setDocumentsToDisplay(response.documents);
-        setTotalDocuments(response.total);
-        setTotalPages(Math.ceil(response.total / pageSize));
-      } catch (err) {
-        console.error('Error fetching documents by folder:', err);
-        setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
-        setDocumentsToDisplay([]);
-        setTotalPages(1);
-      }
-      return;
-    }
-
-    // Entity mode: fetch by entity (existing behavior)
-    if (!entityId || !entityType) {
-      if (searchTerm) {
-        const filtered = initialDocuments.filter(doc =>
-          doc.document_name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setDocumentsToDisplay(filtered);
-        setTotalPages(1);
-      } else {
-        setDocumentsToDisplay(initialDocuments);
-        setTotalPages(1);
-      }
-      return;
-    }
-
-    try {
-      const currentFilters: DocumentFilters = {
-        searchTerm: searchTerm || undefined,
-      };
-      const response = await getDocumentsByEntity(entityId, entityType, currentFilters, page, pageSize);
-      setDocumentsToDisplay(response.documents);
-      setTotalDocuments(response.totalCount);
-      setTotalPages(response.totalPages);
-    } catch (err) {
-      console.error('Error fetching documents:', err);
-      setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
-      setDocumentsToDisplay([]);
-      setTotalPages(1);
-    }
-  }, [entityId, entityType, pageSize, initialDocuments, inFolderMode, currentFolder, filters]);
-
-
+  // Single effect to fetch documents
+  // In entity mode: uses initialDocuments passed from parent (no client-side fetch)
+  // In folder mode: fetches from server
   useEffect(() => {
-    fetchDocuments(currentPage, searchTermFromParent);
-  }, [fetchDocuments, currentPage, searchTermFromParent]);
+    let cancelled = false;
+
+    const fetchDocuments = async () => {
+      // Folder mode: fetch by folder
+      if (inFolderMode) {
+        try {
+          const includeSubfolders = filters?.showAllDocuments || false;
+          const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
+
+          const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
+
+          if (!cancelled) {
+            setDocumentsToDisplay(response.documents);
+            setTotalDocuments(response.total);
+            setTotalPages(Math.ceil(response.total / pageSize));
+          }
+        } catch (err) {
+          if (!cancelled) {
+            console.error('Error fetching documents by folder:', err);
+            setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
+            setDocumentsToDisplay([]);
+            setTotalPages(1);
+          }
+        }
+        return;
+      }
+
+      // Entity mode: use initialDocuments from parent (no client-side fetching)
+      // Parent component (e.g., ContractDetail) should fetch and pass documents
+      if (!cancelled) {
+        if (searchTermFromParent) {
+          const filtered = initialDocuments.filter(doc =>
+            doc.document_name.toLowerCase().includes(searchTermFromParent.toLowerCase())
+          );
+          setDocumentsToDisplay(filtered);
+        } else {
+          setDocumentsToDisplay(initialDocuments);
+        }
+        setTotalDocuments(initialDocuments.length);
+        setTotalPages(1);
+      }
+    };
+
+    fetchDocuments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, pageSize, searchTermFromParent, inFolderMode, currentFolder, filters, initialDocuments, t]);
 
 
   const handlePageChange = (newPage: number) => {
