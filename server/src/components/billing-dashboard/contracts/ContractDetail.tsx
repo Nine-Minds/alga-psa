@@ -59,7 +59,17 @@ const formatDate = (value?: string | Date | null): string => {
   }
 };
 
-const ContractDetail: React.FC = () => {
+interface ContractDetailProps {
+  /** Documents fetched server-side when viewing documents tab */
+  serverDocuments?: IDocument[] | null;
+  /** Current user ID fetched server-side */
+  serverUserId?: string | null;
+}
+
+const ContractDetail: React.FC<ContractDetailProps> = ({
+  serverDocuments,
+  serverUserId
+}) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const contractId = searchParams?.get('contractId') as string;
@@ -78,8 +88,10 @@ const ContractDetail: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
-  const [documents, setDocuments] = useState<IDocument[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+  // Use server-provided documents if available, otherwise start empty
+  const [documents, setDocuments] = useState<IDocument[]>(serverDocuments || []);
+  // Use server-provided userId if available
+  const [currentUserId, setCurrentUserId] = useState<string>(serverUserId || '');
 
   // Client drawer state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -123,6 +135,20 @@ const ContractDetail: React.FC = () => {
       setActiveTab('edit');
     }
   }, [searchParams, validTabs]);
+
+  // Sync documents from server props when they change (e.g., after router.refresh())
+  useEffect(() => {
+    if (serverDocuments !== undefined && serverDocuments !== null) {
+      setDocuments(serverDocuments);
+    }
+  }, [serverDocuments]);
+
+  // Sync userId from server props when it changes
+  useEffect(() => {
+    if (serverUserId) {
+      setCurrentUserId(serverUserId);
+    }
+  }, [serverUserId]);
 
   const updateContractViewParam = useCallback((tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -301,15 +327,11 @@ const ContractDetail: React.FC = () => {
     refreshSummary();
   };
 
-  const handleDocumentCreated = async () => {
-    if (!contractId) return;
-    try {
-      const documentsData = await getDocumentsByContractId(contractId);
-      setDocuments(documentsData || []);
-    } catch (error) {
-      console.error('Error refreshing documents:', error);
-    }
-  };
+  const handleDocumentCreated = useCallback(() => {
+    // Trigger server re-fetch by refreshing the route
+    // This causes page.tsx to re-run and fetch fresh documents server-side
+    router.refresh();
+  }, [router]);
 
   const handleOpenClientDrawer = async (clientId: string) => {
     try {

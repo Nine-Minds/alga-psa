@@ -216,11 +216,14 @@ const Documents = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
+  // Sync documents from props when they change (e.g., after router.refresh() in entity mode)
   useEffect(() => {
-    if (initialDocuments && initialDocuments.length > 0) {
-        setDocumentsToDisplay(initialDocuments);
+    // In entity mode, always sync from initialDocuments when they change
+    if (!inFolderMode) {
+      setDocumentsToDisplay(initialDocuments);
+      setTotalDocuments(initialDocuments.length);
     }
-  }, [initialDocuments]);
+  }, [initialDocuments, inFolderMode]);
 
   // Single effect to fetch documents
   // In entity mode: uses initialDocuments passed from parent (no client-side fetch)
@@ -276,6 +279,28 @@ const Documents = ({
     };
   }, [currentPage, pageSize, searchTermFromParent, inFolderMode, currentFolder, filters, initialDocuments, t]);
 
+  // Refresh documents - handles both folder mode and entity mode
+  const refreshDocuments = useCallback(async () => {
+    if (inFolderMode) {
+      // Folder mode: refetch from server
+      try {
+        const includeSubfolders = filters?.showAllDocuments || false;
+        const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
+        const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
+        setDocumentsToDisplay(response.documents);
+        setTotalDocuments(response.total);
+        setTotalPages(Math.ceil(response.total / pageSize));
+      } catch (err) {
+        console.error('Error refreshing documents:', err);
+        setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
+      }
+    } else {
+      // Entity mode: trigger parent to refresh via router.refresh()
+      if (onDocumentCreated) {
+        onDocumentCreated();
+      }
+    }
+  }, [inFolderMode, filters, currentFolder, currentPage, pageSize, onDocumentCreated, t]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -372,7 +397,7 @@ const Documents = ({
 
       setSelectedDocumentsForMove(new Set());
       setShowBulkMoveFolderModal(false);
-      fetchDocuments(currentPage, searchTermFromParent);
+      await refreshDocuments();
 
       // Refresh folder tree to update counts
       setFolderTreeKey(prev => prev + 1);
@@ -484,7 +509,7 @@ const Documents = ({
       );
 
       // Refresh the document list
-      await fetchDocuments(currentPage, searchTermFromParent);
+      await refreshDocuments();
 
       // Refresh folder tree to update counts
       if (inFolderMode) {
@@ -525,13 +550,8 @@ const Documents = ({
         folder_path: documentFolderPath
       });
 
-      // Refresh the document list
-      fetchDocuments(currentPage, searchTermFromParent);
-
-      // Call the parent callback for new documents
-      if (onDocumentCreated) {
-        await onDocumentCreated();
-      }
+      // Refresh the document list (triggers router.refresh() in entity mode)
+      await refreshDocuments();
 
       // Reset folder selection for next document
       setDocumentFolderPath(null);
@@ -802,7 +822,7 @@ const Documents = ({
                   selectedFolder={currentFolder}
                   onFolderSelect={handleFolderSelect}
                   onFolderDeleted={() => {
-                    fetchDocuments(currentPage, searchTermFromParent);
+                    refreshDocuments();
                   }}
                   isCollapsed={isFoldersPaneCollapsed}
                   onToggleCollapse={() => setIsFoldersPaneCollapsed(!isFoldersPaneCollapsed)}
@@ -823,7 +843,7 @@ const Documents = ({
                   folderPath={currentFolder}
                   onUploadComplete={async () => {
                     setShowUpload(false);
-                    fetchDocuments(currentPage, searchTermFromParent);
+                    await refreshDocuments();
                   }}
                   onCancel={() => setShowUpload(false)}
                 />
@@ -891,10 +911,7 @@ const Documents = ({
                                   })
                                 );
                                 setSelectedDocumentsForMove(new Set());
-                                fetchDocuments(currentPage, searchTermFromParent);
-                                if (onDocumentCreated) {
-                                  await onDocumentCreated();
-                                }
+                                await refreshDocuments();
                               } catch (error) {
                                 console.error('Error deleting documents:', error);
                                 toast.error(
@@ -1264,10 +1281,8 @@ const Documents = ({
               entityType={entityType}
               onUploadComplete={async () => {
                 setShowUpload(false);
-                // Refresh the documents list
-                fetchDocuments(currentPage, searchTermFromParent);
-                // Also call parent callback if provided
-                if (onDocumentCreated) await onDocumentCreated();
+                // Refresh the documents list (triggers router.refresh() in entity mode)
+                await refreshDocuments();
               }}
               onCancel={() => setShowUpload(false)}
             />
@@ -1281,10 +1296,8 @@ const Documents = ({
             entityType={entityType}
             onDocumentsSelected={async () => {
               setShowSelector(false);
-              // Refresh the documents list
-              fetchDocuments(currentPage, searchTermFromParent);
-              // Also call parent callback if provided
-              if (onDocumentCreated) await onDocumentCreated();
+              // Refresh the documents list (triggers router.refresh() in entity mode)
+              await refreshDocuments();
             }}
             isOpen={showSelector}
             onClose={() => setShowSelector(false)}
