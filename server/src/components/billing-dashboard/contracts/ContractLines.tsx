@@ -106,9 +106,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
     }
   };
 
-  const loadServicesForLine = async (contractLineId: string, forceReload: boolean = false) => {
-    if (!forceReload && (lineServices[contractLineId] || loadingServices[contractLineId])) {
-      return; // Already loaded or loading
+  const loadServicesForLine = async (contractLineId: string, forceReload: boolean = false): Promise<ServiceConfiguration[]> => {
+    if (!forceReload && lineServices[contractLineId]) {
+      return lineServices[contractLineId]; // Already loaded
+    }
+
+    if (!forceReload && loadingServices[contractLineId]) {
+      return []; // Currently loading, return empty
     }
 
     setLoadingServices(prev => ({ ...prev, [contractLineId]: true }));
@@ -120,8 +124,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         : await getContractLineServicesWithConfigurations(contractLineId);
 
       setLineServices(prev => ({ ...prev, [contractLineId]: services }));
+      return services;
     } catch (err) {
       console.error(`Error loading services for contract line ${contractLineId}:`, err);
+      return [];
     } finally {
       setLoadingServices(prev => ({ ...prev, [contractLineId]: false }));
     }
@@ -179,15 +185,24 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         return;
       }
 
+      // Expand the line if not already expanded (like clicking the caret)
+      const isCurrentlyExpanded = expandedLines[line.contract_line_id];
+      if (!isCurrentlyExpanded) {
+        setExpandedLines(prev => ({
+          ...prev,
+          [line.contract_line_id]: true
+        }));
+      }
+
+      // Load services for the line (returns cached if already loaded)
+      const services = await loadServicesForLine(line.contract_line_id);
+
       // Start editing - populate edit data from the line
       setEditingLineId(line.contract_line_id);
       setEditLineData({
         minimum_billable_time: line.minimum_billable_time,
         round_up_to_nearest: line.round_up_to_nearest,
       });
-
-      // Populate service configs for editing
-      const services = lineServices[line.contract_line_id] || [];
       const serviceConfigsData: Record<string, any> = {};
       const bucketConfigsData: Record<string, BucketOverlayInput | null> = {};
 
