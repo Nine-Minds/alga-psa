@@ -151,6 +151,7 @@ export async function verifyClientPortalPayment(
   status: 'succeeded' | 'pending' | 'processing' | 'failed';
   invoiceNumber?: string;
   amount?: number;
+  currencyCode?: string;
   message?: string;
 }>> {
   try {
@@ -207,6 +208,7 @@ export async function verifyClientPortalPayment(
           status: 'succeeded',
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
+          currencyCode: invoice.currency_code || 'USD',
         },
       };
     }
@@ -262,6 +264,7 @@ export async function verifyClientPortalPayment(
           status: 'pending',
           invoiceNumber: invoice.invoice_number,
           amount: invoice.total_amount,
+          currencyCode: invoice.currency_code || 'USD',
           message: 'Payment is being processed',
         },
       };
@@ -297,6 +300,7 @@ export async function verifyClientPortalPayment(
         status,
         invoiceNumber: invoice.invoice_number,
         amount: paymentDetails.amount || invoice.total_amount,
+        currencyCode: invoice.currency_code || 'USD',
       },
     };
   } catch (error) {
