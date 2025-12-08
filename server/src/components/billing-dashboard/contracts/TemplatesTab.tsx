@@ -68,7 +68,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
   const navigateToContract = (contractId?: string) => {
     if (contractId) {
       const params = new URLSearchParams();
-      params.set('tab', 'contracts');
+      params.set('tab', 'contract-templates');
       params.set('contractId', contractId);
       router.push(`/msp/billing?${params.toString()}`);
     }
@@ -126,7 +126,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}`);
+                  router.push(`/msp/billing?tab=contract-templates&contractId=${record.contract_id}`);
                 }
               }}
             >
