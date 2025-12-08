@@ -39,6 +39,10 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
 
   // Get client details
   const client = await invoiceService.getClientDetails(knex, tenant, clientId);
+
+  // Validate that the client has a billing email (required for online payments)
+  await invoiceService.validateClientBillingEmail(knex, tenant, clientId, client.client_name);
+
   const currentDate = Temporal.Now.plainDateISO().toString();
 
   // Generate invoice number and create invoice record
