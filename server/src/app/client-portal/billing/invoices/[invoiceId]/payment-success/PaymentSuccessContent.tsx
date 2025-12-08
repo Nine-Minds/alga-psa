@@ -21,6 +21,7 @@ export default function PaymentSuccessContent({
   const [status, setStatus] = useState<PaymentStatus>('verifying');
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const [amount, setAmount] = useState<number>(0);
+  const [currencyCode, setCurrencyCode] = useState<string>('USD');
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function PaymentSuccessContent({
         if (result.success && result.data) {
           setInvoiceNumber(result.data.invoiceNumber || '');
           setAmount(result.data.amount || 0);
+          setCurrencyCode(result.data.currencyCode || 'USD');
 
           if (result.data.status === 'succeeded') {
             setStatus('success');
@@ -62,7 +64,7 @@ export default function PaymentSuccessContent({
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currencyCode,
     }).format(cents / 100);
   };
 
