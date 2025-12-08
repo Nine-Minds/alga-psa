@@ -64,6 +64,28 @@ export const PaymentSettings = () => {
   );
 };
 
+export const StripeConnectionSettings = () => {
+  return (
+    <div className="text-center py-8 text-muted-foreground">
+      <p className="text-lg font-medium">Enterprise Feature</p>
+      <p className="mt-2 text-sm">
+        Stripe payment integration is available in the Enterprise edition of Alga PSA.
+      </p>
+    </div>
+  );
+};
+
+export const PaymentSettingsConfig = () => {
+  return (
+    <div className="text-center py-8 text-muted-foreground">
+      <p className="text-lg font-medium">Enterprise Feature</p>
+      <p className="mt-2 text-sm">
+        Payment settings configuration is available in the Enterprise edition of Alga PSA.
+      </p>
+    </div>
+  );
+};
+
 // Default export
 export default {
   BillingDashboard,
@@ -71,4 +93,6 @@ export default {
   PaymentProcessing,
   BillingReports,
   PaymentSettings,
+  StripeConnectionSettings,
+  PaymentSettingsConfig,
 };

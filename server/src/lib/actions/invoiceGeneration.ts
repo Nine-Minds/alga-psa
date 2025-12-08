@@ -27,7 +27,7 @@ import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { getClientLogoUrl } from '../utils/avatarUtils';
-import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from 'server/src/lib/services/invoiceService';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { analytics } from '../analytics/posthog';
@@ -281,6 +281,16 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
     const { client_id, effective_date } = billingCycle;
 
+    // Validate that the client has a billing email (required for online payments)
+    const clientForValidation = await knex('clients')
+      .where({ client_id, tenant })
+      .select('client_name')
+      .first();
+
+    if (clientForValidation) {
+      await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+    }
+
     // Calculate cycle dates
     const cycleStart = toISODate(toPlainDate(effective_date));
     const cycleEnd = await getNextBillingDate(client_id, effective_date); // Uses temporary import
@@ -471,9 +481,20 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     throw new Error('Billing cycle not found');
   }
 
+  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
+
+  // Validate that the client has a billing email (required for online payments)
+  const clientForValidation = await knex('clients')
+    .where({ client_id, tenant })
+    .select('client_name')
+    .first();
+
+  if (clientForValidation) {
+    await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+  }
+
   let cycleStart: ISO8601String;
   let cycleEnd: ISO8601String;
-  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
 
   if (period_start_date && period_end_date) {
     // Use the billing cycle's period dates if provided, ensuring UTC format
