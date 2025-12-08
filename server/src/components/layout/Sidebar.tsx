@@ -30,6 +30,7 @@ interface SidebarProps {
   menuSections?: NavigationSection[];
   disableTransition?: boolean;
   mode?: NavMode;
+  onBackToMain?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -39,7 +40,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   bottomMenuItems = defaultBottomMenuItems,
   menuSections,
   disableTransition = false,
-  mode = 'main'
+  mode = 'main',
+  onBackToMain
 }): JSX.Element => {
   const appVersion = getAppVersion();
   const pathname = usePathname();
@@ -118,7 +120,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleBackToMain = () => {
-    router.push('/msp/dashboard');
+    if (onBackToMain) {
+      onBackToMain();
+    } else {
+      // Fallback to navigation if no callback provided
+      router.push('/msp/dashboard');
+    }
   };
 
   const renderMenuItem = (item: MenuItem) => {

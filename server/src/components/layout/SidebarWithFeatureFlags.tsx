@@ -19,6 +19,7 @@ interface SidebarWithFeatureFlagsProps {
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   disableTransition?: boolean;
   mode?: NavMode;
+  onBackToMain?: () => void;
 }
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
@@ -67,6 +68,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       bottomMenuItems={bottomMenuItems}
       disableTransition={props.disableTransition}
       mode={props.mode}
+      onBackToMain={props.onBackToMain}
     />
   );
 }
