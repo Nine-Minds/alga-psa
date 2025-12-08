@@ -385,10 +385,14 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                     />
                   </div>
                 </div>
-                <div 
-                  className="border-t bg-white max-h-[300px] overflow-y-auto"
+                <div
+                  className="border-t bg-white max-h-[300px] overflow-y-auto overscroll-contain"
                   role="listbox"
                   aria-label="Clients"
+                  onWheel={(e) => {
+                    // Ensure scroll events work properly within the dropdown
+                    e.stopPropagation();
+                  }}
                 >
                   {/* Add clear/none option */}
                   <OptionButton

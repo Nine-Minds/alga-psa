@@ -1154,7 +1154,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
           <BackNav href="/msp/clients">
-            {isInDrawer ? 'Back' : 'Back to Clients'}
+            {isInDrawer ? 'Back' : '← Back to Clients'}
           </BackNav>
         )}
         
