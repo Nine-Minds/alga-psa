@@ -1,6 +1,8 @@
 'use server';
 
-import { getConnection } from '@/lib/db/db';
+import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import { SupportedLocale, isSupportedLocale } from '@/lib/i18n/config';
 import { getCurrentUser } from '../user-actions/userActions';
 
@@ -20,35 +22,40 @@ export async function updateClientLocaleAction(
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
-  const knex = await getConnection(user.tenant);
-
-  // Get existing client
-  const client = await knex('clients')
-    .where({
-      client_id: clientId,
-      tenant: user.tenant
-    })
-    .first();
-
-  if (!client) {
-    throw new Error('Client not found');
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
-  // Update properties JSONB with new locale
-  const updatedProperties = {
-    ...(client.properties || {}),
-    defaultLocale: locale
-  };
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Get existing client
+    const client = await trx('clients')
+      .where({
+        client_id: clientId,
+        tenant
+      })
+      .first();
 
-  await knex('clients')
-    .where({
-      client_id: clientId,
-      tenant: user.tenant
-    })
-    .update({
-      properties: updatedProperties,
-      updated_at: knex.fn.now()
-    });
+    if (!client) {
+      throw new Error('Client not found');
+    }
+
+    // Update properties JSONB with new locale
+    const updatedProperties = {
+      ...(client.properties || {}),
+      defaultLocale: locale
+    };
+
+    await trx('clients')
+      .where({
+        client_id: clientId,
+        tenant
+      })
+      .update({
+        properties: updatedProperties,
+        updated_at: trx.fn.now()
+      });
+  });
 
   return { success: true };
 }
@@ -64,14 +71,19 @@ export async function getClientLocaleAction(
     return null;
   }
 
-  const knex = await getConnection(user.tenant);
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return null;
+  }
 
-  const client = await knex('clients')
-    .where({
-      client_id: clientId,
-      tenant: user.tenant
-    })
-    .first();
+  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('clients')
+      .where({
+        client_id: clientId,
+        tenant
+      })
+      .first();
+  });
 
   const locale = client?.properties?.defaultLocale;
   return isSupportedLocale(locale) ? locale : null;
