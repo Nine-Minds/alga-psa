@@ -15,66 +15,50 @@ import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegions
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <Skeleton className="h-6 w-40" />
-        </CardTitle>
-        <div className="text-sm text-muted-foreground mt-2">
+    <div className="space-y-6">
+      {/* Form Fields Skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-64" />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Connection Status Skeleton */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            <Skeleton className="h-10 w-24" />
-          </div>
+        <Skeleton className="h-6 w-12" />
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-4 w-64" />
         </div>
+        <Skeleton className="h-6 w-12" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-10 w-48" />
+      </div>
 
-        {/* Form Fields Skeleton */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-
-        {/* Loading Indicator */}
-        <div className="flex flex-col items-center justify-center py-8">
-          <Spinner size="md" />
-          <p className="mt-2 text-gray-600">Loading payment configuration...</p>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Loading Indicator */}
+      <div className="flex flex-col items-center justify-center py-4">
+        <Spinner size="md" />
+        <p className="mt-2 text-gray-600">Loading payment settings...</p>
+      </div>
+    </div>
   );
 };
 
-// Dynamic import for PaymentSettings using the packages pattern
+// Dynamic import for PaymentSettingsConfig using the packages pattern
 // The webpack alias @product/billing/entry will resolve to either EE or OSS version
-const PaymentSettings = dynamic(
+const PaymentSettingsConfig = dynamic(
   () => import('@product/billing/entry').then(mod => {
-    const PaymentSettingsExport = mod.PaymentSettings;
-    const result = PaymentSettingsExport();
-    
+    const PaymentSettingsConfigExport = mod.PaymentSettingsConfig;
+    const result = PaymentSettingsConfigExport();
+
     // EE version: result is a Promise that resolves to the module
     // OSS version: result is JSX directly
     if (result instanceof Promise || (result && typeof result === 'object' && 'then' in result && typeof (result as any).then === 'function')) {
       // EE: unwrap the promise and get the component
       return (result as unknown as Promise<any>).then(componentModule => ({
-        default: componentModule.default || componentModule.PaymentSettings || componentModule
+        default: componentModule.default || componentModule.PaymentSettingsConfig || componentModule
       }));
     } else {
       // OSS: result is JSX, wrap it in a component function
@@ -129,17 +113,17 @@ const BillingSettings: React.FC = () => {
       ),
     },
     {
-      label: 'Payment Settings',
+      label: 'Payments',
       content: (
         <Card>
           <CardHeader>
             <CardTitle>Payment Settings</CardTitle>
             <CardDescription>
-              Configure payment providers (Stripe) for invoice payments.
+              Configure how payment links work with your invoices.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PaymentSettings />
+            <PaymentSettingsConfig />
           </CardContent>
         </Card>
       ),

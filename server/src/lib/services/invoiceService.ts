@@ -65,6 +65,41 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
   return client;
 }
 
+/**
+ * Gets the billing email for a client.
+ * Checks billing location first (is_billing_address=true), then falls back to default location.
+ * Returns null if no email is found.
+ */
+export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
+  const location = await knex('client_locations')
+    .where('tenant', tenant)
+    .where('client_id', clientId)
+    .where(function() {
+      this.where('is_billing_address', true)
+          .orWhere('is_default', true);
+    })
+    .orderByRaw('is_billing_address DESC, is_default DESC')
+    .select('email')
+    .first();
+
+  return location?.email || null;
+}
+
+/**
+ * Validates that a client has a billing email address set.
+ * This is required for online payments via Stripe.
+ * Throws an error with a user-friendly message if no email is found.
+ */
+export async function validateClientBillingEmail(knex: Knex, tenant: string, clientId: string, clientName: string): Promise<void> {
+  const billingEmail = await getClientBillingEmail(knex, tenant, clientId);
+  if (!billingEmail) {
+    throw new Error(
+      `Cannot generate invoice: No billing email address for "${clientName}". ` +
+      `Please set an email address on the client's billing location before generating invoices.`
+    );
+  }
+}
+
 // Renamed interface for clarity within manual context
 interface ManualInvoiceItemInput extends NetAmountItem {
   service_id?: string; // Optional for manual items

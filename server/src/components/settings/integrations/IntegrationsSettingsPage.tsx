@@ -45,19 +45,19 @@ const NinjaOneIntegrationSettings = dynamic(
   }
 );
 
-// Dynamic import for PaymentSettings using the packages pattern
+// Dynamic import for StripeConnectionSettings using the packages pattern
 // The webpack alias @product/billing/entry will resolve to either EE or OSS version
-const PaymentSettings = dynamic(
+const StripeConnectionSettings = dynamic(
   () => import('@product/billing/entry').then(mod => {
-    const PaymentSettingsExport = mod.PaymentSettings;
-    const result = PaymentSettingsExport();
-    
+    const StripeConnectionSettingsExport = mod.StripeConnectionSettings;
+    const result = StripeConnectionSettingsExport();
+
     // EE version: result is a Promise that resolves to the module
     // OSS version: result is JSX directly
     if (result instanceof Promise || (result && typeof result === 'object' && 'then' in result && typeof (result as any).then === 'function')) {
       // EE: unwrap the promise and get the component
       return (result as unknown as Promise<any>).then(componentModule => ({
-        default: componentModule.default || componentModule.PaymentSettings || componentModule
+        default: componentModule.default || componentModule.StripeConnectionSettings || componentModule
       }));
     } else {
       // OSS: result is JSX, wrap it in a component function
@@ -70,7 +70,7 @@ const PaymentSettings = dynamic(
         <CardContent className="py-8">
           <div className="flex flex-col items-center justify-center gap-2">
             <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading payment settings...</span>
+            <span className="text-sm text-muted-foreground">Loading Stripe settings...</span>
           </div>
         </CardContent>
       </Card>
@@ -206,7 +206,7 @@ const IntegrationsSettingsPage: React.FC = () => {
           id: 'stripe',
           name: 'Stripe',
           description: 'Accept credit card payments for invoices via Stripe',
-          component: PaymentSettings,
+          component: StripeConnectionSettings,
           isEE: true,
         }] : []),
       ],

@@ -10,8 +10,14 @@ export {
   BillingReports
 } from '../oss/entry';
 
-// PaymentSettings is implemented in EE - use dynamic import
+// PaymentSettings is implemented in EE - use dynamic import (kept for backwards compatibility)
 export const PaymentSettings = () => import('../../../ee/server/src/components/settings/billing/PaymentSettings');
+
+// StripeConnectionSettings - for Integrations settings page
+export const StripeConnectionSettings = () => import('../../../ee/server/src/components/settings/integrations/StripeConnectionSettings');
+
+// PaymentSettingsConfig - for Billing settings page
+export const PaymentSettingsConfig = () => import('../../../ee/server/src/components/settings/billing/PaymentSettingsConfig');
 
 // Default export
 const billing = {
@@ -20,6 +26,8 @@ const billing = {
   PaymentProcessing: async () => (await import('../oss/entry')).PaymentProcessing,
   BillingReports: async () => (await import('../oss/entry')).BillingReports,
   PaymentSettings: () => import('../../../ee/server/src/components/settings/billing/PaymentSettings'),
+  StripeConnectionSettings: () => import('../../../ee/server/src/components/settings/integrations/StripeConnectionSettings'),
+  PaymentSettingsConfig: () => import('../../../ee/server/src/components/settings/billing/PaymentSettingsConfig'),
 };
 
 export default billing;
