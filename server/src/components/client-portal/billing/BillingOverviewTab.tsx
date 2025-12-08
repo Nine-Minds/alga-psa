@@ -23,7 +23,7 @@ interface BillingOverviewTabProps {
   bucketUsage: ClientBucketUsageResult[];
   isBucketUsageLoading: boolean;
   isLoading: boolean;
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
   onViewAllInvoices?: () => void;
 }
@@ -100,7 +100,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           {nextInvoice ? (
             <>
               <p className="mt-2 text-3xl font-semibold">
-                {nextInvoice.total_amount ? formatCurrency(nextInvoice.total_amount) : '$0.00'}
+                {formatCurrency(nextInvoice.total_amount ?? 0, nextInvoice.currencyCode)}
               </p>
               <p className="mt-1 text-sm text-gray-500">
                 {nextInvoice.due_date ? t('billing.invoice.dueDateText', { date: formatDate(nextInvoice.due_date) }) : t('billing.invoice.noDueDate')}

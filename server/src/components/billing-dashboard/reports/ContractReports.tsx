@@ -7,7 +7,7 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { Badge } from 'server/src/components/ui/Badge';
 import {
-  DollarSign,
+  Coins,
   Calendar,
   TrendingUp,
   Clock,
@@ -352,7 +352,7 @@ const ContractReports: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
+            <Coins className="h-5 w-5 text-green-600" />
             <h3 className="font-semibold">Total MRR</h3>
           </div>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalMRR ?? 0)}</p>
@@ -390,7 +390,7 @@ const ContractReports: React.FC = () => {
         <TabsContent value="revenue" className="mt-4">
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
-              <DollarSign className="h-5 w-5 text-green-600" />
+              <Coins className="h-5 w-5 text-green-600" />
               <h3 className="text-lg font-semibold">Contract Revenue Report</h3>
             </div>
             <p className="text-sm text-gray-600 mb-4">

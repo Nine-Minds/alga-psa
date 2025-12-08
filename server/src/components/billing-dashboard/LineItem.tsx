@@ -3,6 +3,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import { DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 
 // Extend SelectOption to include rate
 export interface ServiceOption extends SelectOption {
@@ -35,6 +37,7 @@ interface LineItemProps {
   onRemove: () => void;
   onChange: (updatedItem: EditableItem) => void;
   onToggleExpand: () => void;
+  currencyCode?: string;
 }
 
 const discountTypeOptions: SelectOption[] = [
@@ -51,7 +54,9 @@ export const LineItem: React.FC<LineItemProps> = ({
   onRemove,
   onChange,
   onToggleExpand,
+  currencyCode = 'USD',
 }) => {
+  const currencySymbol = getCurrencySymbol(currencyCode);
   // Internal state for editing
   const [editState, setEditState] = useState<EditableItem>(() => ({
     ...item,
@@ -203,7 +208,7 @@ export const LineItem: React.FC<LineItemProps> = ({
               <span className="text-gray-600">
                 {editState.discount_type === 'percentage'
                   ? `${editState.discount_percentage}%`
-                  : `$${(Math.abs(editState.rate) / 100).toFixed(2)}`}
+                  : `${currencySymbol}${(Math.abs(editState.rate) / 100).toFixed(2)}`}
                 {editState.applies_to_item_id && (
                   <>
                     <span className="mx-2 text-gray-400">|</span>
@@ -226,12 +231,12 @@ export const LineItem: React.FC<LineItemProps> = ({
         </div>
         <div className="flex items-center gap-4">
           {!editState.is_discount && (
-            <span className="text-gray-600">{editState.quantity} × ${rateInDollars.toFixed(2)}</span>
+            <span className="text-gray-600">{editState.quantity} × {currencySymbol}{rateInDollars.toFixed(2)}</span>
           )}
           <span className="font-medium">
             {editState.discount_type === 'percentage'
               ? `${editState.discount_percentage || 0}%`
-              : `$${Math.abs(subtotal / 100).toFixed(2)}`}
+              : `${currencySymbol}${Math.abs(subtotal / 100).toFixed(2)}`}
           </span>
           {editState.discount_type === 'percentage' && (
             <span className="text-sm text-gray-500 ml-1">
@@ -333,7 +338,7 @@ export const LineItem: React.FC<LineItemProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {editState.discount_type === 'percentage' ? 'Percentage' : 'Amount ($)'}
+                {editState.discount_type === 'percentage' ? 'Percentage' : `Amount (${currencySymbol})`}
               </label>
               <Input
                 id='discount-value-input'
@@ -434,7 +439,7 @@ export const LineItem: React.FC<LineItemProps> = ({
         ) : (
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rate ($)
+              Rate ({currencySymbol})
             </label>
             <Input
               id='rate-input'
@@ -487,7 +492,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             <span>
               {editState.discount_type === 'percentage'
                 ? `${editState.discount_percentage || 0}% of ${editState.applies_to_item_id ? 'item' : 'invoice'} total`
-                : `Amount: -$${(Math.abs(subtotal) / 100).toFixed(2)}`}
+                : `Amount: -${currencySymbol}${(Math.abs(subtotal) / 100).toFixed(2)}`}
               {editState.applies_to_item_id && (
                 <>
                   <span className="mx-2">|</span>
@@ -499,7 +504,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             </span>
           </>
         ) : (
-          <>Subtotal: ${(subtotal / 100).toFixed(2)}</>
+          <>Subtotal: {currencySymbol}{(subtotal / 100).toFixed(2)}</>
         )}
       </div>
     </div>

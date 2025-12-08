@@ -70,6 +70,7 @@ type TemplateOption = {
   contract_name: string;
   contract_description?: string | null;
   billing_frequency?: string | null;
+  currency_code?: string | null;
 };
 
 // ---------------------- Client wizard types ----------------------
@@ -957,7 +958,8 @@ export async function listContractTemplatesForWizard(): Promise<TemplateOption[]
       'template_id',
       'template_name',
       'template_description',
-      'default_billing_frequency'
+      'default_billing_frequency',
+      'currency_code'
     );
 
   return templates.map((template) => ({
@@ -965,6 +967,7 @@ export async function listContractTemplatesForWizard(): Promise<TemplateOption[]
     contract_name: template.template_name,
     contract_description: template.template_description,
     billing_frequency: template.default_billing_frequency,
+    currency_code: template.currency_code,
   }));
 }
 

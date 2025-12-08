@@ -12,7 +12,7 @@ interface ContractLineDetailsDialogProps {
   contractLine: IClientContractLine | null;
   isOpen: boolean;
   onClose: () => void;
-  formatCurrency?: (amount: number) => string;
+  formatCurrency?: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 };
 
@@ -20,7 +20,12 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
   contractLine,
   isOpen,
   onClose,
-  formatCurrency = (amount: number) => `$${amount.toFixed(2)}`,
+  formatCurrency = (amount: number, currencyCode: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode
+    }).format(amount / 100);
+  },
   formatDate
 }) => {
   const { t } = useTranslation('clientPortal');
@@ -61,7 +66,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
           {contractLine.custom_rate !== undefined && (
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.customRate')}</p>
-              <p className="mt-1">{formatCurrency(contractLine.custom_rate)}</p>
+              <p className="mt-1">{formatCurrency(contractLine.custom_rate, contractLine.currency_code)}</p>
             </div>
           )}
           {(contractLine.service_category_name || contractLine.service_category) && (

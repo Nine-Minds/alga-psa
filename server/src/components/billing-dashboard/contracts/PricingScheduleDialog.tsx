@@ -259,7 +259,7 @@ export function PricingScheduleDialog({
                   step="0.01"
                   value={customRate}
                   onChange={(e) => setCustomRate(e.target.value)}
-                  className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   placeholder="0.00"
                 />
               </div>

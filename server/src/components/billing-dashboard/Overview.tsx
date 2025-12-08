@@ -2,13 +2,13 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
-import { 
-  FileSpreadsheet, 
-  Building2, 
-  CreditCard, 
-  Clock, 
+import {
+  FileSpreadsheet,
+  Building2,
+  CreditCard,
+  Clock,
   Calendar,
-  DollarSign,
+  Coins,
   FileText,
   AlertCircle,
   TrendingUp,
@@ -155,7 +155,7 @@ const Overview = () => {
         <MetricCard
           title="Monthly Revenue"
           value={metrics.monthly_revenue}
-          icon={DollarSign}
+          icon={Coins}
           loading={loading}
           error={hasError}
           subtitle="Current Month"

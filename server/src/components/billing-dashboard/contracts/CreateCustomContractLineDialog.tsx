@@ -9,7 +9,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { createCustomContractLine, CreateCustomContractLineInput, CustomContractLineServiceConfig } from 'server/src/lib/actions/contractLinePresetActions';
-import { Package, Clock, Activity, Plus, X, DollarSign } from 'lucide-react';
+import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
@@ -489,7 +489,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
                 <div className="space-y-2">
                   <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
-                    <DollarSign className="h-3 w-3" />
+                    <Coins className="h-3 w-3" />
                     Hourly Rate
                   </Label>
                   <div className="relative">
@@ -691,7 +691,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
-                      <DollarSign className="h-3 w-3" />
+                      <Coins className="h-3 w-3" />
                       Rate per Unit
                     </Label>
                     <div className="relative">
@@ -721,7 +721,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                           }
                         }}
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                       />
                     </div>
                     <p className="text-xs text-gray-500">
@@ -995,7 +995,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                           }
                         }}
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                       />
                     </div>
                     <p className="text-xs text-gray-500">Recurring fee for all fixed services.</p>

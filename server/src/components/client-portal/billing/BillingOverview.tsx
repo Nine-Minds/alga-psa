@@ -277,10 +277,10 @@ export default function BillingOverview() {
 
   // Memoize formatters to prevent unnecessary re-creation
   // Note: Invoice amounts are stored in cents, so we divide by 100
-  const formatCurrency = useCallback((amountInCents: number) => {
+  const formatCurrency = useCallback((amountInCents: number, currencyCode: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: currencyCode
     }).format(amountInCents / 100);
   }, []);
 
