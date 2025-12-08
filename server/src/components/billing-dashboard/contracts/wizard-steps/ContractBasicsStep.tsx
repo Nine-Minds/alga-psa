@@ -307,7 +307,12 @@ export function ContractBasicsStep({
           className="w-full"
           clearable
         />
-        <p className="text-xs text-gray-500">Leave blank for an ongoing contract.</p>
+        {endDate && startDate && endDate < startDate && (
+          <p className="text-xs text-red-600">End date must be after start date</p>
+        )}
+        {!(endDate && startDate && endDate < startDate) && (
+          <p className="text-xs text-gray-500">Leave blank for an ongoing contract.</p>
+        )}
       </div>
 
       <div className="space-y-2">
