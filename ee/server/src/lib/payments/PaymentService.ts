@@ -37,7 +37,7 @@ interface InvoiceData {
   invoice_number: string;
   client_id: string;
   total_amount: number;
-  currency?: string;
+  currency_code: string;
   status: string;
 }
 
@@ -211,7 +211,7 @@ export class PaymentService {
     const request: CreatePaymentLinkRequest = {
       invoiceId,
       amount: invoice.total_amount,
-      currency: invoice.currency || 'USD',
+      currency: invoice.currency_code || 'USD',
       description: `Invoice ${invoice.invoice_number}`,
       clientId: client.client_id,
       clientEmail,
@@ -569,7 +569,7 @@ export class PaymentService {
     }
 
     // Validate currency matches
-    const invoiceCurrency = (invoice.currency || 'USD').toUpperCase();
+    const invoiceCurrency = (invoice.currency_code || 'USD').toUpperCase();
     const paymentCurrency = (event.currency || 'USD').toUpperCase();
     if (invoiceCurrency !== paymentCurrency) {
       return {

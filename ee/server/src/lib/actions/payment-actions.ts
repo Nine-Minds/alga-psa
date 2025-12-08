@@ -373,7 +373,7 @@ export async function connectStripeAction(
 
     if (existingConfig) {
       await knex('payment_provider_configs')
-        .where({ config_id: existingConfig.config_id })
+        .where({ config_id: existingConfig.config_id, tenant: user.tenant })
         .update(configData);
     } else {
       await knex('payment_provider_configs').insert({
@@ -523,7 +523,7 @@ export async function updatePaymentSettingsAction(
 
     // Update config
     await knex('payment_provider_configs')
-      .where({ config_id: config.config_id })
+      .where({ config_id: config.config_id, tenant: user.tenant })
       .update({
         settings: newSettings,
         updated_at: knex.fn.now(),
@@ -648,7 +648,7 @@ export async function saveStripeWebhookSecretAction(
 
     // Update the config to point to the webhook secret
     await knex('payment_provider_configs')
-      .where({ config_id: config.config_id })
+      .where({ config_id: config.config_id, tenant: user.tenant })
       .update({
         webhook_secret_vault_path: `tenant/${user.tenant}/stripe_payment_webhook_secret`,
         updated_at: knex.fn.now(),
@@ -757,7 +757,7 @@ export async function retryStripeWebhookConfigurationAction(): Promise<PaymentAc
     // Update the config with webhook info
     const configuration = config.configuration as any;
     await knex('payment_provider_configs')
-      .where({ config_id: config.config_id })
+      .where({ config_id: config.config_id, tenant: user.tenant })
       .update({
         configuration: {
           ...configuration,
