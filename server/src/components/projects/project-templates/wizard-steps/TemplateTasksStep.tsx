@@ -5,6 +5,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Plus, Trash2, Edit2, Check, X, CheckSquare, ListTodo } from 'lucide-react';
 import { TemplateWizardData, TemplateTask, TemplateChecklistItem } from '../TemplateCreationWizard';
@@ -512,13 +513,13 @@ export function TemplateTasksStep({
         )}
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">Tip</h4>
-        <p className="text-sm text-blue-800">
+      <Alert variant="info">
+        <AlertTitle>Tip</AlertTitle>
+        <AlertDescription>
           Add checklist items to break down complex tasks into smaller steps. These will help
           team members track progress within each task.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

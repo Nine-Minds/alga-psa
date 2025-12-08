@@ -5,7 +5,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IService } from 'server/src/interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
@@ -78,18 +78,13 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
       <h1 className="text-3xl font-bold mb-6">Billing</h1>
 
       {/* Beta Warning Banner */}
-      <div className="bg-blue-50 border-l-4 border-blue-500 px-4 py-3 rounded mb-4" role="alert">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="font-semibold text-blue-800">Beta Release</p>
-            <p className="text-sm text-blue-700">
-              Our revamped billing system is currently in beta. You may encounter issues or incomplete features.
-              We appreciate your patience as we continue to improve the experience.
-            </p>
-          </div>
-        </div>
-      </div>
+      <Alert variant="info" className="mb-4">
+        <AlertTitle>Beta Release</AlertTitle>
+        <AlertDescription>
+          Our revamped billing system is currently in beta. You may encounter issues or incomplete features.
+          We appreciate your patience as we continue to improve the experience.
+        </AlertDescription>
+      </Alert>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">

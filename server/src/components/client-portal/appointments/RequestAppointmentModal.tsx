@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import Spinner from 'server/src/components/ui/Spinner';
 import { Calendar } from 'server/src/components/ui/Calendar';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -465,20 +466,22 @@ export function RequestAppointmentModal({
               />
 
               {selectedService && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-900 mb-2">{selectedService.service_name}</h4>
-                  {selectedService.description && (
-                    <p className="text-sm text-blue-800 mb-2">{selectedService.description}</p>
-                  )}
-                  {selectedService.service_type && (
-                    <div className="flex items-center gap-2 text-sm text-blue-700">
-                      <Badge variant="primary">{selectedService.service_type}</Badge>
-                      {selectedService.default_rate && (
-                        <span>${selectedService.default_rate}/{selectedService.unit_of_measure || 'hour'}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <Alert variant="info" className="mt-4">
+                  <AlertTitle>{selectedService.service_name}</AlertTitle>
+                  <AlertDescription>
+                    {selectedService.description && (
+                      <p className="mb-2">{selectedService.description}</p>
+                    )}
+                    {selectedService.service_type && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="primary">{selectedService.service_type}</Badge>
+                        {selectedService.default_rate && (
+                          <span>${selectedService.default_rate}/{selectedService.unit_of_measure || 'hour'}</span>
+                        )}
+                      </div>
+                    )}
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
 
@@ -720,14 +723,12 @@ export function RequestAppointmentModal({
                 </div>
               </div>
 
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-blue-800">
-                    {t('appointments.step4.approvalNote')}
-                  </p>
-                </div>
-              </div>
+              <Alert variant="info" className="mt-4">
+                <AlertCircle className="h-5 w-5" />
+                <AlertDescription>
+                  {t('appointments.step4.approvalNote')}
+                </AlertDescription>
+              </Alert>
             </div>
           </div>
         );

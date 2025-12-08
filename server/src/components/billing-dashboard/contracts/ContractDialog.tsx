@@ -1205,12 +1205,12 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
               {/* Coming Soon Notice */}
               {poRequired && (
-                <div className="flex gap-2 text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
-                  <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                  <p>
+                <Alert variant="info">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
                     <span className="font-medium">Note:</span> Invoice integration coming soon. Settings will be saved but PO enforcement won't be active until a future release.
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
               )}
 
               {/* PO Fields */}

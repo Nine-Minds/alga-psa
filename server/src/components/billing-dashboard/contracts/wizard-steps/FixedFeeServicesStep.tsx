@@ -15,6 +15,7 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -283,20 +284,22 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         )}
 
         {data.fixed_services.length > 0 && data.fixed_base_rate && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">Fixed Fee Summary</h4>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p>
-                <strong>Services:</strong> {data.fixed_services.length}
-              </p>
-              <p>
-                <strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}
-              </p>
-              <p>
-                <strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
-              </p>
-            </div>
-          </div>
+          <Alert variant="info" className="mt-6">
+            <AlertDescription>
+              <h4 className="text-sm font-semibold mb-2">Fixed Fee Summary</h4>
+              <div className="text-sm space-y-1">
+                <p>
+                  <strong>Services:</strong> {data.fixed_services.length}
+                </p>
+                <p>
+                  <strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}
+                </p>
+                <p>
+                  <strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {data.fixed_services.length > 0 && (

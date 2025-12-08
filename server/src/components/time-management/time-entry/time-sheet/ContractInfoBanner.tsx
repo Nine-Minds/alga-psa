@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useState } from 'react';
 import { Info, FileText } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/contractLineDisambiguation';
 import { ISO8601String } from 'server/src/types/types.d';
 
@@ -153,24 +154,22 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
   }
 
   return (
-    <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
-      <div className="flex items-start">
-        <FileText className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <p className="text-sm text-blue-700 font-medium">
-            Contract: {contractInfo.contractName || 'Default Contract'}
+    <Alert variant="info">
+      <FileText className="h-5 w-5" />
+      <AlertDescription>
+        <p className="font-medium">
+          Contract: {contractInfo.contractName || 'Default Contract'}
+        </p>
+        <p className="text-xs mt-0.5">
+          {contractInfo.contractLineName} ({contractInfo.contractLineType})
+        </p>
+        {contractInfo.multipleLines && (
+          <p className="text-xs mt-1 italic">
+            Multiple contract lines available - using default selection
           </p>
-          <p className="text-xs text-blue-600 mt-0.5">
-            {contractInfo.contractLineName} ({contractInfo.contractLineType})
-          </p>
-          {contractInfo.multipleLines && (
-            <p className="text-xs text-blue-500 mt-1 italic">
-              Multiple contract lines available - using default selection
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+        )}
+      </AlertDescription>
+    </Alert>
   );
 });
 

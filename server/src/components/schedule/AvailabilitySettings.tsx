@@ -8,6 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Switch } from 'server/src/components/ui/Switch';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { Calendar } from 'server/src/components/ui/Calendar';
@@ -623,20 +624,21 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
-              <div className="flex items-start space-x-3">
-                <Switch
-                  id="auto-approval-enabled"
-                  checked={autoApprovalEnabled}
-                  onCheckedChange={setAutoApprovalEnabled}
-                />
-                <div className="flex-1">
-                  <Label htmlFor="auto-approval-enabled" className="text-base font-semibold">Enable Auto-Approval</Label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Automatically approve appointments that meet the criteria configured below
-                  </p>
+            <Alert variant="info">
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <Switch
+                    id="auto-approval-enabled"
+                    checked={autoApprovalEnabled}
+                    onCheckedChange={setAutoApprovalEnabled}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="auto-approval-enabled" className="text-base font-semibold">Enable Auto-Approval</Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Automatically approve appointments that meet the criteria configured below
+                    </p>
+                  </div>
                 </div>
-              </div>
 
               {autoApprovalEnabled && (
                 <div className="ml-8 space-y-3 border-l-2 border-blue-300 pl-4">
@@ -687,7 +689,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </Alert>
 
             <div>
               <Label htmlFor="general-default-approver">Default Approver</Label>
@@ -734,8 +737,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           </TabsContent>
 
           <TabsContent value="user-hours" className="space-y-4 mt-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-gray-700">
+            <Alert variant="info">
+              <AlertDescription>
                 {isManager ? (
                   <>
                     <strong>Team Manager:</strong> You can configure availability settings for members of your team(s).
@@ -747,8 +750,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     The "Configured Users" table below shows all users with availability settings.
                   </>
                 )}
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
 
             {isManager && managedTeams.length > 1 && (
               <div>

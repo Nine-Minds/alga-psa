@@ -5,6 +5,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import { Plus, Trash2, Edit2, Check, X, GripVertical, Layers, Calculator } from 'lucide-react';
 import { TemplateWizardData, TemplatePhase } from '../TemplateCreationWizard';
 
@@ -380,9 +381,9 @@ export function TemplatePhasesStep({
         </div>
       )}
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">About Phase Timing</h4>
-        <p className="text-sm text-blue-800">
+      <Alert variant="info">
+        <AlertTitle>About Phase Timing</AlertTitle>
+        <AlertDescription>
           <strong>Start Offset:</strong> Days after the project start date when this phase begins.
           New phases auto-calculate their offset based on preceding phases.
           <br />
@@ -391,8 +392,8 @@ export function TemplatePhasesStep({
           <br />
           <strong>Tip:</strong> After reordering phases, use "Recalculate Offsets" to update timing
           based on the new order.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

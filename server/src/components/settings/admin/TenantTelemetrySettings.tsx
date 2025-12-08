@@ -6,6 +6,7 @@ import { Switch } from "server/src/components/ui/Switch";
 import { Label } from "server/src/components/ui/Label";
 import { Button } from "server/src/components/ui/Button";
 import CustomSelect from "server/src/components/ui/CustomSelect";
+import { Alert, AlertDescription } from "server/src/components/ui/Alert";
 import type { TenantTelemetrySettings, AnonymizationLevel } from "server/src/config/telemetry";
 
 interface TenantTelemetrySettingsProps {
@@ -130,13 +131,13 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
               onCheckedChange={(enabled) => handleSettingChange('enabled', enabled)}
             />
           </div>
-          
+
           {settings.enabled && (
-            <div className="ml-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
+            <Alert variant="info" className="ml-6">
+              <AlertDescription>
                 ✓ Telemetry enabled. All categories are enabled by default for new users, but they can opt-out individually if desired.
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
         </div>
 
