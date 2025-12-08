@@ -384,13 +384,15 @@ async function persistFixedInvoiceCharges(
           }
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
+          console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${clientContractLineId}, charge.base_rate: ${charge.base_rate}`);
           fixedPlanDetailsMap.set(clientContractLineId, {
               consolidatedItem: {
                   invoice_id: invoiceId,
                   service_id: null,
                   description: `Fixed Plan: ${charge.serviceName}`,
                   quantity: 1,
-                  unit_price: Math.round(charge.base_rate * 100),
+                  // base_rate is already in cents from billingEngine, no conversion needed
+                  unit_price: Math.round(charge.base_rate),
                   net_amount: 0,
                   tax_amount: 0,
                   tax_region: consolidatedRegion, // Use the determined region
@@ -503,9 +505,12 @@ async function persistFixedInvoiceCharges(
     planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.contract_line_name}`;
     // Use the plan-level base rate sourced from the contract line if available.
     // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
+    // contract_line_base_rate (from custom_rate) is already stored in cents, no conversion needed
+    const oldUnitPrice = planEntry.consolidatedItem.unit_price;
     planEntry.consolidatedItem.unit_price = planInfo.contract_line_base_rate !== null
-        ? Math.round(planInfo.contract_line_base_rate * 100) // Use plan base rate in cents
+        ? Math.round(planInfo.contract_line_base_rate)
         : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
+    console.log(`[INVOICE DEBUG] Updated unit_price for ${clientContractLineId}: contract_line_base_rate=${planInfo.contract_line_base_rate}, oldUnitPrice=${oldUnitPrice}, newUnitPrice=${planEntry.consolidatedItem.unit_price}`);
 
     let planNetTotal = 0;
     let planTaxTotal = 0;
