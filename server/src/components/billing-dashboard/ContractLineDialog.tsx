@@ -18,8 +18,9 @@ import {
 } from 'server/src/lib/actions/contractLinePresetActions';
 import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
-import { Package, Clock, Activity, Plus, X, DollarSign } from 'lucide-react';
+import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { SwitchWithLabel } from '../ui/SwitchWithLabel';
@@ -397,9 +398,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     closeDialog();
   };
 
-  const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return '$0.00';
-    return `$${(cents / 100).toFixed(2)}`;
+  const formatCurrency = (cents: number | undefined, currencyCode: string = 'USD') => {
+    const symbol = getCurrencySymbol(currencyCode);
+    if (!cents) return `${symbol}0.00`;
+    return `${symbol}${(cents / 100).toFixed(2)}`;
   };
 
   const renderFixedConfig = () => {
@@ -635,7 +637,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
                 <div className="space-y-2">
                   <Label htmlFor={`hourly-rate-${index}`} className="text-sm flex items-center gap-2">
-                    <DollarSign className="h-3 w-3" />
+                    <Coins className="h-3 w-3" />
                     Hourly Rate
                   </Label>
                   <div className="relative">
@@ -665,7 +667,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         }
                       }}
                       placeholder="0.00"
-                      className="pl-7"
+                      className="pl-10"
                     />
                   </div>
                   <p className="text-xs text-gray-500">
@@ -840,7 +842,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
-                      <DollarSign className="h-3 w-3" />
+                      <Coins className="h-3 w-3" />
                       Rate per Unit
                     </Label>
                     <div className="relative">
@@ -870,7 +872,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                           }
                         }}
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                       />
                     </div>
                     <p className="text-xs text-gray-500">
@@ -1187,7 +1189,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                             }
                           }}
                           placeholder="0.00"
-                          className="pl-7"
+                          className="pl-10"
                         />
                       </div>
                       <p className="text-xs text-gray-500">Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.</p>

@@ -19,7 +19,8 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { IClient } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { BILLING_FREQUENCY_OPTIONS, CONTRACT_LINE_TYPE_DISPLAY } from 'server/src/constants/billing';
-import { HelpCircle, Info, Plus, X, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
+import { HelpCircle, Info, Plus, X, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Badge } from 'server/src/components/ui/Badge';
@@ -548,6 +549,33 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 placeholder="Select billing frequency"
                 className="w-full"
               />
+            </div>
+
+            {/* Currency */}
+            <div>
+              <Label htmlFor="currency" className="flex items-center gap-2">
+                <Coins className="h-4 w-4" />
+                Currency
+              </Label>
+              {clientId ? (
+                <>
+                  <div className="flex items-center h-10 px-3 bg-gray-50 border rounded-md text-sm">
+                    {(() => {
+                      const selectedClient = clients.find(c => c.client_id === clientId);
+                      const currencyCode = selectedClient?.default_currency_code || 'USD';
+                      const currencyOption = CURRENCY_OPTIONS.find(c => c.value === currencyCode);
+                      return currencyOption?.label || currencyCode;
+                    })()}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Currency is based on the client's default currency setting.
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center h-10 px-3 bg-gray-100 border rounded-md text-sm text-gray-500">
+                  Select a client first
+                </div>
+              )}
             </div>
 
             {/* Start Date */}
@@ -1231,7 +1259,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                           }
                         }}
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                       />
                     </div>
                   </div>

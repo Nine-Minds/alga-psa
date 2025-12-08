@@ -738,7 +738,7 @@ const ServiceCatalogManager: React.FC = () => {
                           }
                         }}
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                       />
                     </div>
                     {editingPrices.length > 1 && (

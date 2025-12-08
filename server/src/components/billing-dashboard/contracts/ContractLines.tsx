@@ -824,7 +824,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                                     });
                                                   }
                                                 }}
-                                                className="pl-7"
+                                                className="pl-10"
                                               />
                                             </div>
                                           ) : (

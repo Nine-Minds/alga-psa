@@ -24,7 +24,7 @@ import { useTranslation } from 'server/src/lib/i18n/client';
 import toast from 'react-hot-toast';
 
 interface InvoicesTabProps {
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 }
 
@@ -182,10 +182,10 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
     {
       title: t('billing.invoice.amount'),
       dataIndex: 'total',
-      render: (value) => {
+      render: (value, record) => {
         // Convert cents to dollars and handle potential null/undefined
-        const amount = typeof value === 'number' ? value / 100 : 0;
-        return `$${amount.toFixed(2)}`;
+        const amount = typeof value === 'number' ? value : 0;
+        return formatCurrency(amount, record.currencyCode);
       }
     },
     {
@@ -263,7 +263,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         </DropdownMenu>
       )
     }
-  ], [formatDate, t]);
+  ], [formatDate, formatCurrency, t]);
 
   // Loading state with skeleton
   if (isLoading) {
@@ -329,7 +329,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
             {selectedInvoice.credit_applied > 0 && (
               <div className="mx-4 mb-4 p-4 bg-blue-50 rounded-md">
                 <p className="text-blue-800">
-                  Credit Applied: ${(selectedInvoice.credit_applied / 100).toFixed(2)}
+                  Credit Applied: {formatCurrency(selectedInvoice.credit_applied, selectedInvoice.currencyCode)}
                 </p>
               </div>
             )}

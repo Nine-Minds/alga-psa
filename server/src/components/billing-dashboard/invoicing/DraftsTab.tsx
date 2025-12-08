@@ -23,6 +23,7 @@ import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
 import { finalizeInvoice, hardDeleteInvoice } from '../../../lib/actions/invoiceModification';
 import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
+import { formatCurrency } from '../../../lib/utils/formatters';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '../../ui/LoadingIndicator';
 import { ConfirmationDialog } from '../../ui/ConfirmationDialog';

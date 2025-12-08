@@ -465,7 +465,7 @@ if (createdService?.service_id) {
                           setPriceInputs(newInputs);
                         }}
                         placeholder="0.00"
-                        className={`pl-7 ${hasAttemptedSubmit && index === 0 && prices[0].rate === 0 ? 'border-red-500' : ''}`}
+                        className={`pl-10 ${hasAttemptedSubmit && index === 0 && prices[0].rate === 0 ? 'border-red-500' : ''}`}
                       />
                     </div>
                     {prices.length > 1 && (

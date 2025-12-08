@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Badge } from 'server/src/components/ui/Badge';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { getContractOverview, IContractOverview, IContractLineOverview } from 'server/src/lib/actions/contractActions';
-import { Package, Clock, Activity, DollarSign, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
+import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from 'server/src/lib/utils';
 
 interface ContractOverviewProps {
@@ -231,7 +231,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           {/* Estimated Value */}
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm text-green-700 mb-1">
-              <DollarSign className="h-4 w-4" />
+              <Coins className="h-4 w-4" />
               <span>Est. Monthly Value</span>
             </div>
             <div className="text-xl font-bold text-green-900">

@@ -104,7 +104,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
       >
 
         <Tabs.Content value="contract-templates">
-          <TemplatesTab />
+          {searchParams?.has('contractId') ? (
+            <ContractDetailSwitcher />
+          ) : (
+            <TemplatesTab />
+          )}
         </Tabs.Content>
 
         <Tabs.Content value="client-contracts">

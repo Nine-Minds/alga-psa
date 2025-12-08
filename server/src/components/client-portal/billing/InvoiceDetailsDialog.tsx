@@ -14,7 +14,7 @@ interface InvoiceDetailsDialogProps {
   invoiceId: string | null;
   isOpen: boolean;
   onClose: () => void;
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 };
 
@@ -128,7 +128,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.invoice.amount', 'Amount')}</p>
-              <p className="mt-1">${(invoice.total / 100).toFixed(2)}</p>
+              <p className="mt-1">{formatCurrency(invoice.total, invoice.currencyCode)}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.invoice.status', 'Status')}</p>
@@ -144,7 +144,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.invoice.credits', 'Credits')}</p>
-              <p className="mt-1">${(invoice.credit_applied / 100).toFixed(2)}</p>
+              <p className="mt-1">{formatCurrency(invoice.credit_applied, invoice.currencyCode)}</p>
             </div>
           </div>
 
@@ -165,8 +165,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                     <tr key={idx}>
                       <td className="px-3 py-2">{item.description}</td>
                       <td className="px-3 py-2">{item.quantity}</td>
-                      <td className="px-3 py-2">${(item.unit_price / 100).toFixed(2)}</td>
-                      <td className="px-3 py-2">${(item.total_price / 100).toFixed(2)}</td>
+                      <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
+                      <td className="px-3 py-2">{formatCurrency(item.total_price, invoice.currencyCode)}</td>
                     </tr>
                   ))
                 ) : (
@@ -185,14 +185,14 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             <ul className="mt-2 space-y-1">
               <li className="flex justify-between">
                 <span>{t('billing.invoice.tax', 'Tax')}</span>
-                <span>${(invoice.tax / 100).toFixed(2)}</span>
+                <span>{formatCurrency(invoice.tax, invoice.currencyCode)}</span>
               </li>
             </ul>
           </div>
         </div>
       </>
     );
-  }, [invoice, formatDate]);
+  }, [invoice, formatDate, formatCurrency]);
 
   // Loading skeleton for when invoice is being fetched
   const loadingSkeleton = (

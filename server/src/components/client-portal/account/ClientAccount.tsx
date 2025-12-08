@@ -22,12 +22,22 @@ export default function ClientAccount() {
   const [error, setError] = useState<string | null>(null);
 
   // Note: Invoice amounts are stored in cents, so we divide by 100
-  const formatCurrency = useCallback((amountInCents: number | string | null | undefined) => {
+  const formatCurrency = useCallback((amountInCents: number | string | null | undefined, currencyCode: string = 'USD') => {
     try {
       const n = typeof amountInCents === 'string' ? Number(amountInCents) : (amountInCents ?? 0);
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((n as number) / 100);
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currencyCode,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format((n as number) / 100);
     } catch {
-      return '$0.00';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(0);
     }
   }, []);
 
@@ -175,7 +185,7 @@ export default function ClientAccount() {
                     <tr key={inv.invoice_id}>
                       <td>{inv.invoice_number}</td>
                       <td>{formatDate(inv.invoice_date)}</td>
-                      <td>{formatCurrency(inv.total_amount ?? inv.total)}</td>
+                      <td>{formatCurrency(inv.total_amount ?? inv.total, inv.currencyCode)}</td>
                       <td>{inv.status}</td>
                     </tr>
                   ))
