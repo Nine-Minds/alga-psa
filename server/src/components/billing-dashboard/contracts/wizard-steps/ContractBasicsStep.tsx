@@ -27,6 +27,7 @@ import {
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { IClient } from 'server/src/interfaces';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 type TemplateOption = {
   contract_id: string;
@@ -352,13 +353,13 @@ export function ContractBasicsStep({
               onCheckedChange={(checked) => updateData({ po_required: checked })}
             />
           </div>
-          <div className="flex gap-2 text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
-            <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-            <p>
+          <Alert variant="info">
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-xs">
               <span className="font-medium">Note:</span> PO enforcement will apply when invoice
               automation is enabled. Configure now to stay ahead.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
         </div>
 
         {data.po_required && (
@@ -418,57 +419,59 @@ export function ContractBasicsStep({
       </div>
 
       {data.client_id && data.contract_name && data.start_date && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Contract Summary</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <p>
-              <strong>Client:</strong>{' '}
-              {clients.find((c) => c.client_id === data.client_id)?.client_name || 'Not selected'}
-            </p>
-            <p>
-              <strong>Contract:</strong> {data.contract_name}
-            </p>
-            <p>
-              <strong>Billing Frequency:</strong>{' '}
-              {BILLING_FREQUENCY_OPTIONS.find((opt) => opt.value === data.billing_frequency)
-                ?.label || data.billing_frequency}
-            </p>
-            <p>
-              <strong>Currency:</strong>{' '}
-              {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
-                data.currency_code}
-            </p>
-            <p>
-              <strong>Period:</strong>{' '}
-              {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}
-              {data.end_date
-                ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}`
-                : ' (Ongoing)'}
-            </p>
-            {data.po_required && (
-              <>
-                <p>
-                  <strong>PO Required:</strong> Yes
-                </p>
-                {data.po_number && (
+        <Alert variant="info" className="mt-6">
+          <AlertDescription>
+            <h4 className="text-sm font-semibold mb-2">Contract Summary</h4>
+            <div className="text-sm space-y-1">
+              <p>
+                <strong>Client:</strong>{' '}
+                {clients.find((c) => c.client_id === data.client_id)?.client_name || 'Not selected'}
+              </p>
+              <p>
+                <strong>Contract:</strong> {data.contract_name}
+              </p>
+              <p>
+                <strong>Billing Frequency:</strong>{' '}
+                {BILLING_FREQUENCY_OPTIONS.find((opt) => opt.value === data.billing_frequency)
+                  ?.label || data.billing_frequency}
+              </p>
+              <p>
+                <strong>Currency:</strong>{' '}
+                {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
+                  data.currency_code}
+              </p>
+              <p>
+                <strong>Period:</strong>{' '}
+                {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}
+                {data.end_date
+                  ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}`
+                  : ' (Ongoing)'}
+              </p>
+              {data.po_required && (
+                <>
                   <p>
-                    <strong>PO Number:</strong> {data.po_number}
+                    <strong>PO Required:</strong> Yes
                   </p>
-                )}
-                {data.po_amount && (
-                  <p>
-                    <strong>PO Amount:</strong>{' '}
-                    {getCurrencySymbol(data.currency_code)}
-                    {(data.po_amount / 100).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+                  {data.po_number && (
+                    <p>
+                      <strong>PO Number:</strong> {data.po_number}
+                    </p>
+                  )}
+                  {data.po_amount && (
+                    <p>
+                      <strong>PO Amount:</strong>{' '}
+                      {getCurrencySymbol(data.currency_code)}
+                      {(data.po_amount / 100).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

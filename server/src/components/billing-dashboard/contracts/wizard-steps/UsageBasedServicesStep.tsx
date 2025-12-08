@@ -13,6 +13,7 @@ import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface UsageBasedServicesStepProps {
   data: ContractWizardData;
@@ -304,25 +305,27 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
       )}
 
       {(data.usage_services?.length ?? 0) > 0 && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Usage-Based Summary</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <p>
-              <strong>Services:</strong> {data.usage_services?.length ?? 0}
-            </p>
-            <div className="mt-2 space-y-1">
-              {data.usage_services?.map(
-                (service, idx) =>
-                  service.unit_rate && (
-                    <p key={idx} className="text-xs">
-                      • {service.service_name || `Service ${idx + 1}`}: {formatCurrency(service.unit_rate)}/
-                      {service.unit_of_measure || 'unit'}
-                    </p>
-                  )
-              )}
+        <Alert variant="info" className="mt-6">
+          <AlertDescription>
+            <h4 className="text-sm font-semibold mb-2">Usage-Based Summary</h4>
+            <div className="text-sm space-y-1">
+              <p>
+                <strong>Services:</strong> {data.usage_services?.length ?? 0}
+              </p>
+              <div className="mt-2 space-y-1">
+                {data.usage_services?.map(
+                  (service, idx) =>
+                    service.unit_rate && (
+                      <p key={idx} className="text-xs">
+                        • {service.service_name || `Service ${idx + 1}`}: {formatCurrency(service.unit_rate)}/
+                        {service.unit_of_measure || 'unit'}
+                      </p>
+                    )
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {(data.usage_services?.length ?? 0) > 0 && (

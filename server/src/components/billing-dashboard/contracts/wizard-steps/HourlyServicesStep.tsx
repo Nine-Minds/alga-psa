@@ -13,6 +13,7 @@ import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -325,24 +326,26 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       )}
 
       {data.hourly_services.length > 0 && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Hourly Services Summary</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <p>
-              <strong>Services:</strong> {data.hourly_services.length}
-            </p>
-            {data.minimum_billable_time !== undefined && (
+        <Alert variant="info" className="mt-6">
+          <AlertDescription>
+            <h4 className="text-sm font-semibold mb-2">Hourly Services Summary</h4>
+            <div className="text-sm space-y-1">
               <p>
-                <strong>Minimum Time:</strong> {data.minimum_billable_time} minutes
+                <strong>Services:</strong> {data.hourly_services.length}
               </p>
-            )}
-            {data.round_up_to_nearest !== undefined && (
-              <p>
-                <strong>Round Up:</strong> Every {data.round_up_to_nearest} minutes
-              </p>
-            )}
-          </div>
-        </div>
+              {data.minimum_billable_time !== undefined && (
+                <p>
+                  <strong>Minimum Time:</strong> {data.minimum_billable_time} minutes
+                </p>
+              )}
+              {data.round_up_to_nearest !== undefined && (
+                <p>
+                  <strong>Round Up:</strong> Every {data.round_up_to_nearest} minutes
+                </p>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {data.hourly_services.length > 0 && (

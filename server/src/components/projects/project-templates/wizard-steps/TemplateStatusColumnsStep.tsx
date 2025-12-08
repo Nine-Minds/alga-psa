@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import { Plus, Trash2, GripVertical, Circle } from 'lucide-react';
 import { TemplateWizardData, TemplateStatusMapping } from '../TemplateCreationWizard';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -297,15 +298,17 @@ export function TemplateStatusColumnsStep({
         )}
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">How it works</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>Select existing statuses from your tenant's status library</li>
-          <li>Click "Create New Status" to add a new status to your library</li>
-          <li>Drag to reorder columns as they should appear on the board (left to right)</li>
-          <li>Each status can only be used once per template</li>
-        </ul>
-      </div>
+      <Alert variant="info">
+        <AlertTitle>How it works</AlertTitle>
+        <AlertDescription>
+          <ul className="space-y-1">
+            <li>Select existing statuses from your tenant's status library</li>
+            <li>Click "Create New Status" to add a new status to your library</li>
+            <li>Drag to reorder columns as they should appear on the board (left to right)</li>
+            <li>Each status can only be used once per template</li>
+          </ul>
+        </AlertDescription>
+      </Alert>
 
       {/* Quick Add Status Dialog */}
       <QuickAddStatus

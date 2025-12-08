@@ -693,14 +693,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                   <p className="text-sm text-gray-600">
                                     Fixed contract lines bill a flat recurring fee regardless of individual service rates.
                                   </p>
-                                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                                    <p className="text-xs text-blue-800">
+                                  <Alert variant="info">
+                                    <AlertDescription className="text-xs">
                                       <strong>About service rates below:</strong> For fixed fee lines, the service rate and quantity
                                       are used only for <em>tax allocation</em> purposes — they determine how the fixed fee is
                                       proportionally attributed across services for tax calculations. The actual billed amount
                                       is the contract line's base rate shown above.
-                                    </p>
-                                  </div>
+                                    </AlertDescription>
+                                  </Alert>
                                 </div>
                               )}
 

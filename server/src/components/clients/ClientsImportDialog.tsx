@@ -14,6 +14,7 @@ import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { parseCSV } from 'server/src/lib/utils/csvParser';
 import { checkExistingClients, importClientsFromCSV, generateClientCSVTemplate } from 'server/src/lib/actions/client-actions/clientActions';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface ClientsImportDialogProps {
   isOpen: boolean;
@@ -513,13 +514,13 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           {step === 'preview' && validationResults.length > 0 && (
             <div>
               <h3 className="text-lg font-medium mb-4">Preview Import</h3>
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-800">
+              <Alert variant="info" className="mb-4">
+                <AlertDescription>
                   <strong>Total records:</strong> {validationResults.length} |
                   <strong className="ml-2">Valid:</strong> {validationResults.filter(r => r.isValid).length} |
                   <strong className="ml-2">Invalid:</strong> {validationResults.filter(r => !r.isValid).length}
-                </p>
-              </div>
+                </AlertDescription>
+              </Alert>
               <div className="mb-6 space-y-4">
                 <div className="flex items-center justify-between py-3">
                   <div>

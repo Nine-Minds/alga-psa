@@ -4,6 +4,7 @@ import React from 'react';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import { FileText, Tag, FolderTree } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateCreationWizard';
 
@@ -68,13 +69,13 @@ export function TemplateBasicsStep({
         </p>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">What's Next?</h4>
-        <p className="text-sm text-blue-800">
+      <Alert variant="info">
+        <AlertTitle>What's Next?</AlertTitle>
+        <AlertDescription>
           After defining the basics, you'll set up status columns, add phases, create tasks,
           and review your template before saving.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

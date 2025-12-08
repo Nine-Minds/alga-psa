@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signOut } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, LogOut, ArrowRight } from 'lucide-react';
 
 interface PortalSwitchPromptProps {
@@ -60,11 +61,11 @@ export default function PortalSwitchPrompt({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <p className="text-sm text-blue-900 dark:text-blue-100">
+          <Alert variant="info">
+            <AlertDescription>
               To access the <strong>{targetPortalName}</strong>, you need to sign out of your current session.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
 
           <div className="space-y-3">
             <Button
