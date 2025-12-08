@@ -25,8 +25,24 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
   const isOnBillingPage = pathname?.startsWith('/msp/billing') ?? false;
 
-  // Determine sidebar mode based on current route
-  const sidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : 'main';
+  // Determine default sidebar mode based on current route
+  const defaultSidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : 'main';
+
+  // Allow overriding the mode (e.g., show main menu while on settings page)
+  const [modeOverride, setModeOverride] = useState<'main' | null>(null);
+
+  // Reset mode override when navigating to a different page type
+  useEffect(() => {
+    setModeOverride(null);
+  }, [defaultSidebarMode]);
+
+  // Use override if set, otherwise use route-based mode
+  const sidebarMode = modeOverride ?? defaultSidebarMode;
+
+  // Callback for "Back to Main" - just switches to main menu without navigation
+  const handleBackToMain = () => {
+    setModeOverride('main');
+  };
 
   // Sidebar collapsed state
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
@@ -140,6 +156,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             setSidebarOpen={setSidebarOpen}
             disableTransition={disableTransition}
             mode={sidebarMode}
+            onBackToMain={handleBackToMain}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header
