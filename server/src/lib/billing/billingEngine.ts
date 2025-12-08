@@ -481,10 +481,10 @@ export class BillingEngine {
       // Normalize billing_timing default
       plan.billing_timing = (plan.billing_timing ?? 'arrears') as 'arrears' | 'advance';
 
-      // Convert custom_rate from dollars to cents if present
+      // custom_rate is already stored in cents in the database, just parse it
       if (plan.custom_rate !== null && plan.custom_rate !== undefined) {
         const parsedRate = typeof plan.custom_rate === 'string' ? parseFloat(plan.custom_rate) : Number(plan.custom_rate);
-        plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate * 100) : null;
+        plan.custom_rate = Number.isFinite(parsedRate) ? Math.round(parsedRate) : null;
       }
 
       // Set defaults for proration and alignment
@@ -730,7 +730,9 @@ export class BillingEngine {
               ? parseFloat(contractLineDetails.custom_rate)
               : Number(contractLineDetails.custom_rate);
           if (!Number.isNaN(parsedContractRate)) {
-            planLevelBaseRate = parsedContractRate;
+            // custom_rate is stored in cents, convert to dollars for planLevelBaseRate
+            planLevelBaseRate = parsedContractRate / 100;
+            console.log(`[BILLING DEBUG] custom_rate from DB: ${contractLineDetails.custom_rate}, parsedContractRate: ${parsedContractRate}, planLevelBaseRate (dollars): ${planLevelBaseRate}`);
           }
         }
 
@@ -756,7 +758,8 @@ export class BillingEngine {
               ? parseFloat(clientContractLine.custom_rate)
               : Number(clientContractLine.custom_rate);
           if (!Number.isNaN(parsedAssignmentRate)) {
-            planLevelBaseRate = parsedAssignmentRate;
+            // custom_rate is stored in cents, convert to dollars for planLevelBaseRate
+            planLevelBaseRate = parsedAssignmentRate / 100;
           }
         }
       }
@@ -847,9 +850,10 @@ export class BillingEngine {
         }
 
         if (hasServiceBaseRate) {
-          planLevelBaseRate = derivedBaseRate;
+          // service_base_rate is stored in cents, convert to dollars for planLevelBaseRate
+          planLevelBaseRate = derivedBaseRate / 100;
           console.log(
-            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`
+            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate} (converted from ${derivedBaseRate} cents)`
           );
         }
       }
@@ -879,6 +883,7 @@ export class BillingEngine {
         planLevelBaseRate !== null && !Number.isNaN(planLevelBaseRate)
           ? Math.round(planLevelBaseRate * 100)
           : null;
+      console.log(`[BILLING DEBUG] planLevelBaseRate (dollars): ${planLevelBaseRate}, planLevelBaseRateCents: ${planLevelBaseRateCents}`);
 
       const hasCustomRateOverride =
         effectiveCustomRate !== null &&
@@ -1124,8 +1129,9 @@ export class BillingEngine {
         const parsedBaseRate = service.service_base_rate !== null && service.service_base_rate !== undefined
           ? Number(service.service_base_rate)
           : null;
+        // service_base_rate is already stored in cents, no conversion needed
         const baseRateInCents = parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
-          ? Math.round(parsedBaseRate * 100)
+          ? Math.round(parsedBaseRate)
           : Number(service.default_rate ?? 0);
         const total = baseRateInCents * quantity;
 
