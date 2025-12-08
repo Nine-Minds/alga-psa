@@ -130,71 +130,88 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
       throw new Error('No tenant found');
     }
 
-    // Build where clause based on provided fields
-    const whereClause: any = {
-      client_id: newBilling.client_id,
-      contract_line_id: newBilling.contract_line_id,
-      is_active: true,
-      tenant
-    };
-
-    // Only include service_category if it's provided
-    if (newBilling.service_category) {
-      whereClause.service_category = newBilling.service_category;
-    }
-
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const existingBilling = await trx('client_contract_lines')
-        .where(whereClause)
-        .whereNull('end_date')
+      // Get the client contract to find the target contract_id
+      if (!newBilling.client_contract_id) {
+        throw new Error('client_contract_id is required');
+      }
+
+      const clientContract = await trx('client_contracts')
+        .where({ tenant, client_contract_id: newBilling.client_contract_id })
+        .first('template_contract_id', 'contract_id');
+
+      if (!clientContract?.contract_id) {
+        throw new Error('Client contract not found or missing contract_id');
+      }
+
+      const templateContractId = clientContract.template_contract_id ?? clientContract.contract_id;
+
+      // Get the template line to copy
+      const templateLine = await trx('contract_lines')
+        .where({ tenant, contract_line_id: newBilling.contract_line_id })
         .first();
 
-      if (existingBilling) {
+      if (!templateLine) {
+        throw new Error(`Template contract line ${newBilling.contract_line_id} not found`);
+      }
+
+      // Check if this contract already has a line from the same template
+      const existingLine = await trx('contract_lines')
+        .where({
+          tenant,
+          contract_id: clientContract.contract_id,
+          is_active: true
+        })
+        .whereRaw('contract_line_name = ?', [templateLine.contract_line_name])
+        .first();
+
+      if (existingLine) {
         throw new Error('A contract line with the same details already exists for this client');
       }
 
-      const templateContract = newBilling.client_contract_id
-        ? await trx('client_contracts')
-            .where({ tenant, client_contract_id: newBilling.client_contract_id })
-            .first('template_contract_id', 'contract_id')
-        : null;
+      // Create new contract_line for the client's contract
+      const newContractLineId = trx.raw('gen_random_uuid()');
+      const startDate = newBilling.start_date ? new Date(newBilling.start_date) : new Date();
 
-      const templateContractId = templateContract?.template_contract_id ?? templateContract?.contract_id ?? null;
-
-      // Only include service_category in insert if it's provided
-      const insertData: Record<string, unknown> = {
-        ...newBilling,
-        tenant,
-        // Convert string date to Date object if it's a string
-        start_date: newBilling.start_date ? new Date(newBilling.start_date) : new Date(),
-        // Handle end_date similarly if it exists
-        end_date: newBilling.end_date ? new Date(newBilling.end_date) : null
-      };
-      
-      if (!newBilling.service_category) {
-        delete insertData.service_category;
-      }
-
-      insertData.template_contract_line_id = newBilling.contract_line_id;
-
-      const [created] = await trx('client_contract_lines')
-        .insert(insertData)
-        .returning('client_contract_line_id');
+      const [created] = await trx('contract_lines')
+        .insert({
+          contract_line_id: newContractLineId,
+          tenant,
+          contract_id: clientContract.contract_id,
+          contract_line_name: templateLine.contract_line_name,
+          description: templateLine.description,
+          billing_frequency: templateLine.billing_frequency,
+          contract_line_type: templateLine.contract_line_type,
+          service_category: newBilling.service_category ?? templateLine.service_category,
+          billing_timing: templateLine.billing_timing ?? 'arrears',
+          is_active: newBilling.is_active ?? true,
+          is_custom: false,
+          custom_rate: newBilling.custom_rate ?? templateLine.custom_rate,
+          display_order: templateLine.display_order ?? 0,
+          enable_proration: templateLine.enable_proration,
+          enable_overtime: templateLine.enable_overtime,
+          overtime_rate: templateLine.overtime_rate,
+          overtime_threshold: templateLine.overtime_threshold,
+          enable_after_hours_rate: templateLine.enable_after_hours_rate,
+          after_hours_multiplier: templateLine.after_hours_multiplier,
+          created_at: trx.fn.now(),
+          updated_at: trx.fn.now()
+        })
+        .returning('contract_line_id');
 
       await cloneTemplateContractLine(trx, {
         tenant,
         templateContractLineId: newBilling.contract_line_id,
-        clientContractLineId: created.client_contract_line_id,
+        contractLineId: created.contract_line_id,
         templateContractId,
         overrideRate: newBilling.custom_rate ?? null,
-        effectiveDate: insertData.start_date instanceof Date ? insertData.start_date.toISOString() : null
+        effectiveDate: startDate.toISOString()
       });
 
       return created;
     });
   } catch (error: any) {
     console.error('Error adding client contract line:', error);
-    // Provide more specific error message
     if (error.code === 'ER_NO_SUCH_TABLE') {
       throw new Error('Database table not found');
     } else if (error.code === 'ER_BAD_FIELD_ERROR') {

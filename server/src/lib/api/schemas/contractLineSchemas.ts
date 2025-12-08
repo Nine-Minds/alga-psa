@@ -96,9 +96,7 @@ export const contractLineResponseSchema = z.object({
   tenant: uuidSchema,
   
   // Additional computed fields
-  total_services: z.number().optional(),
-  clients_using_plan: z.number().optional(),
-  average_monthly_revenue: z.number().optional()
+  total_services: z.number().optional()
 });
 
 // ============================================================================

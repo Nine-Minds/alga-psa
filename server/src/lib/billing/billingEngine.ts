@@ -746,20 +746,9 @@ export class BillingEngine {
       }
 
       if (isFixedFeePlan) {
-        const pricing = await this.knex('client_contract_line_pricing')
-          .where({
-            client_contract_line_id: clientContractLine.client_contract_line_id,
-            tenant
-          })
-          .first('custom_rate');
-
-        if (pricing?.custom_rate !== undefined && pricing.custom_rate !== null) {
-          const parsedPricingRate =
-            typeof pricing.custom_rate === 'string' ? parseFloat(pricing.custom_rate) : Number(pricing.custom_rate);
-          if (!Number.isNaN(parsedPricingRate)) {
-            planLevelBaseRate = parsedPricingRate;
-          }
-        } else if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
+        // Use the contract line's custom_rate directly
+        // (client_contract_line_pricing table has been deprecated)
+        if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
           const parsedAssignmentRate =
             typeof clientContractLine.custom_rate === 'string'
               ? parseFloat(clientContractLine.custom_rate)
@@ -770,37 +759,39 @@ export class BillingEngine {
         }
       }
 
-      const planServices = await this.knex('client_contract_services as ccs')
-        .join('client_contract_service_configuration as ccsc', function () {
-          this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
-            .andOn('ccsc.tenant', '=', 'ccs.tenant');
+      // Query services from contract_line_services (the contract definition)
+      // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
+      const planServices = await this.knex('contract_line_services as cls')
+        .join('contract_line_service_configuration as clsc', function () {
+          this.on('clsc.contract_line_id', '=', 'cls.contract_line_id')
+            .andOn('clsc.service_id', '=', 'cls.service_id')
+            .andOn('clsc.tenant', '=', 'cls.tenant');
         })
-        .leftJoin('client_contract_service_fixed_config as ccsfc', function () {
-          this.on('ccsfc.config_id', '=', 'ccsc.config_id')
-            .andOn('ccsfc.tenant', '=', 'ccsc.tenant');
+        .leftJoin('contract_line_service_fixed_config as clsfc', function () {
+          this.on('clsfc.config_id', '=', 'clsc.config_id')
+            .andOn('clsfc.tenant', '=', 'clsc.tenant');
         })
         .join('service_catalog as sc', function () {
-          this.on('sc.service_id', '=', 'ccs.service_id')
-            .andOn('sc.tenant', '=', 'ccs.tenant');
+          this.on('sc.service_id', '=', 'cls.service_id')
+            .andOn('sc.tenant', '=', 'cls.tenant');
         })
         .where({
-          'ccs.client_contract_line_id': clientContractLine.client_contract_line_id,
-          'ccs.tenant': tenant,
-          'ccsc.configuration_type': 'Fixed'
+          'cls.contract_line_id': clientContractLine.client_contract_line_id,
+          'cls.tenant': tenant,
+          'clsc.configuration_type': 'Fixed'
         })
         .select(
           'sc.service_id',
           'sc.service_name',
           'sc.default_rate',
           'sc.tax_rate_id',
-          'ccs.quantity as service_quantity',
-          'ccs.custom_rate as service_line_custom_rate',
-          'ccsc.quantity as configuration_quantity',
-          'ccsc.custom_rate as configuration_custom_rate',
-          'ccsc.config_id',
-          'ccsfc.base_rate as service_base_rate',
-          'ccsfc.enable_proration',
-          'ccsfc.billing_cycle_alignment'
+          'cls.quantity as service_quantity',
+          'cls.custom_rate as service_line_custom_rate',
+          'clsc.quantity as configuration_quantity',
+          'clsc.custom_rate as configuration_custom_rate',
+          'clsc.config_id',
+          'clsfc.base_rate as service_base_rate'
+          // Note: enable_proration and billing_cycle_alignment are on contract_lines, not service config
         );
 
       if (planServices.length === 0) {
@@ -1845,31 +1836,33 @@ export class BillingEngine {
     }
 
     // Get bucket configurations for this plan
-    const bucketConfigs = await this.knex('client_contract_service_configuration as ccsc')
-      .join('client_contract_services as ccs', function () {
-        this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
-          .andOn('ccsc.tenant', '=', 'ccs.tenant');
+    // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
+    const bucketConfigs = await this.knex('contract_line_service_configuration as clsc')
+      .join('contract_line_services as cls', function () {
+        this.on('clsc.contract_line_id', '=', 'cls.contract_line_id')
+          .andOn('clsc.service_id', '=', 'cls.service_id')
+          .andOn('clsc.tenant', '=', 'cls.tenant');
       })
-      .leftJoin('client_contract_service_bucket_config as ccsbc', function () {
-        this.on('ccsbc.config_id', '=', 'ccsc.config_id')
-          .andOn('ccsbc.tenant', '=', 'ccsc.tenant');
+      .leftJoin('contract_line_service_bucket_config as clsbc', function () {
+        this.on('clsbc.config_id', '=', 'clsc.config_id')
+          .andOn('clsbc.tenant', '=', 'clsc.tenant');
       })
       .join('service_catalog as sc', function () {
-        this.on('ccs.service_id', '=', 'sc.service_id')
-          .andOn('sc.tenant', '=', 'ccs.tenant');
+        this.on('cls.service_id', '=', 'sc.service_id')
+          .andOn('sc.tenant', '=', 'cls.tenant');
       })
       .where({
-        'ccs.client_contract_line_id': contractLine.client_contract_line_id,
-        'ccsc.configuration_type': 'Bucket',
-        'ccs.tenant': client.tenant
+        'cls.contract_line_id': contractLine.client_contract_line_id,
+        'clsc.configuration_type': 'Bucket',
+        'cls.tenant': client.tenant
       })
       .select(
-        'ccsc.*',
-        'ccsbc.*',
+        'clsc.*',
+        'clsbc.*',
         'sc.service_name',
         'sc.default_rate',
         'sc.tax_rate_id',
-        'ccs.service_id'
+        'cls.service_id'
       );
 
     if (!bucketConfigs || bucketConfigs.length === 0) {
@@ -2026,17 +2019,14 @@ export class BillingEngine {
       throw new Error('Database connection not initialized');
     }
 
+    // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
     const existing = await this.knex('invoice_charge_details as iid')
-      .join('client_contract_service_configuration as ccsc', function () {
-        this.on('iid.config_id', '=', 'ccsc.config_id')
-          .andOn('iid.tenant', '=', 'ccsc.tenant');
-      })
-      .join('client_contract_services as ccs', function () {
-        this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
-          .andOn('ccsc.tenant', '=', 'ccs.tenant');
+      .join('contract_line_service_configuration as clsc', function () {
+        this.on('iid.config_id', '=', 'clsc.config_id')
+          .andOn('iid.tenant', '=', 'clsc.tenant');
       })
       .where('iid.tenant', this.tenant)
-      .andWhere('ccs.client_contract_line_id', clientContractLineId)
+      .andWhere('clsc.contract_line_id', clientContractLineId)
       .andWhere('iid.service_period_start', servicePeriodStart)
       .andWhere('iid.service_period_end', servicePeriodEnd)
       .andWhere('iid.billing_timing', billingTiming)

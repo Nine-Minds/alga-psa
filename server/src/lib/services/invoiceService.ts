@@ -433,15 +433,13 @@ async function persistFixedInvoiceCharges(
   }
 
   if (validDbPlanIds.length > 0) {
-    const planDetails = await tx('client_contract_lines as ccl')
-      .join('contract_lines as cl', function() {
-        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('ccl.tenant', '=', 'cl.tenant');
-      })
-      .whereIn('ccl.client_contract_line_id', validDbPlanIds)
-      .andWhere('ccl.tenant', tenant)
+    // Query contract_lines directly since client_contract_line_id is actually a contract_line_id
+    // (see billingEngine.ts getClientContractLinesAndCycle which sets 'cl.contract_line_id as client_contract_line_id')
+    const planDetails = await tx('contract_lines as cl')
+      .whereIn('cl.contract_line_id', validDbPlanIds)
+      .andWhere('cl.tenant', tenant)
       .select(
-        'ccl.client_contract_line_id',
+        'cl.contract_line_id as client_contract_line_id',
         'cl.contract_line_name',
         'cl.custom_rate as contract_line_base_rate'
        );

@@ -212,6 +212,7 @@ export interface IServiceType extends TenantEntity {
 export interface IContractLine extends TenantEntity {
   contract_line_id?: string;
   contract_line_name: string;
+  description?: string | null;
   billing_frequency: string;
   contract_id?: string | null;
   service_category?: string;
@@ -221,6 +222,7 @@ export interface IContractLine extends TenantEntity {
   display_order?: number;
   enable_proration?: boolean;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
+  is_active?: boolean;
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services

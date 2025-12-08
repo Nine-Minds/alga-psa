@@ -54,24 +54,27 @@ export class ClientContractServiceConfigurationService {
   async getConfigurationsForClientContractLine(clientContractLineId: string): Promise<ClientConfigDetails[]> {
     await this.initKnex();
 
-    const rows = await this.knex('client_contract_services as ccs')
-      .join('client_contract_service_configuration as ccsc', function () {
-        this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
-          .andOn('ccsc.tenant', '=', 'ccs.tenant');
+    // Use contract_line_services and contract_line_service_configuration tables
+    // The clientContractLineId is now effectively a contract_line_id
+    const rows = await this.knex('contract_line_services as cls')
+      .join('contract_line_service_configuration as clsc', function () {
+        this.on('clsc.contract_line_id', '=', 'cls.contract_line_id')
+          .andOn('clsc.service_id', '=', 'cls.service_id')
+          .andOn('clsc.tenant', '=', 'cls.tenant');
       })
       .where({
-        'ccs.client_contract_line_id': clientContractLineId,
-        'ccs.tenant': this.tenant
+        'cls.contract_line_id': clientContractLineId,
+        'cls.tenant': this.tenant
       })
       .select(
-        'ccsc.config_id',
-        'ccsc.configuration_type',
-        'ccsc.custom_rate',
-        'ccsc.quantity',
-        'ccsc.created_at',
-        'ccsc.updated_at',
-        'ccs.client_contract_service_id',
-        'ccs.service_id'
+        'clsc.config_id',
+        'clsc.configuration_type',
+        'clsc.custom_rate',
+        'clsc.quantity',
+        'clsc.created_at',
+        'clsc.updated_at',
+        'cls.contract_line_id',
+        'cls.service_id'
       );
 
     const results: ClientConfigDetails[] = [];
@@ -92,7 +95,7 @@ export class ClientContractServiceConfigurationService {
 
       const detail = await this.materializeTypeSpecificConfig(baseConfig);
       results.push({
-        clientContractServiceId: row.client_contract_service_id,
+        clientContractServiceId: row.contract_line_id, // Use contract_line_id as the service identifier
         serviceId: row.service_id,
         ...detail
       });
@@ -107,25 +110,27 @@ export class ClientContractServiceConfigurationService {
   ): Promise<ClientConfigDetails | null> {
     await this.initKnex();
 
-    const row = await this.knex('client_contract_services as ccs')
-      .join('client_contract_service_configuration as ccsc', function () {
-        this.on('ccsc.client_contract_service_id', '=', 'ccs.client_contract_service_id')
-          .andOn('ccsc.tenant', '=', 'ccs.tenant');
+    // Use contract_line_services and contract_line_service_configuration tables
+    const row = await this.knex('contract_line_services as cls')
+      .join('contract_line_service_configuration as clsc', function () {
+        this.on('clsc.contract_line_id', '=', 'cls.contract_line_id')
+          .andOn('clsc.service_id', '=', 'cls.service_id')
+          .andOn('clsc.tenant', '=', 'cls.tenant');
       })
       .where({
-        'ccs.client_contract_line_id': clientContractLineId,
-        'ccs.service_id': serviceId,
-        'ccs.tenant': this.tenant
+        'cls.contract_line_id': clientContractLineId,
+        'cls.service_id': serviceId,
+        'cls.tenant': this.tenant
       })
       .first(
-        'ccsc.config_id',
-        'ccsc.configuration_type',
-        'ccsc.custom_rate',
-        'ccsc.quantity',
-        'ccsc.created_at',
-        'ccsc.updated_at',
-        'ccs.client_contract_service_id',
-        'ccs.service_id'
+        'clsc.config_id',
+        'clsc.configuration_type',
+        'clsc.custom_rate',
+        'clsc.quantity',
+        'clsc.created_at',
+        'clsc.updated_at',
+        'cls.contract_line_id',
+        'cls.service_id'
       );
 
     if (!row) {
@@ -147,7 +152,7 @@ export class ClientContractServiceConfigurationService {
 
     const detail = await this.materializeTypeSpecificConfig(baseConfig);
     return {
-      clientContractServiceId: row.client_contract_service_id,
+      clientContractServiceId: row.contract_line_id,
       serviceId: row.service_id,
       ...detail
     };
@@ -173,9 +178,10 @@ export class ClientContractServiceConfigurationService {
     let rateTiers: IContractLineServiceRateTier[] | undefined;
     let userTypeRates: IUserTypeRate[] | undefined;
 
+    // Use contract_line_service_* tables instead of client_contract_service_* tables
     switch (baseConfig.configuration_type) {
       case 'Fixed': {
-        const fixedConfig = await this.knex('client_contract_service_fixed_config')
+        const fixedConfig = await this.knex('contract_line_service_fixed_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -193,14 +199,14 @@ export class ClientContractServiceConfigurationService {
         break;
       }
       case 'Hourly': {
-        const hourlyCore = await this.knex('client_contract_service_hourly_configs')
+        const hourlyCore = await this.knex('contract_line_service_hourly_configs')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
           })
           .first();
 
-        const hourlyMeta = await this.knex('client_contract_service_hourly_config')
+        const hourlyMeta = await this.knex('contract_line_service_hourly_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -239,7 +245,7 @@ export class ClientContractServiceConfigurationService {
         break;
       }
       case 'Usage': {
-        const usageConfig = await this.knex('client_contract_service_usage_config')
+        const usageConfig = await this.knex('contract_line_service_usage_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant
@@ -259,7 +265,7 @@ export class ClientContractServiceConfigurationService {
         }
 
         if (usageConfig?.enable_tiered_pricing) {
-          rateTiers = await this.knex('client_contract_service_rate_tiers')
+          rateTiers = await this.knex('contract_line_service_rate_tiers')
             .where({
               config_id: baseConfig.config_id,
               tenant: this.tenant
@@ -270,7 +276,7 @@ export class ClientContractServiceConfigurationService {
         break;
       }
       case 'Bucket': {
-        const bucketConfig = await this.knex('client_contract_service_bucket_config')
+        const bucketConfig = await this.knex('contract_line_service_bucket_config')
           .where({
             config_id: baseConfig.config_id,
             tenant: this.tenant

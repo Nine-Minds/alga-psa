@@ -737,57 +737,14 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
   }));
 }
 
-export async function upgradeService(serviceId: string, planId: string): Promise<{ success: boolean }> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
-
-  const { knex } = await createTenantKnex();
-
-  // Start a transaction
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get current service plan
-    const currentPlan = await trx('client_contract_lines as ccl')
-      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
-        this.on('ccl.contract_line_id', '=', 'ps.contract_line_id')
-            .andOn('ccl.tenant', '=', 'ps.tenant');
-      })
-      .where({ 
-        'ps.service_id': serviceId,
-        'ccl.client_id': session.user.clientId,
-        'ccl.tenant': session.user.tenant
-      })
-      .whereNull('ccl.end_date')
-      .first();
-
-    if (!currentPlan) throw new Error('No active plan found for this service');
-
-    const now = new Date();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    // End current plan at the end of the billing cycle
-    await trx('client_contract_lines')
-      .where({ 
-        client_contract_line_id: currentPlan.client_contract_line_id,
-        tenant: session.user.tenant
-      })
-      .update({ 
-        end_date: endOfMonth.toISOString(),
-        updated_at: now.toISOString()
-      });
-
-    // Start new plan from the beginning of next month
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return await trx('client_contract_lines').insert({
-      client_id: session.user.clientId,
-      contract_line_id: planId,
-      tenant: session.user.tenant,
-      start_date: startOfNextMonth.toISOString(),
-      created_at: now.toISOString()
-    });
-  });
-
-  return { success: true };
+/**
+ * @deprecated This function operated on the legacy client_contract_lines table which is being phased out.
+ * Contracts are now client-specific via client_contracts, so plan upgrade/downgrade needs to be
+ * reimplemented to modify contract lines on the client's contract directly.
+ * TODO: Refactor to work with the new contract architecture.
+ */
+export async function upgradeService(_serviceId: string, _planId: string): Promise<{ success: boolean }> {
+  throw new Error('Service upgrade functionality is temporarily unavailable. Please contact support to change your plan.');
 }
 
 export async function downgradeService(serviceId: string, planId: string): Promise<{ success: boolean }> {

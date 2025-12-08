@@ -400,12 +400,16 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   }, [manualSorting, sortBy, sortDirection]);
 
   React.useEffect(() => {
-    if (!manualSorting && initialSorting && initialSorting.length > 0) {
-      // Filter to only include sorting for columns that exist
-      const validSorting = initialSorting.filter(sort =>
-        visibleColumnIds.includes(sort.id)
-      );
-      setSorting(prev => (prev.length === 0 ? validSorting : prev));
+    if (!manualSorting) {
+      // Always filter sorting to only include visible columns
+      setSorting(prev => {
+        const validSorting = prev.filter(sort => visibleColumnIds.includes(sort.id));
+        // If current sorting became invalid, try to use initialSorting
+        if (validSorting.length === 0 && initialSorting && initialSorting.length > 0) {
+          return initialSorting.filter(sort => visibleColumnIds.includes(sort.id));
+        }
+        return validSorting;
+      });
     }
   }, [initialSorting, manualSorting, visibleColumnIds]);
 

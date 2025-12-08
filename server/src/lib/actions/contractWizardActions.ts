@@ -899,17 +899,10 @@ export async function createClientContractFromWizard(
       template_contract_id: submission.template_id ?? null,
     });
 
-    if (createdContractLineIds.length > 0) {
-      await replicateContractLinesToClient(trx, {
-        tenant,
-        clientId: submission.client_id,
-        clientContractId,
-        contractLineIds: createdContractLineIds,
-        startDate,
-        endDate,
-        isActive: !isDraft
-      });
-    }
+    // NOTE: The legacy replicateContractLinesToClient call has been removed.
+    // The client_contract_lines, client_contract_services, and related tables are
+    // redundant since contracts are already client-specific via client_contracts.
+    // The billing engine reads from contract_lines directly.
 
     return {
       contract_id: contractId,
