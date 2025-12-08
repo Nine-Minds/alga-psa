@@ -56,7 +56,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         invoice_template_id: client.invoice_template_id || '',
         billing_contact_id: client.billing_contact_id || '',
         billing_email: client.billing_email || '',
-        region_code: client.region_code || null, // Added region_code from client data
+        region_code: client.region_code || null,
+        default_currency_code: client.default_currency_code || 'USD',
     });
 
     const [contractLines, setContractLines] = useState<IContractLine[]>([]);
@@ -189,7 +190,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 billing_email,
                 billing_cycle,
                 invoice_template_id,
-                region_code, // Added region_code
+                region_code,
+                default_currency_code,
                 ...rest
             } = billingConfig;
 
@@ -201,7 +203,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 invoice_delivery_method,
                 billing_contact_id,  // Pass through as-is, updateClient will handle empty strings
                 billing_email,
-                region_code // Pass region_code to onSave
+                region_code,
+                default_currency_code
             });
 
             // Save template selection separately using the dedicated function
