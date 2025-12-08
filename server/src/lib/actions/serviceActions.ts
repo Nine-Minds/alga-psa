@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import Service, { serviceSchema, refinedServiceSchema } from 'server/src/lib/models/service'; // Import both schemas
-import { IService, IServiceType } from '../../interfaces/billing.interfaces';
+import { IService, IServiceType, IServicePrice } from '../../interfaces/billing.interfaces';
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
@@ -142,9 +142,30 @@ export async function getServices(
 
         const servicesData = await servicesQuery;
 
+        // Fetch all prices for these services
+        const serviceIds = servicesData.map((s: { service_id: string }) => s.service_id);
+        const allPrices = serviceIds.length > 0
+          ? await trx('service_prices')
+              .where({ tenant })
+              .whereIn('service_id', serviceIds)
+              .select('*')
+          : [];
+
+        // Group prices by service_id
+        const pricesByService = allPrices.reduce((acc: Record<string, IServicePrice[]>, price: IServicePrice) => {
+          if (!acc[price.service_id]) {
+            acc[price.service_id] = [];
+          }
+          acc[price.service_id].push(price);
+          return acc;
+        }, {} as Record<string, IServicePrice[]>);
+
         // Validate and transform the data
-        const validatedServices = servicesData.map(service => {
-            return serviceSchema.parse(service);
+        const validatedServices = servicesData.map((service: { service_id: string }) => {
+            return serviceSchema.parse({
+              ...service,
+              prices: pricesByService[service.service_id] || []
+            });
         });
 
             // Return paginated response
@@ -481,4 +502,113 @@ export async function updateServiceTypeInline(id: string, name: string): Promise
 export async function deleteServiceTypeInline(id: string): Promise<void> {
   // This is the same as deleteServiceType but renamed for clarity
   return deleteServiceType(id);
+}
+
+// ========== Service Price Actions ==========
+
+/**
+ * Get all prices for a service
+ */
+export async function getServicePrices(serviceId: string): Promise<IServicePrice[]> {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await Service.getPrices(trx, serviceId);
+    });
+  } catch (error) {
+    console.error(`Error fetching prices for service ${serviceId}:`, error);
+    throw new Error('Failed to fetch service prices');
+  }
+}
+
+/**
+ * Get a specific price for a service in a given currency
+ */
+export async function getServicePrice(serviceId: string, currencyCode: string): Promise<IServicePrice | null> {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await Service.getPrice(trx, serviceId, currencyCode);
+    });
+  } catch (error) {
+    console.error(`Error fetching price for service ${serviceId} in ${currencyCode}:`, error);
+    throw new Error('Failed to fetch service price');
+  }
+}
+
+/**
+ * Set a price for a service in a given currency (upsert)
+ */
+export async function setServicePrice(
+  serviceId: string,
+  currencyCode: string,
+  rate: number
+): Promise<IServicePrice> {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const result = await Service.setPrice(trx, serviceId, currencyCode, rate);
+      safeRevalidate('/msp/billing');
+      return result;
+    });
+  } catch (error) {
+    console.error(`Error setting price for service ${serviceId} in ${currencyCode}:`, error);
+    throw new Error('Failed to set service price');
+  }
+}
+
+/**
+ * Set multiple prices for a service at once (replaces all existing prices)
+ */
+export async function setServicePrices(
+  serviceId: string,
+  prices: Array<{ currency_code: string; rate: number }>
+): Promise<IServicePrice[]> {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const result = await Service.setPrices(trx, serviceId, prices);
+      safeRevalidate('/msp/billing');
+      return result;
+    });
+  } catch (error) {
+    console.error(`Error setting prices for service ${serviceId}:`, error);
+    throw new Error('Failed to set service prices');
+  }
+}
+
+/**
+ * Remove a specific price for a service
+ */
+export async function removeServicePrice(serviceId: string, currencyCode: string): Promise<boolean> {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const result = await Service.removePrice(trx, serviceId, currencyCode);
+      safeRevalidate('/msp/billing');
+      return result;
+    });
+  } catch (error) {
+    console.error(`Error removing price for service ${serviceId} in ${currencyCode}:`, error);
+    throw new Error('Failed to remove service price');
+  }
+}
+
+/**
+ * Validate that services have prices in the required currency
+ * Returns services that are missing the required currency price
+ */
+export async function validateServiceCurrencyPrices(
+  serviceIds: string[],
+  requiredCurrency: string
+): Promise<{ valid: boolean; missingServices: Array<{ service_id: string; service_name: string }> }> {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await Service.validateCurrencyPrices(trx, serviceIds, requiredCurrency);
+    });
+  } catch (error) {
+    console.error(`Error validating currency prices for services:`, error);
+    throw new Error('Failed to validate service currency prices');
+  }
 }

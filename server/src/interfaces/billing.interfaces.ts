@@ -157,17 +157,32 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
   period_end?: ISO8601String;
 }
 
+/**
+ * Interface for service prices in multiple currencies.
+ * Each service can have multiple prices, one per currency.
+ */
+export interface IServicePrice extends TenantEntity {
+  price_id: string;
+  service_id: string;
+  currency_code: string; // ISO 4217 code (e.g., 'USD', 'EUR', 'GBP')
+  rate: number; // Amount in minor units (cents)
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
 export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
   custom_service_type_id: string;   // FK to service_types (now required)
   billing_method: 'fixed' | 'hourly' | 'usage' | 'per_unit'; // Billing method specific to this service instance (Now required)
-  default_rate: number;
+  default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
   tax_rate_id?: string | null; // Added: FK to tax_rates table
   description?: string | null; // Added: Description field from the database
   service_type_name?: string; // Added: Name of the service type (from custom)
+  // Multi-currency pricing
+  prices?: IServicePrice[]; // All currency/rate pairs for this service
 }
 
 // New interface for standard service types (cross-tenant)
@@ -197,6 +212,7 @@ export interface IServiceType extends TenantEntity {
 export interface IContractLine extends TenantEntity {
   contract_line_id?: string;
   contract_line_name: string;
+  description?: string | null;
   billing_frequency: string;
   contract_id?: string | null;
   service_category?: string;
@@ -206,6 +222,7 @@ export interface IContractLine extends TenantEntity {
   display_order?: number;
   enable_proration?: boolean;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
+  is_active?: boolean;
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services

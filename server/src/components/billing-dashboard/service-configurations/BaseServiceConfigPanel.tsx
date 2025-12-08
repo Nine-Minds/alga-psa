@@ -101,29 +101,32 @@ export function BaseServiceConfigPanel({
           </div>
         )}
         
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="service-quantity">Quantity</Label>
-            <Input
-              id="service-quantity"
-              type="number"
-              value={configuration.quantity?.toString() || ''}
-              onChange={handleQuantityChange}
-              placeholder="Enter quantity"
-              disabled={disabled}
-              min={0}
-              step={1}
-              className={validationErrors.quantity ? 'border-red-500' : ''}
-            />
-            {validationErrors.quantity ? (
-              <p className="text-sm text-red-500 mt-1">{validationErrors.quantity}</p>
-            ) : (
-              <p className="text-sm text-gray-500 mt-1">
-                Number of units of this service
-              </p>
-            )}
-          </div>
-          
+        <div className={`grid gap-4 ${configuration.configuration_type !== 'Hourly' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Quantity - only shown for Fixed and Usage (not used in Hourly billing) */}
+          {configuration.configuration_type !== 'Hourly' && (
+            <div>
+              <Label htmlFor="service-quantity">Quantity</Label>
+              <Input
+                id="service-quantity"
+                type="number"
+                value={configuration.quantity?.toString() || ''}
+                onChange={handleQuantityChange}
+                placeholder="Enter quantity"
+                disabled={disabled}
+                min={0}
+                step={1}
+                className={validationErrors.quantity ? 'border-red-500' : ''}
+              />
+              {validationErrors.quantity ? (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.quantity}</p>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">
+                  Number of units of this service
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <Label htmlFor="service-custom-rate">Custom Rate</Label>
             <Input

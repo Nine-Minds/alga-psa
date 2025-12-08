@@ -105,15 +105,13 @@ export class ApiContractLineController {
       }
 
       const { page, limit, sort, order, ...filters } = validation.data;
-      
+
       // Extract service options
-      const includeAnalytics = query.include_analytics === 'true';
       const includeServices = query.include_services === 'true';
       const includeUsage = query.include_usage === 'true';
       const includeClients = query.include_clients === 'true';
 
       const serviceOptions: ContractLineServiceOptions = {
-        includeAnalytics,
         includeServices,
         includeUsage,
         includeClients
@@ -164,7 +162,6 @@ export class ApiContractLineController {
       
       // Parse service options from query parameters
       const serviceOptions: ContractLineServiceOptions = {
-        includeAnalytics: url.searchParams.get('include_analytics') === 'true',
         includeServices: url.searchParams.get('include_services') === 'true',
         includeUsage: url.searchParams.get('include_usage') === 'true',
         includeClients: url.searchParams.get('include_clients') === 'true'

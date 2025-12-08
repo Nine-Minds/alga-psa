@@ -60,7 +60,6 @@ import { ListOptions } from '../controllers/types';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
 
 export interface ContractLineServiceOptions {
-  includeAnalytics?: boolean;
   includeServices?: boolean;
   includeUsage?: boolean;
   includeClients?: boolean;
@@ -723,20 +722,17 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const clientAssignments = await trx('client_contract_lines as ccl')
-        .join('client_contracts as cc', function joinContracts() {
-          this.on('ccl.client_contract_id', '=', 'cc.client_contract_id').andOn('ccl.tenant', '=', 'cc.tenant');
-        })
-        .where('ccl.contract_line_id', contractLineId)
-        .where('ccl.tenant', context.tenant)
-        .where('ccl.is_active', true)
+      // Check if this contract is assigned to any clients via client_contracts
+      // If so, we shouldn't allow removing contract lines
+      const clientAssignments = await trx('client_contracts as cc')
         .where('cc.contract_id', contractId)
+        .where('cc.tenant', context.tenant)
         .count<{ count: string }[]>({ count: '*' });
 
       const assignmentCount = parseInt(clientAssignments?.[0]?.count ?? '0', 10);
 
       if (assignmentCount > 0) {
-        throw new Error('Cannot remove contract line: it is currently assigned to clients');
+        throw new Error('Cannot remove contract line: the contract is assigned to clients');
       }
 
       await repositoryRemoveContractLine(trx, context.tenant, contractId, contractLineId);
@@ -749,25 +745,28 @@ export class ContractLineService extends BaseService<IContractLine> {
 
   /**
    * Assign contract line to client
+   * Creates a new contract_line for the client's contract based on a template line.
    */
   async assignPlanToClient(
     data: CreateClientContractLineData,
     context: ServiceContext
   ): Promise<ClientContractLineResponse> {
     const { knex } = await this.getKnex();
-    
+
     return withTransaction(knex, async (trx) => {
-      // Validate plan exists and is active
-      const plan = await this.getExistingPlan(data.contract_line_id, context, trx);
-      // Plan existence check is sufficient - active plans are in the table
-      
+      // Validate template line exists
+      const templateLine = await this.getExistingPlan(data.contract_line_id, context, trx);
+
       // Validate client exists
       await this.validateClientExists(data.client_id, context, trx);
-      
+
       // Check for overlapping assignments
       await this.validateNoOverlappingAssignments(data, context, trx);
 
+      // Get the client's contract to assign this line to
+      let targetContractId: string | null = null;
       let templateContractId: string | null = null;
+
       if (data.client_contract_id) {
         const clientContract = await trx('client_contracts')
           .where('client_contract_id', data.client_contract_id)
@@ -775,6 +774,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           .first('template_contract_id', 'contract_id');
 
         if (clientContract) {
+          targetContractId = clientContract.contract_id;
           templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
 
           if (!clientContract.template_contract_id && clientContract.contract_id) {
@@ -789,58 +789,99 @@ export class ContractLineService extends BaseService<IContractLine> {
           }
         }
       }
-      
-      // Create assignment
-      const assignmentData = this.addCreateAuditFields({
-        client_contract_line_id: uuidv4(),
-        ...data,
-        template_contract_line_id: data.contract_line_id
+
+      if (!targetContractId) {
+        throw new Error('Client contract not found or missing contract_id');
+      }
+
+      // Create new contract_line for the client's contract
+      const newContractLineId = uuidv4();
+      const contractLineData = this.addCreateAuditFields({
+        contract_line_id: newContractLineId,
+        contract_id: targetContractId,
+        contract_line_name: templateLine.contract_line_name,
+        description: templateLine.description,
+        billing_frequency: templateLine.billing_frequency,
+        contract_line_type: templateLine.contract_line_type,
+        service_category: templateLine.service_category ?? data.service_category,
+        billing_timing: templateLine.billing_timing ?? 'arrears',
+        is_active: data.is_active ?? true,
+        is_custom: false,
+        custom_rate: data.custom_rate ?? templateLine.custom_rate,
+        display_order: templateLine.display_order ?? 0,
+        enable_proration: templateLine.enable_proration,
+        enable_overtime: templateLine.enable_overtime,
+        overtime_rate: templateLine.overtime_rate,
+        overtime_threshold: templateLine.overtime_threshold,
+        enable_after_hours_rate: templateLine.enable_after_hours_rate,
+        after_hours_multiplier: templateLine.after_hours_multiplier,
       }, context);
-      
-      const [assignment] = await trx('client_contract_lines')
-        .insert(assignmentData)
+
+      const [newContractLine] = await trx('contract_lines')
+        .insert(contractLineData)
         .returning('*');
 
+      // Clone services and configuration from template
       await cloneTemplateContractLine(trx, {
         tenant: context.tenant,
         templateContractLineId: data.contract_line_id,
-        clientContractLineId: assignment.client_contract_line_id,
+        contractLineId: newContractLineId,
         templateContractId,
         overrideRate: data.custom_rate ?? null,
         effectiveDate: data.start_date
       });
-      
-      return addHateoasLinks(assignment, this.generateClientPlanLinks(assignment.client_contract_line_id, context)) as ClientContractLineResponse;
+
+      // Return response in legacy format for backwards compatibility
+      const response = {
+        ...newContractLine,
+        client_contract_line_id: newContractLine.contract_line_id,
+        client_id: data.client_id,
+        client_contract_id: data.client_contract_id,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        template_contract_line_id: data.contract_line_id,
+      };
+
+      return addHateoasLinks(response, this.generateClientPlanLinks(newContractLine.contract_line_id, context)) as ClientContractLineResponse;
     });
   }
 
   /**
    * Unassign contract line from client
+   * @deprecated This function operates on the legacy client_contract_lines table which is being phased out.
+   * Contracts are now client-specific via client_contracts, so individual line assignment is redundant.
    */
   async unassignPlanFromClient(
     clientContractLineId: string,
     context: ServiceContext
   ): Promise<void> {
     const { knex } = await this.getKnex();
-    
+
     return withTransaction(knex, async (trx) => {
+      // First get the client_id from the assignment record
+      const assignment = await trx('client_contract_lines')
+        .where('client_contract_line_id', clientContractLineId)
+        .where('tenant', context.tenant)
+        .select('client_id')
+        .first();
+
+      if (!assignment) {
+        throw new Error('Client contract line assignment not found');
+      }
+
       // Check if there are pending invoices or active usage
-      await this.validateSafeUnassignment(clientContractLineId, context, trx);
-      
+      await this.validateSafeUnassignment(clientContractLineId, assignment.client_id, context, trx);
+
       // Soft delete by setting end_date and is_active = false
       const updateData = this.addUpdateAuditFields({
         end_date: new Date().toISOString(),
         is_active: false
       }, context);
-      
-      const result = await trx('client_contract_lines')
+
+      await trx('client_contract_lines')
         .where('client_contract_line_id', clientContractLineId)
         .where('tenant', context.tenant)
         .update(updateData);
-      
-      if (result === 0) {
-        throw new Error('Client contract line assignment not found');
-      }
     });
   }
 
@@ -1328,23 +1369,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     let query = knex('contract_lines as cl')
       .where('cl.tenant', context.tenant);
 
-    // Add analytics if requested
-    if (options.includeAnalytics) {
-      query = query
-        .leftJoin('client_contract_lines as ccl', function() {
-          this.on('cl.contract_line_id', '=', 'ccl.contract_line_id')
-              .andOn('cl.tenant', '=', 'ccl.tenant')
-              .andOn('ccl.is_active', '=', knex.raw('true'));
-        })
-        .groupBy('cl.contract_line_id')
-        .select(
-          'cl.*',
-          knex.raw('COUNT(ccl.client_id) as clients_using_plan'),
-          knex.raw('AVG(ccl.custom_rate) as average_monthly_revenue')
-        );
-    } else {
-      query = query.select('cl.*');
-    }
+    query = query.select('cl.*');
 
     // Add service count if requested
     if (options.includeServices) {
@@ -1353,6 +1378,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
               .andOn('cl.tenant', '=', 'psc.tenant');
         })
+        .groupBy('cl.contract_line_id')
         .select(knex.raw('COUNT(DISTINCT psc.service_id) as total_services'));
     }
 
@@ -1651,6 +1677,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
   private async validateSafeUnassignment(
       clientContractLineId: string,
+      clientId: string,
       context: ServiceContext,
       trx: Knex.Transaction
     ): Promise<void> {
@@ -1661,22 +1688,19 @@ export class ContractLineService extends BaseService<IContractLine> {
         .where('status', 'pending')
         .count('* as count')
         .first();
-      
+
       if (parseInt(String(pendingInvoices?.count || '0')) > 0) {
         throw new Error('Cannot unassign plan: there are pending invoices');
       }
-      
-      // Check for active usage tracking
+
+      // Check for active usage tracking for this client
       const activeUsage = await trx('bucket_usage')
-        .join('client_contract_lines as ccl', function() {
-          this.on('bucket_usage.client_id', '=', 'ccl.client_id')
-              .andOn('bucket_usage.tenant', '=', 'ccl.tenant');
-        })
-        .where('ccl.client_contract_line_id', clientContractLineId)
-        .where('bucket_usage.period_end', '>', new Date())
+        .where('client_id', clientId)
+        .where('tenant', context.tenant)
+        .where('period_end', '>', new Date())
         .count('* as count')
         .first();
-      
+
       if (parseInt(String(activeUsage?.count || '0')) > 0) {
         throw new Error('Cannot unassign plan: there is active usage tracking');
       }

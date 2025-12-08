@@ -8,10 +8,21 @@ import { getContractById } from 'server/src/lib/actions/contractActions';
 import ContractTemplateDetail from './ContractTemplateDetail';
 import ContractDetail from './ContractDetail';
 import { getClientContractById } from 'server/src/lib/actions/client-actions/clientContractActions';
+import { IDocument } from 'server/src/interfaces/document.interface';
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
 
-const ContractDetailSwitcher: React.FC = () => {
+interface ContractDetailSwitcherProps {
+  /** Documents fetched server-side when viewing contract documents tab */
+  contractDocuments?: IDocument[] | null;
+  /** Current user ID fetched server-side */
+  currentUserId?: string | null;
+}
+
+const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
+  contractDocuments,
+  currentUserId
+}) => {
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? null;
   const clientContractId = searchParams?.get('clientContractId') ?? null;
@@ -108,7 +119,14 @@ const ContractDetailSwitcher: React.FC = () => {
     );
   }
 
-  return viewMode === 'template' ? <ContractTemplateDetail /> : <ContractDetail />;
+  return viewMode === 'template' ? (
+    <ContractTemplateDetail />
+  ) : (
+    <ContractDetail
+      serverDocuments={contractDocuments}
+      serverUserId={currentUserId}
+    />
+  );
 };
 
 export default ContractDetailSwitcher;

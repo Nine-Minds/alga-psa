@@ -7,9 +7,7 @@ import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Package, Coins } from 'lucide-react';
-import { getCurrencySymbol } from 'server/src/constants/currency';
-import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { Plus, X, Package } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { TemplateWizardData } from '../TemplateWizard';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
@@ -25,7 +23,6 @@ export function TemplateFixedFeeServicesStep({
 }: TemplateFixedFeeServicesStepProps) {
   const [services, setServices] = useState<IService[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
-  const [baseRateInput, setBaseRateInput] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -46,12 +43,6 @@ export function TemplateFixedFeeServicesStep({
 
     void load();
   }, []);
-
-  useEffect(() => {
-    if (data.fixed_base_rate !== undefined) {
-      setBaseRateInput((data.fixed_base_rate / 100).toFixed(2));
-    }
-  }, [data.fixed_base_rate]);
 
   const serviceOptions = services.map((service) => ({
     value: service.service_id,
@@ -156,62 +147,6 @@ export function TemplateFixedFeeServicesStep({
           onQuantityChange={handlePreviewQuantityChange}
           onRemoveService={handlePreviewRemoveService}
         />
-
-        {data.fixed_services.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
-              <Coins className="h-4 w-4" />
-              Recurring Base Rate (Optional)
-            </Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                {getCurrencySymbol(data.currency_code)}
-              </span>
-              <Input
-                id="fixed_base_rate"
-                type="text"
-                inputMode="decimal"
-                value={baseRateInput}
-                onChange={(event) => {
-                  const value = event.target.value.replace(/[^0-9.]/g, '');
-                  const decimalCount = (value.match(/\./g) || []).length;
-                  if (decimalCount <= 1) {
-                    setBaseRateInput(value);
-                  }
-                }}
-                onBlur={() => {
-                  if (baseRateInput.trim() === '' || baseRateInput === '.') {
-                    setBaseRateInput('');
-                    updateData({ fixed_base_rate: undefined });
-                  } else {
-                    const dollars = parseFloat(baseRateInput) || 0;
-                    const cents = Math.round(dollars * 100);
-                    updateData({ fixed_base_rate: cents });
-                    setBaseRateInput((cents / 100).toFixed(2));
-                  }
-                }}
-                placeholder="0.00"
-                className="pl-7"
-              />
-            </div>
-            <p className="text-xs text-gray-500">
-              Suggested total recurring fee for all fixed services combined.
-            </p>
-          </div>
-        )}
-
-        {data.fixed_services.length > 0 && (
-          <div className="space-y-2">
-            <SwitchWithLabel
-              label="Enable proration (Optional)"
-              checked={data.enable_proration ?? false}
-              onCheckedChange={(checked) => updateData({ enable_proration: checked })}
-            />
-            <p className="text-xs text-gray-500">
-              When enabled, suggests that the recurring fee should be prorated if the contract starts or ends mid-cycle.
-            </p>
-          </div>
-        )}
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">

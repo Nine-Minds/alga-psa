@@ -5,7 +5,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Label } from 'server/src/components/ui/Label';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
-import { Info, DollarSign } from 'lucide-react';
+import { Info, Coins } from 'lucide-react';
 import { BucketOverlayInput } from './ContractWizard';
 
 type BucketOverlayMode = 'hours' | 'usage';
@@ -122,7 +122,7 @@ export function BucketOverlayFields({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Label className="font-medium flex items-center gap-1">
-            <DollarSign className="h-4 w-4 text-blue-500" />
+            <Coins className="h-4 w-4 text-blue-500" />
             Overage Rate
             <span className="text-xs text-muted-foreground">
               / {mode === 'hours' ? 'hour' : resolvedUnitLabel}
@@ -160,7 +160,7 @@ export function BucketOverlayFields({
               }
             }}
             placeholder="0.00"
-            className="pl-7"
+            className="pl-10"
             disabled={disabled}
           />
         </div>

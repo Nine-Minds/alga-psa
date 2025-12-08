@@ -118,10 +118,15 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const navigateToContract = (contractId?: string, clientContractId?: string) => {
     if (contractId) {
       const params = new URLSearchParams();
-      params.set('tab', 'contracts');
-      params.set('contractId', contractId);
       if (clientContractId) {
+        // Client contract - use client-contracts tab
+        params.set('tab', 'client-contracts');
+        params.set('contractId', contractId);
         params.set('clientContractId', clientContractId);
+      } else {
+        // Template contract - use contract-templates tab
+        params.set('tab', 'contract-templates');
+        params.set('contractId', contractId);
       }
       router.push(`/msp/billing?${params.toString()}`);
     }
@@ -213,7 +218,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}${record.client_contract_id ? `&clientContractId=${record.client_contract_id}` : ''}`);
+                  navigateToContract(record.contract_id, record.client_contract_id);
                 }
               }}
             >

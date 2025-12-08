@@ -106,30 +106,6 @@ const Contract = {
           .where({ contract_id: contractId, tenant })
           .pluck('client_contract_id');
 
-        // Handle client_contract_lines deletion (FK constraints removed for Citus compatibility)
-        if (clientContractIds.length > 0) {
-          // Get client_contract_line_ids that will be deleted
-          const clientContractLineIds = await trx('client_contract_lines')
-            .where({ tenant })
-            .whereIn('client_contract_id', clientContractIds)
-            .pluck('client_contract_line_id');
-
-          // Clear contract_line_id in time_entries before deleting client_contract_lines
-          // (replaces ON DELETE SET NULL behavior)
-          if (clientContractLineIds.length > 0) {
-            await trx('time_entries')
-              .where({ tenant })
-              .whereIn('contract_line_id', clientContractLineIds)
-              .update({ contract_line_id: null });
-          }
-
-          // Delete client_contract_lines
-          await trx('client_contract_lines')
-            .where({ tenant })
-            .whereIn('client_contract_id', clientContractIds)
-            .delete();
-        }
-
         // Delete client contract assignments
         await trx('client_contracts')
           .where({ contract_id: contractId, tenant })
@@ -140,6 +116,13 @@ const Contract = {
           .pluck('contract_line_id');
 
         if (contractLineIds.length > 0) {
+          // Clear contract_line_id in time_entries before deleting contract_lines
+          // (replaces ON DELETE SET NULL behavior)
+          await trx('time_entries')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .update({ contract_line_id: null });
+
           const configIds = await trx('contract_line_service_configuration')
             .where({ tenant })
             .whereIn('contract_line_id', contractLineIds)
@@ -173,11 +156,6 @@ const Contract = {
             .delete();
 
           await trx('contract_line_services')
-            .where({ tenant })
-            .whereIn('contract_line_id', contractLineIds)
-            .delete();
-
-          await trx('contract_line_template_terms')
             .where({ tenant })
             .whereIn('contract_line_id', contractLineIds)
             .delete();

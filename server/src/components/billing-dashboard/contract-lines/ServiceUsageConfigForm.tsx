@@ -125,7 +125,7 @@ export function ServiceUsageConfigForm({
                             }}
                             placeholder="0.00"
                             disabled={disabled || isTiered}
-                            className={`pl-7 ${saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''}`}
+                            className={`pl-10 ${saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''}`}
                         />
                     </div>
                     {saveAttempted && validationErrors.base_rate && <p className="text-sm text-red-500 mt-1">{validationErrors.base_rate}</p>}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical, Calendar, DollarSign } from 'lucide-react';
+import { Plus, MoreVertical, Calendar, Coins } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -220,7 +220,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
                                     )}
                                   </div>
                                   <div className="text-sm text-gray-600 mt-1 flex items-center">
-                                    <DollarSign className="h-3 w-3 mr-1" />
+                                    <Coins className="h-3 w-3 mr-1" />
                                     {schedule.custom_rate !== undefined && schedule.custom_rate !== null
                                       ? formatCurrency(schedule.custom_rate / 100)
                                       : 'Default rate'}

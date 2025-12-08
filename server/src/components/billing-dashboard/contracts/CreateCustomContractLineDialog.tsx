@@ -1,65 +1,46 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
-import { Button } from '../ui/Button';
-import { Label } from '../ui/Label';
-import { Input } from '../ui/Input';
-import CustomSelect from '../ui/CustomSelect';
-import { Switch } from '../ui/Switch';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
+import { Label } from 'server/src/components/ui/Label';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Switch } from 'server/src/components/ui/Switch';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import {
-  createContractLinePreset,
-  updateContractLinePreset,
-  updateContractLinePresetFixedConfig,
-  getContractLinePresetFixedConfig,
-  updateContractLinePresetServices,
-  getContractLinePresetServices,
-} from 'server/src/lib/actions/contractLinePresetActions';
-import { IContractLinePreset } from 'server/src/interfaces/billing.interfaces';
-import { useTenant } from '../TenantProvider';
+import { createCustomContractLine, CreateCustomContractLineInput, CustomContractLineServiceConfig } from 'server/src/lib/actions/contractLinePresetActions';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { getCurrencySymbol } from 'server/src/constants/currency';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { SwitchWithLabel } from '../ui/SwitchWithLabel';
-import { BucketOverlayFields } from './contracts/BucketOverlayFields';
-import { BucketOverlayInput } from './contracts/ContractWizard';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { BucketOverlayFields } from './BucketOverlayFields';
+import { BucketOverlayInput } from './ContractWizard';
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
-const BILLING_TIMING_OPTIONS = [
-  {
-    value: 'arrears',
-    label: 'Arrears – invoice after the period closes',
-  },
-  {
-    value: 'advance',
-    label: 'Advance – invoice at the start of the period',
-  },
-] as const;
-
-interface ContractLineDialogProps {
-  onPlanAdded: (newPresetId?: string) => void;
-  editingPlan?: IContractLinePreset | null;
-  onClose?: () => void;
-  triggerButton?: React.ReactNode;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
+interface CreateCustomContractLineDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  contractId: string;
+  onCreated: () => Promise<void>;
 }
 
-export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
-  const [open, setOpen] = useState(false);
+export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDialogProps> = ({
+  isOpen,
+  onClose,
+  contractId,
+  onCreated,
+}) => {
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
+  const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('advance');
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [baseRateInput, setBaseRateInput] = useState<string>('');
   const [enableProration, setEnableProration] = useState<boolean>(false);
-  const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
 
   // Services state
   const [services, setServices] = useState<IService[]>([]);
@@ -88,17 +69,18 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const tenant = useTenant()!;
 
-  const markDirty = () => setIsDirty(true);
-
-  // Load services
+  // Load services when dialog opens
   useEffect(() => {
-    loadServices();
-  }, []);
+    if (isOpen) {
+      loadServices();
+    } else {
+      resetForm();
+    }
+  }, [isOpen]);
 
   const loadServices = async () => {
+    setIsLoadingServices(true);
     try {
       const result = await getServices();
       if (result && Array.isArray(result.services)) {
@@ -111,87 +93,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     }
   };
 
-  // Open dialog when editingPlan is provided
-  useEffect(() => {
-    if (editingPlan) {
-      setOpen(true);
-      setPlanName(editingPlan.preset_name);
-      setBillingFrequency(editingPlan.billing_frequency);
-      setPlanType(editingPlan.contract_line_type as PlanType);
-      setBillingTiming(editingPlan.billing_timing ?? 'arrears');
-      if (editingPlan.preset_id && editingPlan.contract_line_type === 'Fixed') {
-        getContractLinePresetFixedConfig(editingPlan.preset_id)
-          .then((cfg) => {
-            if (cfg) {
-              setBaseRate(cfg.base_rate ?? undefined);
-              setEnableProration(!!cfg.enable_proration);
-              setBillingCycleAlignment((cfg.billing_cycle_alignment ?? 'start') as any);
-            }
-          })
-          .catch(() => {});
-      }
-      // Load services for existing preset
-      if (editingPlan.preset_id) {
-        getContractLinePresetServices(editingPlan.preset_id)
-          .then((presetServices) => {
-            // Load services based on type
-            if (editingPlan.contract_line_type === 'Fixed') {
-              const fixedSvcs = presetServices.map(s => ({
-                service_id: s.service_id,
-                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
-                quantity: s.quantity || 1
-              }));
-              setFixedServices(fixedSvcs);
-            } else if (editingPlan.contract_line_type === 'Hourly') {
-              const hourlySvcs = presetServices.map(s => ({
-                service_id: s.service_id,
-                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
-                hourly_rate: s.custom_rate ? s.custom_rate / 100 : undefined,
-                bucket_overlay: (s.bucket_total_minutes != null || s.bucket_overage_rate != null || s.bucket_allow_rollover != null) ? {
-                  total_minutes: s.bucket_total_minutes ?? undefined,
-                  overage_rate: s.bucket_overage_rate ?? undefined,
-                  allow_rollover: s.bucket_allow_rollover ?? false,
-                  billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly'
-                } : null
-              }));
-              setHourlyServices(hourlySvcs);
-            } else if (editingPlan.contract_line_type === 'Usage') {
-              const usageSvcs = presetServices.map(s => ({
-                service_id: s.service_id,
-                service_name: services.find(svc => svc.service_id === s.service_id)?.service_name || '',
-                unit_rate: s.custom_rate ? s.custom_rate / 100 : undefined,
-                unit_of_measure: s.unit_of_measure || '',
-                bucket_overlay: (s.bucket_total_minutes != null || s.bucket_overage_rate != null || s.bucket_allow_rollover != null) ? {
-                  total_minutes: s.bucket_total_minutes ?? undefined,
-                  overage_rate: s.bucket_overage_rate ?? undefined,
-                  allow_rollover: s.bucket_allow_rollover ?? false,
-                  billing_period: editingPlan.billing_frequency as 'weekly' | 'monthly'
-                } : null
-              }));
-              setUsageServices(usageSvcs);
-            }
-          })
-          .catch(() => {});
-      }
-      setIsDirty(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingPlan]);
-
-  useEffect(() => {
-    if (planType !== 'Fixed' && billingTiming !== 'arrears') {
-      setBillingTiming('arrears');
-    }
-  }, [planType, billingTiming]);
-
-  // Reset form when dialog closes
-  useEffect(() => {
-    if (!open && !editingPlan) {
-      resetForm();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
@@ -200,7 +101,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Contract Line Preset Name is required');
+    if (!planName.trim()) errors.push('Contract Line Name is required');
     if (!billingFrequency) errors.push('Billing frequency is required');
     if (!planType) errors.push('Contract Line Type is required');
 
@@ -208,8 +109,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       if (fixedServices.length === 0) {
         errors.push('At least one fixed service is required');
       }
-      // Base rate is now optional for presets - it can be set when creating actual contracts
-      // Check that all services are selected
       fixedServices.forEach((service, index) => {
         if (!service.service_id) {
           errors.push(`Service ${index + 1}: Please select a service`);
@@ -219,7 +118,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       if (hourlyServices.length === 0) {
         errors.push('At least one hourly service is required');
       }
-      // Check that all services have rates
       hourlyServices.forEach((service, index) => {
         if (!service.service_id) {
           errors.push(`Service ${index + 1}: Please select a service`);
@@ -232,7 +130,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       if (usageServices.length === 0) {
         errors.push('At least one usage-based service is required');
       }
-      // Check that all services have rates and units
       usageServices.forEach((service, index) => {
         if (!service.service_id) {
           errors.push(`Service ${index + 1}: Please select a service`);
@@ -264,99 +161,73 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setIsSaving(true);
     setValidationErrors([]);
     try {
-      const presetData: Partial<IContractLinePreset> = {
-        preset_name: planName,
-        billing_frequency: billingFrequency,
+      // Build services array based on plan type
+      const serviceConfigs: CustomContractLineServiceConfig[] = [];
+
+      if (planType === 'Fixed') {
+        fixedServices.forEach(service => {
+          if (service.service_id) {
+            serviceConfigs.push({
+              service_id: service.service_id,
+              quantity: service.quantity || 1,
+            });
+          }
+        });
+      } else if (planType === 'Hourly') {
+        hourlyServices.forEach(service => {
+          if (service.service_id && service.hourly_rate) {
+            serviceConfigs.push({
+              service_id: service.service_id,
+              custom_rate: service.hourly_rate,
+              bucket_overlay: service.bucket_overlay ? {
+                total_minutes: service.bucket_overlay.total_minutes ?? 0,
+                overage_rate: service.bucket_overlay.overage_rate ?? 0,
+                allow_rollover: service.bucket_overlay.allow_rollover ?? false,
+                billing_period: (service.bucket_overlay.billing_period || billingFrequency) as 'weekly' | 'monthly'
+              } : null,
+            });
+          }
+        });
+      } else if (planType === 'Usage') {
+        usageServices.forEach(service => {
+          if (service.service_id && service.unit_rate) {
+            serviceConfigs.push({
+              service_id: service.service_id,
+              custom_rate: service.unit_rate,
+              unit_of_measure: service.unit_of_measure || 'unit',
+              bucket_overlay: service.bucket_overlay ? {
+                total_minutes: service.bucket_overlay.total_minutes ?? 0,
+                overage_rate: service.bucket_overlay.overage_rate ?? 0,
+                allow_rollover: service.bucket_overlay.allow_rollover ?? false,
+                billing_period: (service.bucket_overlay.billing_period || billingFrequency) as 'weekly' | 'monthly'
+              } : null,
+            });
+          }
+        });
+      }
+
+      const input: CreateCustomContractLineInput = {
+        contract_line_name: planName,
         contract_line_type: planType!,
-        tenant,
-        // Add hourly-specific fields if this is an hourly preset
+        billing_frequency: billingFrequency,
+        billing_timing: billingTiming,
+        services: serviceConfigs,
+        ...(planType === 'Fixed' ? {
+          base_rate: baseRate ?? null,
+          enable_proration: enableProration,
+        } : {}),
         ...(planType === 'Hourly' ? {
-          minimum_billable_time: minimumBillableTime ?? null,
-          round_up_to_nearest: roundUpToNearest ?? null,
+          minimum_billable_time: minimumBillableTime ?? 15,
+          round_up_to_nearest: roundUpToNearest ?? 15,
         } : {}),
       };
 
-      let savedPresetId: string | undefined;
-      if (editingPlan?.preset_id) {
-        const { preset_id, ...updateData } = presetData;
-        const updatedPreset = await updateContractLinePreset(editingPlan.preset_id, updateData);
-        savedPresetId = updatedPreset.preset_id;
-      } else {
-        const { preset_id, ...createData } = presetData;
-        const newPreset = await createContractLinePreset(createData as any);
-        savedPresetId = newPreset.preset_id;
-      }
-
-      // Save services based on plan type
-      if (savedPresetId) {
-        const servicesToSave: any[] = [];
-
-        if (planType === 'Fixed') {
-          // Save Fixed config
-          await updateContractLinePresetFixedConfig(savedPresetId, {
-            base_rate: baseRate ?? null,
-            enable_proration: enableProration,
-            billing_cycle_alignment: 'start',
-          });
-
-          // Save Fixed services
-          fixedServices.forEach(service => {
-            if (service.service_id) {
-              servicesToSave.push({
-                preset_id: savedPresetId,
-                service_id: service.service_id,
-                quantity: service.quantity || 1,
-                custom_rate: null,
-                unit_of_measure: null
-              });
-            }
-          });
-        } else if (planType === 'Hourly') {
-          // Save Hourly services
-          hourlyServices.forEach(service => {
-            if (service.service_id && service.hourly_rate) {
-              servicesToSave.push({
-                preset_id: savedPresetId,
-                service_id: service.service_id,
-                quantity: null,
-                custom_rate: service.hourly_rate, // Already in cents from handleHourlyRateChange
-                unit_of_measure: null,
-                // Add bucket overlay fields
-                bucket_total_minutes: service.bucket_overlay?.total_minutes ?? null,
-                bucket_overage_rate: service.bucket_overlay?.overage_rate ?? null,
-                bucket_allow_rollover: service.bucket_overlay?.allow_rollover ?? null
-              });
-            }
-          });
-        } else if (planType === 'Usage') {
-          // Save Usage services
-          usageServices.forEach(service => {
-            if (service.service_id && service.unit_rate) {
-              servicesToSave.push({
-                preset_id: savedPresetId,
-                service_id: service.service_id,
-                quantity: null,
-                custom_rate: service.unit_rate, // Already in cents from handleUsageRateChange
-                unit_of_measure: service.unit_of_measure || '',
-                // Add bucket overlay fields
-                bucket_total_minutes: service.bucket_overlay?.total_minutes ?? null,
-                bucket_overage_rate: service.bucket_overlay?.overage_rate ?? null,
-                bucket_allow_rollover: service.bucket_overlay?.allow_rollover ?? null
-              });
-            }
-          });
-        }
-
-        // Update services for the preset
-        await updateContractLinePresetServices(savedPresetId, servicesToSave);
-      }
-
-      resetForm();
-      setOpen(false);
-      onPlanAdded(savedPresetId);
+      await createCustomContractLine(contractId, input);
+      await onCreated();
+      onClose();
     } catch (error) {
-      console.error('Error saving contract line preset:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract line preset';
+      console.error('Error creating contract line:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create contract line';
       setValidationErrors([errorMessage]);
     } finally {
       setIsSaving(false);
@@ -367,11 +238,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setPlanName('');
     setPlanType(null);
     setBillingFrequency('monthly');
-    setBillingTiming('arrears');
+    setBillingTiming('advance');
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);
-    setBillingCycleAlignment('start');
     setMinimumBillableTime(undefined);
     setRoundUpToNearest(undefined);
     setFixedServices([]);
@@ -381,37 +251,21 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     setUsageServiceRateInputs({});
     setValidationErrors([]);
     setHasAttemptedSubmit(false);
-    setIsDirty(false);
   };
 
-  const closeDialog = () => {
-    setOpen(false);
-    resetForm();
-    onClose?.();
-  };
-
-  const handleCloseRequest = (force = false) => {
-    if (!force && isDirty) {
-      setOpen(true);
-      return;
-    }
-    closeDialog();
-  };
-
-  const formatCurrency = (cents: number | undefined, currencyCode: string = 'USD') => {
-    const symbol = getCurrencySymbol(currencyCode);
-    if (!cents) return `${symbol}0.00`;
-    return `${symbol}${(cents / 100).toFixed(2)}`;
+  const formatCurrency = (cents: number | undefined) => {
+    if (!cents) return '$0.00';
+    return `$${(cents / 100).toFixed(2)}`;
   };
 
   const renderFixedConfig = () => {
-    // Filter to only show services with billing_method === 'fixed'
     const fixedServiceOptions = services
       .filter(service => service.billing_method === 'fixed')
       .map(service => ({
         value: service.service_id,
         label: service.service_name
       }));
+
     const handleAddFixedService = () => {
       setFixedServices([...fixedServices, { service_id: '', service_name: '', quantity: 1 }]);
     };
@@ -442,8 +296,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <div className="space-y-4">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries
-            for these services, but billing is based on the fixed rate, not hours worked.
+            <strong>Fixed Fee Services:</strong> The contract line's base rate (set below) is the billed amount.
+            Service quantity is used for <em>tax allocation</em> — it determines how the fixed fee is proportionally
+            attributed across services for tax calculations.
           </p>
         </div>
 
@@ -472,7 +327,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    Quantity
+                    Quantity (for tax allocation)
                   </Label>
                   <Input
                     id={`quantity-${index}`}
@@ -522,13 +377,13 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   };
 
   const renderHourlyConfig = () => {
-    // Filter to only show services with billing_method === 'hourly'
     const hourlyServiceOptions = services
       .filter(service => service.billing_method === 'hourly')
       .map(service => ({
         value: service.service_id,
         label: service.service_name
       }));
+
     const handleAddHourlyService = () => {
       setHourlyServices([...hourlyServices, { service_id: '', service_name: '', hourly_rate: undefined }]);
     };
@@ -567,8 +422,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <div className="space-y-4">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked.
-            Each time entry will be multiplied by the hourly rate to calculate the invoice amount.
+            <strong>Hourly Services:</strong> These services are billed based on actual time tracked.
           </p>
         </div>
 
@@ -589,7 +443,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 step="15"
                 className="w-32"
               />
-              <p className="text-xs text-gray-500">e.g., 15 minutes - any time entry less than this will be rounded up</p>
             </div>
 
             <div className="space-y-2">
@@ -607,7 +460,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 step="15"
                 className="w-32"
               />
-              <p className="text-xs text-gray-500">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
             </div>
           </>
         )}
@@ -667,7 +519,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         }
                       }}
                       placeholder="0.00"
-                      className="pl-10"
+                      className="pl-7"
                     />
                   </div>
                   <p className="text-xs text-gray-500">
@@ -678,7 +530,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 {/* Bucket Overlay Section */}
                 <div className="space-y-3 pt-3 border-t border-dashed border-gray-200">
                   <SwitchWithLabel
-                    label="Recommend bucket of hours"
+                    label="Add bucket of hours"
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => {
                       const newServices = [...hourlyServices];
@@ -699,7 +551,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         };
                       }
                       setHourlyServices(newServices);
-                      markDirty();
                     }}
                   />
                   {service.bucket_overlay && (
@@ -713,7 +564,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                           bucket_overlay: overlay
                         };
                         setHourlyServices(newServices);
-                        markDirty();
                       }}
                       automationId={`hourly-bucket-${index}`}
                       billingFrequency={billingFrequency}
@@ -759,13 +609,13 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   };
 
   const renderUsageConfig = () => {
-    // Filter to only show services with billing_method === 'usage'
     const usageServiceOptions = services
       .filter(service => service.billing_method === 'usage')
       .map(service => ({
         value: service.service_id,
         label: service.service_name
       }));
+
     const handleAddUsageService = () => {
       setUsageServices([...usageServices, { service_id: '', service_name: '', unit_rate: undefined, unit_of_measure: 'unit' }]);
     };
@@ -811,8 +661,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       <div className="space-y-4">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
           <p className="text-sm text-amber-800">
-            <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics.
-            Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.
+            <strong>Usage-Based Services:</strong> These services are billed based on actual consumption.
           </p>
         </div>
 
@@ -891,16 +740,13 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       onChange={(e) => handleUnitChange(index, e.target.value)}
                       placeholder="e.g., GB, API call, user"
                     />
-                    <p className="text-xs text-gray-500">
-                      e.g., GB, API call, transaction
-                    </p>
                   </div>
                 </div>
 
                 {/* Bucket Overlay Section */}
                 <div className="space-y-3 pt-3 border-t border-dashed border-gray-200">
                   <SwitchWithLabel
-                    label="Recommend bucket of consumption"
+                    label="Add bucket of consumption"
                     checked={Boolean(service.bucket_overlay)}
                     onCheckedChange={(checked) => {
                       const newServices = [...usageServices];
@@ -921,7 +767,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         };
                       }
                       setUsageServices(newServices);
-                      markDirty();
                     }}
                   />
                   {service.bucket_overlay && (
@@ -935,7 +780,6 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                           bucket_overlay: overlay
                         };
                         setUsageServices(newServices);
-                        markDirty();
                       }}
                       unitLabel={service.unit_of_measure || 'units'}
                       automationId={`usage-bucket-${index}`}
@@ -982,282 +826,242 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   };
 
   return (
-    <>
-      {triggerButton && (
-        <div
-          onClick={() => {
-            if (editingPlan) {
-              setPlanName(editingPlan.preset_name);
-              setBillingFrequency(editingPlan.billing_frequency);
-              setPlanType(editingPlan.contract_line_type as PlanType);
-              setIsDirty(false);
-            }
-            setOpen(true);
-          }}
-        >
-          {triggerButton}
-        </div>
-      )}
-      <Dialog
-        isOpen={open}
-        onClose={() => handleCloseRequest(false)}
-        title={editingPlan ? 'Edit Contract Line Preset' : 'Add Contract Line Preset'}
-        className="max-w-3xl"
-        hideCloseButton={!!editingPlan}
-      >
-        <DialogContent>
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-            {hasAttemptedSubmit && validationErrors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  <p className="font-medium mb-2">Please correct the following:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    {validationErrors.map((err, idx) => (
-                      <li key={idx}>{err}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create Custom Contract Line"
+      className="max-w-3xl"
+    >
+      <DialogContent>
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          {hasAttemptedSubmit && validationErrors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                <p className="font-medium mb-2">Please correct the following:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {validationErrors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
 
-            <section className="space-y-4">
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Contract Line Basics</h3>
+              <p className="text-sm text-gray-600">
+                Create a custom contract line directly for this contract.
+              </p>
+            </div>
+            <div className="space-y-3">
               <div>
-                <h3 className="text-lg font-semibold">Contract Line Preset Basics</h3>
-                <p className="text-sm text-gray-600">
-                  Create a reusable template that can be quickly added to contracts or contract templates. Define the billing model, services, and default rates that will be copied when this preset is used.
+                <Label htmlFor="name">Contract Line Name *</Label>
+                <Input
+                  id="name"
+                  value={planName}
+                  onChange={(e) => {
+                    setPlanName(e.target.value);
+                    clearErrorIfSubmitted();
+                  }}
+                  placeholder="e.g. Managed Support – Gold"
+                  required
+                  className={hasAttemptedSubmit && !planName.trim() ? 'border-red-500' : ''}
+                />
+              </div>
+              <div>
+                <Label htmlFor="frequency">Billing Frequency *</Label>
+                <CustomSelect
+                  id="frequency"
+                  value={billingFrequency}
+                  onValueChange={(value) => {
+                    setBillingFrequency(value);
+                    clearErrorIfSubmitted();
+                  }}
+                  options={BILLING_FREQUENCY_OPTIONS}
+                  placeholder="Select billing frequency"
+                  className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
+                />
+              </div>
+              <div>
+                <Label htmlFor="billing-timing">Billing Timing</Label>
+                <CustomSelect
+                  id="billing-timing"
+                  value={billingTiming}
+                  onValueChange={(value) => setBillingTiming(value as 'arrears' | 'advance')}
+                  options={[
+                    { value: 'advance', label: 'Advance (bill at start of period)' },
+                    { value: 'arrears', label: 'Arrears (bill at end of period)' }
+                  ]}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Advance billing is typical for fixed fees; arrears for time/usage-based services.
                 </p>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="name">Contract Line Preset Name *</Label>
-                  <Input
-                    id="name"
-                    value={planName}
-                    onChange={(e) => {
-                      setPlanName(e.target.value);
-                      clearErrorIfSubmitted();
-                      markDirty();
-                    }}
-                    placeholder="e.g. Managed Support – Gold"
-                    required
-                    className={hasAttemptedSubmit && !planName.trim() ? 'border-red-500' : ''}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="frequency">Billing Frequency *</Label>
-                  <CustomSelect
-                    id="frequency"
-                    value={billingFrequency}
-                    onValueChange={(value) => {
-                      setBillingFrequency(value);
-                      clearErrorIfSubmitted();
-                      markDirty();
-                    }}
-                    options={BILLING_FREQUENCY_OPTIONS}
-                    placeholder="Select billing frequency"
-                    className={hasAttemptedSubmit && !billingFrequency ? 'ring-1 ring-red-500' : ''}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="billing-timing">Billing Timing *</Label>
-                  <CustomSelect
-                    id="billing-timing"
-                    value={billingTiming}
-                    onValueChange={(value) => {
-                      if (planType !== 'Fixed') {
-                        return;
-                      }
-                      setBillingTiming(value as 'arrears' | 'advance');
-                      clearErrorIfSubmitted();
-                      markDirty();
-                    }}
-                    options={BILLING_TIMING_OPTIONS.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
-                    disabled={planType !== 'Fixed'}
-                    placeholder="Select billing timing"
-                  />
-                  {planType !== 'Fixed' ? (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Hourly and usage-based lines always bill in arrears.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Advance billing invoices the upcoming period at the cycle start.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </section>
+            </div>
+          </section>
 
+          <section className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Choose a Billing Model *</h3>
+              <p className="text-sm text-gray-600">
+                Select the billing behavior that fits this offering.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {([
+                {
+                  key: 'Fixed' as PlanType,
+                  title: 'Fixed Fee',
+                  description: 'Charge a flat amount every billing period.',
+                  icon: Package,
+                  accent: 'text-blue-600',
+                },
+                {
+                  key: 'Hourly' as PlanType,
+                  title: 'Hourly',
+                  description: 'Bill based on approved time entries.',
+                  icon: Clock,
+                  accent: 'text-emerald-600',
+                },
+                {
+                  key: 'Usage' as PlanType,
+                  title: 'Usage-Based',
+                  description: 'Invoice for units consumed.',
+                  icon: Activity,
+                  accent: 'text-orange-600',
+                },
+              ] as const).map(({ key, title, description, icon: Icon, accent }) => (
+                <button
+                  type="button"
+                  key={key}
+                  onClick={() => {
+                    setPlanType(key);
+                    clearErrorIfSubmitted();
+                  }}
+                  className={`text-left p-4 border-2 rounded-lg transition-all focus:outline-none ${
+                    planType === key ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <Icon className={`h-8 w-8 mt-1 flex-shrink-0 ${accent}`} />
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
+                      <p className="text-sm text-gray-600">{description}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {planType === 'Fixed' && (
             <section className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">Choose a Billing Model *</h3>
+                <h3 className="text-lg font-semibold">Fixed Fee Services</h3>
                 <p className="text-sm text-gray-600">
-                  Select the billing behavior that fits this offering. Services and overlays can be attached once the line exists.
+                  Set up services that are billed at a fixed recurring rate.
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {(
-                  [
-                    {
-                      key: 'Fixed' as PlanType,
-                      title: 'Fixed Fee',
-                      description: 'Charge a flat amount every billing period.',
-                      icon: Package,
-                      accent: 'text-blue-600',
-                    },
-                    {
-                      key: 'Hourly' as PlanType,
-                      title: 'Hourly',
-                      description: 'Bill based on approved time entries and hourly overlays.',
-                      icon: Clock,
-                      accent: 'text-emerald-600',
-                    },
-                    {
-                      key: 'Usage' as PlanType,
-                      title: 'Usage-Based',
-                      description: 'Invoice for units consumed such as devices or licenses.',
-                      icon: Activity,
-                      accent: 'text-orange-600',
-                    },
-                  ] as const
-                ).map(({ key, title, description, icon: Icon, accent }) => (
-                  <button
-                    type="button"
-                    key={key}
-                    onClick={() => {
-                      setPlanType(key);
-                      clearErrorIfSubmitted();
-                      markDirty();
-                    }}
-                    className={`text-left p-4 border-2 rounded-lg transition-all focus:outline-none ${
-                      planType === key ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Icon className={`h-8 w-8 mt-1 flex-shrink-0 ${accent}`} />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
-                        <p className="text-sm text-gray-600">{description}</p>
-                      </div>
+              {renderFixedConfig()}
+
+              {fixedServices.length > 0 && (
+                <>
+                  <div className="space-y-2 pt-4 border-t">
+                    <Label htmlFor="base-rate">Recurring Base Rate</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <Input
+                        id="base-rate"
+                        type="text"
+                        inputMode="decimal"
+                        value={baseRateInput}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                          const decimalCount = (value.match(/\./g) || []).length;
+                          if (decimalCount <= 1) {
+                            setBaseRateInput(value);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                            setBaseRateInput('');
+                            setBaseRate(undefined);
+                          } else {
+                            const dollars = parseFloat(baseRateInput) || 0;
+                            const cents = Math.round(dollars * 100);
+                            setBaseRate(cents);
+                            setBaseRateInput((cents / 100).toFixed(2));
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="pl-10"
+                      />
                     </div>
-                  </button>
-                ))}
-              </div>
+                    <p className="text-xs text-gray-500">Recurring fee for all fixed services.</p>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="enable-proration" className="font-medium text-gray-800">
+                        Enable Proration
+                      </Label>
+                      <Switch
+                        id="enable-proration"
+                        checked={enableProration}
+                        onCheckedChange={setEnableProration}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      When enabled, the recurring fee will be prorated for partial billing periods
+                    </p>
+                  </div>
+                </>
+              )}
             </section>
+          )}
 
-            {planType === 'Fixed' && (
-              <section className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Fixed Fee Services</h3>
-                  <p className="text-sm text-gray-600">
-                    Set up services that are billed at a fixed recurring rate, regardless of usage.
-                  </p>
-                </div>
-                {renderFixedConfig()}
+          {planType === 'Hourly' && (
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Hourly Services</h3>
+                <p className="text-sm text-gray-600">
+                  Configure services that are billed based on time tracked.
+                </p>
+              </div>
+              {renderHourlyConfig()}
+            </section>
+          )}
 
-                {fixedServices.length > 0 && (
-                  <>
-                    <div className="space-y-2 pt-4 border-t">
-                      <Label htmlFor="base-rate">Recurring Base Rate (Optional)</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                        <Input
-                          id="base-rate"
-                          type="text"
-                          inputMode="decimal"
-                          value={baseRateInput}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/[^0-9.]/g, '');
-                            const decimalCount = (value.match(/\./g) || []).length;
-                            if (decimalCount <= 1) {
-                              setBaseRateInput(value);
-                              markDirty();
-                            }
-                          }}
-                          onBlur={() => {
-                            if (baseRateInput.trim() === '' || baseRateInput === '.') {
-                              setBaseRateInput('');
-                              setBaseRate(undefined);
-                            } else {
-                              const dollars = parseFloat(baseRateInput) || 0;
-                              const cents = Math.round(dollars * 100);
-                              setBaseRate(cents);
-                              setBaseRateInput((cents / 100).toFixed(2));
-                            }
-                          }}
-                          placeholder="0.00"
-                          className="pl-10"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500">Suggested recurring fee for all fixed services. Can be overridden when adding this preset to a contract.</p>
-                    </div>
+          {planType === 'Usage' && (
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Usage-Based Services</h3>
+                <p className="text-sm text-gray-600">
+                  Configure services that are billed based on usage or consumption.
+                </p>
+              </div>
+              {renderUsageConfig()}
+            </section>
+          )}
 
-                    <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="enable-proration" className="font-medium text-gray-800">
-                          Enable Proration
-                        </Label>
-                        <Switch
-                          id="enable-proration"
-                          checked={enableProration}
-                          onCheckedChange={(checked) => {
-                            setEnableProration(checked);
-                            markDirty();
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        When enabled, the recurring fee will be prorated for partial billing periods based on the start/end date
-                      </p>
-                    </div>
-                  </>
-                )}
-              </section>
-            )}
-
-            {planType === 'Hourly' && (
-              <section className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Hourly Services</h3>
-                  <p className="text-sm text-gray-600">
-                    Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.
-                  </p>
-                </div>
-                {renderHourlyConfig()}
-              </section>
-            )}
-
-            {planType === 'Usage' && (
-              <section className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Usage-Based Services</h3>
-                  <p className="text-sm text-gray-600">
-                    Configure services that are billed based on usage or consumption.
-                  </p>
-                </div>
-                {renderUsageConfig()}
-              </section>
-            )}
-
-            <DialogFooter>
-              <Button id="contract-line-cancel" variant="outline" onClick={() => handleCloseRequest(true)}>
-                Cancel
-              </Button>
-              <Button
-                id="contract-line-submit"
-                type="submit"
-                disabled={isSaving}
-                className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
-              >
-                {isSaving ? 'Saving…' : editingPlan ? 'Update Contract Line Preset' : 'Create Contract Line Preset'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+          <DialogFooter>
+            <Button id="custom-contract-line-cancel" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              id="custom-contract-line-submit"
+              type="submit"
+              disabled={isSaving}
+              className={!planName.trim() || !planType || !billingFrequency ? 'opacity-50' : ''}
+            >
+              {isSaving ? 'Creating...' : 'Create Contract Line'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
-}
+};
+
+export default CreateCustomContractLineDialog;

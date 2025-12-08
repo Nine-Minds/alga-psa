@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Card } from 'server/src/components/ui/Card';
-import { CheckCircle, DollarSign, Clock, BarChart3, Package } from 'lucide-react';
+import { CheckCircle, Coins, Clock, BarChart3, Package } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ const CONFIGURATION_TYPE_DESCRIPTIONS: Record<ConfigurationType, string> = {
 };
 
 const CONFIGURATION_TYPE_ICONS: Record<ConfigurationType, React.ReactNode> = {
-  'Fixed': <DollarSign className="h-6 w-6 text-green-500" />,
+  'Fixed': <Coins className="h-6 w-6 text-green-500" />,
   'Hourly': <Clock className="h-6 w-6 text-purple-500" />,
   'Usage': <BarChart3 className="h-6 w-6 text-orange-500" />,
   'Bucket': <Package className="h-6 w-6 text-blue-500" />

@@ -6,8 +6,8 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { CURRENCY_OPTIONS } from 'server/src/constants/currency';
-import { FileText, Repeat, StickyNote, Coins } from 'lucide-react';
+// CURRENCY_OPTIONS removed - templates are now currency-neutral
+import { FileText, Repeat, StickyNote } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateWizard';
 
 interface TemplateContractBasicsStepProps {
@@ -89,22 +89,9 @@ export function TemplateContractBasicsStep({
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="template-currency" className="flex items-center gap-2">
-          <Coins className="h-4 w-4" />
-          Default Currency *
-        </Label>
-        <CustomSelect
-          id="template-currency"
-          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
-          value={data.currency_code}
-          onValueChange={(value) => updateData({ currency_code: value })}
-          placeholder="Select currency"
-        />
-        <p className="text-xs text-gray-500">
-          Sets the default currency for this template. Can be overridden when applied to a client.
-        </p>
-      </div>
+      {/* Currency selector removed - templates are now currency-neutral.
+          Currency is inherited from the client when a contract is created from this template.
+          Services have their own currency_code which must match the client's currency. */}
     </div>
   );
 }

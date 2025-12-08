@@ -60,16 +60,17 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         // tenantClient does not exist directly in DbInvoiceViewModel, assuming it's not needed or handled elsewhere
         tenantClient: null,
 
+        // All monetary values are stored in cents in the database, convert to dollars for display
         items: (dbData.invoice_charges ?? []).map((item: IInvoiceCharge) => ({
           id: String(item.item_id ?? ''), // Corrected property name
           description: String(item.description ?? ''),
           quantity: Number(item.quantity ?? 0),
-          unitPrice: Number(item.unit_price ?? 0),
-          total: Number(item.total_price ?? 0), // Corrected property name
+          unitPrice: Number(item.unit_price ?? 0) / 100, // Convert cents to dollars
+          total: Number(item.total_price ?? 0) / 100, // Convert cents to dollars
         })),
-        subtotal: Number(dbData.subtotal ?? 0),
-        tax: Number(dbData.tax ?? 0),
-        total: Number(dbData.total ?? 0),
+        subtotal: Number(dbData.subtotal ?? 0) / 100, // Convert cents to dollars
+        tax: Number(dbData.tax ?? 0) / 100, // Convert cents to dollars
+        total: Number(dbData.total ?? 0) / 100, // Convert cents to dollars
         taxSource: dbData.tax_source || 'internal',
         currencyCode: (dbData as any).currency_code || (dbData as any).currencyCode || 'USD',
         // notes: dbData.notes, // Add if needed

@@ -104,7 +104,7 @@ const Contracts: React.FC = () => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', 'contracts');
     if (view === 'Client Contracts') {
-      params.set('subtab', 'clients');
+      params.set('subtab', 'client-contracts');
     } else {
       params.set('subtab', 'templates');
     }
@@ -168,13 +168,14 @@ const Contracts: React.FC = () => {
   const navigateToContract = (contractId?: string, clientContractId?: string) => {
     if (contractId) {
       const params = new URLSearchParams();
-      params.set('tab', 'contracts');
       if (clientContractId) {
-        params.set('subtab', 'clients');
+        // Client contract - use client-contracts tab
+        params.set('tab', 'client-contracts');
         params.set('contractId', contractId);
         params.set('clientContractId', clientContractId);
       } else {
-        params.set('subtab', 'templates');
+        // Template contract - use contract-templates tab
+        params.set('tab', 'contract-templates');
         params.set('contractId', contractId);
       }
       router.push(`/msp/billing?${params.toString()}`);
@@ -329,7 +330,7 @@ const renderStatusBadge = (status: string) => {
               onClick={(event) => {
                 event.stopPropagation();
                 if (record.contract_id) {
-                  router.push(`/msp/billing?tab=contracts&contractId=${record.contract_id}${record.client_contract_id ? `&clientContractId=${record.client_contract_id}` : ''}`);
+                  navigateToContract(record.contract_id, record.client_contract_id);
                 }
               }}
             >

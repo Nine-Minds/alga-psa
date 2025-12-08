@@ -76,11 +76,21 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
   const handleServiceChange = (index: number, serviceId: string) => {
     const service = services.find((s) => s.service_id === serviceId);
     const next = [...data.hourly_services];
+
+    // Only auto-fill the rate if the service has a price in the contract's currency
+    let autoFillRate: number | undefined = undefined;
+    if (service?.prices && service.prices.length > 0) {
+      const matchingPrice = service.prices.find(p => p.currency_code === data.currency_code);
+      if (matchingPrice) {
+        autoFillRate = matchingPrice.rate;
+      }
+    }
+
     next[index] = {
       ...next[index],
       service_id: serviceId,
       service_name: service?.service_name || '',
-      hourly_rate: service?.default_rate ?? next[index].hourly_rate,
+      hourly_rate: autoFillRate,
     };
     updateData({ hourly_services: next });
   };
@@ -252,7 +262,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                       }
                     }}
                     placeholder="0.00"
-                    className="pl-7"
+                    className="pl-10"
                   />
                 </div>
                 <p className="text-xs text-gray-500">

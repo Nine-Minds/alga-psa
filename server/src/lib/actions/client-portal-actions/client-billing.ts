@@ -28,35 +28,47 @@ import { JobStatus } from 'server/src/types/job';
 
 export async function getClientContractLine(): Promise<IClientContractLine | null> {
   const session = await getSession();
-  
+
   if (!session?.user?.tenant || !session.user.clientId) {
     throw new Error('Unauthorized');
   }
 
   const knex = await getConnection(session.user.tenant);
-  
+
   try {
     const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('client_contract_lines')
-        .select(
-          'client_contract_lines.*',
-          'contract_lines.contract_line_name',
-          'contract_lines.billing_frequency',
-          'service_categories.category_name as service_category_name'
-        )
-        .join('contract_lines', function() {
-          this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
-            .andOn('contract_lines.tenant', '=', 'client_contract_lines.tenant')
+      // Query via client_contracts -> contracts -> contract_lines
+      // (contracts are client-specific via client_contracts)
+      return await trx('client_contracts as cc')
+        .join('contracts as c', function() {
+          this.on('cc.contract_id', '=', 'c.contract_id')
+            .andOn('cc.tenant', '=', 'c.tenant');
         })
-        .leftJoin('service_categories', function() {
-          this.on('client_contract_lines.service_category', '=', 'service_categories.category_id')
-            .andOn('service_categories.tenant', '=', 'client_contract_lines.tenant')
+        .join('contract_lines as cl', function() {
+          this.on('c.contract_id', '=', 'cl.contract_id')
+            .andOn('c.tenant', '=', 'cl.tenant');
+        })
+        .leftJoin('service_categories as sc', function() {
+          this.on('cl.service_category', '=', 'sc.category_id')
+            .andOn('sc.tenant', '=', 'cl.tenant');
         })
         .where({
-          'client_contract_lines.client_id': session.user.clientId,
-          'client_contract_lines.is_active': true,
-          'client_contract_lines.tenant': session.user.tenant
+          'cc.client_id': session.user.clientId,
+          'cc.tenant': session.user.tenant
         })
+        .select(
+          'cl.contract_line_id',
+          'cl.contract_line_name',
+          'cl.billing_frequency',
+          'cl.service_category',
+          'cl.custom_rate',
+          'cl.contract_id',
+          'cl.tenant',
+          'cc.client_id',
+          'cc.start_date',
+          'cc.end_date',
+          'sc.category_name as service_category_name'
+        )
         .first();
     });
 

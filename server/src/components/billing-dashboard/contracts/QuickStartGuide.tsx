@@ -5,8 +5,8 @@ import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
 import {
+  Coins,
   FileText,
-  DollarSign,
   Clock,
   Droplet,
   Activity,
@@ -123,7 +123,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
             </p>
             <div className="space-y-2 ml-2">
               <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-green-600" />
+                <Coins className="h-4 w-4 text-green-600" />
                 <span className="text-sm text-gray-700"><strong>Fixed Fee:</strong> Same price every month</span>
               </div>
               <div className="flex items-center gap-2">

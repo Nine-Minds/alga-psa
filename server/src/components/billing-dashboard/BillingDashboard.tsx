@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { IService } from 'server/src/interfaces';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import { AlertCircle } from 'lucide-react';
 
 // Import all the components
@@ -26,10 +27,16 @@ import AccountingExportsTab from './accounting/AccountingExportsTab';
 
 interface BillingDashboardProps {
   initialServices: IService[];
+  /** Documents fetched server-side when viewing contract documents tab */
+  contractDocuments?: IDocument[] | null;
+  /** Current user ID fetched server-side */
+  currentUserId?: string | null;
 }
 
 const BillingDashboard: React.FC<BillingDashboardProps> = ({
-  initialServices
+  initialServices,
+  contractDocuments,
+  currentUserId
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -97,12 +104,19 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
       >
 
         <Tabs.Content value="contract-templates">
-          <TemplatesTab />
+          {searchParams?.has('contractId') ? (
+            <ContractDetailSwitcher />
+          ) : (
+            <TemplatesTab />
+          )}
         </Tabs.Content>
 
         <Tabs.Content value="client-contracts">
           {searchParams?.has('contractId') ? (
-            <ContractDetailSwitcher />
+            <ContractDetailSwitcher
+              contractDocuments={contractDocuments}
+              currentUserId={currentUserId}
+            />
           ) : (
             <ClientContractsTab />
           )}

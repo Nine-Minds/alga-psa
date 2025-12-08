@@ -54,7 +54,8 @@ export type ContractTemplateWizardSubmission = {
   contract_name: string;
   description?: string;
   billing_frequency?: string;
-  currency_code: string;
+  // currency_code removed - templates are now currency-neutral
+  // Currency is inherited from the client when a contract is created from this template
   fixed_services: TemplateFixedServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
   usage_services?: TemplateUsageServiceInput[];
@@ -69,6 +70,7 @@ type TemplateOption = {
   contract_name: string;
   contract_description?: string | null;
   billing_frequency?: string | null;
+  // currency_code removed - templates are now currency-neutral
 };
 
 // ---------------------- Client wizard types ----------------------
@@ -123,7 +125,8 @@ export type ClientTemplateSnapshot = {
   contract_name?: string;
   description?: string | null;
   billing_frequency?: string | null;
-  currency_code?: string;
+  // currency_code removed - templates are now currency-neutral
+  // Currency is inherited from the client when a contract is created from this template
   fixed_services?: ClientFixedServiceInput[];
   fixed_base_rate?: number;
   enable_proration?: boolean;
@@ -208,7 +211,7 @@ export async function createContractTemplateFromWizard(
       template_name: submission.contract_name,
       template_description: submission.description ?? null,
       default_billing_frequency: submission.billing_frequency ?? 'monthly',
-      currency_code: submission.currency_code,
+      // currency_code removed - templates are now currency-neutral
       template_status: isDraft ? 'draft' : 'published',
       template_metadata: null,
       created_at: nowIso,
@@ -312,7 +315,7 @@ export async function createContractTemplateFromWizard(
       await trx('contract_template_line_fixed_config').insert({
         tenant,
         template_line_id: templateLineId,
-        base_rate: fixedBaseRateCents / 100,
+        base_rate: fixedBaseRateCents,  // Already in cents from frontend
         enable_proration: enableProrationFlag,
         billing_cycle_alignment: enableProrationFlag ? 'prorated' : 'start',
         created_at: nowIso,
@@ -343,7 +346,7 @@ export async function createContractTemplateFromWizard(
           template_line_id: templateLineId,
           service_id: service.service_id,
           quantity,
-          custom_rate: serviceBaseRate > 0 ? serviceBaseRate / 100 : null,
+          custom_rate: serviceBaseRate > 0 ? serviceBaseRate : null,  // Already in cents
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -358,7 +361,7 @@ export async function createContractTemplateFromWizard(
           service_id: service.service_id,
           configuration_type: 'Fixed',
           quantity,
-          custom_rate: serviceBaseRate > 0 ? serviceBaseRate / 100 : null,
+          custom_rate: serviceBaseRate > 0 ? serviceBaseRate : null,  // Already in cents
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -394,7 +397,7 @@ export async function createContractTemplateFromWizard(
           template_line_id: templateLineId,
           service_id: service.service_id,
           quantity: null,
-          custom_rate: normalizedHourlyRate > 0 ? normalizedHourlyRate / 100 : null,
+          custom_rate: normalizedHourlyRate > 0 ? normalizedHourlyRate : null,  // Already in cents
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -408,7 +411,7 @@ export async function createContractTemplateFromWizard(
           service_id: service.service_id,
           configuration_type: 'Hourly',
           quantity: null,
-          custom_rate: normalizedHourlyRate > 0 ? normalizedHourlyRate / 100 : null,
+          custom_rate: normalizedHourlyRate > 0 ? normalizedHourlyRate : null,  // Already in cents
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -417,7 +420,7 @@ export async function createContractTemplateFromWizard(
         await trx('contract_template_line_service_hourly_config').insert({
           tenant,
           config_id: configId,
-          hourly_rate: normalizedHourlyRate / 100,
+          hourly_rate: normalizedHourlyRate,  // Already in cents
           minimum_billable_time: submission.minimum_billable_time ?? 0,
           round_up_to_nearest: submission.round_up_to_nearest ?? 0,
           enable_overtime: false,
@@ -472,7 +475,7 @@ export async function createContractTemplateFromWizard(
           template_line_id: templateLineId,
           service_id: service.service_id,
           quantity: null,
-          custom_rate: normalizedUnitRate > 0 ? normalizedUnitRate / 100 : null,
+          custom_rate: normalizedUnitRate > 0 ? normalizedUnitRate : null,  // Already in cents
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -486,7 +489,7 @@ export async function createContractTemplateFromWizard(
           service_id: service.service_id,
           configuration_type: 'Usage',
           quantity: null,
-          custom_rate: normalizedUnitRate > 0 ? normalizedUnitRate / 100 : null,
+          custom_rate: normalizedUnitRate > 0 ? normalizedUnitRate : null,  // Already in cents
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -498,7 +501,7 @@ export async function createContractTemplateFromWizard(
           unit_of_measure: service.unit_of_measure || 'unit',
           enable_tiered_pricing: false,
           minimum_usage: 0,
-          base_rate: normalizedUnitRate > 0 ? normalizedUnitRate / 100 : null,
+          base_rate: normalizedUnitRate > 0 ? normalizedUnitRate : null,  // Already in cents
           created_at: nowIso,
           updated_at: nowIso,
         });
@@ -635,6 +638,74 @@ export async function createClientContractFromWizard(
         }
       };
 
+      // Validate services have prices in the contract's currency OR have custom rates specified
+      const contractCurrency = submission.currency_code || 'USD';
+
+      // Build a map of services with custom rates (user-entered rates override the need for currency prices)
+      const servicesWithCustomRates = new Set<string>();
+
+      // Hourly services with hourly_rate specified
+      filteredHourlyServices.forEach(s => {
+        if (s.hourly_rate !== undefined && s.hourly_rate > 0) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
+
+      // Usage services with unit_rate specified
+      filteredUsageServices.forEach(s => {
+        if (s.unit_rate !== undefined && s.unit_rate > 0) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
+
+      // Fixed services: if a fixed_base_rate is specified for the line, all services in that line
+      // are covered by the flat fee and don't need individual currency pricing.
+      // Otherwise, check for individual custom_rate on each service.
+      if (submission.fixed_base_rate !== undefined && submission.fixed_base_rate > 0) {
+        // All fixed services are covered by the overall fixed base rate
+        filteredFixedServices.forEach(s => {
+          servicesWithCustomRates.add(s.service_id);
+        });
+      } else {
+        // Check for individual custom_rate on each fixed service
+        filteredFixedServices.forEach(s => {
+          if ((s as any).custom_rate !== undefined && (s as any).custom_rate > 0) {
+            servicesWithCustomRates.add(s.service_id);
+          }
+        });
+      }
+
+      // Only check currency prices for services WITHOUT custom rates
+      const serviceIdsNeedingCurrencyCheck = allServiceIds.filter(id => !servicesWithCustomRates.has(id));
+
+      if (serviceIdsNeedingCurrencyCheck.length > 0) {
+        // Get services that have prices in the required currency
+        const servicesWithPrices = await trx('service_catalog as sc')
+          .whereIn('sc.service_id', serviceIdsNeedingCurrencyCheck)
+          .leftJoin('service_prices as sp', function() {
+            this.on('sc.service_id', '=', 'sp.service_id')
+                .andOn('sp.currency_code', '=', trx.raw('?', [contractCurrency]))
+                .andOn('sp.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .select(
+            'sc.service_id',
+            'sc.service_name',
+            'sp.price_id'
+          );
+
+        // Find services that don't have a price in the required currency AND don't have custom rates
+        const missingPriceServices = servicesWithPrices.filter(s => !s.price_id);
+        if (missingPriceServices.length > 0) {
+          const missingNames = missingPriceServices
+            .map((s) => `"${s.service_name}"`)
+            .join(', ');
+          throw new Error(
+            `Cannot create contract in ${contractCurrency}. The following services do not have ${contractCurrency} pricing and no custom rate was entered: ${missingNames}. ` +
+            `Please either add ${contractCurrency} prices to these services in the Service Catalog, or enter a custom rate in the wizard.`
+          );
+        }
+      }
+
       validateBillingMethod('fixed', filteredFixedServices);
       validateBillingMethod('hourly', filteredHourlyServices);
       validateBillingMethod('usage', filteredUsageServices);
@@ -705,14 +776,14 @@ export async function createClientContractFromWizard(
             tenant,
             custom_rate: undefined,
           },
-          { base_rate: (serviceBaseRate ?? 0) / 100 }
+          { base_rate: serviceBaseRate ?? 0 }  // Already in cents from frontend
         );
       }
 
       const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
       await fixedConfigModel.upsert({
         contract_line_id: planId,
-        base_rate: (submission.fixed_base_rate ?? 0) / 100,
+        base_rate: submission.fixed_base_rate ?? 0,  // Already in cents from frontend
         enable_proration: submission.enable_proration,
         billing_cycle_alignment: submission.enable_proration ? 'prorated' : 'start',
         tenant,
@@ -839,17 +910,10 @@ export async function createClientContractFromWizard(
       template_contract_id: submission.template_id ?? null,
     });
 
-    if (createdContractLineIds.length > 0) {
-      await replicateContractLinesToClient(trx, {
-        tenant,
-        clientId: submission.client_id,
-        clientContractId,
-        contractLineIds: createdContractLineIds,
-        startDate,
-        endDate,
-        isActive: !isDraft
-      });
-    }
+    // NOTE: The legacy replicateContractLinesToClient call has been removed.
+    // The client_contract_lines, client_contract_services, and related tables are
+    // redundant since contracts are already client-specific via client_contracts.
+    // The billing engine reads from contract_lines directly.
 
     return {
       contract_id: contractId,
@@ -897,6 +961,8 @@ export async function listContractTemplatesForWizard(): Promise<TemplateOption[]
     throw new Error('Tenant not found');
   }
 
+  // currency_code removed from contract_templates - templates are now currency-neutral
+  // Currency is inherited from the client when a contract is created from a template
   const templates = await knex('contract_templates')
     .where({ tenant })
     .orderBy('template_name', 'asc')
@@ -1046,7 +1112,7 @@ export async function getContractTemplateSnapshotForClientWizard(
     contract_name: template.template_name,
     description: template.template_description,
     billing_frequency: template.default_billing_frequency,
-    currency_code: template.currency_code,
+    // currency_code removed - templates are now currency-neutral
     fixed_services: fixedServices,
     fixed_base_rate: fixedBaseRateCents,
     enable_proration: enableProration,

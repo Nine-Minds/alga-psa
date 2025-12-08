@@ -57,8 +57,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         invoice_template_id: client.invoice_template_id || '',
         billing_contact_id: client.billing_contact_id || '',
         billing_email: client.billing_email || '',
-        region_code: client.region_code || null, // Added region_code from client data
-        default_currency_code: client.default_currency_code || null, // Added default_currency_code
+        region_code: client.region_code || null,
+        default_currency_code: client.default_currency_code || 'USD',
     });
 
     const [contractLines, setContractLines] = useState<IContractLine[]>([]);

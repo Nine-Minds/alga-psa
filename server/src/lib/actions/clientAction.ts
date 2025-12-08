@@ -13,30 +13,30 @@ export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
     }
 
     const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-
-      const hasClientContractLines = await trx.schema.hasTable('client_contract_lines');
-      if (!hasClientContractLines) {
-        throw new Error('client_contract_lines table not found. Run the latest contract migrations.');
-      }
-
+      // Query via clients -> client_contracts -> contracts -> contract_lines
+      // (contracts are client-specific via client_contracts)
       return await trx('clients')
         .select(
           'clients.client_id',
           'clients.client_name',
-          'contract_lines.contract_line_id',
-          'contract_lines.contract_line_name',
-          'contract_lines.billing_frequency',
-          'contract_lines.is_custom',
-          'contract_lines.contract_line_type'
+          'cl.contract_line_id',
+          'cl.contract_line_name',
+          'cl.billing_frequency',
+          'cl.is_custom',
+          'cl.contract_line_type'
         )
         .where('clients.tenant', tenant)
-        .leftJoin('client_contract_lines', function(this: Knex.JoinClause) {
-          this.on('clients.client_id', '=', 'client_contract_lines.client_id')
-              .andOn('clients.tenant', '=', 'client_contract_lines.tenant');
+        .leftJoin('client_contracts as cc', function(this: Knex.JoinClause) {
+          this.on('clients.client_id', '=', 'cc.client_id')
+              .andOn('clients.tenant', '=', 'cc.tenant');
         })
-        .leftJoin('contract_lines', function(this: Knex.JoinClause) {
-          this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
-              .andOn('client_contract_lines.tenant', '=', 'contract_lines.tenant');
+        .leftJoin('contracts as c', function(this: Knex.JoinClause) {
+          this.on('cc.contract_id', '=', 'c.contract_id')
+              .andOn('cc.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('contract_lines as cl', function(this: Knex.JoinClause) {
+          this.on('c.contract_id', '=', 'cl.contract_id')
+              .andOn('c.tenant', '=', 'cl.tenant');
         });
     });
 

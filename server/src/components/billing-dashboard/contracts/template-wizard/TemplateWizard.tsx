@@ -21,38 +21,26 @@ const TEMPLATE_STEPS = [
 
 const REQUIRED_TEMPLATE_STEPS = [0, 4];
 
-export interface TemplateBucketOverlayInput {
-  total_minutes?: number;
-  overage_rate?: number;
-  allow_rollover?: boolean;
-  billing_period?: 'monthly' | 'weekly';
-}
-
 export interface TemplateWizardData {
   contract_name: string;
   description?: string;
   billing_frequency: string;
-  currency_code: string;
-  fixed_base_rate?: number;
+  // Templates are currency-neutral. Currency and rates are determined when a contract
+  // is created from this template - rates come from the service's prices in the client's currency.
   enable_proration?: boolean;
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
     quantity?: number;
-    bucket_overlay?: TemplateBucketOverlayInput | null;
   }>;
   hourly_services: Array<{
     service_id: string;
     service_name?: string;
-    hourly_rate?: number;
-    bucket_overlay?: TemplateBucketOverlayInput | null;
   }>;
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
-    unit_rate?: number;
     unit_of_measure?: string;
-    bucket_overlay?: TemplateBucketOverlayInput | null;
   }>;
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
@@ -75,7 +63,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     contract_name: '',
     description: '',
     billing_frequency: 'monthly',
-    currency_code: 'USD',
+    // currency_code removed - templates are now currency-neutral
     fixed_services: [],
     hourly_services: [],
     usage_services: [],
@@ -87,7 +75,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         contract_name: '',
         description: '',
         billing_frequency: 'monthly',
-        currency_code: 'USD',
+        // currency_code removed - templates are now currency-neutral
         fixed_services: [],
         hourly_services: [],
         usage_services: [],
@@ -108,7 +96,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     minimum_billable_time: wizardData.minimum_billable_time,
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,
-    currency_code: wizardData.currency_code,
+    // currency_code removed - templates are now currency-neutral
   });
 
   const updateData = (data: Partial<TemplateWizardData>) => {
@@ -224,7 +212,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         contract_name: '',
         description: '',
         billing_frequency: 'monthly',
-        currency_code: 'USD',
+        // currency_code removed - templates are now currency-neutral
         fixed_services: [],
         hourly_services: [],
         usage_services: [],

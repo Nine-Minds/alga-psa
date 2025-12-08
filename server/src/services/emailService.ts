@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { getSecret } from '../lib/utils/getSecret';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
 import { createTenantKnex } from 'server/src/lib/db';
@@ -272,7 +273,7 @@ export class EmailService {
     const templateData: InvoiceEmailTemplateData = {
       client_name: invoice.client.name,
       invoice_number: invoice.invoice_number,
-      total_amount: `$${(invoice.total_amount / 100).toFixed(2)}`,
+      total_amount: `${getCurrencySymbol(invoice.currencyCode || 'USD')}${(invoice.total_amount / 100).toFixed(2)}`,
       sender_client: senderClient
     };
 

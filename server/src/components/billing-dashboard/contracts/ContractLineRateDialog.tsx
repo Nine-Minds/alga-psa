@@ -71,7 +71,7 @@ export function ContractLineRateDialog({ plan, onClose, onSave }: ContractLineRa
                     const parsed = parseFloat(e.target.value);
                     setRate(Number.isNaN(parsed) ? 0 : parsed);
                   }}
-                  className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
             </div>
