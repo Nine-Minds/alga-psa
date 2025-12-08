@@ -328,7 +328,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     refreshSummary();
   };
 
-  const handleDocumentCreated = useCallback(() => {
+  const handleDocumentCreated = useCallback(async () => {
     // Trigger server re-fetch by refreshing the route
     // This causes page.tsx to re-run and fetch fresh documents server-side
     router.refresh();

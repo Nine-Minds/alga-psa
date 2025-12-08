@@ -3,6 +3,7 @@ import BillingDashboard from '../../../components/billing-dashboard/BillingDashb
 import { getServices } from '../../../lib/actions/serviceActions';
 import { getDocumentsByContractId } from '../../../lib/actions/document-actions/documentActions';
 import { getCurrentUser } from '../../../lib/actions/user-actions/userActions';
+import { IDocument } from 'server/src/interfaces/document.interface';
 
 interface BillingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -20,8 +21,8 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
     : (servicesResponse.services || []);
 
   // Fetch documents server-side when viewing the documents tab
-  let contractDocuments = null;
-  let currentUserId = null;
+  let contractDocuments: IDocument[] | null = null;
+  let currentUserId: string | null = null;
   if (contractId && contractView === 'documents') {
     const [documents, user] = await Promise.all([
       getDocumentsByContractId(contractId),
