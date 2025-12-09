@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
@@ -15,6 +15,7 @@ import AutomaticInvoices from '../AutomaticInvoices';
 import ManualInvoices from '../ManualInvoices';
 import PrepaymentInvoices from '../PrepaymentInvoices';
 import SuccessDialog from '../../ui/SuccessDialog';
+import { useFeatureFlag } from '../../../hooks/useFeatureFlag';
 
 interface GenerateTabProps {
   initialServices: IService[];
@@ -42,6 +43,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   refreshTrigger
 }) => {
   const router = useRouter();
+  const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
   const [periods, setPeriods] = useState<(IClientContractLineCycle & {
@@ -99,7 +101,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     router.push('/msp/billing?tab=invoicing&subtab=drafts');
   };
 
-  const invoiceTypeOptions: SelectOption[] = [
+  const allInvoiceTypeOptions: SelectOption[] = [
     {
       value: 'automatic',
       label: (
@@ -129,6 +131,13 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
     }
   ];
 
+  const invoiceTypeOptions = useMemo(() => {
+    if (billingEnabled) {
+      return allInvoiceTypeOptions;
+    }
+    return allInvoiceTypeOptions.filter(option => option.value !== 'prepayment');
+  }, [billingEnabled]);
+
   const renderContent = () => {
     switch (invoiceType) {
       case 'automatic':
@@ -147,6 +156,9 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
           />
         );
       case 'prepayment':
+        if (!billingEnabled) {
+          return null;
+        }
         return (
           <PrepaymentInvoices
             clients={clients}
