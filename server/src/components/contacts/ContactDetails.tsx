@@ -350,10 +350,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const confirmDelete = async () => {
     try {
-      const result = await deleteContact(editedContact.contact_name_id);
+      await deleteContact(editedContact.contact_name_id);
 
-      if (result.success) {
-        setIsDeleteDialogOpen(false);
+      setIsDeleteDialogOpen(false);
 
       toast({
         title: "Contact Deleted",
@@ -366,20 +365,16 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       } else {
         router.push('/msp/contacts');
       }
-      } else {
-        // Handle dependency errors - show "Unable to delete" message with "Mark as Inactive" option
-        if (result.code === 'CONTACT_HAS_DEPENDENCIES' && result.dependencyText) {
-          const dependencyMessage = `Unable to delete this contact.\n\nThis contact has the following associated records:\n• ${result.dependencyText.split(', ').join('\n• ')}\n\nPlease remove or reassign these items before deleting the contact.`;
-          setDeleteError(dependencyMessage);
-          setShowDeactivateOption(true);
-          return;
-        } else {
-          setDeleteError(result.message || 'Failed to delete contact. Please try again.');
-          return;
-        }
-      }
     } catch (error: any) {
       console.error('Failed to delete contact:', error);
+
+      // Handle dependency errors like the main contacts page
+      if (error.message && error.message.includes('VALIDATION_ERROR: Cannot delete contact because it has associated records:')) {
+        setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
+        setShowDeactivateOption(true);
+        return;
+      }
+
       setDeleteError(error.message || 'Failed to delete contact. Please try again.');
     }
   };

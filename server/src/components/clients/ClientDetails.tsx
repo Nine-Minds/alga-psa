@@ -11,7 +11,7 @@ import { TagManager } from 'server/src/components/tags';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from '../FeaturePlaceholder';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
-// import { useTags } from 'server/src/context/TagContext'; // Temporarily removed to fix TagProvider error
+import { useTags } from 'server/src/context/TagContext';
 import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
@@ -20,7 +20,7 @@ import ClientContactsList from 'server/src/components/contacts/ClientContactsLis
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, archiveClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -53,20 +53,12 @@ import ClientContractLineDashboard from '../billing-dashboard/ClientContractLine
 import { toast } from 'react-hot-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import ClientSurveySummaryCard from 'server/src/components/surveys/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 
-// Type for client deletion dependency errors
-interface DependencyResult {
-  success: false;
-  code: string;
-  message: string;
-  dependencies: string[];
-  counts: Record<string, number>;
-}
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -212,7 +204,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showArchiveOption, setShowArchiveOption] = useState(false);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
@@ -232,83 +224,66 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  // const { tags: allTags } = useTags(); // Temporarily commented to fix TagProvider error
+  const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Try to get drawer context, but handle gracefully if not available
-  let drawer: any = null;
-  try {
-    drawer = useDrawer();
-  } catch (error) {
-    // DrawerProvider not available, which is fine when not in drawer mode
-    drawer = null;
-  }
+  const drawer = useDrawer();
 
 
   const handleDeleteClient = () => {
     setDeleteError(null);
-    setShowArchiveOption(false);
+    setShowDeactivateOption(false);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (!editedClient) return;
-
     try {
       const result = await deleteClient(editedClient.client_id);
 
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
           handleDependencyError(result, setDeleteError);
-          setShowArchiveOption(true);
+          setShowDeactivateOption(true);
           return;
         }
         throw new Error(result.message || 'Failed to delete client');
       }
 
-      // Show success toast
-      toast.success(`${editedClient.client_name} has been deleted successfully.`);
+      setIsDeleteDialogOpen(false);
 
-      resetDeleteState();
+      toast.success("Client has been deleted successfully.");
 
       // Navigate back or close drawer depending on context
-      if (isInDrawer && drawer) {
+      if (isInDrawer) {
         drawer.closeDrawer();
       } else {
         router.push('/msp/clients');
       }
     } catch (error: any) {
-      console.error('Error deleting client:', error);
-      setDeleteError('An error occurred while deleting the client. Please try again.');
+      console.error('Failed to delete client:', error);
+      setDeleteError(error.message || 'Failed to delete client. Please try again.');
     }
   };
 
   const handleMarkClientInactive = async () => {
     try {
-      const result = await archiveClient(editedClient.client_id);
+      await updateClient(editedClient.client_id, { is_inactive: true });
 
-      if (result.success) {
-        setIsDeleteDialogOpen(false);
-        toast.success(result.message || "Client has been archived successfully.");
+      setIsDeleteDialogOpen(false);
 
-        // Update local state immediately
-        setEditedClient(prev => ({ ...prev, is_inactive: true }));
-        setHasUnsavedChanges(false);
+      toast.success("Client has been marked as inactive successfully.");
 
-        // Navigate back or close drawer depending on context
-        if (isInDrawer && drawer) {
-          drawer.closeDrawer();
-        } else {
-          router.push('/msp/clients');
-        }
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
       } else {
-        setDeleteError(result.message || 'Failed to archive client. Please try again.');
+        router.push('/msp/clients');
       }
     } catch (error: any) {
-      console.error('Error archiving client:', error);
-      setDeleteError('An error occurred while archiving the client. Please try again.');
+      console.error('Error marking client as inactive:', error);
+      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
@@ -352,11 +327,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleCancelReactivation = () => {
     setIsReactivateDialogOpen(false);
-    // Revert the toggle back to inactive since user cancelled
-    setEditedClient(prevClient => ({
-      ...prevClient,
-      is_inactive: true
-    }));
+    // Keep the client inactive - no changes
   };
 
   const handleDeactivateClient = async () => {
@@ -378,38 +349,36 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleCancelDeactivation = () => {
     setIsDeactivateDialogOpen(false);
-    // Revert the toggle back to active since user cancelled
-    setEditedClient(prevClient => ({
-      ...prevClient,
-      is_inactive: false
-    }));
+    // Keep the client active - no changes
   };
 
   const resetDeleteState = () => {
     setIsDeleteDialogOpen(false);
     setDeleteError(null);
-    setShowArchiveOption(false);
+    setShowDeactivateOption(false);
   };
 
-  // Helper function to format dependency text (matching Clients.tsx)
-  const formatDependencyText = (result: DependencyResult) => {
-    return result.dependencies
-      .map(dep => `${result.counts[dep]} ${dep}${result.counts[dep] > 1 ? 's' : ''}`)
-      .join(', ');
-  };
+  // Helper function to handle dependency errors (copied from main Clients page)
+  const handleDependencyError = (result: any, setError: (error: string) => void) => {
+    const dependencies = result.dependencies || {};
+    const dependencyMessages: string[] = [];
 
-  // Helper function to handle dependency errors (matching Clients.tsx)
-  const handleDependencyError = (
-    result: DependencyResult,
-    setError: (error: string) => void
-  ) => {
-    const dependencyText = formatDependencyText(result);
+    if (dependencies.tickets > 0) {
+      dependencyMessages.push(`${dependencies.tickets} ticket${dependencies.tickets !== 1 ? 's' : ''}`);
+    }
+    if (dependencies.contacts > 0) {
+      dependencyMessages.push(`${dependencies.contacts} contact${dependencies.contacts !== 1 ? 's' : ''}`);
+    }
+    if (dependencies.projects > 0) {
+      dependencyMessages.push(`${dependencies.projects} project${dependencies.projects !== 1 ? 's' : ''}`);
+    }
 
-    setError(
-      `Unable to delete this client.\n\n` +
-      `This client has the following associated records:\n• ${dependencyText.split(', ').join('\n• ')}\n\n` +
-      `Please remove or reassign these items before deleting the client.`
-    );
+    if (dependencyMessages.length > 0) {
+      const dependencyText = dependencyMessages.join(', ');
+      setError(`Cannot delete this client because it has associated ${dependencyText}. You can mark the client as inactive instead.`);
+    } else {
+      setError('Cannot delete this client because it has associated data. You can mark the client as inactive instead.');
+    }
   };
 
   // 1. Implement refreshClientData function
@@ -539,6 +508,31 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
 
   const handleFieldChange = async (field: string, value: string | boolean) => {
+    // Check if client is being deactivated (is_inactive changing from false to true)
+    if (field === 'is_inactive' && editedClient.is_inactive === false && value === true) {
+      // Fetch active contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
+
+      if (activeContacts.length > 0) {
+        setActiveContactsToDeactivate(activeContacts);
+        setIsDeactivateDialogOpen(true);
+        return; // Don't update the field yet, wait for user confirmation
+      }
+    }
+
+    // Check if client is being reactivated (is_inactive changing from true to false)
+    if (field === 'is_inactive' && editedClient.is_inactive === true && value === false) {
+      // Fetch inactive contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
+
+      if (inactiveContacts.length > 0) {
+        setInactiveContactsToReactivate(inactiveContacts);
+        setIsReactivateDialogOpen(true);
+        return; // Don't update the field yet, wait for user confirmation
+      }
+    }
 
     setEditedClient(prevClient => {
       // Create a deep copy of the previous client
@@ -985,9 +979,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContactsList
-            key={`${client.client_id}-${editedClient.is_inactive}`}
             clientId={client.client_id}
-            clients={[editedClient]}
+            clients={[client]}
           />
         </div>
       )
@@ -1257,71 +1250,22 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog (matching Clients.tsx format) */}
-        <Dialog
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          id="client-delete-dialog"
+          onConfirm={confirmDelete}
           title="Delete Client"
-        >
-          <DialogContent>
-            <div className="space-y-4">
-              {deleteError ? (
-                <>
-                  <div className="text-gray-600 whitespace-pre-line">
-                    {deleteError}
-                  </div>
-                  {showArchiveOption && (
-                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md">
-                      <p className="text-sm font-medium text-gray-900 mb-2">
-                        Alternative Option:
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be reactivated later.
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-gray-600">
-                  Are you sure you want to delete {editedClient.client_name}? This action cannot be undone.
-                </p>
-              )}
-            </div>
-
-            <DialogFooter>
-              <div className="mt-4 flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={resetDeleteState}
-                  id="delete-cancel"
-                >
-                  Cancel
-                </Button>
-
-                {deleteError && showArchiveOption ? (
-                  <Button
-                    onClick={handleMarkClientInactive}
-                    id="mark-inactive"
-                    variant="default"
-                  >
-                    Mark as Inactive
-                  </Button>
-                ) : (
-                  !deleteError && (
-                    <Button
-                      onClick={() => void confirmDelete()}
-                      id="delete-confirm"
-                      variant="destructive"
-                    >
-                      Delete
-                    </Button>
-                  )
-                )}
-              </div>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          message={
+            deleteError
+              ? deleteError
+              : "Are you sure you want to delete this client? This action cannot be undone."
+          }
+          confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
+          cancelLabel={deleteError ? "Close" : "Cancel"}
+          isConfirming={false}
+        />
 
         {/* Deactivate Warning Dialog */}
         <ConfirmationDialog

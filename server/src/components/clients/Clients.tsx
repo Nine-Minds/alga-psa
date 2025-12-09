@@ -11,7 +11,6 @@ import {
   getAllClients,
   getAllClientsPaginated,
   deleteClient,
-  archiveClient,
   updateClient,
   importClientsFromCSV,
   exportClientsToCSV,
@@ -361,8 +360,8 @@ const Clients: React.FC = () => {
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showArchiveOption, setShowArchiveOption] = useState(false);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
+  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
 
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -507,19 +506,20 @@ const Clients: React.FC = () => {
   const handleDeleteClient = async (client: IClient) => {
     setClientToDelete(client);
     setDeleteError(null);
-    setShowArchiveOption(false);
+    setShowDeactivateOption(false);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
     if (!clientToDelete) return;
-
+    
     try {
       const result = await deleteClient(clientToDelete.client_id);
-
+      
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
           handleDependencyError(result, setDeleteError);
+          setShowDeactivateOption(true);
           return;
         }
         throw new Error(result.message || 'Failed to delete client');
@@ -527,7 +527,7 @@ const Clients: React.FC = () => {
 
       // Show success toast
       toast.success(`${clientToDelete.client_name} has been deleted successfully.`);
-
+      
       setRefreshKey(prev => prev + 1);
       resetDeleteState();
     } catch (error) {
@@ -683,18 +683,16 @@ const Clients: React.FC = () => {
   };
 
   const handleDependencyError = (
-    result: DependencyResult,
+    result: DependencyResult, 
     setError: (error: string) => void
   ) => {
     const dependencyText = formatDependencyText(result);
-
+    
     setError(
       `Unable to delete this client.\n\n` +
       `This client has the following associated records:\n• ${dependencyText.split(', ').join('\n• ')}\n\n` +
       `Please remove or reassign these items before deleting the client.`
     );
-
-    setShowArchiveOption(true);
   };
 
 
@@ -702,7 +700,7 @@ const Clients: React.FC = () => {
     setIsDeleteDialogOpen(false);
     setClientToDelete(null);
     setDeleteError(null);
-    setShowArchiveOption(false);
+    setShowDeactivateOption(false);
   };
 
   const handleExportToCSV = async () => {
@@ -885,13 +883,11 @@ const Clients: React.FC = () => {
             </div>
 
             {/* View Switcher */}
-            {!isViewModeLoading && viewMode && (
-              <ViewSwitcher
-                currentView={viewMode}
-                onChange={(mode) => void handleViewModeChange(mode)}
-                options={viewOptions}
-              />
-            )}
+            <ViewSwitcher
+              currentView={viewMode}
+              onChange={(mode) => void handleViewModeChange(mode)}
+              options={viewOptions}
+            />
           </div>
         </div>
 
@@ -970,8 +966,8 @@ const Clients: React.FC = () => {
       />
 
       {/* Single client delete confirmation dialog */}
-      <Dialog
-        isOpen={isDeleteDialogOpen}
+      <Dialog 
+        isOpen={isDeleteDialogOpen} 
         onClose={resetDeleteState}
         id="single-delete-confirmation-dialog"
         title="Delete Client"
@@ -988,7 +984,7 @@ const Clients: React.FC = () => {
               </p>
             )}
 
-            {showArchiveOption && deleteError && (
+            {showDeactivateOption && deleteError && (
               <Alert variant="info">
                 <AlertDescription>
                   <strong>Alternative Option:</strong> You can mark this client as inactive instead.
@@ -1008,24 +1004,24 @@ const Clients: React.FC = () => {
                 Cancel
               </Button>
               
-              {deleteError && showArchiveOption ? (
+              {showDeactivateOption && (
                 <Button
-                  onClick={() => void handleMarkClientInactive()}
-                  id="mark-inactive-button"
                   variant="ghost"
+                  onClick={() => void handleMarkClientInactive()}
+                  id="single-delete-mark-inactive"
                 >
                   Mark as Inactive
                 </Button>
-              ) : (
-                !deleteError && (
-                  <Button
-                    onClick={() => void confirmDelete()}
-                    id="single-delete-confirm"
-                    variant="destructive"
-                  >
-                    Delete
-                  </Button>
-                )
+              )}
+              
+              {!deleteError && (
+                <Button
+                  onClick={() => void confirmDelete()}
+                  id="single-delete-confirm"
+                  variant="destructive"
+                >
+                  Delete
+                </Button>
               )}
             </div>
           </DialogFooter>
