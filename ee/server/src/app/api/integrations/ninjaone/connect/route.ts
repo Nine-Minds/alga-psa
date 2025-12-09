@@ -51,8 +51,10 @@ const getRedirectUri = () => {
   return `${baseUrl}/api/integrations/ninjaone/callback`;
 };
 
-// OAuth scopes - omitted to use application's configured scopes in NinjaOne dashboard
+// OAuth scopes for NinjaOne integration
 // Available scopes: monitoring, management, control, offline_access
+// Note: Requested scopes must be enabled for the API client in NinjaOne dashboard
+const NINJAONE_SCOPES = 'monitoring management offline_access';
 
 export async function GET(request: NextRequest) {
   let tenantId: string | null = null;
@@ -112,10 +114,10 @@ export async function GET(request: NextRequest) {
     const redirectUri = getRedirectUri();
 
     // Construct the authorization URL
-    // Note: scope is omitted to use application's configured scopes in NinjaOne dashboard
     const params = new URLSearchParams({
       client_id: clientId,
       response_type: 'code',
+      scope: NINJAONE_SCOPES,
       redirect_uri: redirectUri,
       state: state,
     });
