@@ -28,6 +28,7 @@ import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider'
 import type { ISecretProvider } from '@alga-psa/shared/core/ISecretProvider';
 import { EnvSecretProvider } from '@alga-psa/shared/core/EnvSecretProvider';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
+import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
 
 let isFunctionExecuted = false;
@@ -393,6 +394,38 @@ async function initializeJobScheduler(storageService: StorageService) {
       }
 
       throw error;
+    } finally {
+      // Always enqueue the next run so the job continues daily even after archives are cleaned
+      // Use UTC to avoid DST drift issues
+      try {
+        const nextRunInstant = Temporal.Now.instant().add({ hours: 24 });
+        const nextRun = new Date(nextRunInstant.epochMilliseconds);
+        const singletonKey = `createNextTimePeriods:${tenantId}`;
+
+        // Use scheduleRecurringJob which has singleton deduplication built-in
+        // This prevents duplicate jobs from stacking up on retries
+        const nextJobId = await jobScheduler.scheduleRecurringJob(
+          'createNextTimePeriods',
+          '24 hours',
+          { tenantId }
+        );
+
+        if (nextJobId) {
+          logger.debug('Queued next createNextTimePeriods job', {
+            tenantId,
+            jobId: nextJobId,
+            nextRun: nextRun.toISOString(),
+            singletonKey
+          });
+        } else {
+          logger.debug('createNextTimePeriods job already queued (singleton active)', {
+            tenantId,
+            singletonKey
+          });
+        }
+      } catch (scheduleError) {
+        logger.error('Failed to enqueue next createNextTimePeriods job', { tenantId, scheduleError });
+      }
     }
   });
 
