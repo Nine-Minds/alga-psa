@@ -195,6 +195,7 @@ export function EmailTemplates() {
       title: "Language",
       dataIndex: "activeTemplate.language_code" as any,
       sortable: true,
+      width: "100px",
       render: (_, record): JSX.Element => {
         const languageCode = record.activeTemplate.language_code;
         const languageNames: Record<string, string> = {
@@ -206,7 +207,7 @@ export function EmailTemplates() {
           'it': 'Italian'
         };
         return (
-          <div className="text-sm">
+          <div className="text-sm whitespace-nowrap">
             {languageNames[languageCode] || languageCode.toUpperCase()}
           </div>
         );

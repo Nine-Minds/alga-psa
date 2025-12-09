@@ -102,6 +102,13 @@ exports.seed = async function(knex) {
     },
     {
       category_id: categoryMap.Invoices.id,
+      name: 'Invoice Email',
+      description: 'Email sent to client with invoice attached',
+      is_enabled: true,
+      is_default_enabled: true
+    },
+    {
+      category_id: categoryMap.Invoices.id,
       name: 'Payment Received',
       description: 'When a payment is received',
       is_enabled: true,

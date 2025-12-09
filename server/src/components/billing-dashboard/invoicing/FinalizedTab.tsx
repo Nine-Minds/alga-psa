@@ -22,8 +22,8 @@ import { fetchAllInvoices } from '../../../lib/actions/invoiceQueries';
 import { getInvoiceTemplates } from '../../../lib/actions/invoiceTemplates';
 import { unfinalizeInvoice } from '../../../lib/actions/invoiceModification';
 import { scheduleInvoiceZipAction } from '../../../lib/actions/job-actions/scheduleInvoiceZipAction';
-import { scheduleInvoiceEmailAction } from '../../../lib/actions/job-actions/scheduleInvoiceEmailAction';
 import { downloadInvoicePDF } from '../../../lib/actions/invoiceGeneration';
+import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
 import { formatCurrency } from '../../../lib/utils/formatters';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
@@ -52,6 +52,10 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Email dialog state
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailDialogInvoiceIds, setEmailDialogInvoiceIds] = useState<string[]>([]);
 
   const selectedInvoiceId = searchParams?.get('invoiceId');
   const selectedTemplateId = searchParams?.get('templateId');
@@ -176,13 +180,8 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
 
   const handleEmail = async () => {
     if (!selectedInvoice) return;
-    setError(null);
-    try {
-      await scheduleInvoiceEmailAction([selectedInvoice.invoice_id]);
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      setError('Failed to send invoice email. Please try again.');
-    }
+    setEmailDialogInvoiceIds([selectedInvoice.invoice_id]);
+    setEmailDialogOpen(true);
   };
 
   const handleUnfinalize = async () => {
@@ -210,15 +209,15 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     }
   };
 
-  const handleBulkEmail = async () => {
-    setError(null);
-    try {
-      await scheduleInvoiceEmailAction(Array.from(selectedInvoices));
-      setSelectedInvoices(new Set());
-    } catch (error) {
-      console.error('Failed to send emails:', error);
-      setError('Failed to send invoice emails. Please try again.');
-    }
+  const handleBulkEmail = () => {
+    if (selectedInvoices.size === 0) return;
+    setEmailDialogInvoiceIds(Array.from(selectedInvoices));
+    setEmailDialogOpen(true);
+  };
+
+  const handleEmailDialogSuccess = () => {
+    // Clear selection after successful send
+    setSelectedInvoices(new Set());
   };
 
   const handleBulkUnfinalize = async () => {
@@ -309,12 +308,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 Download PDF
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={async () => {
-                  try {
-                    await scheduleInvoiceEmailAction([record.invoice_id]);
-                  } catch (error) {
-                    setError('Failed to send email.');
-                  }
+                onClick={() => {
+                  setEmailDialogInvoiceIds([record.invoice_id]);
+                  setEmailDialogOpen(true);
                 }}
                 className="flex items-center gap-2"
               >
@@ -459,6 +455,13 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
           </Panel>
         </PanelGroup>
       )}
+
+      <SendInvoiceEmailDialog
+        isOpen={emailDialogOpen}
+        onClose={() => setEmailDialogOpen(false)}
+        invoiceIds={emailDialogInvoiceIds}
+        onSuccess={handleEmailDialogSuccess}
+      />
     </div>
   );
 };

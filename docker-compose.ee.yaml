@@ -37,6 +37,8 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
+      EMAIL_PROVIDER_TYPE: ${EMAIL_PROVIDER_TYPE:-smtp}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
       # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
@@ -115,6 +117,8 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
+      EMAIL_PROVIDER_TYPE: ${EMAIL_PROVIDER_TYPE:-smtp}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
       # Secret provider configuration for setup (EE edition - for local dev, vault is disabled by default)

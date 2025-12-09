@@ -4,6 +4,7 @@ import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { parseISO, isToday, isYesterday } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
+import { DateValue } from '@alga-psa/shared/types';
 
 // Date conversion utilities
 
@@ -106,6 +107,21 @@ export function toISODate(date: Temporal.PlainDate): string {
  */
 export function toISOTimestamp(date: Temporal.PlainDate): ISO8601String {
   return `${date.toString()}T00:00:00.000Z`;
+}
+
+/**
+ * Convert a DateValue (Date, string, or Temporal.PlainDate) to a Date object
+ */
+export function dateValueToDate(dateValue: DateValue): Date {
+  if (dateValue instanceof Date) {
+    return dateValue;
+  }
+  if (dateValue instanceof Temporal.PlainDate) {
+    // Convert PlainDate to ISO string, then to Date
+    return new Date(`${dateValue.toString()}T00:00:00Z`);
+  }
+  // Assume it's a string (ISO date string)
+  return new Date(dateValue);
 }
 
 /**
