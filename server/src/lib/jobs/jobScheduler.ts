@@ -89,6 +89,7 @@ export class JobScheduler implements IJobScheduler {
   private static instance: JobScheduler | null = null;
   private boss: PgBoss;
   private handlers: Map<string, (job: Job<Record<string, unknown>>) => Promise<void>> = new Map();
+  private createdQueues: Set<string> = new Set(); // Memoize queue creation to avoid repeated calls
   private jobService: JobService;
   private storageService: StorageService;
 
@@ -96,6 +97,14 @@ export class JobScheduler implements IJobScheduler {
     this.boss = boss;
     this.jobService = jobService;
     this.storageService = storageService;
+  }
+
+  // Ensure queue exists, memoized to avoid repeated creation calls
+  private async ensureQueue(jobName: string): Promise<void> {
+    if (!this.createdQueues.has(jobName)) {
+      await this.boss.createQueue(jobName);
+      this.createdQueues.add(jobName);
+    }
   }
 
   public static async getInstance(jobService: JobService, storageService: StorageService): Promise<IJobScheduler> {
@@ -150,11 +159,11 @@ export class JobScheduler implements IJobScheduler {
     jobName: string,
     data: T
   ): Promise<string | null> {
-    await this.boss.createQueue(jobName);
+    await this.ensureQueue(jobName);
     if (!data.tenantId) {
       throw new Error('tenantId is required in job data');
     }
-        
+
     return await this.boss.send(jobName, data);
   }
 
@@ -163,8 +172,7 @@ export class JobScheduler implements IJobScheduler {
     runAt: Date,
     data: T
   ): Promise<string | null> {
-    // Ensure queue exists before sending (required in pg-boss v10+)
-    await this.boss.createQueue(jobName);
+    await this.ensureQueue(jobName);
 
     if (!data.tenantId) {
       throw new Error('tenantId is required in job data');
@@ -178,8 +186,7 @@ export class JobScheduler implements IJobScheduler {
     interval: string,
     data: T
   ): Promise<string | null> {
-    // Ensure queue exists before sending (required in pg-boss v10+)
-    await this.boss.createQueue(jobName);
+    await this.ensureQueue(jobName);
 
     // Convert a cron-ish input into a coarse interval, since we're using delayed send()
     let pgBossInterval: string = interval;
