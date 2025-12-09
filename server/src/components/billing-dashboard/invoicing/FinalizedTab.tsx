@@ -178,7 +178,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     }
   };
 
-  const handleEmail = () => {
+  const handleEmail = async () => {
     if (!selectedInvoice) return;
     setEmailDialogInvoiceIds([selectedInvoice.invoice_id]);
     setEmailDialogOpen(true);

@@ -11,6 +11,7 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { getTenantDetails } from '../tenantActions';
 import { EmailMessage } from 'server/src/types/email.types';
 import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { dateValueToDate } from 'server/src/lib/utils/dateTimeUtils';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
 import logger from '@shared/core/logger';
@@ -200,13 +201,13 @@ export async function sendInvoiceEmailAction(invoiceIds: string[], customMessage
 
       // Format dates
       const invoiceDate = invoice.invoice_date
-        ? new Date(invoice.invoice_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric'
           })
         : 'N/A';
 
       const dueDate = invoice.due_date
-        ? new Date(invoice.due_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.due_date).toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric'
           })
         : 'N/A';

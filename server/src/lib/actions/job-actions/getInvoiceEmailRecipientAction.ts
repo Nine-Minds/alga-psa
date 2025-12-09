@@ -6,6 +6,7 @@ import { getInvoiceForRendering } from '../invoiceQueries';
 import { getClientById } from '../client-actions/clientActions';
 import ContactModel from 'server/src/lib/models/contact';
 import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { dateValueToDate } from 'server/src/lib/utils/dateTimeUtils';
 
 export interface InvoiceEmailRecipientInfo {
   invoiceId: string;
@@ -104,13 +105,13 @@ export async function getInvoiceEmailRecipientAction(invoiceIds: string[]): Prom
 
       // Format dates
       const invoiceDate = invoice.invoice_date
-        ? new Date(invoice.invoice_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.invoice_date).toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric'
           })
         : null;
 
       const dueDate = invoice.due_date
-        ? new Date(invoice.due_date).toLocaleDateString('en-US', {
+        ? dateValueToDate(invoice.due_date).toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric'
           })
         : null;

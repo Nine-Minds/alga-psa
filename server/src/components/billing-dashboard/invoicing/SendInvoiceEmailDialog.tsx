@@ -244,6 +244,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
       <DialogFooter>
         <Button
+          id="send-invoice-email-cancel"
           variant="outline"
           onClick={onClose}
           disabled={sending}
@@ -251,6 +252,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
           Cancel
         </Button>
         <Button
+          id="send-invoice-email-send"
           onClick={handleSend}
           disabled={loading || sending || validRecipientCount === 0}
         >
