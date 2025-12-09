@@ -163,6 +163,9 @@ export class JobScheduler implements IJobScheduler {
     runAt: Date,
     data: T
   ): Promise<string | null> {
+    // Ensure queue exists before sending (required in pg-boss v10+)
+    await this.boss.createQueue(jobName);
+
     if (!data.tenantId) {
       throw new Error('tenantId is required in job data');
     }
@@ -175,6 +178,9 @@ export class JobScheduler implements IJobScheduler {
     interval: string,
     data: T
   ): Promise<string | null> {
+    // Ensure queue exists before sending (required in pg-boss v10+)
+    await this.boss.createQueue(jobName);
+
     // Convert a cron-ish input into a coarse interval, since we're using delayed send()
     let pgBossInterval: string = interval;
     if (/(^|\s)\*/.test(interval)) {

@@ -393,6 +393,19 @@ async function initializeJobScheduler(storageService: StorageService) {
       }
 
       throw error;
+    } finally {
+      // Always enqueue the next run so the job continues daily even after archives are cleaned
+      try {
+        const nextRun = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await jobScheduler.scheduleScheduledJob(
+          'createNextTimePeriods',
+          nextRun,
+          { tenantId }
+        );
+        logger.debug('Queued next createNextTimePeriods job', { tenantId, nextRun });
+      } catch (scheduleError) {
+        logger.error('Failed to enqueue next createNextTimePeriods job', { tenantId, scheduleError });
+      }
     }
   });
 
