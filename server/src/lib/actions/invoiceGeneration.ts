@@ -27,7 +27,7 @@ import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { getClientLogoUrl } from '../utils/avatarUtils';
-import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from 'server/src/lib/services/invoiceService';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { analytics } from '../analytics/posthog';
@@ -36,6 +36,8 @@ import { AnalyticsEvents } from '../analytics/events';
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
 import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateActions';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { getCurrencySymbol } from 'server/src/constants/currency';
+import { getInitialInvoiceTaxSource, shouldUseTaxDelegation } from 'server/src/lib/actions/taxSourceActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -221,6 +223,7 @@ async function adaptToWasmViewModel(
     invoiceNumber: 'PREVIEW',
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
+    currencyCode: billingResult.currency_code || 'USD',
     customer: {
       name: client?.client_name || 'N/A',
       address: client?.location_address || 'N/A',
@@ -277,6 +280,16 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     }
 
     const { client_id, effective_date } = billingCycle;
+
+    // Validate that the client has a billing email (required for online payments)
+    const clientForValidation = await knex('clients')
+      .where({ client_id, tenant })
+      .select('client_name')
+      .first();
+
+    if (clientForValidation) {
+      await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+    }
 
     // Calculate cycle dates
     const cycleStart = toISODate(toPlainDate(effective_date));
@@ -372,8 +385,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         let description = charge.serviceName;
         if (isBucketCharge(charge)) {
           const hoursIncluded = charge.hoursUsed - charge.overageHours;
+          const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
           if (charge.overageHours > 0) {
-            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ $${(charge.overageRate / 100).toFixed(2)}/hr)`;
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/hr)`;
           } else {
             description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
           }
@@ -467,9 +481,20 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     throw new Error('Billing cycle not found');
   }
 
+  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
+
+  // Validate that the client has a billing email (required for online payments)
+  const clientForValidation = await knex('clients')
+    .where({ client_id, tenant })
+    .select('client_name')
+    .first();
+
+  if (clientForValidation) {
+    await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
+  }
+
   let cycleStart: ISO8601String;
   let cycleEnd: ISO8601String;
-  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
 
   if (period_start_date && period_end_date) {
     // Use the billing cycle's period dates if provided, ensuring UTC format
@@ -769,6 +794,10 @@ export async function createInvoiceFromBillingResult(
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
+  // Determine tax source for this invoice based on client/tenant settings
+  const taxSource = await getInitialInvoiceTaxSource(clientId);
+  const useTaxDelegation = await shouldUseTaxDelegation(clientId);
+
   // Create base invoice object
   const invoiceData = {
     client_id: clientId,
@@ -782,10 +811,13 @@ export async function createInvoiceFromBillingResult(
     credit_applied: 0,
     billing_cycle_id,
     tenant,
+    currency_code: billingResult.currency_code || 'USD',
     is_manual: false,
     // Add billing period dates to ensure validation works correctly
     billing_period_start: toPlainDate(cycleStart),
-    billing_period_end: toPlainDate(cycleEnd)
+    billing_period_end: toPlainDate(cycleEnd),
+    // Tax source: 'internal', 'pending_external', or 'external'
+    tax_source: taxSource
   };
 
   let newInvoice: IInvoice | null = null;

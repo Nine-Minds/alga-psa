@@ -504,7 +504,13 @@ export async function createProject(
     assigned_to?: string | null;
     contact_name_id?: string | null;
   },
-  selectedTaskStatusIds?: string[]
+  selectedTaskStatusIds?: string[],
+  options?: {
+    /** Optional transaction to use - if provided, the project will be created within this transaction */
+    trx?: Knex.Transaction;
+    /** If true, skip publishing events (useful when called within another action's transaction) */
+    skipEvents?: boolean;
+  }
 ): Promise<IProject> {
     try {
         // Get project statuses first
@@ -523,13 +529,18 @@ export async function createProject(
         }
 
         const {knex} = await createTenantKnex();
+        const externalTrx = options?.trx;
 
         // Try to get both standard statuses and regular statuses for backward compatibility
-        const [standardTaskStatuses, projectTaskStatuses] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const getStatuses = async (trx: Knex.Transaction) => {
             const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, 'project_task').catch(() => []);
             const regularStatuses = await ProjectModel.getStatusesByType(trx, 'project_task').catch(() => []);
-            return [standardStatuses, regularStatuses];
-        });
+            return [standardStatuses, regularStatuses] as const;
+        };
+
+        const [standardTaskStatuses, projectTaskStatuses] = externalTrx
+            ? await getStatuses(externalTrx)
+            : await withTransaction(knex, getStatuses);
 
         // Prefer regular statuses (new system with colors/icons) over standard statuses (old system)
         const taskStatusesToUse = projectTaskStatuses.length > 0 ? projectTaskStatuses : standardTaskStatuses;
@@ -544,8 +555,8 @@ export async function createProject(
 
         const validatedData = validateData(createProjectSchema, projectData);
 
-        // Ensure we're passing all fields including assigned_to and contact_name_id
-        const fullProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Helper function for the actual project creation logic
+        const createProjectInTransaction = async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'create', trx);
 
             // Generate project number
@@ -639,23 +650,31 @@ export async function createProject(
                 throw new Error('Failed to fetch created project details');
             }
             return project;
-        });
+        };
 
-        // Ensure tenant exists before publishing event
-        if (!currentUser.tenant) {
-            throw new Error("tenant context required for event publishing");
-        }
+        // Execute using external transaction if provided, otherwise create a new one
+        const fullProject = externalTrx
+            ? await createProjectInTransaction(externalTrx)
+            : await withTransaction(knex, createProjectInTransaction);
 
-        // Publish project created event
-        await publishEvent({
-            eventType: 'PROJECT_CREATED',
-            payload: {
-                tenantId: currentUser.tenant,
-                projectId: fullProject.project_id,
-                userId: currentUser.user_id,
-                timestamp: new Date().toISOString()
+        // Only publish events if not using an external transaction (or explicitly requested)
+        if (!options?.skipEvents) {
+            // Ensure tenant exists before publishing event
+            if (!currentUser.tenant) {
+                throw new Error("tenant context required for event publishing");
             }
-        });
+
+            // Publish project created event
+            await publishEvent({
+                eventType: 'PROJECT_CREATED',
+                payload: {
+                    tenantId: currentUser.tenant,
+                    projectId: fullProject.project_id,
+                    userId: currentUser.user_id,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
 
         return fullProject;
     } catch (error) {
@@ -830,10 +849,12 @@ export async function getProjectMetadata(projectId: string): Promise<{
         // Fetch contact details if needed
         let contact: { full_name: string } | undefined;
         if (project.contact_name_id) {
-            const contactData = await knex('contacts')
-                .where({ contact_name_id: project.contact_name_id })
-                .select('full_name')
-                .first();
+            const contactData = await withTransaction(knex, async (trx: Knex.Transaction) => {
+                return await trx('contacts')
+                    .where({ contact_name_id: project.contact_name_id })
+                    .select('full_name')
+                    .first();
+            });
             contact = contactData;
         }
         

@@ -6,8 +6,8 @@ import Documents from 'server/src/components/documents/Documents';
 import { Card } from 'server/src/components/ui/Card';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { getDistinctEntityTypes } from 'server/src/lib/actions/document-actions/documentActions';
-import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from 'server/src/interfaces/index';
+import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { toast } from 'react-hot-toast';
 import DocumentFilters from 'server/src/components/documents/DocumentFilters';
 import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
@@ -38,7 +38,7 @@ export default function DocumentsPage() {
 
   const [initialized, setInitialized] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [allUsersData, setAllUsersData] = useState<IUserWithRoles[]>([]);
+  const [allUsersData, setAllUsersData] = useState<IUser[]>([]);
   const [entityTypeOptions, setEntityTypeOptions] = useState<SelectOption[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,7 +149,7 @@ export default function DocumentsPage() {
 
         const [user, allUsersResponse, dbEntityTypes] = await Promise.all([
           getCurrentUser(),
-          getAllUsers(),
+          getAllUsersBasic(),
           getDistinctEntityTypes()
         ]);
 

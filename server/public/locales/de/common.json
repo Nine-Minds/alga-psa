@@ -756,5 +756,64 @@
       "Tickets": "Tickets",
       "Time Entries": "Zeiteinträge"
     }
+  },
+  "sessionManagement": {
+    "title": "Aktive Sitzungen",
+    "description": "Verwalten Sie Ihre aktiven Anmeldesitzungen auf allen Geräten (maximal 5 Sitzungen)",
+    "states": {
+      "loading": "Sitzungen werden geladen...",
+      "noSessions": "Keine aktiven Sitzungen gefunden"
+    },
+    "labels": {
+      "unknownDevice": "Unbekanntes Gerät",
+      "currentSession": "Aktuelle Sitzung",
+      "yourSession": "Ihre Sitzung",
+      "lastActive": "Zuletzt aktiv"
+    },
+    "loginMethods": {
+      "password": "Passwort",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Intern",
+      "client": "Kunde"
+    },
+    "actions": {
+      "logout": "Abmelden",
+      "revoke": "Widerrufen",
+      "revoking": "Wird widerrufen...",
+      "loggingOut": "Wird abgemeldet...",
+      "logoutFromOther": "Von {{count}} anderem Gerät{{count, plural, one {} other {en}} abmelden"
+    },
+    "confirmations": {
+      "logoutCurrent": "Dies meldet Sie von Ihrer aktuellen Sitzung ab. Sind Sie sicher?",
+      "logoutAllOther": "Dies meldet Sie von allen anderen Geräten ab. Sind Sie sicher?"
+    },
+    "prompts": {
+      "enter2FA": "Bitte geben Sie Ihren 2FA-Code ein:"
+    },
+    "messages": {
+      "loggingOut": "Wird abgemeldet...",
+      "sessionRevoked": "Sitzung erfolgreich widerrufen"
+    },
+    "warnings": {
+      "oauthLogout": "Dies meldet Sie nur von Alga PSA ab. Sie bleiben bei {{provider}} angemeldet."
+    },
+    "errors": {
+      "fetchFailed": "Fehler beim Abrufen der Sitzungen",
+      "loadFailed": "Fehler beim Laden der aktiven Sitzungen",
+      "revokeFailed": "Fehler beim Widerrufen der Sitzung",
+      "revokeAllFailed": "Fehler beim Widerrufen der Sitzungen",
+      "logoutAllFailed": "Fehler beim Abmelden von anderen Geräten",
+      "adminAccessRequired": "Unzureichende Berechtigungen zum Anzeigen aller Sitzungen"
+    },
+    "admin": {
+      "title": "Alle Benutzersitzungen",
+      "description": "{{sessionCount}} aktive Sitzungen von {{userCount}} Benutzern",
+      "searchPlaceholder": "Nach Benutzername, E-Mail, Gerät oder IP-Adresse suchen...",
+      "noResults": "Keine Sitzungen entsprechen Ihrer Suche"
+    }
   }
 }

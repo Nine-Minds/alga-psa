@@ -4,6 +4,7 @@ import { createTenantKnex } from '../db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/shared/db';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 
 export interface ClientProfile {
   name: string;
@@ -590,8 +591,9 @@ export async function getActiveServices(): Promise<Service[]> {
     const status = determineServiceStatus(service.start_date, service.end_date);
 
     // Format rate display
-    const rateDisplay = rate ? 
-      `$${(rate / 100).toFixed(2)}${service.billing_frequency ? ` per ${service.billing_frequency.toLowerCase()}` : ''}` : 
+    const currencySymbol = getCurrencySymbol('USD'); // TODO: Get currency from contract when available
+    const rateDisplay = rate ?
+      `${currencySymbol}${(rate / 100).toFixed(2)}${service.billing_frequency ? ` per ${service.billing_frequency.toLowerCase()}` : ''}` :
       'Contact for pricing';
 
     // Format quantity display
@@ -601,7 +603,7 @@ export async function getActiveServices(): Promise<Service[]> {
 
     // Format bucket display using new fields
     const bucketDisplay = service.psbc_total_hours ? // Use new field
-      `${service.psbc_total_hours} hours${service.psbc_overage_rate ? ` (+$${(service.psbc_overage_rate / 100).toFixed(2)}/hr overage)` : ''}` : // Use new field
+      `${service.psbc_total_hours} hours${service.psbc_overage_rate ? ` (+${currencySymbol}${(service.psbc_overage_rate / 100).toFixed(2)}/hr overage)` : ''}` : // Use new field
       'N/A';
 
     // Format billing display
@@ -628,7 +630,7 @@ export async function getActiveServices(): Promise<Service[]> {
       bucket: isBucketPlan && service.psbc_total_hours ? { // Check new field
         totalHours: service.psbc_total_hours.toString(), // Use new field
         overageRate: service.psbc_overage_rate ? // Use new field
-          `$${(service.psbc_overage_rate / 100).toFixed(2)}` :
+          `${currencySymbol}${(service.psbc_overage_rate / 100).toFixed(2)}` :
           'N/A',
         // periodStart/End are derived from the client_contract_line dates
         periodStart: formatDate(service.start_date),
@@ -725,69 +727,27 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
       );
   });
 
+  const currencySymbol = getCurrencySymbol('USD'); // TODO: Get currency from contract when available
   return plans.map((plan): ServicePlan => ({
     id: plan.id,
     name: plan.name,
     description: plan.description || '',
     rate: {
       amount: plan.default_rate.toString(),
-      displayAmount: `$${(plan.default_rate / 100).toFixed(2)}/mo`
+      displayAmount: `${currencySymbol}${(plan.default_rate / 100).toFixed(2)}/mo`
     },
     isCurrentPlan: plan.id === currentService.contract_line_id
   }));
 }
 
-export async function upgradeService(serviceId: string, planId: string): Promise<{ success: boolean }> {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (!session.user.clientId) throw new Error('No client associated with user');
-
-  const { knex } = await createTenantKnex();
-
-  // Start a transaction
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get current service plan
-    const currentPlan = await trx('client_contract_lines as ccl')
-      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
-        this.on('ccl.contract_line_id', '=', 'ps.contract_line_id')
-            .andOn('ccl.tenant', '=', 'ps.tenant');
-      })
-      .where({ 
-        'ps.service_id': serviceId,
-        'ccl.client_id': session.user.clientId,
-        'ccl.tenant': session.user.tenant
-      })
-      .whereNull('ccl.end_date')
-      .first();
-
-    if (!currentPlan) throw new Error('No active plan found for this service');
-
-    const now = new Date();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    // End current plan at the end of the billing cycle
-    await trx('client_contract_lines')
-      .where({ 
-        client_contract_line_id: currentPlan.client_contract_line_id,
-        tenant: session.user.tenant
-      })
-      .update({ 
-        end_date: endOfMonth.toISOString(),
-        updated_at: now.toISOString()
-      });
-
-    // Start new plan from the beginning of next month
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return await trx('client_contract_lines').insert({
-      client_id: session.user.clientId,
-      contract_line_id: planId,
-      tenant: session.user.tenant,
-      start_date: startOfNextMonth.toISOString(),
-      created_at: now.toISOString()
-    });
-  });
-
-  return { success: true };
+/**
+ * @deprecated This function operated on the legacy client_contract_lines table which is being phased out.
+ * Contracts are now client-specific via client_contracts, so plan upgrade/downgrade needs to be
+ * reimplemented to modify contract lines on the client's contract directly.
+ * TODO: Refactor to work with the new contract architecture.
+ */
+export async function upgradeService(_serviceId: string, _planId: string): Promise<{ success: boolean }> {
+  throw new Error('Service upgrade functionality is temporarily unavailable. Please contact support to change your plan.');
 }
 
 export async function downgradeService(serviceId: string, planId: string): Promise<{ success: boolean }> {

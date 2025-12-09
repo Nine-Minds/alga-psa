@@ -1,0 +1,111 @@
+# Extension Documentation Overhaul Notes
+
+Objective: track progress while reviewing and updating extension-related docs; capture issues, mismatches with code, and re-review needs.
+
+## Doc inventory & status
+- [x] ee/docs/extension-system/index.md
+- [x] ee/docs/extension-system/overview.md
+- [x] ee/docs/extension-system/README.md
+- [x] ee/docs/extension-system/development_guide.md
+- [x] ee/docs/extension-system/api-routing-guide.md
+- [x] ee/docs/extension-system/serving-system.md
+- [x] ee/docs/extension-system/template-system-guide.md
+- [x] ee/docs/extension-system/datatable-integration-guide.md
+- [x] ee/docs/extension-system/manifest_schema.md
+- [x] ee/docs/schemas/extension-manifest.v2.schema.json (schema source)
+- [x] ee/docs/extension-system/registry_implementation.md
+- [x] ee/docs/extension-system/enterprise-build-workflow.md
+- [x] ee/docs/extension-system/knative-app-domains.md
+- [x] ee/docs/extension-system/runner.md
+- [x] ee/docs/extension-system/runner_guest_abi.md
+- [x] ee/docs/extension-system/runner-s3-integration.md
+- [x] ee/docs/extension-system/storage-api-contract.md
+- [x] ee/docs/extension-system/storage-api-operations.md
+- [x] ee/docs/extension-system/storage-api-schema.md
+- [x] ee/docs/extension-system/storage-api-validation.md
+- [x] ee/docs/extension-system/storage-api-access-control.md
+- [x] ee/docs/extension-system/storage-api-runner.md
+- [x] ee/docs/extension-system/storage-api-rollout.md
+- [x] ee/docs/extension-system/security_signing.md
+- [x] ee/docs/extension-system/sample_template.md
+- [x] ee/docs/extension-system/samples/hello-world-e2e.md
+- [x] ee/docs/extension-system/e2e-minio-walkthrough.md
+- [x] ee/docs/extension-system/implementation_plan.md
+- [x] ee/docs/extension-system/implementation_scratchpad.md
+- [x] ee/docs/extension-system/descriptor-architecture-implementation-plan.md
+- [x] ee/docs/extension-system/comprehensive-analysis-report.md
+- [x] docs/skills/extension-system-troubleshooting.md
+- [x] ee/docs/examples/extension-bundle-v2/README.md
+- [x] ee/docs/examples/extension-react-app/README.md
+- [x] extension-related plan docs (ee/docs/plans/*extension*).*Triage for relevance/retirement*
+
+## Re-review candidates
+- (Add items here when a doc needs a second pass after new discoveries.)
+
+## Findings & actions
+- Index/README/Overview reviewed:
+  - Links point to `ee/server/src/lib/extensions/ui/iframeBridge.ts` and `/api/ext` route without `[[...path]]`; actual gateway handler lives at `server/src/app/api/ext/[extensionId]/[[...path]]/route.ts` and is aliased via `@ee`, so links should target `server/src/...`. The ext-ui builder with session/theming is in `server/src/lib/extensions/ui/iframeBridge.ts`, while the `ee/server` version is a minimal sandbox+resize helper—docs need to clarify which one is canonical.
+  - Docs assert "no Next.js route for ext-ui". Code has a gate at `server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts` that returns 404/redirect when `EXT_UI_HOST_MODE=rust`; documentation should mention this guard instead of absence.
+  - buildExtUiSrc references should point at `server/src/lib/extensions/assets/url.shared.ts` (single source of truth) rather than the `ee/server` bridge file which no longer exports it.
+- Development Guide reviewed:
+  - Gateway description still includes manifest endpoint matching; the live handler in `server/src/app/api/ext/[extensionId]/[[...path]]/route.ts` does not load or enforce manifest endpoints (no `matchEndpoint` call). Need to note this advisory-only status and update examples to reflect current code.
+  - Markdown links to iframe helpers use `../../server/...` which resolves to `ee/server/...` and misses the canonical implementation in `server/src/lib/extensions/ui/iframeBridge.ts` + `assets/url.shared.ts`. Update links and clarify that sandbox defaults differ (runtime uses `allow-scripts` only, not `allow-same-origin`).
+- API Routing Guide reviewed:
+  - Request header forwarding in docs lists `x-idempotency-key`, `x-alga-tenant`, etc.; actual `filterRequestHeaders` only forwards `x-request-id`, `accept`, `content-type`, `accept-encoding`, `user-agent` and strips auth before the handler adds tenant/extension ids. Update header policy section to match `server/src/lib/extensions/gateway/headers.ts`.
+  - Manifest endpoint resolution step is described but not implemented in the current route handler; call out as future work with pointer to alignment plan.
+  - Body limit currently hard-coded to 10 MiB and timeout default 5s; reflect these exact values.
+- Runner doc reviewed:
+  - Same iframe helper link issue: should reference `server/src/lib/extensions/ui/iframeBridge.ts` (canonical) + `assets/url.shared.ts`; the `ee/server` helper has divergent sandbox defaults.
+  - Header allowlist notes mention custom `x-ext-*` headers; Runner/Gateway code only allows `content-type`, `cache-control`, `etag` from Runner today (`server/src/lib/extensions/gateway/headers.ts`). Need to reconcile or update code if x-ext headers are required.
+  - Document states host enforces sandbox without `allow-same-origin`, aligning with `server/src/lib/extensions/ui/iframeBridge.ts`, but the `@ee/lib` version defaults to `allow-same-origin`; clarify target implementation.
+- Manifest Schema doc reviewed:
+  - Relies on manifest endpoints having `handler` strings even though Gateway no longer uses them for routing (no `endpoint` in execute payload). Clarify whether `handler` is for docs/telemetry only and align JSON schema accordingly.
+  - UI delivery + iframe helper links again point to `../../server/...` (resolving to `ee/server`); canonical helper lives in `server/src/lib/extensions/ui/iframeBridge.ts` with builder in `assets/url.shared.ts`. Update paths.
+  - Routing section mentions manifest enforcement; reconcile with current Gateway behavior (no matchEndpoint) and note ext-ui Next.js gate that returns 404/redirect when rust host is authoritative.
+- Serving System doc reviewed:
+  - Claims "no Next.js route for ext-ui" and suggests optional manifest resolution; actual code has ext-ui gate (`server/src/app/ext-ui/[extensionId]/[contentHash]/[...path]/route.ts`) and Gateway does not match endpoints. Mentions idempotency/retry behavior that is not implemented in the handler (no retries, idempotency key set to request id only).
+- Template & DataTable guides reviewed:
+  - Gateway links still point to `ee/server/.../[...path]`; canonical route is `server/src/app/api/ext/[extensionId]/[[...path]]/route.ts`. Both guides assert no ext-ui route and reference iframe helpers in `ee/server`; update to `server/src/lib/extensions/ui/iframeBridge.ts` + `assets/url.shared.ts` and mention the ext-ui gate behavior.
+- Runner S3 Integration reviewed:
+  - Execution section still refers to `{ handler, payload }` flow; Gateway now sends componentized payload without `handler` selection. Update to reflect `context/http/limits/config/providers/secret_envelope` shape from the live handler.
+- Storage API docs (contract/operations/schema/validation/access-control/runner/rollout):
+  - Marked "archived" but the platform still exposes install-scoped storage endpoints and capabilities (`ee/server/src/app/api/internal/ext-storage/install/[installId]/route.ts`, manifest schema includes `storage.kv`, runner providers in `ee/runner/src/providers/mod.rs`). Need to either update docs to reflect current behavior or plan code deprecation; access-control section still lists quotas/feature flags that are not connected to current code.
+- Registry Implementation reviewed:
+  - Gateway flow step lists manifest endpoint matching and `[...path]`; live route uses `[[...path]]` and does not match endpoints. Update data flow to match actual handler and modern registry facade (`server/src/app/api/ext/...`).
+- Runner Guest ABI reviewed:
+  - Describes legacy alloc/handler JSON ABI; current runtime uses Wasmtime Component Model (`runtime: "wasm-js@1"`, WIT in `sdk/alga-client-sdk/templates/component-basic/wit/extension-runner.wit`). Document should be archived or rewritten for the component ABI and host capabilities.
+- Security & Signing reviewed:
+  - Same path/link drift (gateway link uses `ee/server/.../[...path]`, iframe helpers point to `ee/server`), and asserts manifest matching + x-ext response headers that are not implemented (`filterResponseHeaders` allows only content-type/cache-control/etag). Needs alignment with gateway code and ext-ui gate wording.
+- Sample Template & UI guides reviewed:
+  - Sample template still shows direct `.wasm` handler artifacts and manifest endpoints with `handler` paths, not the componentized `wasm-js@1` flow currently documented elsewhere. Update examples to use componentized output + SDK bootstrap. Gateway links again use `ee/server/.../[...path]` instead of `server/.../[[...path]]`.
+- Hello World sample & MinIO walkthrough reviewed:
+  - MinIO walkthrough uses a manifest format (`extension`, `entry.wasm`) that does not match manifest v2 schema (expects `name/publisher/runtime`). Needs rewrite to align with current manifest and signing rules.
+  - Hello World sample instructions assume Runner-served UI is auto-wired; ensure install UI/page references are still correct (they point to `ee/server` components) and consider adding a componentized server handler example, not just UI-only.
+- Implementation Plan reviewed:
+  - References gateway route at `ee/server/.../[...path]` and includes manifest endpoint matching + retries that are not present. Should update milestone descriptions to match actual behavior (no endpoint enforcement, canonical iframe helper path, ext-ui gate).
+- Knative app domains doc reviewed:
+  - Operational flow assumes Runner exposes `/` redirect and `/ext-ui` validation endpoints; need to verify against current runner implementation before keeping. Could fold into infra runbook section once validated.
+- Extension-related plan docs reviewed:
+  - Pluggable runner backend: implemented (env `RUNNER_BACKEND`, backend abstraction, dev compose); ext-ui same-origin proxy/testing still open.
+  - Debug stream UI: runner→Redis→SSE→UI path exists; authz/capability gating still pending.
+  - Runtime metadata/secrets: gateway now forwards config/providers/secretEnvelope; runner host provides secrets/storage; need schema/doc alignment and install_id propagation.
+  - Storage API: runner storage capability and internal ext-storage API exist; quotas/RBAC alignment pending.
+  - Upload proxy streaming: server upload-proxy route streams to S3 with rate limits; need UI adoption confirmation.
+  - Client portal extension support: manifest/client portal UI/runtime delivered; add tests/docs.
+- Troubleshooting skill doc reviewed:
+  - Assumes bundle paths include tenant/extension prefix (`tenants/<tenant>/extensions/<ext>/sha256/...`) and advises adding `?tenant` query for iframe; current storage layout and `buildExtUiSrc` produce content-hash-only paths with `extensionId`+`path` params (tenant optional). Update steps and commands (MinIO paths, env vars) to reflect canonical `sha256/<hash>` layout.
+- Example bundle v2 README reviewed:
+  - States UI is served via API gateway cache; current architecture serves via Runner (`RUNNER_PUBLIC_BASE`) with Next.js gate returning 404/redirect. Example still uses `.wasm` handler artifacts instead of componentized output. Update to match Runner host model and manifest v2 requirements.
+- Manifest schema source (JSON) vs runtime schema reviewed:
+  - JSON schema now aligned with runtime schema: `api` optional, `capabilities` default [], `entry` removed. Need to keep docs in sync and decide on any future entry usage.
+- Implementation Scratchpad reviewed:
+  - Checklists reference `/api/ext/[extensionId]/[...path]` and early phases; does not reflect current code (route is `[[...path]]`, manifest enforcement removed, bundles/runner implemented). Needs refresh or archival to avoid confusion with main implementation plan.
+- Descriptor/Architecture plan reviewed:
+  - Still references `/api/ext/[...path]` and claims no Next.js ext-ui route; same iframe helper link drift. Should be trimmed or merged into overview/index to avoid duplicating outdated claims.
+- Comprehensive analysis report reviewed:
+  - Duplicates overview content but still references `/api/ext/[...path]`, endpoint resolution, and iframe links to `ee/server`. Consider consolidating into overview once paths and enforcement notes are corrected.
+
+## Structural reorg ideas
+- Nominate a single canonical host reference file (`server/src/lib/extensions/ui/iframeBridge.ts` + `assets/url.shared.ts`) and fix all links; add a short “Host embedding quickstart” doc.
+- Consolidate overview/index/analysis/descriptor docs into one authoritative overview; demote/retire duplicates once updated paths/enforcement notes are in place.
+- Replace archived-but-active storage docs with an up-to-date “Storage capability” doc aligned to current runner/API code, or explicitly plan code removal; move remaining archived files to an `archive/` subfolder.

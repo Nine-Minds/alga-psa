@@ -6,4 +6,4 @@ export type {
   HttpHeader,
   HttpRequest,
   HttpResponse,
-} from '@alga/extension-runtime';
+} from '@alga-psa/extension-runtime';

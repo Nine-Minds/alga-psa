@@ -273,7 +273,8 @@ export async function getClientContractLines(clientContractId: string): Promise<
 
 /**
  * Apply a client's contract lines to the client
- * This creates client_contract_line entries for each plan in the contract
+ * This populates services and configuration for each contract_line in the contract.
+ * The contract_lines already exist - this clones the template services/configuration.
  */
 export async function applyContractToClient(clientContractId: string): Promise<void> {
   const session = await getSession();
@@ -299,65 +300,18 @@ export async function applyContractToClient(clientContractId: string): Promise<v
       throw new Error(`No contract lines found in contract ${clientContract.contract_id}`);
     }
 
-    // Start a transaction to ensure all client contract lines are created
+    // Start a transaction to populate services/configuration for each line
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // For each contract line in the contract, create a client contract line
       const templateContractId = clientContract.template_contract_id ?? clientContract.contract_id ?? null;
 
-      for (const plan of contractLines) {
-        // Check if the client already has this plan
-        const existingPlan = await trx('client_contract_lines')
-          .where({ 
-            client_id: clientContract.client_id,
-            contract_line_id: plan.contract_line_id,
-            is_active: true,
-            tenant 
-          })
-          .first();
-
-        let targetClientContractLineId: string;
-
-        if (existingPlan) {
-          // If the contract line exists but isn't linked to this contract, update it
-          if (!existingPlan.client_contract_id) {
-            await trx('client_contract_lines')
-              .where({ 
-                client_contract_line_id: existingPlan.client_contract_line_id,
-                tenant 
-              })
-              .update({ 
-                client_contract_id: clientContractId,
-                template_contract_line_id: plan.contract_line_id,
-                updated_at: trx.fn.now()
-              });
-          }
-
-          targetClientContractLineId = existingPlan.client_contract_line_id;
-        } else {
-          // Create a new client contract line
-          const [created] = await trx('client_contract_lines')
-            .insert({
-              client_contract_line_id: trx.raw('gen_random_uuid()'),
-              client_id: clientContract.client_id,
-              contract_line_id: plan.contract_line_id,
-              template_contract_line_id: plan.contract_line_id,
-              start_date: clientContract.start_date,
-              end_date: clientContract.end_date,
-              is_active: true,
-              client_contract_id: clientContractId,
-              tenant
-            })
-            .returning('client_contract_line_id');
-
-          targetClientContractLineId = created.client_contract_line_id;
-        }
-
+      for (const line of contractLines) {
+        // Clone services and configuration from template to this contract line
         await cloneTemplateContractLine(trx, {
           tenant,
-          templateContractLineId: plan.contract_line_id,
-          clientContractLineId: targetClientContractLineId,
+          templateContractLineId: line.contract_line_id,
+          contractLineId: line.contract_line_id,
           templateContractId,
-          overrideRate: existingPlan?.custom_rate ?? null,
+          overrideRate: line.custom_rate ?? null,
           effectiveDate: clientContract.start_date ?? null
         });
       }

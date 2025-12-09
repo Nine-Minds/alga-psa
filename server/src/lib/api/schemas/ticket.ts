@@ -269,6 +269,8 @@ export const ticketMetricsQuerySchema = z.object({
 export const createTicketFromAssetSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   priority_id: uuidSchema,
+  status_id: uuidSchema,
+  board_id: uuidSchema,
   asset_id: uuidSchema,
   client_id: uuidSchema,
   description: z.string().optional(),

@@ -7,6 +7,7 @@ import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
 import { AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { IClientContractLine, IContractLine, IService } from 'server/src/interfaces/billing.interfaces';
 import { getContractLines } from 'server/src/lib/actions/contractLineAction';
 import { getContractLineServices } from 'server/src/lib/actions/contractLineServiceActions';
@@ -191,12 +192,12 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         </div>
       ) : (
         <>
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-            <p className="text-sm text-blue-800">
+          <Alert variant="info" className="mb-4">
+            <AlertDescription>
               <strong>{Object.keys(serviceOverlaps).length} service(s)</strong> appear in multiple contract lines for this client.
               This matrix shows which services are included in each line.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
           
           <div className="overflow-x-auto">
             <Table>

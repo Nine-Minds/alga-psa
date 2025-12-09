@@ -2,6 +2,9 @@ import { DateValue, ISO8601String } from '@shared/types/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 
+// Tax source types for external tax delegation
+export type TaxSource = 'internal' | 'external' | 'pending_external';
+
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
   client_id: string;
@@ -10,6 +13,7 @@ export interface IInvoice extends TenantEntity {
   subtotal: number;
   tax: number;
   total_amount: number;
+  currency_code: string;
   status: InvoiceStatus;
   invoice_number: string;
   finalized_at?: DateValue;
@@ -19,6 +23,8 @@ export interface IInvoice extends TenantEntity {
   invoice_charges: IInvoiceCharge[];
   /** @deprecated Use invoice_charges instead. */
   invoice_items?: IInvoiceCharge[];
+  /** Source of tax calculation: internal (Alga), external (accounting package), pending_external (awaiting import) */
+  tax_source?: TaxSource;
 }
 
 export interface NetAmountItem {
@@ -59,6 +65,13 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   updated_by?: string;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
+  // External tax fields (populated when tax is calculated by external accounting system)
+  /** Tax amount calculated by external accounting system (in cents) */
+  external_tax_amount?: number;
+  /** Tax code from external accounting system */
+  external_tax_code?: string;
+  /** Tax rate from external accounting system */
+  external_tax_rate?: number;
 }
 
 export type DiscountType = 'percentage' | 'fixed';
@@ -356,6 +369,7 @@ export interface InvoiceViewModel {
   invoice_id: string;
   due_date: DateValue;
   status: InvoiceStatus;
+  currencyCode: string;
   subtotal: number;
   tax: number;
   total: number;
@@ -366,4 +380,5 @@ export interface InvoiceViewModel {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  tax_source?: 'internal' | 'external' | 'pending_external';
 }

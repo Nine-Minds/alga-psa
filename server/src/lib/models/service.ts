@@ -1,5 +1,5 @@
 import { getCurrentTenantId } from '../db';
-import { IService } from '../../interfaces/billing.interfaces';
+import { IService, IServicePrice } from '../../interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { validateData } from '../utils/validation';
@@ -20,6 +20,23 @@ const log = {
   }
 };
 
+// Schema for service prices
+const servicePriceSchema = z.object({
+  price_id: z.string().uuid(),
+  tenant: z.string().min(1, 'Tenant is required'),
+  service_id: z.string().uuid(),
+  currency_code: z.string().length(3),
+  rate: z.union([z.string(), z.number()]).transform(val =>
+    typeof val === 'string' ? parseFloat(val) || 0 : val
+  ),
+  created_at: z.union([z.string(), z.date()]).transform(val =>
+    val instanceof Date ? val.toISOString() : val
+  ).optional(),
+  updated_at: z.union([z.string(), z.date()]).transform(val =>
+    val instanceof Date ? val.toISOString() : val
+  ).optional()
+});
+
 // Base schema definition - aligns closely with DB nullability where appropriate
 const baseServiceSchema = z.object({
   service_id: z.string().uuid(),
@@ -35,6 +52,7 @@ const baseServiceSchema = z.object({
   tax_rate_id: z.union([z.string().uuid(), z.null()]).optional(), // Accept string, null, or undefined
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
+  prices: z.array(servicePriceSchema).optional(), // Multi-currency prices
   created_at: z.string().optional(),
   updated_at: z.string().optional()
 });
@@ -121,10 +139,32 @@ const Service = {
         .orderBy('sc.service_name', 'asc');
       log.info(`[Service.getAll] Found ${servicesData.length} services`);
 
+      // Fetch all prices for these services
+      const serviceIds = servicesData.map(s => s.service_id);
+      const allPrices = serviceIds.length > 0
+        ? await knexOrTrx('service_prices')
+            .where({ tenant })
+            .whereIn('service_id', serviceIds)
+            .select('*')
+        : [];
+
+      // Group prices by service_id
+      const pricesByService = allPrices.reduce((acc: Record<string, IServicePrice[]>, price: IServicePrice) => {
+        if (!acc[price.service_id]) {
+          acc[price.service_id] = [];
+        }
+        acc[price.service_id].push(price);
+        return acc;
+      }, {} as Record<string, IServicePrice[]>);
+
       // Validate and transform using the final schema's parse method
       const validatedServices = servicesData.map((service) => {
         // .parse() validates against the refined schema AND applies the transform
-        return serviceSchema.parse(service);
+        const validated = serviceSchema.parse({
+          ...service,
+          prices: pricesByService[service.service_id] || []
+        });
+        return validated;
       });
 
       log.info(`[Service.getAll] Services data validated successfully`);
@@ -177,13 +217,17 @@ const Service = {
         return null;
       }
 
-      log.info(`[Service.getById] Found service: ${serviceData.service_name}`);
-      // Validate the fetched data against the updated schema
-      // Validate the fetched data (which now transforms to match IService)
-      // Validate against the schema expecting nulls, then transform
-      // Validate against the schema expecting nulls
+      // Fetch prices for this service
+      const prices = await knexOrTrx('service_prices')
+        .where({ service_id, tenant })
+        .select('*');
+
+      log.info(`[Service.getById] Found service: ${serviceData.service_name} with ${prices.length} price(s)`);
       // Validate and transform using the final schema's parse method
-      const validatedService = serviceSchema.parse(serviceData);
+      const validatedService = serviceSchema.parse({
+        ...serviceData,
+        prices
+      });
       log.info(`[Service.getById] Service data validated successfully`);
 
       return validatedService;
@@ -284,13 +328,12 @@ const Service = {
 
       if (!completeService) {
         log.info(`[Service.create] Failed to fetch complete service after creation: ${createdService.service_id}`);
-        return serviceSchema.parse(createdService); // Fall back to the original service data
+        return serviceSchema.parse({ ...createdService, prices: [] }); // Fall back to the original service data
       }
 
-      // Validate the returned data against the main serviceSchema before returning
-      // Validate the returned data against the schema (which transforms to match IService)
+      // No prices exist yet for a newly created service
       // Validate and transform the DB result using the final schema's parse method
-      return serviceSchema.parse(completeService);
+      return serviceSchema.parse({ ...completeService, prices: [] });
     } catch (error) {
       log.error('[Service.create] Database error:', error);
       throw error;
@@ -307,9 +350,10 @@ const Service = {
     }
 
     try {
-      // Remove tenant and service_type_name from update data to prevent modification
+      // Remove tenant, service_type_name, and prices from update data to prevent modification
       // service_type_name is a virtual field from JOIN and doesn't exist in the table
-      const { tenant: _, service_type_name, ...updateData } = serviceData;
+      // prices is stored in a separate service_prices table
+      const { tenant: _, service_type_name, prices: _prices, ...updateData } = serviceData;
 
       // No need to handle type ID changes anymore
       const finalUpdateData: Partial<IService> = { ...updateData };
@@ -372,10 +416,13 @@ const Service = {
         return null;
       }
 
-      // Validate the result against the updated schema
-      // Validate the result against the schema (which transforms to match IService)
+      // Fetch prices for this service
+      const prices = await knexOrTrx('service_prices')
+        .where({ service_id, tenant })
+        .select('*');
+
       // Validate and transform the DB result using the final schema's parse method
-      return serviceSchema.parse(completeService);
+      return serviceSchema.parse({ ...completeService, prices });
     } catch (error) {
       log.error(`[Service.update] Error updating service ${service_id}:`, error);
       throw error;
@@ -405,6 +452,30 @@ const Service = {
 
         log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
 
+        // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
+        const updatedTasks = await knexOrTrx('project_tasks')
+          .where({
+            service_id,
+            tenant
+          })
+          .update({
+            service_id: null
+          });
+
+        log.info(`[Service.delete] Updated ${updatedTasks} project_tasks records for service ${service_id}`);
+
+        // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
+        const updatedTemplateTasks = await knexOrTrx('project_template_tasks')
+          .where({
+            service_id,
+            tenant
+          })
+          .update({
+            service_id: null
+          });
+
+        log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
+
         // Then delete the service
         const deletedCount = await knexOrTrx('service_catalog')
           .where({
@@ -428,6 +499,30 @@ const Service = {
             });
 
           log.info(`[Service.delete] Updated ${updatedDetails} invoice_charge_details records for service ${service_id}`);
+
+          // Clear service_id from project_tasks (replaces ON DELETE SET NULL)
+          const updatedTasks = await trx('project_tasks')
+            .where({
+              service_id,
+              tenant
+            })
+            .update({
+              service_id: null
+            });
+
+          log.info(`[Service.delete] Updated ${updatedTasks} project_tasks records for service ${service_id}`);
+
+          // Clear service_id from project_template_tasks (replaces ON DELETE SET NULL)
+          const updatedTemplateTasks = await trx('project_template_tasks')
+            .where({
+              service_id,
+              tenant
+            })
+            .update({
+              service_id: null
+            });
+
+          log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
 
           // Then delete the service
           const deletedCount = await trx('service_catalog')
@@ -482,18 +577,233 @@ const Service = {
         );
 
       log.info(`[Service.getByCategoryId] Found ${servicesData.length} services for category ${category_id}`);
-      // Validate each service against the updated schema
-      // Validate each service against the schema (which transforms to match IService)
-      // Validate against the schema expecting nulls, then transform
-      // Validate against the schema expecting nulls, then transform
+
+      // Fetch all prices for these services
+      const serviceIds = servicesData.map(s => s.service_id);
+      const allPrices = serviceIds.length > 0
+        ? await knexOrTrx('service_prices')
+            .where({ tenant })
+            .whereIn('service_id', serviceIds)
+            .select('*')
+        : [];
+
+      // Group prices by service_id
+      const pricesByService = allPrices.reduce((acc: Record<string, IServicePrice[]>, price: IServicePrice) => {
+        if (!acc[price.service_id]) {
+          acc[price.service_id] = [];
+        }
+        acc[price.service_id].push(price);
+        return acc;
+      }, {} as Record<string, IServicePrice[]>);
+
       // Validate and transform using the final schema's parse method
       return servicesData.map(service => {
-        return serviceSchema.parse(service);
+        return serviceSchema.parse({
+          ...service,
+          prices: pricesByService[service.service_id] || []
+        });
       });
     } catch (error) {
       log.error(`[Service.getByCategoryId] Error fetching services for category ${category_id}:`, error);
       throw error;
     }
+  },
+
+  // ========== Service Price CRUD Operations ==========
+
+  /**
+   * Get all prices for a service
+   */
+  getPrices: async (knexOrTrx: Knex | Knex.Transaction, service_id: string): Promise<IServicePrice[]> => {
+    const tenant = await getCurrentTenantId();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for fetching service prices');
+    }
+
+    const prices = await knexOrTrx('service_prices')
+      .where({ service_id, tenant })
+      .select('*')
+      .orderBy('currency_code', 'asc');
+
+    return prices;
+  },
+
+  /**
+   * Get a specific price for a service in a given currency
+   */
+  getPrice: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    service_id: string,
+    currency_code: string
+  ): Promise<IServicePrice | null> => {
+    const tenant = await getCurrentTenantId();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for fetching service price');
+    }
+
+    const price = await knexOrTrx('service_prices')
+      .where({ service_id, currency_code, tenant })
+      .first();
+
+    return price || null;
+  },
+
+  /**
+   * Set a price for a service in a given currency (upsert)
+   */
+  setPrice: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    service_id: string,
+    currency_code: string,
+    rate: number
+  ): Promise<IServicePrice> => {
+    const tenant = await getCurrentTenantId();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for setting service price');
+    }
+
+    // Check if price already exists
+    const existingPrice = await knexOrTrx('service_prices')
+      .where({ service_id, currency_code, tenant })
+      .first();
+
+    if (existingPrice) {
+      // Update existing price
+      const [updatedPrice] = await knexOrTrx('service_prices')
+        .where({ price_id: existingPrice.price_id, tenant })
+        .update({
+          rate,
+          updated_at: knexOrTrx.fn.now()
+        })
+        .returning('*');
+
+      log.info(`[Service.setPrice] Updated price for service ${service_id} in ${currency_code}: ${rate}`);
+      return updatedPrice;
+    } else {
+      // Insert new price
+      const [newPrice] = await knexOrTrx('service_prices')
+        .insert({
+          price_id: uuidv4(),
+          tenant,
+          service_id,
+          currency_code,
+          rate
+        })
+        .returning('*');
+
+      log.info(`[Service.setPrice] Created price for service ${service_id} in ${currency_code}: ${rate}`);
+      return newPrice;
+    }
+  },
+
+  /**
+   * Set multiple prices for a service at once (replaces all existing prices)
+   */
+  setPrices: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    service_id: string,
+    prices: Array<{ currency_code: string; rate: number }>
+  ): Promise<IServicePrice[]> => {
+    const tenant = await getCurrentTenantId();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for setting service prices');
+    }
+
+    // Delete existing prices
+    await knexOrTrx('service_prices')
+      .where({ service_id, tenant })
+      .del();
+
+    if (prices.length === 0) {
+      return [];
+    }
+
+    // Insert new prices
+    const pricesToInsert = prices.map(p => ({
+      price_id: uuidv4(),
+      tenant,
+      service_id,
+      currency_code: p.currency_code,
+      rate: p.rate
+    }));
+
+    const insertedPrices = await knexOrTrx('service_prices')
+      .insert(pricesToInsert)
+      .returning('*');
+
+    log.info(`[Service.setPrices] Set ${prices.length} price(s) for service ${service_id}`);
+    return insertedPrices;
+  },
+
+  /**
+   * Remove a specific price for a service
+   */
+  removePrice: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    service_id: string,
+    currency_code: string
+  ): Promise<boolean> => {
+    const tenant = await getCurrentTenantId();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for removing service price');
+    }
+
+    const deletedCount = await knexOrTrx('service_prices')
+      .where({ service_id, currency_code, tenant })
+      .del();
+
+    log.info(`[Service.removePrice] Removed price for service ${service_id} in ${currency_code}. Affected: ${deletedCount}`);
+    return deletedCount > 0;
+  },
+
+  /**
+   * Check if services have prices in the required currency
+   * Returns services that are missing the required currency price
+   */
+  validateCurrencyPrices: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    service_ids: string[],
+    required_currency: string
+  ): Promise<{ valid: boolean; missingServices: Array<{ service_id: string; service_name: string }> }> => {
+    const tenant = await getCurrentTenantId();
+
+    if (!tenant) {
+      throw new Error('Tenant context is required for validating service prices');
+    }
+
+    if (service_ids.length === 0) {
+      return { valid: true, missingServices: [] };
+    }
+
+    // Get all services with their prices for the required currency
+    const servicesWithPrices = await knexOrTrx('service_catalog as sc')
+      .where({ 'sc.tenant': tenant })
+      .whereIn('sc.service_id', service_ids)
+      .leftJoin('service_prices as sp', function() {
+        this.on('sc.service_id', '=', 'sp.service_id')
+            .andOn('sp.currency_code', '=', knexOrTrx.raw('?', [required_currency]))
+            .andOn('sp.tenant', '=', knexOrTrx.raw('?', [tenant]));
+      })
+      .select(
+        'sc.service_id',
+        'sc.service_name',
+        'sp.price_id'
+      );
+
+    // Find services that don't have a price in the required currency
+    const missingServices = servicesWithPrices
+      .filter(s => !s.price_id)
+      .map(s => ({ service_id: s.service_id, service_name: s.service_name }));
+
+    return {
+      valid: missingServices.length === 0,
+      missingServices
+    };
   },
 };
 

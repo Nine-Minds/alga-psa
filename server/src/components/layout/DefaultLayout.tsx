@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
@@ -18,20 +19,48 @@ interface DefaultLayoutProps {
 export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
+  const pathname = usePathname();
+
+  // Track page type for sidebar mode switching
+  const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
+  const isOnBillingPage = pathname?.startsWith('/msp/billing') ?? false;
+
+  // Determine default sidebar mode based on current route
+  const defaultSidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : 'main';
+
+  // Allow overriding the mode (e.g., show main menu while on settings page)
+  const [modeOverride, setModeOverride] = useState<'main' | null>(null);
+
+  // Reset mode override when navigating to a different page type
+  useEffect(() => {
+    setModeOverride(null);
+  }, [defaultSidebarMode]);
+
+  // Use override if set, otherwise use route-based mode
+  const sidebarMode = modeOverride ?? defaultSidebarMode;
+
+  // Callback for "Back to Main" - just switches to main menu without navigation
+  const handleBackToMain = () => {
+    setModeOverride('main');
+  };
+
+  // Sidebar collapsed state
   const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(initialSidebarCollapsed);
+
   const [disableTransition, setDisableTransition] = useState(true);
 
+  // Enable transitions after initial render
   useEffect(() => {
-    setDisableTransition(false);
+    const raf = requestAnimationFrame(() => {
+      setDisableTransition(false);
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   const setSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
     setSidebarCollapsedState(prev => {
       const newValue = typeof value === 'function' ? value(prev) : value;
-
-      // Save using the helper
       savePreference('sidebar_collapsed', String(newValue));
-
       return newValue;
     });
   };
@@ -126,6 +155,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
             disableTransition={disableTransition}
+            mode={sidebarMode}
+            onBackToMain={handleBackToMain}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header
@@ -134,7 +165,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               rightSidebarOpen={rightSidebarOpen}
               setRightSidebarOpen={setRightSidebarOpen}
             />
-            <main className="flex-1 overflow-hidden flex pt-2 px-3">
+            <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               <RightSidebar
                 isOpen={rightSidebarOpen}

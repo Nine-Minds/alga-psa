@@ -20,6 +20,7 @@ import {
   TenantEmailTemplate 
 } from "server/src/lib/models/notification";
 import { getCurrentTenant } from "server/src/lib/tenant-client";
+import LoadingIndicator from "server/src/components/ui/LoadingIndicator";
 
 export function EmailTemplates() {
   const [templates, setTemplates] = useState<{
@@ -120,7 +121,15 @@ export function EmailTemplates() {
   }
 
   if (!templates || !tenant) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading email templates..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   // Group templates by category and name
@@ -186,6 +195,7 @@ export function EmailTemplates() {
       title: "Language",
       dataIndex: "activeTemplate.language_code" as any,
       sortable: true,
+      width: "100px",
       render: (_, record): JSX.Element => {
         const languageCode = record.activeTemplate.language_code;
         const languageNames: Record<string, string> = {
@@ -197,7 +207,7 @@ export function EmailTemplates() {
           'it': 'Italian'
         };
         return (
-          <div className="text-sm">
+          <div className="text-sm whitespace-nowrap">
             {languageNames[languageCode] || languageCode.toUpperCase()}
           </div>
         );

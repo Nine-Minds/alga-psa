@@ -447,6 +447,25 @@ spec:
           {{- end }}
           {{- end }}
 
+          # ----------- NINJAONE INTEGRATION ----------------
+          {{- if .Values.ninjaone_integration.enabled }}
+          {{- if .Values.ninjaone_integration.client_id }}
+          - name: NINJAONE_CLIENT_ID
+            value: "{{ .Values.ninjaone_integration.client_id }}"
+          {{- end }}
+          {{- if .Values.ninjaone_integration.client_secret }}
+          - name: NINJAONE_CLIENT_SECRET
+            value: "{{ .Values.ninjaone_integration.client_secret }}"
+          {{- end }}
+          {{- if .Values.ninjaone_integration.default_region }}
+          - name: NINJAONE_DEFAULT_REGION
+            value: "{{ .Values.ninjaone_integration.default_region }}"
+          {{- end }}
+          {{- with include "sebastian.ninjaonetOAuthEnv" . }}
+{{ . | nindent 10 }}
+          {{- end }}
+          {{- end }}
+
           # ----------- SECRET PROVIDER ----------------
           # Composite secret provider configuration
           - name: SECRET_READ_CHAIN

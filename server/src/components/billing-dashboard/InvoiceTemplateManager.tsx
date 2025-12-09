@@ -56,6 +56,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
       subtotal: sample.subtotal,
       tax: sample.tax,
       total: sample.total,
+      currencyCode: sample.currencyCode || 'USD',
       // Removed notes mapping as it doesn't exist on SampleInvoiceViewModel
       // Add timeEntries if available in sample data and needed by renderer type
     };

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { Palette, Eye, EyeOff } from 'lucide-react';
+import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
@@ -216,7 +216,12 @@ const ClientPortalSettings = () => {
       {/* Language Settings Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Language Settings</CardTitle>
+          <CardTitle>
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              Language Settings
+            </div>
+          </CardTitle>
           <CardDescription>
             Configure the default language settings for your client portal.
             These settings apply to all users and clients unless overridden.
@@ -375,6 +380,7 @@ const ClientPortalSettings = () => {
                     }
                     showTextColor={false}
                     previewType="circle"
+                    colorMode="tag"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Used for buttons, links, and highlights
@@ -406,6 +412,7 @@ const ClientPortalSettings = () => {
                     }
                     showTextColor={false}
                     previewType="circle"
+                    colorMode="tag"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Used for accents and secondary actions

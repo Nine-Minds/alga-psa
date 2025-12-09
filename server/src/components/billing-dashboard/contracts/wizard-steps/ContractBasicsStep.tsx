@@ -12,6 +12,7 @@ import { ContractWizardData } from '../ContractWizard';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { checkClientHasActiveContract } from 'server/src/lib/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from 'server/src/constants/currency';
 import {
   Calendar,
   Building2,
@@ -21,10 +22,12 @@ import {
   Repeat,
   Info,
   Sparkles,
+  Coins,
 } from 'lucide-react';
 import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { IClient } from 'server/src/interfaces';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 type TemplateOption = {
   contract_id: string;
@@ -98,15 +101,14 @@ export function ContractBasicsStep({
 
   useEffect(() => {
     const checkActiveContract = async () => {
-      const clientId = data.client_id || data.company_id;
-      if (!clientId || data.is_draft) {
+      if (!data.client_id || data.is_draft) {
         setClientHasActiveContract(false);
         return;
       }
 
       setCheckingActiveContract(true);
       try {
-        const hasActive = await checkClientHasActiveContract(clientId, data.contract_id);
+        const hasActive = await checkClientHasActiveContract(data.client_id, data.contract_id);
         setClientHasActiveContract(hasActive);
       } catch (error) {
         console.error('Error checking for active contract:', error);
@@ -117,7 +119,7 @@ export function ContractBasicsStep({
     };
 
     void checkActiveContract();
-  }, [data.client_id, data.company_id, data.is_draft, data.contract_id]);
+  }, [data.client_id, data.is_draft, data.contract_id]);
 
   const templateOptions = templates.map((template) => ({
     value: template.contract_id,
@@ -189,8 +191,15 @@ export function ContractBasicsStep({
         <ClientPicker
           id="contract-basics-client-picker"
           clients={clients}
-          selectedClientId={data.client_id || data.company_id || null}
-          onSelect={(id) => updateData({ client_id: id || '', company_id: id || '' })}
+          selectedClientId={data.client_id || null}
+          onSelect={(id) => {
+            const selectedClient = clients.find((c) => c.client_id === id);
+            const clientCurrency = selectedClient?.default_currency_code || data.currency_code;
+            updateData({
+              client_id: id || '',
+              currency_code: clientCurrency,
+            });
+          }}
           filterState={filterState}
           onFilterStateChange={setFilterState}
           clientTypeFilter={clientTypeFilter}
@@ -198,7 +207,7 @@ export function ContractBasicsStep({
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
         />
-        {!(data.client_id || data.company_id) && (
+        {!data.client_id && (
           <p className="text-xs text-gray-500">Choose the client this contract is for.</p>
         )}
         {clientHasActiveContract && !data.is_draft && (
@@ -245,6 +254,24 @@ export function ContractBasicsStep({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="currency" className="flex items-center gap-2">
+          <Coins className="h-4 w-4" />
+          Currency *
+        </Label>
+        <CustomSelect
+          id="currency"
+          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
+          onValueChange={(value: string) => updateData({ currency_code: value })}
+          value={data.currency_code}
+          placeholder="Select currency"
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500">
+          Currency for this contract. Defaults to the client's preferred currency.
+        </p>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="start_date" className="flex items-center gap-2">
           <Calendar className="h-4 w-4" />
           Start Date *
@@ -281,7 +308,12 @@ export function ContractBasicsStep({
           className="w-full"
           clearable
         />
-        <p className="text-xs text-gray-500">Leave blank for an ongoing contract.</p>
+        {endDate && startDate && endDate < startDate && (
+          <p className="text-xs text-red-600">End date must be after start date</p>
+        )}
+        {!(endDate && startDate && endDate < startDate) && (
+          <p className="text-xs text-gray-500">Leave blank for an ongoing contract.</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -321,13 +353,13 @@ export function ContractBasicsStep({
               onCheckedChange={(checked) => updateData({ po_required: checked })}
             />
           </div>
-          <div className="flex gap-2 text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
-            <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-            <p>
+          <Alert variant="info">
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-xs">
               <span className="font-medium">Note:</span> PO enforcement will apply when invoice
               automation is enabled. Configure now to stay ahead.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
         </div>
 
         {data.po_required && (
@@ -348,7 +380,9 @@ export function ContractBasicsStep({
             <div className="space-y-2">
               <Label htmlFor="po_amount">PO Amount</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  {getCurrencySymbol(data.currency_code)}
+                </span>
                 <Input
                   id="po_amount"
                   type="text"
@@ -384,53 +418,60 @@ export function ContractBasicsStep({
         )}
       </div>
 
-      {(data.client_id || data.company_id) && data.contract_name && data.start_date && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Contract Summary</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <p>
-              <strong>Client:</strong>{' '}
-              {clients.find((c) => c.client_id === (data.client_id || data.company_id))
-                ?.client_name || 'Not selected'}
-            </p>
-            <p>
-              <strong>Contract:</strong> {data.contract_name}
-            </p>
-            <p>
-              <strong>Billing Frequency:</strong>{' '}
-              {BILLING_FREQUENCY_OPTIONS.find((opt) => opt.value === data.billing_frequency)
-                ?.label || data.billing_frequency}
-            </p>
-            <p>
-              <strong>Period:</strong>{' '}
-              {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}
-              {data.end_date
-                ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}`
-                : ' (Ongoing)'}
-            </p>
-            {data.po_required && (
-              <>
-                <p>
-                  <strong>PO Required:</strong> Yes
-                </p>
-                {data.po_number && (
+      {data.client_id && data.contract_name && data.start_date && (
+        <Alert variant="info" className="mt-6">
+          <AlertDescription>
+            <h4 className="text-sm font-semibold mb-2">Contract Summary</h4>
+            <div className="text-sm space-y-1">
+              <p>
+                <strong>Client:</strong>{' '}
+                {clients.find((c) => c.client_id === data.client_id)?.client_name || 'Not selected'}
+              </p>
+              <p>
+                <strong>Contract:</strong> {data.contract_name}
+              </p>
+              <p>
+                <strong>Billing Frequency:</strong>{' '}
+                {BILLING_FREQUENCY_OPTIONS.find((opt) => opt.value === data.billing_frequency)
+                  ?.label || data.billing_frequency}
+              </p>
+              <p>
+                <strong>Currency:</strong>{' '}
+                {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
+                  data.currency_code}
+              </p>
+              <p>
+                <strong>Period:</strong>{' '}
+                {formatDateFns(parseLocalYMD(data.start_date)!, 'MM/dd/yyyy')}
+                {data.end_date
+                  ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}`
+                  : ' (Ongoing)'}
+              </p>
+              {data.po_required && (
+                <>
                   <p>
-                    <strong>PO Number:</strong> {data.po_number}
+                    <strong>PO Required:</strong> Yes
                   </p>
-                )}
-                {data.po_amount && (
-                  <p>
-                    <strong>PO Amount:</strong>{' '}
-                    {(data.po_amount / 100).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+                  {data.po_number && (
+                    <p>
+                      <strong>PO Number:</strong> {data.po_number}
+                    </p>
+                  )}
+                  {data.po_amount && (
+                    <p>
+                      <strong>PO Amount:</strong>{' '}
+                      {getCurrencySymbol(data.currency_code)}
+                      {(data.po_amount / 100).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

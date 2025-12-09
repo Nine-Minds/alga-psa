@@ -6,6 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button'; // Import Button
 import * as RadixTooltip from '@radix-ui/react-tooltip'; // Use Radix Tooltip directly
 import { Info, Trash2 } from 'lucide-react'; // Import Trash2
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { IContractLineServiceHourlyConfig, IUserTypeRate } from 'server/src/interfaces/contractLineServiceConfiguration.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect'; // Import CustomSelect
 
@@ -224,7 +225,7 @@ export function ServiceHourlyConfigForm({
             onBlur={handleHourlyRateBlur} // Process value and update parent on blur
             placeholder="0.00"
             disabled={disabled}
-            className={`pl-7 ${validationErrors.hourly_rate ? 'border-red-500' : ''}`}
+            className={`pl-10 ${validationErrors.hourly_rate ? 'border-red-500' : ''}`}
           />
         </div>
         {validationErrors.hourly_rate && (
@@ -289,7 +290,7 @@ export function ServiceHourlyConfigForm({
                {userTypeRates.map((item, index) => (
                    <div key={item.rate_id || `new-${index}`} className="flex items-center justify-between gap-2 p-2 border rounded bg-background">
                        <span className="font-medium">
-                           {userTypeOptions.find(opt => opt.value === item.user_type)?.label || item.user_type}: ${Number(item.rate).toFixed(2)}/hr {/* Convert rate to number before toFixed */}
+                           {userTypeOptions.find(opt => opt.value === item.user_type)?.label || item.user_type}: {getCurrencySymbol('USD')}{Number(item.rate / 100).toFixed(2)}/hr
                        </span>
                        <Button id={`remove-user-type-rate-${configId}-${index}`} variant="ghost" size="sm" onClick={() => handleRemoveUserTypeRate(index)} disabled={disabled}>
                            <Trash2 className="h-4 w-4 text-destructive" />
@@ -328,7 +329,7 @@ export function ServiceHourlyConfigForm({
                              onBlur={handleNewRateInputBlur}
                              placeholder="0.00"
                              disabled={disabled}
-                             className={`pl-7 mt-1 ${userTypeError ? 'border-red-500' : ''}`}
+                             className={`pl-10 mt-1 ${userTypeError ? 'border-red-500' : ''}`}
                          />
                        </div>
                    </div>

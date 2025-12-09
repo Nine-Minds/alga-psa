@@ -168,6 +168,7 @@ async fn execute(
         .get("x-request-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
+
     let idem = headers
         .get("x-idempotency-key")
         .and_then(|v| v.to_str().ok())
@@ -312,6 +313,7 @@ async fn execute(
         config: req.context.config.clone(),
         providers: provider_set.clone(),
         secrets: secret_material,
+        user: req.user.clone(),
     };
 
     let exec_resp = match loader

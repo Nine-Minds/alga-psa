@@ -33,7 +33,7 @@ export function generateLayout(dataString: string): string {
   createHeaderSection_StdDetailed(viewModel, documentChildren);
 
   // createItemsSection now returns only the subtotal and modifies documentChildren directly
-  const derivedSubtotal = createItemsSection_StdDetailed(viewModel.items, documentChildren);
+  const derivedSubtotal = createItemsSection_StdDetailed(viewModel.items, documentChildren, viewModel.currencyCode);
 
   const hasProvidedTotals = (viewModel.subtotal > 0) || (viewModel.tax > 0) || (viewModel.total > 0);
 
@@ -46,7 +46,7 @@ export function generateLayout(dataString: string): string {
   }
 
   // Pass children array to totals and notes sections
-  createTotalsSection_StdDetailed(displaySubtotal, displayTax, displayTotal, documentChildren);
+  createTotalsSection_StdDetailed(displaySubtotal, displayTax, displayTotal, documentChildren, viewModel.currencyCode);
   createNotesSection_StdDetailed(viewModel, documentChildren);
 
   // documentChildren array is now populated by the helper functions
@@ -123,7 +123,7 @@ function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel, children: 
 
 // *** MODIFIED createItemsSection_StdDetailed function ***
 // Accepts children array, returns only subtotal
-function createItemsSection_StdDetailed(items: Array<InvoiceItem>, children: Array<LayoutElement>): number {
+function createItemsSection_StdDetailed(items: Array<InvoiceItem>, children: Array<LayoutElement>, currencyCode: string): number {
     let runningSubtotal: f64 = 0.0;
 
     const groupedItems = new Map<string, Array<InvoiceItem>>();
@@ -225,9 +225,9 @@ function createItemsSection_StdDetailed(items: Array<InvoiceItem>, children: Arr
 
                 // --- Create Item Row ---
                 log("Wasm Debug: Preparing item row for item ID: " + item.id);
-                const formattedUnitPrice = formatCurrency(item.unitPrice);
-                const formattedTotal = formatCurrency(item.total);
-
+                const formattedUnitPrice = formatCurrency(item.unitPrice, currencyCode);
+                const formattedTotal = formatCurrency(item.total, currencyCode);
+                
                 const rightAlignStyleForRow = new PartialStyle();
                 rightAlignStyleForRow.textAlign = "right";
                 
@@ -345,7 +345,7 @@ function createItemTableHeaderRow_StdDetailed(): RowElement {
 }
 
 // Modified to accept children array and return void
-function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64, children: Array<LayoutElement>): void {
+function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64, children: Array<LayoutElement>, currencyCode: string): void {
     // DSL: section summary grid 12 x 5 { ... }
     const spacerCol = new ColumnElement([]);
     spacerCol.span = 7;
@@ -364,11 +364,11 @@ function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64, ch
 
     const totalStyle = new PartialStyle();
     totalStyle.fontWeight = "bold";
-    const totalText = applyStyle(new TextElement(formatCurrency(total)), instantiateStyle(totalStyle));
+    const totalText = applyStyle(new TextElement(formatCurrency(total, currencyCode)), instantiateStyle(totalStyle));
     
     const valueCol = new ColumnElement([
-        new TextElement(formatCurrency(subtotal)),
-        new TextElement(formatCurrency(tax)),
+        new TextElement(formatCurrency(subtotal, currencyCode)),
+        new TextElement(formatCurrency(tax, currencyCode)),
         totalText
     ]);
     valueCol.span = 3;

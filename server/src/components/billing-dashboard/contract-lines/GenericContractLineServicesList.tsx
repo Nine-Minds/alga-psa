@@ -19,6 +19,8 @@ import { IContractLine, IContractLineService, IService, IServiceCategory } from 
 import { getContractLineServicesWithConfigurations, addServiceToContractLine, removeServiceFromContractLine } from 'server/src/lib/actions/contractLineServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Import action to get plan details
+import { getContractById } from 'server/src/lib/actions/contractActions'; // Import to get contract currency
+import { getCurrencySymbol } from 'server/src/constants/currency'; // Import currency helper
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
@@ -63,7 +65,27 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
   const [editingService, setEditingService] = useState<EnhancedPlanService | null>(null);
   const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null); // State for plan type
   const [contractLineBillingFrequency, setContractLineBillingFrequency] = useState<string | null>(null);
+  const [contractCurrency, setContractCurrency] = useState<string>('USD'); // Contract currency code
+  const [customRates, setCustomRates] = useState<Record<string, string>>({}); // Custom rates for services without matching currency
   // Removed tenant state
+
+  // Helper function to get service price in contract currency
+  const getServicePriceInCurrency = (service: IService, currencyCode: string): number | null => {
+    // First check if service has prices array with the matching currency
+    if (service.prices && service.prices.length > 0) {
+      const matchingPrice = service.prices.find(p => p.currency_code === currencyCode);
+      if (matchingPrice) {
+        return matchingPrice.rate;
+      }
+    }
+    // If no matching currency price, return null (requires custom rate)
+    return null;
+  };
+
+  // Check if a service has a price in the contract currency
+  const hasMatchingCurrencyPrice = (service: IService): boolean => {
+    return getServicePriceInCurrency(service, contractCurrency) !== null;
+  };
 
   const fetchData = useCallback(async () => { // Added useCallback
     if (!contractLineId) return;
@@ -89,6 +111,14 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       }
       setPlanType(planDetails.contract_line_type); // Store the plan type
       setContractLineBillingFrequency(planDetails.billing_frequency); // Store the billing frequency
+
+      // Fetch contract to get currency
+      if (planDetails.contract_id) {
+        const contract = await getContractById(planDetails.contract_id);
+        if (contract?.currency_code) {
+          setContractCurrency(contract.currency_code);
+        }
+      }
 
       // Enhance services with details and configuration
       const enhancedServices: EnhancedPlanService[] = servicesWithConfigurations.map(configInfo => {
@@ -133,20 +163,43 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
   const handleAddService = async () => {
     if (!contractLineId || selectedServicesToAdd.length === 0) return;
 
+    // Validate that all services without matching currency have custom rates
+    for (const serviceId of selectedServicesToAdd) {
+      const service = availableServices.find(s => s.service_id === serviceId);
+      if (service && !hasMatchingCurrencyPrice(service)) {
+        const customRate = customRates[serviceId];
+        if (!customRate || parseFloat(customRate) <= 0) {
+          setError(`Please enter a rate for "${service.service_name}" (no ${contractCurrency} price configured)`);
+          return;
+        }
+      }
+    }
+
     try {
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
+          // Get rate: prefer contract currency price, fall back to custom rate
+          let rate: number;
+          const currencyPrice = getServicePriceInCurrency(serviceToAdd, contractCurrency);
+          if (currencyPrice !== null) {
+            rate = currencyPrice;
+          } else {
+            // Use custom rate (already validated above)
+            rate = Math.round(parseFloat(customRates[serviceId]) * 100); // Convert to cents
+          }
+
           await addServiceToContractLine(
             contractLineId,
             serviceId,
             1, // Default quantity
-            serviceToAdd.default_rate // Default rate
+            rate
           );
         }
       }
       await fetchData(); // Ensure data is fetched before calling callback
       setSelectedServicesToAdd([]);
+      setCustomRates({}); // Clear custom rates
       onServicesChanged?.(); // Call the callback if provided
     } catch (error) {
       console.error('Error adding services:', error);
@@ -356,20 +409,31 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                     {servicesAvailableToAdd.map(service => {
                       // Use service_type_name directly from the service object (fetched via updated getServices)
                       const serviceTypeName = service.service_type_name || 'N/A'; // No cast needed now that IService includes service_type_name
+                      const currencyPrice = getServicePriceInCurrency(service, contractCurrency);
+                      const hasCurrencyPrice = currencyPrice !== null;
+                      const isSelected = selectedServicesToAdd.includes(service.service_id!);
+                      const currencySymbol = getCurrencySymbol(contractCurrency);
+
                       return (
                         <div
                           key={service.service_id}
-                          className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded"
+                          className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded ${!hasCurrencyPrice ? 'bg-amber-50' : ''}`}
                         >
                           <div className="[&>div]:mb-0">
                             <Checkbox
                               id={`add-generic-service-${service.service_id}`}
-                              checked={selectedServicesToAdd.includes(service.service_id!)}
+                              checked={isSelected}
                               onChange={(e) => {
                                 if ((e.target as HTMLInputElement).checked) {
                                   setSelectedServicesToAdd([...selectedServicesToAdd, service.service_id!]);
                                 } else {
                                   setSelectedServicesToAdd(selectedServicesToAdd.filter(id => id !== service.service_id));
+                                  // Clear custom rate when deselecting
+                                  if (customRates[service.service_id!]) {
+                                    const newRates = { ...customRates };
+                                    delete newRates[service.service_id!];
+                                    setCustomRates(newRates);
+                                  }
                                 }
                               }}
                               className="cursor-pointer"
@@ -378,9 +442,32 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                           <div className="flex-grow flex flex-col text-sm">
                             <span>{service.service_name}</span>
                             <span className="text-xs text-muted-foreground">
-                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${service.default_rate.toFixed(2)}
+                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                              {hasCurrencyPrice ? (
+                                <> | Rate: {currencySymbol}{(currencyPrice / 100).toFixed(2)}</>
+                              ) : (
+                                <> | <span className="text-amber-600">No {contractCurrency} price</span></>
+                              )}
                             </span>
                           </div>
+                          {/* Show rate input for services without matching currency when selected */}
+                          {!hasCurrencyPrice && isSelected && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">{currencySymbol}</span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="Enter rate"
+                                value={customRates[service.service_id!] || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^0-9.]/g, '');
+                                  setCustomRates({ ...customRates, [service.service_id!]: value });
+                                }}
+                                className="w-20 px-2 py-1 text-xs border rounded"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          )}
                         </div>
                       );
                     })}

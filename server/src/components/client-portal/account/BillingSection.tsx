@@ -173,11 +173,21 @@ export default function BillingSection() {
     });
   };
 
-  const formatAmount = (amount: number) => {
+  const formatAmount = (amount: number, currencyCode: string = 'USD') => {
     try {
-      return `$${Number(amount).toFixed(2)}`;
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currencyCode,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(Number(amount));
     } catch (err) {
-      return '$0.00';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(0);
     }
   };
 

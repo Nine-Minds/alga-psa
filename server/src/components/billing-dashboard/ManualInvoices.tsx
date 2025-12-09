@@ -16,6 +16,7 @@ import { InvoiceViewModel, DiscountType, IInvoiceCharge } from 'server/src/inter
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -78,7 +79,8 @@ const AutomatedItemsTable: React.FC<{
     service_name: string;
     total: number; // Should be total_price from IInvoiceCharge (in cents)
   }>;
-}> = ({ items }) => {
+  currencyCode?: string;
+}> = ({ items, currencyCode = 'USD' }) => {
   console.log('[Render] Rendering automated items table:', {
     count: items.length,
     items: items.map(item => ({
@@ -102,7 +104,7 @@ const AutomatedItemsTable: React.FC<{
             <tr key={i} className="border-t">
               <td className="py-2">{item.service_name}</td>
               {/* Display total_price */}
-              <td className="text-right">${(item.total / 100).toFixed(2)}</td>
+              <td className="text-right">{formatCurrency(item.total / 100, 'en-US', currencyCode)}</td>
             </tr>
           ))}
         </tbody>
@@ -587,6 +589,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   
   console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_charges?.length);
 
+  // Get currency code from invoice data, selected client, or default to USD
+  const selectedClientData = clients.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
+  const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
+
   // Helper to prepare item prop for LineItem component
   const mapToLineItemEditable = (item: EditableInvoiceItem): LineItemEditableItem => ({
       item_id: item.item_id,
@@ -702,6 +708,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       total: item.total_price // Pass total_price (in cents)
                     }))
                   }
+                  currencyCode={currencyCode}
                 />
               )}
 
@@ -760,6 +767,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         else newExpanded.add(index);
                         setExpandedItems(newExpanded);
                       }}
+                      currencyCode={currencyCode}
                     />
                   ))}
                 </div>
@@ -776,7 +784,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 </div>
                 <div className="text-lg font-semibold">
                   {/* Always use the calculated total for consistency */}
-                  <>Total: ${(calculatedGrandTotal / 100).toFixed(2)}</>
+                  <>Total: {formatCurrency(calculatedGrandTotal / 100, 'en-US', currencyCode)}</>
                 </div>
               </div>
 

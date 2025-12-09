@@ -7,7 +7,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrl, getContactAvatarUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import { createTag } from 'server/src/lib/actions/tagActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -538,13 +538,15 @@ export async function getContactsByClient(clientId: string, status: ContactFilte
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
     });
 
-    // Fetch avatar URLs for each contact
-    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
-      return {
-        ...contact,
-        avatarUrl: avatarUrl || null,
-      };
+    // PERFORMANCE FIX: Fetch avatar URLs in batch to avoid N+1 query problem
+    // Before: 142 contacts = 142 separate getContactAvatarUrl() calls = 142 DB queries
+    // After: 1 batch call = 2 DB queries (associations + documents)
+    const contactIds = contacts.map(c => c.contact_name_id);
+    const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+
+    const contactsWithAvatars = contacts.map((contact: IContact) => ({
+      ...contact,
+      avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
     // Return contacts with avatar URLs
@@ -626,10 +628,14 @@ export async function getContactsEligibleForInvitation(
       return q;
     });
 
-    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
-      return { ...contact, avatarUrl: avatarUrl || null } as IContact;
-    }));
+    // PERFORMANCE FIX: Batch fetch avatar URLs to avoid N+1
+    const contactIds = contacts.map(c => c.contact_name_id);
+    const avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+
+    const contactsWithAvatars = contacts.map((contact: IContact) => ({
+      ...contact,
+      avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
+    } as IContact));
 
     return contactsWithAvatars;
   } catch (err) {
@@ -650,10 +656,12 @@ export async function getAllClients(): Promise<IClient[]> {
     // Start with basic clients query and fallback gracefully
     let clients: any[] = [];
     try {
-      clients = await db('clients')
-        .select('*')
-        .where('tenant', tenant)
-        .orderBy('client_name', 'asc');
+      clients = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await trx('clients')
+          .select('*')
+          .where('tenant', tenant)
+          .orderBy('client_name', 'asc');
+      });
 
       console.log('[getAllClients] Found', clients.length, 'clients');
     } catch (dbErr: any) {
@@ -743,39 +751,43 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
     // Check if contacts table exists and fallback gracefully
     let contacts: any[] = [];
     try {
-      contacts = await db('contacts')
-        .select('*')
-        .where('tenant', tenant)
-        .modify(function (queryBuilder: Knex.QueryBuilder) {
-          if (status !== 'all') {
-            queryBuilder.where('is_inactive', status === 'inactive');
+      contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const fetchedContacts = await trx('contacts')
+          .select('*')
+          .where('tenant', tenant)
+          .modify(function (queryBuilder: Knex.QueryBuilder) {
+            if (status !== 'all') {
+              queryBuilder.where('is_inactive', status === 'inactive');
+            }
+          })
+          .orderBy(CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name', safeSortDirection);
+
+        console.log('[getAllContacts] Found', fetchedContacts.length, 'contacts');
+
+        // Try to add client names if clients table exists
+        if (fetchedContacts.length > 0) {
+          try {
+            const clientIds = fetchedContacts.map(c => c.client_id).filter(Boolean);
+            if (clientIds.length > 0) {
+              const clients = await trx('clients')
+                .select('client_id', 'client_name')
+                .whereIn('client_id', clientIds)
+                .where('tenant', tenant);
+
+              const clientMap = new Map(clients.map(c => [c.client_id, c.client_name]));
+              return fetchedContacts.map(contact => ({
+                ...contact,
+                client_name: contact.client_id ? clientMap.get(contact.client_id) || null : null
+              }));
+            }
+          } catch (clientErr) {
+            console.warn('[getAllContacts] Failed to fetch client names, proceeding without them:', clientErr);
+            // Continue without client names
           }
-        })
-        .orderBy(CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name', safeSortDirection);
-
-      console.log('[getAllContacts] Found', contacts.length, 'contacts');
-
-      // Try to add client names if clients table exists
-      if (contacts.length > 0) {
-        try {
-          const clientIds = contacts.map(c => c.client_id).filter(Boolean);
-          if (clientIds.length > 0) {
-            const clients = await db('clients')
-              .select('client_id', 'client_name')
-              .whereIn('client_id', clientIds)
-              .where('tenant', tenant);
-
-            const clientMap = new Map(clients.map(c => [c.client_id, c.client_name]));
-            contacts = contacts.map(contact => ({
-              ...contact,
-              client_name: contact.client_id ? clientMap.get(contact.client_id) || null : null
-            }));
-          }
-        } catch (clientErr) {
-          console.warn('[getAllContacts] Failed to fetch client names, proceeding without them:', clientErr);
-          // Continue without client names
         }
-      }
+
+        return fetchedContacts;
+      });
     } catch (dbErr: any) {
       console.error('[getAllContacts] Database error:', dbErr);
 
@@ -789,19 +801,21 @@ export async function getAllContacts(status: ContactFilterStatus = 'active', sor
       throw dbErr;
     }
 
-    // Fetch avatar URLs for each contact
-    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
-      let avatarUrl: string | null = null;
-      try {
-        avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
-      } catch (avatarErr) {
-        console.warn('[getAllContacts] Failed to fetch avatar for contact:', contact.contact_name_id, avatarErr);
-        // Continue without avatar
-      }
-      return {
-        ...contact,
-        avatarUrl: avatarUrl || null,
-      };
+    // PERFORMANCE FIX: Batch fetch avatar URLs to avoid N+1 problem
+    // Before: Each contact triggered individual getContactAvatarUrl() call
+    // After: Single batch call for all contacts
+    let avatarUrlsMap: Map<string, string | null> = new Map();
+    try {
+      const contactIds = contacts.map(c => c.contact_name_id);
+      avatarUrlsMap = await getContactAvatarUrlsBatch(contactIds, tenant);
+    } catch (avatarErr) {
+      console.warn('[getAllContacts] Failed to fetch avatars in batch:', avatarErr);
+      // Continue without avatars
+    }
+
+    const contactsWithAvatars = contacts.map((contact: IContact) => ({
+      ...contact,
+      avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
     return contactsWithAvatars;
@@ -897,13 +911,15 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
 
       // Check if new email already exists for another contact
-      const existingContact = await db('contacts')
-        .where({
-          email: contactData.email.trim().toLowerCase(),
-          tenant
-        })
-        .whereNot({ contact_name_id: contactData.contact_name_id })
-        .first();
+      const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await trx('contacts')
+          .where({
+            email: contactData.email!.trim().toLowerCase(),
+            tenant
+          })
+          .whereNot({ contact_name_id: contactData.contact_name_id })
+          .first();
+      });
 
       if (existingContact) {
         throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
@@ -912,9 +928,11 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
 
     // If client_id is being updated, verify it exists (but allow null to remove association)
     if ('client_id' in contactData && contactData.client_id) {
-      const client = await db('clients')
-        .where({ client_id: contactData.client_id, tenant })
-        .first();
+      const client = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await trx('clients')
+          .where({ client_id: contactData.client_id, tenant })
+          .first();
+      });
 
       if (!client) {
         throw new Error('FOREIGN_KEY_ERROR: The selected client no longer exists');
@@ -1498,10 +1516,12 @@ export async function checkExistingEmails(
     });
 
     // Check for existing emails
-    const existingContacts = await db('contacts')
-      .select('email')
-      .whereIn('email', sanitizedEmails)
-      .andWhere('tenant', tenant);
+    const existingContacts = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .select('email')
+        .whereIn('email', sanitizedEmails)
+        .andWhere('tenant', tenant);
+    });
 
     // Return sanitized existing emails
     return existingContacts.map((contact: { email: string }): string => contact.email);
@@ -1831,36 +1851,42 @@ export async function getUserByContactId(
       throw new Error('Tenant not found');
     }
 
-    // First get the user
-    const user = await knex('users')
-      .where({ 
-        contact_id: contactId,
-        tenant: tenant,
-        user_type: 'client'
-      })
-      .first();
+    const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // First get the user
+      const user = await trx('users')
+        .where({
+          contact_id: contactId,
+          tenant: tenant,
+          user_type: 'client'
+        })
+        .first();
 
-    if (!user) {
+      if (!user) {
+        return null;
+      }
+
+      // Then get the roles separately
+      const roles = await trx('user_roles')
+        .select('roles.role_id', 'roles.role_name')
+        .join('roles', function(this: Knex.JoinClause) {
+          this.on('user_roles.role_id', 'roles.role_id')
+            .andOn('roles.tenant', trx.raw('?', [tenant]));
+        })
+        .where({
+          'user_roles.user_id': user.user_id,
+          'user_roles.tenant': tenant
+        });
+
+      // Attach roles to user object
+      return {
+        ...user,
+        roles: roles || []
+      };
+    });
+
+    if (!userWithRoles) {
       return { user: null, error: undefined };
     }
-
-    // Then get the roles separately
-    const roles = await knex('user_roles')
-      .select('roles.role_id', 'roles.role_name')
-      .join('roles', function(this: Knex.JoinClause) {
-        this.on('user_roles.role_id', 'roles.role_id')
-          .andOn('roles.tenant', knex.raw('?', [tenant]));
-      })
-      .where({
-        'user_roles.user_id': user.user_id,
-        'user_roles.tenant': tenant
-      });
-
-    // Attach roles to user object
-    const userWithRoles = {
-      ...user,
-      roles: roles || []
-    };
 
     return { user: userWithRoles, error: undefined };
   } catch (error) {

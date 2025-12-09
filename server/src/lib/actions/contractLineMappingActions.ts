@@ -31,12 +31,9 @@ export async function ensureTemplateLineSnapshot(
     throw new Error(`Base contract line ${contractLineId} not found for tenant ${tenant}`);
   }
 
-  const terms = await knex('contract_line_template_terms')
-    .where({ tenant, contract_line_id: contractLineId })
-    .first();
-
   const now = knex.fn.now();
 
+  // All terms columns are now stored directly on contract_lines
   await knex('contract_template_lines')
     .insert({
       tenant,
@@ -48,15 +45,13 @@ export async function ensureTemplateLineSnapshot(
       line_type: contractLine.contract_line_type ?? null,
       service_category: contractLine.service_category ?? null,
       is_active: contractLine.is_active ?? true,
-      enable_overtime: terms?.enable_overtime ?? contractLine.enable_overtime ?? false,
-      overtime_rate: terms?.overtime_rate ?? contractLine.overtime_rate ?? null,
-      overtime_threshold: terms?.overtime_threshold ?? contractLine.overtime_threshold ?? null,
-      enable_after_hours_rate:
-        terms?.enable_after_hours_rate ?? contractLine.enable_after_hours_rate ?? false,
-      after_hours_multiplier:
-        terms?.after_hours_multiplier ?? contractLine.after_hours_multiplier ?? null,
-      minimum_billable_time: terms?.minimum_billable_time ?? null,
-      round_up_to_nearest: terms?.round_up_to_nearest ?? null,
+      enable_overtime: contractLine.enable_overtime ?? false,
+      overtime_rate: contractLine.overtime_rate ?? null,
+      overtime_threshold: contractLine.overtime_threshold ?? null,
+      enable_after_hours_rate: contractLine.enable_after_hours_rate ?? false,
+      after_hours_multiplier: contractLine.after_hours_multiplier ?? null,
+      minimum_billable_time: contractLine.minimum_billable_time ?? null,
+      round_up_to_nearest: contractLine.round_up_to_nearest ?? null,
       created_at: contractLine.created_at ?? now,
       updated_at: now,
     })
@@ -69,15 +64,13 @@ export async function ensureTemplateLineSnapshot(
       line_type: contractLine.contract_line_type ?? null,
       service_category: contractLine.service_category ?? null,
       is_active: contractLine.is_active ?? true,
-      enable_overtime: terms?.enable_overtime ?? contractLine.enable_overtime ?? false,
-      overtime_rate: terms?.overtime_rate ?? contractLine.overtime_rate ?? null,
-      overtime_threshold: terms?.overtime_threshold ?? contractLine.overtime_threshold ?? null,
-      enable_after_hours_rate:
-        terms?.enable_after_hours_rate ?? contractLine.enable_after_hours_rate ?? false,
-      after_hours_multiplier:
-        terms?.after_hours_multiplier ?? contractLine.after_hours_multiplier ?? null,
-      minimum_billable_time: terms?.minimum_billable_time ?? null,
-      round_up_to_nearest: terms?.round_up_to_nearest ?? null,
+      enable_overtime: contractLine.enable_overtime ?? false,
+      overtime_rate: contractLine.overtime_rate ?? null,
+      overtime_threshold: contractLine.overtime_threshold ?? null,
+      enable_after_hours_rate: contractLine.enable_after_hours_rate ?? false,
+      after_hours_multiplier: contractLine.after_hours_multiplier ?? null,
+      minimum_billable_time: contractLine.minimum_billable_time ?? null,
+      round_up_to_nearest: contractLine.round_up_to_nearest ?? null,
       updated_at: now,
     });
 
@@ -253,63 +246,35 @@ export async function ensureTemplateLineSnapshot(
       });
   }
 
-  const fixedConfig = await knex('contract_line_fixed_config')
-    .where({ tenant, contract_line_id: contractLineId })
-    .first();
-
-  if (fixedConfig) {
+  // After migration 20251028120000, contract_line_fixed_config was merged into contract_lines
+  // Read fixed config data directly from contract_lines
+  if (contractLine.contract_line_type === 'Fixed') {
     await knex('contract_template_line_fixed_config')
       .insert({
         tenant,
         template_line_id: contractLineId,
-        base_rate: fixedConfig.base_rate ?? null,
-        enable_proration: fixedConfig.enable_proration ?? false,
-        billing_cycle_alignment: fixedConfig.billing_cycle_alignment ?? 'start',
-        created_at: fixedConfig.created_at ?? now,
+        base_rate: contractLine.custom_rate ?? null,
+        enable_proration: contractLine.enable_proration ?? false,
+        billing_cycle_alignment: contractLine.billing_cycle_alignment ?? 'start',
+        created_at: contractLine.created_at ?? now,
         updated_at: now,
       })
       .onConflict(['tenant', 'template_line_id'])
       .merge({
-        base_rate: fixedConfig.base_rate ?? null,
-        enable_proration: fixedConfig.enable_proration ?? false,
-        billing_cycle_alignment: fixedConfig.billing_cycle_alignment ?? 'start',
+        base_rate: contractLine.custom_rate ?? null,
+        enable_proration: contractLine.enable_proration ?? false,
+        billing_cycle_alignment: contractLine.billing_cycle_alignment ?? 'start',
         updated_at: now,
       });
   }
 
-  if (terms) {
-    await knex('contract_template_line_terms')
-      .insert({
-        tenant,
-        template_line_id: contractLineId,
-        billing_frequency: terms.billing_frequency ?? null,
-        enable_overtime: terms.enable_overtime ?? false,
-        overtime_rate: terms.overtime_rate ?? null,
-        overtime_threshold: terms.overtime_threshold ?? null,
-        enable_after_hours_rate: terms.enable_after_hours_rate ?? false,
-        after_hours_multiplier: terms.after_hours_multiplier ?? null,
-        minimum_billable_time: terms.minimum_billable_time ?? null,
-        round_up_to_nearest: terms.round_up_to_nearest ?? null,
-        created_at: terms.created_at ?? now,
-        updated_at: now,
-      })
-      .onConflict(['tenant', 'template_line_id'])
-      .merge({
-        billing_frequency: terms.billing_frequency ?? null,
-        enable_overtime: terms.enable_overtime ?? false,
-        overtime_rate: terms.overtime_rate ?? null,
-        overtime_threshold: terms.overtime_threshold ?? null,
-        enable_after_hours_rate: terms.enable_after_hours_rate ?? false,
-        after_hours_multiplier: terms.after_hours_multiplier ?? null,
-        minimum_billable_time: terms.minimum_billable_time ?? null,
-        round_up_to_nearest: terms.round_up_to_nearest ?? null,
-        updated_at: now,
-      });
-  }
+  // Terms columns are now stored directly on contract_lines and contract_template_lines
+  // No separate terms table needed after migration 20251028120000
 }
 
 /**
  * Retrieve all contract line mappings for a contract.
+ * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function getContractLineMappings(contractId: string): Promise<IContractLineMapping[]> {
   const currentUser = await getCurrentUser();
@@ -330,7 +295,8 @@ export async function getContractLineMappings(contractId: string): Promise<ICont
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
-        const rows = await trx('contract_template_line_mappings')
+        // Query contract_template_lines directly (mapping data now inlined)
+        const rows = await trx('contract_template_lines')
           .where({ tenant, template_id: contractId })
           .select({
             tenant: 'tenant',
@@ -357,6 +323,7 @@ export async function getContractLineMappings(contractId: string): Promise<ICont
 
 /**
  * Retrieve detailed contract line mappings for a contract.
+ * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function getDetailedContractLines(contractId: string): Promise<any[]> {
   const currentUser = await getCurrentUser();
@@ -377,38 +344,32 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
-        const rows = await trx('contract_template_line_mappings as map')
-          .join('contract_template_lines as lines', function joinTemplateLines() {
-            this.on('map.template_line_id', '=', 'lines.template_line_id')
-              .andOn('map.tenant', '=', 'lines.tenant');
-          })
-          .leftJoin('contract_lines as base', function joinBaseLines() {
-            this.on('lines.template_line_id', '=', 'base.contract_line_id')
-              .andOn('lines.tenant', '=', 'base.tenant');
-          })
+        // Query contract_template_lines directly (mapping data now inlined)
+        const rows = await trx('contract_template_lines as lines')
           .leftJoin('contract_template_line_fixed_config as tfc', function joinTemplateFixedConfig() {
             this.on('lines.template_line_id', '=', 'tfc.template_line_id')
               .andOn('lines.tenant', '=', 'tfc.tenant');
           })
           .where({
-            'map.template_id': contractId,
-            'map.tenant': tenant,
+            'lines.template_id': contractId,
+            'lines.tenant': tenant,
           })
           .select([
-            'map.tenant as tenant',
-            'map.template_id as contract_id',
-            'map.template_line_id as contract_line_id',
-            'map.display_order',
-            'map.custom_rate',
-            'map.created_at',
+            'lines.tenant as tenant',
+            'lines.template_id as contract_id',
+            'lines.template_line_id as contract_line_id',
+            'lines.display_order',
+            'lines.custom_rate',
+            'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
-            'base.is_custom',
+            trx.raw('false as is_custom'),
             'lines.line_type as contract_line_type',
             'lines.minimum_billable_time',
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
-          ]);
+          ])
+          .orderBy('lines.display_order', 'asc');
 
         return rows;
       }
@@ -426,6 +387,7 @@ export async function getDetailedContractLines(contractId: string): Promise<any[
 
 /**
  * Associate a contract line with a contract.
+ * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function addContractLine(
   contractId: string,
@@ -450,7 +412,8 @@ export async function addContractLine(
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
-        const countResult = await trx('contract_template_line_mappings')
+        // Count existing template lines for display_order
+        const countResult = await trx('contract_template_lines')
           .where({ tenant, template_id: contractId })
           .count<{ count: string | number }>('template_line_id as count')
           .first();
@@ -463,27 +426,25 @@ export async function addContractLine(
             : 0;
         const displayOrder = existingCount;
 
+        // Create template line snapshot (this inserts/updates contract_template_lines)
         await ensureTemplateLineSnapshot(trx, tenant, contractId, contractLineId, customRate);
 
-        await trx('contract_template_line_mappings')
-          .insert({
-            tenant,
-            template_id: contractId,
-            template_line_id: contractLineId,
-            display_order: displayOrder,
-            custom_rate: customRate ?? null,
-            created_at: trx.fn.now(),
-          })
-          .onConflict(['tenant', 'template_id', 'template_line_id'])
-          .merge({
-            display_order: displayOrder,
-            custom_rate: customRate ?? null,
-          });
-
-        const row = await trx('contract_template_line_mappings')
+        // Update the display_order and custom_rate on the template line directly
+        await trx('contract_template_lines')
           .where({
             tenant,
+            template_line_id: contractLineId,
+          })
+          .update({
             template_id: contractId,
+            display_order: displayOrder,
+            custom_rate: customRate ?? null,
+            updated_at: trx.fn.now(),
+          });
+
+        const row = await trx('contract_template_lines')
+          .where({
+            tenant,
             template_line_id: contractLineId,
           })
           .first();
@@ -511,6 +472,7 @@ export async function addContractLine(
 
 /**
  * Remove a contract line association.
+ * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function removeContractLine(contractId: string, contractLineId: string): Promise<void> {
   const currentUser = await getCurrentUser();
@@ -531,13 +493,17 @@ export async function removeContractLine(contractId: string, contractLineId: str
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
-        await trx('contract_template_line_mappings')
+        // Unlink by setting template_id to NULL in contract_template_lines
+        await trx('contract_template_lines')
           .where({
             tenant,
             template_id: contractId,
             template_line_id: contractLineId,
           })
-          .delete();
+          .update({
+            template_id: null,
+            updated_at: trx.fn.now(),
+          });
         return;
       }
 
@@ -554,6 +520,7 @@ export async function removeContractLine(contractId: string, contractLineId: str
 
 /**
  * Update metadata for a contract line association.
+ * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
 export async function updateContractLineAssociation(
   contractId: string,
@@ -590,7 +557,8 @@ export async function updateContractLineAssociation(
 
       const template = await isTemplateContract(trx, tenant, contractId);
       if (template) {
-        await trx('contract_template_line_mappings')
+        // Update contract_template_lines directly (mapping data now inlined)
+        await trx('contract_template_lines')
           .where({
             tenant,
             template_id: contractId,
@@ -598,9 +566,10 @@ export async function updateContractLineAssociation(
           })
           .update({
             custom_rate: dbUpdateData.custom_rate ?? null,
+            updated_at: trx.fn.now(),
           });
 
-        const row = await trx('contract_template_line_mappings')
+        const row = await trx('contract_template_lines')
           .where({
             tenant,
             template_id: contractId,

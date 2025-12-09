@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Globe } from 'lucide-react';
+import { AtSign } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
@@ -211,7 +211,7 @@ const ClientPortalDomainSettings = () => {
       <CardHeader>
         <CardTitle>
           <div className="flex flex-wrap items-center gap-2">
-            <Globe className="h-5 w-5" />
+            <AtSign className="h-5 w-5" />
             Custom Domain
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>

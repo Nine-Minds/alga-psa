@@ -2,19 +2,19 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
-import { 
-  FileSpreadsheet, 
-  Building2, 
-  CreditCard, 
-  Clock, 
+import {
+  FileSpreadsheet,
+  Building2,
+  CreditCard,
+  Clock,
   Calendar,
-  DollarSign,
+  Coins,
   FileText,
   AlertCircle,
   TrendingUp,
-  Users,
-  Loader2
+  Users
 } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
 import { Button } from 'server/src/components/ui/Button';
 import { getBillingOverview } from 'server/src/lib/reports/actions';
 import { ReportResult, FormattedMetricValue } from 'server/src/lib/reports/core/types';
@@ -62,7 +62,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         <div className="flex items-center space-x-4">
           <div className="p-3 rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
             {loading ? (
-              <Loader2 className="h-6 w-6 animate-spin text-[rgb(var(--color-primary-500))]" />
+              <Spinner size="md" className="text-[rgb(var(--color-primary-500))]" />
             ) : (
               <Icon className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
             )}
@@ -155,7 +155,7 @@ const Overview = () => {
         <MetricCard
           title="Monthly Revenue"
           value={metrics.monthly_revenue}
-          icon={DollarSign}
+          icon={Coins}
           loading={loading}
           error={hasError}
           subtitle="Current Month"

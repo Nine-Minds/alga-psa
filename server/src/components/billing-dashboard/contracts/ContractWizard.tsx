@@ -35,13 +35,13 @@ export interface BucketOverlayInput {
 }
 
 export interface ContractWizardData {
-  company_id: string;
-  client_id?: string;
+  client_id: string;
   contract_name: string;
   start_date: string;
   end_date?: string;
   description?: string;
   billing_frequency: string;
+  currency_code: string;
   po_number?: string;
   po_amount?: number;
   po_required?: boolean;
@@ -108,13 +108,13 @@ export function ContractWizard({
   const [isTemplateLoading, startTemplateTransition] = useTransition();
 
   const [wizardData, setWizardData] = useState<ContractWizardData>({
-    company_id: '',
     client_id: '',
     contract_name: '',
     start_date: '',
     end_date: undefined,
     description: '',
     billing_frequency: 'monthly',
+    currency_code: 'USD',
     fixed_services: [],
     fixed_base_rate: undefined,
     enable_proration: true,
@@ -151,13 +151,13 @@ export function ContractWizard({
 
   const resetWizard = () => {
     setWizardData({
-      company_id: '',
       client_id: '',
       contract_name: '',
       start_date: '',
       end_date: undefined,
       description: '',
       billing_frequency: 'monthly',
+      currency_code: 'USD',
       fixed_services: [],
       fixed_base_rate: undefined,
       enable_proration: true,
@@ -184,6 +184,7 @@ export function ContractWizard({
       contract_name: snapshot.contract_name ?? prev.contract_name,
       description: snapshot.description ?? prev.description,
       billing_frequency: snapshot.billing_frequency ?? prev.billing_frequency,
+      // currency_code is inherited from client, not from template (templates are currency-neutral)
       fixed_services: snapshot.fixed_services ?? [],
       fixed_base_rate: snapshot.fixed_base_rate,
       enable_proration: snapshot.enable_proration ?? prev.enable_proration,
@@ -219,7 +220,7 @@ export function ContractWizard({
   const buildSubmissionData = (): ClientContractWizardSubmission => ({
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
-    company_id: wizardData.company_id || wizardData.client_id || '',
+    client_id: wizardData.client_id || '',
     start_date: wizardData.start_date,
     end_date: wizardData.end_date,
     po_required: wizardData.po_required,
@@ -236,6 +237,7 @@ export function ContractWizard({
     minimum_billable_time: wizardData.minimum_billable_time,
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,
+    currency_code: wizardData.currency_code,
     template_id: wizardData.template_id,
   });
 
@@ -244,7 +246,7 @@ export function ContractWizard({
 
     switch (stepIndex) {
       case 0:
-        if (!(wizardData.client_id || wizardData.company_id)) {
+        if (!wizardData.client_id) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Client is required' }));
           return false;
         }
@@ -357,7 +359,7 @@ export function ContractWizard({
       return;
     }
 
-    if (!(wizardData.client_id || wizardData.company_id)) {
+    if (!wizardData.client_id) {
       setErrors((prev) => ({
         ...prev,
         [currentStep]: 'Select a client before saving as draft',
@@ -374,8 +376,7 @@ export function ContractWizard({
       const draftData: ContractWizardData = {
         ...wizardData,
         contract_id: result.contract_id,
-        company_id: wizardData.company_id || wizardData.client_id || '',
-        client_id: wizardData.client_id || wizardData.company_id || '',
+        client_id: wizardData.client_id || '',
         is_draft: true,
       };
 

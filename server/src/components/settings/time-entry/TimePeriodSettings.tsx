@@ -6,11 +6,12 @@ import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert'
 import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
 import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from 'server/src/lib/actions/time-period-settings-actions/timePeriodSettingsActions';
 import { ISO8601String } from 'server/src/types/types.d';
 import { formatISO, parseISO } from 'date-fns';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 type FrequencyUnit = 'day' | 'week' | 'month' | 'year';
 
@@ -156,7 +157,17 @@ const TimePeriodSettings: React.FC = () => {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator 
+          layout="stacked" 
+          text="Loading time period settings..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
+  }
 
   return (
     <Card>
@@ -167,23 +178,25 @@ const TimePeriodSettings: React.FC = () => {
       <CardContent>
         <div className="space-y-4">
           {/* Help Text Section */}
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-            <p className="text-sm text-blue-800 font-medium mb-1">Understanding Time Period Settings</p>
-            <p className="text-xs text-blue-700">
-              You can define multiple active settings to create complex billing cycles. For example, to set up bi-monthly periods (1st-15th (eod) and 16th-End of Month):
-            </p>
-            <ul className="list-disc list-inside text-xs text-blue-700 mt-1 space-y-1">
-              <li>
-                <strong>Setting 1:</strong> Frequency: 1, Unit: Month, Start Day: 1, End Day: 16
-              </li>
-              <li>
-                <strong>Setting 2:</strong> Frequency: 1, Unit: Month, Start Day: 16, End Day: End of month (select checkbox)
-              </li>
-            </ul>
-            <p className="text-xs text-blue-700 mt-1">
-              The system uses these settings to suggest and generate time periods for billing. Ensure your settings cover the entire desired cycle without gaps or overlaps based on their effective dates and frequency rules.
-            </p>
-          </div>
+          <Alert variant="info" className="mb-4">
+            <AlertTitle>Understanding Time Period Settings</AlertTitle>
+            <AlertDescription>
+              <p className="text-xs mb-1">
+                You can define multiple active settings to create complex billing cycles. For example, to set up bi-monthly periods (1st-15th (eod) and 16th-End of Month):
+              </p>
+              <ul className="list-disc list-inside text-xs mt-1 space-y-1">
+                <li>
+                  <strong>Setting 1:</strong> Frequency: 1, Unit: Month, Start Day: 1, End Day: 16
+                </li>
+                <li>
+                  <strong>Setting 2:</strong> Frequency: 1, Unit: Month, Start Day: 16, End Day: End of month (select checkbox)
+                </li>
+              </ul>
+              <p className="text-xs mt-1">
+                The system uses these settings to suggest and generate time periods for billing. Ensure your settings cover the entire desired cycle without gaps or overlaps based on their effective dates and frequency rules.
+              </p>
+            </AlertDescription>
+          </Alert>
           {/* End Help Text Section */}
 
           {settings.map((setting): JSX.Element => (

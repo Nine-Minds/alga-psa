@@ -35,6 +35,7 @@ import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { useTenant } from 'server/src/components/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
+import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
 import Documents from 'server/src/components/documents/Documents';
@@ -59,7 +60,17 @@ const formatDate = (value?: string | Date | null): string => {
   }
 };
 
-const ContractDetail: React.FC = () => {
+interface ContractDetailProps {
+  /** Documents fetched server-side when viewing documents tab */
+  serverDocuments?: IDocument[] | null;
+  /** Current user ID fetched server-side */
+  serverUserId?: string | null;
+}
+
+const ContractDetail: React.FC<ContractDetailProps> = ({
+  serverDocuments,
+  serverUserId
+}) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const contractId = searchParams?.get('contractId') as string;
@@ -78,8 +89,10 @@ const ContractDetail: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summary, setSummary] = useState<IContractSummary | null>(null);
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
-  const [documents, setDocuments] = useState<IDocument[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+  // Use server-provided documents if available, otherwise start empty
+  const [documents, setDocuments] = useState<IDocument[]>(serverDocuments || []);
+  // Use server-provided userId if available
+  const [currentUserId, setCurrentUserId] = useState<string>(serverUserId || '');
 
   // Client drawer state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -113,15 +126,30 @@ const ContractDetail: React.FC = () => {
 
   // PO Amount input state for formatting (stores display value while editing)
   const [poAmountInputs, setPoAmountInputs] = useState<Record<string, string>>({});
+  // Sync tab state FROM URL changes (e.g., browser back/forward)
+  // Don't include activeTab in deps - handleTabChange handles state → URL direction
   useEffect(() => {
     const requested = searchParams?.get('contractView');
-    if (requested && validTabs.has(requested) && requested !== activeTab) {
+    if (requested && validTabs.has(requested)) {
       setActiveTab(requested);
-    }
-    if (!requested && activeTab !== 'edit') {
+    } else if (!requested) {
       setActiveTab('edit');
     }
-  }, [searchParams, activeTab, validTabs]);
+  }, [searchParams, validTabs]);
+
+  // Sync documents from server props when they change (e.g., after router.refresh())
+  useEffect(() => {
+    if (serverDocuments !== undefined && serverDocuments !== null) {
+      setDocuments(serverDocuments);
+    }
+  }, [serverDocuments]);
+
+  // Sync userId from server props when it changes
+  useEffect(() => {
+    if (serverUserId) {
+      setCurrentUserId(serverUserId);
+    }
+  }, [serverUserId]);
 
   const updateContractViewParam = useCallback((tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -300,18 +328,11 @@ const ContractDetail: React.FC = () => {
     refreshSummary();
   };
 
-  const handleDocumentCreated = async () => {
-    if (!contractId) {
-      return;
-    }
-
-    try {
-      const documentsData = await getDocumentsByContractId(contractId);
-      setDocuments(documentsData || []);
-    } catch (error) {
-      console.error('Error refreshing documents:', error);
-    }
-  };
+  const handleDocumentCreated = useCallback(async () => {
+    // Trigger server re-fetch by refreshing the route
+    // This causes page.tsx to re-run and fetch fresh documents server-side
+    router.refresh();
+  }, [router]);
 
   const handleOpenClientDrawer = async (clientId: string) => {
     try {
@@ -689,13 +710,13 @@ const ContractDetail: React.FC = () => {
       <div className="p-4 space-y-4">
         <Button
           id="back-to-contracts-error"
-          variant="outline"
+          variant="soft"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts&subtab=client-contracts')}
-          className="gap-2 hover:bg-gray-50"
+          onClick={() => router.push('/msp/billing?tab=client-contracts')}
+          className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Contracts
+          ← Back to Contracts
         </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -712,10 +733,10 @@ const ContractDetail: React.FC = () => {
       <div className="flex flex-col gap-4">
         <Button
           id="back-to-contracts"
-          variant="outline"
+          variant="soft"
           size="sm"
-          onClick={() => router.push('/msp/billing?tab=contracts&subtab=client-contracts')}
-          className="gap-2 self-start hover:bg-gray-50"
+          onClick={() => router.push('/msp/billing?tab=client-contracts')}
+          className="gap-2 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Contracts
@@ -772,6 +793,7 @@ const ContractDetail: React.FC = () => {
                 </Alert>
               )}
 
+              {/* Contract identity - Details, Snapshot, Client */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
                   <CardHeader className="pb-3">
@@ -935,6 +957,10 @@ const ContractDetail: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
+                      <span>Currency</span>
+                      <span className="font-medium">{contract.currency_code || 'USD'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span>Created</span>
                       <span className="font-medium">{formatDate(contract.created_at)}</span>
                     </div>
@@ -1020,6 +1046,12 @@ const ContractDetail: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Contract Overview - What's included at a glance */}
+              <ContractOverview
+                contractId={contractId}
+                onNavigateToLines={() => handleTabChange('lines')}
+              />
 
               <Card>
                 <CardHeader className="pb-3">
@@ -1268,7 +1300,7 @@ const ContractDetail: React.FC = () => {
                                         }
                                       }}
                                       placeholder="0.00"
-                                      className="pl-7"
+                                      className="pl-10"
                                       disabled={!editData.po_required}
                                     />
                                   </div>

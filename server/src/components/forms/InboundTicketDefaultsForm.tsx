@@ -24,11 +24,11 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import type { IBoard, IPriority } from 'server/src/interfaces';
 import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import type { IUser } from '@shared/interfaces/user.interfaces';
 
 export interface InboundTicketDefaultsFormProps {
   defaults?: InboundTicketDefaults | null;
@@ -74,7 +74,7 @@ export function InboundTicketDefaultsForm({
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [usersWithRoles, setUsersWithRoles] = useState<IUserWithRoles[]>([]);
+  const [usersWithRoles, setUsersWithRoles] = useState<IUser[]>([]);
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('all');
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -137,7 +137,7 @@ export function InboundTicketDefaultsForm({
         getAllBoards(true),
         getAllClients(true),
         getAllPriorities('ticket'),
-        getAllUsers(true, 'internal')
+        getAllUsersBasic(true, 'internal')
       ]);
       setBoards(allBoards || []);
       setClients(allClients || []);

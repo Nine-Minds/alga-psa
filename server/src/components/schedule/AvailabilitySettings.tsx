@@ -8,6 +8,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Switch } from 'server/src/components/ui/Switch';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { Calendar } from 'server/src/components/ui/Calendar';
@@ -28,8 +29,8 @@ import {
   IAvailabilitySetting,
   IAvailabilityException
 } from 'server/src/lib/actions/availabilitySettingsActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
@@ -63,7 +64,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const { data: session } = useSession();
 
   // Team management state
-  const [allUsers, setAllUsers] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]);
+  const [allUsers, setAllUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
   const [managedTeams, setManagedTeams] = useState<ITeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [isManager, setIsManager] = useState(false);
@@ -79,7 +80,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [autoApprovalRespectBuffers, setAutoApprovalRespectBuffers] = useState(true);
 
   // User hours state
-  const [users, setUsers] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]);
+  const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [userHours, setUserHours] = useState<Record<number, UserHoursSetting>>({});
   const [userDefaultDuration, setUserDefaultDuration] = useState('60');
@@ -133,16 +134,16 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       }
 
       // Try to load all users (requires user:read permission)
-      let fetchedUsers: Omit<IUserWithRoles, 'tenant'>[] = [];
+      let fetchedUsers: Omit<IUser, 'tenant'>[] = [];
       try {
-        fetchedUsers = await getAllUsers(false, 'internal');
+        fetchedUsers = await getAllUsersBasic(false, 'internal');
         console.log('[AvailabilitySettings] Loaded all users:', fetchedUsers.length);
         setAllUsers(fetchedUsers);
       } catch (error) {
         console.log('[AvailabilitySettings] Cannot load all users (permission denied), loading team members only');
         // If user doesn't have permission to load all users, load team members from managed teams
         if (userManagedTeams.length > 0) {
-          const allMembers: Omit<IUserWithRoles, 'tenant'>[] = [];
+          const allMembers: Omit<IUser, 'tenant'>[] = [];
           userManagedTeams.forEach(team => {
             if (team.members) {
               allMembers.push(...team.members);
@@ -530,11 +531,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   );
 
   // Column definitions for configured users table
-  const configuredUsersColumns: ColumnDefinition<Omit<IUserWithRoles, 'tenant'>>[] = useMemo(() => [
+  const configuredUsersColumns: ColumnDefinition<Omit<IUser, 'tenant'>>[] = useMemo(() => [
     {
       title: 'User Name',
       dataIndex: 'first_name' as any,
-      render: (_, user: Omit<IUserWithRoles, 'tenant'>) => `${user.first_name} ${user.last_name}`
+      render: (_, user: Omit<IUser, 'tenant'>) => `${user.first_name} ${user.last_name}`
     },
     {
       title: 'Status',
@@ -544,7 +545,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     {
       title: 'Action',
       dataIndex: 'user_id' as any,
-      render: (_, user: Omit<IUserWithRoles, 'tenant'>) => (
+      render: (_, user: Omit<IUser, 'tenant'>) => (
         <Button
           id={`edit-user-${user.user_id}`}
           variant="ghost"
@@ -623,20 +624,21 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
-              <div className="flex items-start space-x-3">
-                <Switch
-                  id="auto-approval-enabled"
-                  checked={autoApprovalEnabled}
-                  onCheckedChange={setAutoApprovalEnabled}
-                />
-                <div className="flex-1">
-                  <Label htmlFor="auto-approval-enabled" className="text-base font-semibold">Enable Auto-Approval</Label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Automatically approve appointments that meet the criteria configured below
-                  </p>
+            <Alert variant="info">
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <Switch
+                    id="auto-approval-enabled"
+                    checked={autoApprovalEnabled}
+                    onCheckedChange={setAutoApprovalEnabled}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="auto-approval-enabled" className="text-base font-semibold">Enable Auto-Approval</Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Automatically approve appointments that meet the criteria configured below
+                    </p>
+                  </div>
                 </div>
-              </div>
 
               {autoApprovalEnabled && (
                 <div className="ml-8 space-y-3 border-l-2 border-blue-300 pl-4">
@@ -687,7 +689,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </Alert>
 
             <div>
               <Label htmlFor="general-default-approver">Default Approver</Label>
@@ -734,8 +737,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           </TabsContent>
 
           <TabsContent value="user-hours" className="space-y-4 mt-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-gray-700">
+            <Alert variant="info">
+              <AlertDescription>
                 {isManager ? (
                   <>
                     <strong>Team Manager:</strong> You can configure availability settings for members of your team(s).
@@ -747,8 +750,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     The "Configured Users" table below shows all users with availability settings.
                   </>
                 )}
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
 
             {isManager && managedTeams.length > 1 && (
               <div>

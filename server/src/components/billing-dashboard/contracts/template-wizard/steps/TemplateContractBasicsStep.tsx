@@ -6,6 +6,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+// CURRENCY_OPTIONS removed - templates are now currency-neutral
 import { FileText, Repeat, StickyNote } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateWizard';
 
@@ -87,6 +88,10 @@ export function TemplateContractBasicsStep({
           client.
         </p>
       </div>
+
+      {/* Currency selector removed - templates are now currency-neutral.
+          Currency is inherited from the client when a contract is created from this template.
+          Services have their own currency_code which must match the client's currency. */}
     </div>
   );
 }

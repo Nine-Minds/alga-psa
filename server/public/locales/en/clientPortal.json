@@ -223,6 +223,7 @@
       "dueDate": "Due Date",
       "dueDateText": "Due {{date}}",
       "noDueDate": "No due date",
+      "allPaid": "All invoices paid",
       "amount": "Amount",
       "status": "Status",
       "paid": "Paid",

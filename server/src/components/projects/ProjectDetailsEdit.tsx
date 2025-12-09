@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import { IStatus } from 'server/src/interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -17,12 +17,13 @@ import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelec
 import { TagManager } from 'server/src/components/tags';
 import { updateProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
+import { Dialog } from 'server/src/components/ui/Dialog';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -56,7 +57,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [contacts, setContacts] = useState<{ value: string; label: string }[]>([]);
-  const [users, setUsers] = useState<IUserWithRoles[]>([]);
+  const [users, setUsers] = useState<IUser[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -69,7 +70,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     const fetchData = async () => {
       try {
         const [allUsers, projectStatuses, projectTagsData] = await Promise.all([
-          getAllUsers(),
+          getAllUsersBasic(),
           getProjectStatuses(),
           initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([])
         ]);
@@ -403,63 +404,67 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         </div>
 
         <div className="flex justify-end space-x-3 mt-4">
-          {showCancelConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg">
-                <h3 className="text-lg font-bold mb-4">Unsaved Changes</h3>
-                <p className="mb-4">You have unsaved changes. Are you sure you want to cancel?</p>
-                <div className="flex justify-end space-x-3">
-                  <Button
-                    id='cancel-button'
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCancelConfirm(false)}
-                  >
-                    Continue Editing
-                  </Button>
-                  <Button
-                    id='discard-button'
-                    type="button"
-                    onClick={() => {
-                      setShowCancelConfirm(false);
-                      onCancel();
-                    }}
-                  >
-                    Discard Changes
-                  </Button>
-                </div>
-              </div>
+          <Dialog
+            isOpen={showCancelConfirm}
+            onClose={() => setShowCancelConfirm(false)}
+            title="Unsaved Changes"
+            id="cancel-confirm-dialog"
+            className="max-w-md"
+            draggable={false}
+          >
+            <p className="mb-4">You have unsaved changes. Are you sure you want to cancel?</p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                id="cancel-button"
+                type="button"
+                variant="outline"
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                Continue Editing
+              </Button>
+              <Button
+                id="discard-button"
+                type="button"
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  onCancel();
+                }}
+              >
+                Discard Changes
+              </Button>
             </div>
-          )}
+          </Dialog>
 
-          {showSaveConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-6 rounded-lg">
-                <h3 className="text-lg font-bold mb-4">Save Changes</h3>
-                <p className="mb-4">Are you sure you want to save your changes and close the drawer?</p>
-                <div className="flex justify-end space-x-3">
-                  <Button
-                    id='continue-button'
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowSaveConfirm(false)}
-                  >
-                    Continue Editing
-                  </Button>
-                  <Button
-                    id='save-and-close-button'
-                    type="button"
-                    onClick={(e) => {
-                      setShowSaveConfirm(false);
-                      handleSubmit(e);
-                    }}
-                  >
-                    Save and Close
-                  </Button>
-                </div>
-              </div>
+          <Dialog
+            isOpen={showSaveConfirm}
+            onClose={() => setShowSaveConfirm(false)}
+            title="Save Changes"
+            id="save-confirm-dialog"
+            className="max-w-md"
+            draggable={false}
+          >
+            <p className="mb-4">Are you sure you want to save your changes and close the drawer?</p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                id="continue-button"
+                type="button"
+                variant="outline"
+                onClick={() => setShowSaveConfirm(false)}
+              >
+                Continue Editing
+              </Button>
+              <Button
+                id="save-and-close-button"
+                type="button"
+                onClick={(e) => {
+                  setShowSaveConfirm(false);
+                  handleSubmit(e);
+                }}
+              >
+                Save and Close
+              </Button>
             </div>
-          )}
+          </Dialog>
 
           <Button
             id='cancel-button'

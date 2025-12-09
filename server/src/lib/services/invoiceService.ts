@@ -65,6 +65,41 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
   return client;
 }
 
+/**
+ * Gets the billing email for a client.
+ * Checks billing location first (is_billing_address=true), then falls back to default location.
+ * Returns null if no email is found.
+ */
+export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
+  const location = await knex('client_locations')
+    .where('tenant', tenant)
+    .where('client_id', clientId)
+    .where(function() {
+      this.where('is_billing_address', true)
+          .orWhere('is_default', true);
+    })
+    .orderByRaw('is_billing_address DESC, is_default DESC')
+    .select('email')
+    .first();
+
+  return location?.email || null;
+}
+
+/**
+ * Validates that a client has a billing email address set.
+ * This is required for online payments via Stripe.
+ * Throws an error with a user-friendly message if no email is found.
+ */
+export async function validateClientBillingEmail(knex: Knex, tenant: string, clientId: string, clientName: string): Promise<void> {
+  const billingEmail = await getClientBillingEmail(knex, tenant, clientId);
+  if (!billingEmail) {
+    throw new Error(
+      `Cannot generate invoice: No billing email address for "${clientName}". ` +
+      `Please set an email address on the client's billing location before generating invoices.`
+    );
+  }
+}
+
 // Renamed interface for clarity within manual context
 interface ManualInvoiceItemInput extends NetAmountItem {
   service_id?: string; // Optional for manual items
@@ -349,13 +384,15 @@ async function persistFixedInvoiceCharges(
           }
           // --- End Determine Consolidated Item Tax Region & Taxability ---
 
+          console.log(`[INVOICE DEBUG] Setting fixedPlanDetailsMap for ${clientContractLineId}, charge.base_rate: ${charge.base_rate}`);
           fixedPlanDetailsMap.set(clientContractLineId, {
               consolidatedItem: {
                   invoice_id: invoiceId,
                   service_id: null,
                   description: `Fixed Plan: ${charge.serviceName}`,
                   quantity: 1,
-                  unit_price: Math.round(charge.base_rate * 100),
+                  // base_rate is already in cents from billingEngine, no conversion needed
+                  unit_price: Math.round(charge.base_rate),
                   net_amount: 0,
                   tax_amount: 0,
                   tax_region: consolidatedRegion, // Use the determined region
@@ -433,15 +470,13 @@ async function persistFixedInvoiceCharges(
   }
 
   if (validDbPlanIds.length > 0) {
-    const planDetails = await tx('client_contract_lines as ccl')
-      .join('contract_lines as cl', function() {
-        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('ccl.tenant', '=', 'cl.tenant');
-      })
-      .whereIn('ccl.client_contract_line_id', validDbPlanIds)
-      .andWhere('ccl.tenant', tenant)
+    // Query contract_lines directly since client_contract_line_id is actually a contract_line_id
+    // (see billingEngine.ts getClientContractLinesAndCycle which sets 'cl.contract_line_id as client_contract_line_id')
+    const planDetails = await tx('contract_lines as cl')
+      .whereIn('cl.contract_line_id', validDbPlanIds)
+      .andWhere('cl.tenant', tenant)
       .select(
-        'ccl.client_contract_line_id',
+        'cl.contract_line_id as client_contract_line_id',
         'cl.contract_line_name',
         'cl.custom_rate as contract_line_base_rate'
        );
@@ -470,9 +505,12 @@ async function persistFixedInvoiceCharges(
     planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.contract_line_name}`;
     // Use the plan-level base rate sourced from the contract line if available.
     // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
+    // contract_line_base_rate (from custom_rate) is already stored in cents, no conversion needed
+    const oldUnitPrice = planEntry.consolidatedItem.unit_price;
     planEntry.consolidatedItem.unit_price = planInfo.contract_line_base_rate !== null
-        ? Math.round(planInfo.contract_line_base_rate * 100) // Use plan base rate in cents
+        ? Math.round(planInfo.contract_line_base_rate)
         : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
+    console.log(`[INVOICE DEBUG] Updated unit_price for ${clientContractLineId}: contract_line_base_rate=${planInfo.contract_line_base_rate}, oldUnitPrice=${oldUnitPrice}, newUnitPrice=${planEntry.consolidatedItem.unit_price}`);
 
     let planNetTotal = 0;
     let planTaxTotal = 0;
@@ -650,8 +688,74 @@ export async function calculateAndDistributeTax(
   taxService: TaxService,
   tenant: string
 ): Promise<number> {
+  // Check invoice tax source before calculating
+  const invoice = await tx('invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .select('tax_source')
+    .first();
+
+  const taxSource = invoice?.tax_source || 'internal';
+  console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has tax_source: ${taxSource}`);
+
+  // Handle external tax sources
+  if (taxSource === 'external') {
+    // For external tax source, use external_tax_amount values
+    console.log(`[calculateAndDistributeTax] Using external tax amounts for invoice ${invoiceId}`);
+
+    // Copy external_tax_amount to tax_amount and update total_price
+    const items = await tx('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant })
+      .select('item_id', 'net_amount', 'external_tax_amount');
+
+    for (const item of items) {
+      const externalTax = Number(item.external_tax_amount || 0);
+      const netAmount = Number(item.net_amount || 0);
+      await tx('invoice_charges')
+        .where({ item_id: item.item_id, tenant })
+        .update({
+          tax_amount: externalTax,
+          total_price: netAmount + externalTax
+        });
+    }
+
+    // Return total external tax
+    const totalExternalTax = items.reduce((sum, item) => sum + Number(item.external_tax_amount || 0), 0);
+    console.log(`[calculateAndDistributeTax] External tax total: ${totalExternalTax}`);
+    return totalExternalTax;
+  }
+
+  if (taxSource === 'pending_external') {
+    // For pending external tax, use zero tax (external tax not yet imported)
+    console.log(`[calculateAndDistributeTax] Invoice ${invoiceId} has pending external tax - using zero tax`);
+
+    const items = await tx('invoice_charges')
+      .where({ invoice_id: invoiceId, tenant })
+      .select('item_id', 'net_amount');
+
+    for (const item of items) {
+      const netAmount = Number(item.net_amount || 0);
+      await tx('invoice_charges')
+        .where({ item_id: item.item_id, tenant })
+        .update({
+          tax_amount: 0,
+          total_price: netAmount
+        });
+    }
+
+    return 0;
+  }
+
+  // Internal tax calculation (default)
   // 1. Fetch all relevant data
   console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
+  
+  // Fetch invoice to get currency_code
+  const invoiceForCurrency = await tx('invoices')
+    .select('currency_code')
+    .where({ invoice_id: invoiceId, tenant })
+    .first();
+  const currencyCode = invoiceForCurrency?.currency_code || 'USD';
+
   const invoiceItems: ManualInvoiceItem[] = await tx('invoice_charges') // Use ManualInvoiceItem type for base structure
     .where({ invoice_id: invoiceId, tenant })
     .select('*');
@@ -807,7 +911,9 @@ export async function calculateAndDistributeTax(
           client.client_id,
           regionalTaxableBase,
           Temporal.Now.plainDateISO().toString(), // Consider using invoice date if available
-          region
+          region,
+          true, // is_taxable
+          currencyCode
         );
         regionalTotalTax = regionalTaxResult.taxAmount;
         taxRate = regionalTaxResult.taxRate;

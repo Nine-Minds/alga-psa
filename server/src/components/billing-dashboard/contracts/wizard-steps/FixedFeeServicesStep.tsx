@@ -9,11 +9,13 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, DollarSign, Package, HelpCircle } from 'lucide-react';
+import { Plus, X, Package, HelpCircle, Coins } from 'lucide-react';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -87,9 +89,11 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     updateData({ fixed_services: next });
   };
 
+  const currencySymbol = getCurrencySymbol(data.currency_code);
+
   const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return '$0.00';
-    return `$${(cents / 100).toFixed(2)}`;
+    if (!cents) return `${currencySymbol}0.00`;
+    return `${currencySymbol}${(cents / 100).toFixed(2)}`;
   };
 
   const getDefaultOverlay = (): BucketOverlayInput => ({
@@ -145,11 +149,13 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         {data.fixed_services.length > 0 && (
           <div className="space-y-2">
             <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+              <Coins className="h-4 w-4" />
               Recurring Base Rate *
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                {currencySymbol}
+              </span>
               <Input
                 id="fixed_base_rate"
                 type="text"
@@ -174,7 +180,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   }
                 }}
                 placeholder="0.00"
-                className="pl-7"
+                className="pl-10"
               />
             </div>
             <p className="text-xs text-gray-500">
@@ -278,20 +284,22 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         )}
 
         {data.fixed_services.length > 0 && data.fixed_base_rate && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">Fixed Fee Summary</h4>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p>
-                <strong>Services:</strong> {data.fixed_services.length}
-              </p>
-              <p>
-                <strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}
-              </p>
-              <p>
-                <strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
-              </p>
-            </div>
-          </div>
+          <Alert variant="info" className="mt-6">
+            <AlertDescription>
+              <h4 className="text-sm font-semibold mb-2">Fixed Fee Summary</h4>
+              <div className="text-sm space-y-1">
+                <p>
+                  <strong>Services:</strong> {data.fixed_services.length}
+                </p>
+                <p>
+                  <strong>Recurring Rate:</strong> {formatCurrency(data.fixed_base_rate)}
+                </p>
+                <p>
+                  <strong>Proration:</strong> {data.enable_proration ? 'Enabled' : 'Disabled'}
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {data.fixed_services.length > 0 && (

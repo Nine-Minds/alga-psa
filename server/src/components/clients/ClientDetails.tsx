@@ -12,7 +12,7 @@ import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from '../FeaturePlaceholder';
 import { findTagsByEntityId } from 'server/src/lib/actions/tagActions';
 // import { useTags } from 'server/src/context/TagContext'; // Temporarily removed to fix TagProvider error
-import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from 'server/src/lib/utils/clientFormValidation';
@@ -33,7 +33,7 @@ import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientAssets from './ClientAssets';
 import ClientTickets from './ClientTickets';
@@ -198,8 +198,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
-  const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
-  const [internalUsers, setInternalUsers] = useState<IUserWithRoles[]>([]);
+  const [currentUser, setCurrentUser] = useState<IUser | null>(null);
+  const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   
   // Update editedClient when client prop changes
   useEffect(() => {
@@ -459,7 +459,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       if (internalUsers.length > 0) return;
       setIsLoadingUsers(true);
       try {
-        const users = await getAllUsers();
+        const users = await getAllUsersBasic();
         setInternalUsers(users);
       } catch (error) {
         console.error("Error fetching MSP users:", error);
@@ -477,7 +477,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     const fetchTicketFormOptions = async () => {
       if (!currentUser) return;
       try {
-        const options = await getTicketFormOptions(currentUser);
+        const options = await getTicketFormOptions(currentUser as any);
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
@@ -1161,7 +1161,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
           <BackNav href="/msp/clients">
-            {isInDrawer ? 'Back' : 'Back to Clients'}
+            {isInDrawer ? 'Back' : '← Back to Clients'}
           </BackNav>
         )}
         

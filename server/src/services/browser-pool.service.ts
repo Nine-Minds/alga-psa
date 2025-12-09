@@ -20,7 +20,8 @@ export class BrowserPoolService {
     if (this.activeBrowsers < this.maxBrowsers) {
       const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       });
       this.activeBrowsers++;
       return browser;
@@ -38,7 +39,8 @@ export class BrowserPoolService {
         } else if (this.activeBrowsers < this.maxBrowsers) {
             const browser = await puppeteer.launch({
               headless: true,
-              args: ['--no-sandbox', '--disable-setuid-sandbox'],
+              executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+              args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
             });
             this.activeBrowsers++;
             clearInterval(interval);

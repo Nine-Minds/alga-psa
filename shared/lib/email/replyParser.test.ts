@@ -78,4 +78,30 @@ describe('replyParser', () => {
     expect(result.strategy).toBe('fallback');
     expect(result.sanitizedText).toMatchInlineSnapshot('"Quick confirmation that everything works as expected."');
   });
+
+  it('recovers tokens wrapped/quoted by Gmail', () => {
+    const text = `let's see if replies work now
+*Robert Isaacs* | *CEO*
+2963 Gulf to Bay Blvd. Clearwater, FL | 727-591-7436
+
+
+On Thu, Nov 20, 2025 at 7:58 AM Software <support@nineminds.com> wrote:
+
+> [ALGA-REPLY-TOKEN a83113b5-d30f-4ec9-85ce-0d0ce95fa49a
+> ticketId=a5ea2cf5-f572-436c-b485-9b5ca07a9e17
+> commentId=3de1cc6a-8d4a-4b3c-9a27-72990ab84226]
+> --- Please reply above this line ---
+>
+> --- Please reply above this line ---
+> New Comment Added
+`;
+
+    const result = parseEmailReply({ text });
+
+    expect(result.tokens).toEqual({
+      conversationToken: 'a83113b5-d30f-4ec9-85ce-0d0ce95fa49a',
+      ticketId: 'a5ea2cf5-f572-436c-b485-9b5ca07a9e17',
+      commentId: '3de1cc6a-8d4a-4b3c-9a27-72990ab84226',
+    });
+  });
 });

@@ -217,6 +217,7 @@
       "dueDate": "Data di scadenza",
       "dueDateText": "Scade il {{date}}",
       "noDueDate": "Nessuna data di scadenza",
+      "allPaid": "Tutte le fatture pagate",
       "amount": "Importo",
       "status": "Stato",
       "paid": "Pagata",

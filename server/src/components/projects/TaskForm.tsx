@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
-import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import { getProjectTreeData, getProjectDetails } from 'server/src/lib/actions/project-actions/projectActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getServices } from 'server/src/lib/actions/serviceActions';
+import { IService } from 'server/src/interfaces/billing.interfaces';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -47,7 +49,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/compone
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { useDrawer } from 'server/src/context/DrawerContext';
-import { IWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { IExtendedWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
@@ -62,7 +64,7 @@ interface TaskFormProps {
   onSubmit: (task: IProjectTask | null) => void;
   projectStatuses: ProjectStatus[];
   defaultStatus?: ProjectStatus;
-  users: IUserWithRoles[];
+  users: IUser[];
   mode: 'create' | 'edit';
   onPhaseChange: (phaseId: string) => void;
   inDrawer?: boolean;
@@ -129,6 +131,8 @@ export default function TaskForm({
   } | null>(null);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
+  const [availableServices, setAvailableServices] = useState<IService[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(task?.service_id ?? null);
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
     successors: IProjectTaskDependency[];
@@ -155,10 +159,14 @@ export default function TaskForm({
         // Fetch priorities for project tasks
         const allPriorities = await getAllPriorities('project_task');
         setPriorities(allPriorities);
-        
+
         // Fetch task types
         const types = await getTaskTypes();
         setTaskTypes(types);
+
+        // Fetch services for time entry prefill
+        const servicesResponse = await getServices(1, 999);
+        setAvailableServices(servicesResponse.services);
         
         // Fetch all tasks in the project
         if (phase.project_id) {
@@ -469,7 +477,8 @@ export default function TaskForm({
           checklist_items: checklistItems,
           project_status_mapping_id: statusChanged ? taskToUpdate.project_status_mapping_id : task.project_status_mapping_id,
           task_type_key: selectedTaskType,
-          order_key: task.order_key // Always preserve the original order_key
+          order_key: task.order_key, // Always preserve the original order_key
+          service_id: selectedServiceId
         };
         resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
         onSubmit(resultTask);
@@ -487,7 +496,8 @@ export default function TaskForm({
           due_date: dueDate || null, // Use selected due date or null
           priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
-          task_type_key: selectedTaskType
+          task_type_key: selectedTaskType,
+          service_id: selectedServiceId
         };
 
         // Create the task first
@@ -565,6 +575,7 @@ export default function TaskForm({
       if (pendingTicketLinks.length > 0) return true;
       if (selectedPriorityId !== null) return true; // User explicitly selected a priority
       if (selectedTaskType !== initialTaskType) return true; // Only if changed from initial value
+      if (selectedServiceId !== null) return true; // User explicitly selected a service
       return false; // No changes detected
     }
     
@@ -579,6 +590,7 @@ export default function TaskForm({
     if (actualHours !== Number(task.actual_hours) / 60) return true;
     if (assignedUser !== task.assigned_to) return true;
     if (selectedPriorityId !== task.priority_id) return true;
+    if (selectedServiceId !== (task.service_id ?? null)) return true;
 
     // Compare checklist items
     if (checklistItems.length !== task.checklist_items?.length) return true;
@@ -749,18 +761,19 @@ export default function TaskForm({
         return;
       }
 
-      const workItem: Omit<IWorkItem, 'tenant'> & {
-        project_name?: string;
-        phase_name?: string;
-        task_name?: string;
-      } = {
+      // Get the service name for the selected service
+      const selectedService = availableServices.find(s => s.service_id === selectedServiceId);
+
+      const workItem: Omit<IExtendedWorkItem, 'tenant'> = {
         work_item_id: task.task_id,
         type: 'project_task' as WorkItemType,
         name: `${task.task_name}`,
         description: '',  // Don't copy task description to time entry notes
         project_name: phase.phase_name, // Using phase name as a placeholder
         phase_name: phase.phase_name,
-        task_name: task.task_name
+        task_name: task.task_name,
+        service_id: selectedServiceId || task.service_id || null,
+        service_name: selectedService?.service_name || null,
       };
 
       openDrawer(
@@ -961,6 +974,30 @@ export default function TaskForm({
             />
           </div>
 
+          {/* Service (for time entry prefill) - right under description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Service (for time entries)
+            </label>
+            <CustomSelect
+              id="task-service-select"
+              value={selectedServiceId || ''}
+              onValueChange={(value) => setSelectedServiceId(value || null)}
+              options={[
+                { value: '', label: 'No service' },
+                ...availableServices.map(s => ({
+                  value: s.service_id,
+                  label: s.service_name
+                }))
+              ]}
+              placeholder="Select service for time entry prefill..."
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              When set, this service will be automatically selected when creating time entries from this task.
+            </p>
+          </div>
+
           {/* 2 Column Grid Section */}
           <div className="grid grid-cols-2 gap-4">
             {/* Row 1: Task Type and Priority */}
@@ -1091,54 +1128,58 @@ export default function TaskForm({
                 className="w-full"
               />
             </div>
-            {/* Row 5: Assigned To and Additional Agents */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-              <UserPicker
-                label=""
-                value={assignedUser ?? ''}
-                onValueChange={(value) => {
-                  // Only set to null if explicitly choosing "Not assigned"
-                  setAssignedUser(value === '' ? null : value);
-                }}
-                size="sm"
-                users={users.filter(u => 
-                  !(task?.task_id ? taskResources : tempTaskResources)
-                    .some(r => r.additional_user_id === u.user_id)
-                )}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Additional Agents</label>
-              {!assignedUser ? (
-                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded mb-2">
-                  Please assign a primary agent first before adding additional agents.
-                </div>
-              ) : mode === 'edit' && task?.assigned_to !== assignedUser ? (
-                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded mb-2">
-                  Please save the task after changing the primary agent before adding additional agents.
-                </div>
-              ) : (
-                <div className="mb-2">
+            {/* Row 5: Assigned To and Additional Agents in one row */}
+            <div className="col-span-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
                   <UserPicker
-                    key={`agent-picker-${(task?.task_id ? taskResources : tempTaskResources).length}`}
-                    value=""
-                    onValueChange={(userId) => {
-                      if (userId) {
-                        handleAddAgent(userId);
-                      }
+                    label=""
+                    value={assignedUser ?? ''}
+                    onValueChange={(value) => {
+                      // Only set to null if explicitly choosing "Not assigned"
+                      setAssignedUser(value === '' ? null : value);
                     }}
-                    users={users.filter(u => 
-                      u.user_id !== assignedUser && 
+                    size="sm"
+                    users={users.filter(u =>
                       !(task?.task_id ? taskResources : tempTaskResources)
                         .some(r => r.additional_user_id === u.user_id)
                     )}
-                    size="sm"
-                    placeholder="Select additional agent..."
                   />
                 </div>
-              )}
-              <div className="space-y-2 max-h-32 overflow-y-auto">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Additional Agents</label>
+                  {!assignedUser ? (
+                    <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+                      Please assign a primary agent first.
+                    </div>
+                  ) : mode === 'edit' && task?.assigned_to !== assignedUser ? (
+                    <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+                      Save task after changing primary agent.
+                    </div>
+                  ) : (
+                    <UserPicker
+                      key={`agent-picker-${(task?.task_id ? taskResources : tempTaskResources).length}`}
+                      value=""
+                      onValueChange={(userId) => {
+                        if (userId) {
+                          handleAddAgent(userId);
+                        }
+                      }}
+                      users={users.filter(u =>
+                        u.user_id !== assignedUser &&
+                        !(task?.task_id ? taskResources : tempTaskResources)
+                          .some(r => r.additional_user_id === u.user_id)
+                      )}
+                      size="sm"
+                      placeholder="Select additional agent..."
+                    />
+                  )}
+                </div>
+              </div>
+              {/* Show list of additional agents below the pickers */}
+              {(task?.task_id ? taskResources : tempTaskResources).length > 0 && (
+                <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
                 {(task?.task_id ? taskResources : tempTaskResources).map((resource): JSX.Element => (
                   <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                     <div className="flex items-center gap-2">
@@ -1161,7 +1202,8 @@ export default function TaskForm({
                     </Button>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 

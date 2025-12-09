@@ -21,11 +21,14 @@ const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 
 const descriptionSchema = z.union([z.string().max(2048), z.null()]);
 
+const currencyCodeSchema = z.string().length(3).default('USD'); // ISO 4217 currency code
+
 const baseServiceSchema = z.object({
   service_name: z.string().min(1).max(255),
   custom_service_type_id: uuidSchema,
   billing_method: billingMethodSchema,
   default_rate: defaultRateSchema,
+  currency_code: currencyCodeSchema.optional(), // Currency of default_rate (defaults to USD)
   unit_of_measure: z.string().min(1).max(128),
   category_id: nullableUuidSchema.optional(),
   tax_rate_id: nullableUuidSchema.optional(),

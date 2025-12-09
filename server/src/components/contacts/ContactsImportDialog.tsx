@@ -13,6 +13,7 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
 import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from 'server/src/lib/actions/contact-actions/contactActions';
 import { X, Upload, AlertTriangle, Check, Download } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { parseCSV, unparseCSV, validateCSVHeaders } from 'server/src/lib/utils/csvParser';
 
 interface ContactsImportDialogProps {
@@ -646,13 +647,13 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           {step === 'preview' && validationResults.length > 0 && (
             <div>
               <h3 className="text-lg font-medium mb-4">Preview Import</h3>
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-800">
+              <Alert variant="info" className="mb-4">
+                <AlertDescription>
                   <strong>Total records:</strong> {validationResults.length} |
                   <strong className="ml-2">Valid:</strong> {validationResults.filter(r => r.isValid).length} |
                   <strong className="ml-2">Invalid:</strong> {validationResults.filter(r => !r.isValid).length}
-                </p>
-              </div>
+                </AlertDescription>
+              </Alert>
               <ImportOptions
                 importOptions={importOptions}
                 onOptionsChange={setImportOptions}

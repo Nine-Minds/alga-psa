@@ -670,8 +670,6 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         color: priorityForm.color,
         order_number: orderNumber,
         item_type: 'ticket',
-        created_by: userId,
-        created_at: new Date()
       });
       
       // Add full priority object to data and sort by order_number
@@ -2290,6 +2288,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         }}
                         showTextColor={false}
                         previewType="circle"
+                        colorMode="tag"
                         trigger={
                           <Button
                             id="priority-color-picker-btn"

@@ -26,7 +26,6 @@ import { NotificationBell } from 'server/src/components/notifications/Notificati
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { checkAccountManagementPermission } from 'server/src/lib/actions/permission-actions';
 import type { JobMetrics } from 'server/src/lib/actions/job-actions';
 import { getQueueMetricsAction } from 'server/src/lib/actions/job-actions';
@@ -77,6 +76,12 @@ const quickCreateOptions: QuickCreateOption[] = [
     label: 'Asset',
     description: 'Add a new device to your workspace',
     type: 'asset'
+  },
+  {
+    id: 'create-service',
+    label: 'Service',
+    description: 'Add a new billable service',
+    type: 'service'
   }
 ];
 
@@ -279,19 +284,11 @@ export default function Header({
       const user = await getCurrentUser();
       if (user) {
         setUserData(user);
+        // getCurrentUser already includes avatarUrl
+        setAvatarUrl(user.avatarUrl ?? null);
 
         const hasAccountPermission = await checkAccountManagementPermission();
         setCanManageAccount(hasAccountPermission);
-
-        if (user.tenant && user.user_id) {
-          try {
-            const userAvatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
-            setAvatarUrl(userAvatarUrl);
-          } catch (error) {
-            console.error('Error fetching user avatar URL:', error);
-            setAvatarUrl(null);
-          }
-        }
       }
     };
 

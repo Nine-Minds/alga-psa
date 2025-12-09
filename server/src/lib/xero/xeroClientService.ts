@@ -169,6 +169,50 @@ export interface XeroConnectionsStore {
   [connectionId: string]: XeroStoredConnection;
 }
 
+/** Tax component details from a Xero line item */
+export interface XeroLineItemTaxComponent {
+  name: string;
+  rate: number;
+  /** Tax amount in cents */
+  amount: number;
+}
+
+/** Line item details from a fetched Xero invoice */
+export interface XeroLineItemDetails {
+  lineItemId?: string;
+  description?: string;
+  quantity: number;
+  /** Unit amount in cents */
+  unitAmount: number;
+  /** Line amount in cents (before tax) */
+  lineAmount: number;
+  /** Tax amount in cents */
+  taxAmount: number;
+  taxType?: string;
+  accountCode?: string;
+  itemCode?: string;
+  /** Detailed tax component breakdown (Xero provides this per line) */
+  taxComponents?: XeroLineItemTaxComponent[];
+}
+
+/** Full invoice details from Xero including tax information */
+export interface XeroInvoiceDetails {
+  invoiceId: string;
+  invoiceNumber?: string;
+  reference?: string;
+  status?: string;
+  currencyCode?: string;
+  /** Total amount in cents (including tax) */
+  total: number;
+  /** Total tax in cents */
+  totalTax: number;
+  /** Subtotal in cents (before tax) */
+  subTotal: number;
+  lineAmountTypes?: 'Exclusive' | 'Inclusive' | 'NoTax';
+  lineItems: XeroLineItemDetails[];
+  raw?: Record<string, unknown>;
+}
+
 export interface XeroStoredConnection {
   connectionId: string;
   xeroTenantId: string;
@@ -329,6 +373,79 @@ export class XeroClientService {
           }))
         : []
     }));
+  }
+
+  /**
+   * Fetch a single invoice by its Xero Invoice ID.
+   * Returns the full invoice including line items with tax details.
+   */
+  async getInvoice(invoiceId: string): Promise<XeroInvoiceDetails | null> {
+    try {
+      const response = await this.request<{ Invoices: Array<Record<string, any>> }>({
+        method: 'GET',
+        url: `/Invoices/${invoiceId}`
+      });
+
+      const invoice = Array.isArray(response?.Invoices) ? response.Invoices[0] : undefined;
+      if (!invoice) {
+        return null;
+      }
+
+      return this.mapInvoiceDetails(invoice);
+    } catch (error) {
+      const normalized = this.normalizeError(error);
+      if (normalized.code === 'XERO_API_ERROR') {
+        logger.warn('[XeroClientService] failed to fetch invoice', {
+          tenantId: this.tenantId,
+          connectionId: this.connection.connectionId,
+          invoiceId,
+          error: normalized.message
+        });
+        return null;
+      }
+      throw normalized;
+    }
+  }
+
+  private mapInvoiceDetails(invoice: Record<string, any>): XeroInvoiceDetails {
+    const lineItems = Array.isArray(invoice.LineItems) ? invoice.LineItems : [];
+
+    return {
+      invoiceId: invoice.InvoiceID,
+      invoiceNumber: invoice.InvoiceNumber ?? undefined,
+      reference: invoice.Reference ?? undefined,
+      status: invoice.Status ?? undefined,
+      currencyCode: invoice.CurrencyCode ?? undefined,
+      total: typeof invoice.Total === 'number' ? decimalToCents(invoice.Total) : 0,
+      totalTax: typeof invoice.TotalTax === 'number' ? decimalToCents(invoice.TotalTax) : 0,
+      subTotal: typeof invoice.SubTotal === 'number' ? decimalToCents(invoice.SubTotal) : 0,
+      lineAmountTypes: invoice.LineAmountTypes ?? 'Exclusive',
+      lineItems: lineItems.map((line: Record<string, any>) => this.mapLineItemDetails(line)),
+      raw: invoice
+    };
+  }
+
+  private mapLineItemDetails(line: Record<string, any>): XeroLineItemDetails {
+    const taxComponents = Array.isArray(line.TaxComponents)
+      ? line.TaxComponents.map((component: Record<string, any>) => ({
+          name: component.Name ?? '',
+          rate: typeof component.Rate === 'number' ? component.Rate : 0,
+          amount: typeof component.TaxAmount === 'number' ? decimalToCents(component.TaxAmount) : 0
+        }))
+      : undefined;
+
+    return {
+      lineItemId: line.LineItemID ?? undefined,
+      description: line.Description ?? undefined,
+      quantity: typeof line.Quantity === 'number' ? line.Quantity : 1,
+      unitAmount: typeof line.UnitAmount === 'number' ? decimalToCents(line.UnitAmount) : 0,
+      lineAmount: typeof line.LineAmount === 'number' ? decimalToCents(line.LineAmount) : 0,
+      taxAmount: typeof line.TaxAmount === 'number' ? decimalToCents(line.TaxAmount) : 0,
+      taxType: line.TaxType ?? undefined,
+      accountCode: line.AccountCode ?? undefined,
+      itemCode: line.ItemCode ?? undefined,
+      taxComponents
+    };
   }
 
   async findContactByName(name: string): Promise<ExternalCompanyRecord | null> {
@@ -778,6 +895,10 @@ function normalizeTracking(
 
 function centsToDecimal(value: number): number {
   return Math.round(value) / 100;
+}
+
+function decimalToCents(value: number): number {
+  return Math.round(value * 100);
 }
 
 function formatDate(value?: string | null): string | undefined {

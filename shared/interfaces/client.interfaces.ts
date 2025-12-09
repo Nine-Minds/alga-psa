@@ -21,6 +21,7 @@ export interface IClient {
   state?: string | null;
   zip?: string | null;
   country?: string | null;
+  default_currency_code?: string | null;
   notes?: string | null;
   is_inactive?: boolean | null;
   created_at: string;
@@ -47,6 +48,7 @@ export interface CreateClientInput {
   state?: string;
   zip?: string;
   country?: string;
+  default_currency_code?: string;
   notes?: string;
   properties?: Record<string, any>;
   parent_client_id?: string;
@@ -69,6 +71,7 @@ export interface UpdateClientInput {
   state?: string;
   zip?: string;
   country?: string;
+  default_currency_code?: string;
   notes?: string;
   is_inactive?: boolean;
   properties?: Record<string, any>;

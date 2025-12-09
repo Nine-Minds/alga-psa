@@ -5,10 +5,11 @@ import { createTenantKnex } from 'server/src/lib/db';
 const ContractLineMapping = {
   /**
    * Retrieve all contract line mappings for a contract.
+   * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
    */
   getByContractId: async (contractId: string): Promise<IContractLineMapping[]> => {
     const { knex: db, tenant } = await createTenantKnex();
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for fetching contract line mappings');
     }
@@ -19,7 +20,8 @@ const ContractLineMapping = {
         .first('template_id');
 
       if (templateRecord) {
-        const templateMappings = await db('contract_template_line_mappings')
+        // Query contract_template_lines directly (mapping data now inlined)
+        const templateLines = await db('contract_template_lines')
           .where({ tenant, template_id: contractId })
           .select(
             'tenant',
@@ -30,12 +32,20 @@ const ContractLineMapping = {
             'created_at'
           );
 
-        return templateMappings as IContractLineMapping[];
+        return templateLines as IContractLineMapping[];
       }
 
-      return await db<IContractLineMapping>('contract_line_mappings')
+      // Query contract_lines directly (mapping data now inlined via contract_id column)
+      return await db('contract_lines')
         .where({ contract_id: contractId, tenant })
-        .select('*');
+        .select(
+          'tenant',
+          'contract_id',
+          'contract_line_id',
+          'display_order',
+          'custom_rate',
+          'created_at'
+        ) as IContractLineMapping[];
     } catch (error) {
       console.error(`Error fetching contract line mappings for contract ${contractId}:`, error);
       throw error;
@@ -44,28 +54,31 @@ const ContractLineMapping = {
 
   /**
    * Determine whether a contract line is already linked to a contract.
+   * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
    */
   isContractLineAttached: async (contractId: string, contractLineId: string): Promise<boolean> => {
     const { knex: db, tenant } = await createTenantKnex();
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for checking contract line association');
     }
 
     try {
-      const result = await db('contract_line_mappings')
+      // Check contract_lines directly (contract_id column indicates association)
+      const result = await db('contract_lines')
         .where({
           contract_id: contractId,
           contract_line_id: contractLineId,
           tenant
         })
         .first();
-      
+
       if (result) {
         return true;
       }
 
-      const templateResult = await db('contract_template_line_mappings')
+      // Check contract_template_lines directly
+      const templateResult = await db('contract_template_lines')
         .where({
           template_id: contractId,
           template_line_id: contractLineId,
@@ -82,19 +95,20 @@ const ContractLineMapping = {
 
   /**
    * Link a contract line to a contract.
+   * After migration 20251028090000, this updates contract_lines.contract_id directly.
    */
   addContractLine: async (contractId: string, contractLineId: string, customRate?: number): Promise<IContractLineMapping> => {
     const { knex: db, tenant } = await createTenantKnex();
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for adding contract line');
     }
 
     try {
       const contract = await db('contracts')
-        .where({ 
+        .where({
           contract_id: contractId,
-          tenant 
+          tenant
         })
         .first();
 
@@ -103,9 +117,9 @@ const ContractLineMapping = {
       }
 
       const contractLine = await db('contract_lines')
-        .where({ 
+        .where({
           contract_line_id: contractLineId,
-          tenant 
+          tenant
         })
         .first();
 
@@ -118,21 +132,28 @@ const ContractLineMapping = {
         throw new Error(`Contract line ${contractLineId} is already linked to contract ${contractId}`);
       }
 
-      const now = new Date().toISOString();
-      const mapping = {
-        contract_id: contractId,
-        contract_line_id: contractLineId,
-        display_order: 0,
-        custom_rate: customRate,
-        tenant,
-        created_at: now
-      };
+      // Update contract_lines directly to link it to the contract
+      const [updatedLine] = await db('contract_lines')
+        .where({
+          contract_line_id: contractLineId,
+          tenant
+        })
+        .update({
+          contract_id: contractId,
+          custom_rate: customRate,
+          display_order: 0,
+          updated_at: db.fn.now()
+        })
+        .returning([
+          'tenant',
+          'contract_id',
+          'contract_line_id',
+          'display_order',
+          'custom_rate',
+          'created_at'
+        ]);
 
-      const [createdMapping] = await db<IContractLineMapping>('contract_line_mappings')
-        .insert(mapping)
-        .returning('*');
-
-      return createdMapping;
+      return updatedLine as IContractLineMapping;
     } catch (error) {
       console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
       throw error;
@@ -141,10 +162,11 @@ const ContractLineMapping = {
 
   /**
    * Unlink a contract line from a contract.
+   * After migration 20251028090000, this sets contract_id to NULL in contract_lines.
    */
   removeContractLine: async (contractId: string, contractLineId: string): Promise<void> => {
     const { knex: db, tenant } = await createTenantKnex();
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for removing contract line link');
     }
@@ -175,15 +197,20 @@ const ContractLineMapping = {
         throw new Error(`Cannot remove contract line ${contractLineId} from contract ${contractId} as the contract has associated invoices`);
       }
 
-      const deletedCount = await db('contract_line_mappings')
+      // Unlink by setting contract_id to NULL in contract_lines
+      const updatedCount = await db('contract_lines')
         .where({
           contract_id: contractId,
           contract_line_id: contractLineId,
           tenant
         })
-        .delete();
+        .update({
+          contract_id: null,
+          custom_rate: null,
+          updated_at: db.fn.now()
+        });
 
-      if (deletedCount === 0) {
+      if (updatedCount === 0) {
         throw new Error(`Failed to remove contract line ${contractLineId} from contract ${contractId}`);
       }
     } catch (error) {
@@ -194,14 +221,15 @@ const ContractLineMapping = {
 
   /**
    * Update metadata for a contract line association (e.g., custom rate).
+   * After migration 20251028090000, this updates contract_lines/contract_template_lines directly.
    */
   updateContractLineAssociation: async (
-    contractId: string, 
-    contractLineId: string, 
+    contractId: string,
+    contractLineId: string,
     updateData: Partial<IContractLineMapping>
   ): Promise<IContractLineMapping> => {
     const { knex: db, tenant } = await createTenantKnex();
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for updating contract line association');
     }
@@ -220,20 +248,34 @@ const ContractLineMapping = {
         ...dataToUpdate
       } = updateData;
 
-      const [updatedMapping] = await db<IContractLineMapping>('contract_line_mappings')
+      // Try updating contract_lines directly
+      const [updatedLine] = await db('contract_lines')
         .where({
           contract_id: contractId,
           contract_line_id: contractLineId,
           tenant
         })
-        .update(dataToUpdate)
-        .returning('*');
+        .update({
+          ...dataToUpdate,
+          updated_at: db.fn.now()
+        })
+        .returning([
+          'tenant',
+          'contract_id',
+          'contract_line_id',
+          'display_order',
+          'custom_rate',
+          'created_at'
+        ]);
 
-      if (updatedMapping) {
-        return updatedMapping;
+      if (updatedLine) {
+        return updatedLine as IContractLineMapping;
       }
 
-      const templateUpdatePayload: Record<string, unknown> = {};
+      // Fall back to contract_template_lines
+      const templateUpdatePayload: Record<string, unknown> = {
+        updated_at: db.fn.now()
+      };
       if (dataToUpdate.custom_rate !== undefined) {
         templateUpdatePayload.custom_rate = dataToUpdate.custom_rate;
       }
@@ -241,7 +283,7 @@ const ContractLineMapping = {
         templateUpdatePayload.display_order = dataToUpdate.display_order;
       }
 
-      const [updatedTemplateMapping] = await db('contract_template_line_mappings')
+      const [updatedTemplateLine] = await db('contract_template_lines')
         .where({
           template_id: contractId,
           template_line_id: contractLineId,
@@ -257,11 +299,11 @@ const ContractLineMapping = {
           'created_at',
         ]);
 
-      if (!updatedTemplateMapping) {
+      if (!updatedTemplateLine) {
         throw new Error(`Failed to update contract line ${contractLineId} for contract ${contractId}`);
       }
 
-      return updatedTemplateMapping as IContractLineMapping;
+      return updatedTemplateLine as IContractLineMapping;
     } catch (error) {
       console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
       throw error;
@@ -270,10 +312,11 @@ const ContractLineMapping = {
 
   /**
    * Retrieve contract line associations with metadata for a contract.
+   * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
    */
   getDetailedContractLines: async (contractId: string): Promise<any[]> => {
     const { knex: db, tenant } = await createTenantKnex();
-    
+
     if (!tenant) {
       throw new Error('Tenant context is required for fetching detailed contract line mappings');
     }
@@ -284,65 +327,59 @@ const ContractLineMapping = {
         .first('template_id');
 
       if (templateRecord) {
-        return await db('contract_template_line_mappings as map')
-          .join('contract_template_lines as lines', function joinTemplateLines() {
-            this.on('map.template_line_id', '=', 'lines.template_line_id')
-              .andOn('map.tenant', '=', 'lines.tenant');
-          })
-          .leftJoin('contract_lines as base', function joinBaseLines() {
-            this.on('lines.template_line_id', '=', 'base.contract_line_id')
-              .andOn('lines.tenant', '=', 'base.tenant');
-          })
+        // Query contract_template_lines directly (mapping data now inlined)
+        return await db('contract_template_lines as lines')
           .leftJoin('contract_template_line_fixed_config as tfc', function joinTemplateFixedConfig() {
             this.on('lines.template_line_id', '=', 'tfc.template_line_id')
               .andOn('lines.tenant', '=', 'tfc.tenant');
           })
           .where({
-            'map.template_id': contractId,
-            'map.tenant': tenant,
+            'lines.template_id': contractId,
+            'lines.tenant': tenant,
           })
           .select(
-            'map.tenant as tenant',
-            'map.template_id as contract_id',
-            'map.template_line_id as contract_line_id',
-            'map.display_order',
-            'map.custom_rate',
-            'map.created_at',
+            'lines.tenant as tenant',
+            'lines.template_id as contract_id',
+            'lines.template_line_id as contract_line_id',
+            'lines.display_order',
+            'lines.custom_rate',
+            'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
-            db.raw('COALESCE(base.is_custom, false) as is_custom'),
+            'lines.billing_timing',
+            db.raw('false as is_custom'),
             'lines.line_type as contract_line_type',
             'lines.minimum_billable_time',
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate'
           )
-          .orderBy('map.display_order', 'asc');
+          .orderBy('lines.display_order', 'asc');
       }
 
-      return await db('contract_line_mappings as clm')
-        .join('contract_lines as cl', function() {
-          this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
-              .andOn('clm.tenant', '=', 'cl.tenant');
-        })
-        .leftJoin('contract_line_fixed_config as fc', function() {
-          this.on('cl.contract_line_id', '=', 'fc.contract_line_id')
-              .andOn('cl.tenant', '=', 'fc.tenant');
-        })
+      // Query contract_lines directly (mapping data now inlined via contract_id column)
+      // After migration 20251028120000, contract_line_fixed_config was merged into contract_lines
+      return await db('contract_lines as cl')
         .where({
-          'clm.contract_id': contractId,
-          'clm.tenant': tenant
+          'cl.contract_id': contractId,
+          'cl.tenant': tenant
         })
         .select(
-          'clm.*',
+          'cl.tenant',
+          'cl.contract_id',
+          'cl.contract_line_id',
+          'cl.display_order',
+          'cl.custom_rate',
+          'cl.created_at',
           'cl.contract_line_name',
           'cl.billing_frequency',
+          'cl.billing_timing',
           'cl.is_custom',
           'cl.contract_line_type',
           'cl.minimum_billable_time',
           'cl.round_up_to_nearest',
-          'fc.base_rate as default_rate'
+          'cl.custom_rate as default_rate'
         )
-        .orderBy('clm.display_order', 'asc');
+        .orderBy('cl.display_order', 'asc');
     } catch (error) {
       console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
       throw error;

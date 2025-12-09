@@ -40,6 +40,13 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
         message: t('auth.accessDeniedMessage', 'You do not have permission to access the client portal.')
       });
       setIsAlertOpen(true);
+    } else if (error === 'SessionRevoked') {
+      setAlertInfo({
+        type: 'warning',
+        title: t('auth.sessionEndedTitle', 'Session Ended'),
+        message: t('auth.sessionEndedMessage', 'Your session has been signed out. Please sign in again.')
+      });
+      setIsAlertOpen(true);
     } else if (registered === 'true') {
       setAlertInfo({
         type: 'success',

@@ -79,6 +79,7 @@ export const projectTaskSchema = tenantSchema.extend({
   updated_at: z.date(),
   wbs_code: z.string(),
   due_date: z.date().nullable(),
+  service_id: z.string().uuid().nullable().optional(),
   checklist_items: z.array(z.lazy(() => taskChecklistItemSchema)).optional()
 });
 
@@ -133,7 +134,8 @@ export const createTaskSchema = projectTaskSchema.omit({
   tenant: true,
   wbs_code: true  // wbs_code is auto-generated
 }).extend({
-  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val)
+  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
 });
 
 export const updateTaskSchema = projectTaskSchema.partial().omit({
@@ -142,7 +144,8 @@ export const updateTaskSchema = projectTaskSchema.partial().omit({
   updated_at: true,
   tenant: true
 }).extend({
-  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val)
+  assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
+  service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
 });
 
 export const createChecklistItemSchema = taskChecklistItemSchema.omit({

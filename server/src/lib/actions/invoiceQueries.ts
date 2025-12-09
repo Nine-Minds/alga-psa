@@ -52,7 +52,8 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
     credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
-    invoice_charges: [] // Empty array initially
+    invoice_charges: [], // Empty array initially
+    currencyCode: invoice.currency_code || 'USD'
   };
 }
 
@@ -87,6 +88,7 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
           'invoices.is_manual',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
+          'invoices.currency_code',
           trx.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
@@ -176,6 +178,7 @@ export async function fetchInvoicesByClient(clientId: string): Promise<InvoiceVi
           'invoices.is_manual',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
+          'invoices.currency_code',
           trx.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),

@@ -191,6 +191,7 @@ export class PDFGenerationService {
       subtotal: dbData.subtotal,
       tax: dbData.tax,
       total: dbData.total_amount,
+      currencyCode: (dbData as any).currency_code || (dbData as any).currencyCode || 'USD',
       tenantClient: tenantClientInfo,
     };
   }

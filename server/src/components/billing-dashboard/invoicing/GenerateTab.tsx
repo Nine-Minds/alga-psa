@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import CustomSelect from '../../ui/CustomSelect';
-import { FileText, DollarSign, Receipt } from 'lucide-react';
+import { Coins, FileText, Receipt } from 'lucide-react';
 import { IService, IClientContractLineCycle } from '../../../interfaces/billing.interfaces';
 import { IClient } from '../../../interfaces';
 import { getAvailableBillingPeriods } from '../../../lib/actions/billingAndTax';
@@ -122,7 +122,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
       value: 'prepayment',
       label: (
         <div className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4" />
+          <Coins className="h-4 w-4" />
           <span>Prepayment</span>
         </div>
       )

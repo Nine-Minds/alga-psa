@@ -78,8 +78,8 @@ async function ensureRuntimeDependency(projectDir: string) {
     const pkgRaw = await fs.readFile(pkgPath, 'utf8');
     const pkg = JSON.parse(pkgRaw);
     pkg.dependencies = pkg.dependencies ?? {};
-    if (!pkg.dependencies['@alga/extension-runtime']) {
-      pkg.dependencies['@alga/extension-runtime'] = '^0.1.0';
+    if (!pkg.dependencies['@alga-psa/extension-runtime']) {
+      pkg.dependencies['@alga-psa/extension-runtime'] = '^0.1.0';
     }
     await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
   } catch (err) {

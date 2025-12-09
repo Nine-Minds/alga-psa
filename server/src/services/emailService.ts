@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { getSecret } from '../lib/utils/getSecret';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
 import { createTenantKnex } from 'server/src/lib/db';
@@ -251,13 +252,18 @@ export class EmailService {
       recipientEmail: string; 
       tenantId: string;
     }, 
-    pdfPath: string
+    pdfPath: string,
+    options?: {
+      paymentLink?: string;
+      companyName?: string;
+    }
   ) {
     const { clients } = await getTenantDetails();
     const defaultClient = clients.find(c => c.is_default);
-    const senderClient = defaultClient?.client_name || 'Our Client';
+    const senderClient = options?.companyName || defaultClient?.client_name || 'Our Client';
 
-    const template = await this.getInvoiceEmailTemplate();
+    const hasPaymentLink = !!options?.paymentLink;
+    const template = await this.getInvoiceEmailTemplate(hasPaymentLink);
     const attachments = [{
       filename: `invoice_${invoice.invoice_number}.pdf`,
       path: pdfPath,
@@ -267,11 +273,14 @@ export class EmailService {
     const templateData: InvoiceEmailTemplateData = {
       client_name: invoice.client.name,
       invoice_number: invoice.invoice_number,
-      total_amount: `$${(invoice.total_amount / 100).toFixed(2)}`,
+      total_amount: `${getCurrencySymbol(invoice.currencyCode || 'USD')}${(invoice.total_amount / 100).toFixed(2)}`,
       sender_client: senderClient
     };
 
-    const html = this.renderInvoiceTemplate(template.body, templateData);
+    let html = this.renderInvoiceTemplate(template.body, templateData);
+    if (options?.paymentLink) {
+      html = html.replace(/{{payment_link}}/g, options.paymentLink);
+    }
     const text = this.stripHtml(html);
     const subject = template.subject.replace(/{{([^}]+)}}/g, (_, key) => templateData[key as keyof InvoiceEmailTemplateData] || '');
 
@@ -302,13 +311,26 @@ export class EmailService {
     });
   }
 
-  private async getInvoiceEmailTemplate() {
+  private async getInvoiceEmailTemplate(hasPaymentLink: boolean = false) {
     // TODO: Fetch from database
+    const paymentSection = hasPaymentLink ? `
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="{{payment_link}}"
+             style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+            Pay Now - {{total_amount}}
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px; text-align: center;">
+          Or copy this link to pay: <a href="{{payment_link}}" style="color: #4f46e5;">{{payment_link}}</a>
+        </p>
+    ` : '';
+
     return {
       subject: 'Invoice {{invoice_number}} from {{sender_client}}',
       body: `
         <p>Dear {{client_name}},</p>
         <p>Please find attached your invoice {{invoice_number}} for {{total_amount}}.</p>
+        ${paymentSection}
         <p>Thank you for your business!</p>
         <p>Best regards,<br>{{sender_client}}</p>
       `

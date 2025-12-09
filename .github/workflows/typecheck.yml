@@ -1,0 +1,38 @@
+name: TypeScript Type Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  typecheck:
+    name: Run tsc --noEmit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: |
+          if ! npm ci; then
+            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
+            npm install
+          fi
+
+      - name: Run TypeScript type check
+        working-directory: ./server
+        run: npx tsc --noEmit

@@ -5,7 +5,8 @@ import { IContractTemplateLine } from 'server/src/interfaces/contractTemplate.in
 interface CloneTemplateOptions {
   tenant: string;
   templateContractLineId: string;
-  clientContractLineId: string;
+  /** The contract_line_id to clone into */
+  contractLineId: string;
   templateContractId?: string | null;
   overrideRate?: number | null;
   effectiveDate?: string | null;
@@ -27,11 +28,11 @@ function normalizeNumeric(value: unknown): number | null {
 }
 
 /**
- * Clone contract template data (terms, services, service configuration, pricing overrides)
- * into the client-specific tables.
+ * Clone contract template data (services, service configuration)
+ * into the contract_line_* tables.
  *
- * NOTE: This helper expects the Phase 1 schema migration to be applied so that the
- * `client_contract_*` tables exist.
+ * This copies from contract_template_line_* tables to contract_line_* tables.
+ * The contract_line should already exist before calling this function.
  */
 export async function cloneTemplateContractLine(
   trx: Knex.Transaction,
@@ -40,11 +41,16 @@ export async function cloneTemplateContractLine(
   const {
     tenant,
     templateContractLineId,
-    clientContractLineId,
+    contractLineId,
     templateContractId = null,
     overrideRate = null,
-    effectiveDate = null
   } = options;
+
+  if (!contractLineId) {
+    throw new Error('contractLineId is required');
+  }
+
+  const targetContractLineId = contractLineId;
 
   const templateLine = await trx<IContractTemplateLine>('contract_template_lines')
     .where('tenant', tenant)
@@ -55,15 +61,10 @@ export async function cloneTemplateContractLine(
     throw new Error(`Template contract line ${templateContractLineId} not found`);
   }
 
-  const templateLineTerms = await trx('contract_template_line_terms')
-    .where({ tenant, template_line_id: templateContractLineId })
-    .first();
+  // Clone services from template to contract_line_services
+  await cloneServices(trx, tenant, templateContractLineId, targetContractLineId);
 
-  const billingTiming = (templateLineTerms?.billing_timing ?? 'arrears') as 'arrears' | 'advance';
-
-  await upsertClientContractLineTerms(trx, tenant, clientContractLineId, templateLine, billingTiming);
-  await cloneServices(trx, tenant, templateContractLineId, clientContractLineId, effectiveDate);
-
+  // Resolve the custom rate to apply
   const templateCustomRate = await resolveTemplateCustomRate(
     trx,
     tenant,
@@ -73,73 +74,24 @@ export async function cloneTemplateContractLine(
 
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
-  await trx('client_contract_line_pricing')
-    .insert({
-      tenant,
-      client_contract_line_id: clientContractLineId,
-      template_contract_line_id: templateContractLineId,
-      template_contract_id: templateContractId,
-      custom_rate: appliedCustomRate,
-      created_at: trx.fn.now(),
-      updated_at: trx.fn.now()
-    })
-    .onConflict(['tenant', 'client_contract_line_id'])
-    .merge({
-      template_contract_line_id: templateContractLineId,
-      template_contract_id: templateContractId,
-      custom_rate: appliedCustomRate,
-      updated_at: trx.fn.now()
-    });
+  // Update the contract_line's custom_rate directly (no separate pricing table needed)
+  if (appliedCustomRate !== null) {
+    await trx('contract_lines')
+      .where({ tenant, contract_line_id: targetContractLineId })
+      .update({
+        custom_rate: appliedCustomRate,
+        updated_at: trx.fn.now()
+      });
+  }
 
   return { appliedCustomRate };
-}
-
-async function upsertClientContractLineTerms(
-  trx: Knex.Transaction,
-  tenant: string,
-  clientContractLineId: string,
-  templateLine: IContractTemplateLine,
-  billingTiming: 'arrears' | 'advance'
-) {
-  const payload = {
-    tenant,
-    client_contract_line_id: clientContractLineId,
-    billing_frequency: templateLine.billing_frequency ?? null,
-    enable_overtime: Boolean(templateLine.enable_overtime),
-    overtime_rate: normalizeNumeric(templateLine.overtime_rate),
-    overtime_threshold: templateLine.overtime_threshold ?? null,
-    enable_after_hours_rate: Boolean(templateLine.enable_after_hours_rate),
-    after_hours_multiplier: normalizeNumeric(templateLine.after_hours_multiplier),
-    minimum_billable_time: templateLine.minimum_billable_time ?? null,
-    round_up_to_nearest: templateLine.round_up_to_nearest ?? null,
-    billing_timing: billingTiming,
-    created_at: trx.fn.now(),
-    updated_at: trx.fn.now()
-  };
-
-  await trx('client_contract_line_terms')
-    .insert(payload)
-    .onConflict(['tenant', 'client_contract_line_id'])
-    .merge({
-      billing_frequency: payload.billing_frequency,
-      enable_overtime: payload.enable_overtime,
-      overtime_rate: payload.overtime_rate,
-      overtime_threshold: payload.overtime_threshold,
-      enable_after_hours_rate: payload.enable_after_hours_rate,
-      after_hours_multiplier: payload.after_hours_multiplier,
-      minimum_billable_time: payload.minimum_billable_time,
-      round_up_to_nearest: payload.round_up_to_nearest,
-      billing_timing: payload.billing_timing,
-      updated_at: trx.fn.now()
-    });
 }
 
 async function cloneServices(
   trx: Knex.Transaction,
   tenant: string,
   templateContractLineId: string,
-  clientContractLineId: string,
-  effectiveDate: string | null
+  contractLineId: string
 ) {
   type TemplateServiceRow = {
     service_id: string;
@@ -153,25 +105,21 @@ async function cloneServices(
     .select('service_id', 'quantity', 'custom_rate');
 
   for (const service of services) {
-    const clientContractServiceId = uuidv4();
-
-    await trx('client_contract_services')
+    // Insert into contract_line_services
+    await trx('contract_line_services')
       .insert({
         tenant,
-        client_contract_service_id: clientContractServiceId,
-        client_contract_line_id: clientContractLineId,
+        contract_line_id: contractLineId,
         service_id: service.service_id,
         quantity: service.quantity,
         custom_rate: normalizeNumeric(service.custom_rate),
-        effective_date: effectiveDate,
         created_at: trx.fn.now(),
         updated_at: trx.fn.now()
       })
-      .onConflict(['tenant', 'client_contract_line_id', 'service_id'])
+      .onConflict(['tenant', 'contract_line_id', 'service_id'])
       .merge({
         quantity: service.quantity,
         custom_rate: normalizeNumeric(service.custom_rate),
-        effective_date: effectiveDate,
         updated_at: trx.fn.now()
       });
 
@@ -179,8 +127,8 @@ async function cloneServices(
       trx,
       tenant,
       templateContractLineId,
-      service.service_id,
-      clientContractServiceId
+      contractLineId,
+      service.service_id
     );
   }
 }
@@ -196,8 +144,8 @@ async function cloneServiceConfiguration(
   trx: Knex.Transaction,
   tenant: string,
   templateContractLineId: string,
-  serviceId: string,
-  clientContractServiceId: string
+  contractLineId: string,
+  serviceId: string
 ) {
   const configurations = await trx<TemplateServiceConfigurationRow>('contract_template_line_service_configuration')
     .where('tenant', tenant)
@@ -208,10 +156,12 @@ async function cloneServiceConfiguration(
   for (const configuration of configurations) {
     const newConfigId = uuidv4();
 
-    await trx('client_contract_service_configuration').insert({
+    // Insert into contract_line_service_configuration
+    await trx('contract_line_service_configuration').insert({
       tenant,
       config_id: newConfigId,
-      client_contract_service_id: clientContractServiceId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
       configuration_type: configuration.configuration_type,
       custom_rate: normalizeNumeric(configuration.custom_rate),
       quantity: configuration.quantity,
@@ -229,6 +179,10 @@ async function cloneServiceConfiguration(
 
     if (configuration.configuration_type === 'Usage') {
       await cloneUsageConfig(trx, tenant, configuration.config_id, newConfigId, configuration);
+    }
+
+    if (configuration.configuration_type === 'Fixed') {
+      await cloneFixedConfig(trx, tenant, configuration.config_id, newConfigId);
     }
   }
 }
@@ -253,13 +207,39 @@ async function cloneBucketConfig(
 
   if (!bucketConfig) return;
 
-  await trx('client_contract_service_bucket_config').insert({
+  await trx('contract_line_service_bucket_config').insert({
     tenant,
     config_id: targetConfigId,
     total_minutes: bucketConfig.total_minutes,
     billing_period: bucketConfig.billing_period,
     overage_rate: normalizeNumeric(bucketConfig.overage_rate) ?? 0,
     allow_rollover: bucketConfig.allow_rollover,
+    created_at: trx.fn.now(),
+    updated_at: trx.fn.now()
+  });
+}
+
+type TemplateFixedConfigRow = {
+  base_rate: number | string | null;
+};
+
+async function cloneFixedConfig(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceConfigId: string,
+  targetConfigId: string
+) {
+  const fixedConfig = await trx<TemplateFixedConfigRow>('contract_template_line_service_fixed_config')
+    .where('tenant', tenant)
+    .where('config_id', sourceConfigId)
+    .first('base_rate');
+
+  if (!fixedConfig) return;
+
+  await trx('contract_line_service_fixed_config').insert({
+    tenant,
+    config_id: targetConfigId,
+    base_rate: normalizeNumeric(fixedConfig.base_rate),
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });
@@ -295,7 +275,7 @@ async function cloneHourlyConfig(
       'after_hours_multiplier'
     );
 
-  await trx('client_contract_service_hourly_config')
+  await trx('contract_line_service_hourly_config')
     .insert({
       tenant,
       config_id: targetConfigId,
@@ -321,7 +301,7 @@ async function cloneHourlyConfig(
       updated_at: trx.fn.now(),
     });
 
-  await trx('client_contract_service_hourly_configs')
+  await trx('contract_line_service_hourly_configs')
     .insert({
       tenant,
       config_id: targetConfigId,
@@ -357,7 +337,7 @@ async function cloneUsageConfig(
     .where('config_id', sourceConfigId)
     .first('unit_of_measure', 'enable_tiered_pricing', 'minimum_usage', 'base_rate');
 
-  await trx('client_contract_service_usage_config')
+  await trx('contract_line_service_usage_config')
     .insert({
       tenant,
       config_id: targetConfigId,
@@ -400,15 +380,5 @@ async function resolveTemplateCustomRate(
     return normalizeNumeric(templateLine.custom_rate);
   }
 
-  const contractLine = await trx<CustomRateRow>('contract_lines')
-    .where('tenant', tenant)
-    .where('contract_id', templateContractId)
-    .where('contract_line_id', templateContractLineId)
-    .first('custom_rate');
-
-  if (!contractLine) {
-    return null;
-  }
-
-  return contractLine.custom_rate != null ? normalizeNumeric(contractLine.custom_rate) : null;
+  return null;
 }

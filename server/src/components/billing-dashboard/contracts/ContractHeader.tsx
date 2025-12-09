@@ -4,7 +4,7 @@ import React from 'react';
 import { Badge } from 'server/src/components/ui/Badge';
 import { IContract } from 'server/src/interfaces/contract.interfaces';
 import { IContractSummary } from 'server/src/lib/actions/contractActions';
-import { Calendar, CalendarClock, FileCheck, Layers3 } from 'lucide-react';
+import { Calendar, CalendarClock, FileCheck, Layers3, Coins } from 'lucide-react';
 
 interface ContractHeaderProps {
   contract: IContract;
@@ -56,6 +56,11 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
       label: 'Billing Frequency',
       value: formatFrequency(contract.billing_frequency),
       icon: Calendar,
+    },
+    {
+      label: 'Currency',
+      value: contract.currency_code || 'USD',
+      icon: Coins,
     },
     {
       label: 'Contract Lines',

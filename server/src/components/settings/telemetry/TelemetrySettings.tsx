@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Switch } from "server/src/components/ui/Switch";
 import { Label } from "server/src/components/ui/Label";
+import { Alert, AlertDescription } from "server/src/components/ui/Alert";
 
 export function TelemetrySettings() {
   const [usageStatsEnabled, setUsageStatsEnabled] = useState(false);
@@ -46,12 +47,12 @@ export function TelemetrySettings() {
         </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-        <p className="text-sm text-blue-800">
-          Usage statistics are controlled via the ALGA_USAGE_STATS environment variable. 
+      <Alert variant="info">
+        <AlertDescription>
+          Usage statistics are controlled via the ALGA_USAGE_STATS environment variable.
           Contact your system administrator to modify this setting.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
 
       <div className="bg-gray-50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-gray-900 mb-2">What data is collected</h4>

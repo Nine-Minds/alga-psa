@@ -33,6 +33,7 @@ import { getRemainingBucketUnits, RemainingBucketUnitsResult } from 'server/src/
 import BucketUsageChart from './BucketUsageChart';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface UsageTrackingProps {
   initialServices: IService[];
@@ -569,14 +570,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
             {showContractLineSelector && (
               <div>
                 {eligibleContractLines.length > 1 && (
-                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-md mb-2">
-                    <div className="flex items-center">
-                      <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
-                      <p className="text-sm text-blue-700">
-                        This service appears in multiple contract lines. Please select which contract line to bill against.
-                      </p>
-                    </div>
-                  </div>
+                  <Alert variant="info" className="mb-2">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      This service appears in multiple contract lines. Please select which contract line to bill against.
+                    </AlertDescription>
+                  </Alert>
                 )}
 
                 <div className="flex items-center space-x-1">

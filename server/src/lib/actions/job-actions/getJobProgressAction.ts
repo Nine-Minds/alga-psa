@@ -89,7 +89,11 @@ export async function getJobProgressAction(jobId: string): Promise<JobProgressDa
         failed: details.filter(d => d.status === 'Failed').length,
         pending: details.filter(d => d.status === 'Pending').length,
         active: details.filter(d => d.status === 'Pending').length,
-        queued: details.filter(d => d.status === 'Pending').length
+        queued: details.filter(d => d.status === 'Pending').length,
+        byRunner: {
+          pgboss: 0,
+          temporal: 0
+        }
       }
     };
   } catch (error) {

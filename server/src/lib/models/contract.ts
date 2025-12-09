@@ -101,6 +101,11 @@ const Contract = {
       }
 
       await db.transaction(async (trx) => {
+        // First get client_contract_ids that will be deleted
+        const clientContractIds = await trx('client_contracts')
+          .where({ contract_id: contractId, tenant })
+          .pluck('client_contract_id');
+
         // Delete client contract assignments
         await trx('client_contracts')
           .where({ contract_id: contractId, tenant })
@@ -111,6 +116,13 @@ const Contract = {
           .pluck('contract_line_id');
 
         if (contractLineIds.length > 0) {
+          // Clear contract_line_id in time_entries before deleting contract_lines
+          // (replaces ON DELETE SET NULL behavior)
+          await trx('time_entries')
+            .where({ tenant })
+            .whereIn('contract_line_id', contractLineIds)
+            .update({ contract_line_id: null });
+
           const configIds = await trx('contract_line_service_configuration')
             .where({ tenant })
             .whereIn('contract_line_id', contractLineIds)
@@ -144,11 +156,6 @@ const Contract = {
             .delete();
 
           await trx('contract_line_services')
-            .where({ tenant })
-            .whereIn('contract_line_id', contractLineIds)
-            .delete();
-
-          await trx('contract_line_template_terms')
             .where({ tenant })
             .whereIn('contract_line_id', contractLineIds)
             .delete();

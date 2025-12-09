@@ -6,15 +6,15 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import type { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Download, X, Mail } from 'lucide-react';
-import { getClientInvoiceById, getClientInvoiceLineItems, downloadClientInvoicePdf, sendClientInvoiceEmail } from 'server/src/lib/actions/client-portal-actions/client-billing';
-import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { useTranslation } from '@/lib/i18n/client';
+import toast from 'react-hot-toast';
 
 interface InvoiceDetailsDialogProps {
   invoiceId: string | null;
   isOpen: boolean;
   onClose: () => void;
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 };
 
@@ -28,7 +28,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   const [invoice, setInvoice] = useState<InvoiceViewModel | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeJobs, setActiveJobs] = useState<Set<string>>(new Set());
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const { t } = useTranslation('clientPortal');
 
   // Fetch invoice details when dialog opens
@@ -57,31 +58,55 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
 
   const handleDownloadPdf = async () => {
     if (!invoiceId) return;
-    
+
     setError(null);
+    setIsDownloading(true);
+
     try {
-      const { jobId } = await downloadClientInvoicePdf(invoiceId);
-      if (jobId) {
-        setActiveJobs(prev => new Set(prev).add(jobId));
+      toast.success(t('billing.invoice.downloadStarted', 'Preparing PDF download...'));
+      const result = await downloadClientInvoicePdf(invoiceId);
+
+      if (result.success && result.fileId) {
+        // Trigger download
+        const downloadUrl = `/api/documents/download/${result.fileId}`;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(t('billing.invoice.downloadComplete', 'PDF downloaded successfully.'));
+      } else {
+        toast.error(result.error || t('billing.invoice.downloadFailed', 'Failed to download PDF.'));
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      setError(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+      toast.error(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handleSendEmail = async () => {
     if (!invoiceId) return;
-    
+
     setError(null);
+    setIsSendingEmail(true);
+
     try {
-      const { jobId } = await sendClientInvoiceEmail(invoiceId);
-      if (jobId) {
-        setActiveJobs(prev => new Set(prev).add(jobId));
+      toast.success(t('billing.invoice.emailStarted', 'Sending invoice email...'));
+      const result = await sendClientInvoiceEmail(invoiceId);
+
+      if (result.success) {
+        toast.success(t('billing.invoice.emailSent', 'Invoice email sent successfully.'));
+      } else {
+        toast.error(result.error || t('billing.invoice.sendEmailFailed', 'Failed to send email.'));
       }
     } catch (error) {
       console.error('Failed to send email:', error);
-      setError(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+      toast.error(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -103,7 +128,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.invoice.amount', 'Amount')}</p>
-              <p className="mt-1">${(invoice.total / 100).toFixed(2)}</p>
+              <p className="mt-1">{formatCurrency(invoice.total, invoice.currencyCode)}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.invoice.status', 'Status')}</p>
@@ -119,7 +144,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('billing.invoice.credits', 'Credits')}</p>
-              <p className="mt-1">${(invoice.credit_applied / 100).toFixed(2)}</p>
+              <p className="mt-1">{formatCurrency(invoice.credit_applied, invoice.currencyCode)}</p>
             </div>
           </div>
 
@@ -140,8 +165,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                     <tr key={idx}>
                       <td className="px-3 py-2">{item.description}</td>
                       <td className="px-3 py-2">{item.quantity}</td>
-                      <td className="px-3 py-2">${(item.unit_price / 100).toFixed(2)}</td>
-                      <td className="px-3 py-2">${(item.total_price / 100).toFixed(2)}</td>
+                      <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
+                      <td className="px-3 py-2">{formatCurrency(item.total_price, invoice.currencyCode)}</td>
                     </tr>
                   ))
                 ) : (
@@ -160,14 +185,14 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             <ul className="mt-2 space-y-1">
               <li className="flex justify-between">
                 <span>{t('billing.invoice.tax', 'Tax')}</span>
-                <span>${(invoice.tax / 100).toFixed(2)}</span>
+                <span>{formatCurrency(invoice.tax, invoice.currencyCode)}</span>
               </li>
             </ul>
           </div>
         </div>
       </>
     );
-  }, [invoice, formatDate]);
+  }, [invoice, formatDate, formatCurrency]);
 
   // Loading skeleton for when invoice is being fetched
   const loadingSkeleton = (
@@ -216,19 +241,19 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         <Button
           id="email-invoice-button"
           variant="outline"
-          disabled={!invoice}
+          disabled={!invoice || isSendingEmail}
           onClick={handleSendEmail}
         >
           <Mail className="mr-2 h-4 w-4" />
-          Send Email
+          {isSendingEmail ? 'Sending...' : 'Send Email'}
         </Button>
         <Button
           id="download-invoice-button"
-          disabled={!invoice}
+          disabled={!invoice || isDownloading}
           onClick={handleDownloadPdf}
         >
           <Download className="mr-2 h-4 w-4" />
-          Download
+          {isDownloading ? 'Preparing...' : 'Download'}
         </Button>
       </DialogFooter>
     </Dialog>

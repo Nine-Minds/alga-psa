@@ -35,6 +35,10 @@ const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   contract_name: template.template_name,
   contract_description: template.template_description ?? undefined,
   billing_frequency: template.default_billing_frequency,
+  // currency_code removed from templates - templates are now currency-neutral
+  // When converting to contract, we use USD as default. Actual contract currency
+  // is set from client's default_currency_code when creating a real contract.
+  currency_code: 'USD',
   is_active: template.template_status === 'published',
   status: template.template_status,
   is_template: true,
@@ -340,6 +344,8 @@ export async function updateContract(
       if (typeof updateData.billing_frequency === 'string') {
         templateUpdates.default_billing_frequency = updateData.billing_frequency;
       }
+      // currency_code removed from templates - templates are now currency-neutral
+      // Currency is inherited from the client when a contract is created
       if (updateData.status && ['draft', 'published', 'archived'].includes(updateData.status)) {
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }
@@ -669,5 +675,259 @@ export async function getContractAssignments(contractId: string): Promise<IContr
       throw error;
     }
     throw new Error(`Failed to fetch contract assignments: ${error}`);
+  }
+}
+
+/**
+ * Contract line overview with services for display in the contract overview
+ */
+export interface IContractLineOverview {
+  contract_line_id: string;
+  contract_line_name: string;
+  contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  billing_frequency: string;
+  base_rate: number | null;  // For fixed lines - in cents
+  display_order: number;
+  services: {
+    service_id: string;
+    service_name: string;
+    billing_method: string;
+    custom_rate: number | null;  // In cents
+    quantity: number | null;
+    unit_of_measure: string | null;
+  }[];
+}
+
+/**
+ * Complete contract overview data for at-a-glance display
+ */
+export interface IContractOverview {
+  contractLines: IContractLineOverview[];
+  totalEstimatedMonthlyValue: number | null;  // In cents, null if not calculable
+  serviceCount: number;
+  hasHourlyServices: boolean;
+  hasUsageServices: boolean;
+  hasFixedServices: boolean;
+  currencyCode: string;  // ISO currency code (e.g., 'USD', 'AUD')
+}
+
+/**
+ * Get comprehensive contract overview including contract lines, services, and estimated value
+ */
+export async function getContractOverview(contractId: string): Promise<IContractOverview> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    // Check if this is a template contract
+    const templateRecord = await knex('contract_templates')
+      .where({ tenant, template_id: contractId })
+      .first();
+
+    const isTemplate = Boolean(templateRecord);
+
+    // Get currency code - templates default to USD, contracts have their own currency
+    let currencyCode = 'USD';
+    if (!isTemplate) {
+      const contractRecord = await knex('contracts')
+        .where({ tenant, contract_id: contractId })
+        .select('currency_code')
+        .first();
+      if (contractRecord?.currency_code) {
+        currencyCode = contractRecord.currency_code;
+      }
+    }
+
+    let contractLines: IContractLineOverview[] = [];
+
+    if (isTemplate) {
+      // Get template lines with their services
+      const lines = await knex('contract_template_lines as ctl')
+        .leftJoin('contract_template_line_fixed_config as tfc', function() {
+          this.on('ctl.template_line_id', '=', 'tfc.template_line_id')
+            .andOn('ctl.tenant', '=', 'tfc.tenant');
+        })
+        .where({ 'ctl.template_id': contractId, 'ctl.tenant': tenant })
+        .select([
+          'ctl.template_line_id as contract_line_id',
+          'ctl.template_line_name as contract_line_name',
+          'ctl.line_type as contract_line_type',
+          'ctl.billing_frequency',
+          'ctl.display_order',
+          'tfc.base_rate'
+        ])
+        .orderBy('ctl.display_order', 'asc');
+
+      // Get services for each line
+      for (const line of lines) {
+        const services = await knex('contract_template_line_services as ctls')
+          .leftJoin('service_catalog as s', function() {
+            this.on('ctls.service_id', '=', 's.service_id')
+              .andOn('s.tenant', '=', knex.raw('?', [tenant]));
+          })
+          .where({ 'ctls.template_line_id': line.contract_line_id, 'ctls.tenant': tenant })
+          .select([
+            'ctls.service_id',
+            's.service_name',
+            's.billing_method',
+            'ctls.custom_rate',
+            'ctls.quantity'
+          ]);
+
+        // Get service configurations for rates
+        const configs = await knex('contract_template_line_service_configuration as config')
+          .where({ 'config.template_line_id': line.contract_line_id, 'config.tenant': tenant })
+          .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
+
+        const configMap = new Map(configs.map(c => [c.service_id, c]));
+
+        contractLines.push({
+          contract_line_id: line.contract_line_id,
+          contract_line_name: line.contract_line_name,
+          contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
+          billing_frequency: line.billing_frequency || 'monthly',
+          base_rate: line.base_rate ? Number(line.base_rate) : null,
+          display_order: line.display_order ?? 0,
+          services: services.map(svc => {
+            const config = configMap.get(svc.service_id);
+            return {
+              service_id: svc.service_id,
+              service_name: svc.service_name || 'Unknown Service',
+              billing_method: svc.billing_method || 'fixed',
+              custom_rate: config?.custom_rate ? Number(config.custom_rate) : (svc.custom_rate ? Number(svc.custom_rate) : null),
+              quantity: config?.quantity ?? svc.quantity ?? 1,
+              unit_of_measure: null
+            };
+          })
+        });
+      }
+    } else {
+      // Get regular contract lines with their services
+      // Note: For regular contracts, custom_rate is stored directly on contract_lines table
+      const lines = await knex('contract_lines as cl')
+        .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
+        .select([
+          'cl.contract_line_id',
+          'cl.contract_line_name',
+          'cl.contract_line_type',
+          'cl.billing_frequency',
+          'cl.display_order',
+          'cl.custom_rate as base_rate'
+        ])
+        .orderBy('cl.display_order', 'asc');
+
+      // Get services for each line
+      for (const line of lines) {
+        const services = await knex('contract_line_services as cls')
+          .leftJoin('service_catalog as s', function() {
+            this.on('cls.service_id', '=', 's.service_id')
+              .andOn('s.tenant', '=', knex.raw('?', [tenant]));
+          })
+          .where({ 'cls.contract_line_id': line.contract_line_id, 'cls.tenant': tenant })
+          .select([
+            'cls.service_id',
+            's.service_name',
+            's.billing_method',
+            's.unit_of_measure'
+          ]);
+
+        // Get service configurations for rates
+        const configs = await knex('contract_line_service_configuration as config')
+          .where({ 'config.contract_line_id': line.contract_line_id, 'config.tenant': tenant })
+          .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
+
+        const configMap = new Map(configs.map(c => [c.service_id, c]));
+
+        contractLines.push({
+          contract_line_id: line.contract_line_id,
+          contract_line_name: line.contract_line_name,
+          contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
+          billing_frequency: line.billing_frequency || 'monthly',
+          base_rate: line.base_rate ? Number(line.base_rate) : null,
+          display_order: line.display_order ?? 0,
+          services: services.map(svc => {
+            const config = configMap.get(svc.service_id);
+            return {
+              service_id: svc.service_id,
+              service_name: svc.service_name || 'Unknown Service',
+              billing_method: svc.billing_method || 'fixed',
+              custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
+              quantity: config?.quantity ?? 1,
+              unit_of_measure: svc.unit_of_measure || null
+            };
+          })
+        });
+      }
+    }
+
+    // Calculate totals
+    const serviceCount = contractLines.reduce((acc, line) => acc + line.services.length, 0);
+    const hasFixedServices = contractLines.some(line => line.contract_line_type === 'Fixed');
+    const hasHourlyServices = contractLines.some(line => line.contract_line_type === 'Hourly');
+    const hasUsageServices = contractLines.some(line => line.contract_line_type === 'Usage');
+
+    // Calculate estimated monthly value (only for fixed lines)
+    let totalEstimatedMonthlyValue: number | null = null;
+
+    if (hasFixedServices && !hasHourlyServices && !hasUsageServices) {
+      // All fixed - we can calculate
+      totalEstimatedMonthlyValue = contractLines
+        .filter(line => line.contract_line_type === 'Fixed' && line.base_rate !== null)
+        .reduce((acc, line) => {
+          let monthlyRate = line.base_rate!;
+          // Normalize to monthly
+          if (line.billing_frequency === 'weekly') {
+            monthlyRate = monthlyRate * 4.33;
+          } else if (line.billing_frequency === 'quarterly') {
+            monthlyRate = monthlyRate / 3;
+          } else if (line.billing_frequency === 'semi-annually' || line.billing_frequency === 'semi_annually') {
+            monthlyRate = monthlyRate / 6;
+          } else if (line.billing_frequency === 'annually') {
+            monthlyRate = monthlyRate / 12;
+          }
+          return acc + monthlyRate;
+        }, 0);
+    } else if (hasFixedServices) {
+      // Mixed - calculate fixed portion only
+      totalEstimatedMonthlyValue = contractLines
+        .filter(line => line.contract_line_type === 'Fixed' && line.base_rate !== null)
+        .reduce((acc, line) => {
+          let monthlyRate = line.base_rate!;
+          // Normalize to monthly
+          if (line.billing_frequency === 'weekly') {
+            monthlyRate = monthlyRate * 4.33;
+          } else if (line.billing_frequency === 'quarterly') {
+            monthlyRate = monthlyRate / 3;
+          } else if (line.billing_frequency === 'semi-annually' || line.billing_frequency === 'semi_annually') {
+            monthlyRate = monthlyRate / 6;
+          } else if (line.billing_frequency === 'annually') {
+            monthlyRate = monthlyRate / 12;
+          }
+          return acc + monthlyRate;
+        }, 0);
+    }
+
+    return {
+      contractLines,
+      totalEstimatedMonthlyValue,
+      serviceCount,
+      hasFixedServices,
+      hasHourlyServices,
+      hasUsageServices,
+      currencyCode
+    };
+  } catch (error) {
+    console.error(`Error fetching contract overview for ${contractId}:`, error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to fetch contract overview: ${error}`);
   }
 }

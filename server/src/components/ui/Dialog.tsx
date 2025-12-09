@@ -25,21 +25,24 @@ interface DialogProps {
   initialPosition?: { x?: number; y?: number };
   /** Whether to constrain dragging within viewport */
   constrainToViewport?: boolean;
+  /** Allow content to overflow (for dialogs with dropdowns) */
+  allowOverflow?: boolean;
 }
 
-export const Dialog: React.FC<DialogProps & AutomationProps> = ({ 
-  isOpen, 
-  onClose, 
-  children, 
-  className, 
-  title = '', 
-  id = 'dialog', 
-  hideCloseButton = false, 
-  onKeyDown, 
+export const Dialog: React.FC<DialogProps & AutomationProps> = ({
+  isOpen,
+  onClose,
+  children,
+  className,
+  title = '',
+  id = 'dialog',
+  hideCloseButton = false,
+  onKeyDown,
   onOpenAutoFocus,
   draggable = true,
   initialPosition,
-  constrainToViewport = false
+  constrainToViewport = false,
+  allowOverflow = false
 }) => {
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
@@ -181,7 +184,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
               </>
             )}
           </div>
-          <div className="px-6 pt-3 pb-6 flex-1 overflow-y-auto overflow-x-visible min-h-0">
+          <div className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'}`}>
             <ReflectionParentContext.Provider value={updateDialog.id}>
               {children}
             </ReflectionParentContext.Provider>

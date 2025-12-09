@@ -76,18 +76,17 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
   };
 
   return (
-    <div className="p-4 rounded-lg border border-border-200">
-      <h2 className="text-xl font-bold mb-4 text-text-900">Team Management</h2>
-      {error && <p className="text-accent-500 mb-4">{error}</p>}
+    <div className="p-4 rounded-lg border border-border-200 min-w-0">
+      {error && <p className="text-accent-500 mb-4 break-words">{error}</p>}
       {!showAddForm ? (
         <button
           onClick={() => setShowAddForm(true)}
-          className="w-full mb-4 bg-primary-500 text-white p-2 rounded hover:bg-primary-600 transition-colors"
+          className="w-full mb-4 bg-primary-500 text-white p-2 rounded hover:bg-primary-600 transition-colors whitespace-nowrap"
         >
           Add New Team
         </button>
       ) : (
-        <div className="mb-4">
+        <div className="mb-4 space-y-2">
           <Input
             type="text"
             value={newTeamName}
@@ -102,13 +101,12 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
             buttonWidth="full"
             size="sm"
             placeholder="Select a manager"
-            className="mt-2"
           />
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2">
             <button
               onClick={handleCreateTeam}
               disabled={!newTeamName.trim() || !selectedManagerId}
-              className="flex-1 bg-primary-500 text-white p-2 rounded hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-primary-500 text-white p-2 rounded hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               Create Team
             </button>
@@ -118,7 +116,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
                 setNewTeamName('');
                 setSelectedManagerId('');
               }}
-              className="bg-border-200 text-text-700 p-2 rounded hover:bg-border-300 transition-colors"
+              className="bg-border-200 text-text-700 p-2 rounded hover:bg-border-300 transition-colors whitespace-nowrap"
             >
               Cancel
             </button>
@@ -128,16 +126,17 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
       <h3 className="text-lg font-semibold mb-2 text-text-800">Teams</h3>
       <ul className="space-y-2">
         {teams.map((team: ITeam): React.ReactNode => (
-          <li key={team.team_id} className="flex items-center justify-between p-2 rounded hover:bg-border-50">
+          <li key={team.team_id} className="flex items-center justify-between gap-2 p-2 rounded hover:bg-border-50 min-w-0">
             <button
               onClick={() => onSelectTeam(team)}
-              className="text-left font-medium text-text-700 hover:text-primary-500 transition-colors"
+              className="text-left font-medium text-text-700 hover:text-primary-500 transition-colors flex-1 min-w-0 truncate"
+              title={team.team_name}
             >
               {team.team_name}
             </button>
             <button
               onClick={() => handleDeleteTeam(team)}
-              className="bg-accent-500 text-white px-3 py-1 rounded hover:bg-accent-600 transition-colors"
+              className="bg-accent-500 text-white px-3 py-1 rounded hover:bg-accent-600 transition-colors flex-shrink-0 whitespace-nowrap"
             >
               Delete
             </button>

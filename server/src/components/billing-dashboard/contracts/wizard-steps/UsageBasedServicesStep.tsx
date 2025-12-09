@@ -8,10 +8,12 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Activity, DollarSign } from 'lucide-react';
+import { Plus, X, Activity, Coins } from 'lucide-react';
+import { getCurrencySymbol } from 'server/src/constants/currency';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface UsageBasedServicesStepProps {
   data: ContractWizardData;
@@ -81,11 +83,21 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
   const handleServiceChange = (index: number, serviceId: string) => {
     const service = services.find((s) => s.service_id === serviceId);
     const next = [...(data.usage_services ?? [])];
+
+    // Only auto-fill the rate if the service has a price in the contract's currency
+    let autoFillRate: number | undefined = undefined;
+    if (service?.prices && service.prices.length > 0) {
+      const matchingPrice = service.prices.find(p => p.currency_code === data.currency_code);
+      if (matchingPrice) {
+        autoFillRate = matchingPrice.rate;
+      }
+    }
+
     next[index] = {
       ...next[index],
       service_id: serviceId,
       service_name: service?.service_name || '',
-      unit_rate: service?.default_rate ?? next[index].unit_rate,
+      unit_rate: autoFillRate,
       unit_of_measure: service?.unit_of_measure || next[index].unit_of_measure || 'unit',
     };
     updateData({ usage_services: next });
@@ -131,9 +143,11 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     updateData({ usage_services: next });
   };
 
+  const currencySymbol = getCurrencySymbol(data.currency_code);
+
   const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return '$0.00';
-    return `$${(cents / 100).toFixed(2)}`;
+    if (!cents) return `${currencySymbol}0.00`;
+    return `${currencySymbol}${(cents / 100).toFixed(2)}`;
   };
 
   return (
@@ -180,11 +194,13 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
-                    <DollarSign className="h-3 w-3" />
+                    <Coins className="h-3 w-3" />
                     Rate per Unit
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      {currencySymbol}
+                    </span>
                     <Input
                       id={`unit-rate-${index}`}
                       type="text"
@@ -210,7 +226,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                         }
                       }}
                       placeholder="0.00"
-                      className="pl-7"
+                      className="pl-10"
                     />
                   </div>
                   <p className="text-xs text-gray-500">
@@ -289,25 +305,27 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
       )}
 
       {(data.usage_services?.length ?? 0) > 0 && (
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Usage-Based Summary</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <p>
-              <strong>Services:</strong> {data.usage_services?.length ?? 0}
-            </p>
-            <div className="mt-2 space-y-1">
-              {data.usage_services?.map(
-                (service, idx) =>
-                  service.unit_rate && (
-                    <p key={idx} className="text-xs">
-                      • {service.service_name || `Service ${idx + 1}`}: {formatCurrency(service.unit_rate)}/
-                      {service.unit_of_measure || 'unit'}
-                    </p>
-                  )
-              )}
+        <Alert variant="info" className="mt-6">
+          <AlertDescription>
+            <h4 className="text-sm font-semibold mb-2">Usage-Based Summary</h4>
+            <div className="text-sm space-y-1">
+              <p>
+                <strong>Services:</strong> {data.usage_services?.length ?? 0}
+              </p>
+              <div className="mt-2 space-y-1">
+                {data.usage_services?.map(
+                  (service, idx) =>
+                    service.unit_rate && (
+                      <p key={idx} className="text-xs">
+                        • {service.service_name || `Service ${idx + 1}`}: {formatCurrency(service.unit_rate)}/
+                        {service.unit_of_measure || 'unit'}
+                      </p>
+                    )
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {(data.usage_services?.length ?? 0) > 0 && (

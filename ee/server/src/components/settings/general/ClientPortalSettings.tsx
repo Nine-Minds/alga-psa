@@ -1,3 +1,3 @@
 'use client';
 
-export { default } from '../../../../../../server/src/components/settings/general/ClientPortalSettings';
+export { default } from '@/components/settings/general/ClientPortalSettings';

@@ -1,0 +1,8 @@
+services:
+  server:
+    environment:
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+
+  workflow-worker:
+    environment:
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Card } from 'server/src/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import { AlertTriangle, Info, CheckCircle, HelpCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 
@@ -39,36 +40,35 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
         </TabsList>
         
         <TabsContent value="overview" className="space-y-4">
-          <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-            <h4 className="text-md font-medium text-blue-800 mb-2 flex items-center">
-              <Info className="h-5 w-5 mr-2" />
-              Understanding Contract Line Disambiguation for This Client
-            </h4>
-            <p className="text-sm text-blue-700 mb-3">
-              When a client has multiple contract lines that include the same service, the system needs to determine which contract line to use for time entries and usage records. This guide explains how to manage this situation for this specific client.
-            </p>
-            <div className="bg-white p-3 rounded-md border border-blue-200">
-              <h5 className="text-sm font-medium mb-2">Key Concepts:</h5>
-              <ul className="text-xs space-y-2 text-gray-700">
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Service Overlap:</strong> When the same service appears in multiple contract lines for this client.</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Explicit Selection:</strong> When users must manually choose which contract line to bill against for this client.</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Default Plan:</strong> The system's automatic choice when a service appears in multiple contract lines for this client.</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Bucket Priority:</strong> Bucket contract lines are given priority when disambiguating services for this client.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <Alert variant="info">
+            <AlertTitle>Understanding Contract Line Disambiguation for This Client</AlertTitle>
+            <AlertDescription>
+              <p className="text-sm mb-3">
+                When a client has multiple contract lines that include the same service, the system needs to determine which contract line to use for time entries and usage records. This guide explains how to manage this situation for this specific client.
+              </p>
+              <div className="bg-white p-3 rounded-md border border-primary-200">
+                <h5 className="text-sm font-medium mb-2">Key Concepts:</h5>
+                <ul className="text-xs space-y-2 text-gray-700">
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-primary-500" />
+                    <span><strong>Service Overlap:</strong> When the same service appears in multiple contract lines for this client.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-primary-500" />
+                    <span><strong>Explicit Selection:</strong> When users must manually choose which contract line to bill against for this client.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-primary-500" />
+                    <span><strong>Default Plan:</strong> The system's automatic choice when a service appears in multiple contract lines for this client.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-primary-500" />
+                    <span><strong>Bucket Priority:</strong> Bucket contract lines are given priority when disambiguating services for this client.</span>
+                  </li>
+                </ul>
+              </div>
+            </AlertDescription>
+          </Alert>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 bg-amber-50 border border-amber-100 rounded-md">
@@ -124,15 +124,12 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
         </TabsContent>
         
         <TabsContent value="bestPractices" className="space-y-4">
-          <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-            <h4 className="text-md font-medium text-blue-800 mb-2 flex items-center">
-              <CheckCircle className="h-5 w-5 mr-2" />
-              Best Practices for Contract Line Disambiguation
-            </h4>
-            <p className="text-sm text-blue-700 mb-3">
+          <Alert variant="info">
+            <AlertTitle>Best Practices for Contract Line Disambiguation</AlertTitle>
+            <AlertDescription>
               Follow these best practices to ensure accurate billing and minimize confusion when managing multiple contract lines for this client.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
           
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-md overflow-hidden">
@@ -204,15 +201,12 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
         </TabsContent>
         
         <TabsContent value="scenarios" className="space-y-4">
-          <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-            <h4 className="text-md font-medium text-blue-800 mb-2 flex items-center">
-              <Info className="h-5 w-5 mr-2" />
-              Common Disambiguation Scenarios
-            </h4>
-            <p className="text-sm text-blue-700 mb-3">
+          <Alert variant="info">
+            <AlertTitle>Common Disambiguation Scenarios</AlertTitle>
+            <AlertDescription>
               These examples illustrate how contract line disambiguation works in common scenarios for this client.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
           
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-md overflow-hidden">
@@ -287,15 +281,12 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
         </TabsContent>
         
         <TabsContent value="troubleshooting" className="space-y-4">
-          <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-            <h4 className="text-md font-medium text-blue-800 mb-2 flex items-center">
-              <HelpCircle className="h-5 w-5 mr-2" />
-              Troubleshooting Contract Line Disambiguation
-            </h4>
-            <p className="text-sm text-blue-700 mb-3">
+          <Alert variant="info">
+            <AlertTitle>Troubleshooting Contract Line Disambiguation</AlertTitle>
+            <AlertDescription>
               Solutions for common issues related to contract line disambiguation for this client.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
           
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-md overflow-hidden">

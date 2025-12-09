@@ -5,7 +5,8 @@ export interface Service {
   id: string;
   name: string;
   type: string;
-  tax_rate_id: string | null; // Use tax_rate_id instead
+  tax_rate_id: string | null;
+  tax_percentage: number | null;
 }
 
 export interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
@@ -13,6 +14,12 @@ export interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isDirty?: boolean;
   tempId?: string;
   client_id?: string; // Added for contract line selection
+  tax_rate_id?: string | null; // ID of the applied tax rate
+  tax_percentage?: number | null; // Percentage of the applied tax rate
+  // Service prefill tracking (only for new entries)
+  _isServicePrefilled?: boolean; // True if service was auto-filled from work item
+  _originalServiceId?: string | null; // Original prefilled service ID
+  _serviceOverridden?: boolean; // True if user changed the prefilled service
 }
 
 export interface TimeInputs {

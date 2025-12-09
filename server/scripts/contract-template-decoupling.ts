@@ -88,10 +88,12 @@ async function migrateTenant(trx: Knex.Transaction, tenant: string) {
 
     const templateContractId = clientContract?.template_contract_id ?? clientContract?.contract_id ?? null;
 
+    // Use contract_line_id (which is the actual contract_lines record)
+    // not client_contract_line_id (which was the deprecated mapping table)
     await cloneTemplateContractLine(trx, {
       tenant,
       templateContractLineId,
-      clientContractLineId: assignment.client_contract_line_id,
+      contractLineId: assignment.contract_line_id,
       templateContractId,
       overrideRate: assignment.custom_rate != null ? Number(assignment.custom_rate) : null,
       effectiveDate: assignment.start_date

@@ -417,9 +417,9 @@ export async function copyPresetToContractLine(
 
             const contractLineId = contractLine.contract_line_id;
 
-            // 3. Add the contract line to the contract by directly inserting into the mapping table
-            // We can't use addContractLine() because it creates its own transaction and session
-            const countResult = await trx('contract_line_mappings')
+            // 3. Link the contract line to the contract by updating contract_lines directly
+            // After migration 20251028090000, data is stored directly in contract_lines
+            const countResult = await trx('contract_lines')
                 .where({ tenant: tenantId, contract_id: contractId })
                 .count<{ count: string | number }>('contract_line_id as count')
                 .first();
@@ -431,14 +431,14 @@ export async function copyPresetToContractLine(
                         : Number(countResult.count)
                     : 0;
 
-            await trx('contract_line_mappings').insert({
-                tenant: tenantId,
-                contract_id: contractId,
-                contract_line_id: contractLineId,
-                display_order: existingCount,
-                custom_rate: null,
-                created_at: trx.fn.now()
-            });
+            await trx('contract_lines')
+                .where({ tenant: tenantId, contract_line_id: contractLineId })
+                .update({
+                    contract_id: contractId,
+                    display_order: existingCount,
+                    custom_rate: null,
+                    updated_at: trx.fn.now()
+                });
 
             // 4. Copy services and their configurations
             const presetServices = await ContractLinePresetService.getByPresetId(trx, presetId);
@@ -577,5 +577,227 @@ export async function copyPresetToContractLine(
             throw error;
         }
         throw new Error(`Failed to copy preset to contract line: ${error}`);
+    }
+}
+
+/**
+ * Service configuration for custom contract line creation
+ */
+export interface CustomContractLineServiceConfig {
+    service_id: string;
+    quantity?: number;
+    custom_rate?: number;  // Rate in cents
+    unit_of_measure?: string;  // For usage-based services
+    bucket_overlay?: {
+        total_minutes: number;
+        overage_rate: number;
+        allow_rollover: boolean;
+        billing_period: 'weekly' | 'monthly';
+    } | null;
+}
+
+/**
+ * Input data for creating a custom contract line
+ */
+export interface CreateCustomContractLineInput {
+    contract_line_name: string;
+    contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+    billing_frequency: string;
+    billing_timing?: 'arrears' | 'advance';
+    services: CustomContractLineServiceConfig[];
+    // Fixed-specific config
+    base_rate?: number | null;  // For Fixed type, overall base rate
+    enable_proration?: boolean;
+    // Hourly-specific config
+    minimum_billable_time?: number;
+    round_up_to_nearest?: number;
+}
+
+/**
+ * Create a custom contract line directly for a contract (without using a preset)
+ * This creates a new contract line with the provided configuration and links it to the specified contract
+ */
+export async function createCustomContractLine(
+    contractId: string,
+    input: CreateCustomContractLineInput
+): Promise<string> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        const tenantId: string = tenant;
+
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(currentUser, 'billing', 'create', trx)) {
+                throw new Error('Permission denied: Cannot create contract lines');
+            }
+
+            // 1. Validate the input
+            if (!input.contract_line_name?.trim()) {
+                throw new Error('Contract line name is required');
+            }
+
+            if (!input.services || input.services.length === 0) {
+                throw new Error('At least one service is required');
+            }
+
+            // 2. Create the contract line
+            const minBillableTime = input.contract_line_type === 'Hourly'
+                ? (input.minimum_billable_time ?? 15)
+                : undefined;
+
+            const roundUpToNearest = input.contract_line_type === 'Hourly'
+                ? (input.round_up_to_nearest ?? 15)
+                : undefined;
+
+            const contractLineData: Omit<IContractLine, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'> = {
+                contract_line_name: input.contract_line_name,
+                contract_line_type: input.contract_line_type,
+                billing_frequency: input.billing_frequency,
+                billing_timing: input.billing_timing ?? 'advance',
+                service_category: undefined,
+                is_custom: true,  // Mark as custom since it's not from a preset
+                ...(input.contract_line_type === 'Hourly' ? {
+                    minimum_billable_time: minBillableTime,
+                    round_up_to_nearest: roundUpToNearest,
+                } : {}),
+            };
+
+            const contractLine = await ContractLine.create(trx, contractLineData);
+
+            if (!contractLine.contract_line_id) {
+                throw new Error('Failed to create contract line: missing contract_line_id');
+            }
+
+            const contractLineId = contractLine.contract_line_id;
+
+            // 3. Link the contract line to the contract
+            const countResult = await trx('contract_lines')
+                .where({ tenant: tenantId, contract_id: contractId })
+                .count<{ count: string | number }>('contract_line_id as count')
+                .first();
+
+            const existingCount =
+                countResult?.count != null
+                    ? typeof countResult.count === 'string'
+                        ? Number.parseInt(countResult.count, 10)
+                        : Number(countResult.count)
+                    : 0;
+
+            await trx('contract_lines')
+                .where({ tenant: tenantId, contract_line_id: contractLineId })
+                .update({
+                    contract_id: contractId,
+                    display_order: existingCount,
+                    custom_rate: null,
+                    updated_at: trx.fn.now()
+                });
+
+            // 4. Create service configurations
+            const configService = new ContractLineServiceConfigurationService(trx, tenantId);
+
+            for (const serviceConfig of input.services) {
+                // Insert into contract_line_services table
+                await trx('contract_line_services').insert({
+                    contract_line_id: contractLineId,
+                    service_id: serviceConfig.service_id,
+                    tenant: tenantId
+                });
+
+                // Create the base configuration
+                const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+                    contract_line_id: contractLineId,
+                    service_id: serviceConfig.service_id,
+                    configuration_type: input.contract_line_type,
+                    custom_rate: serviceConfig.custom_rate ?? undefined,
+                    quantity: serviceConfig.quantity ?? 1,
+                    instance_name: undefined,
+                    tenant: tenantId
+                };
+
+                // Create type-specific config based on contract line type
+                let typeConfig: any = {};
+
+                if (input.contract_line_type === 'Hourly') {
+                    typeConfig = {
+                        hourly_rate: serviceConfig.custom_rate,
+                        minimum_billable_time: minBillableTime,
+                        round_up_to_nearest: roundUpToNearest
+                    };
+                } else if (input.contract_line_type === 'Usage') {
+                    typeConfig = {
+                        unit_of_measure: serviceConfig.unit_of_measure || 'unit',
+                        base_rate: serviceConfig.custom_rate,
+                        enable_tiered_pricing: false,
+                        minimum_usage: undefined
+                    };
+                }
+
+                // Create the configuration record
+                await configService.createConfiguration(baseConfig, typeConfig);
+
+                // Handle bucket overlay if present
+                if (serviceConfig.bucket_overlay &&
+                    serviceConfig.bucket_overlay.total_minutes != null &&
+                    serviceConfig.bucket_overlay.overage_rate != null) {
+
+                    const bucketConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+                        contract_line_id: contractLineId,
+                        service_id: serviceConfig.service_id,
+                        configuration_type: 'Bucket',
+                        custom_rate: undefined,
+                        quantity: undefined,
+                        instance_name: undefined,
+                        tenant: tenantId
+                    };
+
+                    const bucketTypeConfig = {
+                        total_minutes: Math.max(0, Math.round(serviceConfig.bucket_overlay.total_minutes)),
+                        billing_period: serviceConfig.bucket_overlay.billing_period || input.billing_frequency,
+                        overage_rate: Math.max(0, Math.round(serviceConfig.bucket_overlay.overage_rate)),
+                        allow_rollover: serviceConfig.bucket_overlay.allow_rollover ?? false
+                    };
+
+                    await configService.createConfiguration(bucketConfig, bucketTypeConfig);
+                }
+            }
+
+            // 5. Create type-specific config for Fixed type
+            if (input.contract_line_type === 'Fixed') {
+                const fixedConfigData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> = {
+                    contract_line_id: contractLineId,
+                    base_rate: input.base_rate ?? null,
+                    enable_proration: input.enable_proration ?? false,
+                    billing_cycle_alignment: 'start',
+                    tenant: tenantId
+                };
+                const fixedConfigModel = new ContractLineFixedConfig(trx, tenantId);
+                await fixedConfigModel.upsert(fixedConfigData);
+            }
+
+            // Track analytics
+            analytics.capture(AnalyticsEvents.BILLING_RULE_CREATED, {
+                contract_line_id: contractLineId,
+                contract_line_name: contractLine.contract_line_name,
+                contract_line_type: contractLine.contract_line_type,
+                is_custom: true,
+                contract_id: contractId
+            }, currentUser.user_id);
+
+            return contractLineId;
+        });
+    } catch (error) {
+        console.error(`Error creating custom contract line for contract ${contractId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Failed to create custom contract line: ${error}`);
     }
 }

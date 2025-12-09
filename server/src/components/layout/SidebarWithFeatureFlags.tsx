@@ -9,7 +9,8 @@ import {
   bottomMenuItems,
   MenuItem,
   NavigationSection,
-  menuItems as legacyMenuItems
+  menuItems as legacyMenuItems,
+  NavMode
 } from '../../config/menuConfig';
 import { analytics } from 'server/src/lib/analytics/client';
 
@@ -17,6 +18,8 @@ interface SidebarWithFeatureFlagsProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   disableTransition?: boolean;
+  mode?: NavMode;
+  onBackToMain?: () => void;
 }
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
@@ -64,6 +67,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
       disableTransition={props.disableTransition}
+      mode={props.mode}
+      onBackToMain={props.onBackToMain}
     />
   );
 }

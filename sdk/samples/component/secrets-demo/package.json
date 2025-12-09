@@ -4,21 +4,18 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
-    "build:js": "tsup src/handler.ts --format esm --out-dir dist/js --clean",
-    "build:component": "jco componentize dist/js/handler.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/component.wasm",
-    "build": "npm run clean && npm run build:js && npm run build:component",
+    "build": "alga build",
     "postbuild": "node ./scripts/postbuild.mjs",
+    "pack": "alga pack",
     "test": "vitest"
   },
   "dependencies": {
-    "@alga/extension-runtime": "file:../../extension-runtime",
+    "@alga-psa/extension-runtime": "^0.2.0",
     "@mongodb-js/zstd": "^7.0.0"
   },
   "devDependencies": {
-    "@bytecodealliance/componentize-js": "^0.19.3",
+    "@alga-psa/cli": "^0.2.0",
     "rimraf": "^5.0.0",
-    "tsup": "^7.2.0",
-    "typescript": "^5.4.0",
     "vitest": "^3.0.7"
   }
 }

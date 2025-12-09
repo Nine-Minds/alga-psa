@@ -18,10 +18,12 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
-import { Search, Eye, EyeOff, Info } from 'lucide-react';
+import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -506,22 +508,23 @@ const fetchContacts = async (): Promise<void> => {
       <CardContent>
         {/* License Usage Banner for MSP Portal */}
         {portalType === 'msp' && licenseUsage && (
-          <div
+          <Alert
             id="msp-licence-usage-banner"
-            className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Info size={16} className="text-blue-600" />
-              <span className="text-sm text-blue-900">
+            variant="info"
+            className="mb-4"
+          >
+            <AlertDescription className="flex items-center justify-between">
+              <span>
                 MSP users: {licenseUsage.used}
                 {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licenses used` : ' (No limit)'}
               </span>
-            </div>
-            {licenseUsage.limit !== null && licenseUsage.remaining === 0 && (
-              <span className="text-sm text-blue-700">
-                To add a new user you must purchase additional licenses
-              </span>
-            )}
-          </div>
+              {licenseUsage.limit !== null && licenseUsage.remaining === 0 && (
+                <span>
+                  To add a new user you must purchase additional licenses
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
         )}
         <div className="flex justify-between mb-4">
           <div className="flex gap-6 items-center">
@@ -826,7 +829,13 @@ const fetchContacts = async (): Promise<void> => {
           </div>
         )}
         {loading ? (
-          <p>Loading users...</p>
+          <div className="flex items-center justify-center py-8">
+            <LoadingIndicator 
+              layout="stacked" 
+              text="Loading users..."
+              spinnerProps={{ size: 'md' }}
+            />
+          </div>
         ) : (
           <UserList 
             users={filteredUsers} 

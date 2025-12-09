@@ -23,7 +23,7 @@ interface BillingOverviewTabProps {
   bucketUsage: ClientBucketUsageResult[];
   isBucketUsageLoading: boolean;
   isLoading: boolean;
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
   onViewAllInvoices?: () => void;
 }
@@ -73,21 +73,42 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     </Card>
   ), [contractLine]);
 
+  // Find the most recent unpaid invoice for the "Next Invoice" card
+  const nextInvoice = useMemo(() => {
+    // Filter to unpaid invoices and sort by due_date ascending to get the nearest due
+    const unpaidInvoices = invoices.filter(inv =>
+      inv.status !== 'paid' && inv.status !== 'cancelled'
+    );
+    if (unpaidInvoices.length === 0) return null;
+    // Sort by due_date ascending (nearest due first)
+    // due_date is DateValue type, convert to string first
+    return unpaidInvoices.sort((a, b) => {
+      const dateStrA = a.due_date ? String(a.due_date) : '';
+      const dateStrB = b.due_date ? String(b.due_date) : '';
+      const dateA = dateStrA ? new Date(dateStrA).getTime() : Infinity;
+      const dateB = dateStrB ? new Date(dateStrB).getTime() : Infinity;
+      return dateA - dateB;
+    })[0];
+  }, [invoices]);
+
   // Memoize the invoice card to prevent unnecessary re-renders
   const invoiceCard = useMemo(() => (
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500">{t('billing.nextInvoice')}</p>
-          {invoices.length > 0 ? (
+          {nextInvoice ? (
             <>
               <p className="mt-2 text-3xl font-semibold">
-                {invoices[0]?.total_amount ? formatCurrency(invoices[0].total_amount) : '$0.00'}
+                {formatCurrency(nextInvoice.total_amount ?? 0, nextInvoice.currencyCode)}
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                {invoices[0]?.invoice_date ? t('billing.invoice.dueDateText', { date: formatDate(invoices[0].invoice_date) }) : t('billing.invoice.noDueDate')}
+                {nextInvoice.due_date ? t('billing.invoice.dueDateText', { date: formatDate(nextInvoice.due_date) }) : t('billing.invoice.noDueDate')}
               </p>
             </>
+          ) : invoices.length > 0 ? (
+            // All invoices are paid/cancelled
+            <p className="mt-2 text-lg text-gray-500">{t('billing.invoice.allPaid')}</p>
           ) : (
             <>
               <Skeleton className="mt-2 h-8 w-3/4" />
@@ -110,7 +131,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {t('billing.viewAllInvoices')}
       </Button>
     </Card>
-  ), [invoices, formatCurrency, formatDate, onViewAllInvoices]);
+  ), [nextInvoice, invoices.length, formatCurrency, formatDate, onViewAllInvoices, t]);
 
   return (
     <>

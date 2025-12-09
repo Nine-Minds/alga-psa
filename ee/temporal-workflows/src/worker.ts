@@ -1,12 +1,14 @@
 import { Worker, NativeConnection } from "@temporalio/worker";
 import { createLogger, format, transports } from "winston";
 import * as activities from "./activities/index.js";
+import { initializeJobHandlersForWorker } from "./activities/job-activities.js";
 import * as dotenv from "dotenv";
 import express from "express";
 import {
   validateStartup,
   logConfiguration,
 } from "./config/startupValidation.js";
+import { setupSchedules } from "./schedules/setupSchedules.js";
 
 // Load environment variables
 dotenv.config();
@@ -41,7 +43,8 @@ interface WorkerConfig {
  * Get worker configuration from environment variables
  */
 function getWorkerConfig(): WorkerConfig {
-  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows"];
+  // Include alga-jobs queue for generic job execution
+  const defaultQueues = ["tenant-workflows", "portal-domain-workflows", "email-domain-workflows", "alga-jobs"];
   const queuesEnv =
     process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
 
@@ -197,9 +200,21 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
+    // Initialize job handlers for the generic job workflow
+    try {
+      await initializeJobHandlersForWorker();
+      logger.info("Job handlers initialized successfully");
+    } catch (error) {
+      logger.error("Failed to initialize job handlers:", error);
+      process.exit(1);
+    }
+
     // Get configuration
     const config = getWorkerConfig();
     logger.info("Worker configuration", config);
+
+    // Initialize schedules
+    await setupSchedules();
 
     const workers = await createWorkers(config);
 

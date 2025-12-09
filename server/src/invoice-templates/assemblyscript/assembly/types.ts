@@ -31,6 +31,7 @@ export class TenantClient {
 export class InvoiceViewModel {
   invoiceNumber: string = "";
   issueDate: string = "";
+  currencyCode: string = "USD";
   customer: Customer | null = null;
   tenantClient: TenantClient | null = null;
   items: Array<InvoiceItem> = [];

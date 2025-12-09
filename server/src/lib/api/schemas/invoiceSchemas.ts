@@ -307,6 +307,15 @@ const invoicePaymentSchema = z.object({
   notes: z.string().optional()
 });
 
+// Invoice refund schema
+const invoiceRefundSchema = z.object({
+  invoice_id: uuidSchema,
+  refund_amount: monetaryAmountSchema,
+  reason: z.string(),
+  reference_number: z.string().optional(),
+  payment_id: uuidSchema.optional() // Optional link to original payment being refunded
+});
+
 // ============================================================================
 // Invoice Search and Filter Schemas
 // ============================================================================
@@ -630,6 +639,7 @@ export type FinalizeInvoice = z.infer<typeof finalizeInvoiceSchema>;
 export type SendInvoice = z.infer<typeof sendInvoiceSchema>;
 export type ApplyCredit = z.infer<typeof applyCreditSchema>;
 export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
+export type InvoiceRefund = z.infer<typeof invoiceRefundSchema>;
 export type InvoiceFilter = z.infer<typeof invoiceFilterSchema>;
 export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>;
 export type InvoiceAnnotation = z.infer<typeof invoiceAnnotationSchema>;

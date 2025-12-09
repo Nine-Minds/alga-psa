@@ -38,17 +38,9 @@ export async function getEntityImageUrl(
 
       const association = await query.first();
       
-      // If no association found, return null
+      // If no association found, return null (this is expected - many entities don't have logos)
       if (!association?.document_id) {
-        // Use debug level logging to reduce noise - missing logos are common and expected
-        if (process.env.NODE_ENV === 'development') {
-          console.debug(`[getEntityImageUrl] No document association found for ${entityType} ${entityId} with is_entity_logo=true`);
-        }
         return null;
-      }
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`[getEntityImageUrl] Found document association for ${entityType} ${entityId}:`, association);
       }
       
       // Get the file_id and updated_at from the documents table within the same transaction
@@ -60,16 +52,11 @@ export async function getEntityImageUrl(
         })
         .first();
       
-      // If no document record or no file_id, return null
+      // If no document record or no file_id, return null (document may have been deleted)
       if (!documentRecord?.file_id) {
-        console.log(`[getEntityImageUrl] No file_id found for document ${association.document_id} (document may have been deleted)`);
         return null;
       }
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`[getEntityImageUrl] Found file_id ${documentRecord.file_id} for document ${association.document_id}`);
-      }
-      
+
       return { file_id: documentRecord.file_id, updated_at: documentRecord.updated_at };
     });
 
@@ -86,16 +73,9 @@ export async function getEntityImageUrl(
       // Add the document's updated_at timestamp for cache busting
       // This ensures the URL changes only when the document is actually updated
       const timestamp = result.updated_at ? new Date(result.updated_at).getTime() : 0;
-      const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`Generated image URL for ${entityType} ${entityId}: ${urlWithTimestamp}`);
-      }
-      return urlWithTimestamp;
+      return `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
     }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`No image URL generated for ${entityType} ${entityId}`);
-    }
+
     return null;
   } catch (error) {
     console.error(`[AvatarUtils] Failed to retrieve image URL for ${entityType} (ID: ${entityId}):`, {
@@ -233,6 +213,16 @@ export async function getClientLogoUrlsBatch(
   tenant: string
 ): Promise<Map<string, string | null>> {
   return getEntityImageUrlsBatch('client', clientIds, tenant);
+}
+
+/**
+ * Convenience function to get multiple contact avatar URLs at once
+ */
+export async function getContactAvatarUrlsBatch(
+  contactIds: string[],
+  tenant: string
+): Promise<Map<string, string | null>> {
+  return getEntityImageUrlsBatch('contact', contactIds, tenant);
 }
 
 /**

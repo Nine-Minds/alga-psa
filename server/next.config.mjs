@@ -336,8 +336,8 @@ const nextConfig = {
           ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
           : path.join(__dirname, 'src/components/flow/DnDFlow.tsx'),
         '@product/billing/entry': isEE
-          ? path.join(__dirname, '../packages/product-billing/ee/entry.ts')
-          : path.join(__dirname, '../packages/product-billing/oss/entry.ts'),
+          ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
         // Point stable specifiers to exact entry files to avoid conditional exports in package index
         '@alga-psa/product-extension-initialization': isEE
           ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
@@ -439,7 +439,7 @@ const nextConfig = {
           ],
         },
         {
-          to: path.join(__dirname, '../packages/product-billing/ee/entry.ts'),
+          to: path.join(__dirname, '../packages/product-billing/ee/entry.tsx'),
           fromCandidates: [
             path.join(__dirname, '../packages/product-billing/entry.ts'),
             path.join(__dirname, '../packages/product-billing/entry.tsx'),

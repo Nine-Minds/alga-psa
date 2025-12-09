@@ -11,7 +11,7 @@ const WORKFLOW_NAME = 'System Email Processing';
 console.log('🔄 Starting workflow update process...');
 
 // Validate workflow file exists
-const workflowPath = path.join(__dirname, '../shared/workflow/workflows/system-email-processing-workflow.ts');
+const workflowPath = path.join(__dirname, '../services/workflow-worker/src/workflows/system-email-processing-workflow.ts');
 if (!fs.existsSync(workflowPath)) {
   console.error(`❌ Workflow file not found: ${workflowPath}`);
   process.exit(1);

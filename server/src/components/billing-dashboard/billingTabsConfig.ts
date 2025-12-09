@@ -19,22 +19,29 @@ export interface BillingTabDefinition {
 }
 
 export type BillingTabValue =
-  | 'contracts'
+  | 'contract-templates'
+  | 'client-contracts'
+  | 'contract-lines'
   | 'invoicing'
   | 'invoice-templates'
-  | 'tax-rates'
-  | 'contract-lines'
   | 'billing-cycles'
+  | 'service-catalog'
+  | 'tax-rates'
   | 'usage-tracking'
   | 'reports'
-  | 'service-catalog'
   | 'accounting-exports';
 
 export const billingTabDefinitions: BillingTabDefinition[] = [
   {
-    value: 'contracts',
-    label: 'Contracts',
-    href: '/msp/billing?tab=contracts',
+    value: 'contract-templates',
+    label: 'Contract Templates',
+    href: '/msp/billing?tab=contract-templates',
+    icon: FileText
+  },
+  {
+    value: 'client-contracts',
+    label: 'Client Contracts',
+    href: '/msp/billing?tab=client-contracts',
     icon: FileText
   },
   {

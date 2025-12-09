@@ -3,14 +3,22 @@
 import React from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { AutomationProps } from '../../types/ui-reflection/types';
+import { LucideIcon, ChevronDown } from 'lucide-react';
 
 export interface TabContent {
   label: string;
   content: React.ReactNode;
+  icon?: LucideIcon | React.ReactNode;
+}
+
+export interface TabGroup {
+  title?: string;
+  tabs: TabContent[];
 }
 
 export interface CustomTabsProps {
-  tabs: TabContent[];
+  tabs?: TabContent[];
+  groups?: TabGroup[];
   defaultTab?: string;
   onTabChange?: (tabValue: string) => void;
   tabStyles?: {
@@ -30,6 +38,7 @@ export interface CustomTabsProps {
 
 export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   tabs,
+  groups,
   defaultTab,
   onTabChange,
   tabStyles,
@@ -37,15 +46,72 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   idPrefix,
   orientation = 'horizontal',
 }) => {
-  const [value, setValue] = React.useState(defaultTab || tabs[0].label);
+  // Use groups if provided, otherwise fall back to flat tabs
+  const allTabs = React.useMemo(() => {
+    if (groups && groups.length > 0) {
+      return groups.flatMap(group => group.tabs);
+    }
+    return tabs || [];
+  }, [tabs, groups]);
+
+  const [value, setValue] = React.useState(() => {
+    if (defaultTab) return defaultTab;
+    if (allTabs && allTabs.length > 0) return allTabs[0].label;
+    return '';
+  });
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
+
+  // Track expanded state for each section (default to all expanded)
+  const [expandedSections, setExpandedSections] = React.useState<Record<number, boolean>>(() => {
+    if (groups && groups.length > 0) {
+      return groups.reduce((acc, _, index) => {
+        acc[index] = true; // Default to expanded
+        return acc;
+      }, {} as Record<number, boolean>);
+    }
+    return {};
+  });
+
+  const toggleSection = React.useCallback((groupIndex: number) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [groupIndex]: !prev[groupIndex]
+    }));
+  }, []);
 
   React.useEffect(() => {
     if (defaultTab) {
       setValue(defaultTab);
+      // Auto-expand the section containing the default tab
+      if (groups && groups.length > 0) {
+        groups.forEach((group, groupIndex) => {
+          if (group.tabs.some(tab => tab.label === defaultTab)) {
+            setExpandedSections(prev => ({
+              ...prev,
+              [groupIndex]: true
+            }));
+          }
+        });
+      }
     }
-  }, [defaultTab]);
+  }, [defaultTab, groups]);
+
+  // Auto-expand section when a tab within it becomes active
+  React.useEffect(() => {
+    if (groups && groups.length > 0 && value) {
+      groups.forEach((group, groupIndex) => {
+        if (group.tabs.some(tab => tab.label === value)) {
+          setExpandedSections(prev => {
+            if (prev[groupIndex] === false) {
+              return { ...prev, [groupIndex]: true };
+            }
+            return prev;
+          });
+        }
+      });
+    }
+  }, [value, groups]);
 
   const defaultRootClass = orientation === 'vertical'
     ? 'md:grid md:grid-cols-[220px_minmax(0,1fr)] gap-6'
@@ -63,6 +129,14 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     ? ''
     : 'data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600';
 
+  // Render grouped tabs if groups are provided and orientation is vertical
+  const renderGroupedTabs = groups && groups.length > 0 && orientation === 'vertical';
+
+  // Early return if no tabs are available (after all hooks)
+  if (allTabs.length === 0) {
+    return null;
+  }
+
   return (
     <Tabs.Root 
       className={`${defaultRootClass} ${tabStyles?.root || ''}`} 
@@ -74,19 +148,82 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
       }}
     >
       <Tabs.List className={`${defaultListClass} ${tabStyles?.list || ''}`}>
-        {tabs.map((tab, index): JSX.Element => (
-          <Tabs.Trigger
-            key={tab.label}
-            id={`${prefix}-trigger-${index}`}
-            className={`${defaultTriggerClass} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
-            value={tab.label}
-          >
-            {tab.label}
-          </Tabs.Trigger>
-        ))}
+        {renderGroupedTabs ? (
+          groups.map((group, groupIndex) => {
+            const isExpanded = expandedSections[groupIndex] !== false; // Default to true
+            return (
+              <div key={groupIndex} className="space-y-1">
+                {group.title && (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(groupIndex)}
+                    className="w-full px-3 pt-4 pb-2 first:pt-0 flex items-center gap-2 group transition-opacity"
+                  >
+                    <ChevronDown
+                      className={`h-3 w-3 text-primary-600 transition-all duration-200 ${isExpanded ? '' : '-rotate-90'}`}
+                    />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 transition-colors duration-200">
+                      {group.title}
+                    </p>
+                  </button>
+                )}
+                {isExpanded && group.tabs.map((tab, tabIndex): JSX.Element => {
+                  const IconComponent = tab.icon;
+                  const hasIcon = !!IconComponent;
+                  const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
+                  const globalIndex = groups.slice(0, groupIndex).reduce((acc, g) => acc + g.tabs.length, 0) + tabIndex;
+                  const isIconComponent = typeof IconComponent === 'function';
+                  return (
+                    <Tabs.Trigger
+                      key={tab.label}
+                      id={`${prefix}-trigger-${globalIndex}`}
+                      className={`${defaultTriggerClass} ${iconClassName} ml-4 ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
+                      value={tab.label}
+                    >
+                      {IconComponent && (
+                        isIconComponent ? (
+                          <IconComponent className="h-4 w-4 shrink-0" />
+                        ) : (
+                          <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
+                        )
+                      )}
+                      {tab.label}
+                    </Tabs.Trigger>
+                  );
+                })}
+              </div>
+            );
+          })
+        ) : (
+          allTabs.map((tab, index): JSX.Element => {
+            const IconComponent = tab.icon;
+            const hasIcon = !!IconComponent;
+            const iconClassName = hasIcon 
+              ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
+              : '';
+            const isIconComponent = typeof IconComponent === 'function';
+            return (
+              <Tabs.Trigger
+                key={tab.label}
+                id={`${prefix}-trigger-${index}`}
+                className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
+                value={tab.label}
+              >
+                {IconComponent && (
+                  isIconComponent ? (
+                    <IconComponent className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
+                  )
+                )}
+                {tab.label}
+              </Tabs.Trigger>
+            );
+          })
+        )}
         {extraContent}
       </Tabs.List>
-      {tabs.map((tab, index): JSX.Element => (
+      {allTabs.map((tab, index): JSX.Element => (
         <Tabs.Content 
           key={tab.label}
           id={`${prefix}-content-${index}`}

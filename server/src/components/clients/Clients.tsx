@@ -40,6 +40,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import toast from 'react-hot-toast';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
@@ -985,6 +986,15 @@ const Clients: React.FC = () => {
               <p className="text-gray-600">
                 Are you sure you want to delete {clientToDelete?.client_name}? This action cannot be undone.
               </p>
+            )}
+
+            {showArchiveOption && deleteError && (
+              <Alert variant="info">
+                <AlertDescription>
+                  <strong>Alternative Option:</strong> You can mark this client as inactive instead.
+                  Inactive clients are hidden from most views but retain all their data and can be marked as active later.
+                </AlertDescription>
+              </Alert>
             )}
           </div>
           

@@ -13,6 +13,8 @@ import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '../../ui/Button';
+import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
+import { TaxSource } from '../../../interfaces/tax.interfaces';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -48,6 +50,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [taxSource, setTaxSource] = useState<TaxSource>('internal');
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const selectedTemplate = templates.find(t => t.template_id === selectedTemplateId) || null;
@@ -71,6 +74,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     const loadInvoiceData = async () => {
       if (!invoiceId) {
         setDetailedInvoiceData(null);
+        setTaxSource('internal');
         return;
       }
 
@@ -84,6 +88,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         if (!dbInvoiceData) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
         }
+
+        // Extract tax_source from the invoice data
+        setTaxSource(dbInvoiceData.tax_source || 'internal');
 
         const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
 
@@ -143,7 +150,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     <Card className="h-full">
       <div className="p-6" ref={containerRef}>
         <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">Invoice Preview</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold">Invoice Preview</h3>
+            <InvoiceTaxSourceBadge taxSource={taxSource} />
+          </div>
           <CustomSelect
             options={templates.map((template) => ({
               value: template.template_id,
