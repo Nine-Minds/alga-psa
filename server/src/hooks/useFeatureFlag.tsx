@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
 import { usePostHog } from 'posthog-js/react';
 
 // Track if we've already warned about SessionProvider to avoid console spam
@@ -37,10 +38,10 @@ export function useFeatureFlag(
   error: Error | null;
 } {
   // Safely get session - handle cases where SessionProvider isn't available
-  let session = null;
+  let session: Session | null = null;
   try {
     const sessionResult = useSession();
-    session = sessionResult?.data;
+    session = sessionResult?.data ?? null;
   } catch (error) {
     // SessionProvider not available, continue without session
     if (!hasWarnedAboutSessionProvider) {

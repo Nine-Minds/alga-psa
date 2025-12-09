@@ -42,7 +42,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   permissions: passedPermissions
 }) => {
   // Try to get tag context, but handle gracefully if not available
-  let tagContext = null;
+  let tagContext: ReturnType<typeof useTags> | null = null;
   try {
     tagContext = useTags();
   } catch (error) {

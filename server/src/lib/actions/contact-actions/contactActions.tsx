@@ -144,8 +144,8 @@ export async function deleteContact(contactId: string): Promise<{
         dependencies.push('contract');
         counts['contract'] = Number(contractResult.count);
       }
-    } catch (contractError) {
-      console.log('Skipping contract check due to schema differences:', contractError.message);
+    } catch (contractError: unknown) {
+      console.log('Skipping contract check due to schema differences:', contractError instanceof Error ? contractError.message : contractError);
       // Skip contract dependency check if table schema is different
     }
 
@@ -865,9 +865,9 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     full_name: contactData.full_name || '',
     email: contactData.email,
     phone_number: contactData.phone_number,
-    client_id: contactData.client_id || null,
+    client_id: contactData.client_id || undefined,
     role: contactData.role,
-    notes: contactData.notes || null,
+    notes: contactData.notes || undefined,
     is_inactive: contactData.is_inactive
   };
 

@@ -15,6 +15,8 @@ import {
   importClientsFromCSV,
   exportClientsToCSV,
   getAllClientIds,
+  archiveClient,
+  reactivateClient,
   type PaginatedClientsResponse
 } from 'server/src/lib/actions/client-actions/clientActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
@@ -24,7 +26,7 @@ import { useSearchParams } from 'next/navigation';
 import ClientsGrid from './ClientsGrid';
 import ClientsList from './ClientsList';
 import ViewSwitcher, { ViewSwitcherOption } from '../ui/ViewSwitcher';
-import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle } from 'lucide-react';
+import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
@@ -39,7 +41,6 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import toast from 'react-hot-toast';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
@@ -362,6 +363,12 @@ const Clients: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
+  const [deleteDependencies, setDeleteDependencies] = useState<{
+    contacts?: number;
+    tickets?: number;
+    projects?: number;
+    invoices?: number;
+  } | null>(null);
 
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -538,15 +545,84 @@ const Clients: React.FC = () => {
 
   const handleMarkClientInactive = async () => {
     if (!clientToDelete) return;
-    
+
     try {
-      await updateClient(clientToDelete.client_id, { is_inactive: true });
+      const result = await archiveClient(clientToDelete.client_id);
+
+      if (!result.success) {
+        toast.error(result.message || 'Failed to mark client as inactive');
+        resetDeleteState();
+        return;
+      }
+
       await refreshClients();
       resetDeleteState();
-      toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
+      toast.success(`${clientToDelete.client_name} and all associated contacts have been marked as inactive successfully.`);
     } catch (error) {
       console.error('Error marking client as inactive:', error);
       setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+    }
+  };
+
+  // Handler for bulk Mark as Inactive
+  const handleBulkMarkInactive = async () => {
+    if (selectedClients.length === 0) return;
+
+    try {
+      const results = await Promise.all(
+        selectedClients.map(async (clientId: string) => {
+          const result = await archiveClient(clientId);
+          return { clientId, result };
+        })
+      );
+
+      const successCount = results.filter(r => r.result.success).length;
+      const failCount = results.length - successCount;
+
+      if (failCount > 0) {
+        toast.error(`${failCount} client(s) could not be marked as inactive.`);
+      }
+      if (successCount > 0) {
+        toast.success(`${successCount} client(s) and their associated contacts have been marked as inactive successfully.`);
+      }
+
+      setSelectedClients([]);
+      setIsSelectAllMode(false);
+      await refreshClients();
+    } catch (error) {
+      console.error('Error marking clients as inactive:', error);
+      toast.error('An error occurred while marking clients as inactive. Please try again.');
+    }
+  };
+
+  // Handler for bulk Reactivate
+  const handleBulkReactivate = async () => {
+    if (selectedClients.length === 0) return;
+
+    try {
+      const results = await Promise.all(
+        selectedClients.map(async (clientId: string) => {
+          const result = await reactivateClient(clientId);
+          return { clientId, result };
+        })
+      );
+
+      const successCount = results.filter(r => r.result.success).length;
+      const failCount = results.length - successCount;
+
+      if (failCount > 0) {
+        toast.error(`${failCount} client(s) could not be reactivated.`);
+      }
+      if (successCount > 0) {
+        toast.success(`${successCount} client(s) and their associated contacts have been reactivated successfully.`);
+      }
+
+      setSelectedClients([]);
+      setIsSelectAllMode(false);
+      await refreshClients();
+    } catch (error) {
+      console.error('Error reactivating clients:', error);
+      toast.error('An error occurred while reactivating clients. Please try again.');
     }
   };
 
@@ -683,16 +759,19 @@ const Clients: React.FC = () => {
   };
 
   const handleDependencyError = (
-    result: DependencyResult, 
+    result: DependencyResult,
     setError: (error: string) => void
   ) => {
-    const dependencyText = formatDependencyText(result);
-    
-    setError(
-      `Unable to delete this client.\n\n` +
-      `This client has the following associated records:\n• ${dependencyText.split(', ').join('\n• ')}\n\n` +
-      `Please remove or reassign these items before deleting the client.`
-    );
+    // Store the dependency counts for structured display
+    // Only include counts that are > 0
+    const counts = result.counts || {};
+    setDeleteDependencies({
+      contacts: counts['contact'] > 0 ? counts['contact'] : undefined,
+      tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
+      projects: counts['project'] > 0 ? counts['project'] : undefined,
+      invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
+    });
+    // Don't set error message - we'll use the structured display instead
   };
 
 
@@ -701,6 +780,7 @@ const Clients: React.FC = () => {
     setClientToDelete(null);
     setDeleteError(null);
     setShowDeactivateOption(false);
+    setDeleteDependencies(null);
   };
 
   const handleExportToCSV = async () => {
@@ -864,19 +944,36 @@ const Clients: React.FC = () => {
                   </button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-                  <DropdownMenu.Item 
+                  <DropdownMenu.Item
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                     onSelect={() => setIsImportDialogOpen(true)}
                   >
                     <Upload size={14} className="mr-2" />
                     Upload CSV
                   </DropdownMenu.Item>
-                  <DropdownMenu.Item 
+                  <DropdownMenu.Item
                     className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
                     onSelect={() => void handleExportToCSV()}
                   >
                     <CloudDownload size={14} className="mr-2" />
                     Download CSV
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
+                  <DropdownMenu.Item
+                    className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
+                    disabled={selectedClients.length === 0}
+                  >
+                    <Power size={14} className="mr-2" />
+                    Mark as Inactive
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
+                    disabled={selectedClients.length === 0}
+                  >
+                    <RotateCcw size={14} className="mr-2" />
+                    Reactivate
                   </DropdownMenu.Item>
                 </DropdownMenu.Content>
               </DropdownMenu.Root>
@@ -966,15 +1063,42 @@ const Clients: React.FC = () => {
       />
 
       {/* Single client delete confirmation dialog */}
-      <Dialog 
-        isOpen={isDeleteDialogOpen} 
+      <Dialog
+        isOpen={isDeleteDialogOpen}
         onClose={resetDeleteState}
         id="single-delete-confirmation-dialog"
         title="Delete Client"
       >
         <DialogContent>
           <div className="space-y-4">
-            {deleteError ? (
+            {showDeactivateOption && deleteDependencies ? (
+              <>
+                <p className="text-gray-700">Unable to delete this client.</p>
+                <div>
+                  <p className="text-gray-700 mb-2">This client has the following associated records:</p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+                <p className="text-gray-700">Please remove or reassign these items before deleting the client.</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <p className="text-blue-800">
+                    <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
+                  </p>
+                </div>
+              </>
+            ) : deleteError ? (
               <div className="text-gray-600 whitespace-pre-line">
                 {deleteError}
               </div>
@@ -983,17 +1107,8 @@ const Clients: React.FC = () => {
                 Are you sure you want to delete {clientToDelete?.client_name}? This action cannot be undone.
               </p>
             )}
-
-            {showDeactivateOption && deleteError && (
-              <Alert variant="info">
-                <AlertDescription>
-                  <strong>Alternative Option:</strong> You can mark this client as inactive instead.
-                  Inactive clients are hidden from most views but retain all their data and can be marked as active later.
-                </AlertDescription>
-              </Alert>
-            )}
           </div>
-          
+
           <DialogFooter>
             <div className="mt-4 flex justify-end space-x-2">
               <Button
@@ -1003,18 +1118,16 @@ const Clients: React.FC = () => {
               >
                 Cancel
               </Button>
-              
-              {showDeactivateOption && (
+
+              {showDeactivateOption ? (
                 <Button
-                  variant="ghost"
+                  variant="default"
                   onClick={() => void handleMarkClientInactive()}
                   id="single-delete-mark-inactive"
                 >
                   Mark as Inactive
                 </Button>
-              )}
-              
-              {!deleteError && (
+              ) : !deleteError && (
                 <Button
                   onClick={() => void confirmDelete()}
                   id="single-delete-confirm"

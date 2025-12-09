@@ -436,7 +436,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         } else {
           // Show validation message when contact info is partially filled
           const missingField = !contactData.full_name.trim() ? 'name' : 'email';
-          toast.warning(`Client created without contact. Both name and email are required to create a contact (missing ${missingField}).`);
+          toast(`Client created without contact. Both name and email are required to create a contact (missing ${missingField}).`, { icon: '⚠️' });
         }
       }
 

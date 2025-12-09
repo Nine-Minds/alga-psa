@@ -353,7 +353,7 @@ export async function getNotificationsAction(
         console.warn('internal_notifications table does not exist, returning empty list');
         return {
           notifications: [],
-          total_count: 0,
+          total: 0,
           unread_count: 0,
           has_more: false
         };
@@ -400,7 +400,7 @@ export async function getNotificationsAction(
 
     return {
       notifications,
-      total_count: Number(totalCount),
+      total: Number(totalCount),
       unread_count: Number(unreadCount),
       has_more: Number(totalCount) > offset + limit
     };
@@ -409,7 +409,7 @@ export async function getNotificationsAction(
       console.error('Error fetching notifications:', error);
       return {
         notifications: [],
-        total_count: 0,
+        total: 0,
         unread_count: 0,
         has_more: false
       };

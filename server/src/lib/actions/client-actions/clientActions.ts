@@ -660,13 +660,13 @@ export async function deleteClient(clientId: string): Promise<{
 
     console.log('Checking dependencies for client:', clientId, 'tenant:', tenant);
 
-    // Check for dependencies
+    // Check for dependencies - run outside transaction so each check is independent
     const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check for contacts
-      const contactCount = await trx('contacts')
+    // Check for contacts
+    try {
+      const contactCount = await db('contacts')
         .where({ client_id: clientId, tenant })
         .count('contact_name_id as count')
         .first();
@@ -675,9 +675,13 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('contact');
         counts['contact'] = Number(contactCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping contacts check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for active tickets
-      const ticketCount = await trx('tickets')
+    // Check for active tickets
+    try {
+      const ticketCount = await db('tickets')
         .where({ client_id: clientId, tenant, is_closed: false })
         .count('ticket_id as count')
         .first();
@@ -686,9 +690,13 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('ticket');
         counts['ticket'] = Number(ticketCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping tickets check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for projects
-      const projectCount = await trx('projects')
+    // Check for projects
+    try {
+      const projectCount = await db('projects')
         .where({ client_id: clientId, tenant })
         .count('project_id as count')
         .first();
@@ -697,13 +705,17 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('project');
         counts['project'] = Number(projectCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping projects check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for documents using document_associations table
-      const documentCount = await trx('document_associations')
-        .where({ 
-          entity_id: clientId, 
-          entity_type: 'client', 
-          tenant 
+    // Check for documents using document_associations table
+    try {
+      const documentCount = await db('document_associations')
+        .where({
+          entity_id: clientId,
+          entity_type: 'client',
+          tenant
         })
         .count('document_id as count')
         .first();
@@ -712,9 +724,13 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('document');
         counts['document'] = Number(documentCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping documents check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for invoices
-      const invoiceCount = await trx('invoices')
+    // Check for invoices
+    try {
+      const invoiceCount = await db('invoices')
         .where({ client_id: clientId, tenant })
         .count('invoice_id as count')
         .first();
@@ -723,9 +739,13 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('invoice');
         counts['invoice'] = Number(invoiceCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping invoices check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for interactions
-      const interactionCount = await trx('interactions')
+    // Check for interactions
+    try {
+      const interactionCount = await db('interactions')
         .where({ client_id: clientId, tenant })
         .count('interaction_id as count')
         .first();
@@ -734,9 +754,13 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('interaction');
         counts['interaction'] = Number(interactionCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping interactions check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for assets/devices (PSA best practice)
-      const assetCount = await trx('assets')
+    // Check for assets/devices (PSA best practice)
+    try {
+      const assetCount = await db('assets')
         .where({ client_id: clientId, tenant })
         .count('asset_id as count')
         .first();
@@ -745,12 +769,16 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('asset');
         counts['asset'] = Number(assetCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping assets check:', err instanceof Error ? err.message : err);
+    }
 
-      // Note: Locations/addresses are no longer considered blocking dependencies
-      // as per PSA best practices - they will be deleted automatically with the client
+    // Note: Locations/addresses are no longer considered blocking dependencies
+    // as per PSA best practices - they will be deleted automatically with the client
 
-      // Check for service usage
-      const usageCount = await trx('usage_tracking')
+    // Check for service usage (table may not exist in all installations)
+    try {
+      const usageCount = await db('usage_tracking')
         .where({ client_id: clientId, tenant })
         .count('usage_id as count')
         .first();
@@ -759,9 +787,13 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('service_usage');
         counts['service_usage'] = Number(usageCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping usage tracking check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for contract lines
-      const contractLineCount = await trx('client_contract_lines')
+    // Check for contract lines (table may not exist in all installations)
+    try {
+      const contractLineCount = await db('client_contract_lines')
         .where({ client_id: clientId, tenant })
         .count('client_contract_line_id as count')
         .first();
@@ -770,9 +802,13 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('contract_line');
         counts['contract_line'] = Number(contractLineCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping contract line check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for bucket usage
-      const bucketUsageCount = await trx('bucket_usage')
+    // Check for bucket usage (table may not exist in all installations)
+    try {
+      const bucketUsageCount = await db('bucket_usage')
         .where({ client_id: clientId, tenant })
         .count('usage_id as count')
         .first();
@@ -781,15 +817,11 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('bucket_usage');
         counts['bucket_usage'] = Number(bucketUsageCount.count);
       }
+    } catch (err: unknown) {
+      console.log('Skipping bucket usage check:', err instanceof Error ? err.message : err);
+    }
 
-      // Check for client tax settings - we'll delete these automatically if no other dependencies exist
-      const taxSettingsCount = await trx('client_tax_settings')
-        .where({ client_id: clientId, tenant })
-        .count('client_id as count')
-        .first();
-      console.log('Client tax settings count result:', taxSettingsCount);
-      // Note: we don't add tax settings to dependencies since we'll delete them automatically
-    });
+    // Note: tax settings check removed - we'll delete them automatically during deletion
 
     // If there are dependencies, return error with details
     if (dependencies.length > 0) {
