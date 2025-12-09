@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../ui/Card';
 import CustomSelect from '../ui/CustomSelect';
 import { IClientContractLineCycle, IService } from '../../interfaces/billing.interfaces';
@@ -12,6 +12,7 @@ import AutomaticInvoices from './AutomaticInvoices';
 import PrepaymentInvoices from './PrepaymentInvoices';
 import ManualInvoices from './ManualInvoices';
 import SuccessDialog from '../ui/SuccessDialog';
+import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 
 type InvoiceType = 'automatic' | 'manual' | 'prepayment';
 
@@ -26,14 +27,22 @@ interface Service {
   rate: number;
 }
 
-const invoiceTypeOptions: SelectOption[] = [
+const allInvoiceTypeOptions: SelectOption[] = [
   { value: 'automatic', label: 'Automatic Invoices' },
   { value: 'manual', label: 'Manual Invoices' },
   { value: 'prepayment', label: 'Prepayment' }
 ];
 
 const GenerateInvoices: React.FC = () => {
+  const { enabled: prepaymentInvoicesEnabled } = useFeatureFlag('billing-enabled');
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
+
+  const invoiceTypeOptions = useMemo(() => {
+    if (prepaymentInvoicesEnabled) {
+      return allInvoiceTypeOptions;
+    }
+    return allInvoiceTypeOptions.filter(option => option.value !== 'prepayment');
+  }, [prepaymentInvoicesEnabled]);
   const [error, setError] = useState<string | null>(null);
   const [periods, setPeriods] = useState<(IClientContractLineCycle & {
     client_name: string;
@@ -98,6 +107,9 @@ const GenerateInvoices: React.FC = () => {
           />
         );
       case 'prepayment':
+        if (!prepaymentInvoicesEnabled) {
+          return null;
+        }
         return (
           <PrepaymentInvoices
             clients={clients}
