@@ -769,11 +769,13 @@ const fetchContacts = async (): Promise<void> => {
                       </button>
                     </div>
                     {portalType === 'client' && (
-                      <div className={`mt-2 p-3 text-sm rounded-md border ${newUser.password ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
-                        {newUser.password
-                          ? 'Setting a password will create the user immediately. They can log in right away.'
-                          : 'No password required — we will send a portal invitation for the user to set it.'}
-                      </div>
+                      <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
+                        <AlertDescription>
+                          {newUser.password
+                            ? 'Setting a password will create the user immediately. They can log in right away.'
+                            : 'No password required — we will send a portal invitation for the user to set it.'}
+                        </AlertDescription>
+                      </Alert>
                     )}
                   </div>
                 </div>

@@ -21,6 +21,7 @@ import { Dialog } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Badge, BadgeVariant } from 'server/src/components/ui/Badge';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
 import {
   listAccountingExportBatches,
@@ -976,22 +977,24 @@ const AccountingExportsTab: React.FC = () => {
                 </div>
 
                 {selectedRow.adapter_type === 'quickbooks_online' ? (
-                  <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                    Verify QuickBooks realm mappings (services, tax codes, payment terms) are complete for{' '}
-                    <span className="font-semibold">
-                      {(() => {
-                        const realmDisplay = resolveRealmLabel(
-                          selectedRow.adapter_type,
-                          batchDetail.batch.target_realm
-                        );
-                        if (realmDisplay === '—') {
-                          return batchDetail.batch.target_realm || 'the selected realm';
-                        }
-                        return realmDisplay;
-                      })()}
-                    </span>{' '}
-                    before executing this export.
-                  </div>
+                  <Alert variant="info">
+                    <AlertDescription>
+                      Verify QuickBooks realm mappings (services, tax codes, payment terms) are complete for{' '}
+                      <span className="font-semibold">
+                        {(() => {
+                          const realmDisplay = resolveRealmLabel(
+                            selectedRow.adapter_type,
+                            batchDetail.batch.target_realm
+                          );
+                          if (realmDisplay === '—') {
+                            return batchDetail.batch.target_realm || 'the selected realm';
+                          }
+                          return realmDisplay;
+                        })()}
+                      </span>{' '}
+                      before executing this export.
+                    </AlertDescription>
+                  </Alert>
                 ) : null}
 
                 <div>

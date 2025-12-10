@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { IStatus, IStandardStatus } from 'server/src/interfaces/status.interface';
@@ -303,12 +304,12 @@ const InteractionStatusSettings = (): JSX.Element => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
-      <div className="bg-blue-50 p-4 rounded-md mb-4">
-        <p className="text-sm text-blue-700">
+      <Alert variant="info" className="mb-4">
+        <AlertDescription>
           <strong>Interaction Statuses:</strong> Track the state of customer interactions
           such as calls, emails, and meetings.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
 
       <h3 className="text-lg font-semibold mb-4 text-gray-800">Interaction Statuses</h3>
 

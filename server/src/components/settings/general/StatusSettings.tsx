@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
@@ -329,13 +330,13 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
 
   return (
     <div>
-      <div className="bg-blue-50 p-4 rounded-md mb-4">
-        <p className="text-sm text-blue-700">
+      <Alert variant="info" className="mb-4">
+        <AlertDescription>
           <strong>Default Status:</strong> When clients create tickets through the client portal,
           they will automatically be assigned the status marked as default. Only one status can
           be set as default at a time.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
 
       {/* Statuses Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm">

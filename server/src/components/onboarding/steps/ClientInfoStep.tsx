@@ -5,6 +5,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { StepProps } from '../types';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { validateEmailAddress, validateContactName, validateClientName } from 'server/src/lib/utils/clientFormValidation';
 
 interface ClientInfoStepProps extends StepProps {
@@ -66,11 +67,11 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           />
         </div>
 
-        <div className="rounded-md bg-blue-50 p-4">
-          <p className="text-sm text-blue-800">
+        <Alert variant="info">
+          <AlertDescription>
             <span className="font-semibold">Note:</span> You can use this wizard to reconfigure your workspace settings at any time.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -282,11 +283,11 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
         </div>
       </div>
 
-      <div className="rounded-md bg-blue-50 p-4">
-        <p className="text-sm text-blue-800">
+      <Alert variant="info">
+        <AlertDescription>
           <span className="font-semibold">Note:</span> All fields on this page are required to proceed.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }
