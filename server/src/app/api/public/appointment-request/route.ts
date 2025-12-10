@@ -274,9 +274,7 @@ export async function POST(req: NextRequest) {
         responseTime: '24 hours',
         portalLink: process.env.NEXT_PUBLIC_APP_URL || 'https://app.algapsa.com',
         contactEmail: tenantSettings.contactEmail,
-        contactPhone: tenantSettings.contactPhone,
-        tenantName: tenantSettings.tenantName,
-        currentYear: new Date().getFullYear()
+        contactPhone: tenantSettings.contactPhone
       }, {
         tenantId: tenantId
       });
@@ -322,9 +320,7 @@ export async function POST(req: NextRequest) {
           isAuthenticated: false,
           approvalLink: `${process.env.NEXT_PUBLIC_APP_URL}/msp/schedule`,
           contactEmail: tenantSettings.contactEmail,
-          contactPhone: tenantSettings.contactPhone,
-          tenantName: tenantSettings.tenantName,
-          currentYear: new Date().getFullYear()
+          contactPhone: tenantSettings.contactPhone
         }, {
           tenantId: tenantId
         });

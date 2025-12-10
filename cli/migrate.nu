@@ -1,33 +1,40 @@
 # Manage database migrations
 export def run-migrate [
     action: string # The migration action to perform: up, latest, down, or status
-    --ee           # Run combined CE + EE migrations (latest only)
+    --ee           # Run combined CE + EE migrations (latest, down, status)
 ] {
     let project_root = find-project-root
 
     if $ee {
-        if $action != "latest" {
-            error make { msg: $"($env.ALGA_COLOR_RED)--ee is only supported with the 'latest' action($env.ALGA_COLOR_RESET)" }
+        if not ($action in ["latest", "down", "status"]) {
+            error make { msg: $"($env.ALGA_COLOR_RED)--ee is only supported with 'latest', 'down', or 'status' actions($env.ALGA_COLOR_RESET)" }
         }
 
-        print $"($env.ALGA_COLOR_CYAN)Running CE + EE migrations to latest...($env.ALGA_COLOR_RESET)"
+        # Map action to npm script name
+        let npm_script = match $action {
+            "latest" => "migrate:ee",
+            "down" => "migrate:ee:down",
+            "status" => "migrate:ee:status"
+        }
+
+        print $"($env.ALGA_COLOR_CYAN)Running CE + EE migrations ($action)...($env.ALGA_COLOR_RESET)"
         let result = do {
             cd $project_root
-            npm -w server run migrate:ee | complete
+            npm -w server run $npm_script | complete
         }
 
         if $result.exit_code == 0 {
             if not ($result.stdout | is-empty) {
                 print $result.stdout
             }
-            print $"($env.ALGA_COLOR_GREEN)CE + EE migrations completed successfully.($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_GREEN)CE + EE migrations ($action) completed successfully.($env.ALGA_COLOR_RESET)"
             return
         }
 
         if not ($result.stderr | is-empty) {
             print $"($env.ALGA_COLOR_RED)($result.stderr)($env.ALGA_COLOR_RESET)"
         }
-        error make { msg: $"($env.ALGA_COLOR_RED)CE + EE migrations failed($env.ALGA_COLOR_RESET)", code: $result.exit_code }
+        error make { msg: $"($env.ALGA_COLOR_RED)CE + EE migrations ($action) failed($env.ALGA_COLOR_RESET)", code: $result.exit_code }
     }
 
     match $action {

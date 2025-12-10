@@ -354,9 +354,7 @@ export async function createAppointmentRequest(
         responseTime: '24 hours',
         portalLink: `${process.env.NEXT_PUBLIC_APP_URL}/client-portal/appointments`,
         contactEmail: tenantSettings.contactEmail,
-        contactPhone: tenantSettings.contactPhone,
-        tenantName: tenantSettings.tenantName,
-        currentYear: new Date().getFullYear()
+        contactPhone: tenantSettings.contactPhone
       }, {
         tenantId: tenant
       });
@@ -418,9 +416,7 @@ export async function createAppointmentRequest(
           isAuthenticated: true,
           approvalLink: `${process.env.NEXT_PUBLIC_APP_URL}/msp/schedule`,
           contactEmail: tenantSettings.contactEmail,
-          contactPhone: tenantSettings.contactPhone,
-          tenantName: tenantSettings.tenantName,
-          currentYear: new Date().getFullYear()
+          contactPhone: tenantSettings.contactPhone
         }, {
           tenantId: tenant
         });
@@ -455,7 +451,7 @@ export async function createAppointmentRequest(
           template_name: 'appointment-request-created-staff',
           type: 'info',
           category: 'appointments',
-          link: `/msp/schedule`,
+          link: `/msp/schedule?requestId=${appointmentRequest.appointment_request_id}`,
           data: {
             requesterName: contact.full_name || 'Unknown',
             clientName: clientCompanyName,
@@ -1034,7 +1030,7 @@ export async function cancelAppointmentRequest(
             template_name: 'appointment-request-cancelled-staff',
             type: 'info',
             category: 'appointments',
-            link: `/msp/schedule`,
+            link: `/msp/schedule?requestId=${request.appointment_request_id}`,
             data: {
               requesterName: contact.full_name || 'Unknown',
               serviceName: service?.service_name || 'service',
