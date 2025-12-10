@@ -443,6 +443,29 @@ jobs:
           echo "::add-mask::$USER_PASSWORD"
         shell: bash
 
+      - name: Warm up authentication system
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
+        run: |
+          echo "Warming up authentication system to prime database connections..."
+          APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
+
+          # Make a few requests to warm up the auth system and connection pool
+          # First, hit the CSRF endpoint to initialize NextAuth
+          curl -s -o /dev/null -w "CSRF endpoint: %{http_code}\n" \
+            "http://localhost:${APP_PORT_VALUE}/api/auth/csrf" || true
+
+          # Then make a login attempt with invalid credentials to warm up the full auth path
+          # This primes: database connections, NextAuth session machinery, lazy-loaded modules
+          CSRF_TOKEN=$(curl -s "http://localhost:${APP_PORT_VALUE}/api/auth/csrf" | grep -oP '"csrfToken":"\K[^"]+' || echo "")
+          curl -s -o /dev/null -w "Auth warmup: %{http_code}\n" \
+            -X POST "http://localhost:${APP_PORT_VALUE}/api/auth/callback/credentials" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "email=warmup@test.invalid&password=warmup&csrfToken=${CSRF_TOKEN}" || true
+
+          echo "Auth system warmed up. Waiting for connections to stabilize..."
+          sleep 3
+        shell: bash
+
       - name: Set up Node.js
         if: steps.wait_for_setup.outputs.status == 'success'
         uses: actions/setup-node@v3
@@ -555,10 +578,18 @@ jobs:
                 throw e;
               }
 
+              // Wait for authentication to complete - networkidle ensures all auth API calls finish
+              // This is critical because the login process involves multiple async operations:
+              // - NextAuth session creation
+              // - Database session record creation
+              // - Device fingerprinting and geolocation
+              console.log('Waiting for network to become idle after login...');
+              await page.waitForLoadState('networkidle', { timeout: 60000 });
+
               // Wait for navigation to the dashboard (or other expected page)
               // Adjust the expected URL or path as necessary
-              console.log(`Current URL before waiting for dashboard: ${page.url()}`);
-              console.log(`Waiting for URL: ${baseUrl}/msp/dashboard with 90s timeout.`);
+              console.log(\`Current URL after networkidle: \${page.url()}\`);
+              console.log(\`Waiting for URL: \${baseUrl}/msp/dashboard with 90s timeout.\`);
               await page.waitForURL(\`\${baseUrl}/msp/dashboard\`, { timeout: 90000 });
 
               // Assert that the URL is the dashboard URL
