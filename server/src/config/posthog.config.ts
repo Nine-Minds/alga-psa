@@ -7,7 +7,7 @@
 
 export const posthogConfig = {
   // Public API key - safe to commit to source control
-  apiKey: 'phc_pF8AKuHHjdsCDHAtcYurplhk2aE5A5HNNqlcma6hUmB',
+  apiKey: 'phc_RiwIhTqFG1NOWw6TS53fpnj3B7fAGv2Ixx7JD2S4IIn',
   
   // PostHog instance URL
   apiHost: 'https://us.i.posthog.com',
