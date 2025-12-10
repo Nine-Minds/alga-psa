@@ -950,7 +950,10 @@ export class NinjaOneSyncEngine {
     external_entity_id: string;
   } | null> {
     const mapping = await this.knex!('tenant_external_entity_mappings')
-      .join('assets', 'tenant_external_entity_mappings.alga_entity_id', 'assets.asset_id')
+      .join('assets', function () {
+        this.on('tenant_external_entity_mappings.alga_entity_id', '=', 'assets.asset_id')
+            .andOn('tenant_external_entity_mappings.tenant', '=', 'assets.tenant');
+      })
       .where({
         'tenant_external_entity_mappings.tenant': this.tenantId,
         'tenant_external_entity_mappings.integration_type': 'ninjaone',
@@ -958,6 +961,7 @@ export class NinjaOneSyncEngine {
         'tenant_external_entity_mappings.external_entity_id': String(deviceId),
         'assets.status': 'active',
       })
+      .where('assets.tenant', this.tenantId)
       .select('tenant_external_entity_mappings.alga_entity_id', 'tenant_external_entity_mappings.external_entity_id')
       .first();
 
