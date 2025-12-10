@@ -950,12 +950,15 @@ export class NinjaOneSyncEngine {
     external_entity_id: string;
   } | null> {
     const mapping = await this.knex!('tenant_external_entity_mappings')
+      .join('assets', 'tenant_external_entity_mappings.alga_entity_id', 'assets.asset_id')
       .where({
-        tenant: this.tenantId,
-        integration_type: 'ninjaone',
-        alga_entity_type: 'asset',
-        external_entity_id: String(deviceId),
+        'tenant_external_entity_mappings.tenant': this.tenantId,
+        'tenant_external_entity_mappings.integration_type': 'ninjaone',
+        'tenant_external_entity_mappings.alga_entity_type': 'asset',
+        'tenant_external_entity_mappings.external_entity_id': String(deviceId),
+        'assets.status': 'active',
       })
+      .select('tenant_external_entity_mappings.alga_entity_id', 'tenant_external_entity_mappings.external_entity_id')
       .first();
 
     return mapping || null;
