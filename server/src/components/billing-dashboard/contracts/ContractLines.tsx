@@ -914,9 +914,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                       {/* Display bucket configuration in read-only mode */}
                                       {!isEditing && serviceConfig.bucketConfig && (
                                         <div className="col-span-2 pt-4 border-t border-dashed border-gray-200">
-                                          <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
-                                            <p className="text-sm font-medium text-blue-900 mb-2">Bucket Configuration</p>
-                                            <div className="text-sm text-blue-800 space-y-1">
+                                          <div className="rounded-md border border-primary-100 bg-primary-50 p-4">
+                                            <p className="text-sm font-medium text-primary-900 mb-2">Bucket Configuration</p>
+                                            <div className="text-sm text-primary-800 space-y-1">
                                               {serviceConfig.bucketConfig.total_minutes && (
                                                 <p>Included: {serviceConfig.configuration.configuration_type === 'Hourly' ? `${(serviceConfig.bucketConfig.total_minutes / 60).toFixed(2)} hours` : `${serviceConfig.bucketConfig.total_minutes} ${serviceConfig.typeConfig?.unit_of_measure || 'units'}`}</p>
                                               )}

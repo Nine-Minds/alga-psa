@@ -80,14 +80,16 @@ const CheckEmailContent: React.FC = () => {
 
           {/* Didn't receive section */}
           <div className="mb-6">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-sm mb-2 text-blue-900">Didn't receive the email?</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Check your spam or junk folder</li>
-                <li>• Make sure you entered the correct email</li>
-                <li>• The link expires in 1 hour</li>
-              </ul>
-            </div>
+            <Alert variant="info">
+              <AlertDescription>
+                <h4 className="font-medium text-sm mb-2">Didn't receive the email?</h4>
+                <ul className="text-sm space-y-1">
+                  <li>• Check your spam or junk folder</li>
+                  <li>• Make sure you entered the correct email</li>
+                  <li>• The link expires in 1 hour</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
           </div>
 
           {/* Buttons */}

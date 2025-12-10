@@ -7,6 +7,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { StepProps } from '../types';
 import { CheckCircle, ChevronDown, ChevronUp, Package, Trash2, Settings } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { 
@@ -213,11 +214,11 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         {/* Service Types Management Section */}
         {showServiceTypes && (
           <div className="border rounded-lg p-4 space-y-4">
-            <div className="rounded-md bg-blue-50 p-4 mb-4">
-              <p className="text-sm text-blue-800">
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
                 <span className="font-semibold">Note:</span> Service types define how services are billed. Fixed billing means a flat rate, hourly billing tracks time-based work, and usage billing charges per unit consumed.
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
             
             <div className="flex gap-2">
               <Button

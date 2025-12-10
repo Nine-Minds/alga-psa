@@ -6,6 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star, AlertTriangle, CornerDownRight, HelpCircle } from 'lucide-react';
 import { StepProps } from '../types';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { useSession } from 'next-auth/react';
@@ -924,11 +925,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
         {expandedSections.numbering && (
           <div className="p-4 border-t space-y-4">
-            <div className="rounded-md bg-blue-50 p-4 mb-4">
-              <p className="text-sm text-blue-800">
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
                 Configure how ticket numbers are generated. Each ticket will have a unique identifier consisting of an optional prefix and a sequential number with optional zero-padding.
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
             
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -999,16 +1000,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
         {expandedSections.boards && (
           <div className="p-4 border-t space-y-4">
-            <div className="rounded-md bg-blue-50 p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                <span className="font-semibold">Note:</span> Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.
-              </p>
-              {importedBoards.length > 1 && (
-                <p className="text-sm text-blue-800 mt-2">
-                  <span className="font-semibold">Tip:</span> Click the star in the Default column to change which board is the default.
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
+                <p>
+                  <span className="font-semibold">Note:</span> Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.
                 </p>
-              )}
-            </div>
+                {importedBoards.length > 1 && (
+                  <p className="mt-2">
+                    <span className="font-semibold">Tip:</span> Click the star in the Default column to change which board is the default.
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
 
             {/* Action Buttons - Moved to top */}
             <div className="flex gap-2">
@@ -1418,11 +1421,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
         {expandedSections.categories && hasBoard() && (
           <div className="p-4 border-t space-y-4">
-            <div className="rounded-md bg-blue-50 p-4 mb-4">
-              <p className="text-sm text-blue-800">
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
                 <span className="font-semibold">Note:</span> Categories help organize tickets by type of issue or request. You can create parent categories with subcategories for better organization. Examples include Technical Support (with subcategories like Hardware, Software, Network) or Service Requests.
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
 
             {/* Action Buttons - Moved to top */}
             <div className="flex gap-2">
@@ -1864,16 +1867,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
         {expandedSections.statuses && (
           <div className="p-4 border-t space-y-4">
-            <div className="rounded-md bg-blue-50 p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                <span className="font-semibold">Note:</span> Statuses track the lifecycle of a ticket. Each status is either <span className="font-semibold">Open</span> (ticket needs attention) or <span className="font-semibold">Closed</span> (ticket is resolved). The <span className="font-semibold">Default</span> status is automatically assigned to new tickets. Common statuses include New, In Progress, Waiting for Customer, Resolved, and Closed.
-              </p>
-              {importedStatuses.length > 1 && (
-                <p className="text-sm text-blue-800 mt-2">
-                  <span className="font-semibold">Tip:</span> Click the star in the Default column to change which status is the default. Only open statuses can be set as default.
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
+                <p>
+                  <span className="font-semibold">Note:</span> Statuses track the lifecycle of a ticket. Each status is either <span className="font-semibold">Open</span> (ticket needs attention) or <span className="font-semibold">Closed</span> (ticket is resolved). The <span className="font-semibold">Default</span> status is automatically assigned to new tickets. Common statuses include New, In Progress, Waiting for Customer, Resolved, and Closed.
                 </p>
-              )}
-            </div>
+                {importedStatuses.length > 1 && (
+                  <p className="mt-2">
+                    <span className="font-semibold">Tip:</span> Click the star in the Default column to change which status is the default. Only open statuses can be set as default.
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
 
             {/* Action Buttons - Moved to top */}
             <div className="flex gap-2">
@@ -2213,11 +2218,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
         {expandedSections.priorities && (
           <div className="p-4 border-t space-y-4">
-            <div className="rounded-md bg-blue-50 p-4 mb-4">
-              <p className="text-sm text-blue-800">
+            <Alert variant="info" className="mb-4">
+              <AlertDescription>
                 <span className="font-semibold">Note:</span> Priorities help determine the urgency of tickets and service level agreements (SLAs). Each priority has a color for quick visual identification. Typical priorities include Critical (red), High (orange), Medium (blue), and Low (green).
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
 
             {/* Action Buttons - Moved to top */}
             <div className="flex gap-2">
@@ -2519,12 +2524,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         </div>
       </div>
 
-      <div className="rounded-md bg-blue-50 p-4">
-        <p className="text-sm text-blue-800">
+      <Alert variant="info">
+        <AlertDescription>
           <span className="font-semibold">Required:</span> Please configure at least one board and one priority to complete setup.
           Import standard configurations to quickly set up your ticketing system.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
 
       {/* ITIL Information Modal */}
       <Dialog

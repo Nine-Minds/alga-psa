@@ -90,7 +90,7 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
 
   return (
     <div
-      className={`p-4 border-l-4 ${getBorderColor(notification.status)} ${!notification.isRead ? 'bg-blue-50' : 'bg-white'} rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+      className={`p-4 border-l-4 ${getBorderColor(notification.status)} ${!notification.isRead ? 'bg-primary-50' : 'bg-white'} rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
       onClick={handleClick}
       id={`notification-card-${notification.id}`}
     >
@@ -99,7 +99,7 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
           {getNotificationIcon(notification.status)}
           <h3 className="font-medium text-gray-900 truncate">{notification.title}</h3>
           {!notification.isRead && (
-            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" title="Unread" />
+            <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title="Unread" />
           )}
         </div>
         <div className="flex items-center gap-2">

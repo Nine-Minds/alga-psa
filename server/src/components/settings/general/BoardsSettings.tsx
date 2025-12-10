@@ -381,13 +381,13 @@ const BoardsSettings: React.FC = () => {
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
         <h3 className="text-lg font-semibold mb-4 text-gray-800">Boards</h3>
-        <div className="bg-blue-50 p-4 rounded-md mb-4">
-          <p className="text-sm text-blue-700">
+        <Alert variant="info" className="mb-4">
+          <AlertDescription>
             <strong>Default Board:</strong> When clients create tickets through the client portal,
             they will automatically be assigned to the board marked as default. Only one board can
             be set as default at a time. Boards help organize tickets by department, team, or workflow type.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>

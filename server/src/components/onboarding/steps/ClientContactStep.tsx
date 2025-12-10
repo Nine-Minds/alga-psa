@@ -5,6 +5,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { StepProps } from '../types';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 export function ClientContactStep({ data, updateData }: StepProps) {
   const hasClientInfo = !!(data.clientName || data.clientEmail || data.clientPhone || data.clientUrl || data.clientId);
@@ -111,11 +112,11 @@ export function ClientContactStep({ data, updateData }: StepProps) {
         </div>
       </div>
 
-      <div className="rounded-md bg-blue-50 p-4 space-y-2">
-        <p className="text-sm text-blue-700">
+      <Alert variant="info">
+        <AlertDescription>
           <span className="font-semibold">Optional:</span> You can skip this step and add contacts later from the client's profile.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

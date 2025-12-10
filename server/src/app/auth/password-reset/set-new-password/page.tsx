@@ -9,6 +9,7 @@ import * as Form from '@radix-ui/react-form';
 import { setNewPassword, getAccountInfoFromToken } from 'server/src/lib/actions/useRegister';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
 import Alert from 'server/src/components/auth/Alert';
+import { Alert as UIAlert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
@@ -171,30 +172,30 @@ const SetNewPasswordContent: React.FC = () => {
 
           {/* Account Information Section */}
           {accountInfo && (
-            <div className={`mb-6 p-4 ${themeColor === 'blue' ? 'bg-blue-50 border-blue-200' : 'bg-purple-50 border-purple-200'} border rounded-lg`}>
-              <div className="flex items-center gap-2 mb-3">
-                <User className={`w-4 h-4 ${themeColor === 'blue' ? 'text-blue-600' : 'text-purple-600'}`} />
-                <h3 className="font-semibold text-gray-700">Account Information</h3>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex">
-                  <span className="text-gray-500 w-28">Name:</span>
-                  <span className="text-gray-700 font-medium">{accountInfo.name}</span>
+            <UIAlert variant="info" className="mb-6">
+              <User className="h-4 w-4" />
+              <AlertDescription>
+                <h3 className="font-semibold mb-3">Account Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex">
+                    <span className="text-gray-500 w-28">Name:</span>
+                    <span className="font-medium">{accountInfo.name}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-28">Email:</span>
+                    <span className="font-medium">{accountInfo.email}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-28">Username:</span>
+                    <span className="font-medium">{accountInfo.username}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-gray-500 w-28">Account Type:</span>
+                    <span className="font-medium">{accountInfo.accountType}</span>
+                  </div>
                 </div>
-                <div className="flex">
-                  <span className="text-gray-500 w-28">Email:</span>
-                  <span className="text-gray-700 font-medium">{accountInfo.email}</span>
-                </div>
-                <div className="flex">
-                  <span className="text-gray-500 w-28">Username:</span>
-                  <span className="text-gray-700 font-medium">{accountInfo.username}</span>
-                </div>
-                <div className="flex">
-                  <span className="text-gray-500 w-28">Account Type:</span>
-                  <span className="text-gray-700 font-medium">{accountInfo.accountType}</span>
-                </div>
-              </div>
-            </div>
+              </AlertDescription>
+            </UIAlert>
           )}
 
           <Form.Root className="space-y-4" onSubmit={handleSubmit}>

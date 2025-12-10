@@ -96,14 +96,14 @@ export function BucketOverlayFields({
   };
 
   return (
-    <div className="mt-4 space-y-4 rounded-md border border-blue-100 bg-blue-50 p-4">
+    <div className="mt-4 space-y-4 rounded-md border border-primary-100 bg-primary-50 p-4">
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Label className="font-medium">
             Included {resolvedUnitLabel}
           </Label>
           <Tooltip content={`Amount of ${resolvedUnitLabel} included each billing period before overages apply.`}>
-            <Info className="h-4 w-4 text-blue-500" />
+            <Info className="h-4 w-4 text-primary-500" />
           </Tooltip>
         </div>
         <Input
@@ -122,14 +122,14 @@ export function BucketOverlayFields({
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Label className="font-medium flex items-center gap-1">
-            <Coins className="h-4 w-4 text-blue-500" />
+            <Coins className="h-4 w-4 text-primary-500" />
             Overage Rate
             <span className="text-xs text-muted-foreground">
               / {mode === 'hours' ? 'hour' : resolvedUnitLabel}
             </span>
           </Label>
           <Tooltip content={`Charge applied for each ${mode === 'hours' ? 'hour' : resolvedUnitLabel} beyond the included amount.`}>
-            <Info className="h-4 w-4 text-blue-500" />
+            <Info className="h-4 w-4 text-primary-500" />
           </Tooltip>
         </div>
         <div className="relative">
