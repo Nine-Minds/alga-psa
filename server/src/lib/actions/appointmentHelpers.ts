@@ -91,8 +91,25 @@ export async function getTenantSettings(
     // Extract settings from JSONB column or use defaults
     const tenantSettings = settings?.settings || {};
 
-    // Get MSP company name from branding.clientName (same as used in other parts of the system)
-    const tenantName = tenantSettings.branding?.clientName || tenant;
+    // Get MSP company name - check multiple sources in order of preference:
+    // 1. branding.clientName from tenant_settings (configured by user)
+    // 2. client_name from tenants table (set during tenant creation)
+    // 3. Fall back to a generic name (never show raw tenant ID)
+    let tenantName = tenantSettings.branding?.clientName;
+
+    if (!tenantName) {
+      // Try to get tenant name from tenants table
+      const tenantRecord = await trx('tenants')
+        .where({ tenant })
+        .select('client_name')
+        .first();
+      tenantName = tenantRecord?.client_name;
+    }
+
+    // If still no name, use a generic placeholder instead of tenant ID
+    if (!tenantName) {
+      tenantName = 'Your Service Provider';
+    }
 
     return {
       contactEmail: tenantSettings.supportEmail || tenantSettings.contactEmail || 'support@company.com',

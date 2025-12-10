@@ -713,9 +713,7 @@ export async function approveAppointmentRequest(
             cancellationPolicy: 'Please cancel at least 24 hours in advance.',
             minimumNoticeHours: 24,
             contactEmail: tenantSettings.contactEmail,
-            contactPhone: tenantSettings.contactPhone,
-            tenantName: tenantSettings.tenantName,
-            currentYear: new Date().getFullYear()
+            contactPhone: tenantSettings.contactPhone
           }, {
             tenantId: tenant,
             icsAttachment: {
@@ -927,9 +925,7 @@ export async function declineAppointmentRequest(
             declineReason: validatedData.decline_reason,
             requestNewAppointmentLink,
             contactEmail: tenantSettings.contactEmail,
-            contactPhone: tenantSettings.contactPhone,
-            tenantName: tenantSettings.tenantName,
-            currentYear: new Date().getFullYear()
+            contactPhone: tenantSettings.contactPhone
           }, {
             tenantId: tenant
           });

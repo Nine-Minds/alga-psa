@@ -5859,10 +5859,7 @@ Apri la fattura: {{invoice.url}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Merci d'avoir choisi {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -5885,11 +5882,7 @@ Durée : {{duration}} minutes
 QUELLE EST LA PROCHAINE ÉTAPE ?
 Notre équipe examinera votre demande et confirmera la disponibilité. Vous recevrez une notification par e-mail une fois que votre rendez-vous aura été approuvé ou si des modifications sont nécessaires. Nous répondons généralement dans un délai de {{responseTime}}.
 
-Si vous avez des questions ou si vous devez apporter des modifications à votre demande, veuillez nous contacter à {{contactEmail}}{{#if contactPhone}} ou appeler le {{contactPhone}}{{/if}}.
-
-Merci d'avoir choisi {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Si vous avez des questions ou si vous devez apporter des modifications à votre demande, veuillez nous contacter à {{contactEmail}}{{#if contactPhone}} ou appeler le {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
@@ -6228,10 +6221,7 @@ Merci d'avoir choisi {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Merci d'avoir choisi {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -6266,11 +6256,7 @@ POLITIQUE D'ANNULATION :
 
 Si vous devez reporter ou annuler ce rendez-vous, veuillez nous contacter au moins {{minimumNoticeHours}} heures à l'avance à {{contactEmail}}{{#if contactPhone}} ou appeler le {{contactPhone}}{{/if}}.
 
-Nous vous enverrons un rappel avant votre rendez-vous. À bientôt !
-
-Merci d'avoir choisi {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Nous vous enverrons un rappel avant votre rendez-vous. À bientôt !`
     },
     {
       name: 'appointment-request-declined',
@@ -6597,10 +6583,7 @@ Merci d'avoir choisi {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Merci d'avoir choisi {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -6629,11 +6612,7 @@ Nous nous excusons pour tout désagrément. Nous vous encourageons à soumettre 
 Demander un autre créneau : {{requestNewAppointmentLink}}
 {{/if}}
 
-Si vous avez des questions ou si vous souhaitez de l'aide pour trouver un créneau disponible, n'hésitez pas à nous contacter à {{contactEmail}}{{#if contactPhone}} ou à appeler le {{contactPhone}}{{/if}}. Notre équipe est là pour vous aider à trouver un horaire qui vous convient.
-
-Merci d'avoir choisi {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Si vous avez des questions ou si vous souhaitez de l'aide pour trouver un créneau disponible, n'hésitez pas à nous contacter à {{contactEmail}}{{#if contactPhone}} ou à appeler le {{contactPhone}}{{/if}}. Notre équipe est là pour vous aider à trouver un horaire qui vous convient.`
     },
     {
       name: 'new-appointment-request',
@@ -6985,10 +6964,7 @@ Merci d'avoir choisi {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>{{tenantName}} - Système de gestion des rendez-vous</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tous droits réservés.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -7015,10 +6991,7 @@ NOTES DU CLIENT :
 
 Référence de la demande : {{referenceNumber}}
 
-Examiner et répondre : {{reviewLink}}
-
-{{tenantName}} - Système de gestion des rendez-vous
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Examiner et répondre : {{reviewLink}}`
     }
   ];
 
@@ -7354,10 +7327,7 @@ Examiner et répondre : {{reviewLink}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Gracias por elegir {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -7380,11 +7350,7 @@ Duración: {{duration}} minutos
 ¿QUÉ SIGUE?
 Nuestro equipo revisará su solicitud y confirmará la disponibilidad. Recibirá una notificación por correo electrónico una vez que su cita haya sido aprobada o si se necesitan cambios. Normalmente respondemos dentro de {{responseTime}}.
 
-Si tiene alguna pregunta o necesita realizar cambios en su solicitud, por favor contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
-
-Gracias por elegir {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Si tiene alguna pregunta o necesita realizar cambios en su solicitud, por favor contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
@@ -7723,10 +7689,7 @@ Gracias por elegir {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Gracias por elegir {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -7761,11 +7724,7 @@ POLÍTICA DE CANCELACIÓN:
 
 Si necesita reprogramar o cancelar esta cita, por favor contáctenos con al menos {{minimumNoticeHours}} horas de anticipación en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
 
-Le enviaremos un recordatorio antes de su cita. ¡Hasta pronto!
-
-Gracias por elegir {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Le enviaremos un recordatorio antes de su cita. ¡Hasta pronto!`
     },
     {
       name: 'appointment-request-declined',
@@ -8092,10 +8051,7 @@ Gracias por elegir {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Gracias por elegir {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -8124,11 +8080,7 @@ Pedimos disculpas por cualquier inconveniente. Le animamos a enviar una nueva so
 Solicitar otro horario: {{requestNewAppointmentLink}}
 {{/if}}
 
-Si tiene alguna pregunta o desea ayuda para encontrar un horario disponible, no dude en contactarnos en {{contactEmail}}{{#if contactPhone}} o llamar al {{contactPhone}}{{/if}}. Nuestro equipo está aquí para ayudarle a encontrar un horario que le funcione.
-
-Gracias por elegir {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Si tiene alguna pregunta o desea ayuda para encontrar un horario disponible, no dude en contactarnos en {{contactEmail}}{{#if contactPhone}} o llamar al {{contactPhone}}{{/if}}. Nuestro equipo está aquí para ayudarle a encontrar un horario que le funcione.`
     },
     {
       name: 'new-appointment-request',
@@ -8480,10 +8432,7 @@ Gracias por elegir {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>{{tenantName}} - Sistema de gestión de citas</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -8510,10 +8459,7 @@ NOTAS DEL CLIENTE:
 
 Referencia de la solicitud: {{referenceNumber}}
 
-Revisar y responder: {{reviewLink}}
-
-{{tenantName}} - Sistema de gestión de citas
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Revisar y responder: {{reviewLink}}`
     }
   ];
 
@@ -8849,10 +8795,7 @@ Revisar y responder: {{reviewLink}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -8875,11 +8818,7 @@ Dauer: {{duration}} Minuten
 WIE GEHT ES WEITER?
 Unser Team wird Ihre Anfrage prüfen und die Verfügbarkeit bestätigen. Sie erhalten eine E-Mail-Benachrichtigung, sobald Ihr Termin genehmigt wurde oder falls Änderungen erforderlich sind. Wir antworten in der Regel innerhalb von {{responseTime}}.
 
-Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie {{contactPhone}} an{{/if}}.
-
-Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
-
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie {{contactPhone}} an{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
@@ -9218,10 +9157,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
       </p>
     </div>
 
-    <div class="footer">
-      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -9256,11 +9192,7 @@ STORNIERUNGSBEDINGUNGEN:
 
 Wenn Sie diesen Termin verschieben oder stornieren müssen, kontaktieren Sie uns bitte mindestens {{minimumNoticeHours}} Stunden im Voraus unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie {{contactPhone}} an{{/if}}.
 
-Wir senden Ihnen vor Ihrem Termin eine Erinnerung. Bis bald!
-
-Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
-
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Wir senden Ihnen vor Ihrem Termin eine Erinnerung. Bis bald!`
     },
     {
       name: 'appointment-request-declined',
@@ -9587,10 +9519,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
       </p>
     </div>
 
-    <div class="footer">
-      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -9619,11 +9548,7 @@ Wir entschuldigen uns für etwaige Unannehmlichkeiten. Wir ermutigen Sie, eine n
 Andere Zeit anfragen: {{requestNewAppointmentLink}}
 {{/if}}
 
-Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenster benötigen, zögern Sie bitte nicht, uns unter {{contactEmail}}{{#if contactPhone}} zu kontaktieren oder {{contactPhone}} anzurufen{{/if}}. Unser Team hilft Ihnen gerne, einen passenden Zeitpunkt zu finden.
-
-Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
-
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenster benötigen, zögern Sie bitte nicht, uns unter {{contactEmail}}{{#if contactPhone}} zu kontaktieren oder {{contactPhone}} anzurufen{{/if}}. Unser Team hilft Ihnen gerne, einen passenden Zeitpunkt zu finden.`
     },
     {
       name: 'new-appointment-request',
@@ -9975,10 +9900,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
       </p>
     </div>
 
-    <div class="footer">
-      <p>{{tenantName}} - Terminverwaltungssystem</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -10005,10 +9927,7 @@ KUNDENNOTIZEN:
 
 Anfragereferenz: {{referenceNumber}}
 
-Prüfen und antworten: {{reviewLink}}
-
-{{tenantName}} - Terminverwaltungssystem
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Prüfen und antworten: {{reviewLink}}`
     }
   ];
 
@@ -10344,10 +10263,7 @@ Prüfen und antworten: {{reviewLink}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Bedankt voor het kiezen van {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -10370,11 +10286,7 @@ Duur: {{duration}} minuten
 WAT GEBEURT ER NU?
 Ons team zal uw verzoek beoordelen en de beschikbaarheid bevestigen. U ontvangt een e-mailmelding zodra uw afspraak is goedgekeurd of als er wijzigingen nodig zijn. We reageren doorgaans binnen {{responseTime}}.
 
-Als u vragen heeft of wijzigingen in uw verzoek wilt aanbrengen, neem dan contact met ons op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
-
-Bedankt voor het kiezen van {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+Als u vragen heeft of wijzigingen in uw verzoek wilt aanbrengen, neem dan contact met ons op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
@@ -10713,10 +10625,7 @@ Bedankt voor het kiezen van {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Bedankt voor het kiezen van {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -10751,11 +10660,7 @@ ANNULERINGSBELEID:
 
 Als u deze afspraak moet verzetten of annuleren, neem dan minimaal {{minimumNoticeHours}} uur van tevoren contact met ons op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
 
-We sturen u een herinnering voordat uw afspraak plaatsvindt. Tot snel!
-
-Bedankt voor het kiezen van {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+We sturen u een herinnering voordat uw afspraak plaatsvindt. Tot snel!`
     },
     {
       name: 'appointment-request-declined',
@@ -11082,10 +10987,7 @@ Bedankt voor het kiezen van {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Bedankt voor het kiezen van {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -11114,11 +11016,7 @@ Onze excuses voor het ongemak. We moedigen u aan om een nieuw verzoek in te dien
 Andere tijd aanvragen: {{requestNewAppointmentLink}}
 {{/if}}
 
-Als u vragen heeft of hulp nodig heeft bij het vinden van een beschikbaar tijdslot, aarzel dan niet om contact met ons op te nemen via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}. Ons team helpt u graag bij het vinden van een geschikte tijd.
-
-Bedankt voor het kiezen van {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+Als u vragen heeft of hulp nodig heeft bij het vinden van een beschikbaar tijdslot, aarzel dan niet om contact met ons op te nemen via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}. Ons team helpt u graag bij het vinden van een geschikte tijd.`
     },
     {
       name: 'new-appointment-request',
@@ -11470,10 +11368,7 @@ Bedankt voor het kiezen van {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>{{tenantName}} - Afspraakbeheersysteem</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -11500,10 +11395,7 @@ KLANTNOTITIES:
 
 Verzoekreferentie: {{referenceNumber}}
 
-Beoordelen en reageren: {{reviewLink}}
-
-{{tenantName}} - Afspraakbeheersysteem
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+Beoordelen en reageren: {{reviewLink}}`
     }
   ];
 
@@ -11839,10 +11731,7 @@ Beoordelen en reageren: {{reviewLink}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Grazie per aver scelto {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -11865,11 +11754,7 @@ Durata: {{duration}} minuti
 COSA SUCCEDE ORA?
 Il nostro team esaminerà la tua richiesta e confermerà la disponibilità. Riceverai una notifica via email una volta che il tuo appuntamento sarà stato approvato o se sono necessarie modifiche. Di solito rispondiamo entro {{responseTime}}.
 
-Se hai domande o desideri apportare modifiche alla tua richiesta, contattaci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}.
-
-Grazie per aver scelto {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Se hai domande o desideri apportare modifiche alla tua richiesta, contattaci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
@@ -12208,10 +12093,7 @@ Grazie per aver scelto {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Grazie per aver scelto {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -12246,11 +12128,7 @@ POLITICA DI CANCELLAZIONE:
 
 Se devi riprogrammare o annullare questo appuntamento, ti preghiamo di contattarci con almeno {{minimumNoticeHours}} ore di anticipo all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}.
 
-Ti invieremo un promemoria prima del tuo appuntamento. A presto!
-
-Grazie per aver scelto {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Ti invieremo un promemoria prima del tuo appuntamento. A presto!`
     },
     {
       name: 'appointment-request-declined',
@@ -12577,10 +12455,7 @@ Grazie per aver scelto {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Grazie per aver scelto {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -12609,11 +12484,7 @@ Ci scusiamo per l'inconveniente. Ti invitiamo a inviare una nuova richiesta per 
 Richiedi altro orario: {{requestNewAppointmentLink}}
 {{/if}}
 
-Se hai domande o desideri assistenza per trovare una fascia oraria disponibile, non esitare a contattarci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}. Il nostro team è qui per aiutarti a trovare un orario che funzioni per te.
-
-Grazie per aver scelto {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Se hai domande o desideri assistenza per trovare una fascia oraria disponibile, non esitare a contattarci all'indirizzo {{contactEmail}}{{#if contactPhone}} o chiama il {{contactPhone}}{{/if}}. Il nostro team è qui per aiutarti a trovare un orario che funzioni per te.`
     },
     {
       name: 'new-appointment-request',
@@ -12965,10 +12836,7 @@ Grazie per aver scelto {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>{{tenantName}} - Sistema di gestione appuntamenti</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -12995,10 +12863,7 @@ NOTE DEL CLIENTE:
 
 Riferimento richiesta: {{referenceNumber}}
 
-Rivedi e rispondi: {{reviewLink}}
-
-{{tenantName}} - Sistema di gestione appuntamenti
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Rivedi e rispondi: {{reviewLink}}`
     }
   ];
 

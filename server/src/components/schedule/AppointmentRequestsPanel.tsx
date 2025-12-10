@@ -29,12 +29,14 @@ interface AppointmentRequestsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onRequestProcessed?: () => void;
+  highlightedRequestId?: string | null;
 }
 
 export default function AppointmentRequestsPanel({
   isOpen,
   onClose,
-  onRequestProcessed
+  onRequestProcessed,
+  highlightedRequestId
 }: AppointmentRequestsPanelProps) {
   const [requests, setRequests] = useState<IAppointmentRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<IAppointmentRequest[]>([]);
@@ -167,6 +169,21 @@ export default function AppointmentRequestsPanel({
     setLinkedTicketId(request.ticket_id || '');
     setDeclineReason('');
   };
+
+  // Auto-select highlighted request when requests are loaded
+  useEffect(() => {
+    if (highlightedRequestId && requests.length > 0 && !selectedRequest) {
+      const requestToHighlight = requests.find(r => r.appointment_request_id === highlightedRequestId);
+      if (requestToHighlight) {
+        // Set status filter to show the request (switch to 'all' or the request's status)
+        if (requestToHighlight.status !== statusFilter && statusFilter !== 'all') {
+          setStatusFilter('all');
+        }
+        // Use handleSelectRequest to properly initialize all form state
+        handleSelectRequest(requestToHighlight);
+      }
+    }
+  }, [highlightedRequestId, requests, selectedRequest, statusFilter]);
 
   const handleOpenTicket = async (ticketId: string) => {
     try {

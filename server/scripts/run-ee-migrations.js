@@ -1,6 +1,9 @@
 // Runs CE + EE migrations locally by copying into a temp directory
 // and invoking knex with MIGRATIONS_DIR pointing to that temp path.
 // Overlay rule: EE files overwrite CE files when names collide.
+//
+// Usage: node run-ee-migrations.js [action]
+//   action: latest (default), down, status
 
 import fs from 'fs';
 import fsp from 'fs/promises';
@@ -47,6 +50,15 @@ function run(cmd, args, opts = {}) {
 }
 
 async function main() {
+  // Parse action from command line args (default: latest)
+  const validActions = ['latest', 'down', 'status'];
+  const action = process.argv[2] || 'latest';
+
+  if (!validActions.includes(action)) {
+    console.error(`Invalid action: ${action}. Must be one of: ${validActions.join(', ')}`);
+    process.exit(1);
+  }
+
   // Resolve repo root from server/scripts/
   const repoRoot = path.resolve(__dirname, '..', '..');
   const ceDir = path.resolve(repoRoot, 'server', 'migrations');
@@ -83,15 +95,16 @@ async function main() {
 
   console.log(`Prepared merged migrations in: ${tmpMigrations}`);
 
-  // Run knex migrate:latest with MIGRATIONS_DIR override and migration env (uses admin connection)
+  // Run knex migrate:<action> with MIGRATIONS_DIR override and migration env (uses admin connection)
   const serverDir = path.resolve(repoRoot, 'server');
   const knexfilePath = path.resolve(serverDir, 'knexfile.cjs');
   const env = { ...process.env, MIGRATIONS_DIR: tmpMigrations, NODE_ENV: 'migration' };
 
-  console.log('Running migrations with Knex...');
-  await run('npx', ['knex', 'migrate:latest', '--knexfile', knexfilePath, '--env', 'migration'], { env, cwd: serverDir });
+  const knexAction = `migrate:${action}`;
+  console.log(`Running knex ${knexAction}...`);
+  await run('npx', ['knex', knexAction, '--knexfile', knexfilePath, '--env', 'migration'], { env, cwd: serverDir });
 
-  console.log('Migrations completed successfully.');
+  console.log(`Migration ${action} completed successfully.`);
   console.log(`Temporary migrations directory preserved at: ${tmpMigrations}`);
   console.log('Delete it when you are done, e.g. rm -rf', tmpBase);
 }

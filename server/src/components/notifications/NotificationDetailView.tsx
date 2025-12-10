@@ -91,6 +91,8 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
       const isMspTicketLink = notification.link.includes('/msp/tickets/');
       const isClientPortalTicketLink = notification.link.includes('/client-portal/tickets/');
       const isProjectTaskLink = notification.link.includes('/msp/projects/') && notification.link.includes('/tasks/');
+      const isClientPortalAppointmentLink = notification.link.includes('/client-portal/appointments/');
+      const isMspAppointmentLink = notification.link.includes('/msp/schedule') && notification.category === 'appointments';
 
       if (isDocumentLink) {
         // Extract document ID from URL (format: /msp/documents?doc=<documentId>)
@@ -142,6 +144,33 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
 
         if (taskId && projectId) {
           onNavigateToProjectTask(taskId, projectId);
+        }
+      } else if (isClientPortalAppointmentLink) {
+        // For client portal appointments, navigate to the dedicated appointment page
+        // Extract appointment ID from URL (format: /client-portal/appointments/<appointmentId>)
+        const appointmentId = notification.metadata?.appointment_request_id || notification.link.split('/client-portal/appointments/')[1]?.split('?')[0]?.split('#')[0];
+        if (appointmentId) {
+          // Open in new tab for consistency with other entity views
+          window.open(`/client-portal/appointments/${appointmentId}`, '_blank', 'noopener,noreferrer');
+          if (onClose) {
+            onClose();
+          }
+        }
+      } else if (isMspAppointmentLink) {
+        // For MSP appointment notifications, navigate to schedule with the request highlighted
+        const appointmentId = notification.metadata?.appointment_request_id;
+        if (appointmentId) {
+          // Open in new tab for consistency
+          window.open(`/msp/schedule?requestId=${appointmentId}`, '_blank', 'noopener,noreferrer');
+          if (onClose) {
+            onClose();
+          }
+        } else {
+          // Fallback to the link directly
+          window.open(notification.link, '_blank', 'noopener,noreferrer');
+          if (onClose) {
+            onClose();
+          }
         }
       } else {
         // For other links, navigate normally and close drawer
