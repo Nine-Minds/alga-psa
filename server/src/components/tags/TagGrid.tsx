@@ -40,13 +40,17 @@ export const TagGrid: React.FC<TagGridProps> = ({
             key={tagText}
             id={`tag-${index}`}
             label={tagText}
+            title={tagText}
             onClick={() => onTagSelect(tagText)}
-            className={`p-2 rounded-md text-sm text-center transition-colors ${
+            className={`p-1 rounded-md text-xs text-center transition-colors overflow-hidden min-w-0 truncate ${
               isSelected ? 'ring-2 ring-primary-500 px-1' : ''
             }`}
             style={{
               backgroundColor,
               color: textColor,
+              display: 'block',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
             }}
             variant="ghost"
           >
