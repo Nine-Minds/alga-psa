@@ -817,7 +817,7 @@ exports.up = async function(knex) {
 
     if (received) {
       await knex('system_email_templates')
-        .where({ system_email_template_id: received.system_email_template_id })
+        .where({ id: received.id })
         .update({
           subject: t.requestReceived.subject,
           html_content: generateRequestReceivedHtml(t.requestReceived),
@@ -848,7 +848,7 @@ exports.up = async function(knex) {
 
     if (approved) {
       await knex('system_email_templates')
-        .where({ system_email_template_id: approved.system_email_template_id })
+        .where({ id: approved.id })
         .update({
           subject: t.requestApproved.subject,
           html_content: generateRequestApprovedHtml(t.requestApproved),
@@ -879,7 +879,7 @@ exports.up = async function(knex) {
 
     if (declined) {
       await knex('system_email_templates')
-        .where({ system_email_template_id: declined.system_email_template_id })
+        .where({ id: declined.id })
         .update({
           subject: t.requestDeclined.subject,
           html_content: generateRequestDeclinedHtml(t.requestDeclined),
@@ -910,7 +910,7 @@ exports.up = async function(knex) {
 
     if (newReq) {
       await knex('system_email_templates')
-        .where({ system_email_template_id: newReq.system_email_template_id })
+        .where({ id: newReq.id })
         .update({
           subject: t.newRequest.subject,
           html_content: generateNewRequestHtml(t.newRequest),
