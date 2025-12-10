@@ -651,6 +651,9 @@ export async function deleteAsset(asset_id: string): Promise<void> {
             await trx('document_associations')
                 .where({ tenant, entity_type: 'asset', entity_id: asset_id })
                 .delete();
+            await trx('tenant_external_entity_mappings')
+                .where({ tenant, alga_entity_type: 'asset', alga_entity_id: asset_id })
+                .delete();
 
             await trx('assets')
                 .where({ tenant, asset_id })
