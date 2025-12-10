@@ -249,13 +249,13 @@ async function sendNotificationIfEnabled(
 async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string): Promise<string> {
   const formattedChanges = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
-      // Handle different types of values
+      // Handle structured change objects with old/new values
       if (typeof value === 'object' && value !== null) {
-        const { from, to } = value as { from?: unknown; to?: unknown };
-        if (from !== undefined && to !== undefined) {
-          const fromValue = await resolveValue(db, field, from, tenantId);
-          const toValue = await resolveValue(db, field, to, tenantId);
-          return `${formatFieldName(field)}: ${fromValue} → ${toValue}`;
+        const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
+        if (oldVal !== undefined && newVal !== undefined) {
+          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId);
+          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId);
+          return `${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
         }
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId);
