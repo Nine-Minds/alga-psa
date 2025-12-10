@@ -560,35 +560,83 @@ jobs:
 
               // Fill in the email and password
               try {
-                await page.waitForSelector('input[id="msp-email-field"]', { timeout: 15000 }); // Wait for email field first
+                console.log('Waiting for email field...');
+                await page.waitForSelector('input[id="msp-email-field"]', { timeout: 15000 });
+                console.log(\`Filling email: \${email}\`);
                 await page.fill('input[id="msp-email-field"]', email);
+                console.log('Waiting for password field...');
                 await page.waitForSelector('input[id="msp-password-field"]', { timeout: 5000 });
+                console.log('Filling password...');
                 await page.fill('input[id="msp-password-field"]', password);
+                console.log('Credentials filled successfully');
               } catch (e) {
                 console.error('Error filling form fields. Current page HTML:', await page.content());
                 throw e;
               }
 
-              // Click the login button
+              // Click the login button and wait for navigation
               try {
+                console.log('Waiting for sign-in button...');
                 await page.waitForSelector('button[id="msp-sign-in-button"]', { timeout: 5000 });
-                await page.click('button[id="msp-sign-in-button"]');
+                console.log('Clicking sign-in button...');
+
+                // Click and wait for either navigation or network response
+                await Promise.all([
+                  page.waitForResponse(
+                    response => response.url().includes('/api/auth'),
+                    { timeout: 30000 }
+                  ).then(response => {
+                    console.log(\`Auth API response: \${response.status()} \${response.url()}\`);
+                    return response;
+                  }).catch(e => {
+                    console.log('No auth API response detected within timeout');
+                    return null;
+                  }),
+                  page.click('button[id="msp-sign-in-button"]')
+                ]);
+                console.log('Button clicked, waiting for page response...');
               } catch (e) {
-                console.error('Error clicking sign-in button. Current page HTML:', await page.content());
+                console.error('Error clicking sign-in button:', e);
+                console.error('Current page HTML:', await page.content());
                 throw e;
               }
 
-              // Wait for authentication to complete - networkidle ensures all auth API calls finish
-              // This is critical because the login process involves multiple async operations:
-              // - NextAuth session creation
-              // - Database session record creation
-              // - Device fingerprinting and geolocation
+              // Wait for authentication to complete
               console.log('Waiting for network to become idle after login...');
               await page.waitForLoadState('networkidle', { timeout: 60000 });
 
-              // Wait for navigation to the dashboard (or other expected page)
-              // Adjust the expected URL or path as necessary
-              console.log(\`Current URL after networkidle: \${page.url()}\`);
+              // Check current state after networkidle
+              const currentUrl = page.url();
+              console.log(\`Current URL after networkidle: \${currentUrl}\`);
+
+              // If still on login page, capture diagnostic info
+              if (currentUrl.includes('/auth/')) {
+                console.log('Still on auth page - checking for errors...');
+
+                // Check for any visible error messages
+                const pageText = await page.textContent('body');
+                if (pageText.toLowerCase().includes('error') || pageText.toLowerCase().includes('invalid')) {
+                  console.error('Error text found on page:', pageText.substring(0, 1000));
+                }
+
+                // Check for alert elements
+                const alertVisible = await page.locator('[role="alert"]').isVisible().catch(() => false);
+                if (alertVisible) {
+                  const alertText = await page.locator('[role="alert"]').textContent();
+                  console.error('Alert message found:', alertText);
+                }
+
+                // Log the visible form state
+                const emailValue = await page.inputValue('input[id="msp-email-field"]').catch(() => 'N/A');
+                const passwordValue = await page.inputValue('input[id="msp-password-field"]').catch(() => 'N/A');
+                console.log(\`Form state - Email field value: \${emailValue}, Password filled: \${passwordValue ? 'yes' : 'no'}\`);
+
+                // Take a screenshot for debugging
+                await page.screenshot({ path: 'login-debug-screenshot.png', fullPage: true });
+                console.log('Debug screenshot saved to login-debug-screenshot.png');
+              }
+
+              // Wait for navigation to the dashboard
               console.log(\`Waiting for URL: \${baseUrl}/msp/dashboard with 90s timeout.\`);
               await page.waitForURL(\`\${baseUrl}/msp/dashboard\`, { timeout: 90000 });
 
@@ -651,7 +699,11 @@ jobs:
         if: always() && steps.install_docker_compose.outcome == 'success'
         run: |
           mkdir -p logs
-          
+
+          # Copy any Playwright screenshots to logs directory
+          cp e2e-tests/*.png logs/ 2>/dev/null || echo "No Playwright screenshots found"
+          cp e2e-tests/test-results/**/*.png logs/ 2>/dev/null || echo "No test-results screenshots found"
+
           # Save logs for each service
           for service in server setup postgres redis pgbouncer hocuspocus workflow-worker; do
             echo "Saving logs for $service..."
