@@ -289,8 +289,14 @@ export class AssetService extends BaseService<any> {
     // Delete extension data
     await this.deleteExtensionData(id, asset.asset_type, context);
 
-    // Delete main asset record (cascade will handle relationships, documents, etc.)
     const knex = await this.getDbForContext(context);
+
+    // Delete external entity mapping (e.g., NinjaOne device mapping)
+    await knex('tenant_external_entity_mappings')
+      .where({ tenant: context.tenant, alga_entity_type: 'asset', alga_entity_id: id })
+      .del();
+
+    // Delete main asset record (cascade will handle relationships, documents, etc.)
     await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
       .del();
