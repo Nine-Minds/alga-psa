@@ -4,6 +4,55 @@ install_cli:
 validate-secrets:
 	@./scripts/validate-secrets.sh
 
+generate-secrets:
+	@./scripts/generate-secrets.sh
+
+# ============================================================================
+# Quick Start Commands (for open source users)
+# ============================================================================
+# These are simplified aliases for common operations
+
+# Start Alga PSA (Community Edition with prebuilt images)
+up:
+	@docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+		--env-file server/.env --env-file .env.image up -d
+
+# Stop all services
+down:
+	@docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+		--env-file server/.env --env-file .env.image down
+
+# View logs (follow mode)
+logs:
+	@docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+		--env-file server/.env --env-file .env.image logs -f
+
+# Show service status
+status:
+	@docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+		--env-file server/.env --env-file .env.image ps
+
+# Pull latest images
+pull:
+	@docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+		--env-file server/.env --env-file .env.image pull
+
+# Restart all services
+restart: down up
+
+# Show initial login credentials from logs
+credentials:
+	@docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+		--env-file server/.env --env-file .env.image logs | grep -A5 "User Email"
+
+# Full quickstart setup
+quickstart:
+	@./quickstart.sh
+
+# ============================================================================
+# Development Commands (for building from source)
+# ============================================================================
+
 # Main docker commands with automatic validation
 sebastian-docker-run:
 	./setup/bash/run-compose.sh ./docker-compose.yaml -d

@@ -53,7 +53,54 @@ A comprehensive Professional Services Automation platform designed for Managed S
 - **Authentication**: NextAuth.js with multi-portal support (MSP and Client Portal)
 - **UI Components**: Radix-based component library
 
-## Getting Started
+## Quick Start (5 minutes)
+
+Get Alga PSA running with a single command:
+
+```bash
+# Clone and enter the repository
+git clone https://github.com/nine-minds/alga-psa.git
+cd alga-psa
+
+# Run the quick start script
+./quickstart.sh
+```
+
+The script will:
+- Check prerequisites (Docker, Docker Compose)
+- Generate secure secrets automatically
+- Configure environment variables
+- Start all services
+
+Once complete, access the application at **http://localhost:3000**
+
+### Prerequisites
+
+- Docker Engine 24.0+ ([Install Docker](https://docs.docker.com/get-docker/))
+- Docker Compose v2.20+ (included with Docker Desktop)
+- Git
+
+### Manual Setup
+
+If you prefer manual setup or need more control, see the [Complete Setup Guide](docs/setup_guide.md).
+
+### Common Commands
+
+```bash
+# View logs (includes initial login credentials)
+make logs
+
+# Stop services
+make down
+
+# Start services
+make up
+
+# Validate secrets configuration
+make validate-secrets
+```
+
+## Getting Started (Detailed)
 
 For detailed setup instructions, please refer to our [Complete Setup Guide](docs/setup_guide.md). The guide covers:
 - Prerequisites and system requirements
