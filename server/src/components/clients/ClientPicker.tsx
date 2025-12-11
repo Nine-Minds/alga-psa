@@ -340,7 +340,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-white border rounded-md shadow-lg overflow-hidden w-full">
+            <div className="bg-white border rounded-md shadow-lg w-full">
               <ReflectionContainer id={`${id}-dropdown`} label="Client Picker Dropdown">
                 <div className="p-3 space-y-3 bg-white">
                   <div className="grid grid-cols-2 gap-2">

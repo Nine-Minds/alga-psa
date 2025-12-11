@@ -147,7 +147,6 @@ export function TemplateTaskForm({
       title={task ? 'Edit Task' : 'Add Task'}
       className="max-w-2xl"
       id="template-task-form-dialog"
-      allowOverflow
     >
       <DialogContent>
         <form onSubmit={handleSubmit} id="template-task-form">

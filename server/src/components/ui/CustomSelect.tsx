@@ -184,8 +184,8 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
         <RadixSelect.Portal>
           <RadixSelect.Content
             className={`
-              overflow-hidden bg-white rounded-md shadow-lg
-              border border-gray-200 mt-1 z-[9999] min-w-[var(--radix-select-trigger-width)] max-w-full
+              overflow-hidden bg-white rounded-md shadow-lg pointer-events-auto
+              border border-gray-200 mt-1 z-[10001] min-w-[var(--radix-select-trigger-width)] max-w-full
               [&[data-side=top]]:mb-2 [&[data-side=bottom]]:mt-2
               ${customStyles?.content || ''}
             `}

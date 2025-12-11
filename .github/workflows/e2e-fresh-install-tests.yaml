@@ -574,29 +574,63 @@ jobs:
                 throw e;
               }
 
-              // Click the login button and wait for navigation
+              // Submit the login form
+              // Note: Using keyboard Enter instead of button click because React form
+              // onSubmit handlers are sometimes not triggered by Playwright's click()
               try {
                 console.log('Waiting for sign-in button...');
                 await page.waitForSelector('button[id="msp-sign-in-button"]', { timeout: 5000 });
-                console.log('Clicking sign-in button...');
+                console.log('Submitting form via Enter key on password field...');
 
-                // Click and wait for either navigation or network response
-                await Promise.all([
+                // Focus the password field and press Enter to submit the form
+                // This is more reliable than clicking the submit button for React forms
+                await page.focus('input[id="msp-password-field"]');
+
+                // Wait for the credentials POST request while pressing Enter
+                // NextAuth credentials login POSTs to /api/auth/callback/credentials
+                const [credentialsResponse] = await Promise.all([
                   page.waitForResponse(
-                    response => response.url().includes('/api/auth'),
+                    response => {
+                      const isCredentialsPost = response.url().includes('/api/auth/callback') &&
+                                                response.request().method() === 'POST';
+                      if (isCredentialsPost) {
+                        console.log(\`Auth callback response: \${response.status()} \${response.request().method()} \${response.url()}\`);
+                      }
+                      return isCredentialsPost;
+                    },
                     { timeout: 30000 }
-                  ).then(response => {
-                    console.log(\`Auth API response: \${response.status()} \${response.url()}\`);
-                    return response;
-                  }).catch(e => {
-                    console.log('No auth API response detected within timeout');
+                  ).catch(e => {
+                    console.log('No auth callback POST detected - trying button click as fallback');
                     return null;
                   }),
-                  page.click('button[id="msp-sign-in-button"]')
+                  page.keyboard.press('Enter')
                 ]);
-                console.log('Button clicked, waiting for page response...');
+
+                // If Enter didn't work, try clicking the button
+                if (!credentialsResponse) {
+                  console.log('Enter key did not trigger form submit, trying button click...');
+                  await Promise.all([
+                    page.waitForResponse(
+                      response => {
+                        const isCredentialsPost = response.url().includes('/api/auth/callback') &&
+                                                  response.request().method() === 'POST';
+                        if (isCredentialsPost) {
+                          console.log(\`Auth callback response (via click): \${response.status()} \${response.request().method()} \${response.url()}\`);
+                        }
+                        return isCredentialsPost;
+                      },
+                      { timeout: 30000 }
+                    ).catch(e => {
+                      console.log('Still no auth callback POST after button click');
+                      return null;
+                    }),
+                    page.click('button[id="msp-sign-in-button"]')
+                  ]);
+                }
+
+                console.log('Form submitted, waiting for page response...');
               } catch (e) {
-                console.error('Error clicking sign-in button:', e);
+                console.error('Error submitting login form:', e);
                 console.error('Current page HTML:', await page.content());
                 throw e;
               }
