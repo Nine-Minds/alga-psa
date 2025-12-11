@@ -541,6 +541,7 @@ export function QuickAddTicket({
         onClose={handleClose}
         className="w-full max-w-2xl max-h-[90vh]"
         title="Add Ticket"
+        disableFocusTrap
       >
         <DialogContent>
           {isLoading ? (
