@@ -31,22 +31,49 @@ export interface TenantEmailTemplate {
   updated_at: string;
 }
 
-export interface NotificationCategory {
+// Global reference table - no tenant column
+export interface NotificationCategoryBase {
   id: number;
-  tenant: string;
   name: string;
   description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Effective category with tenant-specific flags (returned by actions)
+export interface NotificationCategory extends NotificationCategoryBase {
+  is_enabled: boolean;        // Effective value from tenant settings (or default true)
+  is_default_enabled: boolean; // Effective value from tenant settings (or default true)
+}
+
+export interface NotificationSubtypeBase {
+  id: number;
+  category_id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationSubtype extends NotificationSubtypeBase {
+  is_enabled: boolean;
+  is_default_enabled: boolean;
+}
+
+export interface TenantNotificationCategorySetting {
+  tenant_notification_category_setting_id: string; // UUID
+  tenant: string;
+  category_id: number;
   is_enabled: boolean;
   is_default_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface NotificationSubtype {
-  id: number;
-  category_id: number;
-  name: string;
-  description: string | null;
+export interface TenantNotificationSubtypeSetting {
+  tenant_notification_subtype_setting_id: string; // UUID
+  tenant: string;
+  subtype_id: number;
   is_enabled: boolean;
   is_default_enabled: boolean;
   created_at: string;

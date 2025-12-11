@@ -233,9 +233,21 @@ export class EmailNotificationService implements NotificationService {
   // Category management
   async getCategories(tenant: string): Promise<NotificationCategory[]> {
     const knex = await this.getTenantKnex();
-    return knex('notification_categories')
-      .where({ tenant })
-      .orderBy('name');
+    return knex('notification_categories as nc')
+      .leftJoin('tenant_notification_category_settings as tcs', function() {
+        this.on('tcs.category_id', 'nc.id')
+            .andOn('tcs.tenant', knex.raw('?', [tenant]));
+      })
+      .select(
+        'nc.id',
+        'nc.name',
+        'nc.description',
+        'nc.created_at',
+        'nc.updated_at',
+        knex.raw('COALESCE(tcs.is_enabled, true) as is_enabled'),
+        knex.raw('COALESCE(tcs.is_default_enabled, true) as is_default_enabled')
+      )
+      .orderBy('nc.name');
   }
 
   async getCategoryWithSubtypes(
@@ -243,39 +255,89 @@ export class EmailNotificationService implements NotificationService {
     categoryId: number
   ): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }> {
     const knex = await this.getTenantKnex();
-    
-    const category = await knex('notification_categories')
-      .where({ tenant, id: categoryId })
+
+    const category = await knex('notification_categories as nc')
+      .leftJoin('tenant_notification_category_settings as tcs', function() {
+        this.on('tcs.category_id', 'nc.id')
+            .andOn('tcs.tenant', knex.raw('?', [tenant]));
+      })
+      .select(
+        'nc.id',
+        'nc.name',
+        'nc.description',
+        'nc.created_at',
+        'nc.updated_at',
+        knex.raw('COALESCE(tcs.is_enabled, true) as is_enabled'),
+        knex.raw('COALESCE(tcs.is_default_enabled, true) as is_default_enabled')
+      )
+      .where('nc.id', categoryId)
       .first();
-      
+
     if (!category) {
       throw new Error('Category not found');
     }
-    
-    const subtypes = await knex('notification_subtypes')
-      .where({
-        category_id: categoryId,
-        tenant
+
+    const subtypes = await knex('notification_subtypes as ns')
+      .leftJoin('tenant_notification_subtype_settings as tss', function() {
+        this.on('tss.subtype_id', 'ns.id')
+            .andOn('tss.tenant', knex.raw('?', [tenant]));
       })
-      .orderBy('name');
-      
-    return {
-      ...category,
-      subtypes
-    };
+      .select(
+        'ns.id',
+        'ns.category_id',
+        'ns.name',
+        'ns.description',
+        'ns.created_at',
+        'ns.updated_at',
+        knex.raw('COALESCE(tss.is_enabled, true) as is_enabled'),
+        knex.raw('COALESCE(tss.is_default_enabled, true) as is_default_enabled')
+      )
+      .where('ns.category_id', categoryId)
+      .orderBy('ns.name');
+
+    return { ...category, subtypes };
   }
 
   async updateCategory(
     tenant: string,
     id: number,
-    category: Partial<NotificationCategory>
+    category: Partial<Pick<NotificationCategory, 'is_enabled' | 'is_default_enabled'>>
   ): Promise<NotificationCategory> {
     const knex = await this.getTenantKnex();
-    const [updated] = await knex('notification_categories')
-      .where({ tenant, id })
-      .update(category)
-      .returning('*');
-    return updated;
+
+    await knex('tenant_notification_category_settings')
+      .insert({
+        tenant,
+        category_id: id,
+        is_enabled: category.is_enabled,
+        is_default_enabled: category.is_default_enabled
+      })
+      .onConflict(['tenant', 'category_id'])
+      .merge({
+        is_enabled: category.is_enabled,
+        is_default_enabled: category.is_default_enabled,
+        updated_at: knex.fn.now()
+      });
+
+    // Return the effective category
+    const result = await knex('notification_categories as nc')
+      .leftJoin('tenant_notification_category_settings as tcs', function() {
+        this.on('tcs.category_id', 'nc.id')
+            .andOn('tcs.tenant', knex.raw('?', [tenant]));
+      })
+      .select(
+        'nc.id',
+        'nc.name',
+        'nc.description',
+        'nc.created_at',
+        'nc.updated_at',
+        knex.raw('COALESCE(tcs.is_enabled, true) as is_enabled'),
+        knex.raw('COALESCE(tcs.is_default_enabled, true) as is_default_enabled')
+      )
+      .where('nc.id', id)
+      .first();
+
+    return result;
   }
 
   // User preferences
@@ -295,14 +357,25 @@ export class EmailNotificationService implements NotificationService {
     preference: Partial<UserNotificationPreference>
   ): Promise<UserNotificationPreference> {
     const knex = await this.getTenantKnex();
+
+    if (!preference.subtype_id) {
+      throw new Error('subtype_id is required');
+    }
+
     const [updated] = await knex('user_notification_preferences')
-      .where({
+      .insert({
         tenant,
         user_id: userId,
-        subtype_id: preference.subtype_id
+        subtype_id: preference.subtype_id,
+        is_enabled: preference.is_enabled ?? true
       })
-      .update(preference)
+      .onConflict(['tenant', 'user_id', 'subtype_id'])
+      .merge({
+        is_enabled: preference.is_enabled,
+        updated_at: knex.fn.now()
+      })
       .returning('*');
+
     return updated;
   }
 
@@ -336,6 +409,34 @@ export class EmailNotificationService implements NotificationService {
 
     if (recentCount >= settings.rate_limit_per_minute) {
       throw new Error('Rate limit exceeded');
+    }
+
+    // Check if subtype is enabled FOR THIS TENANT
+    const subtype = await knex('notification_subtypes')
+      .where({ id: params.subtypeId })
+      .first();
+
+    if (!subtype) {
+      throw new Error('Notification subtype not found');
+    }
+
+    const subtypeSetting = await knex('tenant_notification_subtype_settings')
+      .where({ tenant: params.tenant, subtype_id: params.subtypeId })
+      .first();
+
+    const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
+    if (!isSubtypeEnabled) {
+      return; // Subtype disabled for this tenant - silently skip
+    }
+
+    // Check if category is enabled FOR THIS TENANT
+    const categorySetting = await knex('tenant_notification_category_settings')
+      .where({ tenant: params.tenant, category_id: subtype.category_id })
+      .first();
+
+    const isCategoryEnabled = categorySetting?.is_enabled ?? true;
+    if (!isCategoryEnabled) {
+      return; // Category disabled for this tenant - silently skip
     }
 
     // Check user preferences
