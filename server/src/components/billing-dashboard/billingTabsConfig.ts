@@ -33,15 +33,15 @@ export type BillingTabValue =
 
 export const billingTabDefinitions: BillingTabDefinition[] = [
   {
-    value: 'contract-templates',
-    label: 'Contract Templates',
-    href: '/msp/billing?tab=contract-templates',
-    icon: FileText
-  },
-  {
     value: 'client-contracts',
     label: 'Client Contracts',
     href: '/msp/billing?tab=client-contracts',
+    icon: FileText
+  },
+  {
+    value: 'contract-templates',
+    label: 'Contract Templates',
+    href: '/msp/billing?tab=contract-templates',
     icon: FileText
   },
   {

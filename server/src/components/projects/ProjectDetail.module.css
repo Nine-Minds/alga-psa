@@ -148,7 +148,9 @@
 .kanbanColumn {
   display: flex;
   flex-direction: column;
-  min-width: 20vw; /* Minimum 20% of viewport width for each column */
+  width: 350px; /* Fixed width for equal columns */
+  min-width: 350px; /* Ensure minimum width */
+  max-width: 350px; /* Prevent columns from growing */
   flex-shrink: 0; /* Prevent columns from shrinking */
   height: calc(100vh - 200px); /* Full screen minus header and padding */
   max-height: calc(100vh - 200px);
