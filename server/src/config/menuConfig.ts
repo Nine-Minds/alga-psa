@@ -128,7 +128,7 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Billing',
         icon: CreditCard,
-        href: '/msp/billing'
+        href: '/msp/billing?tab=client-contracts'
       },
       {
         name: 'Schedule',

@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Input } from '../ui/Input';
-import CustomSelect, { SelectOption } from '../ui/CustomSelect';
+import CustomSelect from '../ui/CustomSelect';
 import { Button } from '../ui/Button';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ChevronDown } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { AutomationProps, ContainerComponent, FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
+import { AutomationProps, FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 import ClientAvatar from 'server/src/components/ui/ClientAvatar';
@@ -106,15 +106,18 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      
+      const target = event.target as HTMLElement;
+
       // Check if click is inside the dropdown portal or the trigger button
       const isInsideDropdown = dropdownRef.current?.contains(target);
       const isInsideButton = buttonRef.current?.contains(target);
-      const isSelectElement = target.nodeName === 'SELECT';
-      
-      // Don't close if clicking select elements or buttons inside the dropdown
-      if (!isInsideDropdown && !isInsideButton && !isSelectElement) {
+
+      // Check if click is inside a Radix Select portal (the filter dropdowns)
+      const isInsideRadixSelect = target.closest('[data-radix-select-content]') !== null ||
+                                   target.closest('[data-radix-popper-content-wrapper]') !== null;
+
+      // Don't close if clicking inside the dropdown, button, or Radix Select portals
+      if (!isInsideDropdown && !isInsideButton && !isInsideRadixSelect) {
         setIsOpen(false);
       }
     };
