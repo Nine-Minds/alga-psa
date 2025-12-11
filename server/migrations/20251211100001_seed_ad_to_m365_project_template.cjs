@@ -14,10 +14,10 @@ const TEMPLATE_DESCRIPTION = 'Standard template for migrating from on-premises A
 
 // Standard status definitions with colors
 const STANDARD_STATUSES = [
-  { name: 'To Do', color: '#6B7280', is_closed: false, order_number: 1 },
-  { name: 'In Progress', color: '#3B82F6', is_closed: false, order_number: 2 },
-  { name: 'Blocked', color: '#EF4444', is_closed: false, order_number: 3 },
-  { name: 'Done', color: '#10B981', is_closed: true, order_number: 4 }
+  { name: 'To Do', color: '#6B7280', is_closed: false },
+  { name: 'In Progress', color: '#3B82F6', is_closed: false },
+  { name: 'Blocked', color: '#EF4444', is_closed: false },
+  { name: 'Done', color: '#10B981', is_closed: true }
 ];
 
 /**
@@ -29,8 +29,10 @@ const hoursToMinutes = (hours) => Math.round(hours * 60);
  * Build the template data structure
  * Using fractional indexing for order_key (a0, a1, a2, etc.)
  * NOTE: estimated_hours values are in MINUTES
+ * @param {string} tenant - Tenant ID
+ * @param {Map<string, string>} statusMappingsByName - Map of status name to mapping ID
  */
-function buildTemplateData(tenant, statusMappingIds) {
+function buildTemplateData(tenant, statusMappingsByName) {
   const templateId = uuidv4();
 
   // Phase IDs
@@ -61,8 +63,8 @@ function buildTemplateData(tenant, statusMappingIds) {
   const task4_4_Id = uuidv4(); // Document environment
   const task4_5_Id = uuidv4(); // Decommission AD
 
-  // Get status mapping for "To Do" (first status)
-  const toDoStatusMappingId = statusMappingIds[0];
+  // Get status mapping for "To Do" by name (not by index)
+  const toDoStatusMappingId = statusMappingsByName.get('To Do');
 
   const phases = [
     {
@@ -397,12 +399,15 @@ function buildTemplateData(tenant, statusMappingIds) {
 /**
  * Find existing statuses or create if missing, then create status mappings for template
  * Uses: To Do, In Progress, Blocked, Done
+ * @returns {Promise<{mappings: Array, mappingsByName: Map<string, string>}>}
  */
 async function getOrCreateStandardStatusMappings(knex, tenant, templateId) {
   const statusMappings = [];
-  const statusMappingIds = [];
+  const statusMappingsByName = new Map();
 
-  for (const standardStatus of STANDARD_STATUSES) {
+  for (let i = 0; i < STANDARD_STATUSES.length; i++) {
+    const standardStatus = STANDARD_STATUSES[i];
+
     // Look up existing status by name (case-insensitive)
     let status = await knex('statuses')
       .where({ tenant, status_type: 'project_task' })
@@ -440,12 +445,12 @@ async function getOrCreateStandardStatusMappings(knex, tenant, templateId) {
       status_id: status.status_id,
       custom_status_name: null,
       custom_status_color: standardStatus.color,
-      display_order: standardStatus.order_number
+      display_order: i + 1
     });
-    statusMappingIds.push(mappingId);
+    statusMappingsByName.set(standardStatus.name, mappingId);
   }
 
-  return { mappings: statusMappings, mappingIds: statusMappingIds };
+  return { mappings: statusMappings, mappingsByName: statusMappingsByName };
 }
 
 exports.up = async function(knex) {
@@ -470,11 +475,11 @@ exports.up = async function(knex) {
     const templateId = uuidv4();
 
     // Get or create standard status mappings (To Do, In Progress, Blocked, Done)
-    const { mappings: statusMappings, mappingIds: statusMappingIds } =
+    const { mappings: statusMappings, mappingsByName: statusMappingsByName } =
       await getOrCreateStandardStatusMappings(knex, tenant, templateId);
 
     // Build template data with status mapping reference
-    const data = buildTemplateData(tenant, statusMappingIds);
+    const data = buildTemplateData(tenant, statusMappingsByName);
 
     // Override the template_id to match
     data.template.template_id = templateId;

@@ -9,13 +9,16 @@ const TEMPLATE_NAME = 'Active Directory to Microsoft 365 Migration';
 const TEMPLATE_CATEGORY = 'Migration';
 const TEMPLATE_DESCRIPTION = 'Standard template for migrating from on-premises Active Directory to Azure AD/Entra ID with Microsoft 365. Covers assessment, environment preparation, migration execution, and validation.';
 
-// Standard status definitions with colors
-const STANDARD_STATUSES = [
-  { name: 'To Do', color: '#6B7280', is_closed: false, order_number: 1 },
-  { name: 'In Progress', color: '#3B82F6', is_closed: false, order_number: 2 },
-  { name: 'Blocked', color: '#EF4444', is_closed: false, order_number: 3 },
-  { name: 'Done', color: '#10B981', is_closed: true, order_number: 4 }
-];
+// Standard status names for lookup
+const STATUS_NAMES = ['To Do', 'In Progress', 'Blocked', 'Done'];
+
+// Standard status colors (used when creating mappings)
+const STATUS_COLORS = {
+  'To Do': '#6B7280',
+  'In Progress': '#3B82F6',
+  'Blocked': '#EF4444',
+  'Done': '#10B981'
+};
 
 /**
  * Convert hours to minutes for database storage
@@ -26,8 +29,11 @@ const hoursToMinutes = (hours) => Math.round(hours * 60);
  * Build the template data structure
  * Using fractional indexing for order_key (a0, a1, a2, etc.)
  * NOTE: estimated_hours values are in MINUTES
+ * @param {string} tenant - Tenant ID
+ * @param {string} templateId - Template ID
+ * @param {Map<string, string>} statusMappingsByName - Map of status name to mapping ID
  */
-function buildTemplateData(tenant, templateId, statusMappingIds) {
+function buildTemplateData(tenant, templateId, statusMappingsByName) {
   // Phase IDs
   const phase1Id = uuidv4();
   const phase2Id = uuidv4();
@@ -56,8 +62,8 @@ function buildTemplateData(tenant, templateId, statusMappingIds) {
   const task4_4_Id = uuidv4(); // Document environment
   const task4_5_Id = uuidv4(); // Decommission AD
 
-  // Get status mapping for "To Do" (first status)
-  const toDoStatusMappingId = statusMappingIds[0];
+  // Get status mapping for "To Do" by name (not by index)
+  const toDoStatusMappingId = statusMappingsByName.get('To Do');
 
   const phases = [
     {
@@ -379,20 +385,24 @@ function buildTemplateData(tenant, templateId, statusMappingIds) {
 /**
  * Look up existing statuses and create status mappings for template
  * Statuses are created by 06_project_task_statuses.cjs seed
+ * @returns {Promise<{mappings: Array, mappingsByName: Map<string, string>}>}
  */
 async function getStatusMappings(knex, tenant, templateId) {
   const statusMappings = [];
-  const statusMappingIds = [];
+  const statusMappingsByName = new Map();
 
-  for (const standardStatus of STANDARD_STATUSES) {
+  for (let i = 0; i < STATUS_NAMES.length; i++) {
+    const statusName = STATUS_NAMES[i];
+    const statusColor = STATUS_COLORS[statusName];
+
     // Look up existing status by name (case-insensitive)
     const status = await knex('statuses')
       .where({ tenant, status_type: 'project_task' })
-      .whereRaw('LOWER(name) = LOWER(?)', [standardStatus.name])
+      .whereRaw('LOWER(name) = LOWER(?)', [statusName])
       .first();
 
     if (!status) {
-      console.log(`    Warning: Status "${standardStatus.name}" not found for tenant`);
+      console.log(`    Warning: Status "${statusName}" not found for tenant`);
       continue;
     }
 
@@ -404,13 +414,13 @@ async function getStatusMappings(knex, tenant, templateId) {
       template_id: templateId,
       status_id: status.status_id,
       custom_status_name: null,
-      custom_status_color: status.color || standardStatus.color,
-      display_order: standardStatus.order_number
+      custom_status_color: status.color || statusColor,
+      display_order: i + 1
     });
-    statusMappingIds.push(mappingId);
+    statusMappingsByName.set(statusName, mappingId);
   }
 
-  return { mappings: statusMappings, mappingIds: statusMappingIds };
+  return { mappings: statusMappings, mappingsByName: statusMappingsByName };
 }
 
 exports.seed = async function (knex, tenantId) {
@@ -441,7 +451,7 @@ exports.seed = async function (knex, tenantId) {
   const templateId = uuidv4();
 
   // Get status mappings (statuses created by 06_project_task_statuses.cjs)
-  const { mappings: statusMappings, mappingIds: statusMappingIds } =
+  const { mappings: statusMappings, mappingsByName: statusMappingsByName } =
     await getStatusMappings(knex, tenantId, templateId);
 
   // Insert in correct order: template first, then status mappings, then phases, then tasks, then checklists
@@ -458,7 +468,7 @@ exports.seed = async function (knex, tenantId) {
   await knex('project_template_status_mappings').insert(statusMappings);
 
   // Build and insert phases, tasks, and checklists
-  const data = buildTemplateData(tenantId, templateId, statusMappingIds);
+  const data = buildTemplateData(tenantId, templateId, statusMappingsByName);
 
   await knex('project_template_phases').insert(data.phases);
   await knex('project_template_tasks').insert(data.tasks);
@@ -468,3 +478,6 @@ exports.seed = async function (knex, tenantId) {
 
   console.log(`Created AD to M365 project template for tenant ${tenantId}`);
 };
+
+// Disable transaction wrapper for Citus compatibility (large multi-table seeds)
+exports.config = { transaction: false };
