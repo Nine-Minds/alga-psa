@@ -7,11 +7,12 @@
  * Devices can only be synced for organizations that have a company mapping.
  */
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Building2, Link2, Link2Off, RefreshCw, Check } from 'lucide-react';
+import { ClientPicker } from '@/components/clients/ClientPicker';
 import {
   getNinjaOneOrganizationMappings,
   updateNinjaOneOrganizationMapping,
@@ -23,10 +24,16 @@ import { IClient } from '@/interfaces/client.interfaces';
 
 interface OrganizationMappingManagerProps {
   onMappingChanged?: () => void;
+  /**
+   * When this value changes, reload mappings from the server.
+   * Useful for parent-driven refresh after a top-level sync.
+   */
+  refreshKey?: number;
 }
 
 const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
   onMappingChanged,
+  refreshKey,
 }) => {
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
   const [companies, setCompanies] = useState<IClient[]>([]);
@@ -57,6 +64,20 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
   useEffect(() => {
     loadData();
   }, []);
+
+  // Parent-driven refresh without double-fetching on mount.
+  const lastRefreshKeyRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (refreshKey === undefined) return;
+    if (lastRefreshKeyRef.current === undefined) {
+      lastRefreshKeyRef.current = refreshKey;
+      return;
+    }
+    if (refreshKey !== lastRefreshKeyRef.current) {
+      lastRefreshKeyRef.current = refreshKey;
+      loadData();
+    }
+  }, [refreshKey]);
 
   const handleSyncOrganizations = () => {
     startSyncTransition(async () => {
@@ -245,64 +266,67 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {mappings.map((mapping) => (
-                  <tr
-                    key={mapping.mapping_id}
-                    className="border-b last:border-b-0 hover:bg-muted/30"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-medium">
-                        {mapping.external_organization_name || `Org ${mapping.external_organization_id}`}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        ID: {mapping.external_organization_id}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
-                        value={mapping.client_id || ''}
-                        onChange={(e) =>
-                          handleCompanyChange(
-                            mapping.mapping_id,
-                            e.target.value || null
-                          )
-                        }
-                        disabled={savingMappingId === mapping.mapping_id}
-                      >
-                        <option value="">-- Select Company --</option>
-                        {companies.map((company) => (
-                          <option key={company.client_id} value={company.client_id}>
-                            {company.client_name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300"
-                        checked={mapping.auto_sync_assets}
-                        onChange={(e) =>
-                          handleAutoSyncChange(mapping.mapping_id, e.target.checked)
-                        }
-                        disabled={savingMappingId === mapping.mapping_id}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {mapping.client_id ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                          <Check className="mr-1 h-3 w-3" />
-                          Mapped
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                          Unmapped
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {mappings.map((mapping) => {
+                  const isSaving = savingMappingId === mapping.mapping_id;
+                  return (
+                    <tr
+                      key={mapping.mapping_id}
+                      className="border-b last:border-b-0 hover:bg-muted/30"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium">
+                          {mapping.external_organization_name || `Org ${mapping.external_organization_id}`}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          ID: {mapping.external_organization_id}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className={isSaving ? 'pointer-events-none opacity-60' : undefined}>
+                          <ClientPicker
+                            id={`ninjaone-company-picker-${mapping.mapping_id}`}
+                            clients={companies}
+                            selectedClientId={mapping.client_id ?? null}
+                            onSelect={(clientId) => {
+                              if (isSaving) return;
+                              handleCompanyChange(mapping.mapping_id, clientId);
+                            }}
+                            filterState="active"
+                            onFilterStateChange={() => {}}
+                            clientTypeFilter="company"
+                            onClientTypeFilterChange={() => {}}
+                            placeholder="Select company"
+                            fitContent={true}
+                            className="w-full"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300"
+                          checked={mapping.auto_sync_assets}
+                          onChange={(e) =>
+                            handleAutoSyncChange(mapping.mapping_id, e.target.checked)
+                          }
+                          disabled={isSaving}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {mapping.client_id ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            <Check className="mr-1 h-3 w-3" />
+                            Mapped
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            Unmapped
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

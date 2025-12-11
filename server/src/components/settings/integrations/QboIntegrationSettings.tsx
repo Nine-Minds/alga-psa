@@ -116,7 +116,14 @@ const QboIntegrationSettings: React.FC = () => {
       }
 
       if (qboStatus || qboError || qboMessage) {
-        const cleanUrl = window.location.pathname + window.location.hash;
+        params.delete('qbo_status');
+        params.delete('qbo_error');
+        params.delete('message');
+        const remaining = params.toString();
+        const cleanUrl =
+          window.location.pathname +
+          (remaining ? `?${remaining}` : '') +
+          window.location.hash;
         window.history.replaceState({}, document.title, cleanUrl);
       }
     }
