@@ -20,7 +20,7 @@ import ClientContactsList from 'server/src/components/contacts/ClientContactsLis
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts, archiveClient, reactivateClient } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -205,6 +205,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
+  const [deleteDependencies, setDeleteDependencies] = useState<{
+    contacts?: number;
+    tickets?: number;
+    projects?: number;
+    invoices?: number;
+  } | null>(null);
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
@@ -244,7 +250,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
-          handleDependencyError(result, setDeleteError);
+          handleDependencyError(result);
           setShowDeactivateOption(true);
           return;
         }
@@ -269,44 +275,101 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleMarkClientInactive = async () => {
     try {
-      await updateClient(editedClient.client_id, { is_inactive: true });
+      const result = await archiveClient(editedClient.client_id);
+
+      if (!result.success) {
+        toast.error(result.message || 'Failed to mark client as inactive');
+        setIsDeleteDialogOpen(false);
+        return;
+      }
 
       setIsDeleteDialogOpen(false);
 
-      toast.success("Client has been marked as inactive successfully.");
+      // Update local state immediately to reflect the change
+      setEditedClient(prev => ({ ...prev, is_inactive: true }));
 
-      // Navigate back or close drawer depending on context
-      if (isInDrawer) {
-        drawer.closeDrawer();
-      } else {
-        router.push('/msp/clients');
-      }
+      toast.success("Client and all associated contacts have been marked as inactive successfully.");
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
       setDeleteError('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
+  // Handler for the direct "Mark as Inactive" button (not from delete dialog)
+  const handleDirectMarkInactive = async () => {
+    // Fetch active contacts for this client
+    const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+    const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
+
+    if (activeContacts.length > 0) {
+      setActiveContactsToDeactivate(activeContacts);
+      setIsDeactivateDialogOpen(true);
+    } else {
+      // No contacts to warn about, just deactivate
+      try {
+        const result = await archiveClient(editedClient.client_id);
+
+        if (!result.success) {
+          toast.error(result.message || 'Failed to mark client as inactive');
+          return;
+        }
+
+        // Update local state immediately
+        setEditedClient(prev => ({ ...prev, is_inactive: true }));
+        toast.success("Client has been marked as inactive successfully.");
+      } catch (error: any) {
+        console.error('Error marking client as inactive:', error);
+        toast.error('An error occurred while marking the client as inactive. Please try again.');
+      }
+    }
+  };
+
+  // Handler for the direct "Reactivate" button
+  const handleDirectReactivate = async () => {
+    // Fetch inactive contacts for this client
+    const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+    const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
+
+    if (inactiveContacts.length > 0) {
+      setInactiveContactsToReactivate(inactiveContacts);
+      setIsReactivateDialogOpen(true);
+    } else {
+      // No contacts to ask about, just reactivate
+      try {
+        const result = await reactivateClient(editedClient.client_id);
+
+        if (!result.success) {
+          toast.error(result.message || 'Failed to reactivate client');
+          return;
+        }
+
+        // Update local state immediately
+        setEditedClient(prev => ({ ...prev, is_inactive: false }));
+        toast.success("Client has been reactivated successfully.");
+      } catch (error: any) {
+        console.error('Error reactivating client:', error);
+        toast.error('An error occurred while reactivating the client. Please try again.');
+      }
+    }
+  };
+
   const handleReactivateClient = async (reactivateContacts: boolean) => {
     try {
       if (reactivateContacts) {
-        // Reactivate all contacts and their associated users
-        const result = await reactivateClientContacts(editedClient.client_id);
+        // Use the cascade reactivateClient action which reactivates client + all contacts + users
+        const result = await reactivateClient(editedClient.client_id);
 
         if (!result.success) {
-          toast.error(result.message || 'Failed to reactivate contacts');
+          toast.error(result.message || 'Failed to reactivate client and contacts');
           setIsReactivateDialogOpen(false);
           return;
         }
 
-        // Update the client to be active and save
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
-
         // Update local state immediately
-        setEditedClient(updatedClient);
+        setEditedClient(prev => ({ ...prev, is_inactive: false }));
         setHasUnsavedChanges(false);
 
-        toast.success(`Client and ${result.contactsReactivated} contact(s) have been reactivated successfully.`);
+        toast.success(`Client and ${inactiveContactsToReactivate.length} contact(s) have been reactivated successfully.`);
       } else {
         // Only reactivate the client (skip contacts)
         const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
@@ -332,11 +395,17 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleDeactivateClient = async () => {
     try {
-      // Deactivate the client (contacts and users will be automatically deactivated by the server action)
-      const updatedClient = await updateClient(editedClient.client_id, { is_inactive: true });
+      // Use the cascade archiveClient action which deactivates client + all contacts + users
+      const result = await archiveClient(editedClient.client_id);
+
+      if (!result.success) {
+        toast.error(result.message || 'Failed to deactivate client');
+        setIsDeactivateDialogOpen(false);
+        return;
+      }
 
       // Update local state immediately
-      setEditedClient(updatedClient);
+      setEditedClient(prev => ({ ...prev, is_inactive: true }));
       setHasUnsavedChanges(false);
 
       toast.success(`Client and ${activeContactsToDeactivate.length} contact(s) have been deactivated successfully.`);
@@ -356,29 +425,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     setIsDeleteDialogOpen(false);
     setDeleteError(null);
     setShowDeactivateOption(false);
+    setDeleteDependencies(null);
   };
 
   // Helper function to handle dependency errors (copied from main Clients page)
-  const handleDependencyError = (result: any, setError: (error: string) => void) => {
-    const dependencies = result.dependencies || {};
-    const dependencyMessages: string[] = [];
-
-    if (dependencies.tickets > 0) {
-      dependencyMessages.push(`${dependencies.tickets} ticket${dependencies.tickets !== 1 ? 's' : ''}`);
-    }
-    if (dependencies.contacts > 0) {
-      dependencyMessages.push(`${dependencies.contacts} contact${dependencies.contacts !== 1 ? 's' : ''}`);
-    }
-    if (dependencies.projects > 0) {
-      dependencyMessages.push(`${dependencies.projects} project${dependencies.projects !== 1 ? 's' : ''}`);
-    }
-
-    if (dependencyMessages.length > 0) {
-      const dependencyText = dependencyMessages.join(', ');
-      setError(`Cannot delete this client because it has associated ${dependencyText}. You can mark the client as inactive instead.`);
-    } else {
-      setError('Cannot delete this client because it has associated data. You can mark the client as inactive instead.');
-    }
+  const handleDependencyError = (result: any) => {
+    // Use counts from the result which contains: contact, ticket, project, invoice, etc.
+    // Only include counts that are > 0
+    const counts = result.counts || {};
+    setDeleteDependencies({
+      contacts: counts['contact'] > 0 ? counts['contact'] : undefined,
+      tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
+      projects: counts['project'] > 0 ? counts['project'] : undefined,
+      invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
+    });
   };
 
   // 1. Implement refreshClientData function
@@ -1203,16 +1263,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </Button>
           )}
 
-          <Button
-            id={`${id}-delete-client-button`}
-            onClick={handleDeleteClient}
-            variant="destructive"
-            size="sm"
-            className="flex items-center mr-8"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
+          <div className="flex items-center gap-2 mr-8">
+            <Button
+              id={`${id}-delete-client-button`}
+              onClick={handleDeleteClient}
+              variant="destructive"
+              size="sm"
+              className="flex items-center"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1255,15 +1317,44 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          onConfirm={confirmDelete}
+          onConfirm={showDeactivateOption ? handleMarkClientInactive : confirmDelete}
           title="Delete Client"
           message={
-            deleteError
-              ? deleteError
-              : "Are you sure you want to delete this client? This action cannot be undone."
+            showDeactivateOption && deleteDependencies ? (
+              <div className="space-y-4">
+                <p className="text-gray-700">Unable to delete this client.</p>
+                <div>
+                  <p className="text-gray-700 mb-2">This client has the following associated records:</p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+                <p className="text-gray-700">Please remove or reassign these items before deleting the client.</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <p className="text-blue-800">
+                    <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
+                  </p>
+                </div>
+              </div>
+            ) : deleteError ? (
+              deleteError
+            ) : (
+              "Are you sure you want to delete this client? This action cannot be undone."
+            )
           }
-          confirmLabel={deleteError ? undefined : (showDeactivateOption ? undefined : "Delete")}
-          cancelLabel={deleteError ? "Close" : "Cancel"}
+          confirmLabel={showDeactivateOption ? "Mark as Inactive" : "Delete"}
+          cancelLabel="Cancel"
           isConfirming={false}
         />
 
