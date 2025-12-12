@@ -281,135 +281,130 @@ exports.up = async function(knex) {
   }
 
   // Seed tenant settings from current global values
+  // Skip seeding if data already exists (idempotent)
   console.log('Seeding tenant settings from global values...');
 
-  // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
-  console.log(`  Found ${tenants.length} tenants`);
+  // Check if seeding is needed (any existing data means we skip)
+  const existingCategorySettings = await knex('tenant_notification_category_settings').first();
+  if (existingCategorySettings) {
+    console.log('  - Seeding skipped: data already exists');
+  } else {
+    // Get all tenants
+    const tenants = await knex('tenants').select('tenant');
+    console.log(`  Found ${tenants.length} tenants`);
 
-  if (tenants.length > 0) {
-    // Seed notification_categories
-    const categories = await knex('notification_categories')
-      .select('id', 'is_enabled', 'is_default_enabled');
+    if (tenants.length > 0) {
+      // Seed notification_categories
+      const categories = await knex('notification_categories')
+        .select('id', 'is_enabled', 'is_default_enabled');
 
-    if (categories.length > 0) {
-      const categorySettings = [];
-      for (const tenant of tenants) {
-        for (const category of categories) {
-          categorySettings.push({
-            tenant: tenant.tenant,
-            tenant_notification_category_setting_id: knex.raw('gen_random_uuid()'),
-            category_id: category.id,
-            is_enabled: category.is_enabled,
-            is_default_enabled: category.is_default_enabled,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
-          });
+      if (categories.length > 0) {
+        const categorySettings = [];
+        for (const tenant of tenants) {
+          for (const category of categories) {
+            categorySettings.push({
+              tenant: tenant.tenant,
+              tenant_notification_category_setting_id: knex.raw('gen_random_uuid()'),
+              category_id: category.id,
+              is_enabled: category.is_enabled,
+              is_default_enabled: category.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            });
+          }
         }
-      }
 
-      // Insert in batches of 100
-      for (let i = 0; i < categorySettings.length; i += 100) {
-        const batch = categorySettings.slice(i, i + 100);
-        await knex('tenant_notification_category_settings')
-          .insert(batch)
-          .onConflict(['tenant', 'category_id'])
-          .ignore();
-      }
-      console.log(`  ✓ Seeded ${categorySettings.length} category settings`);
-    }
-
-    // Seed notification_subtypes
-    const subtypes = await knex('notification_subtypes')
-      .select('id', 'is_enabled', 'is_default_enabled');
-
-    if (subtypes.length > 0) {
-      const subtypeSettings = [];
-      for (const tenant of tenants) {
-        for (const subtype of subtypes) {
-          subtypeSettings.push({
-            tenant: tenant.tenant,
-            tenant_notification_subtype_setting_id: knex.raw('gen_random_uuid()'),
-            subtype_id: subtype.id,
-            is_enabled: subtype.is_enabled,
-            is_default_enabled: subtype.is_default_enabled,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
-          });
+        // Insert in batches of 100
+        for (let i = 0; i < categorySettings.length; i += 100) {
+          const batch = categorySettings.slice(i, i + 100);
+          await knex('tenant_notification_category_settings').insert(batch);
         }
+        console.log(`  ✓ Seeded ${categorySettings.length} category settings`);
       }
 
-      // Insert in batches of 100
-      for (let i = 0; i < subtypeSettings.length; i += 100) {
-        const batch = subtypeSettings.slice(i, i + 100);
-        await knex('tenant_notification_subtype_settings')
-          .insert(batch)
-          .onConflict(['tenant', 'subtype_id'])
-          .ignore();
-      }
-      console.log(`  ✓ Seeded ${subtypeSettings.length} subtype settings`);
-    }
+      // Seed notification_subtypes
+      const subtypes = await knex('notification_subtypes')
+        .select('id', 'is_enabled', 'is_default_enabled');
 
-    // Seed internal_notification_categories
-    const internalCategories = await knex('internal_notification_categories')
-      .select('internal_notification_category_id', 'is_enabled', 'is_default_enabled');
-
-    if (internalCategories.length > 0) {
-      const internalCategorySettings = [];
-      for (const tenant of tenants) {
-        for (const category of internalCategories) {
-          internalCategorySettings.push({
-            tenant: tenant.tenant,
-            tenant_internal_notification_category_setting_id: knex.raw('gen_random_uuid()'),
-            category_id: category.internal_notification_category_id,
-            is_enabled: category.is_enabled,
-            is_default_enabled: category.is_default_enabled,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
-          });
+      if (subtypes.length > 0) {
+        const subtypeSettings = [];
+        for (const tenant of tenants) {
+          for (const subtype of subtypes) {
+            subtypeSettings.push({
+              tenant: tenant.tenant,
+              tenant_notification_subtype_setting_id: knex.raw('gen_random_uuid()'),
+              subtype_id: subtype.id,
+              is_enabled: subtype.is_enabled,
+              is_default_enabled: subtype.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            });
+          }
         }
-      }
 
-      // Insert in batches of 100
-      for (let i = 0; i < internalCategorySettings.length; i += 100) {
-        const batch = internalCategorySettings.slice(i, i + 100);
-        await knex('tenant_internal_notification_category_settings')
-          .insert(batch)
-          .onConflict(['tenant', 'category_id'])
-          .ignore();
-      }
-      console.log(`  ✓ Seeded ${internalCategorySettings.length} internal category settings`);
-    }
-
-    // Seed internal_notification_subtypes
-    const internalSubtypes = await knex('internal_notification_subtypes')
-      .select('internal_notification_subtype_id', 'is_enabled', 'is_default_enabled');
-
-    if (internalSubtypes.length > 0) {
-      const internalSubtypeSettings = [];
-      for (const tenant of tenants) {
-        for (const subtype of internalSubtypes) {
-          internalSubtypeSettings.push({
-            tenant: tenant.tenant,
-            tenant_internal_notification_subtype_setting_id: knex.raw('gen_random_uuid()'),
-            subtype_id: subtype.internal_notification_subtype_id,
-            is_enabled: subtype.is_enabled,
-            is_default_enabled: subtype.is_default_enabled,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
-          });
+        // Insert in batches of 100
+        for (let i = 0; i < subtypeSettings.length; i += 100) {
+          const batch = subtypeSettings.slice(i, i + 100);
+          await knex('tenant_notification_subtype_settings').insert(batch);
         }
+        console.log(`  ✓ Seeded ${subtypeSettings.length} subtype settings`);
       }
 
-      // Insert in batches of 100
-      for (let i = 0; i < internalSubtypeSettings.length; i += 100) {
-        const batch = internalSubtypeSettings.slice(i, i + 100);
-        await knex('tenant_internal_notification_subtype_settings')
-          .insert(batch)
-          .onConflict(['tenant', 'subtype_id'])
-          .ignore();
+      // Seed internal_notification_categories
+      const internalCategories = await knex('internal_notification_categories')
+        .select('internal_notification_category_id', 'is_enabled', 'is_default_enabled');
+
+      if (internalCategories.length > 0) {
+        const internalCategorySettings = [];
+        for (const tenant of tenants) {
+          for (const category of internalCategories) {
+            internalCategorySettings.push({
+              tenant: tenant.tenant,
+              tenant_internal_notification_category_setting_id: knex.raw('gen_random_uuid()'),
+              category_id: category.internal_notification_category_id,
+              is_enabled: category.is_enabled,
+              is_default_enabled: category.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            });
+          }
+        }
+
+        // Insert in batches of 100
+        for (let i = 0; i < internalCategorySettings.length; i += 100) {
+          const batch = internalCategorySettings.slice(i, i + 100);
+          await knex('tenant_internal_notification_category_settings').insert(batch);
+        }
+        console.log(`  ✓ Seeded ${internalCategorySettings.length} internal category settings`);
       }
-      console.log(`  ✓ Seeded ${internalSubtypeSettings.length} internal subtype settings`);
+
+      // Seed internal_notification_subtypes
+      const internalSubtypes = await knex('internal_notification_subtypes')
+        .select('internal_notification_subtype_id', 'is_enabled', 'is_default_enabled');
+
+      if (internalSubtypes.length > 0) {
+        const internalSubtypeSettings = [];
+        for (const tenant of tenants) {
+          for (const subtype of internalSubtypes) {
+            internalSubtypeSettings.push({
+              tenant: tenant.tenant,
+              tenant_internal_notification_subtype_setting_id: knex.raw('gen_random_uuid()'),
+              subtype_id: subtype.internal_notification_subtype_id,
+              is_enabled: subtype.is_enabled,
+              is_default_enabled: subtype.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            });
+          }
+        }
+
+        // Insert in batches of 100
+        for (let i = 0; i < internalSubtypeSettings.length; i += 100) {
+          const batch = internalSubtypeSettings.slice(i, i + 100);
+          await knex('tenant_internal_notification_subtype_settings').insert(batch);
+        }
+        console.log(`  ✓ Seeded ${internalSubtypeSettings.length} internal subtype settings`);
+      }
     }
   }
 
