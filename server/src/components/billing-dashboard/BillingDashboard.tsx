@@ -71,7 +71,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const availableValues = tabDefinitions.map((tab) => tab.value);
   const currentTab = availableValues.includes(requestedTab as BillingTabValue)
     ? (requestedTab as BillingTabValue)
-    : tabDefinitions[0]?.value ?? 'contract-templates';
+    : tabDefinitions[0]?.value ?? 'client-contracts';
 
   return (
     <div className="h-full overflow-y-auto p-6">

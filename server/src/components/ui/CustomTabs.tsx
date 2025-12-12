@@ -46,6 +46,21 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   idPrefix,
   orientation = 'horizontal',
 }) => {
+  const renderIcon = React.useCallback((icon: TabContent['icon']) => {
+    if (!icon) return null;
+    if (React.isValidElement(icon)) {
+      return icon;
+    }
+    const isComponentType =
+      typeof icon === 'function' ||
+      (typeof icon === 'object' && icon !== null && '$$typeof' in icon);
+    if (isComponentType) {
+      const Icon = icon as React.ElementType<{ className?: string }>;
+      return <Icon className="h-4 w-4 shrink-0" />;
+    }
+    return <span className="h-4 w-4 shrink-0 flex items-center justify-center">{icon}</span>;
+  }, []);
+
   // Use groups if provided, otherwise fall back to flat tabs
   const allTabs = React.useMemo(() => {
     if (groups && groups.length > 0) {
@@ -172,7 +187,6 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                   const hasIcon = !!IconComponent;
                   const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
                   const globalIndex = groups.slice(0, groupIndex).reduce((acc, g) => acc + g.tabs.length, 0) + tabIndex;
-                  const isIconComponent = typeof IconComponent === 'function';
                   return (
                     <Tabs.Trigger
                       key={tab.label}
@@ -180,13 +194,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                       className={`${defaultTriggerClass} ${iconClassName} ml-4 ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
                       value={tab.label}
                     >
-                      {IconComponent && (
-                        isIconComponent ? (
-                          <IconComponent className="h-4 w-4 shrink-0" />
-                        ) : (
-                          <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
-                        )
-                      )}
+                      {renderIcon(IconComponent)}
                       {tab.label}
                     </Tabs.Trigger>
                   );
@@ -201,7 +209,6 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
             const iconClassName = hasIcon 
               ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
               : '';
-            const isIconComponent = typeof IconComponent === 'function';
             return (
               <Tabs.Trigger
                 key={tab.label}
@@ -209,13 +216,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                 className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
                 value={tab.label}
               >
-                {IconComponent && (
-                  isIconComponent ? (
-                    <IconComponent className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
-                  )
-                )}
+                {renderIcon(IconComponent)}
                 {tab.label}
               </Tabs.Trigger>
             );

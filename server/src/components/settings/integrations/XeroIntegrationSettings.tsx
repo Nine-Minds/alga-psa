@@ -54,7 +54,14 @@ const XeroIntegrationSettings: React.FC = () => {
       }
 
       if (statusParam || errorParam || messageParam) {
-        const cleanUrl = window.location.pathname + window.location.hash;
+        params.delete('xero_status');
+        params.delete('xero_error');
+        params.delete('message');
+        const remaining = params.toString();
+        const cleanUrl =
+          window.location.pathname +
+          (remaining ? `?${remaining}` : '') +
+          window.location.hash;
         window.history.replaceState({}, document.title, cleanUrl);
       }
     }

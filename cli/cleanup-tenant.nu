@@ -290,59 +290,108 @@ def "main cleanup" [
     # Tables to delete from (in dependency order - most dependent first)
     # The order is critical due to foreign key constraints
     let tables = [
+        # === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
+        "sessions"
+
         # === LEVEL 1: Leaf tables with no dependencies ===
         # Workflow details
         "workflow_action_results" "workflow_event_attachments" "workflow_snapshots"
         "workflow_action_dependencies" "workflow_sync_points" "workflow_timers"
         "workflow_task_history" "workflow_form_schemas"
-        
+
         # Task/project details
         "task_checklist_items" "project_task_dependencies" "task_resources"
-        "project_ticket_links"
-        
+        "project_ticket_links" "project_task_comments"
+
+        # Project template details
+        "project_template_checklist_items" "project_template_dependencies"
+        "project_template_task_resources" "project_template_status_mappings"
+        "project_template_tasks" "project_template_phases" "project_templates"
+
         # Invoice details
         "invoice_charges" "invoice_annotations" "invoice_time_entries" "invoice_usage_records"
-        "invoice_item_details" "invoice_item_fixed_details"
-        
+        "invoice_charge_details" "invoice_charge_fixed_details" "invoice_items"
+        "invoice_payment_links" "invoice_payments" "invoice_template_assignments"
+
         # Time tracking
         "time_sheet_comments" "time_entries" "time_sheets"
-        
+
         # Document details
         "document_block_content" "document_versions" "document_content"
-        
+        "document_folders" "document_system_entries"
+
         # Messages and comments
-        "messages" "direct_messages" "comments"
+        "comments"
         "gmail_processed_history" "email_processed_messages"
-        
+        "email_reply_tokens" "email_sending_logs" "email_rate_limits"
+
         # User related details
-        "user_notification_preferences" "internal_notification_preferences" "user_preferences"
-        "role_permissions" "user_roles"
-        
+        "user_notification_preferences" "user_internal_notification_preferences" "user_preferences"
+        "role_permissions" "user_roles" "user_auth_accounts"
+
         # Schedule and team
         "schedule_entry_assignees" "schedule_conflicts" "team_members"
-        
+        "availability_exceptions" "availability_settings"
+
+        # Calendar
+        "calendar_event_mappings" "calendar_provider_health"
+        "google_calendar_provider_config" "microsoft_calendar_provider_config" "calendar_providers"
+
         # Tags and resources
         "tag_mappings" "ticket_resources"
-        
+
         # Logs and notifications
-        "job_details" "audit_logs" "notification_logs" "internal_notifications"
-        
+        "job_details" "jobs" "audit_logs" "notification_logs" "internal_notifications"
+
+        # Import/export
+        "import_job_items" "import_jobs" "import_sources"
+        "accounting_export_errors" "accounting_export_lines" "accounting_export_batches"
+
         # Asset details
         "asset_maintenance_notifications" "asset_maintenance_history" "asset_service_history"
         "asset_ticket_associations" "asset_document_associations" "asset_relationships"
-        "asset_history" "asset_associations"
+        "asset_history" "asset_associations" "asset_software"
         "workstation_assets" "server_assets" "network_device_assets" "mobile_device_assets" "printer_assets"
+
+        # Software catalog
+        "software_catalog"
+
+        # RMM
+        "rmm_alert_rules" "rmm_alerts" "rmm_organization_mappings" "rmm_integrations"
+
+        # Survey
+        "survey_responses" "survey_invitations" "survey_triggers" "survey_templates"
+
+        # Appointment
+        "appointment_requests"
         
         # === LEVEL 2: Tables that depend on level 3+ ===
+        # Payment/Stripe
+        "stripe_webhook_events" "stripe_subscriptions" "stripe_prices" "stripe_products"
+        "stripe_customers" "stripe_accounts"
+        "payment_webhook_events" "payment_provider_configs" "client_payment_customers"
+
         # Billing details
         "credit_allocations" "credit_reconciliation_reports" "credit_tracking"
         "usage_tracking" "bucket_usage" "transactions"
         "client_contracts" "contract_line_service_rate_tiers" "contract_line_service_bucket_config"
         "contract_line_service_hourly_config" "contract_line_service_hourly_configs" "contract_line_service_usage_config"
-        "contract_line_service_fixed_config" "contract_line_service_configuration" "contract_line_fixed_config"
-        "service_rate_tiers" "contract_line_discounts" "discounts"
-        "client_contract_lines" "client_billing_cycles" "client_billing_settings"
+        "contract_line_service_fixed_config" "contract_line_service_configuration"
+        "contract_line_service_defaults" "contract_pricing_schedules"
+        "service_rate_tiers" "service_prices" "contract_line_discounts" "discounts"
+        "client_billing_cycles" "client_billing_settings"
         "contract_line_services" "contract_lines" "contracts"
+
+        # Contract line presets
+        "contract_line_preset_fixed_config" "contract_line_preset_services" "contract_line_presets"
+
+        # Contract templates (must be deleted before contracts)
+        "contract_template_compare_view" "contract_template_line_defaults"
+        "contract_template_line_fixed_config" "contract_template_line_service_bucket_config"
+        "contract_template_line_service_configuration" "contract_template_line_service_hourly_config"
+        "contract_template_line_service_usage_config" "contract_template_line_services"
+        "contract_template_line_terms" "contract_template_lines"
+        "contract_template_pricing_schedules" "contract_template_services" "contract_templates"
         
         # Client details (must come before clients)
         "client_tax_rates" "client_tax_settings"
@@ -440,36 +489,47 @@ def "main cleanup" [
         # === LEVEL 7: Configuration and settings ===
         # API and auth
         "api_keys" "portal_invitations" "password_reset_tokens"
-        
+        "portal_domain_session_otts" "portal_domains"
+
         # Policies and resources
         "policies" "resources"
-        
+
         # Email configuration
         "google_email_provider_config" "microsoft_email_provider_config"
-        "email_provider_configs" "email_providers"
-        
+        "email_provider_health" "email_provider_configs" "email_providers"
+        "email_templates" "email_domains" "tenant_email_settings"
+
         # Storage configuration
+        "storage_records" "storage_schemas" "storage_usage"
         "storage_configurations" "storage_providers"
-        
+        "ext_storage_records" "ext_storage_schemas" "ext_storage_usage"
+
         # Templates and layouts
         "tenant_email_templates" "template_sections"
         "approval_levels"  # After approval_thresholds
-        
+
         # Custom fields and attributes
         "attribute_definitions" "custom_fields"
         "layout_blocks" "tag_definitions" "custom_task_types"
-        
+
         # Time period settings (tenant_time_period_settings must come BEFORE time_period_types)
         "tenant_time_period_settings"
         "time_periods" "time_period_types" "time_period_settings"
-        
+
+        # External entity mappings and tax
+        "external_entity_mappings" "external_tax_imports"
+
+        # Tenant notification settings
+        "tenant_internal_notification_category_settings" "tenant_internal_notification_subtype_settings"
+        "tenant_notification_category_settings" "tenant_notification_subtype_settings"
+
         # Other tenant settings
         "tenant_telemetry_settings"
         "tenant_external_entity_mappings" "telemetry_consent_log"
         "default_billing_settings" "notification_settings"
         "inbound_ticket_defaults" "user_type_rates" "next_number"
         "event_catalog" "provider_events"
-        
+
         # Tenant settings last
         "tenant_settings"
     ]
