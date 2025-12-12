@@ -14,6 +14,9 @@ WORKDIR /app
 
 COPY shared/ /app/shared
 COPY packages/ /app/packages/
+COPY server/src/ /app/server/src/
+COPY server/package.json /app/server/package.json
+COPY ee/server/src/ /app/ee/server/src/
 COPY ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
 COPY tsconfig.base.json /app/tsconfig.base.json
 
@@ -45,6 +48,10 @@ COPY packages/ /app/packages/
 
 WORKDIR /app/packages/product-email-domains
 RUN npm install --ignore-scripts
+
+# Install server dependencies (needed for type-checking server source files via path aliases)
+WORKDIR /app/server
+RUN npm install --ignore-scripts --legacy-peer-deps || true
 
 WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build
