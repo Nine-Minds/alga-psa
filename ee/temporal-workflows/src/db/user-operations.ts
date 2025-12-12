@@ -25,14 +25,15 @@ export async function createAdminUserInDB(
     const knex = await getAdminConnection();
     
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
-      // Check if user already exists in this tenant
-      const existingUser = await trx('users')
-        .select('user_id')
-        .where({ email: input.email.toLowerCase(), tenant: input.tenantId })
+      // Check if an internal user with this email already exists in ANY tenant
+      // This prevents duplicate MSP users across tenants which causes SSO issues
+      const existingInternalUser = await trx('users')
+        .select('user_id', 'tenant')
+        .where({ email: input.email.toLowerCase(), user_type: 'internal' })
         .first();
 
-      if (existingUser) {
-        throw new Error(`User with email ${input.email} already exists`);
+      if (existingInternalUser) {
+        throw new Error(`An internal user with email ${input.email} already exists. Each internal user email must be unique across all tenants.`);
       }
 
       // Generate temporary password
