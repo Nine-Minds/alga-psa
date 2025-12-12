@@ -10,7 +10,7 @@
  * - Software inventory stats
  */
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -89,7 +89,15 @@ const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
-const NinjaOneComplianceDashboard: React.FC = () => {
+interface NinjaOneComplianceDashboardProps {
+  /**
+   * When this value changes, re-fetch compliance summary.
+   * Used to refresh after device sync.
+   */
+  refreshKey?: number;
+}
+
+const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = ({ refreshKey }) => {
   const [summary, setSummary] = useState<ComplianceSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,6 +129,20 @@ const NinjaOneComplianceDashboard: React.FC = () => {
   useEffect(() => {
     fetchSummary();
   }, []);
+
+  // Parent-driven refresh without double-fetching on mount.
+  const lastRefreshKeyRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (refreshKey === undefined) return;
+    if (lastRefreshKeyRef.current === undefined) {
+      lastRefreshKeyRef.current = refreshKey;
+      return;
+    }
+    if (refreshKey !== lastRefreshKeyRef.current) {
+      lastRefreshKeyRef.current = refreshKey;
+      fetchSummary();
+    }
+  }, [refreshKey]);
 
   const handleSyncPatches = () => {
     startPatchSync(async () => {

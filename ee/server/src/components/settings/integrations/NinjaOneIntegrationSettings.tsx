@@ -47,6 +47,8 @@ const NinjaOneIntegrationSettings: React.FC = () => {
   const [isSyncingDevices, startDeviceSyncTransition] = useTransition();
   const [isTesting, startTestTransition] = useTransition();
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [orgMappingsRefreshKey, setOrgMappingsRefreshKey] = useState(0);
+  const [fleetComplianceRefreshKey, setFleetComplianceRefreshKey] = useState(0);
 
   const refreshStatus = useCallback(() => {
     startRefresh(async () => {
@@ -82,9 +84,16 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         setSuccessMessage(null);
       }
 
-      // Clean up URL params
+      // Clean up only NinjaOne callback params, preserve tab/category
       if (ninjaStatus || ninjaError || ninjaMessage) {
-        const cleanUrl = window.location.pathname + window.location.hash;
+        params.delete('ninjaone_status');
+        params.delete('error');
+        params.delete('message');
+        const remaining = params.toString();
+        const cleanUrl =
+          window.location.pathname +
+          (remaining ? `?${remaining}` : '') +
+          window.location.hash;
         window.history.replaceState({}, document.title, cleanUrl);
       }
     }
@@ -156,6 +165,8 @@ const NinjaOneIntegrationSettings: React.FC = () => {
             `Organization sync completed. Processed: ${result.items_processed}, ` +
             `Created: ${result.items_created}, Updated: ${result.items_updated}`
           );
+          // Ensure mapping list reflects newly-synced orgs.
+          setOrgMappingsRefreshKey((prev) => prev + 1);
         } else {
           setError(
             result.errors?.join('; ') ?? 'Organization sync failed.'
@@ -181,6 +192,8 @@ const NinjaOneIntegrationSettings: React.FC = () => {
             `Device sync completed. Processed: ${result.items_processed}, ` +
             `Created: ${result.items_created}, Updated: ${result.items_updated}`
           );
+          // Refresh fleet compliance to reflect newly-synced devices.
+          setFleetComplianceRefreshKey((prev) => prev + 1);
         } else {
           setError(
             result.errors?.join('; ') ?? 'Device sync failed.'
@@ -428,14 +441,17 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       {/* Organization Mappings - shown when connected */}
       {isConnected && isActive && (
         <div className="mt-6">
-          <OrganizationMappingManager onMappingChanged={refreshStatus} />
+          <OrganizationMappingManager
+            onMappingChanged={refreshStatus}
+            refreshKey={orgMappingsRefreshKey}
+          />
         </div>
       )}
 
       {/* Compliance Dashboard - shown when connected */}
       {isConnected && isActive && (
         <div className="mt-6">
-          <NinjaOneComplianceDashboard />
+          <NinjaOneComplianceDashboard refreshKey={fleetComplianceRefreshKey} />
         </div>
       )}
     </>
