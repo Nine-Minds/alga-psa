@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { Card } from "server/src/components/ui/Card";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "server/src/components/ui/Button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "server/src/components/ui/Dialog";
 import { Input } from "server/src/components/ui/Input";
@@ -9,18 +8,50 @@ import { Label } from "server/src/components/ui/Label";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { DataTable } from "server/src/components/ui/DataTable";
 import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
-import { 
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical } from "lucide-react";
+import { useUserPreference } from "server/src/hooks/useUserPreference";
+import {
   getTemplatesAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction
 } from "server/src/lib/actions/notification-actions/notificationActions";
-import { 
+import {
   SystemEmailTemplate,
-  TenantEmailTemplate 
+  TenantEmailTemplate
 } from "server/src/lib/models/notification";
 import { getCurrentTenant } from "server/src/lib/tenant-client";
 import LoadingIndicator from "server/src/components/ui/LoadingIndicator";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "server/src/components/ui/DropdownMenu";
+
+// Row types for flat list
+interface CategoryRow {
+  id: string;
+  type: 'category';
+  name: string;
+  templateCount: number;
+}
+
+interface TemplateRow {
+  id: string;
+  type: 'template';
+  name: string;
+  displayName: string;
+  category: string;
+  systemTemplate: SystemEmailTemplate;
+  tenantTemplate?: TenantEmailTemplate;
+  activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
+  isCustom: boolean;
+  language: string;
+  subject: string;
+}
+
+type EmailTemplateRow = CategoryRow | TemplateRow;
 
 export function EmailTemplates() {
   const [templates, setTemplates] = useState<{
@@ -32,37 +63,28 @@ export function EmailTemplates() {
   const [isCloning, setIsCloning] = useState(false);
   const [viewingTemplate, setViewingTemplate] = useState<SystemEmailTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<TenantEmailTemplate | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-  // Separate pagination state for each category
-  const [paginationState, setPaginationState] = useState<Record<string, { currentPage: number; pageSize: number }>>({});
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const getCurrentPage = (category: string) => {
-    return paginationState[category]?.currentPage ?? 1;
+  const {
+    value: pageSize,
+    setValue: setPageSize
+  } = useUserPreference<number>('email_templates_page_size', {
+    defaultValue: 10,
+    localStorageKey: 'email_templates_page_size',
+  });
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
-  const getPageSize = (category: string) => {
-    return paginationState[category]?.pageSize ?? 10;
-  };
-
-  const handlePageChange = (category: string, newPage: number) => {
-    setPaginationState(prev => {
-      const currentState = prev[category] ?? { currentPage: 1, pageSize: 10 };
-      return {
-        ...prev,
-        [category]: {
-          currentPage: newPage,
-          pageSize: currentState.pageSize
-        }
-      };
-    });
-  };
-
-  const handlePageSizeChange = (category: string, newPageSize: number) => {
-    setPaginationState(prev => ({
-      ...prev,
-      [category]: { currentPage: 1, pageSize: newPageSize }
-    }));
-  };
+  // Reset to page 1 when categories expand/collapse to avoid confusion
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [expandedCategories.size]);
 
   useEffect(() => {
     async function init() {
@@ -78,27 +100,33 @@ export function EmailTemplates() {
     init();
   }, []);
 
+  const handleToggleExpand = useCallback((category: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  }, []);
+
   const handleCreateCustom = async (template: SystemEmailTemplate) => {
     if (!tenant) {
       console.error("No tenant found");
       return;
     }
-    
+
     try {
       setIsCloning(true);
-      console.log("Cloning template:", template.id);
-      const cloned = await cloneSystemTemplateAction(tenant, template.id);
-      console.log("Cloned template:", cloned);
-      
+      await cloneSystemTemplateAction(tenant, template.id);
+
       // Refresh templates
       const currentTemplates = await getTemplatesAction(tenant);
-      console.log("Updated templates:", currentTemplates);
       setTemplates(currentTemplates);
     } catch (error) {
       console.error("Failed to create custom template:", error);
-      if (error instanceof Error) {
-        console.error("Error details:", error.message, error.stack);
-      }
     } finally {
       setIsCloning(false);
     }
@@ -123,49 +151,14 @@ export function EmailTemplates() {
   if (!templates || !tenant) {
     return (
       <div className="flex items-center justify-center py-8">
-        <LoadingIndicator 
-          layout="stacked" 
+        <LoadingIndicator
+          layout="stacked"
           text="Loading email templates..."
           spinnerProps={{ size: 'md' }}
         />
       </div>
     );
   }
-
-  // Group templates by category and name
-  const templateGroups = templates.systemTemplates.reduce((acc: Record<string, Array<{
-    name: string;
-    systemTemplate: SystemEmailTemplate;
-    tenantTemplate?: TenantEmailTemplate;
-    activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
-    category: string;
-  }>>, systemTemplate) => {
-    const tenantTemplate = templates.tenantTemplates.find(
-      t => t.name === systemTemplate.name
-    );
-    
-    const category = systemTemplate.category;
-    
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    
-    acc[category].push({
-      name: formatTemplateName(systemTemplate.name),
-      systemTemplate,
-      tenantTemplate,
-      activeTemplate: tenantTemplate ? tenantTemplate : systemTemplate,
-      category
-    });
-    
-    return acc;
-  }, {} as Record<string, Array<{
-    name: string;
-    systemTemplate: SystemEmailTemplate;
-    tenantTemplate?: TenantEmailTemplate;
-    activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
-    category: string;
-  }>>);
 
   // Helper to format template names for display
   function formatTemplateName(name: string): string {
@@ -175,87 +168,204 @@ export function EmailTemplates() {
       .join(' ');
   }
 
-  const columns: ColumnDefinition<typeof templateGroups[string][number]>[] = [
-    {
-      title: "Event Type",
-      dataIndex: "name" as any,
-      sortable: true,
-      render: (_, record): JSX.Element => (
-        <div>
-          <div className="font-medium">{record.name}</div>
-          <div className="text-sm text-gray-500">
-            {record.tenantTemplate
-              ? "Using custom template"
-              : "Using standard template"}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "Language",
-      dataIndex: "activeTemplate.language_code" as any,
-      sortable: true,
-      width: "100px",
-      render: (_, record): JSX.Element => {
-        const languageCode = record.activeTemplate.language_code;
-        const languageNames: Record<string, string> = {
-          'en': 'English',
-          'fr': 'French',
-          'es': 'Spanish',
-          'de': 'German',
-          'nl': 'Dutch',
-          'it': 'Italian'
-        };
-        return (
-          <div className="text-sm whitespace-nowrap">
-            {languageNames[languageCode] || languageCode.toUpperCase()}
-          </div>
-        );
+  // Group templates by category
+  const templatesByCategory = templates.systemTemplates.reduce((acc, systemTemplate) => {
+    const category = systemTemplate.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+
+    const tenantTemplate = templates.tenantTemplates.find(
+      t => t.name === systemTemplate.name
+    );
+
+    acc[category].push({
+      systemTemplate,
+      tenantTemplate,
+      activeTemplate: tenantTemplate || systemTemplate,
+    });
+
+    return acc;
+  }, {} as Record<string, Array<{
+    systemTemplate: SystemEmailTemplate & { category: string };
+    tenantTemplate?: TenantEmailTemplate;
+    activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
+  }>>);
+
+  // Build flat list with categories and templates
+  const buildFlatList = (): EmailTemplateRow[] => {
+    const rows: EmailTemplateRow[] = [];
+    const categories = Object.keys(templatesByCategory).sort();
+
+    categories.forEach(category => {
+      const categoryTemplates = templatesByCategory[category];
+
+      // Add category row
+      rows.push({
+        id: `cat_${category}`,
+        type: 'category',
+        name: category,
+        templateCount: categoryTemplates.length,
+      });
+
+      // Add templates if expanded
+      if (expandedCategories.has(category)) {
+        categoryTemplates.forEach(({ systemTemplate, tenantTemplate, activeTemplate }) => {
+          const languageNames: Record<string, string> = {
+            'en': 'English',
+            'fr': 'French',
+            'es': 'Spanish',
+            'de': 'German',
+            'nl': 'Dutch',
+            'it': 'Italian'
+          };
+
+          rows.push({
+            id: `tpl_${systemTemplate.id}`,
+            type: 'template',
+            name: systemTemplate.name,
+            displayName: formatTemplateName(systemTemplate.name),
+            category,
+            systemTemplate,
+            tenantTemplate,
+            activeTemplate,
+            isCustom: !!tenantTemplate,
+            language: languageNames[activeTemplate.language_code] || activeTemplate.language_code.toUpperCase(),
+            subject: activeTemplate.subject,
+          });
+        });
       }
-    },
+    });
+
+    return rows;
+  };
+
+  const flatList = buildFlatList();
+
+  const columns: ColumnDefinition<EmailTemplateRow>[] = [
     {
-      title: "Subject",
-      dataIndex: "activeTemplate.subject" as any,
-      sortable: true,
-      render: (_, record): JSX.Element => (
-        <div className="break-words">
-          {record.activeTemplate.subject}
-        </div>
-      )
-    },
-    {
-      title: "Template",
-      dataIndex: "template",
-      render: (_, record): JSX.Element => {
-        if (record.tenantTemplate) {
+      title: 'Name',
+      dataIndex: 'name',
+      render: (value: string, record: EmailTemplateRow) => {
+        if (record.type === 'category') {
+          const isExpanded = expandedCategories.has(record.name);
           return (
-            <div className="flex space-x-2">
-              <Button id="edit-custom-template-btn" onClick={() => setEditingTemplate(record.tenantTemplate!)}>
-                Edit Custom
+            <div
+              className="flex items-center"
+              id={`expand-template-category-${record.name}`}
+            >
+              <div className="p-1 mr-2">
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </div>
+              <span className="font-semibold text-gray-700">
+                {value}
+              </span>
+              <span className="ml-2 text-sm text-gray-500">
+                ({(record as CategoryRow).templateCount} templates)
+              </span>
+            </div>
+          );
+        } else {
+          const tplRecord = record as TemplateRow;
+          return (
+            <div className="flex items-center pl-8">
+              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />
+              <div>
+                <span className="font-medium text-gray-700">{tplRecord.displayName}</span>
+                <div className="text-xs text-gray-500">
+                  {tplRecord.isCustom ? 'Using custom template' : 'Using standard template'}
+                </div>
+              </div>
+            </div>
+          );
+        }
+      },
+    },
+    {
+      title: 'Language',
+      dataIndex: 'language',
+      width: '100px',
+      render: (value: string, record: EmailTemplateRow) => {
+        if (record.type === 'category') return null;
+        return <span className="text-sm">{(record as TemplateRow).language}</span>;
+      },
+    },
+    {
+      title: 'Subject',
+      dataIndex: 'subject',
+      render: (value: string, record: EmailTemplateRow) => {
+        if (record.type === 'category') return null;
+        return <span className="text-sm text-gray-600 break-words">{(record as TemplateRow).subject}</span>;
+      },
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'id',
+      width: '15%',
+      render: (value: string, record: EmailTemplateRow) => {
+        if (record.type === 'category') {
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button id={`category-${value}-actions`} variant="ghost" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    id={`expand-all-${value}`}
+                    onClick={() => handleToggleExpand(record.name)}
+                  >
+                    {expandedCategories.has(record.name) ? 'Collapse' : 'Expand'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        }
+
+        const tplRecord = record as TemplateRow;
+        if (tplRecord.isCustom) {
+          return (
+            <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+              <Button
+                id={`edit-template-${tplRecord.systemTemplate.id}`}
+                size="sm"
+                onClick={() => setEditingTemplate(tplRecord.tenantTemplate!)}
+              >
+                Edit
               </Button>
               <Button
-                id="switch-to-standard-btn"
+                id={`use-standard-${tplRecord.systemTemplate.id}`}
                 variant="outline"
-                onClick={() => handleUseStandard(record.systemTemplate.name)}
+                size="sm"
+                onClick={() => handleUseStandard(tplRecord.systemTemplate.name)}
               >
-                Switch to Standard
+                Use Standard
               </Button>
             </div>
           );
         } else {
           return (
-            <div className="flex space-x-2">
+            <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
               <Button
-                id="view-template-btn"
+                id={`view-template-${tplRecord.systemTemplate.id}`}
                 variant="outline"
-                onClick={() => setViewingTemplate(record.systemTemplate)}
+                size="sm"
+                onClick={() => setViewingTemplate(tplRecord.systemTemplate)}
               >
                 View
               </Button>
               <Button
-                id="customize-template-btn"
+                id={`customize-template-${tplRecord.systemTemplate.id}`}
                 variant="outline"
-                onClick={() => handleCreateCustom(record.systemTemplate)}
+                size="sm"
+                onClick={() => handleCreateCustom(tplRecord.systemTemplate)}
                 disabled={isCloning}
               >
                 Customize
@@ -263,70 +373,35 @@ export function EmailTemplates() {
             </div>
           );
         }
-      }
-    }
+      },
+    },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="mb-4">
-        <p className="text-sm text-gray-600 mt-2">
-          Each event type has a standard template that can be customized. 
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-gray-600">
+          Each event type has a standard template that can be customized.
           You can either use the standard template or create a custom version.
         </p>
       </div>
 
-      {Object.entries(templateGroups).map(([category, templates]): JSX.Element => (
-        <Card key={category} className="p-6">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
-          </div>
-          <div className="overflow-hidden">
-            <style jsx>{`
-              :global(table) {
-                table-layout: fixed;
-                width: 100%;
-                border-collapse: separate;
-                border-spacing: 0;
-                border: 1px solid rgb(var(--color-border));
-                border-radius: 0.5rem;
-              }
-              :global(th) {
-                padding: 1rem;
-                background-color: rgb(var(--color-background-100));
-                font-weight: 600;
-              }
-              :global(td) {
-                padding: 1rem;
-                vertical-align: top;
-              }
-              :global(th:nth-child(1)) {
-                width: 20%;
-              }
-              :global(th:nth-child(2)) {
-                width: 10%;
-              }
-              :global(th:nth-child(3)) {
-                width: 30%;
-              }
-              :global(th:nth-child(4)) {
-                width: 40%;
-              }
-            `}</style>
-            <DataTable
-              key={`${category}-${getCurrentPage(category)}-${getPageSize(category)}`}
-              id={`email-templates-table-${category}`}
-              data={templates}
-              columns={columns}
-              pagination={true}
-              currentPage={getCurrentPage(category)}
-              onPageChange={(newPage) => handlePageChange(category, newPage)}
-              pageSize={getPageSize(category)}
-              onItemsPerPageChange={(newPageSize) => handlePageSizeChange(category, newPageSize)}
-            />
-          </div>
-        </Card>
-      ))}
+      <DataTable
+        id="email-templates-table"
+        data={flatList}
+        columns={columns}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
+        onRowClick={(row: EmailTemplateRow) => {
+          // Only expand/collapse for category rows
+          if (row.type === 'category') {
+            handleToggleExpand(row.name);
+          }
+        }}
+      />
 
       <ViewTemplateDialog
         template={viewingTemplate}
@@ -381,21 +456,21 @@ function ViewTemplateDialog({
 
         <div>
           <Label>HTML Content</Label>
-          <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm">
+          <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
             {template.html_content}
           </div>
         </div>
 
         <div>
           <Label>Text Content</Label>
-          <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm">
+          <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
             {template.text_content}
           </div>
         </div>
       </DialogContent>
 
       <DialogFooter>
-          <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
+        <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
           Close
         </Button>
       </DialogFooter>
@@ -523,8 +598,8 @@ function EditTemplateDialog({
 }
 
 function formatTemplateName(name: string): string {
-    return name
-      .split('-')
-      .map((word): string => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+  return name
+    .split('-')
+    .map((word): string => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }

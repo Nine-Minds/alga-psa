@@ -20,7 +20,18 @@ export interface CustomTabsProps {
   tabs?: TabContent[];
   groups?: TabGroup[];
   defaultTab?: string;
+  /**
+   * Controlled value - when provided, tabs become fully controlled by parent.
+   * Use with onTabChange to manage tab state externally.
+   */
+  value?: string;
   onTabChange?: (tabValue: string) => void;
+  /**
+   * Called before tab change. Return false to prevent the change.
+   * Useful for confirming unsaved changes before navigating away.
+   * Only works in uncontrolled mode (when value prop is not provided).
+   */
+  beforeTabChange?: (newTab: string, currentTab: string) => boolean;
   tabStyles?: {
     root?: string;
     list?: string;
@@ -40,7 +51,9 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   tabs,
   groups,
   defaultTab,
+  value: controlledValue,
   onTabChange,
+  beforeTabChange,
   tabStyles,
   extraContent,
   idPrefix,
@@ -54,11 +67,19 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     return tabs || [];
   }, [tabs, groups]);
 
-  const [value, setValue] = React.useState(() => {
+  // Determine if controlled or uncontrolled mode
+  const isControlled = controlledValue !== undefined;
+
+  const [internalValue, setInternalValue] = React.useState(() => {
+    if (controlledValue) return controlledValue;
     if (defaultTab) return defaultTab;
     if (allTabs && allTabs.length > 0) return allTabs[0].label;
     return '';
   });
+
+  // Use controlled value if provided, otherwise use internal state
+  const value = isControlled ? controlledValue : internalValue;
+  const setValue = isControlled ? undefined : setInternalValue;
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
 
@@ -81,8 +102,8 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   }, []);
 
   React.useEffect(() => {
-    if (defaultTab) {
-      setValue(defaultTab);
+    if (defaultTab && !isControlled) {
+      setInternalValue(defaultTab);
       // Auto-expand the section containing the default tab
       if (groups && groups.length > 0) {
         groups.forEach((group, groupIndex) => {
@@ -95,7 +116,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
         });
       }
     }
-  }, [defaultTab, groups]);
+  }, [defaultTab, groups, isControlled]);
 
   // Auto-expand section when a tab within it becomes active
   React.useEffect(() => {
@@ -143,7 +164,15 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
       value={value}
       orientation={orientation}
       onValueChange={(newValue) => {
-        setValue(newValue);
+        // In uncontrolled mode, check beforeTabChange
+        if (!isControlled && beforeTabChange && !beforeTabChange(newValue, value)) {
+          return; // Prevent tab change
+        }
+        // In uncontrolled mode, update internal state
+        if (setValue) {
+          setValue(newValue);
+        }
+        // Always notify parent
         onTabChange?.(newValue);
       }}
     >
