@@ -182,49 +182,11 @@ exports.up = async function(knex) {
   if (isCitus) {
     console.log('  Citus detected, handling distribution and foreign keys...');
 
-    // First, ensure internal_notification tables are reference tables
-    // These are system-wide lookup tables that should be replicated to all nodes
-    const internalRefTables = [
-      'internal_notification_categories',
-      'internal_notification_subtypes',
-      'internal_notification_templates'
-    ];
+    // Note: We skip making internal_notification_* tables reference tables
+    // because they have complex FK relationships that prevent conversion.
+    // The FK constraints to these tables will also be skipped in Citus.
 
-    for (const tableName of internalRefTables) {
-      try {
-        // Check if table exists
-        const tableExists = await knex.raw(`
-          SELECT EXISTS (
-            SELECT 1 FROM information_schema.tables
-            WHERE table_schema = 'public' AND table_name = '${tableName}'
-          ) AS exists;
-        `);
-
-        if (!tableExists.rows[0].exists) {
-          console.log(`    - ${tableName} does not exist, skipping`);
-          continue;
-        }
-
-        // Check if already distributed
-        const isDistributed = await knex.raw(`
-          SELECT EXISTS (
-            SELECT 1 FROM pg_dist_partition
-            WHERE logicalrelid = '${tableName}'::regclass
-          ) AS distributed;
-        `);
-
-        if (!isDistributed.rows[0].distributed) {
-          await knex.raw(`SELECT create_reference_table('${tableName}')`);
-          console.log(`    ✓ Created ${tableName} as reference table`);
-        } else {
-          console.log(`    - ${tableName} already distributed`);
-        }
-      } catch (e) {
-        console.log(`    - Could not create ${tableName} as reference table: ${e.message}`);
-      }
-    }
-
-    // Now distribute the new tenant settings tables
+    // Distribute the new tenant settings tables
     const tables = [
       'tenant_notification_category_settings',
       'tenant_notification_subtype_settings',
@@ -252,7 +214,9 @@ exports.up = async function(knex) {
     // Now add foreign key constraints AFTER distribution (idempotent)
     console.log('  Adding foreign key constraints after distribution...');
 
-    // Define all FK constraints to add
+    // Define FK constraints to add
+    // Note: We skip FK constraints to internal_notification_* tables in Citus
+    // because those tables cannot be converted to reference tables
     const fkConstraints = [
       // FK to tenants table (distributed table)
       {
@@ -284,6 +248,7 @@ exports.up = async function(knex) {
               FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE`
       },
       // FK to reference tables (notification_categories, notification_subtypes)
+      // These are already reference tables in Citus
       {
         table: 'tenant_notification_category_settings',
         constraint: 'tenant_notification_category_settings_category_id_foreign',
@@ -297,22 +262,9 @@ exports.up = async function(knex) {
         sql: `ALTER TABLE tenant_notification_subtype_settings
               ADD CONSTRAINT tenant_notification_subtype_settings_subtype_id_foreign
               FOREIGN KEY (subtype_id) REFERENCES notification_subtypes(id) ON DELETE CASCADE`
-      },
-      // FK to internal notification reference tables
-      {
-        table: 'tenant_internal_notification_category_settings',
-        constraint: 'tenant_internal_notification_category_settings_category_id_foreign',
-        sql: `ALTER TABLE tenant_internal_notification_category_settings
-              ADD CONSTRAINT tenant_internal_notification_category_settings_category_id_foreign
-              FOREIGN KEY (category_id) REFERENCES internal_notification_categories(internal_notification_category_id) ON DELETE CASCADE`
-      },
-      {
-        table: 'tenant_internal_notification_subtype_settings',
-        constraint: 'tenant_internal_notification_subtype_settings_subtype_id_foreign',
-        sql: `ALTER TABLE tenant_internal_notification_subtype_settings
-              ADD CONSTRAINT tenant_internal_notification_subtype_settings_subtype_id_foreign
-              FOREIGN KEY (subtype_id) REFERENCES internal_notification_subtypes(internal_notification_subtype_id) ON DELETE CASCADE`
       }
+      // Note: FK constraints to internal_notification_categories and internal_notification_subtypes
+      // are intentionally skipped in Citus - referential integrity is enforced at application level
     ];
 
     for (const fk of fkConstraints) {
