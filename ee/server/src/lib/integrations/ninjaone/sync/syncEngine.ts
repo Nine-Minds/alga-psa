@@ -953,11 +953,11 @@ export class NinjaOneSyncEngine {
 	      .join('assets', (join) => {
 	        // alga_entity_id is stored as string; assets.asset_id is UUID.
 	        // Compare as text to avoid varchar=uuid operator errors.
-	        join
+	        (join as any)
 	          .on(
-	            this.knex!.raw('assets.asset_id::text'),
-	            '=',
-	            'tenant_external_entity_mappings.alga_entity_id'
+	            this.knex!.raw(
+	              'assets.asset_id::text = tenant_external_entity_mappings.alga_entity_id'
+	            )
 	          )
 	          .andOn('tenant_external_entity_mappings.tenant', '=', 'assets.tenant');
 	      })
