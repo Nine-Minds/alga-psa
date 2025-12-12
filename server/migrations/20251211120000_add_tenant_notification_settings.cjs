@@ -8,7 +8,22 @@ exports.config = { transaction: false };
 exports.up = async function(knex) {
   console.log('Creating tenant-specific notification settings tables...');
 
-  // Create tenant_notification_category_settings
+  // Check if Citus is enabled - we need to know this to handle FK constraints properly
+  const citusFn = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_proc
+      WHERE proname = 'create_distributed_table'
+    ) AS exists;
+  `);
+  const isCitus = citusFn.rows?.[0]?.exists;
+
+  // In Citus, we need to:
+  // 1. Create tables WITHOUT foreign keys
+  // 2. Distribute the tables
+  // 3. Add foreign keys AFTER distribution
+  // This avoids "out of shared memory" errors when Citus tries to convert local tables
+
+  // Create tenant_notification_category_settings (without FKs for Citus)
   await knex.schema.createTable('tenant_notification_category_settings', table => {
     table.uuid('tenant').notNullable();
     table.uuid('tenant_notification_category_setting_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -20,16 +35,19 @@ exports.up = async function(knex) {
     // Composite primary key with tenant first for Citus
     table.primary(['tenant_notification_category_setting_id', 'tenant']);
 
-    // Foreign keys
-    table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
-    table.foreign('category_id').references('id').inTable('notification_categories').onDelete('CASCADE');
+    // Foreign keys - only add in non-Citus environments
+    // In Citus, these will be added AFTER distribution
+    if (!isCitus) {
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
+      table.foreign('category_id').references('id').inTable('notification_categories').onDelete('CASCADE');
+    }
 
     // Unique constraint on tenant + category_id
     table.unique(['tenant', 'category_id']);
   });
   console.log('  ✓ Created tenant_notification_category_settings');
 
-  // Create tenant_notification_subtype_settings
+  // Create tenant_notification_subtype_settings (without FKs for Citus)
   await knex.schema.createTable('tenant_notification_subtype_settings', table => {
     table.uuid('tenant').notNullable();
     table.uuid('tenant_notification_subtype_setting_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -41,16 +59,18 @@ exports.up = async function(knex) {
     // Composite primary key with tenant first for Citus
     table.primary(['tenant_notification_subtype_setting_id', 'tenant']);
 
-    // Foreign keys
-    table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
-    table.foreign('subtype_id').references('id').inTable('notification_subtypes').onDelete('CASCADE');
+    // Foreign keys - only add in non-Citus environments
+    if (!isCitus) {
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
+      table.foreign('subtype_id').references('id').inTable('notification_subtypes').onDelete('CASCADE');
+    }
 
     // Unique constraint on tenant + subtype_id
     table.unique(['tenant', 'subtype_id']);
   });
   console.log('  ✓ Created tenant_notification_subtype_settings');
 
-  // Create tenant_internal_notification_category_settings
+  // Create tenant_internal_notification_category_settings (without FKs for Citus)
   await knex.schema.createTable('tenant_internal_notification_category_settings', table => {
     table.uuid('tenant').notNullable();
     table.uuid('tenant_internal_notification_category_setting_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -62,19 +82,21 @@ exports.up = async function(knex) {
     // Composite primary key with tenant first for Citus
     table.primary(['tenant_internal_notification_category_setting_id', 'tenant']);
 
-    // Foreign keys
-    table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
-    table.foreign('category_id')
-      .references('internal_notification_category_id')
-      .inTable('internal_notification_categories')
-      .onDelete('CASCADE');
+    // Foreign keys - only add in non-Citus environments
+    if (!isCitus) {
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
+      table.foreign('category_id')
+        .references('internal_notification_category_id')
+        .inTable('internal_notification_categories')
+        .onDelete('CASCADE');
+    }
 
     // Unique constraint on tenant + category_id
     table.unique(['tenant', 'category_id']);
   });
   console.log('  ✓ Created tenant_internal_notification_category_settings');
 
-  // Create tenant_internal_notification_subtype_settings
+  // Create tenant_internal_notification_subtype_settings (without FKs for Citus)
   await knex.schema.createTable('tenant_internal_notification_subtype_settings', table => {
     table.uuid('tenant').notNullable();
     table.uuid('tenant_internal_notification_subtype_setting_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
@@ -86,12 +108,14 @@ exports.up = async function(knex) {
     // Composite primary key with tenant first for Citus
     table.primary(['tenant_internal_notification_subtype_setting_id', 'tenant']);
 
-    // Foreign keys
-    table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
-    table.foreign('subtype_id')
-      .references('internal_notification_subtype_id')
-      .inTable('internal_notification_subtypes')
-      .onDelete('CASCADE');
+    // Foreign keys - only add in non-Citus environments
+    if (!isCitus) {
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
+      table.foreign('subtype_id')
+        .references('internal_notification_subtype_id')
+        .inTable('internal_notification_subtypes')
+        .onDelete('CASCADE');
+    }
 
     // Unique constraint on tenant + subtype_id
     table.unique(['tenant', 'subtype_id']);
@@ -114,18 +138,53 @@ exports.up = async function(knex) {
   `);
   console.log('  ✓ Created lookup indexes');
 
-  // Check if Citus is enabled and distribute tables
-  console.log('Checking for Citus...');
-  const citusFn = await knex.raw(`
-    SELECT EXISTS (
-      SELECT 1 FROM pg_proc
-      WHERE proname = 'create_distributed_table'
-    ) AS exists;
-  `);
+  // Handle Citus distribution and FK constraints
+  if (isCitus) {
+    console.log('  Citus detected, handling distribution and foreign keys...');
 
-  if (citusFn.rows?.[0]?.exists) {
-    console.log('  Citus detected, distributing tables...');
+    // First, ensure internal_notification tables are reference tables
+    // These are system-wide lookup tables that should be replicated to all nodes
+    const internalRefTables = [
+      'internal_notification_categories',
+      'internal_notification_subtypes',
+      'internal_notification_templates'
+    ];
 
+    for (const tableName of internalRefTables) {
+      try {
+        // Check if table exists
+        const tableExists = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = '${tableName}'
+          ) AS exists;
+        `);
+
+        if (!tableExists.rows[0].exists) {
+          console.log(`    - ${tableName} does not exist, skipping`);
+          continue;
+        }
+
+        // Check if already distributed
+        const isDistributed = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition
+            WHERE logicalrelid = '${tableName}'::regclass
+          ) AS distributed;
+        `);
+
+        if (!isDistributed.rows[0].distributed) {
+          await knex.raw(`SELECT create_reference_table('${tableName}')`);
+          console.log(`    ✓ Created ${tableName} as reference table`);
+        } else {
+          console.log(`    - ${tableName} already distributed`);
+        }
+      } catch (e) {
+        console.log(`    - Could not create ${tableName} as reference table: ${e.message}`);
+      }
+    }
+
+    // Now distribute the new tenant settings tables
     const tables = [
       'tenant_notification_category_settings',
       'tenant_notification_subtype_settings',
@@ -149,8 +208,71 @@ exports.up = async function(knex) {
         console.log(`    - ${tableName} already distributed`);
       }
     }
+
+    // Now add foreign key constraints AFTER distribution
+    console.log('  Adding foreign key constraints after distribution...');
+
+    // FK to tenants table (distributed table)
+    await knex.raw(`
+      ALTER TABLE tenant_notification_category_settings
+      ADD CONSTRAINT tenant_notification_category_settings_tenant_foreign
+      FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added tenant FK to tenant_notification_category_settings');
+
+    await knex.raw(`
+      ALTER TABLE tenant_notification_subtype_settings
+      ADD CONSTRAINT tenant_notification_subtype_settings_tenant_foreign
+      FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added tenant FK to tenant_notification_subtype_settings');
+
+    await knex.raw(`
+      ALTER TABLE tenant_internal_notification_category_settings
+      ADD CONSTRAINT tenant_internal_notification_category_settings_tenant_foreign
+      FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added tenant FK to tenant_internal_notification_category_settings');
+
+    await knex.raw(`
+      ALTER TABLE tenant_internal_notification_subtype_settings
+      ADD CONSTRAINT tenant_internal_notification_subtype_settings_tenant_foreign
+      FOREIGN KEY (tenant) REFERENCES tenants(tenant) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added tenant FK to tenant_internal_notification_subtype_settings');
+
+    // FK to reference tables (notification_categories, notification_subtypes)
+    await knex.raw(`
+      ALTER TABLE tenant_notification_category_settings
+      ADD CONSTRAINT tenant_notification_category_settings_category_id_foreign
+      FOREIGN KEY (category_id) REFERENCES notification_categories(id) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added category_id FK to tenant_notification_category_settings');
+
+    await knex.raw(`
+      ALTER TABLE tenant_notification_subtype_settings
+      ADD CONSTRAINT tenant_notification_subtype_settings_subtype_id_foreign
+      FOREIGN KEY (subtype_id) REFERENCES notification_subtypes(id) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added subtype_id FK to tenant_notification_subtype_settings');
+
+    // FK to internal notification reference tables
+    await knex.raw(`
+      ALTER TABLE tenant_internal_notification_category_settings
+      ADD CONSTRAINT tenant_internal_notification_category_settings_category_id_foreign
+      FOREIGN KEY (category_id) REFERENCES internal_notification_categories(internal_notification_category_id) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added category_id FK to tenant_internal_notification_category_settings');
+
+    await knex.raw(`
+      ALTER TABLE tenant_internal_notification_subtype_settings
+      ADD CONSTRAINT tenant_internal_notification_subtype_settings_subtype_id_foreign
+      FOREIGN KEY (subtype_id) REFERENCES internal_notification_subtypes(internal_notification_subtype_id) ON DELETE CASCADE;
+    `);
+    console.log('    ✓ Added subtype_id FK to tenant_internal_notification_subtype_settings');
+
   } else {
-    console.warn('  Citus not detected, skipping table distribution');
+    console.log('  Citus not detected, skipping table distribution');
   }
 
   // Seed tenant settings from current global values
