@@ -93,8 +93,15 @@ export async function createTimePeriod(
 
       const validatedPeriod = validateData(timePeriodSchema, timePeriod);
       console.log('Time period after validation:', validatedPeriod);
-      console.log('Revalidating path: /msp/time-entry');
-      revalidatePath('/msp/time-entry');
+
+      // revalidatePath only works in request context, not from background jobs
+      try {
+        revalidatePath('/msp/time-entry');
+        console.log('Revalidated path: /msp/time-entry');
+      } catch {
+        // Ignore revalidation errors when called outside request context (e.g., from jobs)
+        console.log('Skipping revalidatePath (not in request context)');
+      }
 
       console.log('createTimePeriod function completed successfully.');
       return validatedPeriod;
