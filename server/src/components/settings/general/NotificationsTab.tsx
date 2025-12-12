@@ -9,23 +9,17 @@ import { EmailTemplates } from "server/src/components/settings/notifications/Ema
 import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
 import { InternalNotificationCategories } from "server/src/components/settings/notifications/InternalNotificationCategories";
 import { TelemetrySettings } from "server/src/components/settings/telemetry/TelemetrySettings";
-import { UnsavedChangesProvider, useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
+import { useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
 
 type NotificationView = 'email' | 'internal';
 
 export default function NotificationsTab() {
-  return (
-    <UnsavedChangesProvider
-      dialogTitle="Unsaved Changes"
-      dialogMessage="You have unsaved notification settings. Are you sure you want to leave? Your changes will be lost."
-    >
-      <NotificationsTabContent />
-    </UnsavedChangesProvider>
-  );
+  return <NotificationsTabContent />;
 }
 
 function NotificationsTabContent() {
   const [currentView, setCurrentView] = useState<NotificationView>('email');
+  const [currentTab, setCurrentTab] = useState<string>('Settings');
   const { confirmNavigation } = useUnsavedChanges();
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
@@ -39,8 +33,19 @@ function NotificationsTabContent() {
 
     confirmNavigation(() => {
       setCurrentView(newView);
+      // Reset to first tab of new view
+      setCurrentTab(newView === 'email' ? 'Settings' : 'Categories');
     });
   }, [currentView, confirmNavigation]);
+
+  // Handle tab change with confirmation
+  const handleTabChange = useCallback((newTab: string) => {
+    if (newTab === currentTab) return;
+
+    confirmNavigation(() => {
+      setCurrentTab(newTab);
+    });
+  }, [currentTab, confirmNavigation]);
 
   const emailTabContent = [
     {
@@ -141,6 +146,8 @@ function NotificationsTabContent() {
         <CustomTabs
           key={currentView}
           tabs={currentView === 'email' ? emailTabContent : internalTabContent}
+          value={currentTab}
+          onTabChange={handleTabChange}
         />
       </CardContent>
     </Card>

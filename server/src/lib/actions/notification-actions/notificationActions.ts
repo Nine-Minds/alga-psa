@@ -4,13 +4,14 @@ import { getEmailNotificationService } from "../../notifications/email";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
-import { 
+import {
   NotificationSettings,
   SystemEmailTemplate,
   TenantEmailTemplate,
   NotificationCategory,
   NotificationSubtype,
-  UserNotificationPreference
+  UserNotificationPreference,
+  isLockedCategory
 } from "../../models/notification";
 
 export async function getNotificationSettingsAction(tenant: string): Promise<NotificationSettings> {
@@ -129,7 +130,7 @@ export async function getCategoriesAction(): Promise<NotificationCategory[]> {
   }
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('notification_categories as nc')
+    const categories = await trx('notification_categories as nc')
       .leftJoin('tenant_notification_category_settings as tcs', function() {
         this.on('tcs.category_id', 'nc.id')
             .andOn('tcs.tenant', trx.raw('?', [tenant]));
@@ -144,6 +145,12 @@ export async function getCategoriesAction(): Promise<NotificationCategory[]> {
         trx.raw('COALESCE(tcs.is_default_enabled, true) as is_default_enabled')
       )
       .orderBy('nc.name');
+
+    // Add is_locked flag based on category name
+    return categories.map(cat => ({
+      ...cat,
+      is_locked: isLockedCategory(cat.name)
+    }));
   });
 }
 
@@ -231,6 +238,14 @@ export async function updateCategoryAction(
 
     if (!exists) {
       throw new Error("Category not found");
+    }
+
+    // Check if category is locked and prevent disabling
+    if (isLockedCategory(exists.name)) {
+      // Locked categories cannot be disabled
+      if (category.is_enabled === false) {
+        throw new Error(`Cannot disable '${exists.name}' category: This category contains system-critical notifications that must always be sent.`);
+      }
     }
 
     // Get existing tenant settings (if any) to preserve values not being updated

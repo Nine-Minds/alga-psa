@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "server/src/components/ui/Button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "server/src/components/ui/Dialog";
 import { Input } from "server/src/components/ui/Input";
@@ -8,7 +8,7 @@ import { Label } from "server/src/components/ui/Label";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { DataTable } from "server/src/components/ui/DataTable";
 import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, X } from "lucide-react";
 import { useUserPreference } from "server/src/hooks/useUserPreference";
 import {
   getTemplatesAction,
@@ -28,6 +28,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "server/src/components/ui/DropdownMenu";
+
+// Language names mapping (shared across component)
+const LANGUAGE_NAMES: Record<string, string> = {
+  'en': 'English',
+  'fr': 'French',
+  'es': 'Spanish',
+  'de': 'German',
+  'nl': 'Dutch',
+  'it': 'Italian'
+};
 
 // Row types for flat list
 interface CategoryRow {
@@ -65,6 +75,9 @@ export function EmailTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<TenantEmailTemplate | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
+  // Language filter state - empty means show all languages
+  const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -81,10 +94,37 @@ export function EmailTemplates() {
     setCurrentPage(1);
   };
 
-  // Reset to page 1 when categories expand/collapse to avoid confusion
+  // Reset to page 1 when categories expand/collapse or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [expandedCategories.size]);
+  }, [expandedCategories.size, selectedLanguages.size]);
+
+  // Get available languages from templates
+  const availableLanguages = useMemo(() => {
+    if (!templates) return [];
+    const languageCodes = new Set<string>();
+    templates.systemTemplates.forEach(t => languageCodes.add(t.language_code));
+    templates.tenantTemplates.forEach(t => languageCodes.add(t.language_code));
+    return Array.from(languageCodes).sort();
+  }, [templates]);
+
+  // Toggle language in filter
+  const handleToggleLanguage = useCallback((languageCode: string) => {
+    setSelectedLanguages(prev => {
+      const next = new Set(prev);
+      if (next.has(languageCode)) {
+        next.delete(languageCode);
+      } else {
+        next.add(languageCode);
+      }
+      return next;
+    });
+  }, []);
+
+  // Clear all language filters
+  const handleClearLanguageFilters = useCallback(() => {
+    setSelectedLanguages(new Set());
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -168,21 +208,27 @@ export function EmailTemplates() {
       .join(' ');
   }
 
-  // Group templates by category
+  // Group templates by category (filtered by selected languages)
   const templatesByCategory = templates.systemTemplates.reduce((acc, systemTemplate) => {
+    const tenantTemplate = templates.tenantTemplates.find(
+      t => t.name === systemTemplate.name
+    );
+    const activeTemplate = tenantTemplate || systemTemplate;
+
+    // Apply language filter - if no languages selected, show all
+    if (selectedLanguages.size > 0 && !selectedLanguages.has(activeTemplate.language_code)) {
+      return acc;
+    }
+
     const category = systemTemplate.category;
     if (!acc[category]) {
       acc[category] = [];
     }
 
-    const tenantTemplate = templates.tenantTemplates.find(
-      t => t.name === systemTemplate.name
-    );
-
     acc[category].push({
       systemTemplate,
       tenantTemplate,
-      activeTemplate: tenantTemplate || systemTemplate,
+      activeTemplate,
     });
 
     return acc;
@@ -211,15 +257,6 @@ export function EmailTemplates() {
       // Add templates if expanded
       if (expandedCategories.has(category)) {
         categoryTemplates.forEach(({ systemTemplate, tenantTemplate, activeTemplate }) => {
-          const languageNames: Record<string, string> = {
-            'en': 'English',
-            'fr': 'French',
-            'es': 'Spanish',
-            'de': 'German',
-            'nl': 'Dutch',
-            'it': 'Italian'
-          };
-
           rows.push({
             id: `tpl_${systemTemplate.id}`,
             type: 'template',
@@ -230,7 +267,7 @@ export function EmailTemplates() {
             tenantTemplate,
             activeTemplate,
             isCustom: !!tenantTemplate,
-            language: languageNames[activeTemplate.language_code] || activeTemplate.language_code.toUpperCase(),
+            language: LANGUAGE_NAMES[activeTemplate.language_code] || activeTemplate.language_code.toUpperCase(),
             subject: activeTemplate.subject,
           });
         });
@@ -379,11 +416,65 @@ export function EmailTemplates() {
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex items-start justify-between">
         <p className="text-sm text-gray-600">
           Each event type has a standard template that can be customized.
           You can either use the standard template or create a custom version.
         </p>
+
+        {/* Language Filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="language-filter-btn"
+              variant="outline"
+              size="sm"
+              className="ml-4 flex items-center gap-2 whitespace-nowrap"
+            >
+              <Filter className="h-4 w-4" />
+              Languages
+              {selectedLanguages.size > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary-100 text-primary-700 rounded-full">
+                  {selectedLanguages.size}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {availableLanguages.map(langCode => (
+              <DropdownMenuItem
+                key={langCode}
+                id={`filter-language-${langCode}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleToggleLanguage(langCode);
+                }}
+                className="flex items-center justify-between cursor-pointer"
+              >
+                <span>{LANGUAGE_NAMES[langCode] || langCode.toUpperCase()}</span>
+                {selectedLanguages.has(langCode) && (
+                  <Check className="h-4 w-4 text-primary-600" />
+                )}
+              </DropdownMenuItem>
+            ))}
+            {selectedLanguages.size > 0 && (
+              <>
+                <div className="border-t border-gray-200 my-1" />
+                <DropdownMenuItem
+                  id="clear-language-filter"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleClearLanguageFilters();
+                  }}
+                  className="flex items-center gap-2 text-gray-600 cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                  Clear filter
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <DataTable
@@ -428,15 +519,6 @@ function ViewTemplateDialog({
 }) {
   if (!template) return null;
 
-  const languageNames: Record<string, string> = {
-    'en': 'English',
-    'fr': 'French',
-    'es': 'Spanish',
-    'de': 'German',
-    'nl': 'Dutch',
-    'it': 'Italian'
-  };
-
   return (
     <Dialog isOpen={!!template} onClose={onClose}>
       <DialogTitle>Standard Template: {formatTemplateName(template.name)}</DialogTitle>
@@ -445,7 +527,7 @@ function ViewTemplateDialog({
         <div>
           <Label>Language</Label>
           <div className="p-2 bg-gray-50 rounded border">
-            {languageNames[template.language_code] || template.language_code.toUpperCase()}
+            {LANGUAGE_NAMES[template.language_code] || template.language_code.toUpperCase()}
           </div>
         </div>
 
@@ -513,15 +595,6 @@ function EditTemplateDialog({
   }, [template]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const languageNames: Record<string, string> = {
-    'en': 'English',
-    'fr': 'French',
-    'es': 'Spanish',
-    'de': 'German',
-    'nl': 'Dutch',
-    'it': 'Italian'
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -547,7 +620,7 @@ function EditTemplateDialog({
           <div>
             <Label>Language</Label>
             <div className="p-2 bg-gray-50 rounded border text-gray-700">
-              {formData.language_code ? (languageNames[formData.language_code] || formData.language_code.toUpperCase()) : 'N/A'}
+              {formData.language_code ? (LANGUAGE_NAMES[formData.language_code] || formData.language_code.toUpperCase()) : 'N/A'}
             </div>
           </div>
 

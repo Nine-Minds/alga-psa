@@ -5,7 +5,7 @@ import { Button } from "server/src/components/ui/Button";
 import { Switch } from "server/src/components/ui/Switch";
 import { DataTable } from "server/src/components/ui/DataTable";
 import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Lock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useUserPreference } from "server/src/hooks/useUserPreference";
 import {
@@ -52,6 +52,7 @@ interface NotificationRow {
   is_enabled: boolean;
   is_default_enabled: boolean;
   isCategory: boolean;
+  is_locked?: boolean; // For categories, whether it's locked (cannot be disabled)
   categoryId?: number; // For subtypes, the parent category id
   category_id?: number; // From the original subtype
 }
@@ -311,6 +312,7 @@ function NotificationCategoriesContent({
         is_enabled: category.is_enabled,
         is_default_enabled: category.is_default_enabled,
         isCategory: true,
+        is_locked: category.is_locked,
       });
 
       // Add subtypes if expanded
@@ -363,6 +365,11 @@ function NotificationCategoriesContent({
                 {value}
                 {rowHasChanges(record) && <span className="ml-1 text-xs">*</span>}
               </span>
+              {record.is_locked && (
+                <span className="ml-2 flex items-center text-gray-400" title="This category cannot be disabled">
+                  <Lock className="h-3.5 w-3.5" />
+                </span>
+              )}
             </div>
           );
         } else {
@@ -391,12 +398,14 @@ function NotificationCategoriesContent({
       render: (value: boolean, record: NotificationRow) => {
         if (record.isCategory) {
           const category = categories.find(c => c.id === record.originalId)!;
+          const isLocked = record.is_locked;
           return (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()} title={isLocked ? "This category cannot be disabled" : undefined}>
               <Switch
                 id={`category-enabled-${record.id}`}
-                checked={value}
-                onCheckedChange={() => handleToggleCategory(category, 'is_enabled')}
+                checked={isLocked ? true : value}
+                onCheckedChange={() => !isLocked && handleToggleCategory(category, 'is_enabled')}
+                disabled={isLocked}
               />
             </div>
           );
@@ -423,12 +432,14 @@ function NotificationCategoriesContent({
       render: (value: boolean, record: NotificationRow) => {
         if (record.isCategory) {
           const category = categories.find(c => c.id === record.originalId)!;
+          const isLocked = record.is_locked;
           return (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()} title={isLocked ? "This category cannot be modified" : undefined}>
               <Switch
                 id={`category-default-${record.id}`}
-                checked={value}
-                onCheckedChange={() => handleToggleCategory(category, 'is_default_enabled')}
+                checked={isLocked ? true : value}
+                onCheckedChange={() => !isLocked && handleToggleCategory(category, 'is_default_enabled')}
+                disabled={isLocked}
               />
             </div>
           );

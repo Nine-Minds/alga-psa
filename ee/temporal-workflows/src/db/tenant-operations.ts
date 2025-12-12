@@ -311,6 +311,87 @@ export async function setupTenantDataInDB(
         }
       }
 
+      // Initialize tenant notification settings from global defaults
+      try {
+        // Seed email notification category settings
+        const categories = await trx('notification_categories')
+          .select('id', 'is_enabled', 'is_default_enabled');
+
+        if (categories.length > 0) {
+          await trx('tenant_notification_category_settings')
+            .insert(categories.map(category => ({
+              tenant: input.tenantId,
+              tenant_notification_category_setting_id: trx.raw('gen_random_uuid()'),
+              category_id: category.id,
+              is_enabled: category.is_enabled,
+              is_default_enabled: category.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            })));
+        }
+
+        // Seed email notification subtype settings
+        const subtypes = await trx('notification_subtypes')
+          .select('id', 'is_enabled', 'is_default_enabled');
+
+        if (subtypes.length > 0) {
+          await trx('tenant_notification_subtype_settings')
+            .insert(subtypes.map(subtype => ({
+              tenant: input.tenantId,
+              tenant_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
+              subtype_id: subtype.id,
+              is_enabled: subtype.is_enabled,
+              is_default_enabled: subtype.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            })));
+        }
+
+        // Seed internal notification category settings
+        const internalCategories = await trx('internal_notification_categories')
+          .select('internal_notification_category_id', 'is_enabled', 'is_default_enabled');
+
+        if (internalCategories.length > 0) {
+          await trx('tenant_internal_notification_category_settings')
+            .insert(internalCategories.map(category => ({
+              tenant: input.tenantId,
+              tenant_internal_notification_category_setting_id: trx.raw('gen_random_uuid()'),
+              category_id: category.internal_notification_category_id,
+              is_enabled: category.is_enabled,
+              is_default_enabled: category.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            })));
+        }
+
+        // Seed internal notification subtype settings
+        const internalSubtypes = await trx('internal_notification_subtypes')
+          .select('internal_notification_subtype_id', 'is_enabled', 'is_default_enabled');
+
+        if (internalSubtypes.length > 0) {
+          await trx('tenant_internal_notification_subtype_settings')
+            .insert(internalSubtypes.map(subtype => ({
+              tenant: input.tenantId,
+              tenant_internal_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
+              subtype_id: subtype.internal_notification_subtype_id,
+              is_enabled: subtype.is_enabled,
+              is_default_enabled: subtype.is_default_enabled,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            })));
+        }
+
+        setupSteps.push('notification_settings');
+        log.info('Tenant notification settings created successfully', { tenantId: input.tenantId });
+      } catch (error) {
+        // Log but don't block tenant creation - notifications will fall back to global settings
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        log.warn('Failed to create tenant notification settings (non-blocking)', {
+          tenantId: input.tenantId,
+          error: errorMessage
+        });
+      }
+
       log.info('Tenant data setup steps completed', { tenantId: input.tenantId, setupSteps });
     });
 
@@ -342,25 +423,31 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
 
     await knex.transaction(async (trx: Knex.Transaction) => {
       // Delete in proper order to avoid foreign key violations
-      
+
       // Delete user roles first (references users)
       await trx('user_roles').where({ tenant: tenantId }).delete();
-      
+
       // Delete users (references tenant)
       await trx('users').where({ tenant: tenantId }).delete();
-      
+
       // Delete tenant_companies associations (references tenant and clients)
       await trx('tenant_companies').where({ tenant: tenantId }).delete();
-      
+
       // Delete tenant_email_settings (references tenant indirectly)
       await trx('tenant_email_settings').where({ tenant: tenantId }).delete();
-      
+
       // Delete tenant_settings (references tenant)
       await trx('tenant_settings').where({ tenant: tenantId }).delete();
-      
+
+      // Delete tenant notification settings
+      await trx('tenant_notification_category_settings').where({ tenant: tenantId }).delete();
+      await trx('tenant_notification_subtype_settings').where({ tenant: tenantId }).delete();
+      await trx('tenant_internal_notification_category_settings').where({ tenant: tenantId }).delete();
+      await trx('tenant_internal_notification_subtype_settings').where({ tenant: tenantId }).delete();
+
       // Delete clients (references tenant)
       await trx('clients').where({ tenant: tenantId }).delete();
-      
+
       // Delete the tenant last
       await trx('tenants').where({ tenant: tenantId }).delete();
     });

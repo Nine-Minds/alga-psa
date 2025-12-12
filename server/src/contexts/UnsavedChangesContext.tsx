@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ui/ConfirmationDialog';
 
 interface UnsavedChangesContextType {
@@ -100,7 +101,12 @@ export function UnsavedChangesProvider({
   const handleClose = useCallback(() => {
     setShowDialog(false);
     pendingActionRef.current = null;
+    pendingNavigationRef.current = null;
   }, []);
+
+  // Router for programmatic navigation after confirmation
+  const router = useRouter();
+  const pendingNavigationRef = useRef<string | null>(null);
 
   // Handle browser beforeunload
   useEffect(() => {
@@ -114,6 +120,55 @@ export function UnsavedChangesProvider({
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  // Intercept link clicks for client-side navigation (Next.js App Router)
+  useEffect(() => {
+    const handleLinkClick = (e: MouseEvent) => {
+      // Only proceed if there are unsaved changes
+      if (unsavedComponentsRef.current.size === 0) return;
+
+      // Find the closest anchor element
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (!anchor) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+
+      // Skip external links, hash links, and non-navigation links
+      if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+        return;
+      }
+
+      // Skip links with target="_blank"
+      if (anchor.target === '_blank') return;
+
+      // Skip links with download attribute
+      if (anchor.hasAttribute('download')) return;
+
+      // Prevent the navigation
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Store the pending navigation URL
+      pendingNavigationRef.current = href;
+
+      // Set up the pending action to navigate after confirmation
+      pendingActionRef.current = () => {
+        if (pendingNavigationRef.current) {
+          router.push(pendingNavigationRef.current);
+          pendingNavigationRef.current = null;
+        }
+      };
+
+      // Show the confirmation dialog
+      setShowDialog(true);
+    };
+
+    // Use capture phase to intercept before Next.js Link handles it
+    document.addEventListener('click', handleLinkClick, true);
+    return () => document.removeEventListener('click', handleLinkClick, true);
+  }, [router]);
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
