@@ -444,7 +444,8 @@ export async function createNextTimePeriod(knexOrTrx: Knex | Knex.Transaction, s
 
     // Check if we're within the threshold days of the new period
     const currentDate = getCurrentDate();
-    const daysUntilStart = Temporal.PlainDate.compare(newStartDate, currentDate);
+    // Calculate actual days difference (positive if newStartDate is in future)
+    const daysUntilStart = newStartDate.since(currentDate, { largestUnit: 'day' }).days;
 
     // Only create the period if we're within the threshold
     if (daysUntilStart > daysThreshold) {
@@ -452,12 +453,23 @@ export async function createNextTimePeriod(knexOrTrx: Knex | Knex.Transaction, s
       return null;
     }
 
+    console.log(`Creating new period: ${daysUntilStart} days until start date (threshold: ${daysThreshold} days)`);
+    console.log(`Last period ends: ${lastPeriod.end_date}, New period would start: ${newStartDate}`);
+    console.log(`Available settings:`, settings.map(s => ({
+      start_day: s.start_day,
+      end_day: s.end_day,
+      frequency_unit: s.frequency_unit
+    })));
+
     // Use TimePeriodSuggester to create the new period
     const newPeriodResult = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
-    
+
     // Check if the suggestion was successful
     if (!newPeriodResult.success || !newPeriodResult.data) {
-      throw new Error(`Failed to suggest new time period: ${newPeriodResult.error || 'Unknown error'}`);
+      // "No applicable settings" is not an error - it means no period should be created
+      // This can happen when settings exist but don't match the current date criteria
+      console.log(`No time period to create: ${newPeriodResult.error || 'Unknown reason'}`);
+      return null;
     }
     
     // Convert string dates to Temporal.PlainDate

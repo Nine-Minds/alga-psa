@@ -444,6 +444,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       }
     },
     manualPagination: totalItems !== undefined,
+    // Prevent react-table from auto-resetting page index when data changes
+    // This is important for client-side pagination where data reference may change
+    // but we want to maintain the current page position
+    autoResetPageIndex: false,
     meta: {
       editableConfig: props.editableConfig,
     },
@@ -634,6 +638,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               totalItems={total}
               itemsPerPage={currentPageSize}
               onPageChange={(page) => {
+                // Update internal state immediately for responsive UI
+                // (the useEffect sync from currentPage prop has a 1-render delay)
+                setPagination(prev => ({
+                  ...prev,
+                  pageIndex: page - 1,
+                }));
+                // Notify parent
                 if (onPageChange) {
                   onPageChange(page);
                 }

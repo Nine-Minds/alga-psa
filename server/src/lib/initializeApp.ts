@@ -353,32 +353,41 @@ async function initializeJobScheduler(storageService: StorageService) {
         scheduledJobId: job.id
       });
 
-      await runWithTenant(tenantId, async () =>
-        jobService.updateJobStatus(jobRecordId!, JobStatus.Processing, {
+      await runWithTenant(tenantId, async () => {
+        await jobService.updateJobStatus(jobRecordId!, JobStatus.Processing, {
           tenantId,
           pgBossJobId: job.id,
           details: 'Starting time period creation run'
-        })
-      );
+        });
 
-      const tenantKnex = await getConnection(tenantId);
-      const settings = await TimePeriodSettings.getActiveSettings(tenantKnex);
+        const tenantKnex = await getConnection(tenantId);
+        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex);
 
-      const result = await createNextTimePeriod(tenantKnex, settings);
-      const details =
-        result
-          ? `Created new time period ${result.start_date} to ${result.end_date}`
-          : 'No new time period needed';
+        // Skip if no time period settings are configured for this tenant
+        if (!settings || settings.length === 0) {
+          logger.debug(`No time period settings configured for tenant ${tenantId}, skipping time period creation`);
+          await jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
+            tenantId,
+            pgBossJobId: job.id,
+            details: 'Skipped - no time period settings configured'
+          });
+          return;
+        }
 
-      await runWithTenant(tenantId, async () =>
-        jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
+        const result = await createNextTimePeriod(tenantKnex, settings);
+        const details =
+          result
+            ? `Created new time period ${result.start_date} to ${result.end_date}`
+            : 'No new time period needed';
+
+        await jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
           tenantId,
           pgBossJobId: job.id,
           details
-        })
-      );
+        });
 
-      logger.info(`Time period creation job completed for tenant ${tenantId}: ${details}`);
+        logger.info(`Time period creation job completed for tenant ${tenantId}: ${details}`);
+      });
     } catch (error) {
       logger.error(`Error creating next time period in tenant ${tenantId}:`, error);
 

@@ -1,22 +1,29 @@
 /**
  * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
+ * @returns { Promise<void> }
+ *
+ * DEPRECATED: This seed is superseded by seed 69_add_more_notification_setttings.cjs
+ * which includes all the categories and subtypes from this seed plus additional ones.
+ *
+ * This seed now only runs if no notification categories exist (fresh database).
+ * For existing databases, seed 69 handles all upserts non-destructively.
  */
 exports.seed = async function(knex) {
+  // Check if notification categories already exist
+  const existingCategories = await knex('notification_categories').count('id as count').first();
+
+  if (existingCategories && existingCategories.count > 0) {
+    console.log('Seed 67: Notification categories already exist, skipping (seed 69 will handle upserts)');
+    return;
+  }
+
+  console.log('Seed 67: Fresh database detected, seeding initial notification data...');
+
   // Get the first tenant from the tenants table
   const tenant = await knex('tenants').first('tenant');
   if (!tenant) {
     throw new Error('No tenant found in tenants table');
   }
-
-  // First, clean up existing data
-  await knex('notification_logs').del();
-  await knex('user_notification_preferences').del();
-  await knex('notification_subtypes').del();
-  await knex('notification_categories').del();
-  await knex('tenant_email_templates').del();
-  await knex('system_email_templates').del();
-  await knex('notification_settings').del();
 
   // Insert default categories (system-wide)
   const categories = await knex('notification_categories').insert([
@@ -175,4 +182,6 @@ exports.seed = async function(knex) {
     is_enabled: true,
     rate_limit_per_minute: 60
   });
+
+  console.log('Seed 67: Initial notification data seeded successfully');
 };
