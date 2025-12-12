@@ -11,6 +11,7 @@ import type { DnsRecord, DnsLookupResult } from '@shared/types/email';
 import { enqueueManagedEmailDomainWorkflow } from '@ee/lib/email-domains/workflowClient';
 import { isValidDomain } from '@ee/lib/email-domains/domainValidation';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { observabilityLogger } from 'server/src/lib/observability/logging';
 
 const DEFAULT_REGION = process.env.RESEND_DEFAULT_REGION || 'us-east-1';
 const EMAIL_SETTINGS_RESOURCE = 'ticket_settings';
@@ -33,6 +34,23 @@ async function getEmailDomainTenantColumn(knex: Knex): Promise<TenantColumnName>
   }
 
   return cachedTenantColumn;
+}
+
+function logWorkflowEnqueueFailure(params: {
+  operation: 'register' | 'refresh' | 'delete';
+  tenantId: string;
+  domain: string;
+  providerDomainId?: string;
+  workflowError?: string;
+}) {
+  observabilityLogger.error('Failed to enqueue managed email domain workflow', undefined, {
+    event_type: 'managed_email_domain_workflow_enqueue_failed',
+    managed_email_domain_operation: params.operation,
+    tenant_id: params.tenantId,
+    domain: params.domain,
+    provider_domain_id: params.providerDomainId,
+    enqueue_error: params.workflowError,
+  });
 }
 
 export interface ManagedDomainStatus {
@@ -136,14 +154,30 @@ export async function requestManagedEmailDomain(domainName: string) {
       updated_at: now,
     });
 
-  const result = await enqueueManagedEmailDomainWorkflow({
-    tenantId,
-    domain: normalizedDomain,
-    region: DEFAULT_REGION,
-    trigger: 'register',
-  });
+  let result: Awaited<ReturnType<typeof enqueueManagedEmailDomainWorkflow>>;
+  try {
+    result = await enqueueManagedEmailDomainWorkflow({
+      tenantId,
+      domain: normalizedDomain,
+      region: DEFAULT_REGION,
+      trigger: 'register',
+    });
+  } catch (error: any) {
+    observabilityLogger.error('Error enqueueing managed email domain workflow (register)', error, {
+      event_type: 'managed_email_domain_workflow_enqueue_failed',
+      tenant_id: tenantId,
+      domain: normalizedDomain,
+    });
+    throw new Error('Failed to start managed domain workflow');
+  }
 
   if (!result.enqueued) {
+    logWorkflowEnqueueFailure({
+      operation: 'register',
+      tenantId,
+      domain: normalizedDomain,
+      workflowError: result.error,
+    });
     throw new Error(`Failed to start managed domain workflow${result.error ? `: ${result.error}` : ''}`);
   }
 
@@ -163,14 +197,32 @@ export async function refreshManagedEmailDomain(domainName: string) {
     throw new Error('Domain not found');
   }
 
-  const result = await enqueueManagedEmailDomainWorkflow({
-    tenantId,
-    domain: normalizedDomain,
-    providerDomainId: existing.provider_domain_id || undefined,
-    trigger: 'refresh',
-  });
+  let result: Awaited<ReturnType<typeof enqueueManagedEmailDomainWorkflow>>;
+  try {
+    result = await enqueueManagedEmailDomainWorkflow({
+      tenantId,
+      domain: normalizedDomain,
+      providerDomainId: existing.provider_domain_id || undefined,
+      trigger: 'refresh',
+    });
+  } catch (error: any) {
+    observabilityLogger.error('Error enqueueing managed email domain workflow (refresh)', error, {
+      event_type: 'managed_email_domain_workflow_enqueue_failed',
+      tenant_id: tenantId,
+      domain: normalizedDomain,
+      provider_domain_id: existing.provider_domain_id || undefined,
+    });
+    throw new Error('Failed to refresh domain status');
+  }
 
   if (!result.enqueued) {
+    logWorkflowEnqueueFailure({
+      operation: 'refresh',
+      tenantId,
+      domain: normalizedDomain,
+      providerDomainId: existing.provider_domain_id || undefined,
+      workflowError: result.error,
+    });
     throw new Error(`Failed to refresh domain status${result.error ? `: ${result.error}` : ''}`);
   }
 
@@ -198,14 +250,32 @@ export async function deleteManagedEmailDomain(domainName: string) {
       updated_at: now,
     });
 
-  const result = await enqueueManagedEmailDomainWorkflow({
-    tenantId,
-    domain: normalizedDomain,
-    providerDomainId: existing.provider_domain_id || undefined,
-    trigger: 'delete',
-  });
+  let result: Awaited<ReturnType<typeof enqueueManagedEmailDomainWorkflow>>;
+  try {
+    result = await enqueueManagedEmailDomainWorkflow({
+      tenantId,
+      domain: normalizedDomain,
+      providerDomainId: existing.provider_domain_id || undefined,
+      trigger: 'delete',
+    });
+  } catch (error: any) {
+    observabilityLogger.error('Error enqueueing managed email domain workflow (delete)', error, {
+      event_type: 'managed_email_domain_workflow_enqueue_failed',
+      tenant_id: tenantId,
+      domain: normalizedDomain,
+      provider_domain_id: existing.provider_domain_id || undefined,
+    });
+    throw new Error('Failed to delete managed domain');
+  }
 
   if (!result.enqueued) {
+    logWorkflowEnqueueFailure({
+      operation: 'delete',
+      tenantId,
+      domain: normalizedDomain,
+      providerDomainId: existing.provider_domain_id || undefined,
+      workflowError: result.error,
+    });
     throw new Error(`Failed to delete managed domain${result.error ? `: ${result.error}` : ''}`);
   }
 
