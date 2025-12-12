@@ -913,7 +913,7 @@ export async function prepareGitRepository(
   config: GitConfiguration,
 ): Promise<string> {
   await ensureDirectory(config.workspaceDir);
-  const gitEnv = { GIT_TERMINAL_PROMPT: "0" };
+  const gitEnv: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: "0" };
 
   const gitDirExists = await pathExists(joinPath(config.repoDir, ".git"));
   if (!gitDirExists) {
@@ -990,7 +990,7 @@ export async function runGit(
 ): Promise<{ stdout: string; stderr: string }> {
   return runCommand("git", args, {
     cwd: options.cwd || config.repoDir,
-    env: { ...(options.env || {}), GIT_TERMINAL_PROMPT: "0" },
+    env: { ...process.env, ...(options.env || {}), GIT_TERMINAL_PROMPT: "0" },
     maskValues: config.maskValues,
     suppressOutput: options.suppressOutput,
   });
