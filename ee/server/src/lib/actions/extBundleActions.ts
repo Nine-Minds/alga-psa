@@ -22,6 +22,7 @@ import {
   parseManifestJson,
   extractEndpoints,
   getUiEntry,
+  getUiHooks,
   getRuntime,
   getCapabilities,
   type ManifestV2,
@@ -311,22 +312,15 @@ async function finalizeUploadInternal(params: FinalizeParamsInternal): Promise<F
   const manifest = parsed.manifest as ManifestV2;
   const parsedEndpoints = extractEndpoints(manifest);
   const parsedUiEntry = getUiEntry(manifest);
-  // Build a sanitized UI object (type/entry/hooks.appMenu only) for persistence
+  // Build a sanitized UI object (type/entry/known hooks only) for persistence
   const parsedUi = (() => {
     try {
       const ui = (manifest as any).ui;
       if (!ui || ui.type !== 'iframe') return undefined;
       const entry = parsedUiEntry ?? (typeof ui.entry === 'string' ? ui.entry : undefined);
       if (!entry) return undefined;
-      let hooks: any | undefined;
-      if (ui.hooks && typeof ui.hooks === 'object' && !Array.isArray(ui.hooks)) {
-        const appMenu = (ui.hooks as any).appMenu;
-        if (appMenu && typeof appMenu === 'object' && !Array.isArray(appMenu)) {
-          const label = typeof appMenu.label === 'string' ? appMenu.label.trim() : '';
-          if (label) hooks = { appMenu: { label } };
-        }
-      }
-      return { type: 'iframe' as const, entry, hooks };
+      const hooks = getUiHooks(manifest);
+      return hooks ? { type: 'iframe' as const, entry, hooks } : { type: 'iframe' as const, entry };
     } catch {
       return undefined;
     }
