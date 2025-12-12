@@ -333,6 +333,8 @@ const ServiceCatalogManager: React.FC = () => {
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = useCallback((newPageSize: number) => {
+    // Mark that this change was from user interaction so we refetch
+    setUserChangedPage(true);
     setPageSize(newPageSize);
     setCurrentPage(1);
   }, []);
