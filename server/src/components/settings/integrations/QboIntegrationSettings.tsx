@@ -333,14 +333,19 @@ const QboIntegrationSettings: React.FC = () => {
                 </Button>
               </>
             ) : (
-              <Button
-                id="qbo-connect-button"
-                onClick={handleConnect}
-                disabled={isLoading || isRefreshing}
-              >
-                <Link className="mr-2 h-4 w-4" />
-                Connect to QuickBooks Online
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button
+                  id="qbo-connect-button"
+                  onClick={handleConnect}
+                  disabled={true}
+                >
+                  <Link className="mr-2 h-4 w-4" />
+                  Connect to QuickBooks Online
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  We apologize for the inconvenience. We are currently waiting on Intuit to approve our integration.
+                </p>
+              </div>
             )}
           </div>
         </CardFooter>
