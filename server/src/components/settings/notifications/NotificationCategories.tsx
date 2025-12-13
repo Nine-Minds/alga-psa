@@ -1,22 +1,61 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { Card } from "server/src/components/ui/Card";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "server/src/components/ui/Button";
 import { Switch } from "server/src/components/ui/Switch";
 import { DataTable } from "server/src/components/ui/DataTable";
 import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
-import { 
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Lock } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useUserPreference } from "server/src/hooks/useUserPreference";
+import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateCategoryAction,
   updateSubtypeAction
 } from "server/src/lib/actions/notification-actions/notificationActions";
-import { 
+import {
   NotificationCategory,
-  NotificationSubtype 
+  NotificationSubtype
 } from "server/src/lib/models/notification";
 import LoadingIndicator from "server/src/components/ui/LoadingIndicator";
+import { ConfirmationDialog } from "server/src/components/ui/ConfirmationDialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "server/src/components/ui/DropdownMenu";
+import { Alert, AlertDescription } from "server/src/components/ui/Alert";
+import { useRegisterUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
+
+// Types for tracking pending changes
+interface PendingCategoryChange {
+  id: number;
+  is_enabled?: boolean;
+  is_default_enabled?: boolean;
+}
+
+interface PendingSubtypeChange {
+  id: number;
+  categoryId: number;
+  is_enabled?: boolean;
+  is_default_enabled?: boolean;
+}
+
+// Combined row type for the flat list
+interface NotificationRow {
+  id: string; // Unique ID for DataTable: "cat_<id>" or "sub_<id>"
+  originalId: number; // The actual DB ID for lookups
+  name: string;
+  description: string | null;
+  is_enabled: boolean;
+  is_default_enabled: boolean;
+  isCategory: boolean;
+  is_locked?: boolean; // For categories, whether it's locked (cannot be disabled)
+  categoryId?: number; // For subtypes, the parent category id
+  category_id?: number; // From the original subtype
+}
 
 export function NotificationCategories() {
   const [categories, setCategories] = useState<NotificationCategory[] | null>(null);
@@ -41,8 +80,8 @@ export function NotificationCategories() {
   if (!categories) {
     return (
       <div className="flex items-center justify-center py-8">
-        <LoadingIndicator 
-          layout="stacked" 
+        <LoadingIndicator
+          layout="stacked"
           text="Loading notification categories..."
           spinnerProps={{ size: 'md' }}
         />
@@ -50,213 +89,531 @@ export function NotificationCategories() {
     );
   }
 
-  return <NotificationCategoriesContent categories={categories} />;
+  return <NotificationCategoriesContent initialCategories={categories} />;
 }
 
 function NotificationCategoriesContent({
-  categories: initialCategories,
+  initialCategories,
 }: {
-  categories: NotificationCategory[];
+  initialCategories: NotificationCategory[];
 }) {
+  // Current state (what's displayed)
   const [categories, setCategories] = useState(initialCategories);
-  const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
-  const [subtypes, setSubtypes] = useState<NotificationSubtype[]>([]);
-  const [currentCategory, setCurrentCategory] = useState<NotificationCategory | null>(null);
+  const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+  const [loadingSubtypes, setLoadingSubtypes] = useState<Set<number>>(new Set());
 
-  // Pagination state for categories table
-  const [currentPageCategories, setCurrentPageCategories] = useState(1);
-  const [pageSizeCategories, setPageSizeCategories] = useState(10);
+  // Original state (what's saved in DB)
+  const [originalCategories, setOriginalCategories] = useState(initialCategories);
+  const [originalSubtypes, setOriginalSubtypes] = useState<Record<number, NotificationSubtype[]>>({});
 
-  // Handle page size change for categories - reset to page 1
-  const handlePageSizeChangeCategories = (newPageSize: number) => {
-    setPageSizeCategories(newPageSize);
-    setCurrentPageCategories(1);
+  // Pending changes tracking
+  const [pendingCategoryChanges, setPendingCategoryChanges] = useState<Map<number, PendingCategoryChange>>(new Map());
+  const [pendingSubtypeChanges, setPendingSubtypeChanges] = useState<Map<number, PendingSubtypeChange>>(new Map());
+
+  // UI state
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const {
+    value: pageSize,
+    setValue: setPageSize
+  } = useUserPreference<number>('email_notification_categories_page_size', {
+    defaultValue: 10,
+    localStorageKey: 'email_notification_categories_page_size',
+  });
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
-  // Pagination state for subtypes table
-  const [currentPageSubtypes, setCurrentPageSubtypes] = useState(1);
-  const [pageSizeSubtypes, setPageSizeSubtypes] = useState(10);
+  // Reset to page 1 when categories expand/collapse to avoid confusion
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [expandedCategories.size]);
 
-  // Handle page size change for subtypes - reset to page 1
-  const handlePageSizeChangeSubtypes = (newPageSize: number) => {
-    setPageSizeSubtypes(newPageSize);
-    setCurrentPageSubtypes(1);
-  };
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = pendingCategoryChanges.size > 0 || pendingSubtypeChanges.size > 0;
 
-  const handleToggleCategory = async (category: NotificationCategory) => {
+  // Register unsaved changes with context (handles navigation protection)
+  useRegisterUnsavedChanges('email-notification-categories', hasUnsavedChanges);
+
+  // Load subtypes for a category
+  const loadSubtypes = useCallback(async (categoryId: number) => {
+    if (subtypesByCategory[categoryId]) {
+      return; // Already loaded
+    }
+
+    setLoadingSubtypes(prev => new Set(prev).add(categoryId));
     try {
-      const updated = await updateCategoryAction(category.id, {
-        is_enabled: !category.is_enabled
-      });
-      setCategories(prev => 
-        prev.map((c): NotificationCategory => c.id === category.id ? updated : c)
-      );
-      
-      // If this is the currently expanded category, update its reference
-      if (category.id === currentCategory?.id) {
-        setCurrentCategory(updated);
-      }
-
-      // If disabling the category, also disable all subtypes
-      if (!updated.is_enabled && category.id === expandedCategory) {
-        const updatedSubtypes = await Promise.all(
-          subtypes.map(async (subtype): Promise<NotificationSubtype> => {
-            if (subtype.is_enabled) {
-              const updated = await updateSubtypeAction(subtype.id, {
-                is_enabled: false
-              });
-              return updated;
-            }
-            return subtype;
-          })
-        );
-        setSubtypes(updatedSubtypes);
-      }
+      const { subtypes } = await getCategoryWithSubtypesAction(categoryId);
+      setSubtypesByCategory(prev => ({ ...prev, [categoryId]: subtypes }));
+      setOriginalSubtypes(prev => ({ ...prev, [categoryId]: subtypes }));
     } catch (error) {
-      console.error("Failed to update category:", error);
+      console.error("Failed to load subtypes:", error);
+      toast.error("Failed to load notification subtypes");
+    } finally {
+      setLoadingSubtypes(prev => {
+        const next = new Set(prev);
+        next.delete(categoryId);
+        return next;
+      });
+    }
+  }, [subtypesByCategory]);
+
+  // Toggle category expansion
+  const handleToggleExpand = async (categoryId: number) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+      await loadSubtypes(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  // Handle category toggle (local state only)
+  const handleToggleCategory = (category: NotificationCategory, field: 'is_enabled' | 'is_default_enabled') => {
+    const newValue = !category[field];
+
+    // Update local state
+    setCategories(prev =>
+      prev.map(c => c.id === category.id ? { ...c, [field]: newValue } : c)
+    );
+
+    // Track pending change
+    setPendingCategoryChanges(prev => {
+      const next = new Map(prev);
+      const existing = next.get(category.id) || { id: category.id };
+      next.set(category.id, { ...existing, [field]: newValue });
+      return next;
+    });
+
+    // If disabling category, also disable all subtypes in local state
+    if (field === 'is_enabled' && !newValue) {
+      const categorySubtypes = subtypesByCategory[category.id] || [];
+      categorySubtypes.forEach(subtype => {
+        if (subtype.is_enabled) {
+          handleToggleSubtype(subtype, 'is_enabled', category.id, true);
+        }
+      });
     }
   };
 
-  const handleToggleSubtype = async (subtype: NotificationSubtype) => {
-    // Don't allow toggling if category is disabled
-    if (!currentCategory?.is_enabled) return;
-
-    try {
-      const updated = await updateSubtypeAction(subtype.id, {
-        is_enabled: !subtype.is_enabled
-      });
-      setSubtypes(prev =>
-        prev.map((s): NotificationSubtype => s.id === subtype.id ? updated : s)
-      );
-    } catch (error) {
-      console.error("Failed to update subtype:", error);
-    }
-  };
-
-  const handleExpandCategory = async (category: NotificationCategory) => {
-    if (expandedCategory === category.id) {
-      setExpandedCategory(null);
-      setSubtypes([]);
-      setCurrentCategory(null);
+  // Handle subtype toggle (local state only)
+  const handleToggleSubtype = (
+    subtype: NotificationSubtype,
+    field: 'is_enabled' | 'is_default_enabled',
+    categoryId: number,
+    skipCategoryCheck = false
+  ) => {
+    // Don't allow enabling if category is disabled
+    const category = categories.find(c => c.id === categoryId);
+    if (!skipCategoryCheck && field === 'is_enabled' && !category?.is_enabled) {
       return;
     }
 
+    const newValue = skipCategoryCheck ? false : !subtype[field];
+
+    // Update local state
+    setSubtypesByCategory(prev => ({
+      ...prev,
+      [categoryId]: prev[categoryId].map(s =>
+        s.id === subtype.id ? { ...s, [field]: newValue } : s
+      )
+    }));
+
+    // Track pending change
+    setPendingSubtypeChanges(prev => {
+      const next = new Map(prev);
+      const existing = next.get(subtype.id) || { id: subtype.id, categoryId };
+      next.set(subtype.id, { ...existing, [field]: newValue });
+      return next;
+    });
+  };
+
+  // Save all pending changes
+  const handleSave = async () => {
+    setIsSaving(true);
     try {
-      const { subtypes } = await getCategoryWithSubtypesAction(category.id);
-      setSubtypes(subtypes);
-      setExpandedCategory(category.id);
-      setCurrentCategory(category);
+      // Save category changes
+      const categoryPromises = Array.from(pendingCategoryChanges.values()).map(change =>
+        updateCategoryAction(change.id, {
+          is_enabled: change.is_enabled,
+          is_default_enabled: change.is_default_enabled
+        })
+      );
+
+      // Save subtype changes
+      const subtypePromises = Array.from(pendingSubtypeChanges.values()).map(change =>
+        updateSubtypeAction(change.id, {
+          is_enabled: change.is_enabled,
+          is_default_enabled: change.is_default_enabled
+        })
+      );
+
+      await Promise.all([...categoryPromises, ...subtypePromises]);
+
+      // Update original state to current state
+      setOriginalCategories([...categories]);
+      setOriginalSubtypes({ ...subtypesByCategory });
+
+      // Clear pending changes
+      setPendingCategoryChanges(new Map());
+      setPendingSubtypeChanges(new Map());
+
+      toast.success("Notification settings saved successfully");
     } catch (error) {
-      console.error("Failed to load subtypes:", error);
+      console.error("Failed to save notification settings:", error);
+      toast.error("Failed to save notification settings");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const categoryColumns: ColumnDefinition<NotificationCategory>[] = [
-    { 
-      title: "Name",
-      dataIndex: "name"
-    },
-    { 
-      title: "Description",
-      dataIndex: "description",
-      render: (value): React.ReactNode => value || "-"
-    },
-    { 
-      title: "Enabled",
-      dataIndex: "is_enabled",
-      render: (value, record): React.ReactNode => (
-        <Switch
-          checked={value}
-          onCheckedChange={() => handleToggleCategory(record)}
-        />
-      )
+  // Discard all pending changes
+  const handleDiscard = () => {
+    // Restore original state
+    setCategories([...originalCategories]);
+    setSubtypesByCategory({ ...originalSubtypes });
+
+    // Clear pending changes
+    setPendingCategoryChanges(new Map());
+    setPendingSubtypeChanges(new Map());
+
+    setShowDiscardDialog(false);
+    toast.success("Changes discarded");
+  };
+
+  // Check if a row has pending changes
+  const rowHasChanges = (row: NotificationRow): boolean => {
+    if (row.isCategory) {
+      return pendingCategoryChanges.has(row.originalId);
+    }
+    return pendingSubtypeChanges.has(row.originalId);
+  };
+
+  // Build flat list with categories and their subtypes interleaved
+  const buildFlatList = (): NotificationRow[] => {
+    const rows: NotificationRow[] = [];
+
+    categories.forEach(category => {
+      // Add category row
+      rows.push({
+        id: `cat_${category.id}`,
+        originalId: category.id,
+        name: category.name,
+        description: category.description,
+        is_enabled: category.is_enabled,
+        is_default_enabled: category.is_default_enabled,
+        isCategory: true,
+        is_locked: category.is_locked,
+      });
+
+      // Add subtypes if expanded
+      if (expandedCategories.has(category.id)) {
+        const subtypes = subtypesByCategory[category.id] || [];
+        subtypes.forEach(subtype => {
+          rows.push({
+            id: `sub_${subtype.id}`,
+            originalId: subtype.id,
+            name: subtype.name,
+            description: subtype.description,
+            is_enabled: subtype.is_enabled,
+            is_default_enabled: subtype.is_default_enabled,
+            isCategory: false,
+            categoryId: category.id,
+            category_id: subtype.category_id,
+          });
+        });
+      }
+    });
+
+    return rows;
+  };
+
+  const flatList = buildFlatList();
+
+  const columns: ColumnDefinition<NotificationRow>[] = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      render: (value: string, record: NotificationRow) => {
+        if (record.isCategory) {
+          const isExpanded = expandedCategories.has(record.originalId);
+          const isLoading = loadingSubtypes.has(record.originalId);
+          return (
+            <div
+              className="flex items-center"
+              id={`expand-category-${record.id}`}
+            >
+              <div className="p-1 mr-2">
+                {isLoading ? (
+                  <LoadingIndicator spinnerProps={{ size: 'sm' }} />
+                ) : isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </div>
+              <span className={`font-semibold ${rowHasChanges(record) ? 'text-blue-600' : 'text-gray-700'}`}>
+                {value}
+                {rowHasChanges(record) && <span className="ml-1 text-xs">*</span>}
+              </span>
+              {record.is_locked && (
+                <span className="ml-2 flex items-center text-gray-400" title="This category cannot be disabled">
+                  <Lock className="h-3.5 w-3.5" />
+                </span>
+              )}
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex items-center pl-8">
+              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />
+              <span className={`font-medium ${rowHasChanges(record) ? 'text-blue-600' : 'text-gray-700'}`}>
+                {value}
+                {rowHasChanges(record) && <span className="ml-1 text-xs">*</span>}
+              </span>
+            </div>
+          );
+        }
+      },
     },
     {
-      title: "Actions",
-      dataIndex: "id",
-      render: (value, record): React.ReactNode => (
-        <Button
-          id={`category-${record.id}`}
-          onClick={() => handleExpandCategory(record)}
-          variant="outline"
-        >
-          {expandedCategory === record.id ? "Hide Subtypes" : "Show Subtypes"}
-        </Button>
-      )
-    }
-  ];
+      title: 'Description',
+      dataIndex: 'description',
+      render: (value: string | null) => (
+        <span className="text-gray-600">{value || '-'}</span>
+      ),
+    },
+    {
+      title: 'Enabled',
+      dataIndex: 'is_enabled',
+      render: (value: boolean, record: NotificationRow) => {
+        if (record.isCategory) {
+          const category = categories.find(c => c.id === record.originalId)!;
+          const isLocked = record.is_locked;
+          return (
+            <div onClick={(e) => e.stopPropagation()} title={isLocked ? "This category cannot be disabled" : undefined}>
+              <Switch
+                id={`category-enabled-${record.id}`}
+                checked={isLocked ? true : value}
+                onCheckedChange={() => !isLocked && handleToggleCategory(category, 'is_enabled')}
+                disabled={isLocked}
+              />
+            </div>
+          );
+        } else {
+          const category = categories.find(c => c.id === record.categoryId);
+          const subtype = subtypesByCategory[record.categoryId!]?.find(s => s.id === record.originalId);
+          if (!subtype) return null;
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Switch
+                id={`subtype-enabled-${record.id}`}
+                checked={value}
+                onCheckedChange={() => handleToggleSubtype(subtype, 'is_enabled', record.categoryId!)}
+                disabled={!category?.is_enabled}
+              />
+            </div>
+          );
+        }
+      },
+    },
+    {
+      title: 'Default for Users',
+      dataIndex: 'is_default_enabled',
+      render: (value: boolean, record: NotificationRow) => {
+        if (record.isCategory) {
+          const category = categories.find(c => c.id === record.originalId)!;
+          const isLocked = record.is_locked;
+          return (
+            <div onClick={(e) => e.stopPropagation()} title={isLocked ? "This category cannot be modified" : undefined}>
+              <Switch
+                id={`category-default-${record.id}`}
+                checked={isLocked ? true : value}
+                onCheckedChange={() => !isLocked && handleToggleCategory(category, 'is_default_enabled')}
+                disabled={isLocked}
+              />
+            </div>
+          );
+        } else {
+          const category = categories.find(c => c.id === record.categoryId);
+          const subtype = subtypesByCategory[record.categoryId!]?.find(s => s.id === record.originalId);
+          if (!subtype) return null;
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Switch
+                id={`subtype-default-${record.id}`}
+                checked={value}
+                onCheckedChange={() => handleToggleSubtype(subtype, 'is_default_enabled', record.categoryId!)}
+                disabled={!category?.is_enabled}
+              />
+            </div>
+          );
+        }
+      },
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'id',
+      width: '10%',
+      render: (value: string, record: NotificationRow) => {
+        if (record.isCategory) {
+          const category = categories.find(c => c.id === record.originalId)!;
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button id={`category-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    id={`enable-all-subtypes-${value}`}
+                    onClick={async () => {
+                      await loadSubtypes(category.id);
+                      const subtypes = subtypesByCategory[category.id] || [];
+                      subtypes.forEach(subtype => {
+                        if (!subtype.is_enabled) {
+                          handleToggleSubtype(subtype, 'is_enabled', category.id);
+                        }
+                      });
+                    }}
+                    disabled={!category.is_enabled}
+                  >
+                    Enable all subtypes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    id={`disable-all-subtypes-${value}`}
+                    onClick={async () => {
+                      await loadSubtypes(category.id);
+                      const subtypes = subtypesByCategory[category.id] || [];
+                      subtypes.forEach(subtype => {
+                        if (subtype.is_enabled) {
+                          handleToggleSubtype(subtype, 'is_enabled', category.id, true);
+                        }
+                      });
+                    }}
+                  >
+                    Disable all subtypes
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        } else {
+          const category = categories.find(c => c.id === record.categoryId);
+          const subtype = subtypesByCategory[record.categoryId!]?.find(s => s.id === record.originalId);
+          if (!subtype) return null;
 
-  const subtypeColumns: ColumnDefinition<NotificationSubtype>[] = [
-    { 
-      title: "Name",
-      dataIndex: "name"
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button id={`subtype-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    id={`toggle-subtype-enabled-${value}`}
+                    onClick={() => handleToggleSubtype(subtype, 'is_enabled', record.categoryId!)}
+                    disabled={!category?.is_enabled}
+                  >
+                    {subtype.is_enabled ? 'Disable' : 'Enable'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    id={`toggle-subtype-default-${value}`}
+                    onClick={() => handleToggleSubtype(subtype, 'is_default_enabled', record.categoryId!)}
+                  >
+                    {subtype.is_default_enabled ? 'Disable default' : 'Enable default'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        }
+      },
     },
-    { 
-      title: "Description",
-      dataIndex: "description",
-      render: (value): React.ReactNode => value || "-"
-    },
-    { 
-      title: "Enabled",
-      dataIndex: "is_enabled",
-      render: (value, record) => (
-        <div className="flex flex-col">
-          <Switch
-            checked={value}
-            onCheckedChange={() => handleToggleSubtype(record)}
-            disabled={!currentCategory?.is_enabled}
-          />
-          {!currentCategory?.is_enabled && (
-            <span className="text-xs text-gray-500 mt-1">
-              Enable the category first
-            </span>
-          )}
-        </div>
-      )
-    }
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Notification Categories</h2>
+    <div className="space-y-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm text-gray-600">
+            Control which email notification types are available and set defaults for new users.
+          </p>
+          <ul className="text-sm text-gray-600 mt-2 ml-4 list-disc space-y-1">
+            <li><strong>Enabled:</strong> Controls whether this notification type is active</li>
+            <li><strong>Default for Users:</strong> Sets whether new users have this notification enabled by default</li>
+          </ul>
+        </div>
+        {hasUnsavedChanges && (
+          <div className="flex gap-2">
+            <Button
+              id="discard-notification-changes"
+              variant="outline"
+              onClick={() => setShowDiscardDialog(true)}
+              disabled={isSaving}
+            >
+              Discard Changes
+            </Button>
+            <Button
+              id="save-notification-changes"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        )}
       </div>
 
-      <Card className="p-6">
-        <DataTable
-          id="notification-categories-table"
-          data={categories}
-          columns={categoryColumns}
-          pagination={true}
-          currentPage={currentPageCategories}
-          onPageChange={setCurrentPageCategories}
-          pageSize={pageSizeCategories}
-          onItemsPerPageChange={handlePageSizeChangeCategories}
-        />
-      </Card>
-
-      {expandedCategory && (
-        <Card className="p-6">
-          <div className="mb-4">
-            <h3 className="text-md font-semibold">Subtypes</h3>
-            {!currentCategory?.is_enabled && (
-              <p className="text-sm text-gray-500 mt-1">
-                These notification subtypes are currently disabled because their parent category is disabled.
-              </p>
-            )}
-          </div>
-          <DataTable
-            id="notification-subtypes-table"
-            data={subtypes}
-            columns={subtypeColumns}
-            pagination={true}
-            currentPage={currentPageSubtypes}
-            onPageChange={setCurrentPageSubtypes}
-            pageSize={pageSizeSubtypes}
-            onItemsPerPageChange={handlePageSizeChangeSubtypes}
-          />
-        </Card>
+      {hasUnsavedChanges && (
+        <Alert variant="info">
+          <AlertDescription>
+            You have unsaved changes. Click "Save Changes" to apply them.
+          </AlertDescription>
+        </Alert>
       )}
+
+      <DataTable
+        id="notification-categories-table"
+        data={flatList}
+        columns={columns}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={handlePageSizeChange}
+        onRowClick={(row: NotificationRow) => {
+          // Only expand/collapse for category rows
+          if (row.isCategory && !loadingSubtypes.has(row.originalId)) {
+            handleToggleExpand(row.originalId);
+          }
+        }}
+      />
+
+      {/* Discard confirmation dialog */}
+      <ConfirmationDialog
+        id="discard-notification-changes-dialog"
+        isOpen={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        onConfirm={handleDiscard}
+        title="Discard Changes?"
+        message="Are you sure you want to discard all unsaved changes? This action cannot be undone."
+        confirmLabel="Discard Changes"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }

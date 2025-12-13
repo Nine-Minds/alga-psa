@@ -24,6 +24,7 @@ export interface ManifestV2 {
     entry: string;
     hooks?: {
       appMenu?: { label: string };
+      clientPortalMenu?: { label: string };
       [key: string]: unknown;
     };
   };
@@ -339,6 +340,23 @@ export function validateManifestShape(input: unknown, opts?: ValidationOptions):
               }
             }
           }
+          if ("clientPortalMenu" in h && typeof h.clientPortalMenu !== "undefined") {
+            const m = h.clientPortalMenu as unknown;
+            if (typeof m !== "object" || m === null || Array.isArray(m)) {
+              issues.push({
+                path: "ui.hooks.clientPortalMenu",
+                message: "Field 'ui.hooks.clientPortalMenu' must be an object if provided.",
+              });
+            } else {
+              const mo = m as Record<string, unknown>;
+              if (!("label" in mo) || typeof mo.label !== "string" || mo.label.trim() === "") {
+                issues.push({
+                  path: "ui.hooks.clientPortalMenu.label",
+                  message: "Field 'ui.hooks.clientPortalMenu.label' is required and must be a non-empty string.",
+                });
+              }
+            }
+          }
         }
       }
     }
@@ -498,6 +516,36 @@ export function getUiEntry(manifest: ManifestV2): string | undefined {
   if (typeof ui.entry !== "string" || ui.entry.trim() === "") return undefined;
   if (containsDotDot(ui.entry)) return undefined;
   return sanitizePath(ui.entry);
+}
+
+/**
+ * Return normalized UI hooks if present:
+ * - Trims labels
+ * - Drops empty/invalid labels
+ * - Returns undefined when no valid hooks remain
+ */
+export function getUiHooks(manifest: ManifestV2): NonNullable<ManifestV2["ui"]>["hooks"] | undefined {
+  const ui = manifest.ui;
+  if (!ui || ui.type !== "iframe") return undefined;
+  const hooks = ui.hooks as unknown;
+  if (!hooks || typeof hooks !== "object" || Array.isArray(hooks)) return undefined;
+
+  const h = hooks as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+
+  const appMenu = h.appMenu as unknown;
+  if (appMenu && typeof appMenu === "object" && !Array.isArray(appMenu)) {
+    const label = typeof (appMenu as any).label === "string" ? String((appMenu as any).label).trim() : "";
+    if (label) out.appMenu = { label };
+  }
+
+  const clientPortalMenu = h.clientPortalMenu as unknown;
+  if (clientPortalMenu && typeof clientPortalMenu === "object" && !Array.isArray(clientPortalMenu)) {
+    const label = typeof (clientPortalMenu as any).label === "string" ? String((clientPortalMenu as any).label).trim() : "";
+    if (label) out.clientPortalMenu = { label };
+  }
+
+  return Object.keys(out).length > 0 ? (out as any) : undefined;
 }
 
 /**

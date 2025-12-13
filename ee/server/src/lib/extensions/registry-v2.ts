@@ -594,7 +594,7 @@ export interface UpsertVersionFromManifestInput {
     ui?: {
       type: 'iframe';
       entry: string;
-      hooks?: { appMenu?: { label: string }; [key: string]: unknown };
+      hooks?: { appMenu?: { label: string }; clientPortalMenu?: { label: string }; [key: string]: unknown };
     };
     uiEntry?: string;
     endpoints: ManifestEndpoint[];

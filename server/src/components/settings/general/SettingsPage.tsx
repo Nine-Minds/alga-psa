@@ -1,7 +1,7 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
@@ -11,6 +11,7 @@ import UserManagement from 'server/src/components/settings/general/UserManagemen
 import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { UnsavedChangesProvider } from "server/src/contexts/UnsavedChangesContext";
 
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
@@ -40,8 +41,20 @@ import Link from 'next/link';
 import SurveySettings from 'server/src/components/surveys/SurveySettings';
 import ProjectSettings from './ProjectSettings';
 
-// Revert to standard function component
-const SettingsPage = (): JSX.Element =>  {
+// Wrapper component with UnsavedChangesProvider
+const SettingsPage = (): JSX.Element => {
+  return (
+    <UnsavedChangesProvider
+      dialogTitle="Unsaved Changes"
+      dialogMessage="You have unsaved changes. Are you sure you want to leave? Your changes will be lost."
+    >
+      <SettingsPageContent />
+    </UnsavedChangesProvider>
+  );
+};
+
+// Main content component
+const SettingsPageContent = (): JSX.Element =>  {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   // Extensions are conditionally available based on edition
