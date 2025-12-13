@@ -144,4 +144,4 @@ The system now includes:
 
 See also:
 - [UI Reflection System](ui_reflection_system.md)
-- [Development Guide](development_guide.md)
+- [Development Guide](../getting-started/development_guide.md)

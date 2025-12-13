@@ -340,4 +340,4 @@ docker compose logs <service>
 - [Setup Guide](setup_guide.md)
 - [Development Guide](development_guide.md)
 - [Docker Compose Docs](docker_compose.md)
-- [Secrets Management](secrets_management.md)
+- [Secrets Management](../security/secrets_management.md)

@@ -95,7 +95,7 @@ The `default_values` field in both `workflow_form_schemas` and `system_workflow_
 *   Logical OR (e.g., `${contextData.optionalValue || 'fallback'}`)
 *   Date formatting (e.g., `${new Date(contextData.timestamp).toLocaleDateString()}`)
 
-This allows for more dynamic and context-aware form schemas and default data. For a detailed technical design of this Parsimmon-based templating engine, refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
+This allows for more dynamic and context-aware form schemas and default data. For a detailed technical design of this Parsimmon-based templating engine, refer to "[`docs/technical/parsimmon_templating_engine.md`](../technical/parsimmon_templating_engine.md)".
 ## Usage Examples
 
 ### Registering a Form

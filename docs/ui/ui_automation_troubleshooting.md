@@ -759,7 +759,7 @@ If issues persist:
 3. **Check Documentation:**
    - [UI Reflection System](ui_reflection_system.md)
    - [UI Automation IDs](ui_automation_ids.md)
-   - [Development Guide](development_guide.md)
+   - [Development Guide](../getting-started/development_guide.md)
 
 4. **Report Issues:**
    Include debug information and reproduction steps when reporting problems.
@@ -768,4 +768,4 @@ If issues persist:
 
 - [UI Reflection System](ui_reflection_system.md) - Core system documentation
 - [UI Automation IDs](ui_automation_ids.md) - ID conventions and standards
-- [Development Guide](development_guide.md) - General development practices
+- [Development Guide](../getting-started/development_guide.md) - General development practices

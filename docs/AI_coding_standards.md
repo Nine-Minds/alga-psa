@@ -708,7 +708,7 @@ const { formatDate, formatNumber, formatCurrency } = useFormatters();
 
 # Testing Standards
 
-All tests should follow the conventions outlined in [docs/testing-standards.md](./testing-standards.md).
+All tests should follow the conventions outlined in [docs/testing-standards.md](./reference/testing-standards.md).
 
 **Quick Reference:**
 - **Unit tests**: `server/src/test/unit/` - Isolated tests with mocked dependencies
@@ -729,7 +729,7 @@ All tests should follow the conventions outlined in [docs/testing-standards.md](
 - Use `TestContext` helpers for infrastructure tests
 - Use `setupE2ETestEnvironment()` for E2E tests
 
-See the full [Testing Standards](./testing-standards.md) document for complete guidelines, templates, and the decision tree for test placement.
+See the full [Testing Standards](./reference/testing-standards.md) document for complete guidelines, templates, and the decision tree for test placement.
 
 # Time Entry Work Item Types
 They can be:

@@ -9,10 +9,10 @@ This document represents the original improvement plan for the billing system. T
 - ⚠️ Phase 4: Partially Implemented (basic support exists, minor UI enhancements pending)
 
 For current billing system documentation, see:
-- [billing.md](./billing.md) - Comprehensive billing system overview
-- [billing_cycles.md](./billing_cycles.md) - Billing cycle management
-- [invoice_templates.md](./invoice_templates.md) - Invoice template system
-- [invoice_finalization.md](./invoice_finalization.md) - Invoice finalization
+- [billing.md](../billing.md) - Comprehensive billing system overview
+- [billing_cycles.md](../billing_cycles.md) - Billing cycle management
+- [invoice_templates.md](../invoice_templates.md) - Invoice template system
+- [invoice_finalization.md](../invoice_finalization.md) - Invoice finalization
 
 ---
 

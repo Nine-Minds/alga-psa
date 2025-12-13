@@ -211,7 +211,7 @@ The standard tables are relatively small and indexed appropriately. If you exper
 
 For issues or questions:
 
-1. Check the [Reference Data Import System](../reference_data_import_system.md) documentation
-2. Review the [Settings Reference Data Guide](../settings_reference_data_guide.md)
+1. Check the [Reference Data Import System](../reference/reference-data-import/reference_data_import_system.md) documentation
+2. Review the [Settings Reference Data Guide](../reference/reference-data-import/settings_reference_data_guide.md)
 3. Check server logs for detailed error messages
 4. Contact support with migration version and error details

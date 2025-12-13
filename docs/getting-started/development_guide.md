@@ -455,5 +455,5 @@ docker compose exec [service] sh
 
 - [Setup Guide](setup_guide.md)
 - [Configuration Guide](configuration_guide.md)
-- [API Documentation](api_docs.md)
-- [Testing Guide](testing_guide.md)
+- [API Documentation](../api/api_overview.md)
+- [Testing Guide](../reference/testing-standards.md)

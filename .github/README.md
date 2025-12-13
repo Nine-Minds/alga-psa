@@ -53,7 +53,7 @@ A comprehensive Professional Services Automation platform designed for Managed S
 
 ## Getting Started
 
-For detailed setup instructions, please refer to our [Complete Setup Guide](/docs/setup_guide.md) or [Setup Guide for Windows](/docs/setup_guide_windows.md) . The guide covers:
+For detailed setup instructions, please refer to our [Complete Setup Guide](/docs/getting-started/setup_guide.md) or [Setup Guide for Windows](/docs/getting-started/setup_guide_windows.md). The guide covers:
 - Prerequisites and system requirements
 - Installation steps for both Community and Enterprise editions
 - Environment configuration
@@ -63,22 +63,22 @@ For detailed setup instructions, please refer to our [Complete Setup Guide](/doc
 ## Documentation
 
 ### Setup & Configuration
-- [Complete Setup Guide](/docs/setup_guide.md) - Step-by-step setup instructions
-- [Configuration Guide](/docs/configuration_guide.md) - Detailed configuration options
-- [Development Guide](/docs/development_guide.md) - Development workflow and best practices
+- [Complete Setup Guide](/docs/getting-started/setup_guide.md) - Step-by-step setup instructions
+- [Configuration Guide](/docs/getting-started/configuration_guide.md) - Detailed configuration options
+- [Development Guide](/docs/getting-started/development_guide.md) - Development workflow and best practices
 
 ### Architecture & Components
-- [Docker Compose Structure](/docs/docker_compose.md) - Container orchestration
-- [Secrets Management](/docs/secrets_management.md) - Secure credentials handling
-- [Configuration Standards](/docs/configuration_standards.md) - Coding and config standards
-- [Entrypoint Scripts](/docs/entrypoint_scripts.md) - Service initialization
+- [Docker Compose Structure](/docs/getting-started/docker_compose.md) - Container orchestration
+- [Secrets Management](/docs/security/secrets_management.md) - Secure credentials handling
+- [Configuration Standards](/docs/getting-started/configuration_standards.md) - Coding and config standards
+- [Entrypoint Scripts](/docs/getting-started/entrypoint_scripts.md) - Service initialization
 
 ### Features & Modules
-- [Architecture Overview](/docs/overview.md)
-- [Billing System](/docs/billing.md)
-- [International Tax Support](/docs/international_tax_support.md)
-- [Asset Management](/docs/asset_management.md)
-- [Time Entry Guide](/docs/time_entry.md)
+- [Architecture Overview](/docs/architecture/overview.md)
+- [Billing System](/docs/billing/billing.md)
+- [International Tax Support](/docs/billing/tax/international_tax_support.md)
+- [Asset Management](/docs/features/asset_management.md)
+- [Time Entry Guide](/docs/features/time_entry.md)
 - [Workflow System](/docs/workflow/workflow-system.md)
 - [TypeScript Workflow Creation](/docs/workflow/typescript-workflow-creation.md)
 - [Automation Hub Guide](/docs/workflow/automation-hub-workflow-guide.md)
