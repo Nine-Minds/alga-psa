@@ -832,7 +832,6 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       onClose={onClose}
       title="Create Custom Contract Line"
       className="max-w-3xl"
-      disableFocusTrap
     >
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
