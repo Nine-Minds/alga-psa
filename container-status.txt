@@ -1,5 +1,0 @@
-NAME                       IMAGE                     COMMAND                  SERVICE     CREATED          STATUS          PORTS
-alga-e2e-test-postgres-1   ankane/pgvector:latest    "docker-entrypoint.s…"   postgres    12 minutes ago   Up 12 minutes   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
-alga-e2e-test-redis-1      alga-e2e-test-redis       "./entrypoint.sh"        redis       12 minutes ago   Up 12 minutes   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
-alga-e2e-test_pgbouncer    alga-e2e-test-pgbouncer   "/entrypoint.sh"         pgbouncer   10 minutes ago   Up 10 minutes   5432/tcp, 0.0.0.0:6432->6432/tcp, [::]:6432->6432/tcp
-alga-e2e-test_setup_ce     alga-e2e-test-setup       "/app/setup/entrypoi…"   setup       10 minutes ago   Up 10 minutes   
