@@ -14,6 +14,7 @@ import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { ServicePicker } from './ServicePicker';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 
@@ -315,9 +316,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <Label htmlFor={`fixed-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServicePicker
                     value={service.service_id}
-                    onValueChange={(value: string) => handleFixedServiceChange(index, value)}
+                    onChange={(value: string) => handleFixedServiceChange(index, value)}
                     options={fixedServiceOptions}
                     placeholder={isLoadingServices ? "Loading..." : "Select a service"}
                     disabled={isLoadingServices}
@@ -477,9 +478,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <Label htmlFor={`hourly-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServicePicker
                     value={service.service_id}
-                    onValueChange={(value: string) => handleHourlyServiceChange(index, value)}
+                    onChange={(value: string) => handleHourlyServiceChange(index, value)}
                     options={hourlyServiceOptions}
                     placeholder={isLoadingServices ? "Loading..." : "Select a service"}
                     disabled={isLoadingServices}
@@ -678,9 +679,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <Label htmlFor={`usage-service-${index}`} className="text-sm">
                     Service {index + 1}
                   </Label>
-                  <CustomSelect
+                  <ServicePicker
                     value={service.service_id}
-                    onValueChange={(value: string) => handleUsageServiceChange(index, value)}
+                    onChange={(value: string) => handleUsageServiceChange(index, value)}
                     options={usageServiceOptions}
                     placeholder={isLoadingServices ? "Loading..." : "Select a service"}
                     disabled={isLoadingServices}
@@ -831,6 +832,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
       onClose={onClose}
       title="Create Custom Contract Line"
       className="max-w-3xl"
+      disableFocusTrap
     >
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
