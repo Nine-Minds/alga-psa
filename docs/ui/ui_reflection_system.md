@@ -229,4 +229,4 @@ To extend the system:
 
 See also:
 - [UI Automation IDs](ui_automation_ids.md)
-- [Development Guide](development_guide.md)
+- [Development Guide](../getting-started/development_guide.md)
