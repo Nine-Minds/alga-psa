@@ -195,7 +195,7 @@ To provide more flexibility while maintaining security for user-influenced templ
 *   **Security:** The custom parser and evaluator are designed to be secure by only allowing the explicitly defined expressions and operations, preventing arbitrary code execution.
 *   **Integration:** This will affect how `default` values in JSON schemas and other templated strings are processed by `server/src/utils/templateUtils.ts`, impacting components like `DynamicForm.tsx` and `ActivityDetailViewerDrawer.tsx`.
 
-For a detailed technical design of this Parsimmon-based templating engine, please refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
+For a detailed technical design of this Parsimmon-based templating engine, please refer to "[`docs/technical/parsimmon_templating_engine.md`](../technical/parsimmon_templating_engine.md)".
 
 By understanding these data flow patterns, developers can effectively design workflows that create informative and actionable human tasks.
 

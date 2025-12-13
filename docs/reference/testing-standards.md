@@ -686,5 +686,5 @@ describe('Companies API E2E Tests', () => {
 
 - [Vitest Documentation](https://vitest.dev/)
 - [Testing Library Documentation](https://testing-library.com/)
-- [Contact API E2E Test Plan](./contact-api-e2e-test-plan.md) - Example E2E test implementation
-- [Inbound Email Testing Guide](./inbound-email/development/testing.md) - Email workflow testing examples
+- [Contact API E2E Test Plan](../archive/contact-api-e2e-test-plan.md) - Example E2E test implementation
+- [Inbound Email Testing Guide](../inbound-email/development/testing.md) - Email workflow testing examples

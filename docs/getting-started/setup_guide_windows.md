@@ -388,5 +388,5 @@ When upgrading from a previous version:
 - [Configuration Guide](configuration_guide.md)
 - [Development Guide](development_guide.md)
 - [Docker Compose Documentation](docker_compose.md)
-- [Secrets Management](secrets_management.md)
+- [Secrets Management](../security/secrets_management.md)
 - [Entrypoint Scripts](entrypoint_scripts.md)

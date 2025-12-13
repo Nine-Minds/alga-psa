@@ -363,6 +363,6 @@ If you see "No handler registered for job: X":
 
 ## See Also
 
-- [Enterprise Temporal Documentation](../ee/docs/temporal-workflows/job-runner-abstraction.md)
-- [Temporal Worker Deployment](../ee/docs/temporal-workflows/deployment.md)
-- [Configuration Guide](./configuration_guide.md)
+- [Enterprise Temporal Documentation](../../ee/docs/temporal-workflows/job-runner-abstraction.md)
+- [Temporal Worker Deployment](../../ee/docs/temporal-workflows/deployment.md)
+- [Configuration Guide](../getting-started/configuration_guide.md)
