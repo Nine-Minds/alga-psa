@@ -27,8 +27,11 @@ describe('Time Entries API E2E Tests', () => {
     
     // Create time periods for testing
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth() + 1;
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const startOfMonth = `${year}-${pad2(month)}-01`;
+    const endOfMonth = month === 12 ? `${year + 1}-01-01` : `${year}-${pad2(month + 1)}-01`;
     
     await createTestTimePeriod(env.db, env.tenant, {
       start_date: startOfMonth,
@@ -96,6 +99,56 @@ describe('Time Entries API E2E Tests', () => {
         });
       });
 
+      it('should compute work_date in user timezone and bucket to the correct period', async () => {
+        // Force a non-UTC timezone so we can test around local midnight.
+        await env.db('users')
+          .where({ tenant: env.tenant, user_id: env.userId })
+          .update({ timezone: 'America/Los_Angeles' });
+
+        // Two adjacent single-day periods to make the bucketing difference observable.
+        const period1 = await createTestTimePeriod(env.db, env.tenant, {
+          start_date: '2024-07-01',
+          end_date: '2024-07-02',
+          is_closed: false
+        });
+        await createTestTimePeriod(env.db, env.tenant, {
+          start_date: '2024-07-02',
+          end_date: '2024-07-03',
+          is_closed: false
+        });
+
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
+          entered_by: env.userId,
+          assigned_to: env.userId
+        });
+        const service = await createTestService(env.db, env.tenant);
+
+        // 2024-07-02T06:30:00Z is 2024-07-01 23:30 in America/Los_Angeles (PDT).
+        const response = await env.apiClient.post(API_BASE, {
+          work_item_id: ticket.ticket_id,
+          work_item_type: 'ticket',
+          service_id: service.service_id,
+          start_time: '2024-07-02T06:30:00.000Z',
+          end_time: '2024-07-02T07:30:00.000Z',
+          notes: 'Timezone edge case',
+          is_billable: true,
+          // Should be ignored by the server:
+          work_date: '2099-01-01',
+          work_timezone: 'UTC'
+        } as any);
+
+        assertSuccess(response, 201);
+        expect(response.data.data.work_date).toBe('2024-07-01');
+        expect(response.data.data.work_timezone).toBe('America/Los_Angeles');
+
+        // Verify the server attached the entry to the period containing work_date (period1).
+        const sheet = await env.db('time_sheets')
+          .where({ tenant: env.tenant, id: response.data.data.time_sheet_id })
+          .first();
+        expect(sheet?.period_id).toBe(period1.period_id);
+      });
+
       it('should validate required fields', async () => {
         const response = await env.apiClient.post(API_BASE, {
           notes: 'Missing required fields'
@@ -121,8 +174,8 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
           service_id: service.service_id,
           user_id: env.userId,
-          start_time: new Date(`${workDate}T09:00:00`).toISOString(),
-          end_time: new Date(`${workDate}T10:30:00`).toISOString(),
+          start_time: new Date(`${workDate}T09:00:00Z`).toISOString(),
+          end_time: new Date(`${workDate}T10:30:00Z`).toISOString(),
           notes: 'First entry',
           is_billable: true
         });
@@ -133,8 +186,8 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
           service_id: service.service_id,
           user_id: env.userId,
-          start_time: new Date(`${workDate}T10:00:00`).toISOString(),
-          end_time: new Date(`${workDate}T11:00:00`).toISOString(),
+          start_time: new Date(`${workDate}T10:00:00Z`).toISOString(),
+          end_time: new Date(`${workDate}T11:00:00Z`).toISOString(),
           notes: 'Overlapping entry',
           is_billable: true
         });
@@ -365,7 +418,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
           service_id: service.service_id,
           user_id: env.userId,
-          start_time: new Date(2024, 0, i + 1, 9, 0)
+          start_time: new Date(Date.UTC(2024, 0, i + 1, 9, 0))
         });
       }
 
@@ -389,15 +442,15 @@ describe('Time Entries API E2E Tests', () => {
     it('should filter by date range', async () => {
       // Create time period for July 2024
       await createTestTimePeriod(env.db, env.tenant, {
-        start_date: new Date('2024-07-01'),
-        end_date: new Date('2024-07-31'),
+        start_date: '2024-07-01',
+        end_date: '2024-08-01',
         is_closed: false
       });
       
       // Create time period for August 2024
       await createTestTimePeriod(env.db, env.tenant, {
-        start_date: new Date('2024-08-01'),
-        end_date: new Date('2024-08-31'),
+        start_date: '2024-08-01',
+        end_date: '2024-09-01',
         is_closed: false
       });
       
@@ -415,7 +468,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         user_id: env.userId,
-        start_time: new Date('2024-07-05T09:00:00')
+        start_time: new Date('2024-07-05T09:00:00Z')
       });
 
       await createTestTimeEntry(env.db, env.tenant, {
@@ -423,7 +476,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         user_id: env.userId,
-        start_time: new Date('2024-07-15T09:00:00')
+        start_time: new Date('2024-07-15T09:00:00Z')
       });
 
       await createTestTimeEntry(env.db, env.tenant, {
@@ -431,7 +484,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         user_id: env.userId,
-        start_time: new Date('2024-08-01T09:00:00')
+        start_time: new Date('2024-08-01T09:00:00Z')
       });
 
       const response = await env.apiClient.get(API_BASE, {
@@ -447,11 +500,10 @@ describe('Time Entries API E2E Tests', () => {
       const ourEntries = response.data.data.filter((e: any) => e.work_item_id === ticket.ticket_id);
       expect(ourEntries.length).toBe(2);
       
-      // Verify the entries are from July
+      // Verify the entries are from July (work_date-based filtering)
       ourEntries.forEach((entry: any) => {
-        const startDate = new Date(entry.start_time);
-        expect(startDate.getMonth()).toBe(6); // July is month 6
-        expect(startDate.getFullYear()).toBe(2024);
+        expect(entry.work_date).toBeDefined();
+        expect(entry.work_date >= '2024-07-01' && entry.work_date <= '2024-07-31').toBe(true);
       });
     });
 
@@ -562,7 +614,7 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
           service_id: service.service_id,
           user_id: env.userId,
-          start_time: new Date(`${date}T09:00:00`)
+          start_time: new Date(`${date}T09:00:00Z`)
         });
       }
 
@@ -790,8 +842,8 @@ describe('Time Entries API E2E Tests', () => {
     it('should bulk create time entries', async () => {
       // Create time period for January 2024
       await createTestTimePeriod(env.db, env.tenant, {
-        start_date: new Date('2024-01-01'),
-        end_date: new Date('2024-01-31'),
+        start_date: '2024-01-01',
+        end_date: '2024-02-01',
         is_closed: false
       });
 

@@ -4,6 +4,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatISO } from 'date-fns';
 
 interface TimePeriodListProps {
   timePeriods: ITimePeriodWithStatusView[];
@@ -34,10 +35,11 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
   };
 
   const isCurrentPeriod = (start: string, end: string) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatISO(new Date(), { representation: 'date' });
     const s = start.slice(0, 10);
     const e = end.slice(0, 10);
-    return today >= s && today <= e;
+    // Periods are treated as half-open: [start_date, end_date)
+    return today >= s && today < e;
   };
 
   return (

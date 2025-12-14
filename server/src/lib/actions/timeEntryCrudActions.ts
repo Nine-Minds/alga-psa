@@ -24,6 +24,7 @@ import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
   const currentUser = await getCurrentUser();
@@ -247,6 +248,9 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
+    const userTimeZone = await resolveUserTimeZone(db, tenant, session.user.id);
+    const { work_date, work_timezone } = computeWorkDateFields(start_time, userTimeZone);
+
     const startDate = new Date(start_time);
     const endDate = new Date(end_time);
     const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
@@ -269,6 +273,8 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       work_item_type,
       start_time,
       end_time,
+      work_date,
+      work_timezone,
       billable_duration: finalBillableDuration,
       notes,
       time_sheet_id,

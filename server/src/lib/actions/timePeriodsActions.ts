@@ -22,6 +22,8 @@ import { createTenantKnex } from '../db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import logger from '@shared/core/logger';
+import { getSession } from 'server/src/lib/auth/getSession';
+import { resolveUserTimeZone } from 'server/src/lib/utils/workDate';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
@@ -145,8 +147,8 @@ export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
 }
 
 // Utility function to get current date as Temporal.PlainDate
-function getCurrentDate(): Temporal.PlainDate {
-  return Temporal.Now.plainDateISO();
+function getCurrentDate(timeZone: string): Temporal.PlainDate {
+  return Temporal.Now.plainDateISO(timeZone);
 }
 
 // Internal helper: fetch all time periods using provided transaction (for use within transactions)
@@ -195,8 +197,13 @@ function toModelPeriodsWithPlainDate(periods: ITimePeriodView[]): ITimePeriodWit
 
 export async function getCurrentTimePeriod(): Promise<ITimePeriodView | null> {
   try {
-    const { knex } = await createTenantKnex();
-    const currentDate = getCurrentDate().toString();
+    const { knex, tenant } = await createTenantKnex();
+    const session = await getSession();
+
+    const userId = session?.user?.id || null;
+    const userTimeZone = tenant && userId ? await resolveUserTimeZone(knex, tenant, userId) : 'UTC';
+
+    const currentDate = getCurrentDate(userTimeZone).toString();
     const currentPeriod = await TimePeriod.findByDate(knex, currentDate);
     if (!currentPeriod) return null;
 
@@ -492,7 +499,8 @@ export async function createNextTimePeriod(
 
   try {
     return await withTransaction(db, async (trx) => {
-      const currentDate = getCurrentDate();
+      // Use UTC for background jobs since there's no user session
+      const currentDate = getCurrentDate('UTC');
       const createdPeriods: ITimePeriod[] = [];
 
       // Get initial existing time periods using the transaction
