@@ -118,6 +118,7 @@ export function TimeSheet({
     useEffect(() => {
         const loadData = async () => {
             setIsLoadingTimeSheetData(true);
+            let groupedLocal: Record<string, ITimeEntryWithWorkItemString[]> = {};
             try {
                 const [fetchedTimeEntries, fetchedWorkItems, updatedTimeSheet] = await Promise.all([
                     fetchTimeEntriesForTimeSheet(timeSheet.id),
@@ -141,7 +142,7 @@ export function TimeSheet({
                 }, {});
                 setWorkItemsByType(fetchedWorkItemsByType);
 
-                const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
+                groupedLocal = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
                     const key = `${entry.work_item_id}`;
                     if (!acc[key]) {
                         acc[key] = [];
@@ -156,12 +157,12 @@ export function TimeSheet({
 
                 workItems.forEach(workItem => {
                     const key = workItem.work_item_id;
-                    if (!grouped[key]) {
-                        grouped[key] = [];
+                    if (!groupedLocal[key]) {
+                        groupedLocal[key] = [];
                     }
                 });
 
-                setGroupedTimeEntries(grouped);
+                setGroupedTimeEntries(groupedLocal);
             } finally {
                 setIsLoadingTimeSheetData(false);
             }
@@ -195,7 +196,7 @@ export function TimeSheet({
                 setSelectedCell({
                     workItem: initialWorkItem,
                     date: formatISO(initialDateObj, { representation: 'date' }),
-                    entries: grouped[initialWorkItem.work_item_id] || [],
+                    entries: groupedLocal[initialWorkItem.work_item_id] || [],
                     defaultStartTime: formatISO(startTime),
                     defaultEndTime: formatISO(endTime)
                 });
