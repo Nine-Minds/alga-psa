@@ -133,6 +133,9 @@ server/.alga-ext-cache/
 .vscode
 ee/server/playwright-storage/
 
+# EE Playwright test artifacts
+ee/server/playwright-report/
+ee/server/playwright-test-results/
 
 volumes/
 
