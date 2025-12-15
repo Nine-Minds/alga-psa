@@ -68,6 +68,7 @@ export interface TemplateChecklistItem {
   item_name: string;
   description?: string;
   order_number: number;
+  completed: boolean;
 }
 
 export interface TemplateWizardData {

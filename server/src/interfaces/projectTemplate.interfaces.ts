@@ -56,6 +56,7 @@ export interface IProjectTemplateChecklistItem extends TenantEntity {
   item_name: string;
   description?: string;
   order_number: number;
+  completed: boolean;
 }
 
 export interface IProjectTemplateStatusMapping extends TenantEntity {
