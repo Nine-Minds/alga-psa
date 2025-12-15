@@ -6,22 +6,10 @@
  * - Persist work_date (DATE) computed from start_time in the user's timezone.
  * - Persist work_timezone (IANA tz) used for computation for audit/debug.
  * - Store time_periods.start_date/end_date as DATE to avoid server timezone ambiguity.
+ *
+ * Note: CitusDB doesn't allow non-IMMUTABLE functions (like AT TIME ZONE) in CASE/COALESCE
+ * within distributed UPDATE queries. We work around this by splitting into multiple simple UPDATEs.
  */
-
-function sqlComputeWorkDate(startTimeExpr, timeZoneExpr) {
-  // Works whether start_time is `timestamp` or `timestamptz`.
-  // - If start_time is timestamp (no tz), treat it as UTC instant.
-  // - If start_time is timestamptz, it already represents an instant.
-  return `
-    (
-      CASE
-        WHEN pg_typeof(${startTimeExpr}) = 'timestamp without time zone'::regtype
-          THEN ((((${startTimeExpr}) AT TIME ZONE 'UTC') AT TIME ZONE ${timeZoneExpr})::date)
-        ELSE ((${startTimeExpr}) AT TIME ZONE ${timeZoneExpr})::date
-      END
-    )
-  `;
-}
 
 exports.up = async function up(knex) {
   const hasWorkDate = await knex.schema.hasColumn('time_entries', 'work_date');
@@ -42,30 +30,42 @@ exports.up = async function up(knex) {
       ALTER COLUMN end_date TYPE date USING ((end_date AT TIME ZONE 'UTC')::date)
   `);
 
-  // Backfill work_date/work_timezone from users.timezone (fallback UTC).
-  const workTzExpr = `COALESCE(u.timezone, 'UTC')`;
-  const workDateExpr = sqlComputeWorkDate('te.start_time', workTzExpr);
+  // Backfill work_date/work_timezone from users.timezone.
+  // Split into separate queries to avoid CitusDB's non-IMMUTABLE function restrictions.
 
+  // Step 1: Update entries where user has a timezone set
+  // start_time is timestamptz, so we convert directly to the user's timezone
   await knex.raw(`
     UPDATE time_entries te
     SET
-      work_timezone = ${workTzExpr},
-      work_date = ${workDateExpr}
+      work_timezone = u.timezone,
+      work_date = (te.start_time AT TIME ZONE u.timezone)::date
     FROM users u
     WHERE te.tenant = u.tenant
       AND te.user_id = u.user_id
+      AND u.timezone IS NOT NULL
       AND (te.work_date IS NULL OR te.work_timezone IS NULL)
   `);
 
-  // Final fallback for any rows not covered by the users join.
-  const fallbackTzExpr = `COALESCE(te.work_timezone, 'UTC')`;
-  const fallbackDateExpr = sqlComputeWorkDate('te.start_time', fallbackTzExpr);
-
+  // Step 2: Update entries where user has no timezone (use UTC)
   await knex.raw(`
     UPDATE time_entries te
     SET
-      work_timezone = ${fallbackTzExpr},
-      work_date = ${fallbackDateExpr}
+      work_timezone = 'UTC',
+      work_date = (te.start_time AT TIME ZONE 'UTC')::date
+    FROM users u
+    WHERE te.tenant = u.tenant
+      AND te.user_id = u.user_id
+      AND u.timezone IS NULL
+      AND (te.work_date IS NULL OR te.work_timezone IS NULL)
+  `);
+
+  // Step 3: Fallback for any entries without a matching user (use UTC)
+  await knex.raw(`
+    UPDATE time_entries te
+    SET
+      work_timezone = 'UTC',
+      work_date = (te.start_time AT TIME ZONE 'UTC')::date
     WHERE te.work_date IS NULL OR te.work_timezone IS NULL
   `);
 
