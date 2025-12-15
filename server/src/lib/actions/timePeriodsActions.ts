@@ -471,114 +471,129 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
   });
 }
 
-export async function createNextTimePeriod(knexOrTrx: Knex | Knex.Transaction, settings: ITimePeriodSettings[], daysThreshold: number = 5): Promise<ITimePeriod | null> {
+export async function createNextTimePeriod(settings: ITimePeriodSettings[], daysThreshold: number = 5): Promise<ITimePeriod | null> {
   // Safety limit to prevent infinite loops (max 1 year of weekly periods)
   const MAX_PERIODS_PER_RUN = 52;
 
+  const { knex: db } = await createTenantKnex();
+
   try {
-    const currentDate = getCurrentDate();
-    const createdPeriods: ITimePeriod[] = [];
+    return await withTransaction(db, async (trx) => {
+      const currentDate = getCurrentDate();
+      const createdPeriods: ITimePeriod[] = [];
 
-    // Get initial existing time periods using the provided transaction
-    const existingPeriods = await fetchAllTimePeriodsWithTrx(knexOrTrx);
-    // Keep model periods in memory to avoid repeated DB queries
-    const modelPeriods: ITimePeriodWithPlainDate[] = toModelPeriodsWithPlainDate(existingPeriods);
+      // Get initial existing time periods using the transaction
+      const existingPeriods = await fetchAllTimePeriodsWithTrx(trx);
+      // Keep model periods in memory to avoid repeated DB queries
+      const modelPeriods: ITimePeriodWithPlainDate[] = toModelPeriodsWithPlainDate(existingPeriods);
 
-    // Handle first period creation (bootstrapping)
-    if (!existingPeriods.length) {
-      logger.info('No existing time periods found. Creating initial time period based on settings.');
-      logger.debug('Available settings:', { settings: settings.map(s => ({
-        start_day: s.start_day,
-        end_day: s.end_day,
-        frequency_unit: s.frequency_unit
-      }))});
+      // Track the latest end date to avoid repeated sorting
+      let latestEndDate: Temporal.PlainDate | null = modelPeriods.length > 0
+        ? modelPeriods.reduce((max, p) =>
+            Temporal.PlainDate.compare(p.end_date, max) > 0 ? p.end_date : max,
+            modelPeriods[0].end_date
+          )
+        : null;
 
-      // Use TimePeriodSuggester with empty periods to create the first period
-      const newPeriodResult = TimePeriodSuggester.suggestNewTimePeriod(settings, []);
+      // Handle first period creation (bootstrapping)
+      if (!existingPeriods.length) {
+        logger.info('No existing time periods found. Creating initial time period based on settings.');
+        logger.debug('Available settings:', { settings: settings.map(s => ({
+          start_day: s.start_day,
+          end_day: s.end_day,
+          frequency_unit: s.frequency_unit
+        }))});
 
-      if (!newPeriodResult.success || !newPeriodResult.data) {
-        logger.info(`Cannot create initial time period: ${newPeriodResult.error || 'Unknown reason'}`);
-        return null;
-      }
+        // Use TimePeriodSuggester with empty periods to create the first period
+        const newPeriodResult = TimePeriodSuggester.suggestNewTimePeriod(settings, []);
 
-      // Create the first period using the provided transaction
-      const newPeriod = await createTimePeriodWithTrx(knexOrTrx, {
-        start_date: toPlainDate(newPeriodResult.data.start_date),
-        end_date: toPlainDate(newPeriodResult.data.end_date)
-      });
-
-      logger.info(`Created initial time period: ${newPeriod.start_date} to ${newPeriod.end_date}`);
-      createdPeriods.push(newPeriod);
-
-      // Add the new period to our in-memory list (convert to PlainDate type)
-      modelPeriods.push({
-        ...newPeriod,
-        start_date: toPlainDate(newPeriod.start_date),
-        end_date: toPlainDate(newPeriod.end_date)
-      });
-    }
-
-    // Loop to fill any gaps - keep creating periods until we're caught up
-    for (let i = 0; i < MAX_PERIODS_PER_RUN; i++) {
-      // Get the latest period end date from in-memory list
-      const lastPeriod = modelPeriods.sort((a, b) =>
-        Temporal.PlainDate.compare(b.end_date, a.end_date)
-      )[0];
-      const newStartDate = lastPeriod.end_date;
-
-      // Check if we're within the threshold days of the new period
-      // Calculate actual days difference (positive if newStartDate is in future)
-      const daysUntilStart = newStartDate.since(currentDate, { largestUnit: 'day' }).days;
-
-      // Stop if the next period's start date is too far in the future
-      if (daysUntilStart > daysThreshold) {
-        if (createdPeriods.length === 0) {
-          logger.debug(`Not creating new period: ${daysUntilStart} days until start date exceeds threshold of ${daysThreshold} days`);
-        } else {
-          logger.info(`Stopped after creating ${createdPeriods.length} period(s). Next period would start in ${daysUntilStart} days (threshold: ${daysThreshold})`);
+        if (!newPeriodResult.success || !newPeriodResult.data) {
+          logger.info(`Cannot create initial time period: ${newPeriodResult.error || 'Unknown reason'}`);
+          return null;
         }
-        break;
+
+        // Create the first period using the transaction
+        const newPeriod = await createTimePeriodWithTrx(trx, {
+          start_date: toPlainDate(newPeriodResult.data.start_date),
+          end_date: toPlainDate(newPeriodResult.data.end_date)
+        });
+
+        logger.info(`Created initial time period: ${newPeriod.start_date} to ${newPeriod.end_date}`);
+        createdPeriods.push(newPeriod);
+
+        // Add the new period to our in-memory list and update latest end date
+        const newPeriodWithPlainDate: ITimePeriodWithPlainDate = {
+          ...newPeriod,
+          start_date: toPlainDate(newPeriod.start_date),
+          end_date: toPlainDate(newPeriod.end_date)
+        };
+        modelPeriods.push(newPeriodWithPlainDate);
+        latestEndDate = newPeriodWithPlainDate.end_date;
       }
 
-      logger.debug(`Creating period ${createdPeriods.length + 1}: ${daysUntilStart} days until start, last period ends: ${lastPeriod.end_date}`);
+      // Loop to fill any gaps - keep creating periods until we're caught up
+      for (let i = 0; i < MAX_PERIODS_PER_RUN; i++) {
+        if (!latestEndDate) break;
 
-      // Use TimePeriodSuggester to create the new period
-      const newPeriodResult = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
+        const newStartDate = latestEndDate;
 
-      // Check if the suggestion was successful
-      if (!newPeriodResult.success || !newPeriodResult.data) {
-        // "No applicable settings" is not an error - it means no period should be created
-        logger.info(`No time period to create: ${newPeriodResult.error || 'Unknown reason'}`);
-        break;
+        // Check if we're within the threshold days of the new period
+        // Calculate actual days difference (positive if newStartDate is in future)
+        const daysUntilStart = newStartDate.since(currentDate, { largestUnit: 'day' }).days;
+
+        // Stop if the next period's start date is too far in the future
+        if (daysUntilStart > daysThreshold) {
+          if (createdPeriods.length === 0) {
+            logger.debug(`Not creating new period: ${daysUntilStart} days until start date exceeds threshold of ${daysThreshold} days`);
+          } else {
+            logger.info(`Stopped after creating ${createdPeriods.length} period(s). Next period would start in ${daysUntilStart} days (threshold: ${daysThreshold})`);
+          }
+          break;
+        }
+
+        logger.debug(`Creating period ${createdPeriods.length + 1}: ${daysUntilStart} days until start, last period ends: ${latestEndDate}`);
+
+        // Use TimePeriodSuggester to create the new period
+        const newPeriodResult = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
+
+        // Check if the suggestion was successful
+        if (!newPeriodResult.success || !newPeriodResult.data) {
+          // "No applicable settings" is not an error - it means no period should be created
+          logger.info(`No time period to create: ${newPeriodResult.error || 'Unknown reason'}`);
+          break;
+        }
+
+        // Create the period using the transaction
+        const newPeriod = await createTimePeriodWithTrx(trx, {
+          start_date: toPlainDate(newPeriodResult.data.start_date),
+          end_date: toPlainDate(newPeriodResult.data.end_date)
+        });
+
+        createdPeriods.push(newPeriod);
+
+        // Add the new period to our in-memory list and update latest end date
+        const newPeriodWithPlainDate: ITimePeriodWithPlainDate = {
+          ...newPeriod,
+          start_date: toPlainDate(newPeriod.start_date),
+          end_date: toPlainDate(newPeriod.end_date)
+        };
+        modelPeriods.push(newPeriodWithPlainDate);
+        latestEndDate = newPeriodWithPlainDate.end_date;
+
+        logger.debug(`Created time period: ${newPeriod.start_date} to ${newPeriod.end_date}`);
       }
 
-      // Create the period using the provided transaction
-      const newPeriod = await createTimePeriodWithTrx(knexOrTrx, {
-        start_date: toPlainDate(newPeriodResult.data.start_date),
-        end_date: toPlainDate(newPeriodResult.data.end_date)
-      });
+      if (createdPeriods.length >= MAX_PERIODS_PER_RUN) {
+        logger.warn(`Hit maximum periods per run limit (${MAX_PERIODS_PER_RUN}). There may be more gaps to fill.`);
+      }
 
-      createdPeriods.push(newPeriod);
-      // Add the new period to our in-memory list (convert to PlainDate type)
-      modelPeriods.push({
-        ...newPeriod,
-        start_date: toPlainDate(newPeriod.start_date),
-        end_date: toPlainDate(newPeriod.end_date)
-      });
+      if (createdPeriods.length > 0) {
+        logger.info(`Time period creation completed: created ${createdPeriods.length} period(s)`);
+      }
 
-      logger.debug(`Created time period: ${newPeriod.start_date} to ${newPeriod.end_date}`);
-    }
-
-    if (createdPeriods.length >= MAX_PERIODS_PER_RUN) {
-      logger.warn(`Hit maximum periods per run limit (${MAX_PERIODS_PER_RUN}). There may be more gaps to fill.`);
-    }
-
-    if (createdPeriods.length > 0) {
-      logger.info(`Time period creation completed: created ${createdPeriods.length} period(s)`);
-    }
-
-    // Return the last created period, or null if none were created
-    return createdPeriods.length > 0 ? createdPeriods[createdPeriods.length - 1] : null;
+      // Return the last created period, or null if none were created
+      return createdPeriods.length > 0 ? createdPeriods[createdPeriods.length - 1] : null;
+    });
   } catch (error) {
     logger.error('Error creating next time period:', error);
     throw error;

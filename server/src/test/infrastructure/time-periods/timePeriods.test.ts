@@ -362,7 +362,7 @@ describe('Time Periods Infrastructure', () => {
       };
       await createTimePeriod(initialPeriod);
 
-      const result = await createNextTimePeriod(context.db, settings, 7);
+      const result = await createNextTimePeriod(settings, 7);
 
       expect(result).not.toBeNull();
       expect(result).toMatchObject({
@@ -394,7 +394,7 @@ describe('Time Periods Infrastructure', () => {
       };
       await createTimePeriod(initialPeriod);
 
-      const result = await createNextTimePeriod(context.db, settings, 5);
+      const result = await createNextTimePeriod(settings, 5);
 
       expect(result).toBeNull();
     });
