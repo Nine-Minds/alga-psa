@@ -35,6 +35,7 @@ import {
   IProjectTemplatePhase,
   IProjectTemplateStatusMapping,
   IProjectTemplateTaskAssignment,
+  IProjectTemplateChecklistItem,
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import {
   deleteTemplate,
@@ -51,6 +52,9 @@ import {
   removeTemplateStatusMapping,
   reorderTemplateStatusMappings,
   setTaskAdditionalAgents,
+  addTemplateChecklistItem,
+  updateTemplateChecklistItem,
+  deleteTemplateChecklistItem,
 } from 'server/src/lib/actions/project-actions/projectTemplateActions';
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
@@ -101,6 +105,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   );
   const [taskAssignments, setTaskAssignments] = useState<IProjectTemplateTaskAssignment[]>(
     initialTemplate.task_assignments || []
+  );
+  const [checklistItems, setChecklistItems] = useState<IProjectTemplateChecklistItem[]>(
+    initialTemplate.checklist_items || []
   );
 
   // Selection state
@@ -524,6 +531,52 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   };
 
   // ============================================================
+  // CHECKLIST MANAGEMENT
+  // ============================================================
+
+  const handleAddChecklistItem = async (taskId: string, itemName: string, description?: string) => {
+    try {
+      const newItem = await addTemplateChecklistItem(taskId, { item_name: itemName, description });
+      setChecklistItems((prev) => [...prev, newItem]);
+      return newItem;
+    } catch (error) {
+      toast.error('Failed to add checklist item');
+      console.error(error);
+      throw error;
+    }
+  };
+
+  const handleUpdateChecklistItem = async (
+    checklistId: string,
+    data: { item_name?: string; description?: string; order_number?: number }
+  ) => {
+    try {
+      const updated = await updateTemplateChecklistItem(checklistId, data);
+      setChecklistItems((prev) =>
+        prev.map((item) => (item.template_checklist_id === checklistId ? updated : item))
+      );
+      return updated;
+    } catch (error) {
+      toast.error('Failed to update checklist item');
+      console.error(error);
+      throw error;
+    }
+  };
+
+  const handleDeleteChecklistItem = async (checklistId: string) => {
+    try {
+      await deleteTemplateChecklistItem(checklistId);
+      setChecklistItems((prev) =>
+        prev.filter((item) => item.template_checklist_id !== checklistId)
+      );
+    } catch (error) {
+      toast.error('Failed to delete checklist item');
+      console.error(error);
+      throw error;
+    }
+  };
+
+  // ============================================================
   // STATUS MANAGEMENT
   // ============================================================
 
@@ -592,6 +645,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           users={users}
           taskTypes={taskTypes}
           initialStatusMappingId={newTaskStatusMappingId}
+          checklistItems={editingTask ? checklistItems.filter(c => c.template_task_id === editingTask.template_task_id) : []}
+          onAddChecklistItem={handleAddChecklistItem}
+          onUpdateChecklistItem={handleUpdateChecklistItem}
+          onDeleteChecklistItem={handleDeleteChecklistItem}
         />
       )}
 
@@ -899,6 +956,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                               priorities={priorities}
                               taskAssignments={taskAssignments}
                               taskTypes={taskTypes}
+                              checklistItems={checklistItems}
                             />
                           );
                         })}
@@ -942,6 +1000,7 @@ interface StatusColumnProps {
   priorities: Array<{ priority_id: string; priority_name: string; color?: string }>;
   taskAssignments: IProjectTemplateTaskAssignment[];
   taskTypes: ITaskType[];
+  checklistItems: IProjectTemplateChecklistItem[];
 }
 
 function StatusColumn({
@@ -962,6 +1021,7 @@ function StatusColumn({
   priorities,
   taskAssignments,
   taskTypes,
+  checklistItems,
 }: StatusColumnProps) {
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
@@ -1087,6 +1147,9 @@ function StatusColumn({
                   (a) => a.template_task_id === task.template_task_id
                 )}
                 taskType={taskTypes.find((t) => t.type_key === task.task_type_key)}
+                checklistItemsCount={checklistItems.filter(
+                  (c) => c.template_task_id === task.template_task_id
+                ).length}
               />
             </div>
           ))}
@@ -1118,6 +1181,7 @@ interface TaskCardProps {
   priorities: Array<{ priority_id: string; priority_name: string; color?: string }>;
   taskAssignments: IProjectTemplateTaskAssignment[];
   taskType?: ITaskType;
+  checklistItemsCount: number;
 }
 
 function TaskCard({
@@ -1132,6 +1196,7 @@ function TaskCard({
   priorities,
   taskAssignments,
   taskType,
+  checklistItemsCount,
 }: TaskCardProps) {
   const handleDragStart = (e: React.DragEvent) => {
     document.body.classList.add('dragging-task');
@@ -1240,7 +1305,7 @@ function TaskCard({
         )}
       </div>
 
-      {/* Bottom row: estimated hours, duration */}
+      {/* Bottom row: estimated hours, duration, checklist */}
       <div className="flex items-center justify-between text-xs text-gray-500 px-1 mt-1">
         <div className="flex items-center gap-2">
           {task.estimated_hours && (
@@ -1251,6 +1316,15 @@ function TaskCard({
           )}
           {task.duration_days && (
             <span className="bg-gray-100 px-1.5 py-0.5 rounded">{task.duration_days}d</span>
+          )}
+          {checklistItemsCount > 0 && (
+            <span
+              className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded"
+              title={`${checklistItemsCount} checklist item${checklistItemsCount > 1 ? 's' : ''}`}
+            >
+              <CheckSquare className="w-3 h-3" />
+              {checklistItemsCount}
+            </span>
           )}
         </div>
       </div>

@@ -8,7 +8,8 @@ import {
   IProjectTemplate,
   IProjectTemplateWithDetails,
   IProjectTemplatePhase,
-  IProjectTemplateTask
+  IProjectTemplateTask,
+  IProjectTemplateChecklistItem
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import { addDays } from 'date-fns';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -1990,6 +1991,197 @@ export async function removeTaskAdditionalAgent(
     // Get task for template update
     const task = await trx('project_template_tasks')
       .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (task) {
+      const phase = await trx('project_template_phases')
+        .where({ template_phase_id: task.template_phase_id, tenant })
+        .first();
+
+      if (phase) {
+        await trx('project_templates')
+          .where({ template_id: phase.template_id, tenant })
+          .update({ updated_at: trx.fn.now() });
+      }
+    }
+  });
+}
+
+// ============================================================
+// TEMPLATE CHECKLIST ACTIONS
+// ============================================================
+
+/**
+ * Get all checklist items for a template task
+ */
+export async function getTemplateTaskChecklistItems(
+  taskId: string
+): Promise<IProjectTemplateChecklistItem[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  const items = await knex('project_template_checklist_items')
+    .where({ template_task_id: taskId, tenant })
+    .orderBy('order_number');
+
+  return items;
+}
+
+/**
+ * Add a checklist item to a template task
+ */
+export async function addTemplateChecklistItem(
+  taskId: string,
+  data: {
+    item_name: string;
+    description?: string;
+  }
+): Promise<IProjectTemplateChecklistItem> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Verify task exists
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Get max order number
+    const maxOrder = await trx('project_template_checklist_items')
+      .where({ template_task_id: taskId, tenant })
+      .max('order_number as max')
+      .first();
+
+    const orderNumber = (maxOrder?.max ?? -1) + 1;
+
+    // Insert checklist item
+    const [item] = await trx('project_template_checklist_items')
+      .insert({
+        tenant,
+        template_task_id: taskId,
+        item_name: data.item_name,
+        description: data.description || null,
+        order_number: orderNumber
+      })
+      .returning('*');
+
+    // Update template timestamp via phase
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: task.template_phase_id, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+
+    return item;
+  });
+}
+
+/**
+ * Update a template checklist item
+ */
+export async function updateTemplateChecklistItem(
+  checklistId: string,
+  data: {
+    item_name?: string;
+    description?: string;
+    order_number?: number;
+  }
+): Promise<IProjectTemplateChecklistItem> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const [updated] = await trx('project_template_checklist_items')
+      .where({ template_checklist_id: checklistId, tenant })
+      .update({
+        ...(data.item_name !== undefined && { item_name: data.item_name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.order_number !== undefined && { order_number: data.order_number })
+      })
+      .returning('*');
+
+    if (!updated) {
+      throw new Error('Checklist item not found');
+    }
+
+    // Update template timestamp via task -> phase
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: updated.template_task_id, tenant })
+      .first();
+
+    if (task) {
+      const phase = await trx('project_template_phases')
+        .where({ template_phase_id: task.template_phase_id, tenant })
+        .first();
+
+      if (phase) {
+        await trx('project_templates')
+          .where({ template_id: phase.template_id, tenant })
+          .update({ updated_at: trx.fn.now() });
+      }
+    }
+
+    return updated;
+  });
+}
+
+/**
+ * Delete a template checklist item
+ */
+export async function deleteTemplateChecklistItem(
+  checklistId: string
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Get item first to find task for timestamp update
+    const item = await trx('project_template_checklist_items')
+      .where({ template_checklist_id: checklistId, tenant })
+      .first();
+
+    if (!item) {
+      throw new Error('Checklist item not found');
+    }
+
+    // Delete the item
+    await trx('project_template_checklist_items')
+      .where({ template_checklist_id: checklistId, tenant })
+      .delete();
+
+    // Update template timestamp via task -> phase
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: item.template_task_id, tenant })
       .first();
 
     if (task) {

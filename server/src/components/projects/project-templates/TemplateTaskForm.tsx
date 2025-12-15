@@ -10,10 +10,12 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { TaskTypeSelector } from 'server/src/components/projects/TaskTypeSelector';
+import { Plus, Trash2, CheckSquare } from 'lucide-react';
 import {
   IProjectTemplateTask,
   IProjectTemplateStatusMapping,
   IProjectTemplateTaskAssignment,
+  IProjectTemplateChecklistItem,
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
@@ -32,6 +34,14 @@ interface TemplateTaskFormProps {
   taskTypes: ITaskType[];
   /** Initial status mapping ID for new tasks (e.g., when clicking + on a status column) */
   initialStatusMappingId?: string | null;
+  /** Checklist items for the task being edited */
+  checklistItems?: IProjectTemplateChecklistItem[];
+  /** Handler to add a new checklist item */
+  onAddChecklistItem?: (taskId: string, itemName: string, description?: string) => Promise<IProjectTemplateChecklistItem>;
+  /** Handler to update a checklist item */
+  onUpdateChecklistItem?: (checklistId: string, data: { item_name?: string; description?: string }) => Promise<IProjectTemplateChecklistItem>;
+  /** Handler to delete a checklist item */
+  onDeleteChecklistItem?: (checklistId: string) => Promise<void>;
 }
 
 export function TemplateTaskForm({
@@ -45,6 +55,10 @@ export function TemplateTaskForm({
   users,
   taskTypes,
   initialStatusMappingId,
+  checklistItems = [],
+  onAddChecklistItem,
+  onUpdateChecklistItem,
+  onDeleteChecklistItem,
 }: TemplateTaskFormProps) {
   const [taskName, setTaskName] = useState('');
   const [description, setDescription] = useState('');
@@ -59,6 +73,10 @@ export function TemplateTaskForm({
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newChecklistItemName, setNewChecklistItemName] = useState('');
+  const [isAddingChecklistItem, setIsAddingChecklistItem] = useState(false);
+  const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
+  const [editingChecklistName, setEditingChecklistName] = useState('');
 
   // Fetch services on mount
   useEffect(() => {
@@ -138,6 +156,52 @@ export function TemplateTaskForm({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAddChecklistItem = async () => {
+    if (!task || !onAddChecklistItem || !newChecklistItemName.trim()) return;
+
+    setIsAddingChecklistItem(true);
+    try {
+      await onAddChecklistItem(task.template_task_id, newChecklistItemName.trim());
+      setNewChecklistItemName('');
+    } catch (err) {
+      console.error('Failed to add checklist item:', err);
+    } finally {
+      setIsAddingChecklistItem(false);
+    }
+  };
+
+  const handleUpdateChecklistItem = async (checklistId: string) => {
+    if (!onUpdateChecklistItem || !editingChecklistName.trim()) return;
+
+    try {
+      await onUpdateChecklistItem(checklistId, { item_name: editingChecklistName.trim() });
+      setEditingChecklistId(null);
+      setEditingChecklistName('');
+    } catch (err) {
+      console.error('Failed to update checklist item:', err);
+    }
+  };
+
+  const handleDeleteChecklistItem = async (checklistId: string) => {
+    if (!onDeleteChecklistItem) return;
+
+    try {
+      await onDeleteChecklistItem(checklistId);
+    } catch (err) {
+      console.error('Failed to delete checklist item:', err);
+    }
+  };
+
+  const startEditingChecklistItem = (item: IProjectTemplateChecklistItem) => {
+    setEditingChecklistId(item.template_checklist_id);
+    setEditingChecklistName(item.item_name);
+  };
+
+  const cancelEditingChecklistItem = () => {
+    setEditingChecklistId(null);
+    setEditingChecklistName('');
   };
 
   return (
@@ -343,6 +407,114 @@ export function TemplateTaskForm({
                 Additional team members to assign to this task
               </p>
             </div>
+
+            {/* Checklist Items - Only show for existing tasks */}
+            {task && onAddChecklistItem && (
+              <div className="border-t pt-4">
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4" />
+                    Checklist Items ({checklistItems.length})
+                  </div>
+                </Label>
+
+                {/* Existing checklist items */}
+                <div className="space-y-2 mb-3">
+                  {checklistItems
+                    .sort((a, b) => a.order_number - b.order_number)
+                    .map((item) => (
+                      <div key={item.template_checklist_id} className="flex items-center gap-2">
+                        {editingChecklistId === item.template_checklist_id ? (
+                          <>
+                            <Input
+                              value={editingChecklistName}
+                              onChange={(e) => setEditingChecklistName(e.target.value)}
+                              className="flex-1"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleUpdateChecklistItem(item.template_checklist_id);
+                                } else if (e.key === 'Escape') {
+                                  cancelEditingChecklistItem();
+                                }
+                              }}
+                            />
+                            <Button
+                              id={`save-checklist-${item.template_checklist_id}`}
+                              type="button"
+                              size="sm"
+                              onClick={() => handleUpdateChecklistItem(item.template_checklist_id)}
+                              disabled={!editingChecklistName.trim()}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              id={`cancel-checklist-${item.template_checklist_id}`}
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={cancelEditingChecklistItem}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <span
+                              className="flex-1 text-sm cursor-pointer hover:text-purple-600 py-1 px-2 rounded hover:bg-gray-50"
+                              onClick={() => startEditingChecklistItem(item)}
+                              title="Click to edit"
+                            >
+                              {item.item_name}
+                            </span>
+                            <Button
+                              id={`delete-checklist-${item.template_checklist_id}`}
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteChecklistItem(item.template_checklist_id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                </div>
+
+                {/* Add new checklist item */}
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newChecklistItemName}
+                    onChange={(e) => setNewChecklistItemName(e.target.value)}
+                    placeholder="Add a checklist item..."
+                    className="flex-1"
+                    disabled={isAddingChecklistItem}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddChecklistItem();
+                      }
+                    }}
+                  />
+                  <Button
+                    id="add-checklist-item"
+                    type="button"
+                    size="sm"
+                    onClick={handleAddChecklistItem}
+                    disabled={isAddingChecklistItem || !newChecklistItemName.trim()}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Checklist items help break down tasks into smaller, trackable steps.
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-6">
