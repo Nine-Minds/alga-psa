@@ -305,16 +305,14 @@ export function TimeSheetTable({
                 <thead>
                     <tr className="bg-white">
                         <th className="px-4 py-3 border-r border-b border-gray-200 sticky left-0 z-20 bg-white min-w-[160px]">
-                            <Button
+                            <button
                                 {...addWorkItemProps}
-                                variant="outline"
-                                size="sm"
                                 onClick={onAddWorkItem}
-                                className="text-[rgb(var(--color-primary-500))] border-[rgb(var(--color-primary-200))] hover:bg-[rgb(var(--color-primary-50))]"
+                                className="inline-flex items-center px-4 py-2 text-sm font-medium text-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] border-2 border-dashed border-[rgb(var(--color-primary-300))] rounded-lg hover:bg-[rgb(var(--color-primary-100))] hover:border-[rgb(var(--color-primary-400))] transition-colors"
                             >
-                                <Plus className="h-4 w-4 mr-1" />
+                                <Plus className="h-4 w-4 mr-1.5" />
                                 Add Item
-                            </Button>
+                            </button>
                         </th>
                         {visibleDates.map((date): JSX.Element => {
                             const isTodayDate = isToday(date);
