@@ -387,7 +387,9 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
         'user_id',
         'time_sheet_id',
         'approval_status',
-        'tenant'
+        'tenant',
+        'work_date',
+        'work_timezone'
       )
       .orderBy('start_time', 'asc');
 
@@ -398,7 +400,12 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
       start_time: formatISO(entry.start_time),
       end_time: formatISO(entry.end_time),
       created_at: formatISO(entry.created_at),
-      updated_at: formatISO(entry.updated_at)
+      updated_at: formatISO(entry.updated_at),
+      // work_date is a DATE column - convert to ISO string (YYYY-MM-DD)
+      work_date: entry.work_date instanceof Date
+        ? entry.work_date.toISOString().slice(0, 10)
+        : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
+      work_timezone: entry.work_timezone
     }));
 
     return validateArray(timeEntrySchema, formattedEntries);

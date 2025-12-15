@@ -193,6 +193,10 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
     end_time: formatISO(entry.end_time),
     updated_at: formatISO(entry.updated_at),
     created_at: formatISO(entry.created_at),
+    // work_date is a DATE column - convert to ISO string (YYYY-MM-DD)
+    work_date: entry.work_date instanceof Date
+      ? entry.work_date.toISOString().slice(0, 10)
+      : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
     workItem: workItemMap.get(entry.work_item_id),
   }));
 }
@@ -740,8 +744,12 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
     }, currentUser.user_id);
 
     // Return the complete time entry with work item details
+    // Format work_date properly (DATE column comes back as Date object)
     const result: ITimeEntryWithWorkItem = {
       ...entry,
+      work_date: entry.work_date instanceof Date
+        ? entry.work_date.toISOString().slice(0, 10)
+        : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
       workItem: workItemDetails
     };
     return result;
