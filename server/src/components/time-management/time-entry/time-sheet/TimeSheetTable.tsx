@@ -508,20 +508,21 @@ export function TimeSheetTable({
                                                         });
                                                     }}
                                                 >
-                                                    {dayEntries.length > 0 ? (
-                                                        <div
-                                                            className="rounded-lg p-2 text-xs h-full w-full"
-                                                            style={{
-                                                                backgroundColor: colors.background,
-                                                                borderColor: colors.border,
-                                                                borderWidth: '1px',
-                                                                borderStyle: 'solid'
-                                                            }}
-                                                        >
-                                                            <div className="font-medium text-gray-700">{formatDuration(totalDuration)}</div>
-                                                            <div className="text-gray-500 text-xs">{`$ ${formatDuration(totalBillableDuration)}`}</div>
-                                                        </div>
-                                                    ) : (
+	                                                    {dayEntries.length > 0 ? (
+	                                                        <div
+	                                                            className="rounded-lg p-2 text-xs h-full w-full flex items-center justify-center"
+	                                                            style={{
+	                                                                backgroundColor: colors.background,
+	                                                                borderColor: colors.border,
+	                                                                borderWidth: '1px',
+	                                                                borderStyle: 'solid'
+	                                                            }}
+	                                                        >
+	                                                            <div className="font-medium text-gray-700 text-center">
+	                                                                {formatDuration(totalDuration)}
+	                                                            </div>
+	                                                        </div>
+	                                                    ) : (
                                                         <div className="h-full w-full">
                                                             {/* Empty cell - click anywhere to open full dialog */}
                                                             {isHovered && isEditable && (
