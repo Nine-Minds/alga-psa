@@ -37,8 +37,12 @@ exports.up = async function up(knex) {
   `);
   const tenants = tenantsResult.rows.map(r => r.tenant);
 
-  // Process each tenant separately to ensure CitusDB routes to correct shards
+  // Process each tenant separately to ensure CitusDB routes to correct shards.
+  // We use string interpolation with explicit UUID cast instead of ? parameters
+  // to avoid potential Knex/pg UUID binding issues.
   for (const tenant of tenants) {
+    const tenantStr = String(tenant);
+
     // Step 1: Update entries where user has a timezone set
     await knex.raw(`
       UPDATE time_entries te
@@ -46,13 +50,13 @@ exports.up = async function up(knex) {
         work_timezone = u.timezone,
         work_date = (te.start_time AT TIME ZONE u.timezone)::date
       FROM users u
-      WHERE te.tenant = ?
+      WHERE te.tenant = '${tenantStr}'::uuid
         AND te.tenant = u.tenant
         AND te.user_id = u.user_id
         AND u.timezone IS NOT NULL
         AND te.start_time IS NOT NULL
         AND (te.work_date IS NULL OR te.work_timezone IS NULL)
-    `, [tenant]);
+    `);
 
     // Step 2: Update entries where user has no timezone (use UTC)
     await knex.raw(`
@@ -61,13 +65,13 @@ exports.up = async function up(knex) {
         work_timezone = 'UTC',
         work_date = (te.start_time AT TIME ZONE 'UTC')::date
       FROM users u
-      WHERE te.tenant = ?
+      WHERE te.tenant = '${tenantStr}'::uuid
         AND te.tenant = u.tenant
         AND te.user_id = u.user_id
         AND u.timezone IS NULL
         AND te.start_time IS NOT NULL
         AND (te.work_date IS NULL OR te.work_timezone IS NULL)
-    `, [tenant]);
+    `);
 
     // Step 3: Fallback for entries with start_time but no matching user (use UTC)
     await knex.raw(`
@@ -75,10 +79,10 @@ exports.up = async function up(knex) {
       SET
         work_timezone = 'UTC',
         work_date = (start_time AT TIME ZONE 'UTC')::date
-      WHERE tenant = ?
+      WHERE tenant = '${tenantStr}'::uuid
         AND start_time IS NOT NULL
         AND (work_date IS NULL OR work_timezone IS NULL)
-    `, [tenant]);
+    `);
 
     // Step 4: Final fallback - derive from created_at if start_time is somehow NULL
     await knex.raw(`
@@ -86,9 +90,21 @@ exports.up = async function up(knex) {
       SET
         work_timezone = 'UTC',
         work_date = (created_at AT TIME ZONE 'UTC')::date
-      WHERE tenant = ?
+      WHERE tenant = '${tenantStr}'::uuid
+        AND start_time IS NULL
+        AND created_at IS NOT NULL
         AND (work_date IS NULL OR work_timezone IS NULL)
-    `, [tenant]);
+    `);
+
+    // Step 5: Ultimate fallback for this tenant - use current date
+    await knex.raw(`
+      UPDATE time_entries
+      SET
+        work_timezone = 'UTC',
+        work_date = CURRENT_DATE
+      WHERE tenant = '${tenantStr}'::uuid
+        AND (work_date IS NULL OR work_timezone IS NULL)
+    `);
   }
 
   // Verify no NULLs remain before setting NOT NULL
