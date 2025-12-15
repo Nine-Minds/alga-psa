@@ -80,12 +80,12 @@ exports.up = async function up(knex) {
         AND (work_date IS NULL OR work_timezone IS NULL)
     `, [tenant]);
 
-    // Step 4: Final fallback for entries with NULL start_time (use fixed date)
+    // Step 4: Final fallback - derive from created_at if start_time is somehow NULL
     await knex.raw(`
       UPDATE time_entries
       SET
         work_timezone = 'UTC',
-        work_date = '2025-01-01'::date
+        work_date = (created_at AT TIME ZONE 'UTC')::date
       WHERE tenant = ?
         AND (work_date IS NULL OR work_timezone IS NULL)
     `, [tenant]);
