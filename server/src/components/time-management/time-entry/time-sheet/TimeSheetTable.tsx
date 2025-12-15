@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
@@ -36,7 +36,11 @@ interface TimeSheetTableProps {
     }) => Promise<void>;
 }
 
-const DAYS_PER_PAGE = 7;
+// Fixed widths for layout calculations
+const WORK_ITEM_COLUMN_WIDTH = 180; // Width of the first column (work item names)
+const DAY_COLUMN_WIDTH = 120; // Width of each day column
+const MIN_DAYS_PER_PAGE = 3; // Minimum days to show
+const MAX_DAYS_PER_PAGE = 14; // Maximum days to show
 
 type BillabilityPercentage = 0 | 25 | 50 | 75 | 100;
 
@@ -94,19 +98,62 @@ export function TimeSheetTable({
     const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
     const [quickInputValues, setQuickInputValues] = useState<{ [key: string]: string }>({});
 
+    // Container ref for measuring available width
+    const containerRef = useRef<HTMLDivElement>(null);
+
     // Carousel pagination state
     const [currentPage, setCurrentPage] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [daysPerPage, setDaysPerPage] = useState(7); // Default, will be calculated
+
+    // Calculate days per page based on container width
+    const calculateDaysPerPage = useCallback((containerWidth: number) => {
+        const availableWidth = containerWidth - WORK_ITEM_COLUMN_WIDTH;
+        const calculatedDays = Math.floor(availableWidth / DAY_COLUMN_WIDTH);
+        return Math.max(MIN_DAYS_PER_PAGE, Math.min(MAX_DAYS_PER_PAGE, calculatedDays, dates.length));
+    }, [dates.length]);
+
+    // Set up resize observer to track container width changes
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const updateDaysPerPage = () => {
+            const newDaysPerPage = calculateDaysPerPage(container.offsetWidth);
+            setDaysPerPage(prevDays => {
+                if (prevDays !== newDaysPerPage) {
+                    // Adjust current page if it would now be out of bounds
+                    const newTotalPages = Math.ceil(dates.length / newDaysPerPage);
+                    setCurrentPage(prevPage => Math.min(prevPage, Math.max(0, newTotalPages - 1)));
+                }
+                return newDaysPerPage;
+            });
+        };
+
+        // Initial calculation
+        updateDaysPerPage();
+
+        // Set up resize observer
+        const resizeObserver = new ResizeObserver(() => {
+            updateDaysPerPage();
+        });
+
+        resizeObserver.observe(container);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [calculateDaysPerPage, dates.length]);
 
     // Calculate total pages and visible dates
-    const totalPages = Math.ceil(dates.length / DAYS_PER_PAGE);
+    const totalPages = Math.ceil(dates.length / daysPerPage);
     const canGoBack = currentPage > 0;
     const canGoForward = currentPage < totalPages - 1;
     const hasMultiplePages = totalPages > 1;
 
     // Get visible dates for current page
-    const startIndex = currentPage * DAYS_PER_PAGE;
-    const visibleDates = dates.slice(startIndex, startIndex + DAYS_PER_PAGE);
+    const startIndex = currentPage * daysPerPage;
+    const visibleDates = dates.slice(startIndex, startIndex + daysPerPage);
 
     // Format date range for display
     const getDateRangeDisplay = (): string => {
@@ -187,6 +234,7 @@ export function TimeSheetTable({
 
 
     return (
+        <div ref={containerRef}>
         <ReflectionContainer id="timesheet-table" label="Time Sheet Data Table">
             <React.Fragment>
             <ConfirmationDialog
@@ -758,5 +806,6 @@ export function TimeSheetTable({
         </div>
             </React.Fragment>
         </ReflectionContainer>
+        </div>
     );
 }
