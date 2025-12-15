@@ -47,7 +47,7 @@ export function TimeSheetHeader({
 
     return (
         <>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6">
                 <div className="flex items-center gap-4 min-w-0 shrink-0">
                     <Button
                         id="back-button"

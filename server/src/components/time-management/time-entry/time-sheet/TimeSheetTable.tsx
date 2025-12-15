@@ -728,7 +728,7 @@ export function TimeSheetTable({
 
                 <tfoot>
                     <tr className="bg-gray-100 border-t border-gray-200">
-                        <td className="px-4 py-4 text-sm font-semibold text-gray-900 border-t border-r border-gray-200 sticky left-0 z-10 bg-gray-100">
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 border-t border-r border-gray-200 sticky left-0 z-10 bg-gray-100">
                             Weekly Total
                         </td>
                         {visibleDates.map((date): JSX.Element => {
@@ -742,25 +742,17 @@ export function TimeSheetTable({
                                 return sum + durationInMinutes;
                             }, 0);
 
-                            const totalBillableDuration = entriesForDate.reduce((sum, entry) =>
-                                sum + entry.billable_duration, 0
-                            );
-
                             const isTodayDate = isToday(date);
 
                             return (
                                 <td
                                     key={formatISO(date)}
-                                    className={`px-3 py-4 text-center border-t border-r border-gray-200 last:border-r-0 ${
+                                    className={`px-3 py-3 text-center border-t border-r border-gray-200 last:border-r-0 ${
                                         isTodayDate ? 'text-[rgb(var(--color-primary-500))]' : 'text-gray-500'
                                     }`}
                                 >
-                                    <div className="text-xs text-gray-400 uppercase">Total</div>
                                     <div className={`text-sm font-semibold ${isTodayDate ? 'text-[rgb(var(--color-primary-500))]' : 'text-gray-900'}`}>
                                         {formatDuration(totalDuration)}
-                                    </div>
-                                    <div className={`text-xs ${isTodayDate ? 'text-[rgb(var(--color-primary-400))]' : 'text-gray-400'}`}>
-                                        $ {formatDuration(totalBillableDuration)}
                                     </div>
                                 </td>
                             );
