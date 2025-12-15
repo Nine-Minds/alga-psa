@@ -74,6 +74,7 @@ export function TimeSheet({
 }: TimeSheetProps): JSX.Element {
     const [showIntervals, setShowIntervals] = useState(false);
     const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
+    const [isLoadingTimeSheetData, setIsLoadingTimeSheetData] = useState(true);
     const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
     const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
     const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
@@ -116,49 +117,54 @@ export function TimeSheet({
 
     useEffect(() => {
         const loadData = async () => {
-            const [fetchedTimeEntries, fetchedWorkItems, updatedTimeSheet] = await Promise.all([
-                fetchTimeEntriesForTimeSheet(timeSheet.id),
-                fetchWorkItemsForTimeSheet(timeSheet.id),
-                fetchTimeSheet(timeSheet.id)
-            ]);
+            setIsLoadingTimeSheetData(true);
+            try {
+                const [fetchedTimeEntries, fetchedWorkItems, updatedTimeSheet] = await Promise.all([
+                    fetchTimeEntriesForTimeSheet(timeSheet.id),
+                    fetchWorkItemsForTimeSheet(timeSheet.id),
+                    fetchTimeSheet(timeSheet.id)
+                ]);
 
-            setTimeSheet(updatedTimeSheet);
+                setTimeSheet(updatedTimeSheet);
 
-            let workItems = fetchedWorkItems;
-            if (initialWorkItem && !workItems.some(item => item.work_item_id === initialWorkItem.work_item_id)) {
-                workItems = [...workItems, initialWorkItem];
-            }
-
-            const fetchedWorkItemsByType = workItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
-                if (!acc[item.type]) {
-                    acc[item.type] = [];
+                let workItems = fetchedWorkItems;
+                if (initialWorkItem && !workItems.some(item => item.work_item_id === initialWorkItem.work_item_id)) {
+                    workItems = [...workItems, initialWorkItem];
                 }
-                acc[item.type].push(item);
-                return acc;
-            }, {});
-            setWorkItemsByType(fetchedWorkItemsByType);
 
-            const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
-                const key = `${entry.work_item_id}`;
-                if (!acc[key]) {
-                    acc[key] = [];
-                }
-                acc[key].push({
-                    ...entry,
-                    start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
-                    end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+                const fetchedWorkItemsByType = workItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
+                    if (!acc[item.type]) {
+                        acc[item.type] = [];
+                    }
+                    acc[item.type].push(item);
+                    return acc;
+                }, {});
+                setWorkItemsByType(fetchedWorkItemsByType);
+
+                const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
+                    const key = `${entry.work_item_id}`;
+                    if (!acc[key]) {
+                        acc[key] = [];
+                    }
+                    acc[key].push({
+                        ...entry,
+                        start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
+                        end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+                    });
+                    return acc;
+                }, {});
+
+                workItems.forEach(workItem => {
+                    const key = workItem.work_item_id;
+                    if (!grouped[key]) {
+                        grouped[key] = [];
+                    }
                 });
-                return acc;
-            }, {});
 
-            workItems.forEach(workItem => {
-                const key = workItem.work_item_id;
-                if (!grouped[key]) {
-                    grouped[key] = [];
-                }
-            });
-
-            setGroupedTimeEntries(grouped);
+                setGroupedTimeEntries(grouped);
+            } finally {
+                setIsLoadingTimeSheetData(false);
+            }
 
             if (initialWorkItem && initialDateObj && initialDuration) {
                 let endTime = new Date();
@@ -526,6 +532,7 @@ export function TimeSheet({
                 workItemsByType={workItemsByType}
                 groupedTimeEntries={groupedTimeEntries}
                 isEditable={isEditable}
+                isLoading={isLoadingTimeSheetData}
                 onCellClick={setSelectedCell}
                 onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
                 onQuickAddTimeEntry={handleQuickAddTimeEntry}

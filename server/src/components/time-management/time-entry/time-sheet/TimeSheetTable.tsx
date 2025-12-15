@@ -19,6 +19,7 @@ interface TimeSheetTableProps {
     workItemsByType: Record<string, IExtendedWorkItem[]>;
     groupedTimeEntries: Record<string, ITimeEntryWithWorkItemString[]>;
     isEditable: boolean;
+    isLoading?: boolean;
     onDeleteWorkItem: (workItemId: string) => Promise<void>;
     onCellClick: (params: {
         workItem: IExtendedWorkItem;
@@ -90,6 +91,7 @@ export function TimeSheetTable({
     workItemsByType,
     groupedTimeEntries,
     isEditable,
+    isLoading = false,
     onCellClick,
     onAddWorkItem,
     onWorkItemClick,
@@ -224,6 +226,7 @@ export function TimeSheetTable({
 
     // Check if there are any work items
     const hasWorkItems = Object.values(workItemsByType).some(items => items.length > 0);
+    const lastWorkItemId = Object.values(workItemsByType).flat().at(-1)?.work_item_id;
 
     // Register add work item button for automation
     const { automationIdProps: addWorkItemProps } = useAutomationIdAndRegister<ButtonComponent>({
@@ -336,7 +339,29 @@ export function TimeSheetTable({
                     </tr>
                 </thead>
                 <tbody>
-                    {!hasWorkItems ? (
+                    {isLoading ? (
+                        Array.from({ length: 3 }).map((_, rowIndex) => (
+                            <tr key={`skeleton-${rowIndex}`} className="border-b border-gray-200">
+                                <td className="px-4 py-3 border-b border-r border-gray-200 sticky left-0 z-10 bg-white min-w-[160px]">
+                                    <div className="animate-pulse space-y-2 pr-6">
+                                        <div className="h-3 w-28 bg-gray-200 rounded" />
+                                        <div className="h-3 w-20 bg-gray-200 rounded" />
+                                        <div className="h-4 w-14 bg-gray-200 rounded-full" />
+                                    </div>
+                                </td>
+                                {visibleDates.map((date): JSX.Element => (
+                                    <td
+                                        key={`skeleton-${rowIndex}-${date.toISOString()}`}
+                                        className="px-3 py-3 border-b border-r border-gray-200 last:border-r-0 h-20"
+                                    >
+                                        <div className="h-full w-full flex items-center justify-center">
+                                            <div className="animate-pulse w-12 h-12 bg-gray-200 rounded-lg" />
+                                        </div>
+                                    </td>
+                                ))}
+                            </tr>
+                        ))
+                    ) : !hasWorkItems ? (
                         <tr>
                             <td
                                 colSpan={visibleDates.length + 1}
@@ -368,11 +393,17 @@ export function TimeSheetTable({
                         Object.entries(workItemsByType).map(([type, workItems]): JSX.Element => (
                             <React.Fragment key={type}>
                                 {workItems.map((workItem): JSX.Element => {
+                                    const isLastWorkItemRow = !!lastWorkItemId && workItem.work_item_id === lastWorkItemId;
                                     const entries = groupedTimeEntries[workItem.work_item_id] || [];
                                     return (
-                                        <tr key={`${workItem.work_item_id}-${Math.random()}`} className="border-b border-gray-200">
+                                        <tr
+                                            key={`${workItem.work_item_id}-${Math.random()}`}
+                                            className={isLastWorkItemRow ? '' : 'border-b border-gray-200'}
+                                        >
                                     <td
-                                        className="px-4 py-3 text-sm font-medium text-gray-900 border-b border-r border-gray-200 sticky left-0 z-10 bg-white min-w-[160px] cursor-pointer hover:bg-gray-50 relative"
+                                        className={`px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200 sticky left-0 z-10 bg-white min-w-[160px] cursor-pointer hover:bg-gray-50 relative ${
+                                            isLastWorkItemRow ? '' : 'border-b border-gray-200'
+                                        }`}
                                         onClick={() => onWorkItemClick(workItem)}
                                         data-automation-id={`work-item-${workItem.work_item_id}`}
                                         data-automation-type="work-item-cell"
@@ -454,17 +485,19 @@ export function TimeSheetTable({
                                                             hoveredCell?.date === formatISO(date, { representation: 'date' });
                                             const isTodayDate = isToday(date);
 
-                                            return (
-                                                <td
-                                                    key={formatISO(date)}
-                                                    className={`px-3 py-3 text-sm text-gray-500 cursor-pointer border-b border-r border-gray-200 transition-all relative h-20 ${
-                                                        isHovered && isEditable ? 'bg-gray-50' : ''
-                                                    } hover:bg-gray-50 ${isTodayDate ? 'bg-[rgb(var(--color-primary-50))]/30' : ''}`}
-                                                    data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
-                                                    data-automation-type="time-entry-cell"
-                                                    onMouseEnter={() => isEditable && setHoveredCell({
-                                                        workItemId: workItem.work_item_id,
-                                                        date: formatISO(date, { representation: 'date' })
+	                                            return (
+	                                                <td
+	                                                    key={formatISO(date)}
+	                                                    className={`px-3 py-3 text-sm text-gray-500 cursor-pointer border-r border-gray-200 transition-all relative h-20 ${
+	                                                        isHovered && isEditable ? 'bg-gray-50' : ''
+	                                                    } hover:bg-gray-50 ${isTodayDate ? 'bg-[rgb(var(--color-primary-50))]/30' : ''} ${
+	                                                        isLastWorkItemRow ? '' : 'border-b border-gray-200'
+	                                                    }`}
+	                                                    data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+	                                                    data-automation-type="time-entry-cell"
+	                                                    onMouseEnter={() => isEditable && setHoveredCell({
+	                                                        workItemId: workItem.work_item_id,
+	                                                        date: formatISO(date, { representation: 'date' })
                                                     })}
                                                     onMouseLeave={() => setHoveredCell(null)}
                                                     onClick={() => {
