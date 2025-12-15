@@ -402,8 +402,8 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
       created_at: formatISO(entry.created_at),
       updated_at: formatISO(entry.updated_at),
       // work_date is a DATE column - convert to ISO string (YYYY-MM-DD)
-      work_date: entry.work_date instanceof Date
-        ? entry.work_date.toISOString().slice(0, 10)
+      work_date: (entry.work_date as unknown) instanceof Date
+        ? (entry.work_date as unknown as Date).toISOString().slice(0, 10)
         : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
       work_timezone: entry.work_timezone
     }));

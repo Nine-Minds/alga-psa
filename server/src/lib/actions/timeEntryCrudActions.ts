@@ -747,8 +747,8 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
     // Format work_date properly (DATE column comes back as Date object)
     const result: ITimeEntryWithWorkItem = {
       ...entry,
-      work_date: entry.work_date instanceof Date
-        ? entry.work_date.toISOString().slice(0, 10)
+      work_date: (entry.work_date as unknown) instanceof Date
+        ? (entry.work_date as unknown as Date).toISOString().slice(0, 10)
         : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
       workItem: workItemDetails
     };
