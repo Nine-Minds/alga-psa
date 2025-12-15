@@ -8,8 +8,11 @@
  * - Store time_periods.start_date/end_date as DATE to avoid server timezone ambiguity.
  *
  * Note: CitusDB requires tenant in WHERE clauses for distributed tables to route to correct shards.
- * We iterate through tenants to ensure updates propagate to all shards properly.
+ * We disable transactions so DDL (ADD COLUMN) propagates to shards before DML (UPDATE) runs.
  */
+
+// Disable transaction wrapping - CitusDB DDL needs to commit before DML can see new columns on shards
+exports.config = { transaction: false };
 
 exports.up = async function up(knex) {
   const hasWorkDate = await knex.schema.hasColumn('time_entries', 'work_date');
