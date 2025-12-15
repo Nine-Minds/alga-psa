@@ -7,12 +7,38 @@
  * - Persist work_timezone (IANA tz) used for computation for audit/debug.
  * - Store time_periods.start_date/end_date as DATE to avoid server timezone ambiguity.
  *
- * Note: CitusDB requires tenant in WHERE clauses for distributed tables to route to correct shards.
- * We disable transactions so DDL (ADD COLUMN) propagates to shards before DML (UPDATE) runs.
+ * Note: CitusDB requires special handling for distributed tables:
+ * - Use run_command_on_shards for SET NOT NULL
+ * - Update pg_attribute for coordinator metadata
  */
 
 // Disable transaction wrapping - CitusDB DDL needs to commit before DML can see new columns on shards
 exports.config = { transaction: false };
+
+/**
+ * Check if a table is distributed in Citus.
+ */
+async function isCitusDistributedTable(knex, tableName) {
+  try {
+    const result = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass
+      ) as is_distributed
+    `, [tableName]);
+    return result.rows[0]?.is_distributed === true;
+  } catch (error) {
+    // pg_dist_partition doesn't exist - standard PostgreSQL
+    return false;
+  }
+}
+
+/**
+ * Wait for Citus propagation.
+ */
+async function waitForCitusPropagation(ms, message) {
+  console.log(message);
+  await new Promise(resolve => setTimeout(resolve, ms));
+}
 
 exports.up = async function up(knex) {
   const hasWorkDate = await knex.schema.hasColumn('time_entries', 'work_date');
@@ -110,6 +136,9 @@ exports.up = async function up(knex) {
     `);
   }
 
+  // Wait for Citus to propagate changes across all shards
+  await waitForCitusPropagation(3000, 'Waiting for distributed changes to propagate...');
+
   // Verify no NULLs remain before setting NOT NULL
   const nullCheck = await knex.raw(`
     SELECT COUNT(*) as cnt FROM time_entries
@@ -120,8 +149,48 @@ exports.up = async function up(knex) {
     throw new Error(`Migration failed: ${nullCount} time_entries still have NULL work_date/work_timezone`);
   }
 
-  await knex.raw(`ALTER TABLE time_entries ALTER COLUMN work_date SET NOT NULL`);
-  await knex.raw(`ALTER TABLE time_entries ALTER COLUMN work_timezone SET NOT NULL`);
+  // Check if time_entries is a Citus distributed table
+  const isCitusDistributed = await isCitusDistributedTable(knex, 'time_entries');
+
+  if (isCitusDistributed) {
+    console.log('Detected Citus distributed table, setting NOT NULL on all shards...');
+
+    // Set NOT NULL on all shards first
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'time_entries',
+        $$ALTER TABLE %s ALTER COLUMN work_date SET NOT NULL$$
+      )
+    `);
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'time_entries',
+        $$ALTER TABLE %s ALTER COLUMN work_timezone SET NOT NULL$$
+      )
+    `);
+    console.log('✅ Set NOT NULL on all shards');
+
+    // Update coordinator metadata
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET attnotnull = true
+      WHERE attrelid = 'time_entries'::regclass
+      AND attname = 'work_date'
+      AND attnotnull = false
+    `);
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET attnotnull = true
+      WHERE attrelid = 'time_entries'::regclass
+      AND attname = 'work_timezone'
+      AND attnotnull = false
+    `);
+    console.log('✅ Updated coordinator metadata');
+  } else {
+    // Standard PostgreSQL
+    await knex.raw(`ALTER TABLE time_entries ALTER COLUMN work_date SET NOT NULL`);
+    await knex.raw(`ALTER TABLE time_entries ALTER COLUMN work_timezone SET NOT NULL`);
+  }
 
   // Indexes for common access patterns (include tenant first for shard pruning / multi-tenancy).
   await knex.raw(`
