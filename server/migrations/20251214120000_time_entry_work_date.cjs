@@ -7,8 +7,8 @@
  * - Persist work_timezone (IANA tz) used for computation for audit/debug.
  * - Store time_periods.start_date/end_date as DATE to avoid server timezone ambiguity.
  *
- * Note: CitusDB doesn't allow non-IMMUTABLE functions (like AT TIME ZONE) in CASE/COALESCE
- * within distributed UPDATE queries. We work around this by splitting into multiple simple UPDATEs.
+ * Note: CitusDB requires tenant in WHERE clauses for distributed tables to route to correct shards.
+ * We iterate through tenants to ensure updates propagate to all shards properly.
  */
 
 exports.up = async function up(knex) {
@@ -30,56 +30,76 @@ exports.up = async function up(knex) {
       ALTER COLUMN end_date TYPE date USING ((end_date AT TIME ZONE 'UTC')::date)
   `);
 
-  // Backfill work_date/work_timezone from users.timezone.
-  // Split into separate queries to avoid CitusDB's non-IMMUTABLE function restrictions.
-
-  // Step 1: Update entries where user has a timezone set and start_time exists
-  // start_time is timestamptz, so we convert directly to the user's timezone
-  await knex.raw(`
-    UPDATE time_entries te
-    SET
-      work_timezone = u.timezone,
-      work_date = (te.start_time AT TIME ZONE u.timezone)::date
-    FROM users u
-    WHERE te.tenant = u.tenant
-      AND te.user_id = u.user_id
-      AND u.timezone IS NOT NULL
-      AND te.start_time IS NOT NULL
-      AND (te.work_date IS NULL OR te.work_timezone IS NULL)
+  // Get all tenants with time entries that need updating
+  const tenantsResult = await knex.raw(`
+    SELECT DISTINCT tenant FROM time_entries
+    WHERE work_date IS NULL OR work_timezone IS NULL
   `);
+  const tenants = tenantsResult.rows.map(r => r.tenant);
 
-  // Step 2: Update entries where user has no timezone and start_time exists (use UTC)
-  await knex.raw(`
-    UPDATE time_entries te
-    SET
-      work_timezone = 'UTC',
-      work_date = (te.start_time AT TIME ZONE 'UTC')::date
-    FROM users u
-    WHERE te.tenant = u.tenant
-      AND te.user_id = u.user_id
-      AND u.timezone IS NULL
-      AND te.start_time IS NOT NULL
-      AND (te.work_date IS NULL OR te.work_timezone IS NULL)
-  `);
+  // Process each tenant separately to ensure CitusDB routes to correct shards
+  for (const tenant of tenants) {
+    // Step 1: Update entries where user has a timezone set
+    await knex.raw(`
+      UPDATE time_entries te
+      SET
+        work_timezone = u.timezone,
+        work_date = (te.start_time AT TIME ZONE u.timezone)::date
+      FROM users u
+      WHERE te.tenant = ?
+        AND te.tenant = u.tenant
+        AND te.user_id = u.user_id
+        AND u.timezone IS NOT NULL
+        AND te.start_time IS NOT NULL
+        AND (te.work_date IS NULL OR te.work_timezone IS NULL)
+    `, [tenant]);
 
-  // Step 3: Fallback for entries with start_time but no matching user (use UTC)
-  await knex.raw(`
-    UPDATE time_entries te
-    SET
-      work_timezone = 'UTC',
-      work_date = (te.start_time AT TIME ZONE 'UTC')::date
-    WHERE te.start_time IS NOT NULL
-      AND (te.work_date IS NULL OR te.work_timezone IS NULL)
-  `);
+    // Step 2: Update entries where user has no timezone (use UTC)
+    await knex.raw(`
+      UPDATE time_entries te
+      SET
+        work_timezone = 'UTC',
+        work_date = (te.start_time AT TIME ZONE 'UTC')::date
+      FROM users u
+      WHERE te.tenant = ?
+        AND te.tenant = u.tenant
+        AND te.user_id = u.user_id
+        AND u.timezone IS NULL
+        AND te.start_time IS NOT NULL
+        AND (te.work_date IS NULL OR te.work_timezone IS NULL)
+    `, [tenant]);
 
-  // Step 4: Final fallback for entries with NULL start_time (use CURRENT_DATE)
-  await knex.raw(`
-    UPDATE time_entries te
-    SET
-      work_timezone = 'UTC',
-      work_date = CURRENT_DATE
-    WHERE te.work_date IS NULL OR te.work_timezone IS NULL
+    // Step 3: Fallback for entries with start_time but no matching user (use UTC)
+    await knex.raw(`
+      UPDATE time_entries
+      SET
+        work_timezone = 'UTC',
+        work_date = (start_time AT TIME ZONE 'UTC')::date
+      WHERE tenant = ?
+        AND start_time IS NOT NULL
+        AND (work_date IS NULL OR work_timezone IS NULL)
+    `, [tenant]);
+
+    // Step 4: Final fallback for entries with NULL start_time (use fixed date)
+    await knex.raw(`
+      UPDATE time_entries
+      SET
+        work_timezone = 'UTC',
+        work_date = '2025-01-01'::date
+      WHERE tenant = ?
+        AND (work_date IS NULL OR work_timezone IS NULL)
+    `, [tenant]);
+  }
+
+  // Verify no NULLs remain before setting NOT NULL
+  const nullCheck = await knex.raw(`
+    SELECT COUNT(*) as cnt FROM time_entries
+    WHERE work_date IS NULL OR work_timezone IS NULL
   `);
+  const nullCount = parseInt(nullCheck.rows[0].cnt, 10);
+  if (nullCount > 0) {
+    throw new Error(`Migration failed: ${nullCount} time_entries still have NULL work_date/work_timezone`);
+  }
 
   await knex.raw(`ALTER TABLE time_entries ALTER COLUMN work_date SET NOT NULL`);
   await knex.raw(`ALTER TABLE time_entries ALTER COLUMN work_timezone SET NOT NULL`);
