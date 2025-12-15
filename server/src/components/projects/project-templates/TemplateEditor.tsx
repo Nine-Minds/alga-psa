@@ -400,7 +400,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     setShowTaskForm(true);
   };
 
-  const handleSaveTask = async (taskData: Partial<IProjectTemplateTask>, additionalAgents?: string[]) => {
+  const handleSaveTask = async (
+    taskData: Partial<IProjectTemplateTask>,
+    additionalAgents?: string[],
+    localChecklistItems?: Array<{ id: string; item_name: string; description?: string; completed: boolean; order_number: number; isNew?: boolean }>
+  ) => {
     try {
       let taskId: string;
 
@@ -449,6 +453,72 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             is_primary: false,
           }));
           return [...filtered, ...newAssignments];
+        });
+      }
+
+      // Handle checklist items - diff and apply changes
+      if (localChecklistItems) {
+        const existingItems = checklistItems.filter(c => c.template_task_id === taskId);
+        const existingIds = new Set(existingItems.map(i => i.template_checklist_id));
+        const newItemIds = new Set(localChecklistItems.map(i => i.id));
+        const updatedChecklistItems: IProjectTemplateChecklistItem[] = [];
+
+        // Delete removed items
+        for (const existing of existingItems) {
+          if (!newItemIds.has(existing.template_checklist_id)) {
+            try {
+              await deleteTemplateChecklistItem(existing.template_checklist_id);
+            } catch (err) {
+              console.error('Failed to delete checklist item:', err);
+            }
+          }
+        }
+
+        // Update existing items and create new ones
+        for (const item of localChecklistItems) {
+          if (item.id.startsWith('temp_')) {
+            // New item - create it
+            if (item.item_name.trim()) {
+              try {
+                const created = await addTemplateChecklistItem(taskId, {
+                  item_name: item.item_name.trim(),
+                  description: item.description,
+                  completed: item.completed,
+                });
+                updatedChecklistItems.push(created);
+              } catch (err) {
+                console.error('Failed to create checklist item:', err);
+              }
+            }
+          } else if (existingIds.has(item.id)) {
+            // Existing item - update it
+            const existing = existingItems.find(e => e.template_checklist_id === item.id);
+            if (existing && (
+              existing.item_name !== item.item_name ||
+              existing.completed !== item.completed ||
+              existing.description !== item.description
+            )) {
+              try {
+                const updated = await updateTemplateChecklistItem(item.id, {
+                  item_name: item.item_name.trim(),
+                  completed: item.completed,
+                  description: item.description,
+                });
+                updatedChecklistItems.push(updated);
+              } catch (err) {
+                console.error('Failed to update checklist item:', err);
+                updatedChecklistItems.push(existing); // Keep the old version
+              }
+            } else if (existing) {
+              updatedChecklistItems.push(existing); // No change needed
+            }
+          }
+        }
+
+        // Update local state - remove old items for this task and add updated ones
+        setChecklistItems((prev) => {
+          const otherTaskItems = prev.filter(c => c.template_task_id !== taskId);
+          return [...otherTaskItems, ...updatedChecklistItems];
         });
       }
 
@@ -531,52 +601,6 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   };
 
   // ============================================================
-  // CHECKLIST MANAGEMENT
-  // ============================================================
-
-  const handleAddChecklistItem = async (taskId: string, itemName: string, description?: string) => {
-    try {
-      const newItem = await addTemplateChecklistItem(taskId, { item_name: itemName, description });
-      setChecklistItems((prev) => [...prev, newItem]);
-      return newItem;
-    } catch (error) {
-      toast.error('Failed to add checklist item');
-      console.error(error);
-      throw error;
-    }
-  };
-
-  const handleUpdateChecklistItem = async (
-    checklistId: string,
-    data: { item_name?: string; description?: string; order_number?: number }
-  ) => {
-    try {
-      const updated = await updateTemplateChecklistItem(checklistId, data);
-      setChecklistItems((prev) =>
-        prev.map((item) => (item.template_checklist_id === checklistId ? updated : item))
-      );
-      return updated;
-    } catch (error) {
-      toast.error('Failed to update checklist item');
-      console.error(error);
-      throw error;
-    }
-  };
-
-  const handleDeleteChecklistItem = async (checklistId: string) => {
-    try {
-      await deleteTemplateChecklistItem(checklistId);
-      setChecklistItems((prev) =>
-        prev.filter((item) => item.template_checklist_id !== checklistId)
-      );
-    } catch (error) {
-      toast.error('Failed to delete checklist item');
-      console.error(error);
-      throw error;
-    }
-  };
-
-  // ============================================================
   // STATUS MANAGEMENT
   // ============================================================
 
@@ -646,9 +670,6 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           taskTypes={taskTypes}
           initialStatusMappingId={newTaskStatusMappingId}
           checklistItems={editingTask ? checklistItems.filter(c => c.template_task_id === editingTask.template_task_id) : []}
-          onAddChecklistItem={handleAddChecklistItem}
-          onUpdateChecklistItem={handleUpdateChecklistItem}
-          onDeleteChecklistItem={handleDeleteChecklistItem}
         />
       )}
 

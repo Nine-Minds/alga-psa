@@ -7,7 +7,8 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Plus, Trash2, Edit2, Check, X, CheckSquare, ListTodo } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, CheckSquare, ListTodo, ListChecks } from 'lucide-react';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { TemplateWizardData, TemplateTask, TemplateChecklistItem } from '../TemplateCreationWizard';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
@@ -37,7 +38,6 @@ export function TemplateTasksStep({
     data.phases[0]?.temp_id || null
   );
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [saveAttempted, setSaveAttempted] = useState<Set<string>>(new Set());
 
   // Debug priorities
@@ -81,9 +81,6 @@ export function TemplateTasksStep({
     if (editingTaskId === temp_id) {
       setEditingTaskId(null);
     }
-    if (expandedTaskId === temp_id) {
-      setExpandedTaskId(null);
-    }
   };
 
   const updateTask = (temp_id: string, updates: Partial<TemplateTask>) => {
@@ -99,6 +96,7 @@ export function TemplateTasksStep({
       item_name: '',
       description: '',
       order_number: taskChecklists.length,
+      completed: false,
     };
     updateData({
       checklist_items: [...data.checklist_items, newItem],
@@ -172,7 +170,6 @@ export function TemplateTasksStep({
                 const taskChecklists = data.checklist_items.filter(
                   (c) => c.task_temp_id === task.temp_id
                 );
-                const isExpanded = expandedTaskId === task.temp_id;
 
                 return (
                   <div key={task.temp_id} className="p-4 bg-white border rounded-lg">
@@ -346,6 +343,69 @@ export function TemplateTasksStep({
                           />
                         </div>
 
+                        {/* Checklist Items - Available during editing */}
+                        <div className="border-t pt-3 mt-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold">Checklist</h3>
+                            <ListChecks className="h-5 w-5 text-gray-500" />
+                          </div>
+
+                          <div className="flex flex-col space-y-2 mb-3">
+                            {taskChecklists.map((item) => (
+                              <div
+                                key={item.temp_id}
+                                className="flex items-center gap-2 w-full"
+                              >
+                                <Checkbox
+                                  checked={item.completed}
+                                  onChange={(e) =>
+                                    updateChecklistItem(item.temp_id, {
+                                      completed: e.target.checked,
+                                    })
+                                  }
+                                  className="flex-none"
+                                />
+                                <div className="flex-1">
+                                  <TextArea
+                                    value={item.item_name}
+                                    onChange={(e) =>
+                                      updateChecklistItem(item.temp_id, {
+                                        item_name: e.target.value,
+                                      })
+                                    }
+                                    onBlur={() => {
+                                      // Remove empty items on blur
+                                      if (!item.item_name.trim()) {
+                                        removeChecklistItem(item.temp_id);
+                                      }
+                                    }}
+                                    placeholder="Checklist item"
+                                    className={`w-full ${item.completed ? 'line-through text-gray-500' : ''}`}
+                                    rows={1}
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeChecklistItem(item.temp_id)}
+                                  className="text-red-500 flex-none"
+                                  onMouseDown={(e) => e.preventDefault()} // Prevent blur before click registers
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+
+                          <Button
+                            id={`add-checklist-item-edit-${task.temp_id}`}
+                            type="button"
+                            variant="soft"
+                            onClick={() => addChecklistItem(task.temp_id)}
+                          >
+                            Add an item
+                          </Button>
+                        </div>
+
                         <div>
                           {!task.task_name.trim() && saveAttempted.has(task.temp_id) && (
                             <p className="text-sm text-red-600 mb-2">
@@ -437,62 +497,6 @@ export function TemplateTasksStep({
                               <Trash2 className="w-4 h-4 text-red-600" />
                             </Button>
                           </div>
-                        </div>
-
-                        {/* Checklist section */}
-                        <div className="mt-3 pt-3 border-t">
-                          <Button
-                            id={`toggle-checklist-${task.temp_id}`}
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setExpandedTaskId(isExpanded ? null : task.temp_id)
-                            }
-                          >
-                            <CheckSquare className="w-4 h-4 mr-2" />
-                            Checklist ({taskChecklists.length})
-                          </Button>
-
-                          {isExpanded && (
-                            <div className="mt-2 space-y-2">
-                              {taskChecklists.map((item) => (
-                                <div
-                                  key={item.temp_id}
-                                  className="flex items-center gap-2 pl-4"
-                                >
-                                  <Input
-                                    value={item.item_name}
-                                    onChange={(e) =>
-                                      updateChecklistItem(item.temp_id, {
-                                        item_name: e.target.value,
-                                      })
-                                    }
-                                    placeholder="Checklist item..."
-                                    className="flex-1"
-                                  />
-                                  <Button
-                                    id={`remove-checklist-${item.temp_id}`}
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeChecklistItem(item.temp_id)}
-                                  >
-                                    <Trash2 className="w-4 h-4 text-red-600" />
-                                  </Button>
-                                </div>
-                              ))}
-
-                              <Button
-                                id={`add-checklist-item-${task.temp_id}`}
-                                variant="outline"
-                                size="sm"
-                                onClick={() => addChecklistItem(task.temp_id)}
-                                className="ml-4"
-                              >
-                                <Plus className="w-3 h-3 mr-1" />
-                                Add Item
-                              </Button>
-                            </div>
-                          )}
                         </div>
                       </>
                     )}

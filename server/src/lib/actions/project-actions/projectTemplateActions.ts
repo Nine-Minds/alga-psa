@@ -281,7 +281,8 @@ export async function createTemplateFromProject(
                 template_task_id: newTaskId,
                 item_name: item.item_name,
                 description: item.description,
-                order_number: item.order_number
+                order_number: item.order_number,
+                completed: item.completed ?? false
               });
           }
         }
@@ -739,7 +740,7 @@ export async function applyTemplate(
               item_name: templateItem.item_name,
               description: templateItem.description,
               order_number: templateItem.order_number,
-              completed: false
+              completed: templateItem.completed ?? false
             });
         }
         }
@@ -1134,7 +1135,8 @@ export async function duplicateTemplate(templateId: string): Promise<string> {
                 template_task_id: newTaskId,
                 item_name: item.item_name,
                 description: item.description,
-                order_number: item.order_number
+                order_number: item.order_number,
+                completed: item.completed ?? false
               });
           }
         }
@@ -2039,6 +2041,7 @@ export async function addTemplateChecklistItem(
   data: {
     item_name: string;
     description?: string;
+    completed?: boolean;
   }
 ): Promise<IProjectTemplateChecklistItem> {
   const currentUser = await getCurrentUser();
@@ -2075,7 +2078,8 @@ export async function addTemplateChecklistItem(
         template_task_id: taskId,
         item_name: data.item_name,
         description: data.description || null,
-        order_number: orderNumber
+        order_number: orderNumber,
+        completed: data.completed ?? false
       })
       .returning('*');
 
@@ -2103,6 +2107,7 @@ export async function updateTemplateChecklistItem(
     item_name?: string;
     description?: string;
     order_number?: number;
+    completed?: boolean;
   }
 ): Promise<IProjectTemplateChecklistItem> {
   const currentUser = await getCurrentUser();
@@ -2120,7 +2125,8 @@ export async function updateTemplateChecklistItem(
       .update({
         ...(data.item_name !== undefined && { item_name: data.item_name }),
         ...(data.description !== undefined && { description: data.description }),
-        ...(data.order_number !== undefined && { order_number: data.order_number })
+        ...(data.order_number !== undefined && { order_number: data.order_number }),
+        ...(data.completed !== undefined && { completed: data.completed })
       })
       .returning('*');
 
