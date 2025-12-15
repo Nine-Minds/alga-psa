@@ -372,7 +372,7 @@ export function TimeSheetTable({
                                     return (
                                         <tr key={`${workItem.work_item_id}-${Math.random()}`} className="border-b border-gray-200">
                                     <td
-                                        className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200 sticky left-0 z-10 bg-white min-w-[160px] cursor-pointer hover:bg-gray-50 relative"
+                                        className="px-4 py-3 text-sm font-medium text-gray-900 border-b border-r border-gray-200 sticky left-0 z-10 bg-white min-w-[160px] cursor-pointer hover:bg-gray-50 relative"
                                         onClick={() => onWorkItemClick(workItem)}
                                         data-automation-id={`work-item-${workItem.work_item_id}`}
                                         data-automation-type="work-item-cell"
@@ -457,7 +457,7 @@ export function TimeSheetTable({
                                             return (
                                                 <td
                                                     key={formatISO(date)}
-                                                    className={`px-3 py-3 text-sm text-gray-500 cursor-pointer border-r border-gray-200 transition-all relative h-20 ${
+                                                    className={`px-3 py-3 text-sm text-gray-500 cursor-pointer border-b border-r border-gray-200 transition-all relative h-20 ${
                                                         isHovered && isEditable ? 'bg-gray-50' : ''
                                                     } hover:bg-gray-50 ${isTodayDate ? 'bg-[rgb(var(--color-primary-50))]/30' : ''}`}
                                                     data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
