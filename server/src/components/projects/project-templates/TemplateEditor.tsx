@@ -52,9 +52,7 @@ import {
   removeTemplateStatusMapping,
   reorderTemplateStatusMappings,
   setTaskAdditionalAgents,
-  addTemplateChecklistItem,
-  updateTemplateChecklistItem,
-  deleteTemplateChecklistItem,
+  saveTemplateChecklistItems,
 } from 'server/src/lib/actions/project-actions/projectTemplateActions';
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
@@ -456,69 +454,15 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         });
       }
 
-      // Handle checklist items - diff and apply changes
+      // Handle checklist items - all operations in a single transaction
+      // Note: Items with "temp_" prefix ids are client-generated temporary ids for new items
       if (localChecklistItems) {
-        const existingItems = checklistItems.filter(c => c.template_task_id === taskId);
-        const existingIds = new Set(existingItems.map(i => i.template_checklist_id));
-        const newItemIds = new Set(localChecklistItems.map(i => i.id));
-        const updatedChecklistItems: IProjectTemplateChecklistItem[] = [];
+        const savedItems = await saveTemplateChecklistItems(taskId, localChecklistItems);
 
-        // Delete removed items
-        for (const existing of existingItems) {
-          if (!newItemIds.has(existing.template_checklist_id)) {
-            try {
-              await deleteTemplateChecklistItem(existing.template_checklist_id);
-            } catch (err) {
-              console.error('Failed to delete checklist item:', err);
-            }
-          }
-        }
-
-        // Update existing items and create new ones
-        for (const item of localChecklistItems) {
-          if (item.id.startsWith('temp_')) {
-            // New item - create it
-            if (item.item_name.trim()) {
-              try {
-                const created = await addTemplateChecklistItem(taskId, {
-                  item_name: item.item_name.trim(),
-                  description: item.description,
-                  completed: item.completed,
-                });
-                updatedChecklistItems.push(created);
-              } catch (err) {
-                console.error('Failed to create checklist item:', err);
-              }
-            }
-          } else if (existingIds.has(item.id)) {
-            // Existing item - update it
-            const existing = existingItems.find(e => e.template_checklist_id === item.id);
-            if (existing && (
-              existing.item_name !== item.item_name ||
-              existing.completed !== item.completed ||
-              existing.description !== item.description
-            )) {
-              try {
-                const updated = await updateTemplateChecklistItem(item.id, {
-                  item_name: item.item_name.trim(),
-                  completed: item.completed,
-                  description: item.description,
-                });
-                updatedChecklistItems.push(updated);
-              } catch (err) {
-                console.error('Failed to update checklist item:', err);
-                updatedChecklistItems.push(existing); // Keep the old version
-              }
-            } else if (existing) {
-              updatedChecklistItems.push(existing); // No change needed
-            }
-          }
-        }
-
-        // Update local state - remove old items for this task and add updated ones
+        // Update local state - remove old items for this task and add saved ones
         setChecklistItems((prev) => {
           const otherTaskItems = prev.filter(c => c.template_task_id !== taskId);
-          return [...otherTaskItems, ...updatedChecklistItems];
+          return [...otherTaskItems, ...savedItems];
         });
       }
 

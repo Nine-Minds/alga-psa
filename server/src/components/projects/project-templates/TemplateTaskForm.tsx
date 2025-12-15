@@ -23,14 +23,24 @@ import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 
-/** Local checklist item - unified type for both new and existing items */
+/**
+ * Local checklist item - unified type for both new and existing items.
+ * Used for local state management before saving to the database.
+ */
 export interface LocalChecklistItem {
-  id: string; // template_checklist_id for existing, temp_id for new
+  /**
+   * Item identifier:
+   * - For existing items: the actual `template_checklist_id` UUID from the database
+   * - For new items: a client-generated temporary id with "temp_" prefix (e.g., "temp_1234567890")
+   *   These temp ids are NOT real UUIDs and are replaced with actual UUIDs when saved to the database.
+   */
+  id: string;
   item_name: string;
   description?: string;
   completed: boolean;
   order_number: number;
-  isNew?: boolean; // true for items created in this session
+  /** True for items created in this editing session (not yet saved to DB) */
+  isNew?: boolean;
 }
 
 interface TemplateTaskFormProps {
@@ -414,10 +424,12 @@ export function TemplateTaskForm({
             </div>
 
             {/* Checklist Items - Same pattern as projects */}
+            {/* Note: Items with "temp_" prefix ids are client-generated temporary ids for new items */}
             <div className="border-t pt-4">
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="font-semibold">Checklist</h3>
                 <button
+                  id="toggle-checklist-edit"
                   type="button"
                   onClick={() => setIsEditingChecklist(!isEditingChecklist)}
                   className="text-gray-500 hover:text-gray-700"
@@ -430,17 +442,19 @@ export function TemplateTaskForm({
               <div className="flex flex-col space-y-2 mb-3">
                 {localChecklistItems
                   .sort((a, b) => a.order_number - b.order_number)
-                  .map((item) => (
+                  .map((item, index) => (
                     <div key={item.id} className="flex items-center gap-2 w-full">
                       {isEditingChecklist ? (
                         <>
                           <Checkbox
+                            id={`checklist-item-${index}-completed`}
                             checked={item.completed}
                             onChange={(e) => updateChecklistItem(item.id, 'completed', e.target.checked)}
                             className="flex-none"
                           />
                           <div className="flex-1">
                             <TextArea
+                              id={`checklist-item-${index}-name`}
                               value={item.item_name}
                               onChange={(e) => updateChecklistItem(item.id, 'item_name', e.target.value)}
                               onBlur={() => {
@@ -456,6 +470,7 @@ export function TemplateTaskForm({
                             />
                           </div>
                           <button
+                            id={`checklist-item-${index}-remove`}
                             type="button"
                             onClick={() => removeChecklistItem(item.id)}
                             className="text-red-500 flex-none"
@@ -467,6 +482,7 @@ export function TemplateTaskForm({
                       ) : (
                         <>
                           <Checkbox
+                            id={`checklist-item-${index}-completed`}
                             checked={item.completed}
                             onChange={(e) => updateChecklistItem(item.id, 'completed', e.target.checked)}
                             className="flex-none"
