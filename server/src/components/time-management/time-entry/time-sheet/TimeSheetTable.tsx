@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { Trash, Plus, Check, X, ClipboardList, ArrowRight, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Trash, Plus, Check, X, ClipboardList, ArrowRight } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from 'server/src/interfaces/timeEntry.interfaces';
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { formatISO, parseISO, format, isToday } from 'date-fns';
@@ -12,6 +12,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { TimeSheetDateNavigatorState } from './types';
 
 interface TimeSheetTableProps {
     dates: Date[];
@@ -34,6 +35,7 @@ interface TimeSheetTableProps {
         durationInMinutes: number;
         existingEntry?: ITimeEntryWithWorkItemString;
     }) => Promise<void>;
+    onDateNavigatorChange?: (state: TimeSheetDateNavigatorState) => void;
 }
 
 // Fixed widths for layout calculations
@@ -92,7 +94,8 @@ export function TimeSheetTable({
     onAddWorkItem,
     onWorkItemClick,
     onDeleteWorkItem,
-    onQuickAddTimeEntry
+    onQuickAddTimeEntry,
+    onDateNavigatorChange
 }: TimeSheetTableProps): JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
@@ -171,24 +174,53 @@ export function TimeSheetTable({
         return `${format(firstDate, 'MMM d, yyyy')} - ${format(lastDate, 'MMM d, yyyy')}`;
     };
 
+    const dateRangeDisplay = getDateRangeDisplay();
+
     // Navigation handlers with cross-fade animation
-    const goToPreviousPage = () => {
+    const goToPreviousPage = useCallback(() => {
         if (!canGoBack || isAnimating) return;
         setIsAnimating(true);
         setTimeout(() => {
             setCurrentPage(prev => prev - 1);
             setIsAnimating(false);
         }, 200);
-    };
+    }, [canGoBack, isAnimating]);
 
-    const goToNextPage = () => {
+    const goToNextPage = useCallback(() => {
         if (!canGoForward || isAnimating) return;
         setIsAnimating(true);
         setTimeout(() => {
             setCurrentPage(prev => prev + 1);
             setIsAnimating(false);
         }, 200);
-    };
+    }, [canGoForward, isAnimating]);
+
+    useEffect(() => {
+        if (!onDateNavigatorChange) return;
+
+        onDateNavigatorChange({
+            dateRangeDisplay,
+            canGoBack,
+            canGoForward,
+            hasMultiplePages,
+            currentPage,
+            totalPages,
+            isAnimating,
+            goToPreviousPage,
+            goToNextPage
+        });
+    }, [
+        onDateNavigatorChange,
+        canGoBack,
+        canGoForward,
+        hasMultiplePages,
+        currentPage,
+        totalPages,
+        isAnimating,
+        goToPreviousPage,
+        goToNextPage,
+        dateRangeDisplay
+    ]);
 
     // Check if there are any work items
     const hasWorkItems = Object.values(workItemsByType).some(items => items.length > 0);
@@ -251,77 +283,41 @@ export function TimeSheetTable({
                 confirmLabel="Delete"
             />
 
-            {/* Date Range Navigator */}
-            <div className="flex items-center justify-center mb-4">
-                <div className="inline-flex items-center bg-white border border-gray-200 rounded-lg px-2 py-1.5 shadow-sm">
-                    <button
-                        onClick={goToPreviousPage}
-                        disabled={!canGoBack || isAnimating}
-                        className={`p-1.5 rounded-md transition-colors ${
-                            canGoBack && !isAnimating
-                                ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                : 'text-gray-300 cursor-not-allowed'
-                        }`}
-                        aria-label="Previous week"
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
-
-                    <div className="flex items-center px-3 min-w-[200px] justify-center">
-                        <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                        <span className="text-sm font-medium text-gray-900">
-                            {getDateRangeDisplay()}
-                        </span>
-                    </div>
-
-                    <button
-                        onClick={goToNextPage}
-                        disabled={!canGoForward || isAnimating}
-                        className={`p-1.5 rounded-md transition-colors ${
-                            canGoForward && !isAnimating
-                                ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                : 'text-gray-300 cursor-not-allowed'
-                        }`}
-                        aria-label="Next week"
-                    >
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Page indicator for multi-page timesheets */}
-                {hasMultiplePages && (
-                    <div className="ml-3 text-xs text-gray-500">
-                        Page {currentPage + 1} of {totalPages}
-                    </div>
-                )}
-            </div>
-
-        <div className="overflow-hidden border border-gray-200 rounded-lg" {...tableProps}>
+        <div className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {...tableProps}>
             <div
                 className="transition-opacity duration-200 ease-in-out"
                 style={{ opacity: isAnimating ? 0 : 1 }}
             >
             <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead>
-                    <tr className="bg-white">
-                        <th className="px-4 py-3 border-r border-b border-gray-200 sticky left-0 z-20 bg-white min-w-[160px]">
+                    <tr className="bg-gray-50">
+                        <th
+                            className="px-4 py-3 sticky left-0 z-20 bg-gray-50 min-w-[160px]"
+                            style={{ boxShadow: 'inset -1px 0 0 #e5e7eb, inset 0 -1px 0 #e5e7eb' }}
+                        >
                             <button
                                 {...addWorkItemProps}
                                 onClick={onAddWorkItem}
-                                className="inline-flex items-center px-4 py-2 text-sm font-medium text-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] border-2 border-dashed border-[rgb(var(--color-primary-300))] rounded-lg hover:bg-[rgb(var(--color-primary-100))] hover:border-[rgb(var(--color-primary-400))] transition-colors"
+                                className="inline-flex items-center px-4 py-2 text-sm font-medium text-[rgb(var(--color-primary-500))] bg-white border-2 border-dashed border-[rgb(var(--color-primary-300))] rounded-lg hover:bg-[rgb(var(--color-primary-50))] hover:border-[rgb(var(--color-primary-400))] transition-colors"
                             >
                                 <Plus className="h-4 w-4 mr-1.5" />
                                 Add Item
                             </button>
                         </th>
-                        {visibleDates.map((date): JSX.Element => {
+                        {visibleDates.map((date, index): JSX.Element => {
                             const isTodayDate = isToday(date);
+                            const isLastHeaderCell = index === visibleDates.length - 1;
                             return (
                                 <th
                                     key={date.toISOString()}
-                                    className={`px-4 py-3 text-center border-r border-b border-gray-200 min-w-[120px] ${
+                                    className={`px-4 py-3 text-center min-w-[120px] bg-gray-50 ${
                                         isTodayDate ? 'text-[rgb(var(--color-primary-500))]' : 'text-gray-500'
                                     }`}
+                                    style={{
+                                        boxShadow: isLastHeaderCell
+                                            ? 'inset 0 -1px 0 #e5e7eb'
+                                            : 'inset -1px 0 0 #e5e7eb, inset 0 -1px 0 #e5e7eb'
+                                    }}
                                 >
                                     <div className="text-xs font-medium uppercase tracking-wider">
                                         {format(date, 'EEE')}
@@ -346,26 +342,25 @@ export function TimeSheetTable({
                                 colSpan={visibleDates.length + 1}
                                 className="bg-white h-64"
                             >
-                                <div
-                                    className="sticky left-0 flex flex-col items-center justify-center py-16"
-                                    style={{ width: 'min(100%, 800px)' }}
-                                >
-                                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                                        <ClipboardList className="w-8 h-8 text-gray-400" />
+                                <div className="flex w-full h-full items-center justify-center py-16 px-4">
+                                    <div className="flex flex-col items-center justify-center text-center max-w-md">
+                                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                                            <ClipboardList className="w-8 h-8 text-gray-400" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                            No work items on your time sheet
+                                        </h3>
+                                        <p className="text-gray-500 text-sm mb-4">
+                                            Add a new work item to get started tracking your time for this week.
+                                        </p>
+                                        <button
+                                            onClick={onAddWorkItem}
+                                            className="inline-flex items-center text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] font-medium text-sm"
+                                        >
+                                            Get Started
+                                            <ArrowRight className="w-4 h-4 ml-1" />
+                                        </button>
                                     </div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                        No work items on your time sheet
-                                    </h3>
-                                    <p className="text-gray-500 text-sm mb-4 max-w-sm text-center px-4">
-                                        Add a new work item to get started tracking your time for this week.
-                                    </p>
-                                    <button
-                                        onClick={onAddWorkItem}
-                                        className="inline-flex items-center text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] font-medium text-sm"
-                                    >
-                                        Get Started
-                                        <ArrowRight className="w-4 h-4 ml-1" />
-                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -732,8 +727,8 @@ export function TimeSheetTable({
                 </tbody>
 
                 <tfoot>
-                    <tr className="bg-gray-50 border-t border-gray-200">
-                        <td className="px-4 py-4 text-sm font-semibold text-gray-900 border-r border-gray-200 sticky left-0 z-10 bg-gray-50">
+                    <tr className="bg-gray-100 border-t border-gray-200">
+                        <td className="px-4 py-4 text-sm font-semibold text-gray-900 border-t border-r border-gray-200 sticky left-0 z-10 bg-gray-100">
                             Weekly Total
                         </td>
                         {visibleDates.map((date): JSX.Element => {
@@ -756,7 +751,7 @@ export function TimeSheetTable({
                             return (
                                 <td
                                     key={formatISO(date)}
-                                    className={`px-3 py-4 text-center border-r border-gray-200 ${
+                                    className={`px-3 py-4 text-center border-t border-r border-gray-200 last:border-r-0 ${
                                         isTodayDate ? 'text-[rgb(var(--color-primary-500))]' : 'text-gray-500'
                                     }`}
                                 >
@@ -777,7 +772,7 @@ export function TimeSheetTable({
         </div>
 
         {/* Billable Legend */}
-        <div className="mt-6 p-4 bg-white border border-gray-200 rounded-lg">
+        <div className="mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-sm font-semibold text-gray-900">Billable Legend</h3>

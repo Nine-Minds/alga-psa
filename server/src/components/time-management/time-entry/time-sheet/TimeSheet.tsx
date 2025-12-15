@@ -22,6 +22,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { formatISO, parseISO } from 'date-fns';
 import { TimeSheetTable } from './TimeSheetTable';
 import { TimeSheetHeader } from './TimeSheetHeader';
+import { TimeSheetDateNavigatorState } from './types';
 import { TimeSheetComments } from 'server/src/components/time-management/approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
 import { IntervalSection } from 'server/src/components/time-management/interval-tracking/IntervalSection';
@@ -68,6 +69,7 @@ export function TimeSheet({
     onBack
 }: TimeSheetProps): JSX.Element {
     const [showIntervals, setShowIntervals] = useState(false);
+    const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
     const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
     const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
     const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
@@ -479,6 +481,7 @@ export function TimeSheet({
                 onBack={onBack}
                 showIntervals={showIntervals}
                 onToggleIntervals={() => setShowIntervals(!showIntervals)}
+                dateNavigator={dateNavigator}
             />
 
             {(timeSheet.approval_status === 'CHANGES_REQUESTED' || comments.length > 0) && (
@@ -516,6 +519,7 @@ export function TimeSheet({
                 onCellClick={setSelectedCell}
                 onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
                 onQuickAddTimeEntry={handleQuickAddTimeEntry}
+                onDateNavigatorChange={setDateNavigator}
             onWorkItemClick={(workItem: IExtendedWorkItem) => {
                 openDrawer(
                     <WorkItemDrawer
