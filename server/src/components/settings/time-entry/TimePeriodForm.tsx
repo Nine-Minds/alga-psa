@@ -2,10 +2,10 @@
 'use client';
 
 import React, { useState, useEffect, useReducer } from 'react';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 import { Dialog } from 'server/src/components/ui/Dialog';
-import { Input } from 'server/src/components/ui/Input';
-import { DatePicker } from 'server/src/components/ui/DatePicker';import { Button } from 'server/src/components/ui/Button';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
@@ -13,6 +13,22 @@ import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TimePeriodSuggester } from 'server/src/lib/timePeriodSuggester';
 import { Temporal } from '@js-temporal/polyfill';
+
+// Helper to convert Temporal.PlainDate to Date (for DatePicker)
+function plainDateToDate(plainDate: Temporal.PlainDate | null): Date | undefined {
+    if (!plainDate) return undefined;
+    return new Date(plainDate.year, plainDate.month - 1, plainDate.day);
+}
+
+// Helper to convert Date to Temporal.PlainDate
+function dateToPlainDate(date: Date | undefined): Temporal.PlainDate | null {
+    if (!date) return null;
+    return Temporal.PlainDate.from({
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        day: date.getDate()
+    });
+}
 
 interface TimePeriodFormProps {
     isOpen: boolean;
@@ -40,8 +56,6 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
     interface FormState {
         startDate: Temporal.PlainDate | null;
         endDate: Temporal.PlainDate | null;
-        startDateInput: string;
-        endDateInput: string;
         error: string | null;
     }
 
@@ -49,24 +63,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
     const initialFormState: FormState = {
         startDate: null,
         endDate: null,
-        startDateInput: '',
-        endDateInput: '',
         error: null
-    };
-
-    // Define utility functions
-    const formatDateForInput = (date: Temporal.PlainDate | null): string => {
-        if (!date) return '';
-        return date.toString().split('T')[0];
-    };
-
-    const parseInputToDate = (inputValue: string): Temporal.PlainDate | null => {
-        if (!inputValue) return null;
-        try {
-            return toPlainDate(inputValue);
-        } catch {
-            return null;
-        }
     };
 
     // Define action types
@@ -74,8 +71,8 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         | { type: 'INITIALIZE_EDIT_MODE', payload: { selectedPeriod: ITimePeriodView } }
         | { type: 'INITIALIZE_CREATE_MODE', payload: { settings: ITimePeriodSettings[], existingTimePeriods: ITimePeriodView[] } }
         | { type: 'SET_ERROR', payload: string | null }
-        | { type: 'SET_START_DATE', payload: { date: Temporal.PlainDate | null, input: string } }
-        | { type: 'SET_END_DATE', payload: { date: Temporal.PlainDate | null, input: string } }
+        | { type: 'SET_START_DATE', payload: Temporal.PlainDate | null }
+        | { type: 'SET_END_DATE', payload: Temporal.PlainDate | null }
         | { type: 'RESET' };
 
     // Define the reducer function
@@ -86,13 +83,10 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 return {
                     startDate: toPlainDate(period.start_date),
                     endDate: period.end_date ? toPlainDate(period.end_date) : null,
-                    startDateInput: formatDateForInput(toPlainDate(period.start_date)),
-                    endDateInput: formatDateForInput(period.end_date ? toPlainDate(period.end_date) : null),
                     error: null
                 };
             case 'INITIALIZE_CREATE_MODE':
                 const { settings, existingTimePeriods } = action.payload;
-                // Convert view types to model types for the suggester
                 // Convert view types to model types for the suggester
                 // If end_date is null/undefined, use start_date as fallback to satisfy ITimePeriod interface
                 const modelPeriods = existingTimePeriods.map(period => {
@@ -105,21 +99,19 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 });
                 // Get suggestion for new time period
                 const suggestion = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
-                
+
                 if (!suggestion.success || !suggestion.data) {
                     return {
                         ...initialFormState,
                         error: suggestion.error || 'Failed to suggest a new time period'
                     };
                 }
-                
+
                 const { start_date: suggestedStart, end_date: suggestedEnd } = suggestion.data;
-                
+
                 return {
                     startDate: toPlainDate(suggestedStart),
                     endDate: suggestedEnd ? toPlainDate(suggestedEnd) : null,
-                    startDateInput: formatDateForInput(toPlainDate(suggestedStart)),
-                    endDateInput: suggestedEnd ? formatDateForInput(toPlainDate(suggestedEnd)) : '',
                     error: null
                 };
             case 'SET_ERROR':
@@ -130,14 +122,12 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             case 'SET_START_DATE':
                 return {
                     ...state,
-                    startDate: action.payload.date,
-                    startDateInput: action.payload.input
+                    startDate: action.payload
                 };
             case 'SET_END_DATE':
                 return {
                     ...state,
-                    endDate: action.payload.date,
-                    endDateInput: action.payload.input
+                    endDate: action.payload
                 };
             case 'RESET':
                 return initialFormState;
@@ -148,7 +138,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
 
     // Use the reducer
     const [formState, dispatch] = useReducer(formReducer, initialFormState);
-    const { startDate, endDate, startDateInput, endDateInput, error } = formState;
+    const { startDate, endDate, error } = formState;
 
     // Additional state that doesn't need to be part of the reducer
     const [override, setOverride] = useState<boolean>(false);
@@ -176,82 +166,25 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         }
     }, [mode, selectedPeriod, settings, existingTimePeriods]);
 
-    const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        dispatch({
-            type: 'SET_START_DATE',
-            payload: {
-                date: startDate, // Keep the current date object
-                input: e.target.value // Update only the input string
-            }
-        });
-    };
+    // Handle start date change from DatePicker
+    const handleStartDateChange = (date: Date | undefined) => {
+        const newStartDate = dateToPlainDate(date);
+        dispatch({ type: 'SET_START_DATE', payload: newStartDate });
 
-    const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        dispatch({
-            type: 'SET_END_DATE',
-            payload: {
-                date: endDate, // Keep the current date object
-                input: e.target.value // Update only the input string
-            }
-        });
-    };
-
-    const handleStartDateBlur = () => {
-        const newStartDate = parseInputToDate(startDateInput);
-
+        // Auto-calculate end date if not in override mode
         if (settings && !override && newStartDate) {
             try {
                 const newEndDate = TimePeriodSuggester.calculateEndDate(newStartDate, settings[0]);
-                dispatch({
-                    type: 'SET_START_DATE',
-                    payload: {
-                        date: newStartDate,
-                        input: startDateInput
-                    }
-                });
-                dispatch({
-                    type: 'SET_END_DATE',
-                    payload: {
-                        date: newEndDate,
-                        input: formatDateForInput(newEndDate)
-                    }
-                });
+                dispatch({ type: 'SET_END_DATE', payload: newEndDate });
             } catch {
-                dispatch({
-                    type: 'SET_START_DATE',
-                    payload: {
-                        date: newStartDate,
-                        input: startDateInput
-                    }
-                });
-                dispatch({
-                    type: 'SET_END_DATE',
-                    payload: {
-                        date: null,
-                        input: ''
-                    }
-                });
+                dispatch({ type: 'SET_END_DATE', payload: null });
             }
-        } else {
-            dispatch({
-                type: 'SET_START_DATE',
-                payload: {
-                    date: newStartDate,
-                    input: startDateInput
-                }
-            });
         }
     };
-    
-    const handleEndDateBlur = () => {
-        const newEndDate = parseInputToDate(endDateInput);
-        dispatch({
-            type: 'SET_END_DATE',
-            payload: {
-                date: newEndDate,
-                input: endDateInput
-            }
-        });
+
+    // Handle end date change from DatePicker
+    const handleEndDateChange = (date: Date | undefined) => {
+        dispatch({ type: 'SET_END_DATE', payload: dateToPlainDate(date) });
     };
 
     const handleSubmit = async () => {
@@ -315,10 +248,10 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
 
             let updatedPeriod;
             if (mode === 'edit' && selectedPeriod?.period_id) {
-                // Update existing period
+                // Update existing period - pass string dates (server converts to Temporal)
                 const modelPeriod = await updateTimePeriod(selectedPeriod.period_id, {
-                    start_date: startDate,
-                    end_date: endDate!
+                    start_date: startDate.toString(),
+                    end_date: endDate!.toString()
                 });
                 // Convert model type to view type
                 updatedPeriod = {
@@ -327,10 +260,10 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                     end_date: modelPeriod.end_date.toString()
                 };
             } else {
-                // Create new period
+                // Create new period - pass string dates (server converts to Temporal)
                 const modelPeriod = await createTimePeriod({
-                    start_date: startDate,
-                    end_date: endDate!
+                    start_date: startDate.toString(),
+                    end_date: endDate!.toString()
                 });
                 // Convert model type to view type
                 updatedPeriod = {
@@ -401,14 +334,13 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                             />
                         </div>
                         <div className="mb-4">
-                            <Label htmlFor="startDate">Start Date</Label>
-                            <Input
-                                type="date"
-                                id="startDate"
-                                value={startDateInput}
+                            <Label htmlFor="time-period-start-date-picker">Start Date</Label>
+                            <DatePicker
+                                id="time-period-start-date-picker"
+                                value={plainDateToDate(startDate)}
                                 onChange={handleStartDateChange}
-                                onBlur={handleStartDateBlur}
-                                readOnly={!override}
+                                disabled={!override}
+                                placeholder="Select start date"
                             />
                         </div>
                         <div className="mb-4">
@@ -419,28 +351,20 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                                     onChange={(e) => {
                                         setNoEndDate(e.target.checked);
                                         if (e.target.checked) {
-                                            dispatch({
-                                                type: 'SET_END_DATE',
-                                                payload: {
-                                                    date: null,
-                                                    input: ''
-                                                }
-                                            });
+                                            dispatch({ type: 'SET_END_DATE', payload: null });
                                         }
                                     }}
                                 />
                             </div>
                             {!noEndDate && (
                                 <>
-                                    <Label htmlFor="endDate">End Date</Label>
-                                    <Input
-                                        type="date"
-                                        id="endDate"
-                                        value={endDateInput}
+                                    <Label htmlFor="time-period-end-date-picker">End Date</Label>
+                                    <DatePicker
+                                        id="time-period-end-date-picker"
+                                        value={plainDateToDate(endDate)}
                                         onChange={handleEndDateChange}
-                                        onBlur={handleEndDateBlur}
-                                        readOnly={!override}
-                                        placeholder=""
+                                        disabled={!override}
+                                        placeholder="Select end date"
                                     />
                                 </>
                             )}

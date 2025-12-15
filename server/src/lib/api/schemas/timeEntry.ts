@@ -86,6 +86,8 @@ export const timeEntryResponseSchema = z.object({
   work_item_type: workItemTypeSchema,
   start_time: z.string().datetime(),
   end_time: z.string().datetime(),
+  work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  work_timezone: z.string().optional(),
   billable_duration: z.number(), // in minutes
   notes: z.string().nullable(),
   user_id: uuidSchema,

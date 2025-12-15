@@ -16,6 +16,15 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Temporal } from '@js-temporal/polyfill';
+
+// Helper to get the last inclusive day from an exclusive end_date
+// end_date is the day AFTER the period ends (exclusive boundary)
+function getLastInclusiveDay(exclusiveEndDate: string): string {
+  const endDate = Temporal.PlainDate.from(exclusiveEndDate);
+  const lastDay = endDate.subtract({ days: 1 });
+  return lastDay.toString();
+}
 
 const TimePeriodList: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -97,7 +106,8 @@ const TimePeriodList: React.FC = () => {
     {
       title: 'End Date',
       dataIndex: 'end_date',
-      render: (value) => value.slice(0, 10)
+      // Show the last inclusive day (end_date is exclusive - the day AFTER the period)
+      render: (value) => getLastInclusiveDay(value)
     },
     {
       title: 'Actions',

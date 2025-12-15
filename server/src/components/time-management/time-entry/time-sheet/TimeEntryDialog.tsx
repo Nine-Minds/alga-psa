@@ -78,8 +78,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   // Convert string dates to Temporal.PlainDate for internal use
   const timePeriod: ITimePeriod = {
     ...props.timePeriod,
-    start_date: Temporal.PlainDate.from(new Date(props.timePeriod.start_date).toISOString().split('T')[0]),
-    end_date: Temporal.PlainDate.from(new Date(props.timePeriod.end_date).toISOString().split('T')[0])
+    start_date: Temporal.PlainDate.from(props.timePeriod.start_date.slice(0, 10)),
+    end_date: Temporal.PlainDate.from(props.timePeriod.end_date.slice(0, 10))
   };
 
   const lastNoteInputRef = useRef<HTMLInputElement>(null);

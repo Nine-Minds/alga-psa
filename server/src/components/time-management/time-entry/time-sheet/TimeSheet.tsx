@@ -43,15 +43,19 @@ interface TimeSheetProps {
 
 import { Temporal } from '@js-temporal/polyfill';
 
+function parseLocalDate(dateStr: string): Date {
+    const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
 function getDatesInPeriod(timePeriod: ITimePeriodView): Date[] {
     const dates: Date[] = [];
     let currentDate = Temporal.PlainDate.from(timePeriod.start_date);
     const endDate = Temporal.PlainDate.from(timePeriod.end_date);
 
     while (Temporal.PlainDate.compare(currentDate, endDate) < 0) {
-        // Convert PlainDate to Date at midnight UTC
-        const dateStr = `${currentDate.toString()}T00:00:00Z`;
-        dates.push(new Date(dateStr));
+        // Convert PlainDate to a local Date at midnight to avoid UTC offset drift in the UI.
+        dates.push(new Date(currentDate.year, currentDate.month - 1, currentDate.day));
         currentDate = currentDate.add({ days: 1 });
     }
     return dates;
@@ -182,7 +186,7 @@ export function TimeSheet({
 
                 setSelectedCell({
                     workItem: initialWorkItem,
-                    date: formatISO(initialDateObj),
+                    date: formatISO(initialDateObj, { representation: 'date' }),
                     entries: grouped[initialWorkItem.work_item_id] || [],
                     defaultStartTime: formatISO(startTime),
                     defaultEndTime: formatISO(endTime)
@@ -201,8 +205,10 @@ export function TimeSheet({
     }) => {
         const { workItem, date, durationInMinutes, existingEntry } = params;
         
-        // Set start time to 8 AM on the selected date
-        const startTime = parseISO(date);
+        const workDate = date.slice(0, 10);
+
+        // Set start time to 8 AM on the selected date (local time)
+        const startTime = parseLocalDate(workDate);
         startTime.setHours(8, 0, 0, 0);
         
         // Calculate end time based on duration
@@ -210,7 +216,11 @@ export function TimeSheet({
         
         // Get entries for this date to check for overlaps
         const entriesForDate = (groupedTimeEntries[workItem.work_item_id] || [])
-            .filter(entry => parseISO(entry.start_time).toDateString() === startTime.toDateString());
+            .filter(entry => {
+                const entryWorkDate = entry.work_date?.slice(0, 10);
+                if (entryWorkDate) return entryWorkDate === workDate;
+                return parseISO(entry.start_time).toDateString() === startTime.toDateString();
+            });
         
         // If there are existing entries for this date, start after the last one
         if (entriesForDate.length > 0) {
@@ -350,12 +360,12 @@ export function TimeSheet({
       }
       
       currentDate = timeSheet.time_period ?
-        new Date(timeSheet.time_period.start_date) :
+        parseLocalDate(timeSheet.time_period.start_date) :
         new Date();
     } else {
       // For other work items, set reasonable defaults
       currentDate = timeSheet.time_period ?
-        new Date(timeSheet.time_period.start_date) :
+        parseLocalDate(timeSheet.time_period.start_date) :
         new Date();
       defaultStartTime = new Date(currentDate);
       defaultStartTime.setHours(8, 0, 0, 0); // 8:00 AM
@@ -576,7 +586,7 @@ export function TimeSheet({
                     onClose={() => setSelectedCell(null)}
                     onSave={handleSaveTimeEntry}
                     workItem={selectedCell.workItem}
-                    date={parseISO(selectedCell.date)}
+                    date={parseLocalDate(selectedCell.date)}
                     existingEntries={selectedCell.entries.map((entry): ITimeEntryWithWorkItem => ({
                         ...entry,
                     }))}
@@ -600,7 +610,8 @@ export function TimeSheet({
                         if (selectedCell) {
                             const updatedEntries = entries.filter(entry => 
                                 entry.work_item_id === selectedCell.workItem.work_item_id &&
-                                parseISO(entry.start_time).toDateString() === parseISO(selectedCell.date).toDateString()
+                                (entry.work_date?.slice(0, 10) === selectedCell.date ||
+                                  parseISO(entry.start_time).toDateString() === parseLocalDate(selectedCell.date).toDateString())
                             );
                             setSelectedCell(prev => prev ? {
                                 ...prev,

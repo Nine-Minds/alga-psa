@@ -232,9 +232,12 @@ export function TimeSheetTable({
                                         )}
                                     </td>
                                         {dates.map((date): JSX.Element => {
-                                            const dayEntries = entries.filter(entry =>
-                                                parseISO(entry.start_time).toDateString() === date.toDateString()
-                                            );
+                                            const dateKey = formatISO(date, { representation: 'date' });
+                                            const dayEntries = entries.filter(entry => {
+                                                const entryWorkDate = entry.work_date?.slice(0, 10);
+                                                if (entryWorkDate) return entryWorkDate === dateKey;
+                                                return parseISO(entry.start_time).toDateString() === date.toDateString();
+                                            });
                                             
                                             const totalDuration = dayEntries.reduce((sum, entry) => {
                                                 const start = parseISO(entry.start_time);
@@ -257,21 +260,21 @@ export function TimeSheetTable({
                                             ) as BillabilityPercentage;
 
                                             const colors = billabilityColorScheme[billabilityTier];
-                                            const cellKey = `${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`;
+                                            const cellKey = `${workItem.work_item_id}-${dateKey}`;
                                             const isHovered = hoveredCell?.workItemId === workItem.work_item_id && 
-                                                            hoveredCell?.date === formatISO(date, { representation: 'date' });
+                                                            hoveredCell?.date === dateKey;
 
                                             return (
                                                 <td
-                                                    key={formatISO(date)}
+                                                    key={dateKey}
                                                     className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer border transition-all relative h-20 ${
                                                         isHovered && isEditable ? 'bg-gray-50' : ''
                                                     } hover:bg-gray-50`}
-                                                    data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
+                                                    data-automation-id={`time-cell-${workItem.work_item_id}-${dateKey}`}
                                                     data-automation-type="time-entry-cell"
                                                     onMouseEnter={() => isEditable && setHoveredCell({ 
                                                         workItemId: workItem.work_item_id, 
-                                                        date: formatISO(date, { representation: 'date' }) 
+                                                        date: dateKey
                                                     })}
                                                     onMouseLeave={() => setHoveredCell(null)}
                                                     onClick={() => {
@@ -308,7 +311,7 @@ export function TimeSheetTable({
 
                                                         onCellClick({
                                                             workItem,
-                                                            date: formatISO(date),
+                                                            date: dateKey,
                                                             entries: dayEntries,
                                                             defaultStartTime: startTime ? formatISO(startTime) : undefined,
                                                             defaultEndTime: endTime ? formatISO(endTime) : undefined
@@ -414,7 +417,7 @@ export function TimeSheetTable({
                                                                                     // Create the time entry directly without opening dialog
                                                                                     await onQuickAddTimeEntry({
                                                                                         workItem,
-                                                                                        date: formatISO(date),
+                                                                                        date: dateKey,
                                                                                         durationInMinutes,
                                                                                         existingEntry
                                                                                     });
@@ -481,7 +484,7 @@ export function TimeSheetTable({
                                                                             try {
                                                                                 await onQuickAddTimeEntry({
                                                                                     workItem,
-                                                                                    date: formatISO(date),
+                                                                                    date: dateKey,
                                                                                     durationInMinutes,
                                                                                     existingEntry
                                                                                 });
@@ -538,8 +541,13 @@ export function TimeSheetTable({
                     <tr className="shadow-[0px_-4px_6px_rgba(var(--color-border-200),0.3)]">
                         <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r z-10 w-1/5 min-w-[250px] shadow-[4px_0_6px_rgba(var(--color-border-200),0.3)] sticky left-0 bg-white">Total</td>
                         {dates.map((date): JSX.Element => {
+                            const dateKey = formatISO(date, { representation: 'date' });
                             const entriesForDate = Object.values(groupedTimeEntries).flat()
-                                .filter((entry) => parseISO(entry.start_time).toDateString() === date.toDateString());
+                                .filter((entry) => {
+                                    const entryWorkDate = entry.work_date?.slice(0, 10);
+                                    if (entryWorkDate) return entryWorkDate === dateKey;
+                                    return parseISO(entry.start_time).toDateString() === date.toDateString();
+                                });
                             
                             const totalDuration = entriesForDate.reduce((sum, entry) => {
                                 const start = parseISO(entry.start_time);
@@ -553,7 +561,7 @@ export function TimeSheetTable({
                             );
                             
                             return (
-                                <td key={formatISO(date)} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r">
+                                <td key={dateKey} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r">
                                     <div>{`Total: ${formatDuration(totalDuration)}`}</div>
                                     <div>{`Billable: ${formatDuration(totalBillableDuration)}`}</div>
                                 </td>

@@ -182,18 +182,21 @@ const TimePeriodSettings: React.FC = () => {
             <AlertTitle>Understanding Time Period Settings</AlertTitle>
             <AlertDescription>
               <p className="text-xs mb-1">
-                You can define multiple active settings to create complex billing cycles. For example, to set up bi-monthly periods (1st-15th (eod) and 16th-End of Month):
+                You can define multiple active settings to create complex billing cycles. End Day is the last day included in the period.
+              </p>
+              <p className="text-xs mb-1">
+                For example, to set up semi-monthly periods (1st–15th and 16th–End of Month):
               </p>
               <ul className="list-disc list-inside text-xs mt-1 space-y-1">
                 <li>
-                  <strong>Setting 1:</strong> Frequency: 1, Unit: Month, Start Day: 1, End Day: 16
+                  <strong>Setting 1:</strong> Start Day: 1, End Day: 15 → Period covers 1st through 15th
                 </li>
                 <li>
-                  <strong>Setting 2:</strong> Frequency: 1, Unit: Month, Start Day: 16, End Day: End of month (select checkbox)
+                  <strong>Setting 2:</strong> Start Day: 16, End Day: End of month → Period covers 16th through last day
                 </li>
               </ul>
               <p className="text-xs mt-1">
-                The system uses these settings to suggest and generate time periods for billing. Ensure your settings cover the entire desired cycle without gaps or overlaps based on their effective dates and frequency rules.
+                The system uses these settings to suggest and generate time periods. Ensure your settings cover the entire cycle without gaps.
               </p>
             </AlertDescription>
           </Alert>
