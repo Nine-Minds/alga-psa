@@ -353,10 +353,11 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         }
         oldDuration = originalEntryForUpdate.billable_duration || 0;
 
-        // Update existing entry
+        // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
+        const { tenant: _tenant, ...updateData } = cleanedEntry;
         const [updated] = await trx('time_entries')
           .where({ entry_id, tenant }) // Ensure tenant match
-          .update(cleanedEntry)
+          .update(updateData)
           .returning('*');
 
         if (!updated) {
