@@ -150,6 +150,7 @@ function getCurrentDate(): Temporal.PlainDate {
 }
 
 // Internal helper: fetch all time periods using provided transaction (for use within transactions)
+// Note: TimePeriod.getAll() internally filters by tenant via getCurrentTenantId()
 async function fetchAllTimePeriodsWithTrx(trx: Knex | Knex.Transaction): Promise<ITimePeriodView[]> {
   const timePeriods = await TimePeriod.getAll(trx);
 
@@ -471,7 +472,19 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
   });
 }
 
-export async function createNextTimePeriod(settings: ITimePeriodSettings[], daysThreshold: number = 5): Promise<ITimePeriod | null> {
+/**
+ * Creates the next time period(s) based on settings, filling any gaps up to the threshold.
+ *
+ * This function manages its own transaction internally to ensure atomicity - either all
+ * periods are created or none are. It uses createTenantKnex() to get a pooled connection.
+ *
+ * @param settings - Time period settings to use for generation
+ * @param daysThreshold - How many days ahead to create periods (default: 5)
+ */
+export async function createNextTimePeriod(
+  settings: ITimePeriodSettings[],
+  daysThreshold: number = 5
+): Promise<ITimePeriod | null> {
   // Safety limit to prevent infinite loops (max 1 year of weekly periods)
   const MAX_PERIODS_PER_RUN = 52;
 
@@ -532,26 +545,26 @@ export async function createNextTimePeriod(settings: ITimePeriodSettings[], days
       }
 
       // Loop to fill any gaps - keep creating periods until we're caught up
-      for (let i = 0; i < MAX_PERIODS_PER_RUN; i++) {
-        if (!latestEndDate) break;
-
+      // Note: latestEndDate is always set after bootstrapping, but we keep the null check
+      // as defensive programming in case the loop is entered without existing periods
+      for (let i = 0; i < MAX_PERIODS_PER_RUN && latestEndDate; i++) {
         const newStartDate = latestEndDate;
 
-        // Check if we're within the threshold days of the new period
-        // Calculate actual days difference (positive if newStartDate is in future)
-        const daysUntilStart = newStartDate.since(currentDate, { largestUnit: 'day' }).days;
+        // Calculate days from today to the next period's start
+        // Positive = future, negative = past (gap that needs filling)
+        const daysFromToday = newStartDate.since(currentDate, { largestUnit: 'day' }).days;
 
         // Stop if the next period's start date is too far in the future
-        if (daysUntilStart > daysThreshold) {
+        if (daysFromToday > daysThreshold) {
           if (createdPeriods.length === 0) {
-            logger.debug(`Not creating new period: ${daysUntilStart} days until start date exceeds threshold of ${daysThreshold} days`);
+            logger.debug(`Not creating new period: next start date is ${daysFromToday} days from today (threshold: ${daysThreshold})`);
           } else {
-            logger.info(`Stopped after creating ${createdPeriods.length} period(s). Next period would start in ${daysUntilStart} days (threshold: ${daysThreshold})`);
+            logger.info(`Stopped after creating ${createdPeriods.length} period(s). Next start date is ${daysFromToday} days from today (threshold: ${daysThreshold})`);
           }
           break;
         }
 
-        logger.debug(`Creating period ${createdPeriods.length + 1}: ${daysUntilStart} days until start, last period ends: ${latestEndDate}`);
+        logger.debug(`Creating period ${createdPeriods.length + 1}: start date ${daysFromToday} days from today, last period ends: ${latestEndDate}`);
 
         // Use TimePeriodSuggester to create the new period
         const newPeriodResult = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
