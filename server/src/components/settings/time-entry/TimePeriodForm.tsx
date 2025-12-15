@@ -334,9 +334,9 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                             />
                         </div>
                         <div className="mb-4">
-                            <Label htmlFor="startDate">Start Date</Label>
+                            <Label htmlFor="time-period-start-date-picker">Start Date</Label>
                             <DatePicker
-                                id="startDate"
+                                id="time-period-start-date-picker"
                                 value={plainDateToDate(startDate)}
                                 onChange={handleStartDateChange}
                                 disabled={!override}
@@ -358,9 +358,9 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                             </div>
                             {!noEndDate && (
                                 <>
-                                    <Label htmlFor="endDate">End Date</Label>
+                                    <Label htmlFor="time-period-end-date-picker">End Date</Label>
                                     <DatePicker
-                                        id="endDate"
+                                        id="time-period-end-date-picker"
                                         value={plainDateToDate(endDate)}
                                         onChange={handleEndDateChange}
                                         disabled={!override}
