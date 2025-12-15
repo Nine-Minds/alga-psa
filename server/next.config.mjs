@@ -583,7 +583,8 @@ const nextConfig = {
         config.plugins = config.plugins || [];
         config.plugins.push(
           new webpack.NormalModuleReplacementPlugin(
-            /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+            // Removed (.*) prefix - was causing catastrophic backtracking on large strings
+            /(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
             path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
           )
         );
