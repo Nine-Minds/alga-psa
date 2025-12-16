@@ -6,6 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, Trash2, Users, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { StepProps } from '../types';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { getAvailableRoles, addSingleTeamMember } from '@/lib/actions/onboarding-actions/onboardingActions';
@@ -231,36 +232,26 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
       {/* License Status Display */}
       {!isLoadingLicense && licenseInfo && (
-        <div className={`rounded-md border p-4 ${
-          licenseInfo.allowed 
-            ? 'bg-blue-50 border-blue-200' 
-            : 'bg-red-50 border-red-200'
-        }`}>
-          <div className="flex items-center gap-2">
-            {licenseInfo.allowed ? (
-              <Users className="w-5 h-5 text-blue-600" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-red-600" />
-            )}
-            <div className="flex-1">
-              <div className={`text-sm font-medium ${
-                licenseInfo.allowed ? 'text-blue-800' : 'text-red-800'
-              }`}>
-                {licenseInfo.limit === Infinity 
-                  ? `Users: ${licenseInfo.current} (No limit)` 
-                  : `Users: ${licenseInfo.current}/${licenseInfo.limit}`
-                }
-              </div>
-              {licenseInfo.message && (
-                <div className={`text-xs ${
-                  licenseInfo.allowed ? 'text-blue-600' : 'text-red-600'
-                }`}>
-                  {licenseInfo.message}
-                </div>
-              )}
+        <Alert variant={licenseInfo.allowed ? "info" : "destructive"}>
+          {licenseInfo.allowed ? (
+            <Users className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
+          )}
+          <AlertDescription>
+            <div className="font-medium">
+              {licenseInfo.limit === Infinity
+                ? `Users: ${licenseInfo.current} (No limit)`
+                : `Users: ${licenseInfo.current}/${licenseInfo.limit}`
+              }
             </div>
-          </div>
-        </div>
+            {licenseInfo.message && (
+              <div className="text-xs mt-1">
+                {licenseInfo.message}
+              </div>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
       {data.teamMembers.map((member, index) => {
@@ -444,11 +435,11 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         </div>
       )}
 
-      <div className="rounded-md bg-blue-50 p-4 space-y-2">
-        <p className="text-sm text-blue-800">
+      <Alert variant="info">
+        <AlertDescription>
           <span className="font-semibold">Optional:</span> You can skip this step and invite team members later from the settings page.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

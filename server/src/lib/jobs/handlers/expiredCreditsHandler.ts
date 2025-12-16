@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex } from 'server/src/lib/db';
+import { runWithTenant } from 'server/src/lib/db';
+import { getConnection } from 'server/src/lib/db/db';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 
@@ -20,55 +21,54 @@ export interface ExpiredCreditsJobData extends Record<string, unknown> {
  */
 export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promise<void> {
   const { tenantId, clientId } = data;
-  
+
   if (!tenantId) {
     throw new Error('Tenant ID is required for expired credits job');
   }
-  
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-  
-  console.log(`Processing expired credits for tenant ${tenant}${clientId ? ` and client ${clientId}` : ''}`);
-  
-  try {
-    await knex.transaction(async (trx: Knex.Transaction) => {
-      // Ensure tenant/user context is available for database triggers and audit logging
-      await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
-      await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
 
-      // Get current date for expiration check
-      const now = new Date().toISOString();
-      
-      // Find credits that have expired but are not yet marked as expired
-      let query = trx('credit_tracking')
-        .where('tenant', tenant)
-        .where('is_expired', false)
-        .whereNotNull('expiration_date')
-        .where('expiration_date', '<', now)
-        .where('remaining_amount', '>', 0);
-      
-      // Add client filter if provided
-      if (clientId) {
-        query = query.where('client_id', clientId);
-      }
-      
-      const expiredCredits: ICreditTracking[] = await query;
-      
-      console.log(`Found ${expiredCredits.length} expired credits to process`);
-      
-      // Process each expired credit
-      for (const credit of expiredCredits) {
-        await processExpiredCredit(trx, credit, tenant, now);
-      }
-      
-      console.log(`Successfully processed ${expiredCredits.length} expired credits`);
-    });
-  } catch (error: any) {
-    console.error(`Error processing expired credits: ${error.message}`, error);
-    throw error; // Re-throw to let pg-boss handle the failure
-  }
+  await runWithTenant(tenantId, async () => {
+    const knex = await getConnection(tenantId);
+
+    console.log(`Processing expired credits for tenant ${tenantId}${clientId ? ` and client ${clientId}` : ''}`);
+
+    try {
+      await knex.transaction(async (trx: Knex.Transaction) => {
+        // Ensure tenant/user context is available for database triggers and audit logging
+        await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
+        await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
+
+        // Get current date for expiration check
+        const now = new Date().toISOString();
+
+        // Find credits that have expired but are not yet marked as expired
+        let query = trx('credit_tracking')
+          .where('tenant', tenantId)
+          .where('is_expired', false)
+          .whereNotNull('expiration_date')
+          .where('expiration_date', '<', now)
+          .where('remaining_amount', '>', 0);
+
+        // Add client filter if provided
+        if (clientId) {
+          query = query.where('client_id', clientId);
+        }
+
+        const expiredCredits: ICreditTracking[] = await query;
+
+        console.log(`Found ${expiredCredits.length} expired credits to process`);
+
+        // Process each expired credit
+        for (const credit of expiredCredits) {
+          await processExpiredCredit(trx, credit, tenantId, now);
+        }
+
+        console.log(`Successfully processed ${expiredCredits.length} expired credits`);
+      });
+    } catch (error: any) {
+      console.error(`Error processing expired credits: ${error.message}`, error);
+      throw error; // Re-throw to let pg-boss handle the failure
+    }
+  });
 }
 
 /**

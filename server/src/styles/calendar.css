@@ -540,8 +540,8 @@ button[aria-selected="true"].rdp-day {
   font-weight: 600;
 }
 
-/* Fix for Popover positioning */
-[data-radix-popper-content-wrapper] {
+/* Fix for Popover positioning in calendar context */
+.calendar-popover-content [data-radix-popper-content-wrapper] {
   z-index: 50 !important;
 }
 

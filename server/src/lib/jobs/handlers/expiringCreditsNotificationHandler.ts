@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
+import { runWithTenant } from 'server/src/lib/db';
+import { getConnection } from 'server/src/lib/db/db';
 import { getEmailNotificationService } from 'server/src/lib/notifications/email';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
@@ -21,45 +22,44 @@ export interface ExpiringCreditsNotificationJobData extends Record<string, unkno
  */
 export async function expiringCreditsNotificationHandler(data: ExpiringCreditsNotificationJobData): Promise<void> {
   const { tenantId, clientId } = data;
-  
+
   if (!tenantId) {
     throw new Error('Tenant ID is required for expiring credits notification job');
   }
-  
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-  
-  console.log(`Processing expiring credits notifications for tenant ${tenant}${clientId ? ` and client ${clientId}` : ''}`);
-  
-  try {
-    // Get notification thresholds from settings
-    const defaultSettings = await knex('default_billing_settings')
-      .where({ tenant })
-      .first();
-      
-    if (!defaultSettings || !defaultSettings.credit_expiration_notification_days) {
-      console.log('No notification thresholds configured, skipping notifications');
-      return;
+
+  await runWithTenant(tenantId, async () => {
+    const knex = await getConnection(tenantId);
+
+    console.log(`Processing expiring credits notifications for tenant ${tenantId}${clientId ? ` and client ${clientId}` : ''}`);
+
+    try {
+      // Get notification thresholds from settings
+      const defaultSettings = await knex('default_billing_settings')
+        .where({ tenant: tenantId })
+        .first();
+
+      if (!defaultSettings || !defaultSettings.credit_expiration_notification_days) {
+        console.log('No notification thresholds configured, skipping notifications');
+        return;
+      }
+
+      const notificationThresholds: number[] = defaultSettings.credit_expiration_notification_days;
+
+      if (!notificationThresholds.length) {
+        console.log('Empty notification thresholds array, skipping notifications');
+        return;
+      }
+
+      // Process each threshold
+      for (const daysBeforeExpiration of notificationThresholds) {
+        await processNotificationsForThreshold(knex, tenantId, daysBeforeExpiration, clientId);
+      }
+
+    } catch (error: any) {
+      console.error(`Error processing expiring credits notifications: ${error.message}`, error);
+      throw error; // Re-throw to let pg-boss handle the failure
     }
-    
-    const notificationThresholds: number[] = defaultSettings.credit_expiration_notification_days;
-    
-    if (!notificationThresholds.length) {
-      console.log('Empty notification thresholds array, skipping notifications');
-      return;
-    }
-    
-    // Process each threshold
-    for (const daysBeforeExpiration of notificationThresholds) {
-      await processNotificationsForThreshold(knex, tenant, daysBeforeExpiration, clientId);
-    }
-    
-  } catch (error: any) {
-    console.error(`Error processing expiring credits notifications: ${error.message}`, error);
-    throw error; // Re-throw to let pg-boss handle the failure
-  }
+  });
 }
 
 /**

@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';
 import { Button } from './Button';
+import Spinner from './Spinner';
+
+// Hook to detect if we're on the client (after hydration)
+const emptySubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
 
 export interface TreeSelectOption<T extends string = string> {
   label: string | React.ReactNode;
@@ -52,6 +63,7 @@ function TreeSelect<T extends string>({
   showReset = false,
   allowEmpty = false,
 }: TreeSelectProps<T>): JSX.Element {
+  const isClient = useIsClient();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value);
@@ -297,6 +309,33 @@ function TreeSelect<T extends string>({
 
   const hasSelections = options.some(opt => opt.selected || opt.excluded);
 
+  // Render a loading state during SSR to avoid hydration mismatch
+  // caused by Radix UI's useId() generating different IDs on server vs client
+  if (!isClient) {
+    return (
+      <div className={label ? 'mb-4' : ''}>
+        {label && (
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {label}
+          </label>
+        )}
+        <div className="relative">
+          <div
+            className={`
+              inline-flex items-center justify-center
+              border border-[rgb(var(--color-border-400))] rounded-lg p-2
+              bg-white min-h-[38px]
+              text-sm w-full
+              ${className}
+            `}
+          >
+            <Spinner size="xs" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={label ? 'mb-4' : ''}>
       {label && (
@@ -305,7 +344,7 @@ function TreeSelect<T extends string>({
         </label>
       )}
       <div className="relative">
-        <RadixSelect.Root 
+        <RadixSelect.Root
           value={selectedValue}
           open={isOpen}
           onOpenChange={setIsOpen}

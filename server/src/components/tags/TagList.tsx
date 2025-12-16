@@ -79,6 +79,7 @@ export const TagList: React.FC<TagListProps> = ({
         return (
           <span
             key={tag.tag_id}
+            title={tag.tag_text}
             style={{
               backgroundColor: tag.background_color || colors.background,
               color: tag.text_color || colors.text,
@@ -88,7 +89,8 @@ export const TagList: React.FC<TagListProps> = ({
               fontWeight: '600',
               display: 'inline-flex',
               alignItems: 'center',
-              position: 'relative'
+              position: 'relative',
+              maxWidth: '150px',
             }}
           >
             <TagEditForm
@@ -100,7 +102,7 @@ export const TagList: React.FC<TagListProps> = ({
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity"
+                  className="inline-flex items-center justify-center h-full px-2 py-1 hover:opacity-70 transition-opacity flex-shrink-0"
                   style={{
                     borderRight: `1px dotted ${tag.text_color || colors.text}`,
                     marginRight: '4px',
@@ -110,12 +112,20 @@ export const TagList: React.FC<TagListProps> = ({
                 </button>
               }
             />
-            {tag.tag_text}
+            <span
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {tag.tag_text}
+            </span>
             {onRemoveTag && (
               <button
                 type="button"
                 onClick={() => void onRemoveTag(tag.tag_id)}
-                className="ml-1 text-red-500 hover:text-red-700"
+                className="ml-1 text-red-500 hover:text-red-700 flex-shrink-0"
                 title="Remove tag"
               >
                 <X size={12} />

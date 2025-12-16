@@ -549,10 +549,13 @@ async function consumeLinkStateCookie(
             }
 
             if (expectedUserId && payload.userId !== expectedUserId) {
-                console.warn('[oauth] link state cookie user mismatch', {
+                console.warn('[oauth] link state cookie user mismatch - rejecting stale cookie', {
                     expected: expectedUserId,
                     actual: payload.userId,
                 });
+                // SECURITY FIX: Reject stale cookies to prevent phantom user_id issues
+                // A mismatch indicates a stale cookie from a previous SSO attempt that should not be used
+                return undefined;
             }
 
             return payload as LinkStateCookiePayload;
@@ -615,9 +618,10 @@ async function ensureOAuthAccountLink(
     }
 
     // Some providers echo only an access token back; fall back to the cookie if the signed link fields are missing.
+    // SECURITY FIX: Pass user.id to reject stale cookies from different users/tenants
     const cookieState =
         !metadata.linkNonce || !metadata.linkNonceSignature
-            ? await consumeLinkStateCookie(undefined)
+            ? await consumeLinkStateCookie(user.id)
             : undefined;
 
     if (cookieState) {

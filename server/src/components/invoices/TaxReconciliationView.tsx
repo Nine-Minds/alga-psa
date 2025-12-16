@@ -125,15 +125,15 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
             </div>
           </div>
 
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center gap-2 text-blue-700 mb-2">
-              <Cloud className="h-4 w-4" />
-              <span className="text-sm font-medium">External (Accounting)</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-800">
-              {formatCurrency(data.externalTax)}
-            </p>
-          </div>
+          <Alert variant="info" className="p-4">
+            <Cloud className="h-4 w-4" />
+            <AlertDescription>
+              <span className="text-sm font-medium block mb-2">External (Accounting)</span>
+              <p className="text-2xl font-bold">
+                {formatCurrency(data.externalTax)}
+              </p>
+            </AlertDescription>
+          </Alert>
         </div>
 
         {/* Warning for significant differences */}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical, Palette } from "lucide-react";
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { getAllPriorities, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
@@ -227,14 +228,14 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         </div>
         
         {/* Info box about priorities */}
-        <div className="bg-blue-50 p-4 rounded-md mb-4">
-          <p className="text-sm text-blue-700">
+        <Alert variant="info" className="mb-4">
+          <AlertDescription>
             <strong>Priority Management:</strong> Create custom priorities for your organization or import from standard templates.
             {priorities.some(p => 'is_from_itil_standard' in p && p.is_from_itil_standard && p.item_type === selectedPriorityType) ?
               ' ITIL standard priorities cannot be edited or deleted.' :
               ' All priorities can be edited or deleted to fit your workflow.'}
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
 
         <DataTable
           id="priorities-table"

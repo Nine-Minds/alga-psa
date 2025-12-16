@@ -245,7 +245,7 @@ The templating engine has been enhanced to use Parsimmon for parsing and safely 
 
 This capability is leveraged by the Form Renderer when preparing forms for display, using the `contextData` associated with the task instance. The implementation ensures that only whitelisted expressions and operations are permitted, maintaining security even with user-influenced template expressions.
 
-For a detailed technical design of this Parsimmon-based templating engine, refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
+For a detailed technical design of this Parsimmon-based templating engine, refer to "[`docs/technical/parsimmon_templating_engine.md`](../technical/parsimmon_templating_engine.md)".
 ### 5. Database Schema
 
 ```sql

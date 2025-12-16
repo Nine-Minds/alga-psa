@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.14.15",
+  "version": "0.15.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -49,7 +49,9 @@
     "workflow-worker:start": "node dist/bin/workflow-worker.js",
     "create-tenant": "tsx scripts/create-tenant.ts",
     "rollback-tenant": "tsx scripts/rollback-tenant.ts",
-    "migrate:ee": "node scripts/run-ee-migrations.js"
+    "migrate:ee": "node scripts/run-ee-migrations.js",
+    "migrate:ee:down": "node scripts/run-ee-migrations.js down",
+    "migrate:ee:status": "node scripts/run-ee-migrations.js status"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",

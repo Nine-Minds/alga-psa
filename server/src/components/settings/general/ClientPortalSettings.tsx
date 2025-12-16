@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
@@ -273,21 +274,23 @@ const ClientPortalSettings = () => {
               </div>
             </div>
 
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">Language Preference Hierarchy</h4>
-              <p className="text-sm text-blue-800 mb-2">
-                This hierarchy applies to both the client portal interface and email notifications sent to client portal users:
-              </p>
-              <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                <li>Individual user preference (highest priority)</li>
-                <li>Client default language</li>
-                <li>Organization default (configured here)</li>
-                <li>System default (English)</li>
-              </ol>
-              <p className="text-sm text-blue-600 mt-2 italic">
-                Note: Internal MSP users always receive emails in English
-              </p>
-            </div>
+            <Alert variant="info">
+              <AlertDescription>
+                <h4 className="font-medium mb-2">Language Preference Hierarchy</h4>
+                <p className="mb-2">
+                  This hierarchy applies to both the client portal interface and email notifications sent to client portal users:
+                </p>
+                <ol className="space-y-1 list-decimal list-inside">
+                  <li>Individual user preference (highest priority)</li>
+                  <li>Client default language</li>
+                  <li>Organization default (configured here)</li>
+                  <li>System default (English)</li>
+                </ol>
+                <p className="mt-2 italic">
+                  Note: Internal MSP users always receive emails in English
+                </p>
+              </AlertDescription>
+            </Alert>
           </div>
         </CardContent>
       </Card>

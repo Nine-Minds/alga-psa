@@ -20,6 +20,7 @@ import {
 import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import Pagination from 'server/src/components/ui/Pagination';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 // Default pagination options for list/table views
 const DEFAULT_LIST_ITEMS_PER_PAGE_OPTIONS = [
@@ -443,6 +444,10 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       }
     },
     manualPagination: totalItems !== undefined,
+    // Prevent react-table from auto-resetting page index when data changes
+    // This is important for client-side pagination where data reference may change
+    // but we want to maintain the current page position
+    autoResetPageIndex: false,
     meta: {
       editableConfig: props.editableConfig,
     },
@@ -531,14 +536,14 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       ref={tableContainerRef}
     >
         {visibleColumnIds.length < columns.length && (
-          <div className="px-4 py-2 bg-blue-50 text-blue-700 text-sm border-b border-gray-200">
-            <span className="flex items-center">
+          <Alert variant="info" className="rounded-none border-x-0 border-t-0">
+            <AlertDescription className="flex items-center text-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               {columns.length - visibleColumnIds.length} columns hidden due to limited space. Resize browser to see more.
-            </span>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -633,6 +638,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               totalItems={total}
               itemsPerPage={currentPageSize}
               onPageChange={(page) => {
+                // Update internal state immediately for responsive UI
+                // (the useEffect sync from currentPage prop has a 1-render delay)
+                setPagination(prev => ({
+                  ...prev,
+                  pageIndex: page - 1,
+                }));
+                // Notify parent
                 if (onPageChange) {
                   onPageChange(page);
                 }

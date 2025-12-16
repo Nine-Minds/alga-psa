@@ -17,6 +17,13 @@ screenshots/
 *.webm
 *.mp4
 ee/server/playwright-storage/
+.tmp/
+tmp/
+tmp-ext/
+tmp-ext2/
+html/
+dist/
+test-results/
 
 # Playwright utility scripts (for manual MinIO management)
 scripts/minio-test.sh
@@ -95,6 +102,7 @@ yarn-error.log*
 .mcp.json
 CLAUDE.md
 .claude/
+.codex/
 
 # vercel
 .vercel
@@ -125,6 +133,9 @@ server/.alga-ext-cache/
 .vscode
 ee/server/playwright-storage/
 
+# EE Playwright test artifacts
+ee/server/playwright-report/
+ee/server/playwright-test-results/
 
 volumes/
 

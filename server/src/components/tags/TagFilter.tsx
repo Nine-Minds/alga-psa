@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import { Tag as TagIcon } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input';
 import * as Popover from '@radix-ui/react-popover';
 import { TagGrid } from './TagGrid';
 import { filterTagsByText } from 'server/src/utils/colorUtils';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
+import Spinner from 'server/src/components/ui/Spinner';
+
+// Hook to detect if we're on the client (after hydration)
+const emptySubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
 
 interface TagFilterProps {
   allTags: string[] | ITag[];
@@ -21,16 +32,27 @@ export const TagFilter: React.FC<TagFilterProps> = ({
   className = '',
   onClear
 }) => {
+  const isClient = useIsClient();
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Handle both string[] and ITag[] formats
   const tagTexts = allTags.map(tag => typeof tag === 'string' ? tag : tag.tag_text);
   const filteredTagTexts = filterTagsByText(tagTexts, searchTerm);
-  
+
   // If we have ITag objects, filter them based on the filtered texts
-  const filteredTags = typeof allTags[0] === 'string' 
-    ? filteredTagTexts 
+  const filteredTags = typeof allTags[0] === 'string'
+    ? filteredTagTexts
     : allTags.filter(tag => filteredTagTexts.includes((tag as ITag).tag_text)) as ITag[];
+
+  // Render a loading state during SSR to avoid hydration mismatch
+  // caused by Radix UI's useId() generating different IDs on server vs client
+  if (!isClient) {
+    return (
+      <div className={`flex items-center justify-center bg-white border border-gray-300 rounded-md p-2 min-w-[120px] ${className}`}>
+        <Spinner size="xs" />
+      </div>
+    );
+  }
 
   return (
     <Popover.Root>

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ScheduleCalendar from 'server/src/components/schedule/ScheduleCalendar';
 import AppointmentRequestsPanel from 'server/src/components/schedule/AppointmentRequestsPanel';
 import AvailabilitySettings from 'server/src/components/schedule/AvailabilitySettings';
@@ -12,11 +13,15 @@ import { getCurrentUserPermissions, getCurrentUser } from 'server/src/lib/action
 import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 
 export default function SchedulePage() {
+  const searchParams = useSearchParams();
+  const requestIdFromUrl = searchParams.get('requestId');
+
   const [showRequestsPanel, setShowRequestsPanel] = useState(false);
   const [showAvailabilitySettings, setShowAvailabilitySettings] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [canConfigureAvailability, setCanConfigureAvailability] = useState(false);
+  const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
 
   const fetchPendingCount = async () => {
     const result = await getAppointmentRequests({ status: 'pending' });
@@ -53,6 +58,14 @@ export default function SchedulePage() {
     fetchPendingCount();
     checkPermissions();
   }, [refreshKey]);
+
+  // Auto-open requests panel if requestId is in URL
+  useEffect(() => {
+    if (requestIdFromUrl) {
+      setHighlightedRequestId(requestIdFromUrl);
+      setShowRequestsPanel(true);
+    }
+  }, [requestIdFromUrl]);
 
   return (
     <div className="p-4">
@@ -91,11 +104,15 @@ export default function SchedulePage() {
 
       <AppointmentRequestsPanel
         isOpen={showRequestsPanel}
-        onClose={() => setShowRequestsPanel(false)}
+        onClose={() => {
+          setShowRequestsPanel(false);
+          setHighlightedRequestId(null);
+        }}
         onRequestProcessed={() => {
           // Refresh the pending count and trigger calendar refresh
           setRefreshKey(prev => prev + 1);
         }}
+        highlightedRequestId={highlightedRequestId}
       />
 
       {canConfigureAvailability && (

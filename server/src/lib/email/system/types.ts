@@ -87,8 +87,6 @@ export interface AppointmentRequestReceivedData {
   portalLink: string;
   contactEmail: string;
   contactPhone?: string;
-  tenantName: string;
-  currentYear: number;
 }
 
 export interface AppointmentRequestApprovedData {
@@ -106,8 +104,6 @@ export interface AppointmentRequestApprovedData {
   minimumNoticeHours: number;
   contactEmail: string;
   contactPhone?: string;
-  tenantName: string;
-  currentYear: number;
 }
 
 export interface AppointmentRequestDeclinedData {
@@ -121,8 +117,6 @@ export interface AppointmentRequestDeclinedData {
   requestNewAppointmentLink?: string;
   contactEmail: string;
   contactPhone?: string;
-  tenantName: string;
-  currentYear: number;
 }
 
 export interface NewAppointmentRequestData {
@@ -145,6 +139,4 @@ export interface NewAppointmentRequestData {
   portalLink?: string;
   contactEmail: string;
   contactPhone?: string;
-  tenantName: string;
-  currentYear: number;
 }

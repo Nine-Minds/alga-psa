@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { NotificationSettings } from "server/src/components/settings/notifications/NotificationSettings";
 import { EmailTemplates } from "server/src/components/settings/notifications/EmailTemplates";
 import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
@@ -8,16 +8,50 @@ import { InternalNotificationCategories } from "server/src/components/settings/n
 import { CustomTabs } from "server/src/components/ui/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "server/src/components/ui/ViewSwitcher";
 import { Card } from "server/src/components/ui/Card";
+import { UnsavedChangesProvider, useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
 
 type NotificationView = 'email' | 'internal';
 
 export default function NotificationsSettingsPage() {
+  return (
+    <UnsavedChangesProvider
+      dialogTitle="Unsaved Changes"
+      dialogMessage="You have unsaved notification settings. Are you sure you want to leave? Your changes will be lost."
+    >
+      <NotificationsSettingsContent />
+    </UnsavedChangesProvider>
+  );
+}
+
+function NotificationsSettingsContent() {
   const [currentView, setCurrentView] = useState<NotificationView>('internal');
+  const [currentTab, setCurrentTab] = useState<string>('Categories & Types');
+  const { confirmNavigation } = useUnsavedChanges();
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
     { value: 'email', label: 'Email Notifications' },
     { value: 'internal', label: 'Internal Notifications' },
   ];
+
+  // Handle view change with confirmation
+  const handleViewChange = useCallback((newView: NotificationView) => {
+    if (newView === currentView) return;
+
+    confirmNavigation(() => {
+      setCurrentView(newView);
+      // Reset to first tab of new view
+      setCurrentTab(newView === 'email' ? 'Settings' : 'Categories & Types');
+    });
+  }, [currentView, confirmNavigation]);
+
+  // Handle tab change with confirmation (controlled mode)
+  const handleTabChange = useCallback((newTab: string) => {
+    if (newTab === currentTab) return;
+
+    confirmNavigation(() => {
+      setCurrentTab(newTab);
+    });
+  }, [currentTab, confirmNavigation]);
 
   const emailTabs = [
     {
@@ -37,7 +71,7 @@ export default function NotificationsSettingsPage() {
       ),
     },
     {
-      label: "Categories & Types",
+      label: "Categories",
       content: (
         <Suspense fallback={<div>Loading categories...</div>}>
           <NotificationCategories />
@@ -70,12 +104,17 @@ export default function NotificationsSettingsPage() {
         </div>
         <ViewSwitcher
           currentView={currentView}
-          onChange={setCurrentView}
+          onChange={handleViewChange}
           options={viewOptions}
         />
       </div>
       <Card>
-        <CustomTabs tabs={currentView === 'email' ? emailTabs : internalTabs} />
+        <CustomTabs
+          key={currentView}
+          tabs={currentView === 'email' ? emailTabs : internalTabs}
+          value={currentTab}
+          onTabChange={handleTabChange}
+        />
       </Card>
     </div>
   );

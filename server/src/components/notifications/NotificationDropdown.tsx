@@ -86,8 +86,9 @@ export function NotificationDropdown({
     }
 
     // Determine how to handle the notification based on its type and link
+    // Note: Most notifications open in a drawer first, then user can click "View Details" to navigate
     const shouldOpenInNewTab = notification.link && (
-      // Tickets: category='tickets' or link pattern
+      // Tickets: category='tickets' or link pattern - open directly in new tab
       notification.category === 'tickets' ||
       notification.link.includes('/msp/tickets/') ||
       notification.link.includes('/client-portal/tickets/') ||

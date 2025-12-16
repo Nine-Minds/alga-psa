@@ -51,9 +51,23 @@ exports.seed = async function (knex, tenantId) {
             },
             {
                 status_id: uuidv4(),
-                name: 'Done',
+                name: 'Blocked',
                 status_type: 'project_task',
                 order_number: 3,
+                is_closed: false,
+                is_default: false,
+                item_type: 'project_task',
+                color: '#EF4444', // Red
+                icon: 'AlertCircle',
+                tenant: tenantId,
+                created_by: null, // No user exists yet during tenant creation
+                created_at: knex.fn.now()
+            },
+            {
+                status_id: uuidv4(),
+                name: 'Done',
+                status_type: 'project_task',
+                order_number: 4,
                 is_closed: true,
                 is_default: false,
                 item_type: 'project_task',

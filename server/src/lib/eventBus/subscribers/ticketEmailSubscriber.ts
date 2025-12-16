@@ -155,17 +155,37 @@ async function sendNotificationIfEnabled(
       return;
     }
 
-    // 3. Check if subtype is enabled
-    if (!subtype.is_enabled) {
-      logger.info('[TicketEmailSubscriber] Notification subtype disabled:', {
+    // 3. Check tenant-specific subtype setting
+    const subtypeSetting = await knex('tenant_notification_subtype_settings')
+      .where({ tenant: params.tenantId, subtype_id: subtype.id })
+      .first();
+
+    const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
+    if (!isSubtypeEnabled) {
+      logger.info('[TicketEmailSubscriber] Subtype disabled for tenant:', {
         subtypeName,
-        recipient: params.to,
-        tenantId: params.tenantId
+        tenantId: params.tenantId,
+        recipient: params.to
       });
       return;
     }
 
-    // 4. For internal users, check user preferences and rate limiting
+    // 4. Check tenant-specific category setting
+    const categorySetting = await knex('tenant_notification_category_settings')
+      .where({ tenant: params.tenantId, category_id: subtype.category_id })
+      .first();
+
+    const isCategoryEnabled = categorySetting?.is_enabled ?? true;
+    if (!isCategoryEnabled) {
+      logger.info('[TicketEmailSubscriber] Category disabled for tenant:', {
+        categoryId: subtype.category_id,
+        tenantId: params.tenantId,
+        recipient: params.to
+      });
+      return;
+    }
+
+    // 5. For internal users, check user preferences and rate limiting
     if (recipientUserId) {
       // Check user preferences
       const preference = await knex('user_notification_preferences')
@@ -209,10 +229,10 @@ async function sendNotificationIfEnabled(
       }
     }
 
-    // 5. All checks passed - send the email
+    // 6. All checks passed - send the email
     await sendEventEmail(params);
 
-    // 6. Log the notification (only for internal users with userId)
+    // 7. Log the notification (only for internal users with userId)
     if (recipientUserId && subtype) {
       try {
         await knex('notification_logs').insert({
@@ -249,13 +269,13 @@ async function sendNotificationIfEnabled(
 async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string): Promise<string> {
   const formattedChanges = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
-      // Handle different types of values
+      // Handle structured change objects with old/new values
       if (typeof value === 'object' && value !== null) {
-        const { from, to } = value as { from?: unknown; to?: unknown };
-        if (from !== undefined && to !== undefined) {
-          const fromValue = await resolveValue(db, field, from, tenantId);
-          const toValue = await resolveValue(db, field, to, tenantId);
-          return `${formatFieldName(field)}: ${fromValue} → ${toValue}`;
+        const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
+        if (oldVal !== undefined && newVal !== undefined) {
+          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId);
+          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId);
+          return `${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
         }
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId);

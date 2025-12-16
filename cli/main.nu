@@ -26,9 +26,11 @@ def --wrapped main [
        print "Usage:"
        print "  nu main.nu migrate <action> [--ee]"
        print "    Action: up, latest, down, status"
-       print "    --ee: Run combined CE + EE migrations (latest only)"
+       print "    --ee: Run combined CE + EE migrations (latest, down, status)"
        print "    Example: nu main.nu migrate latest"
        print "    Example: nu main.nu migrate latest --ee"
+       print "    Example: nu main.nu migrate status --ee"
+       print "    Example: nu main.nu migrate down --ee"
        print ""
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
@@ -148,9 +150,11 @@ def --wrapped main [
        print "Usage:"
        print "  nu main.nu migrate <action> [--ee]"
        print "    Action: up, latest, down, status"
-       print "    --ee: Run combined CE + EE migrations (latest only)"
+       print "    --ee: Run combined CE + EE migrations (latest, down, status)"
        print "    Example: nu main.nu migrate latest"
        print "    Example: nu main.nu migrate latest --ee"
+       print "    Example: nu main.nu migrate status --ee"
+       print "    Example: nu main.nu migrate down --ee"
        print ""
        print "  nu main.nu -- dev-up [--detached] [--edition ce|ee]  # Start development environment"
        print "  nu main.nu dev-down               # Stop development environment"
@@ -267,8 +271,8 @@ def --wrapped main [
                 error make { msg: $"($env.ALGA_COLOR_RED)Invalid migrate action '($action)'. Must be one of: up, latest, down, status($env.ALGA_COLOR_RESET)" }
            }
 
-           if $ee_flag and $action != "latest" {
-               error make { msg: $"($env.ALGA_COLOR_RED)--ee is only supported with the 'latest' action($env.ALGA_COLOR_RESET)" }
+           if $ee_flag and not ($action in ["latest", "down", "status"]) {
+               error make { msg: $"($env.ALGA_COLOR_RED)--ee is only supported with 'latest', 'down', or 'status' actions($env.ALGA_COLOR_RESET)" }
            }
 
            if $ee_flag {

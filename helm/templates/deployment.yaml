@@ -637,6 +637,39 @@ spec:
             - name: http
               containerPort: {{ .Values.server.service.port }}
               protocol: TCP
+          {{- if and .Values.server.probes .Values.server.probes.startup .Values.server.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.server.probes.startup.httpGet.path | default "/auth/signin" }}
+              port: {{ .Values.server.probes.startup.httpGet.port | default .Values.server.service.port }}
+            initialDelaySeconds: {{ .Values.server.probes.startup.initialDelaySeconds | default 10 }}
+            periodSeconds: {{ .Values.server.probes.startup.periodSeconds | default 10 }}
+            timeoutSeconds: {{ .Values.server.probes.startup.timeoutSeconds | default 10 }}
+            failureThreshold: {{ .Values.server.probes.startup.failureThreshold | default 30 }}
+            successThreshold: {{ .Values.server.probes.startup.successThreshold | default 1 }}
+          {{- end }}
+          {{- if and .Values.server.probes .Values.server.probes.liveness .Values.server.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.server.probes.liveness.httpGet.path | default "/auth/signin" }}
+              port: {{ .Values.server.probes.liveness.httpGet.port | default .Values.server.service.port }}
+            initialDelaySeconds: {{ .Values.server.probes.liveness.initialDelaySeconds | default 40 }}
+            periodSeconds: {{ .Values.server.probes.liveness.periodSeconds | default 30 }}
+            timeoutSeconds: {{ .Values.server.probes.liveness.timeoutSeconds | default 10 }}
+            failureThreshold: {{ .Values.server.probes.liveness.failureThreshold | default 3 }}
+            successThreshold: {{ .Values.server.probes.liveness.successThreshold | default 1 }}
+          {{- end }}
+          {{- if and .Values.server.probes .Values.server.probes.readiness .Values.server.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.server.probes.readiness.httpGet.path | default "/auth/signin" }}
+              port: {{ .Values.server.probes.readiness.httpGet.port | default .Values.server.service.port }}
+            initialDelaySeconds: {{ .Values.server.probes.readiness.initialDelaySeconds | default 30 }}
+            periodSeconds: {{ .Values.server.probes.readiness.periodSeconds | default 15 }}
+            timeoutSeconds: {{ .Values.server.probes.readiness.timeoutSeconds | default 10 }}
+            failureThreshold: {{ .Values.server.probes.readiness.failureThreshold | default 3 }}
+            successThreshold: {{ .Values.server.probes.readiness.successThreshold | default 1 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

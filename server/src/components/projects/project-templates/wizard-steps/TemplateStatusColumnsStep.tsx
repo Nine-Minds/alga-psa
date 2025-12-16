@@ -203,29 +203,41 @@ export function TemplateStatusColumnsStep({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <ColorPicker
-                        currentBackgroundColor={getStatusColor(mapping)}
-                        currentTextColor={null}
-                        onSave={(backgroundColor) =>
-                          updateStatusMapping(index, { custom_status_color: backgroundColor || '#6B7280' })
-                        }
-                        showTextColor={false}
-                        previewType="circle"
-                        colorMode="solid"
-                        trigger={
-                          <button
-                            type="button"
-                            className="hover:opacity-80 transition-opacity"
-                            title="Click to change color"
-                          >
-                            <Circle
-                              className="w-6 h-6"
-                              fill={getStatusColor(mapping)}
-                              stroke={getStatusColor(mapping)}
-                            />
-                          </button>
-                        }
-                      />
+                      {/* Only show color picker for new statuses (no status_id selected) */}
+                      {!mapping.status_id ? (
+                        <ColorPicker
+                          currentBackgroundColor={getStatusColor(mapping)}
+                          currentTextColor={null}
+                          onSave={(backgroundColor) =>
+                            updateStatusMapping(index, { custom_status_color: backgroundColor || '#6B7280' })
+                          }
+                          showTextColor={false}
+                          previewType="circle"
+                          colorMode="solid"
+                          trigger={
+                            <Button
+                              id={`color-picker-trigger-${index}`}
+                              variant="ghost"
+                              size="sm"
+                              className="p-0 hover:opacity-80 transition-opacity"
+                              title="Click to change color"
+                            >
+                              <Circle
+                                className="w-6 h-6"
+                                fill={getStatusColor(mapping)}
+                                stroke={getStatusColor(mapping)}
+                              />
+                            </Button>
+                          }
+                        />
+                      ) : (
+                        /* For existing statuses, just display the color without editing */
+                        <Circle
+                          className="w-6 h-6"
+                          fill={getStatusColor(mapping)}
+                          stroke={getStatusColor(mapping)}
+                        />
+                      )}
                       <span className="font-medium text-gray-500 w-6">{index + 1}.</span>
                     </div>
 

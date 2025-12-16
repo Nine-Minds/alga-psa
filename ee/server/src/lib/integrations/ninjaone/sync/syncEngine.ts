@@ -949,13 +949,27 @@ export class NinjaOneSyncEngine {
     alga_entity_id: string;
     external_entity_id: string;
   } | null> {
-    const mapping = await this.knex!('tenant_external_entity_mappings')
+	    const mapping = await this.knex!('tenant_external_entity_mappings')
+	      .join('assets', (join) => {
+	        // alga_entity_id is stored as string; assets.asset_id is UUID.
+	        // Compare as text to avoid varchar=uuid operator errors.
+	        (join as any)
+	          .on(
+	            this.knex!.raw(
+	              'assets.asset_id::text = tenant_external_entity_mappings.alga_entity_id'
+	            )
+	          )
+	          .andOn('tenant_external_entity_mappings.tenant', '=', 'assets.tenant');
+	      })
       .where({
-        tenant: this.tenantId,
-        integration_type: 'ninjaone',
-        alga_entity_type: 'asset',
-        external_entity_id: String(deviceId),
+        'tenant_external_entity_mappings.tenant': this.tenantId,
+        'tenant_external_entity_mappings.integration_type': 'ninjaone',
+        'tenant_external_entity_mappings.alga_entity_type': 'asset',
+        'tenant_external_entity_mappings.external_entity_id': String(deviceId),
+        'assets.status': 'active',
       })
+      .where('assets.tenant', this.tenantId)
+      .select('tenant_external_entity_mappings.alga_entity_id', 'tenant_external_entity_mappings.external_entity_id')
       .first();
 
     return mapping || null;

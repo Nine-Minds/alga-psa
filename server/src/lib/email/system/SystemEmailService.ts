@@ -621,8 +621,6 @@ Duration: ${data.duration} minutes
 ${data.preferredTechnician ? `Preferred Technician: ${data.preferredTechnician}` : ''}
 
 We typically respond within ${data.responseTime}. If you have questions, contact us at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.
-
-© ${data.currentYear} ${data.tenantName}
     `.trim();
 
     return { subject, html, text };
@@ -665,8 +663,6 @@ ${data.technicianName ? `Assigned Technician: ${data.technicianName}` : ''}
 ${data.calendarLink ? `Add to Calendar: ${data.calendarLink}` : ''}
 
 If you need to reschedule or cancel, please contact us at least ${data.minimumNoticeHours} hours in advance at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.
-
-© ${data.currentYear} ${data.tenantName}
     `.trim();
 
     return { subject, html, text };
@@ -713,8 +709,6 @@ We encourage you to submit a new request for an alternative date and time.
 ${data.requestNewAppointmentLink ? `Request Another Time: ${data.requestNewAppointmentLink}` : ''}
 
 If you have questions or need assistance, please contact us at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.
-
-© ${data.currentYear} ${data.tenantName}
     `.trim();
 
     return { subject, html, text };
@@ -781,8 +775,6 @@ ${data.description ? `NOTES:\n"${data.description}"` : ''}
 ${data.approvalLink ? `REVIEW & APPROVE:\n${data.approvalLink}` : ''}
 
 Please review this request and take appropriate action.
-
-© ${data.currentYear} ${data.tenantName}
     `.trim();
 
     return { subject, html, text };

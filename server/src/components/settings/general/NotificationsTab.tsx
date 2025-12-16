@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { CustomTabs } from "server/src/components/ui/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "server/src/components/ui/ViewSwitcher";
@@ -9,16 +9,43 @@ import { EmailTemplates } from "server/src/components/settings/notifications/Ema
 import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
 import { InternalNotificationCategories } from "server/src/components/settings/notifications/InternalNotificationCategories";
 import { TelemetrySettings } from "server/src/components/settings/telemetry/TelemetrySettings";
+import { useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
 
 type NotificationView = 'email' | 'internal';
 
 export default function NotificationsTab() {
+  return <NotificationsTabContent />;
+}
+
+function NotificationsTabContent() {
   const [currentView, setCurrentView] = useState<NotificationView>('email');
+  const [currentTab, setCurrentTab] = useState<string>('Settings');
+  const { confirmNavigation } = useUnsavedChanges();
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
     { value: 'email', label: 'Email Notifications' },
     { value: 'internal', label: 'Internal Notifications' },
   ];
+
+  // Handle view change with confirmation
+  const handleViewChange = useCallback((newView: NotificationView) => {
+    if (newView === currentView) return;
+
+    confirmNavigation(() => {
+      setCurrentView(newView);
+      // Reset to first tab of new view
+      setCurrentTab(newView === 'email' ? 'Settings' : 'Categories');
+    });
+  }, [currentView, confirmNavigation]);
+
+  // Handle tab change with confirmation
+  const handleTabChange = useCallback((newTab: string) => {
+    if (newTab === currentTab) return;
+
+    confirmNavigation(() => {
+      setCurrentTab(newTab);
+    });
+  }, [currentTab, confirmNavigation]);
 
   const emailTabContent = [
     {
@@ -110,7 +137,7 @@ export default function NotificationsTab() {
           </div>
           <ViewSwitcher
             currentView={currentView}
-            onChange={setCurrentView}
+            onChange={handleViewChange}
             options={viewOptions}
           />
         </div>
@@ -119,6 +146,8 @@ export default function NotificationsTab() {
         <CustomTabs
           key={currentView}
           tabs={currentView === 'email' ? emailTabContent : internalTabContent}
+          value={currentTab}
+          onTabChange={handleTabChange}
         />
       </CardContent>
     </Card>

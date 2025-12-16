@@ -1,9 +1,7 @@
 import { createLogger, format, transports } from 'winston';
-import { JobStatus } from 'server/src/types/job';
-import { JobService } from 'server/src/services/job.service';
-import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
-import { JobHandlerRegistry } from 'server/src/lib/jobs/jobHandlerRegistry';
-import { registerAllJobHandlers } from 'server/src/lib/jobs/registerAllHandlers';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import type { Knex } from 'knex';
+import type { JobStatus } from '../types/job.js';
 
 // Configure logger
 const logger = createLogger({
@@ -20,6 +18,25 @@ const logger = createLogger({
   ],
 });
 
+type JobHandler = (
+  jobId: string,
+  data: Record<string, unknown>
+) => Promise<void | Record<string, unknown>>;
+
+const jobHandlers = new Map<string, JobHandler>();
+let jobHandlersInitialized = false;
+
+async function runWithTenant<T>(
+  tenantId: string,
+  callback: (trx: Knex.Transaction) => Promise<T>
+): Promise<T> {
+  const knex = await getAdminConnection();
+  return knex.transaction(async (trx) => {
+    await trx.raw(`SET LOCAL app.current_tenant = '${tenantId}'`);
+    return callback(trx);
+  });
+}
+
 /**
  * Initialize the job handler registry for Temporal worker
  *
@@ -27,14 +44,14 @@ const logger = createLogger({
  * with all available job handlers before any workflows are executed.
  */
 export async function initializeJobHandlersForWorker(): Promise<void> {
-  if (JobHandlerRegistry.isInitialized()) {
+  if (jobHandlersInitialized) {
     logger.info('Job handler registry already initialized');
     return;
   }
 
-  logger.info('Initializing job handler registry for Temporal worker');
-  await registerAllJobHandlers({
-    includeEnterprise: true, // Worker always runs in EE context
+  jobHandlersInitialized = true;
+  logger.info('Initialized job handler registry for Temporal worker', {
+    handlerCount: jobHandlers.size,
   });
 }
 
@@ -44,12 +61,9 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
  */
 export function registerJobHandlerForActivities(
   jobName: string,
-  handler: (jobId: string, data: Record<string, unknown>) => Promise<void>
+  handler: JobHandler
 ): void {
-  JobHandlerRegistry.register({
-    name: jobName,
-    handler,
-  });
+  jobHandlers.set(jobName, handler);
   logger.info(`Registered job handler for Temporal activities: ${jobName}`);
 }
 
@@ -70,25 +84,33 @@ export async function executeJobHandler(input: {
   logger.info('Executing job handler activity', { jobId, jobName, tenantId });
 
   // Ensure handlers are initialized
-  if (!JobHandlerRegistry.isInitialized()) {
+  if (!jobHandlersInitialized) {
     logger.warn('Job handler registry not initialized, initializing now');
     await initializeJobHandlersForWorker();
   }
 
-  if (!JobHandlerRegistry.has(jobName)) {
+  const handler = jobHandlers.get(jobName);
+  if (!handler) {
     const error = `No handler registered for job type: ${jobName}`;
-    logger.error(error, { jobId, jobName, availableHandlers: JobHandlerRegistry.getRegisteredNames() });
+    logger.error(error, {
+      jobId,
+      jobName,
+      availableHandlers: Array.from(jobHandlers.keys()),
+    });
     return { success: false, error };
   }
 
   try {
-    // Execute the handler within the tenant context using the centralized registry
-    await runWithTenant(tenantId, async () => {
-      await JobHandlerRegistry.execute(jobName, jobId, { ...data, tenantId });
+    const result = await runWithTenant(tenantId, async () => {
+      const maybeResult = await handler(jobId, { ...data, tenantId });
+      if (maybeResult && typeof maybeResult === 'object') {
+        return maybeResult as Record<string, unknown>;
+      }
+      return undefined;
     });
 
     logger.info('Job handler executed successfully', { jobId, jobName });
-    return { success: true };
+    return { success: true, ...(result ? { result } : {}) };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Job handler failed', {
@@ -117,11 +139,9 @@ export async function updateJobStatus(input: {
 
   logger.debug('Updating job status', { jobId, tenantId, status });
 
-  await runWithTenant(tenantId, async () => {
-    const { knex } = await createTenantKnex();
-
+  await runWithTenant(tenantId, async (trx) => {
     // Get current metadata
-    const currentJob = await knex('jobs')
+    const currentJob = await trx('jobs')
       .where({ job_id: jobId, tenant: tenantId })
       .first('metadata');
 
@@ -139,13 +159,12 @@ export async function updateJobStatus(input: {
     };
 
     // Update job record
-    await knex('jobs')
+    await trx('jobs')
       .where({ job_id: jobId, tenant: tenantId })
       .update({
         status,
         metadata: JSON.stringify(updatedMetadata),
         updated_at: new Date(),
-        ...(status === JobStatus.Processing ? { processed_at: new Date() } : {}),
       });
   });
 
@@ -161,22 +180,33 @@ export async function createJobDetail(input: {
   jobId: string;
   tenantId: string;
   stepName: string;
-  status: string;
+  status: JobStatus;
   metadata?: Record<string, unknown>;
 }): Promise<string> {
   const { jobId, tenantId, stepName, status, metadata } = input;
 
   logger.debug('Creating job detail', { jobId, tenantId, stepName, status });
 
-  const detailId = await runWithTenant(tenantId, async () => {
-    const jobService = await JobService.create();
-    return jobService.createJobDetail(
-      jobId,
-      stepName,
-      status as 'pending' | 'processing' | 'completed' | 'failed',
-      metadata
-    );
+  const detailId = await runWithTenant(tenantId, async (trx) => {
+    const [row] = await trx('job_details')
+      .insert({
+        tenant: tenantId,
+        job_id: jobId,
+        step_name: stepName,
+        status,
+        result: metadata ? JSON.stringify(metadata) : null,
+        processed_at: status === 'pending' ? null : new Date(),
+        retry_count: 0,
+        updated_at: new Date(),
+      })
+      .returning<{ detail_id: string }[]>('detail_id');
+
+    return row?.detail_id;
   });
+
+  if (!detailId) {
+    throw new Error('Failed to create job detail record');
+  }
 
   logger.debug('Job detail created', { jobId, detailId, stepName });
   return detailId;
@@ -199,10 +229,8 @@ export async function getJobData(input: {
 } | null> {
   const { jobId, tenantId } = input;
 
-  return runWithTenant(tenantId, async () => {
-    const { knex } = await createTenantKnex();
-
-    const job = await knex('jobs')
+  return runWithTenant(tenantId, async (trx) => {
+    const job = await trx('jobs')
       .where({ job_id: jobId, tenant: tenantId })
       .first();
 

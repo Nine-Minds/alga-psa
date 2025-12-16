@@ -7,7 +7,7 @@ import {
   sleep,
   workflowInfo,
 } from '@temporalio/workflow';
-import type { JobStatus } from 'server/src/types/job';
+import type { JobStatus } from '../types/job.js';
 
 /**
  * Input for the generic job workflow
@@ -90,7 +90,7 @@ const activities = proxyActivities<{
     jobId: string;
     tenantId: string;
     stepName: string;
-    status: string;
+    status: JobStatus;
     metadata?: Record<string, unknown>;
   }): Promise<string>;
 }>({

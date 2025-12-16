@@ -27,6 +27,8 @@ interface DialogProps {
   constrainToViewport?: boolean;
   /** Allow content to overflow (for dialogs with dropdowns) */
   allowOverflow?: boolean;
+  /** Disable focus trapping to allow interaction with portaled elements outside the dialog */
+  disableFocusTrap?: boolean;
 }
 
 export const Dialog: React.FC<DialogProps & AutomationProps> = ({
@@ -42,7 +44,8 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
   draggable = true,
   initialPosition,
   constrainToViewport = false,
-  allowOverflow = false
+  allowOverflow = false,
+  disableFocusTrap = false
 }) => {
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
@@ -154,13 +157,16 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
   };
 
   return (
-    <RadixDialog.Root open={isOpen} onOpenChange={onClose}>
+    <RadixDialog.Root open={isOpen} onOpenChange={onClose} modal={!disableFocusTrap}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+        <RadixDialog.Overlay
+          className="fixed inset-0 bg-black/50 z-50"
+          onClick={disableFocusTrap ? onClose : undefined}
+        />
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
-          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
+          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
           onKeyDown={onKeyDown}
           onOpenAutoFocus={onOpenAutoFocus}

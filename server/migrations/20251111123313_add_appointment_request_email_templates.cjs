@@ -248,10 +248,7 @@ exports.up = async function(knex) {
       </p>
     </div>
 
-    <div class="footer">
-      <p>Thank you for choosing {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. All rights reserved.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -274,11 +271,7 @@ Duration: {{duration}} minutes
 WHAT HAPPENS NEXT?
 Our team will review your request and confirm availability. You will receive an email notification once your appointment has been approved or if any changes are needed. We typically respond within {{responseTime}}.
 
-If you have any questions or need to make changes to your request, please contact us at {{contactEmail}}{{#if contactPhone}} or call {{contactPhone}}{{/if}}.
-
-Thank you for choosing {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. All rights reserved.`
+If you have any questions or need to make changes to your request, please contact us at {{contactEmail}}{{#if contactPhone}} or call {{contactPhone}}{{/if}}.`
     },
 
     // 2. Appointment Request Approved - To client/requester
@@ -514,10 +507,7 @@ Thank you for choosing {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Thank you for choosing {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. All rights reserved.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -552,11 +542,7 @@ CANCELLATION POLICY:
 
 If you need to reschedule or cancel this appointment, please contact us at least {{minimumNoticeHours}} hours in advance at {{contactEmail}}{{#if contactPhone}} or call {{contactPhone}}{{/if}}.
 
-We'll send you a reminder before your appointment. See you soon!
-
-Thank you for choosing {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. All rights reserved.`
+We'll send you a reminder before your appointment. See you soon!`
     },
 
     // 3. Appointment Request Declined - To client/requester
@@ -770,10 +756,7 @@ Thank you for choosing {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>Thank you for choosing {{tenantName}}</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. All rights reserved.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -802,11 +785,7 @@ We apologize for any inconvenience. We encourage you to submit a new request for
 Request Another Time: {{requestNewAppointmentLink}}
 {{/if}}
 
-If you have any questions or would like assistance finding an available time slot, please don't hesitate to contact us at {{contactEmail}}{{#if contactPhone}} or call {{contactPhone}}{{/if}}. Our team is here to help you find a time that works.
-
-Thank you for choosing {{tenantName}}
-
-© {{currentYear}} {{tenantName}}. All rights reserved.`
+If you have any questions or would like assistance finding an available time slot, please don't hesitate to contact us at {{contactEmail}}{{#if contactPhone}} or call {{contactPhone}}{{/if}}. Our team is here to help you find a time that works.`
     },
 
     // 4. New Appointment Request - To MSP staff
@@ -1082,10 +1061,7 @@ Thank you for choosing {{tenantName}}
       </p>
     </div>
 
-    <div class="footer">
-      <p>{{tenantName}} - Appointment Management</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. All rights reserved.</p>
-    </div>
+    
   </div>
 </body>
 </html>
@@ -1126,10 +1102,7 @@ REVIEW & APPROVE:
 {{approvalLink}}
 {{/if}}
 
-Please review this request and take appropriate action. The requester is waiting for confirmation.
-
-{{tenantName}} - Appointment Management
-© {{currentYear}} {{tenantName}}. All rights reserved.`
+Please review this request and take appropriate action. The requester is waiting for confirmation.`
     },
 
     // German (de) templates
@@ -1191,10 +1164,7 @@ Please review this request and take appropriate action. The requester is waiting
       </div>
       <p class="message">Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.</p>
     </div>
-    <div class="footer">
-      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>`,
@@ -1216,11 +1186,7 @@ Dauer: {{duration}} Minuten
 WAS PASSIERT ALS NÄCHSTES?
 Unser Team wird Ihre Anfrage prüfen und die Verfügbarkeit bestätigen. Sie erhalten eine E-Mail-Benachrichtigung, sobald Ihr Termin genehmigt wurde oder falls Änderungen erforderlich sind. Wir antworten in der Regel innerhalb von {{responseTime}}.
 
-Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.
-
-Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
-
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Wenn Sie Fragen haben oder Änderungen an Ihrer Anfrage vornehmen möchten, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
@@ -1275,10 +1241,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
       {{/if}}
       <p class="message">Wenn Sie diesen Termin verschieben oder stornieren möchten, kontaktieren Sie uns bitte mindestens {{minimumNoticeHours}} Stunden im Voraus unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.</p>
     </div>
-    <div class="footer">
-      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>`,
@@ -1306,11 +1269,7 @@ STORNIERUNGSBEDINGUNGEN:
 {{cancellationPolicy}}
 {{/if}}
 
-Wenn Sie diesen Termin verschieben oder stornieren möchten, kontaktieren Sie uns bitte mindestens {{minimumNoticeHours}} Stunden im Voraus unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.
-
-Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
-
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Wenn Sie diesen Termin verschieben oder stornieren möchten, kontaktieren Sie uns bitte mindestens {{minimumNoticeHours}} Stunden im Voraus unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-declined',
@@ -1357,10 +1316,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
       </div>
       <p class="message">Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenster benötigen, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.</p>
     </div>
-    <div class="footer">
-      <p>Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>`,
@@ -1378,11 +1334,7 @@ GRUND:
 WIR HELFEN IHNEN GERNE WEITER
 Wir entschuldigen uns für die Unannehmlichkeiten. Wir ermutigen Sie, eine neue Anfrage für ein alternatives Datum und eine alternative Uhrzeit einzureichen.
 
-Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenster benötigen, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.
-
-Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
-
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Wenn Sie Fragen haben oder Hilfe bei der Suche nach einem verfügbaren Zeitfenster benötigen, kontaktieren Sie uns bitte unter {{contactEmail}}{{#if contactPhone}} oder rufen Sie an unter {{contactPhone}}{{/if}}.`
     },
     {
       name: 'new-appointment-request',
@@ -1425,10 +1377,7 @@ Vielen Dank, dass Sie sich für {{tenantName}} entschieden haben
       </div>
       <p class="message">Bitte prüfen Sie diese Anfrage und ergreifen Sie entsprechende Maßnahmen. Der Antragsteller wartet auf Bestätigung.</p>
     </div>
-    <div class="footer">
-      <p>{{tenantName}} - Terminverwaltung</p>
-      <p class="copyright">© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.</p>
-    </div>
+    
   </div>
 </body>
 </html>`,
@@ -1450,10 +1399,7 @@ Gewünschtes Datum: {{requestedDate}}
 Gewünschte Uhrzeit: {{requestedTime}}
 Dauer: {{duration}} Minuten
 
-Bitte prüfen Sie diese Anfrage und ergreifen Sie entsprechende Maßnahmen.
-
-{{tenantName}} - Terminverwaltung
-© {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.`
+Bitte prüfen Sie diese Anfrage und ergreifen Sie entsprechende Maßnahmen.`
     },
 
     // Spanish (es), French (fr), Italian (it), Dutch (nl) templates
@@ -1466,7 +1412,7 @@ Bitte prüfen Sie diese Anfrage und ergreifen Sie entsprechende Maßnahmen.
       language_code: 'es',
       subject: 'Solicitud de cita recibida - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-received'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Solicitud recibida</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Solicitud recibida</h1><p>Hola{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Gracias por enviar su solicitud de cita. Hemos recibido su solicitud y nuestro equipo la revisará en breve.</p><p><strong>Referencia:</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Detalles de la solicitud</h3><p><strong>Servicio:</strong> {{serviceName}}</p><p><strong>Fecha solicitada:</strong> {{requestedDate}}</p><p><strong>Hora solicitada:</strong> {{requestedTime}}</p><p><strong>Duración:</strong> {{duration}} minutos</p></div><p>Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Solicitud recibida</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Solicitud recibida</h1><p>Hola{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Gracias por enviar su solicitud de cita. Hemos recibido su solicitud y nuestro equipo la revisará en breve.</p><p><strong>Referencia:</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Detalles de la solicitud</h3><p><strong>Servicio:</strong> {{serviceName}}</p><p><strong>Fecha solicitada:</strong> {{requestedDate}}</p><p><strong>Hora solicitada:</strong> {{requestedTime}}</p><p><strong>Duración:</strong> {{duration}} minutos</p></div><p>Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Solicitud de cita recibida
 
 Hola{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1483,16 +1429,14 @@ Duración: {{duration}} minutos
 
 Nuestro equipo revisará su solicitud y confirmará la disponibilidad. Recibirá una notificación por correo electrónico una vez que su cita haya sido aprobada.
 
-Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
       language_code: 'es',
       subject: 'Cita confirmada - {{serviceName}} el {{appointmentDate}}',
       notification_subtype_id: subtypeIds['appointment-request-approved'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cita confirmada</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Cita confirmada</h1><p>Hola{{#if requesterName}} {{requesterName}}{{/if}},</p><p>¡Buenas noticias! Su solicitud de cita ha sido aprobada y confirmada.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Su cita</h3><p><strong>Servicio:</strong> {{serviceName}}</p><p><strong>Fecha:</strong> {{appointmentDate}}</p><p><strong>Hora:</strong> {{appointmentTime}}</p><p><strong>Duración:</strong> {{duration}} minutos</p></div>{{#if technicianName}}<p><strong>Técnico asignado:</strong> {{technicianName}}</p>{{/if}}<p>Si necesita reprogramar o cancelar, contáctenos con al menos {{minimumNoticeHours}} horas de anticipación en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cita confirmada</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Cita confirmada</h1><p>Hola{{#if requesterName}} {{requesterName}}{{/if}},</p><p>¡Buenas noticias! Su solicitud de cita ha sido aprobada y confirmada.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Su cita</h3><p><strong>Servicio:</strong> {{serviceName}}</p><p><strong>Fecha:</strong> {{appointmentDate}}</p><p><strong>Hora:</strong> {{appointmentTime}}</p><p><strong>Duración:</strong> {{duration}} minutos</p></div>{{#if technicianName}}<p><strong>Técnico asignado:</strong> {{technicianName}}</p>{{/if}}<p>Si necesita reprogramar o cancelar, contáctenos con al menos {{minimumNoticeHours}} horas de anticipación en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Cita confirmada
 
 Hola{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1512,16 +1456,14 @@ TÉCNICO ASIGNADO:
 {{#if technicianPhone}}Teléfono: {{technicianPhone}}{{/if}}
 {{/if}}
 
-Si necesita reprogramar o cancelar, contáctenos con al menos {{minimumNoticeHours}} horas de anticipación.
-
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Si necesita reprogramar o cancelar, contáctenos con al menos {{minimumNoticeHours}} horas de anticipación.`
     },
     {
       name: 'appointment-request-declined',
       language_code: 'es',
       subject: 'Actualización de solicitud de cita - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-declined'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Actualización de cita</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Actualización de solicitud de cita</h1><p>Hola{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Gracias por su interés. Lamentablemente, no podemos acomodar su solicitud en el momento solicitado.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Motivo</h4><p>{{declineReason}}</p></div>{{/if}}<p>Le animamos a enviar una nueva solicitud para una fecha y hora alternativa.</p><p>Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Todos los derechos reservados.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Actualización de cita</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Actualización de solicitud de cita</h1><p>Hola{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Gracias por su interés. Lamentablemente, no podemos acomodar su solicitud en el momento solicitado.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Motivo</h4><p>{{declineReason}}</p></div>{{/if}}<p>Le animamos a enviar una nueva solicitud para una fecha y hora alternativa.</p><p>Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Actualización de solicitud de cita
 
 Hola{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1535,16 +1477,14 @@ MOTIVO:
 
 Le animamos a enviar una nueva solicitud para una fecha y hora alternativa que funcione mejor con nuestra disponibilidad.
 
-Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Si tiene preguntas, contáctenos en {{contactEmail}}{{#if contactPhone}} o llame al {{contactPhone}}{{/if}}.`
     },
     {
       name: 'new-appointment-request',
       language_code: 'es',
       subject: 'Nueva solicitud de cita - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
       notification_subtype_id: subtypeIds['new-appointment-request'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nueva solicitud</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nueva solicitud de cita</h1><p>Equipo,</p><p>Se ha enviado una nueva solicitud de cita que requiere su revisión y aprobación.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Detalles de la cita</h3><p><strong>Servicio:</strong> {{serviceName}}</p><p><strong>Fecha solicitada:</strong> {{requestedDate}}</p><p><strong>Hora solicitada:</strong> {{requestedTime}}</p><p><strong>Duración:</strong> {{duration}} minutos</p></div><p>Por favor revise esta solicitud y tome las medidas apropiadas.</p><p>{{tenantName}} - Gestión de citas</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nueva solicitud</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nueva solicitud de cita</h1><p>Equipo,</p><p>Se ha enviado una nueva solicitud de cita que requiere su revisión y aprobación.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Detalles de la cita</h3><p><strong>Servicio:</strong> {{serviceName}}</p><p><strong>Fecha solicitada:</strong> {{requestedDate}}</p><p><strong>Hora solicitada:</strong> {{requestedTime}}</p><p><strong>Duración:</strong> {{duration}} minutos</p></div><p>Por favor revise esta solicitud y tome las medidas apropiadas.</p></body></html>`,
       text_content: `Nueva solicitud de cita - Acción requerida
 
 Equipo,
@@ -1557,10 +1497,7 @@ Fecha solicitada: {{requestedDate}}
 Hora solicitada: {{requestedTime}}
 Duración: {{duration}} minutos
 
-Por favor revise esta solicitud y tome las medidas apropiadas.
-
-{{tenantName}} - Gestión de citas
-© {{currentYear}} {{tenantName}}. Todos los derechos reservados.`
+Por favor revise esta solicitud y tome las medidas apropiadas.`
     },
 
     // French (fr)
@@ -1569,7 +1506,7 @@ Por favor revise esta solicitud y tome las medidas apropiadas.
       language_code: 'fr',
       subject: 'Demande de rendez-vous reçue - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-received'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Demande reçue</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Demande reçue</h1><p>Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Merci d'avoir soumis votre demande de rendez-vous. Nous avons reçu votre demande et notre équipe l'examinera sous peu.</p><p><strong>Référence :</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Détails de la demande</h3><p><strong>Service :</strong> {{serviceName}}</p><p><strong>Date demandée :</strong> {{requestedDate}}</p><p><strong>Heure demandée :</strong> {{requestedTime}}</p><p><strong>Durée :</strong> {{duration}} minutes</p></div><p>Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Tous droits réservés.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Demande reçue</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Demande reçue</h1><p>Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Merci d'avoir soumis votre demande de rendez-vous. Nous avons reçu votre demande et notre équipe l'examinera sous peu.</p><p><strong>Référence :</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Détails de la demande</h3><p><strong>Service :</strong> {{serviceName}}</p><p><strong>Date demandée :</strong> {{requestedDate}}</p><p><strong>Heure demandée :</strong> {{requestedTime}}</p><p><strong>Durée :</strong> {{duration}} minutes</p></div><p>Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Demande de rendez-vous reçue
 
 Bonjour{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1586,16 +1523,14 @@ Durée : {{duration}} minutes
 
 Notre équipe examinera votre demande et confirmera la disponibilité. Vous recevrez une notification par e-mail une fois votre rendez-vous approuvé.
 
-Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
       language_code: 'fr',
       subject: 'Rendez-vous confirmé - {{serviceName}} le {{appointmentDate}}',
       notification_subtype_id: subtypeIds['appointment-request-approved'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rendez-vous confirmé</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Rendez-vous confirmé</h1><p>Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Bonne nouvelle ! Votre demande de rendez-vous a été approuvée et confirmée.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Votre rendez-vous</h3><p><strong>Service :</strong> {{serviceName}}</p><p><strong>Date :</strong> {{appointmentDate}}</p><p><strong>Heure :</strong> {{appointmentTime}}</p><p><strong>Durée :</strong> {{duration}} minutes</p></div>{{#if technicianName}}<p><strong>Technicien assigné :</strong> {{technicianName}}</p>{{/if}}<p>Si vous devez reporter ou annuler, contactez-nous au moins {{minimumNoticeHours}} heures à l'avance à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Tous droits réservés.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rendez-vous confirmé</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Rendez-vous confirmé</h1><p>Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Bonne nouvelle ! Votre demande de rendez-vous a été approuvée et confirmée.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Votre rendez-vous</h3><p><strong>Service :</strong> {{serviceName}}</p><p><strong>Date :</strong> {{appointmentDate}}</p><p><strong>Heure :</strong> {{appointmentTime}}</p><p><strong>Durée :</strong> {{duration}} minutes</p></div>{{#if technicianName}}<p><strong>Technicien assigné :</strong> {{technicianName}}</p>{{/if}}<p>Si vous devez reporter ou annuler, contactez-nous au moins {{minimumNoticeHours}} heures à l'avance à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Rendez-vous confirmé
 
 Bonjour{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1615,16 +1550,14 @@ TECHNICIEN ASSIGNÉ :
 {{#if technicianPhone}}Téléphone : {{technicianPhone}}{{/if}}
 {{/if}}
 
-Si vous devez reporter ou annuler, contactez-nous au moins {{minimumNoticeHours}} heures à l'avance.
-
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Si vous devez reporter ou annuler, contactez-nous au moins {{minimumNoticeHours}} heures à l'avance.`
     },
     {
       name: 'appointment-request-declined',
       language_code: 'fr',
       subject: 'Mise à jour de la demande de rendez-vous - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-declined'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Mise à jour</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Mise à jour de la demande</h1><p>Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Merci de votre intérêt. Malheureusement, nous ne pouvons pas accepter votre demande au moment demandé.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Raison</h4><p>{{declineReason}}</p></div>{{/if}}<p>Nous vous encourageons à soumettre une nouvelle demande pour une date et une heure alternatives.</p><p>Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Tous droits réservés.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Mise à jour</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Mise à jour de la demande</h1><p>Bonjour{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Merci de votre intérêt. Malheureusement, nous ne pouvons pas accepter votre demande au moment demandé.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Raison</h4><p>{{declineReason}}</p></div>{{/if}}<p>Nous vous encourageons à soumettre une nouvelle demande pour une date et une heure alternatives.</p><p>Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Mise à jour de la demande de rendez-vous
 
 Bonjour{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1638,16 +1571,14 @@ RAISON :
 
 Nous vous encourageons à soumettre une nouvelle demande pour une date et une heure alternatives qui correspondent mieux à notre disponibilité.
 
-Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Si vous avez des questions, contactez-nous à {{contactEmail}}{{#if contactPhone}} ou appelez au {{contactPhone}}{{/if}}.`
     },
     {
       name: 'new-appointment-request',
       language_code: 'fr',
       subject: 'Nouvelle demande de rendez-vous - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
       notification_subtype_id: subtypeIds['new-appointment-request'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nouvelle demande</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nouvelle demande de rendez-vous</h1><p>Équipe,</p><p>Une nouvelle demande de rendez-vous a été soumise et nécessite votre examen et approbation.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Détails du rendez-vous</h3><p><strong>Service :</strong> {{serviceName}}</p><p><strong>Date demandée :</strong> {{requestedDate}}</p><p><strong>Heure demandée :</strong> {{requestedTime}}</p><p><strong>Durée :</strong> {{duration}} minutes</p></div><p>Veuillez examiner cette demande et prendre les mesures appropriées.</p><p>{{tenantName}} - Gestion des rendez-vous</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nouvelle demande</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nouvelle demande de rendez-vous</h1><p>Équipe,</p><p>Une nouvelle demande de rendez-vous a été soumise et nécessite votre examen et approbation.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Détails du rendez-vous</h3><p><strong>Service :</strong> {{serviceName}}</p><p><strong>Date demandée :</strong> {{requestedDate}}</p><p><strong>Heure demandée :</strong> {{requestedTime}}</p><p><strong>Durée :</strong> {{duration}} minutes</p></div><p>Veuillez examiner cette demande et prendre les mesures appropriées.</p></body></html>`,
       text_content: `Nouvelle demande de rendez-vous - Action requise
 
 Équipe,
@@ -1660,10 +1591,7 @@ Date demandée : {{requestedDate}}
 Heure demandée : {{requestedTime}}
 Durée : {{duration}} minutes
 
-Veuillez examiner cette demande et prendre les mesures appropriées.
-
-{{tenantName}} - Gestion des rendez-vous
-© {{currentYear}} {{tenantName}}. Tous droits réservés.`
+Veuillez examiner cette demande et prendre les mesures appropriées.`
     },
 
     // Italian (it)
@@ -1672,7 +1600,7 @@ Veuillez examiner cette demande et prendre les mesures appropriées.
       language_code: 'it',
       subject: 'Richiesta di appuntamento ricevuta - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-received'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Richiesta ricevuta</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Richiesta ricevuta</h1><p>Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Grazie per aver inviato la tua richiesta di appuntamento. Abbiamo ricevuto la tua richiesta e il nostro team la esaminerà a breve.</p><p><strong>Riferimento:</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Dettagli della richiesta</h3><p><strong>Servizio:</strong> {{serviceName}}</p><p><strong>Data richiesta:</strong> {{requestedDate}}</p><p><strong>Ora richiesta:</strong> {{requestedTime}}</p><p><strong>Durata:</strong> {{duration}} minuti</p></div><p>Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Richiesta ricevuta</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Richiesta ricevuta</h1><p>Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Grazie per aver inviato la tua richiesta di appuntamento. Abbiamo ricevuto la tua richiesta e il nostro team la esaminerà a breve.</p><p><strong>Riferimento:</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Dettagli della richiesta</h3><p><strong>Servizio:</strong> {{serviceName}}</p><p><strong>Data richiesta:</strong> {{requestedDate}}</p><p><strong>Ora richiesta:</strong> {{requestedTime}}</p><p><strong>Durata:</strong> {{duration}} minuti</p></div><p>Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Richiesta di appuntamento ricevuta
 
 Ciao{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1689,16 +1617,14 @@ Durata: {{duration}} minuti
 
 Il nostro team esaminerà la tua richiesta e confermerà la disponibilità. Riceverai una notifica via email una volta che il tuo appuntamento sarà stato approvato.
 
-Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
       language_code: 'it',
       subject: 'Appuntamento confermato - {{serviceName}} il {{appointmentDate}}',
       notification_subtype_id: subtypeIds['appointment-request-approved'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Appuntamento confermato</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Appuntamento confermato</h1><p>Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Buone notizie! La tua richiesta di appuntamento è stata approvata e confermata.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Il tuo appuntamento</h3><p><strong>Servizio:</strong> {{serviceName}}</p><p><strong>Data:</strong> {{appointmentDate}}</p><p><strong>Ora:</strong> {{appointmentTime}}</p><p><strong>Durata:</strong> {{duration}} minuti</p></div>{{#if technicianName}}<p><strong>Tecnico assegnato:</strong> {{technicianName}}</p>{{/if}}<p>Se devi riprogrammare o annullare, contattaci almeno {{minimumNoticeHours}} ore prima a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Appuntamento confermato</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Appuntamento confermato</h1><p>Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Buone notizie! La tua richiesta di appuntamento è stata approvata e confermata.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Il tuo appuntamento</h3><p><strong>Servizio:</strong> {{serviceName}}</p><p><strong>Data:</strong> {{appointmentDate}}</p><p><strong>Ora:</strong> {{appointmentTime}}</p><p><strong>Durata:</strong> {{duration}} minuti</p></div>{{#if technicianName}}<p><strong>Tecnico assegnato:</strong> {{technicianName}}</p>{{/if}}<p>Se devi riprogrammare o annullare, contattaci almeno {{minimumNoticeHours}} ore prima a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Appuntamento confermato
 
 Ciao{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1718,16 +1644,14 @@ TECNICO ASSEGNATO:
 {{#if technicianPhone}}Telefono: {{technicianPhone}}{{/if}}
 {{/if}}
 
-Se devi riprogrammare o annullare, contattaci almeno {{minimumNoticeHours}} ore prima.
-
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Se devi riprogrammare o annullare, contattaci almeno {{minimumNoticeHours}} ore prima.`
     },
     {
       name: 'appointment-request-declined',
       language_code: 'it',
       subject: 'Aggiornamento richiesta di appuntamento - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-declined'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Aggiornamento</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Aggiornamento richiesta</h1><p>Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Grazie per il tuo interesse. Purtroppo, non possiamo accogliere la tua richiesta al momento richiesto.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Motivo</h4><p>{{declineReason}}</p></div>{{/if}}<p>Ti incoraggiamo a inviare una nuova richiesta per una data e ora alternative.</p><p>Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Aggiornamento</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Aggiornamento richiesta</h1><p>Ciao{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Grazie per il tuo interesse. Purtroppo, non possiamo accogliere la tua richiesta al momento richiesto.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Motivo</h4><p>{{declineReason}}</p></div>{{/if}}<p>Ti incoraggiamo a inviare una nuova richiesta per una data e ora alternative.</p><p>Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Aggiornamento richiesta di appuntamento
 
 Ciao{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1741,16 +1665,14 @@ MOTIVO:
 
 Ti incoraggiamo a inviare una nuova richiesta per una data e ora alternative che si adattino meglio alla nostra disponibilità.
 
-Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Per domande, contattaci a {{contactEmail}}{{#if contactPhone}} o chiama {{contactPhone}}{{/if}}.`
     },
     {
       name: 'new-appointment-request',
       language_code: 'it',
       subject: 'Nuova richiesta di appuntamento - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
       notification_subtype_id: subtypeIds['new-appointment-request'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nuova richiesta</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nuova richiesta di appuntamento</h1><p>Team,</p><p>È stata inviata una nuova richiesta di appuntamento che richiede la vostra revisione e approvazione.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Dettagli dell'appuntamento</h3><p><strong>Servizio:</strong> {{serviceName}}</p><p><strong>Data richiesta:</strong> {{requestedDate}}</p><p><strong>Ora richiesta:</strong> {{requestedTime}}</p><p><strong>Durata:</strong> {{duration}} minuti</p></div><p>Si prega di rivedere questa richiesta e prendere le misure appropriate.</p><p>{{tenantName}} - Gestione appuntamenti</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nuova richiesta</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nuova richiesta di appuntamento</h1><p>Team,</p><p>È stata inviata una nuova richiesta di appuntamento che richiede la vostra revisione e approvazione.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Dettagli dell'appuntamento</h3><p><strong>Servizio:</strong> {{serviceName}}</p><p><strong>Data richiesta:</strong> {{requestedDate}}</p><p><strong>Ora richiesta:</strong> {{requestedTime}}</p><p><strong>Durata:</strong> {{duration}} minuti</p></div><p>Si prega di rivedere questa richiesta e prendere le misure appropriate.</p></body></html>`,
       text_content: `Nuova richiesta di appuntamento - Azione richiesta
 
 Team,
@@ -1763,10 +1685,7 @@ Data richiesta: {{requestedDate}}
 Ora richiesta: {{requestedTime}}
 Durata: {{duration}} minuti
 
-Si prega di rivedere questa richiesta e prendere le misure appropriate.
-
-{{tenantName}} - Gestione appuntamenti
-© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.`
+Si prega di rivedere questa richiesta e prendere le misure appropriate.`
     },
 
     // Dutch (nl)
@@ -1775,7 +1694,7 @@ Si prega di rivedere questa richiesta e prendere le misure appropriate.
       language_code: 'nl',
       subject: 'Afspraakverzoek ontvangen - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-received'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Verzoek ontvangen</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Verzoek ontvangen</h1><p>Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Bedankt voor het indienen van uw afspraakverzoek. Wij hebben uw verzoek ontvangen en ons team zal deze binnenkort beoordelen.</p><p><strong>Referentie:</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Verzoekdetails</h3><p><strong>Service:</strong> {{serviceName}}</p><p><strong>Gewenste datum:</strong> {{requestedDate}}</p><p><strong>Gewenste tijd:</strong> {{requestedTime}}</p><p><strong>Duur:</strong> {{duration}} minuten</p></div><p>Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Verzoek ontvangen</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#8a4dea;">Verzoek ontvangen</h1><p>Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Bedankt voor het indienen van uw afspraakverzoek. Wij hebben uw verzoek ontvangen en ons team zal deze binnenkort beoordelen.</p><p><strong>Referentie:</strong> {{referenceNumber}}</p><div style="background:#f8fafc;padding:20px;margin:20px 0;"><h3>Verzoekdetails</h3><p><strong>Service:</strong> {{serviceName}}</p><p><strong>Gewenste datum:</strong> {{requestedDate}}</p><p><strong>Gewenste tijd:</strong> {{requestedTime}}</p><p><strong>Duur:</strong> {{duration}} minuten</p></div><p>Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Afspraakverzoek ontvangen
 
 Hallo{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1792,16 +1711,14 @@ Duur: {{duration}} minuten
 
 Ons team zal uw verzoek beoordelen en de beschikbaarheid bevestigen. U ontvangt een e-mailmelding zodra uw afspraak is goedgekeurd.
 
-Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.`
     },
     {
       name: 'appointment-request-approved',
       language_code: 'nl',
       subject: 'Afspraak bevestigd - {{serviceName}} op {{appointmentDate}}',
       notification_subtype_id: subtypeIds['appointment-request-approved'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Afspraak bevestigd</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Afspraak bevestigd</h1><p>Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Goed nieuws! Uw afspraakverzoek is goedgekeurd en bevestigd.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Uw afspraak</h3><p><strong>Service:</strong> {{serviceName}}</p><p><strong>Datum:</strong> {{appointmentDate}}</p><p><strong>Tijd:</strong> {{appointmentTime}}</p><p><strong>Duur:</strong> {{duration}} minuten</p></div>{{#if technicianName}}<p><strong>Toegewezen technicus:</strong> {{technicianName}}</p>{{/if}}<p>Als u moet verzetten of annuleren, neem dan minstens {{minimumNoticeHours}} uur van tevoren contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Afspraak bevestigd</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#10b981;">✓ Afspraak bevestigd</h1><p>Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Goed nieuws! Uw afspraakverzoek is goedgekeurd en bevestigd.</p><div style="background:#f0fdf4;border:2px solid #10b981;padding:20px;margin:20px 0;text-align:center;"><h3>Uw afspraak</h3><p><strong>Service:</strong> {{serviceName}}</p><p><strong>Datum:</strong> {{appointmentDate}}</p><p><strong>Tijd:</strong> {{appointmentTime}}</p><p><strong>Duur:</strong> {{duration}} minuten</p></div>{{#if technicianName}}<p><strong>Toegewezen technicus:</strong> {{technicianName}}</p>{{/if}}<p>Als u moet verzetten of annuleren, neem dan minstens {{minimumNoticeHours}} uur van tevoren contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Afspraak bevestigd
 
 Hallo{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1821,16 +1738,14 @@ TOEGEWEZEN TECHNICUS:
 {{#if technicianPhone}}Telefoon: {{technicianPhone}}{{/if}}
 {{/if}}
 
-Als u moet verzetten of annuleren, neem dan minstens {{minimumNoticeHours}} uur van tevoren contact op.
-
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+Als u moet verzetten of annuleren, neem dan minstens {{minimumNoticeHours}} uur van tevoren contact op.`
     },
     {
       name: 'appointment-request-declined',
       language_code: 'nl',
       subject: 'Update afspraakverzoek - {{serviceName}}',
       notification_subtype_id: subtypeIds['appointment-request-declined'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Update</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Update afspraakverzoek</h1><p>Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Bedankt voor uw interesse. Helaas kunnen wij uw verzoek op het gevraagde tijdstip niet accommoderen.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Reden</h4><p>{{declineReason}}</p></div>{{/if}}<p>Wij moedigen u aan om een nieuw verzoek in te dienen voor een alternatieve datum en tijd.</p><p>Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.</p><p>© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Update</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1>Update afspraakverzoek</h1><p>Hallo{{#if requesterName}} {{requesterName}}{{/if}},</p><p>Bedankt voor uw interesse. Helaas kunnen wij uw verzoek op het gevraagde tijdstip niet accommoderen.</p>{{#if declineReason}}<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:16px;margin:20px 0;"><h4>Reden</h4><p>{{declineReason}}</p></div>{{/if}}<p>Wij moedigen u aan om een nieuw verzoek in te dienen voor een alternatieve datum en tijd.</p><p>Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.</p></body></html>`,
       text_content: `Update afspraakverzoek
 
 Hallo{{#if requesterName}} {{requesterName}}{{/if}},
@@ -1844,16 +1759,14 @@ REDEN:
 
 Wij moedigen u aan om een nieuw verzoek in te dienen voor een alternatieve datum en tijd die beter past bij onze beschikbaarheid.
 
-Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.
-
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+Voor vragen, neem contact op via {{contactEmail}}{{#if contactPhone}} of bel {{contactPhone}}{{/if}}.`
     },
     {
       name: 'new-appointment-request',
       language_code: 'nl',
       subject: 'Nieuw afspraakverzoek - {{clientName}}{{#if serviceName}} - {{serviceName}}{{/if}}',
       notification_subtype_id: subtypeIds['new-appointment-request'],
-      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nieuw verzoek</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nieuw afspraakverzoek</h1><p>Team,</p><p>Er is een nieuw afspraakverzoek ingediend dat uw beoordeling en goedkeuring vereist.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Afspraakdetails</h3><p><strong>Service:</strong> {{serviceName}}</p><p><strong>Gewenste datum:</strong> {{requestedDate}}</p><p><strong>Gewenste tijd:</strong> {{requestedTime}}</p><p><strong>Duur:</strong> {{duration}} minuten</p></div><p>Gelieve dit verzoek te beoordelen en passende actie te ondernemen.</p><p>{{tenantName}} - Afspraakbeheer</p></body></html>`,
+      html_content: `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Nieuw verzoek</title></head><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;"><h1 style="color:#f59e0b;">Nieuw afspraakverzoek</h1><p>Team,</p><p>Er is een nieuw afspraakverzoek ingediend dat uw beoordeling en goedkeuring vereist.</p><div style="background:#fef3c7;padding:20px;margin:20px 0;"><h3>Afspraakdetails</h3><p><strong>Service:</strong> {{serviceName}}</p><p><strong>Gewenste datum:</strong> {{requestedDate}}</p><p><strong>Gewenste tijd:</strong> {{requestedTime}}</p><p><strong>Duur:</strong> {{duration}} minuten</p></div><p>Gelieve dit verzoek te beoordelen en passende actie te ondernemen.</p></body></html>`,
       text_content: `Nieuw afspraakverzoek - Actie vereist
 
 Team,
@@ -1866,10 +1779,7 @@ Gewenste datum: {{requestedDate}}
 Gewenste tijd: {{requestedTime}}
 Duur: {{duration}} minuten
 
-Gelieve dit verzoek te beoordelen en passende actie te ondernemen.
-
-{{tenantName}} - Afspraakbeheer
-© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.`
+Gelieve dit verzoek te beoordelen en passende actie te ondernemen.`
     }
   ];
 

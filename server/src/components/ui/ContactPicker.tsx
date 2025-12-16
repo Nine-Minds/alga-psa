@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Input } from './Input';
 import { ChevronDown, Search } from 'lucide-react';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
@@ -43,6 +44,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownContentRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -99,7 +101,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
   }, [isOpen]);
 
   const updateDropdownPosition = () => {
-    if (!buttonRef.current || !dropdownRef.current) return;
+    if (!buttonRef.current) return;
 
     const buttonRect = buttonRef.current.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
@@ -110,11 +112,19 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
     const itemsHeight = Math.min(filteredContacts.length, 5) * 36;
     const estimatedDropdownHeight = baseHeight + itemsHeight + 10;
 
-    if (spaceBelow < estimatedDropdownHeight && spaceAbove > spaceBelow && spaceAbove > 150) {
-      setDropdownPosition('top');
-    } else {
-      setDropdownPosition('bottom');
-    }
+    // Determine vertical position
+    const showAbove = spaceBelow < estimatedDropdownHeight && spaceAbove > spaceBelow && spaceAbove > 150;
+    setDropdownPosition(showAbove ? 'top' : 'bottom');
+
+    // Calculate dropdown width
+    const dropdownWidth = Math.max(buttonRect.width, 250);
+
+    // Calculate coordinates
+    setDropdownCoords({
+      top: showAbove ? buttonRect.top - estimatedDropdownHeight - 4 : buttonRect.bottom + 4,
+      left: buttonRect.left,
+      width: dropdownWidth
+    });
   };
 
   useEffect(() => {
@@ -257,18 +267,17 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
             </div>
           </button>
 
-          {isOpen && (
+          {isOpen && typeof document !== 'undefined' && createPortal(
             <div
               ref={dropdownContentRef}
-              className="absolute z-[999] overflow-hidden bg-white rounded-md shadow-lg border border-gray-200"
+              className="fixed z-[9999] overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 pointer-events-auto"
               style={{
-                width: buttonRef.current ? Math.max(buttonRef.current.offsetWidth, 250) + 'px' : '250px',
-                ...(dropdownPosition === 'top'
-                  ? { bottom: '100%', marginBottom: '4px' }
-                  : { top: '100%', marginTop: '4px' }),
-                left: 0,
+                top: `${dropdownCoords.top}px`,
+                left: `${dropdownCoords.left}px`,
+                width: `${dropdownCoords.width}px`,
               }}
               onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Search Input Container */}
               <div className="p-2 border-b border-gray-200">
@@ -308,7 +317,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
                 </div>
 
                 {/* Contact List */}
-                {isOpen && filteredContacts.length === 0 ? (
+                {filteredContacts.length === 0 ? (
                   <div className="px-4 py-2 text-gray-500">No contacts found</div>
                 ) : (
                   filteredContacts.map((contact) => (
@@ -347,7 +356,8 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
                   ))
                 )}
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>

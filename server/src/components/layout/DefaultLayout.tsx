@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
@@ -20,6 +20,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Track page type for sidebar mode switching
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
@@ -31,10 +32,12 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   // Allow overriding the mode (e.g., show main menu while on settings page)
   const [modeOverride, setModeOverride] = useState<'main' | null>(null);
 
-  // Reset mode override when navigating to a different page type
+  // Reset mode override when navigating to any new page (including query param changes)
+  // This ensures that clicking a menu item (e.g., Billing) after "Back to Main"
+  // will correctly switch to that menu mode
   useEffect(() => {
     setModeOverride(null);
-  }, [defaultSidebarMode]);
+  }, [pathname, searchParams]);
 
   // Use override if set, otherwise use route-based mode
   const sidebarMode = modeOverride ?? defaultSidebarMode;

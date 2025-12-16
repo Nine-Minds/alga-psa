@@ -20,7 +20,18 @@ export interface CustomTabsProps {
   tabs?: TabContent[];
   groups?: TabGroup[];
   defaultTab?: string;
+  /**
+   * Controlled value - when provided, tabs become fully controlled by parent.
+   * Use with onTabChange to manage tab state externally.
+   */
+  value?: string;
   onTabChange?: (tabValue: string) => void;
+  /**
+   * Called before tab change. Return false to prevent the change.
+   * Useful for confirming unsaved changes before navigating away.
+   * Only works in uncontrolled mode (when value prop is not provided).
+   */
+  beforeTabChange?: (newTab: string, currentTab: string) => boolean;
   tabStyles?: {
     root?: string;
     list?: string;
@@ -40,12 +51,29 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   tabs,
   groups,
   defaultTab,
+  value: controlledValue,
   onTabChange,
+  beforeTabChange,
   tabStyles,
   extraContent,
   idPrefix,
   orientation = 'horizontal',
 }) => {
+  const renderIcon = React.useCallback((icon: TabContent['icon']) => {
+    if (!icon) return null;
+    if (React.isValidElement(icon)) {
+      return icon;
+    }
+    const isComponentType =
+      typeof icon === 'function' ||
+      (typeof icon === 'object' && icon !== null && '$$typeof' in icon);
+    if (isComponentType) {
+      const Icon = icon as React.ElementType<{ className?: string }>;
+      return <Icon className="h-4 w-4 shrink-0" />;
+    }
+    return <span className="h-4 w-4 shrink-0 flex items-center justify-center">{icon}</span>;
+  }, []);
+
   // Use groups if provided, otherwise fall back to flat tabs
   const allTabs = React.useMemo(() => {
     if (groups && groups.length > 0) {
@@ -54,11 +82,19 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
     return tabs || [];
   }, [tabs, groups]);
 
-  const [value, setValue] = React.useState(() => {
+  // Determine if controlled or uncontrolled mode
+  const isControlled = controlledValue !== undefined;
+
+  const [internalValue, setInternalValue] = React.useState(() => {
+    if (controlledValue) return controlledValue;
     if (defaultTab) return defaultTab;
     if (allTabs && allTabs.length > 0) return allTabs[0].label;
     return '';
   });
+
+  // Use controlled value if provided, otherwise use internal state
+  const value = isControlled ? controlledValue : internalValue;
+  const setValue = isControlled ? undefined : setInternalValue;
   const generatedId = React.useId();
   const prefix = React.useMemo(() => idPrefix || `tabs-${generatedId}`, [idPrefix, generatedId]);
 
@@ -81,8 +117,8 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   }, []);
 
   React.useEffect(() => {
-    if (defaultTab) {
-      setValue(defaultTab);
+    if (defaultTab && !isControlled) {
+      setInternalValue(defaultTab);
       // Auto-expand the section containing the default tab
       if (groups && groups.length > 0) {
         groups.forEach((group, groupIndex) => {
@@ -95,7 +131,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
         });
       }
     }
-  }, [defaultTab, groups]);
+  }, [defaultTab, groups, isControlled]);
 
   // Auto-expand section when a tab within it becomes active
   React.useEffect(() => {
@@ -143,7 +179,15 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
       value={value}
       orientation={orientation}
       onValueChange={(newValue) => {
-        setValue(newValue);
+        // In uncontrolled mode, check beforeTabChange
+        if (!isControlled && beforeTabChange && !beforeTabChange(newValue, value)) {
+          return; // Prevent tab change
+        }
+        // In uncontrolled mode, update internal state
+        if (setValue) {
+          setValue(newValue);
+        }
+        // Always notify parent
         onTabChange?.(newValue);
       }}
     >
@@ -172,7 +216,6 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                   const hasIcon = !!IconComponent;
                   const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
                   const globalIndex = groups.slice(0, groupIndex).reduce((acc, g) => acc + g.tabs.length, 0) + tabIndex;
-                  const isIconComponent = typeof IconComponent === 'function';
                   return (
                     <Tabs.Trigger
                       key={tab.label}
@@ -180,13 +223,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                       className={`${defaultTriggerClass} ${iconClassName} ml-4 ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
                       value={tab.label}
                     >
-                      {IconComponent && (
-                        isIconComponent ? (
-                          <IconComponent className="h-4 w-4 shrink-0" />
-                        ) : (
-                          <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
-                        )
-                      )}
+                      {renderIcon(IconComponent)}
                       {tab.label}
                     </Tabs.Trigger>
                   );
@@ -201,7 +238,6 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
             const iconClassName = hasIcon 
               ? (orientation === 'vertical' ? 'flex items-center gap-2' : 'flex items-center gap-1.5')
               : '';
-            const isIconComponent = typeof IconComponent === 'function';
             return (
               <Tabs.Trigger
                 key={tab.label}
@@ -209,13 +245,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                 className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
                 value={tab.label}
               >
-                {IconComponent && (
-                  isIconComponent ? (
-                    <IconComponent className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <span className="h-4 w-4 shrink-0 flex items-center justify-center">{IconComponent}</span>
-                  )
-                )}
+                {renderIcon(IconComponent)}
                 {tab.label}
               </Tabs.Trigger>
             );

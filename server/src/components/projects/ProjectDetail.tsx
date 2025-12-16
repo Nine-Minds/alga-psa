@@ -117,19 +117,39 @@ export default function ProjectDetail({
   const hasNotifiedParent = useRef(false);
   const hasOpenedInitialTask = useRef(false);
   
+  // Auto-select the first phase when the project has phases (but not when opening a specific task)
+  useEffect(() => {
+    // Don't auto-select if we have an initialTaskId - that case is handled separately
+    if (initialTaskId) return;
+
+    // Only auto-select if we have phases but none is selected yet
+    if (projectPhases.length > 0 && !selectedPhase) {
+      // Sort phases by order_key to get the first one
+      const sortedPhases = [...projectPhases].sort((a, b) => {
+        const aKey = a.order_key || 'zzz';
+        const bKey = b.order_key || 'zzz';
+        return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
+      });
+
+      const firstPhase = sortedPhases[0];
+      setSelectedPhase(firstPhase);
+      setCurrentPhase(firstPhase);
+    }
+  }, [projectPhases, initialTaskId]); // Intentionally exclude selectedPhase to avoid re-triggering
+
   // Fetch tags when component mounts
   useEffect(() => {
     const fetchTags = async () => {
       if (!project.project_id) return;
-      
+
       try {
         const tags = await findTagsByEntityId(project.project_id, 'project').catch((error) => {
           console.warn('Failed to fetch project tags, continuing without tags:', error);
           return [];
         });
-        
+
         setProjectTags(tags);
-        
+
         // Notify parent component of tags update only once
         if (onTagsUpdate && !hasNotifiedParent.current) {
           const projectTagTexts = allTags.filter(tag => tag.tagged_type === 'project').map(tag => tag.tag_text);

@@ -20,6 +20,7 @@ import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { IBoard, IClient, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket, deleteTickets } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { XCircle, Clock } from 'lucide-react';
@@ -918,24 +919,26 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         ) : (
           <>
             {showSelectAllBanner && (
-              <div className="mb-3 flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
-                <span>
-                  All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-blue-600">
-                    {totalCount} total ticket{totalCount === 1 ? '' : 's'} match your filters
+              <Alert variant="info" className="mb-3">
+                <AlertDescription className="flex items-center justify-between w-full">
+                  <span>
+                    All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.
                   </span>
-                  <Button
-                    id={`${id}-clear-visible-selection`}
-                    variant="link"
-                    onClick={clearSelection}
-                    className="p-0"
-                  >
-                    Clear selection
-                  </Button>
-                </div>
-              </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">
+                      {totalCount} total ticket{totalCount === 1 ? '' : 's'} match your filters
+                    </span>
+                    <Button
+                      id={`${id}-clear-visible-selection`}
+                      variant="link"
+                      onClick={clearSelection}
+                      className="p-0"
+                    >
+                      Clear selection
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
             )}
             <DataTable
               key={`${currentPage}-${pageSize}`}

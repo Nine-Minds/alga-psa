@@ -24,10 +24,7 @@
       "@alga-psa/shared": ["../../shared"],
       "@alga-psa/shared/*": ["../../shared/*"],
       "@product/email-domains/entry": ["../../packages/product-email-domains/ee/entry"],
-      "@product/email-domains/*": ["../../packages/product-email-domains/*"],
-      "@ee": ["../server/src"],
-      "@ee/*": ["../server/src/*"],
-      "server/*": ["../../server/*"]
+      "@product/email-domains/*": ["../../packages/product-email-domains/*"]
     }
   },
   "include": ["src/**/*"],

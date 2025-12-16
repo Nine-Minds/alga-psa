@@ -51,8 +51,10 @@ const getRedirectUri = () => {
   return `${baseUrl}/api/integrations/ninjaone/callback`;
 };
 
-// OAuth scopes required for full RMM integration
-const NINJAONE_SCOPES = 'monitoring management control offline_access';
+// OAuth scopes for NinjaOne integration
+// Available scopes: monitoring, management, control, offline_access
+// Note: Requested scopes must be enabled for the API client in NinjaOne dashboard
+const NINJAONE_SCOPES = 'monitoring management offline_access';
 
 export async function GET(request: NextRequest) {
   let tenantId: string | null = null;
