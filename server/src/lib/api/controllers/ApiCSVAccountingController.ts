@@ -75,16 +75,13 @@ export class ApiCSVAccountingController extends ApiBaseController {
             invoiceStatuses?: string[];
             clientIds?: string[];
           };
-          taxDelegationMode?: 'none' | 'delegate';
         };
 
         const filters = body.filters ?? {};
-        const taxDelegationMode = body.taxDelegationMode ?? 'none';
 
         logger.info('[ApiCSVAccountingController] Starting CSV export', {
           tenant: apiRequest.context.tenant,
-          filters,
-          taxDelegationMode
+          filters
         });
 
         // 1. Select invoices based on filters
@@ -137,9 +134,7 @@ export class ApiCSVAccountingController extends ApiBaseController {
 
         const context = {
           batch,
-          lines: exportLines,
-          taxDelegationMode: taxDelegationMode as any,
-          excludeTaxFromExport: taxDelegationMode === 'delegate'
+          lines: exportLines
         };
 
         // 3. Run adapter transform and deliver

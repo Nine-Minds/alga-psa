@@ -147,8 +147,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     logger.info('[QuickBooksCSVAdapter] Starting transform', {
       tenant: tenantId,
       batchId: context.batch.batch_id,
-      lineCount: context.lines.length,
-      taxDelegationMode: context.taxDelegationMode
+      lineCount: context.lines.length
     });
 
     // Load data
@@ -162,9 +161,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     // Group lines by invoice
     const linesByInvoice = this.groupBy(context.lines, (line) => line.invoice_id);
     const documents: AccountingExportDocument[] = [];
-
-    // Determine if we should exclude tax from export
-    const shouldExcludeTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
+    let invoicesWithExternalTax = 0;
 
     for (const [invoiceId, exportLines] of linesByInvoice.entries()) {
       const invoice = invoicesById.get(invoiceId);
@@ -180,6 +177,13 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       const client = clientData.get(clientId);
       if (!client) {
         throw new Error(`QuickBooks CSV adapter: client ${clientId} not found for invoice ${invoiceId}`);
+      }
+
+      // Determine if tax should be excluded based on invoice's tax_source setting
+      // 'external' or 'pending_external' means tax will be calculated by QuickBooks
+      const shouldExcludeTax = invoice.tax_source === 'external' || invoice.tax_source === 'pending_external';
+      if (shouldExcludeTax) {
+        invoicesWithExternalTax++;
       }
 
       const csvRows: QuickBooksCSVRow[] = [];
@@ -296,7 +300,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     logger.info('[QuickBooksCSVAdapter] Transform completed', {
       tenant: tenantId,
       documentsCreated: documents.length,
-      taxExcluded: shouldExcludeTax
+      invoicesWithExternalTax
     });
 
     return {
@@ -305,8 +309,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         adapter: this.type,
         invoices: documents.length,
         lines: context.lines.length,
-        taxDelegationMode: context.taxDelegationMode ?? 'none',
-        taxExcluded: shouldExcludeTax
+        invoicesWithExternalTax
       }
     };
   }
@@ -381,17 +384,16 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   }
 
   /**
-   * Called after export when tax delegation is enabled.
-   * For CSV adapter, this marks invoices as pending external tax import.
+   * Called after export to create pending tax import records for invoices
+   * that have external tax source (tax_source = 'external' or 'pending_external').
+   * These invoices need tax amounts imported from QuickBooks after calculation.
    */
   async onTaxDelegationExport(
     deliveryResult: AccountingExportDeliveryResult,
     context: AccountingExportAdapterContext
   ): Promise<PendingTaxImportRecord[]> {
-    if (context.taxDelegationMode !== 'delegate') {
-      return [];
-    }
-
+    const { knex } = await createTenantKnex();
+    const tenantId = context.batch.tenant;
     const pendingRecords: PendingTaxImportRecord[] = [];
     const now = new Date().toISOString();
 
@@ -406,20 +408,41 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       }
     }
 
-    for (const [invoiceId, externalRef] of invoiceRefs.entries()) {
-      pendingRecords.push({
-        invoiceId,
-        externalInvoiceRef: externalRef,
-        adapterType: this.type,
-        targetRealm: context.batch.target_realm ?? undefined,
-        exportedAt: now
-      });
+    if (invoiceRefs.size === 0) {
+      return [];
     }
 
-    logger.info('[QuickBooksCSVAdapter] Created pending tax import records', {
-      count: pendingRecords.length,
-      batchId: context.batch.batch_id
-    });
+    // Load invoices to check their tax_source setting
+    const invoiceIds = Array.from(invoiceRefs.keys());
+    const invoices = await knex('invoices')
+      .select('invoice_id', 'tax_source')
+      .where('tenant', tenantId)
+      .whereIn('invoice_id', invoiceIds);
+
+    const invoiceTaxSources = new Map(invoices.map((inv: { invoice_id: string; tax_source: string | null }) =>
+      [inv.invoice_id, inv.tax_source]
+    ));
+
+    // Only create pending records for invoices with external tax source
+    for (const [invoiceId, externalRef] of invoiceRefs.entries()) {
+      const taxSource = invoiceTaxSources.get(invoiceId);
+      if (taxSource === 'external' || taxSource === 'pending_external') {
+        pendingRecords.push({
+          invoiceId,
+          externalInvoiceRef: externalRef,
+          adapterType: this.type,
+          targetRealm: context.batch.target_realm ?? undefined,
+          exportedAt: now
+        });
+      }
+    }
+
+    if (pendingRecords.length > 0) {
+      logger.info('[QuickBooksCSVAdapter] Created pending tax import records', {
+        count: pendingRecords.length,
+        batchId: context.batch.batch_id
+      });
+    }
 
     return pendingRecords;
   }

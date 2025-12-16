@@ -33,7 +33,6 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
     to: ''
   });
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['approved', 'sent']);
-  const [taxDelegationMode, setTaxDelegationMode] = useState<'none' | 'delegate'>('none');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ filename: string; invoiceCount: number } | null>(null);
@@ -69,10 +68,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          filters,
-          taxDelegationMode
-        })
+        body: JSON.stringify({ filters })
       });
 
       if (!response.ok) {
@@ -104,7 +100,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [dateRange, selectedStatuses, taxDelegationMode, onExportComplete]);
+  }, [dateRange, selectedStatuses, onExportComplete]);
 
   return (
     <Card>
@@ -145,45 +141,6 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
                 {option.label}
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Tax Delegation Mode */}
-        <div className="space-y-2">
-          <Label>Tax Handling</Label>
-          <div className="space-y-2">
-            <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="taxMode"
-                value="none"
-                checked={taxDelegationMode === 'none'}
-                onChange={() => setTaxDelegationMode('none')}
-                className="mt-1"
-              />
-              <div>
-                <div className="font-medium">Include Tax</div>
-                <div className="text-sm text-gray-500">
-                  Export invoices with tax amounts from Alga PSA.
-                </div>
-              </div>
-            </label>
-            <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="taxMode"
-                value="delegate"
-                checked={taxDelegationMode === 'delegate'}
-                onChange={() => setTaxDelegationMode('delegate')}
-                className="mt-1"
-              />
-              <div>
-                <div className="font-medium">Delegate Tax to QuickBooks</div>
-                <div className="text-sm text-gray-500">
-                  Export without tax. QuickBooks will calculate tax. You can import tax amounts back later.
-                </div>
-              </div>
-            </label>
           </div>
         </div>
 
