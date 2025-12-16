@@ -54,6 +54,7 @@ ee/server/.env
 ee/server/.playwright-client-portal-credentials.json
 server/.env
 server/.env.localtest
+server/.env.*
 host.values.yaml
 helm/values-hosted-env.yaml
 helm/values-dev-env.yaml

@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { MenuItem } from '../../config/menuConfig';
 import { Construction, ChevronDown } from 'lucide-react';
+import { useSplitLayouts } from "server/src/components/layout/split-layouts/SplitLayoutsContext";
 
 interface SidebarMenuItemProps {
   id: string;
@@ -20,6 +21,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   openSubmenu,
   onToggleSubmenu,
 }) => {
+  const { enabled: splitLayoutsEnabled } = useSplitLayouts();
   const hasActiveSubItem = item.subItems?.some((subItem) => isActive(subItem.href || '')) ?? false;
 
   if (item.subItems) {
@@ -46,6 +48,18 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   }
 
   const isExternalLink = item.href?.startsWith('http://') || item.href?.startsWith('https://');
+  const draggable = Boolean(splitLayoutsEnabled && item.href && !isExternalLink);
+
+  const onDragStart = (e: React.DragEvent) => {
+    if (!draggable) {
+      return;
+    }
+    e.dataTransfer.setData(
+      "application/x-alga-menu-item",
+      JSON.stringify({ href: item.href, title: item.name }),
+    );
+    e.dataTransfer.effectAllowed = "copy";
+  };
 
   const linkContent = (
     <>
@@ -69,6 +83,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
         rel="noopener noreferrer"
         className={`flex items-center px-4 py-2 hover:bg-[#2a2b32]`}
         data-automation-id={`sidebar-menu-${id}`}
+        draggable={false}
       >
         {linkContent}
       </a>
@@ -81,6 +96,8 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
       href={item.href || '#'}
       className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
       data-automation-id={`sidebar-menu-${id}`}
+      draggable={draggable}
+      onDragStart={onDragStart}
     >
       {linkContent}
     </Link>

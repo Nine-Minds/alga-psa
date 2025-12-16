@@ -10,6 +10,9 @@ import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
 import { ActivityDrawerProvider } from "server/src/components/user-activities/ActivityDrawerProvider";
 import { savePreference } from 'server/src/lib/utils/cookies';
+import { SplitLayoutsProvider } from "server/src/components/layout/split-layouts/SplitLayoutsContext";
+import { SplitLayoutHost } from "server/src/components/layout/split-layouts/SplitLayoutHost";
+import { loadEnabledFromStorage, saveEnabledToStorage } from "server/src/components/layout/split-layouts/layoutState";
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -21,6 +24,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [drawerContent] = useState<React.ReactNode>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const embeddedParam = searchParams?.get('embedded');
+  const embeddedFromQuery = embeddedParam === '1';
+  const [embedded, setEmbedded] = useState(embeddedFromQuery);
+  const [splitLayoutsEnabled, setSplitLayoutsEnabled] = useState(false);
 
   // Track page type for sidebar mode switching
   const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
@@ -38,6 +45,62 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   useEffect(() => {
     setModeOverride(null);
   }, [pathname, searchParams]);
+
+  useEffect(() => {
+    const STORAGE_KEY = "alga.splitLayouts.embedded.v1";
+
+    const inIframe = (() => {
+      try {
+        return window.self !== window.top;
+      } catch {
+        return true;
+      }
+    })();
+
+    // Allow explicitly disabling embedded mode via `?embedded=0`.
+    if (embeddedParam === '0') {
+      sessionStorage.removeItem(STORAGE_KEY);
+      setEmbedded(false);
+      return;
+    }
+
+    // Persist embedded mode across in-iframe navigations even if links don't carry the query param.
+    if (embeddedFromQuery) {
+      if (inIframe) {
+        sessionStorage.setItem(STORAGE_KEY, "1");
+      }
+      setEmbedded(true);
+      return;
+    }
+
+    if (inIframe && sessionStorage.getItem(STORAGE_KEY) === "1") {
+      setEmbedded(true);
+      return;
+    }
+
+    setEmbedded(false);
+  }, [embeddedFromQuery, embeddedParam]);
+
+  useEffect(() => {
+    if (embedded) {
+      setSplitLayoutsEnabled(false);
+      return;
+    }
+
+    const qp = searchParams?.get('splitLayouts');
+    if (qp === '1') {
+      saveEnabledToStorage(true);
+      setSplitLayoutsEnabled(true);
+      return;
+    }
+    if (qp === '0') {
+      saveEnabledToStorage(false);
+      setSplitLayoutsEnabled(false);
+      return;
+    }
+
+    setSplitLayoutsEnabled(loadEnabledFromStorage());
+  }, [embedded, searchParams]);
 
   // Use override if set, otherwise use route-based mode
   const sidebarMode = modeOverride ?? defaultSidebarMode;
@@ -150,46 +213,62 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     setIsDrawerOpen(false);
   };
 
+  const inline = <Body>{children}</Body>;
+
   return (
     <DrawerProvider>
       <ActivityDrawerProvider>
-        <div className="flex h-screen overflow-hidden bg-gray-100">
-          <SidebarWithFeatureFlags
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-            disableTransition={disableTransition}
-            mode={sidebarMode}
-            onBackToMain={handleBackToMain}
-          />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Header
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-              rightSidebarOpen={rightSidebarOpen}
-              setRightSidebarOpen={setRightSidebarOpen}
-            />
-            <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
+        {embedded ? (
+          <div className="flex h-screen overflow-hidden bg-gray-100">
+            <main className="flex-1 overflow-hidden flex">
               <Body>{children}</Body>
-              <RightSidebar
-                isOpen={rightSidebarOpen}
-                setIsOpen={setRightSidebarOpen}
-                clientUrl={clientUrl}
-                accountId={accountId}
-                messages={messages}
-                userRole={userRole}
-                userId={userId}
-                selectedAccount={selectedAccount}
-                handleSelectAccount={handleSelectAccount}
-                auth_token={auth_token}
-                setChatTitle={setChatTitle}
-                isTitleLocked={isTitleLocked}
-              />
             </main>
-            <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
-              {drawerContent}
-            </Drawer>
           </div>
-        </div>
+        ) : (
+          <SplitLayoutsProvider enabled={splitLayoutsEnabled}>
+            <div className="flex h-screen overflow-hidden bg-gray-100">
+              <SidebarWithFeatureFlags
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                disableTransition={disableTransition}
+                mode={sidebarMode}
+                onBackToMain={handleBackToMain}
+              />
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <Header
+                  sidebarOpen={sidebarOpen}
+                  setSidebarOpen={setSidebarOpen}
+                  rightSidebarOpen={rightSidebarOpen}
+                  setRightSidebarOpen={setRightSidebarOpen}
+                />
+                <main
+                  className={`flex-1 overflow-hidden flex ${
+                    sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'
+                  }`}
+                >
+                  {splitLayoutsEnabled ? <SplitLayoutHost inlineContent={inline} /> : inline}
+                  <RightSidebar
+                    isOpen={rightSidebarOpen}
+                    setIsOpen={setRightSidebarOpen}
+                    clientUrl={clientUrl}
+                    accountId={accountId}
+                    messages={messages}
+                    userRole={userRole}
+                    userId={userId}
+                    selectedAccount={selectedAccount}
+                    handleSelectAccount={handleSelectAccount}
+                    auth_token={auth_token}
+                    setChatTitle={setChatTitle}
+                    isTitleLocked={isTitleLocked}
+                  />
+                </main>
+                <Drawer isOpen={isDrawerOpen} onClose={closeDrawer}>
+                  {drawerContent}
+                </Drawer>
+              </div>
+            </div>
+          </SplitLayoutsProvider>
+        )}
       </ActivityDrawerProvider>
     </DrawerProvider>
   );
