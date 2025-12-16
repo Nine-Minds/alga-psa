@@ -395,6 +395,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                       <li>Copy the Client ID and Client Secret below</li>
                     </ol>
                     <Button
+                      id="ninjaone-open-api-settings"
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-blue-700"
@@ -452,6 +453,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                         className="pr-10"
                       />
                       <Button
+                        id="ninjaone-toggle-secret-visibility"
                         type="button"
                         variant="ghost"
                         size="sm"
