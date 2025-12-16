@@ -1330,6 +1330,10 @@ const handleClose = () => {
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}
                                 ticketId={ticket.ticket_id || ''}
+                                initialDocuments={documents}
+                                onDocumentCreated={async () => {
+                                    router.refresh();
+                                }}
                             />
                         </Suspense>
                     </div>
