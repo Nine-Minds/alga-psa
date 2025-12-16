@@ -6,7 +6,7 @@ import { TagInput } from './TagInput';
 import { TagInputInline } from './TagInputInline';
 // import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
-import { useTags } from 'server/src/context/TagContext';
+import { useTagsSafe } from 'server/src/context/TagContext';
 import { handleError } from 'server/src/lib/utils/errorHandling';
 
 interface TagManagerProps {
@@ -42,13 +42,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   permissions: passedPermissions
 }) => {
   // Try to get tag context, but handle gracefully if not available
-  let tagContext: ReturnType<typeof useTags> | null = null;
-  try {
-    tagContext = useTags();
-  } catch (error) {
-    // TagProvider not available, which is fine - component will work without it
-    tagContext = null;
-  }
+  const tagContext = useTagsSafe();
   const [tags, setTags] = useState<ITag[]>(initialTags);
   const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
   const [permissions, setPermissions] = useState(
