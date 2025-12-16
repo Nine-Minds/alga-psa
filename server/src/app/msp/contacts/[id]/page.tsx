@@ -11,10 +11,12 @@ import { getContactPortalPermissions } from 'server/src/lib/actions/permission-a
 
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
-  const { id } = await params;
+const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProps) => {
+  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const tab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab.toLowerCase() : null;
 
   try {
     // Fetch user data first for authorization
@@ -37,16 +39,20 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
     }
 
     // Fetch additional data in parallel
-    const [clients, documentsResponse, permissions] = await Promise.all([
+    // Only fetch documents when viewing the documents tab
+    const [clients, permissions] = await Promise.all([
       getAllClients(),
-      getDocumentsByEntity(id, 'contact'),
       getContactPortalPermissions()
     ]);
 
-    // Handle both array and paginated response formats
-    const documents = Array.isArray(documentsResponse)
-      ? documentsResponse
-      : documentsResponse.documents || [];
+    // Conditionally fetch documents only when on documents tab
+    let documents: IDocument[] = [];
+    if (tab === 'documents') {
+      const documentsResponse = await getDocumentsByEntity(id, 'contact');
+      documents = Array.isArray(documentsResponse)
+        ? documentsResponse
+        : documentsResponse.documents || [];
+    }
 
     return (
       <div className="p-6">
