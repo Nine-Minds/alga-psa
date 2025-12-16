@@ -1,0 +1,157 @@
+{
+  "feature": "quickbooks-csv-export",
+  "title": "QuickBooks CSV Export/Import Integration",
+  "description": "Alternative to OAuth integration for QuickBooks that allows customers to export invoices to CSV for importing into QuickBooks, and re-import tax data from QuickBooks reports when using external tax calculation mode.",
+  "created": "2024-12-16",
+  "branch": "feature/quickbooks-csv-export",
+  "tasks": [
+    {
+      "id": "1.0",
+      "phase": "Core Infrastructure",
+      "description": "Create CSV field normalizer utility for handling column name variations and drift",
+      "file": "server/src/lib/utils/csvFieldNormalizer.ts",
+      "done": false
+    },
+    {
+      "id": "1.1",
+      "phase": "Core Infrastructure",
+      "description": "Create CSV tax import validator service with column validation, date parsing, and amount parsing",
+      "file": "server/src/lib/services/csvTaxImportValidator.ts",
+      "done": false
+    },
+    {
+      "id": "1.2",
+      "phase": "Core Infrastructure",
+      "description": "Create CSV tax import service for processing uploaded CSV files and updating invoice tax data",
+      "file": "server/src/lib/services/csvTaxImportService.ts",
+      "done": false
+    },
+    {
+      "id": "1.3",
+      "phase": "Core Infrastructure",
+      "description": "Write unit tests for CSV field normalizer",
+      "file": "server/src/lib/utils/__tests__/csvFieldNormalizer.test.ts",
+      "done": false
+    },
+    {
+      "id": "1.4",
+      "phase": "Core Infrastructure",
+      "description": "Write unit tests for CSV tax import validator",
+      "file": "server/src/lib/services/__tests__/csvTaxImportValidator.test.ts",
+      "done": false
+    },
+    {
+      "id": "2.0",
+      "phase": "Export Adapter",
+      "description": "Create QuickBooksCSVAdapter implementing AccountingExportAdapter interface",
+      "file": "server/src/lib/adapters/accounting/quickBooksCSVAdapter.ts",
+      "done": false
+    },
+    {
+      "id": "2.1",
+      "phase": "Export Adapter",
+      "description": "Register QuickBooksCSVAdapter in adapter registry",
+      "file": "server/src/lib/adapters/accounting/registry.ts",
+      "done": false
+    },
+    {
+      "id": "2.2",
+      "phase": "Export Adapter",
+      "description": "Create CSV export API route",
+      "file": "server/src/app/api/accounting/csv/export/route.ts",
+      "done": false
+    },
+    {
+      "id": "2.3",
+      "phase": "Export Adapter",
+      "description": "Write unit tests for QuickBooksCSVAdapter",
+      "file": "server/src/lib/adapters/accounting/__tests__/quickBooksCSVAdapter.test.ts",
+      "done": false
+    },
+    {
+      "id": "3.0",
+      "phase": "Import API",
+      "description": "Create tax CSV import API route with file upload support",
+      "file": "server/src/app/api/accounting/csv/import/tax/route.ts",
+      "done": false
+    },
+    {
+      "id": "3.1",
+      "phase": "Import API",
+      "description": "Create CSV template download route",
+      "file": "server/src/app/api/accounting/csv/import/tax/template/route.ts",
+      "done": false
+    },
+    {
+      "id": "3.2",
+      "phase": "Import API",
+      "description": "Write integration tests for CSV export flow",
+      "file": "server/src/test/integration/accounting/csv-export.integration.test.ts",
+      "done": false
+    },
+    {
+      "id": "3.3",
+      "phase": "Import API",
+      "description": "Write integration tests for CSV tax import flow",
+      "file": "server/src/test/integration/accounting/csv-import.integration.test.ts",
+      "done": false
+    },
+    {
+      "id": "4.0",
+      "phase": "UI Components",
+      "description": "Create CSVExportPanel component with date range picker, status filters, and download button",
+      "file": "server/src/components/integrations/csv/CSVExportPanel.tsx",
+      "done": false
+    },
+    {
+      "id": "4.1",
+      "phase": "UI Components",
+      "description": "Create CSVTaxImportPanel component with file upload, validation, and inline help",
+      "file": "server/src/components/integrations/csv/CSVTaxImportPanel.tsx",
+      "done": false
+    },
+    {
+      "id": "4.2",
+      "phase": "UI Components",
+      "description": "Create CSVImportPreview component for displaying validation results and import details",
+      "file": "server/src/components/integrations/csv/CSVImportPreview.tsx",
+      "done": false
+    },
+    {
+      "id": "4.3",
+      "phase": "UI Components",
+      "description": "Integrate CSV panels into accounting exports page",
+      "file": "server/src/app/(authenticated)/msp/accounting/exports/page.tsx",
+      "done": false
+    },
+    {
+      "id": "5.0",
+      "phase": "Testing & Polish",
+      "description": "Write Playwright E2E tests for CSV export UI",
+      "file": "server/src/test/e2e/integrations/csv-export.spec.ts",
+      "done": false
+    },
+    {
+      "id": "5.1",
+      "phase": "Testing & Polish",
+      "description": "Write Playwright E2E tests for CSV import UI",
+      "file": "server/src/test/e2e/integrations/csv-import.spec.ts",
+      "done": false
+    },
+    {
+      "id": "5.2",
+      "phase": "Testing & Polish",
+      "description": "Add optional database index for CSV import queries",
+      "file": "server/migrations/YYYYMMDD_add_csv_import_index.cjs",
+      "done": false
+    }
+  ],
+  "dependencies": [
+    "server/src/lib/adapters/accounting/quickBooksOnlineAdapter.ts",
+    "server/src/lib/services/externalTaxImportService.ts",
+    "server/src/lib/utils/csvParser.ts",
+    "server/src/lib/adapters/accounting/accountingExportAdapter.ts",
+    "server/src/lib/services/accountingExportService.ts",
+    "server/src/lib/services/accountingMappingResolver.ts"
+  ]
+}
