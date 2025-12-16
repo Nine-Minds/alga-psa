@@ -15,7 +15,7 @@ export class AccountingExportValidation {
     const { knex } = await createTenantKnex();
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;
-    const isQuickBooks = adapterType === 'quickbooks_online';
+    const isQuickBooks = adapterType === 'quickbooks_online' || adapterType === 'quickbooks_csv';
 
     const chargeIds = new Set<string>();
     const invoiceIds = new Set<string>();
@@ -43,10 +43,11 @@ export class AccountingExportValidation {
 
     const invoices = invoiceIds.size > 0
       ? await knex('invoices')
-          .select('invoice_id', 'client_id')
+          .select('invoice_id', 'client_id', 'tax_source')
           .whereIn('invoice_id', Array.from(invoiceIds))
           .andWhere({ tenant: batch.tenant })
       : [];
+    const invoiceTaxSourceById = new Map(invoices.map((row) => [row.invoice_id, row.tax_source]));
     const clientIds = new Set<string>();
     if (isQuickBooks) {
       for (const invoice of invoices) {
@@ -107,7 +108,11 @@ export class AccountingExportValidation {
         });
       }
 
-      if (isQuickBooks && charge.tax_region) {
+      const invoiceTaxSource = line.invoice_id ? invoiceTaxSourceById.get(line.invoice_id) : null;
+      const invoiceDelegatesTax =
+        invoiceTaxSource === 'external' || invoiceTaxSource === 'pending_external';
+
+      if (isQuickBooks && charge.tax_region && !invoiceDelegatesTax) {
         const cacheKey = `${charge.tax_region}:${batch.target_realm ?? 'default'}`;
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
@@ -130,7 +135,7 @@ export class AccountingExportValidation {
     }
 
     if (isQuickBooks) {
-      if (!batch.target_realm && lines.length > 0) {
+      if (adapterType === 'quickbooks_online' && !batch.target_realm && lines.length > 0) {
         await repo.addError({
           batch_id: batchId,
           line_id: lines[0].line_id,

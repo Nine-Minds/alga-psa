@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { CSVExportPanel } from '../../integrations/csv/CSVExportPanel';
 import { CSVTaxImportPanel } from '../../integrations/csv/CSVTaxImportPanel';
 import { FileSpreadsheet } from 'lucide-react';
+import { CSVMappingManager } from '../../integrations/csv/CSVMappingManager';
 
 /**
  * CSV Integration Settings Component
@@ -43,9 +44,21 @@ const CSVIntegrationSettings: React.FC = () => {
               </li>
             </ul>
             <p className="text-xs">
-              Note: Service mappings must be configured in the QuickBooks Online section above before exporting.
+              Note: Configure mappings below before exporting. These mappings are stored separately from the OAuth-based QuickBooks Online integration.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card id="qbcsv-mapping-settings-card">
+        <CardHeader>
+          <CardTitle>QuickBooks CSV Mappings</CardTitle>
+          <CardDescription>
+            Map Alga services, tax regions, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CSVMappingManager />
         </CardContent>
       </Card>
 

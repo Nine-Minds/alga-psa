@@ -8,14 +8,6 @@ import {
   type UpdateMappingData
 } from 'server/src/lib/actions/externalMappingActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import {
-  getQboItems,
-  getQboTaxCodes,
-  getQboTerms,
-  type QboItem,
-  type QboTaxCode,
-  type QboTerm
-} from 'server/src/lib/actions/integrations/qboActions';
 import { getTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
 import { getPaymentTermsList } from 'server/src/lib/actions/billingAndTax';
 import type { IService } from 'server/src/interfaces/billing.interfaces';
@@ -24,22 +16,19 @@ import type { IPaymentTermOption } from 'server/src/lib/actions/billingAndTax';
 import type {
   AccountingMappingContext,
   AccountingMappingModule,
-  AccountingMappingOverrides,
   AccountingMappingLoadResult
 } from 'server/src/components/accounting-mappings/types';
 
-const ADAPTER_TYPE = 'quickbooks_online';
+const ADAPTER_TYPE = 'quickbooks_csv';
 
-type MappingLoadConfig<TAlga, TExternal> = {
+type MappingLoadConfig<TAlga> = {
   context: AccountingMappingContext;
   algaEntityType: string;
   loadAlgaEntities: (context: AccountingMappingContext) => Promise<TAlga[]>;
   mapAlga: (entity: TAlga) => { id: string; name: string };
-  loadExternalEntities: (context: AccountingMappingContext) => Promise<TExternal[]>;
-  mapExternal: (entity: TExternal) => { id: string; name: string };
 };
 
-export function createQboMappingModules(): AccountingMappingModule[] {
+export function createCsvMappingModules(): AccountingMappingModule[] {
   return [
     createServiceModule(),
     createTaxCodeModule(),
@@ -49,7 +38,7 @@ export function createQboMappingModules(): AccountingMappingModule[] {
 
 function createServiceModule(): AccountingMappingModule {
   return {
-    id: 'qbo-service-mappings',
+    id: 'qbcsv-service-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'service',
     externalEntityType: 'Item',
@@ -75,20 +64,19 @@ function createServiceModule(): AccountingMappingModule {
         cancelLabel: 'Cancel'
       }
     },
-    resolveOverrides: resolveAccountingOverrides(ADAPTER_TYPE, 'qbo-service-mappings', 'itemMappingOverrides'),
     metadata: {
       enableJsonEditor: true
     },
     elements: {
-      addButton: 'add-qbo-item-mapping-button',
-      table: 'qbo-item-mappings-table',
-      dialog: 'qbo-item-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-qbo-item-mapping-dialog',
-      editMenuPrefix: 'edit-qbo-item-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-qbo-item-mapping-menu-item-'
+      addButton: 'add-qbcsv-item-mapping-button',
+      table: 'qbcsv-item-mappings-table',
+      dialog: 'qbcsv-item-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-qbcsv-item-mapping-dialog',
+      editMenuPrefix: 'edit-qbcsv-item-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-qbcsv-item-mapping-menu-item-'
     },
     load(context) {
-      return loadMappings<IServicesResult, QboItem>({
+      return loadMappings<IServicesResult>({
         context,
         algaEntityType: 'service',
         loadAlgaEntities: async () => {
@@ -103,12 +91,6 @@ function createServiceModule(): AccountingMappingModule {
         mapAlga: (service) => ({
           id: service.service_id,
           name: service.service_name
-        }),
-        loadExternalEntities: (loadContext) =>
-          getQboItems({ realmId: loadContext.realmId ?? null }),
-        mapExternal: (item) => ({
-          id: item.id,
-          name: item.name
         })
       });
     },
@@ -120,9 +102,9 @@ function createServiceModule(): AccountingMappingModule {
       });
     },
     update(context, mappingId, input) {
-      return updateMapping(context, mappingId, input);
+      return updateMapping(mappingId, input);
     },
-    async remove(context, mappingId) {
+    async remove(_context, mappingId) {
       await deleteExternalEntityMapping(mappingId);
     }
   };
@@ -130,7 +112,7 @@ function createServiceModule(): AccountingMappingModule {
 
 function createTaxCodeModule(): AccountingMappingModule {
   return {
-    id: 'qbo-tax-code-mappings',
+    id: 'qbcsv-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'tax_code',
     externalEntityType: 'TaxCode',
@@ -155,20 +137,27 @@ function createTaxCodeModule(): AccountingMappingModule {
         cancelLabel: 'Cancel'
       }
     },
-    resolveOverrides: resolveAccountingOverrides(ADAPTER_TYPE, 'qbo-tax-code-mappings'),
     metadata: {
       enableJsonEditor: true
     },
     elements: {
-      addButton: 'add-qbo-taxcode-mapping-button',
-      table: 'qbo-taxcode-mappings-table',
-      dialog: 'qbo-taxcode-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-qbo-taxcode-mapping-dialog',
-      editMenuPrefix: 'edit-qbo-taxcode-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-qbo-taxcode-mapping-menu-item-'
+      addButton: 'add-qbcsv-taxcode-mapping-button',
+      table: 'qbcsv-taxcode-mappings-table',
+      dialog: 'qbcsv-taxcode-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-qbcsv-taxcode-mapping-dialog',
+      editMenuPrefix: 'edit-qbcsv-taxcode-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-qbcsv-taxcode-mapping-menu-item-'
     },
     load(context) {
-      return loadTaxCodeMappings(context);
+      return loadMappings<ITaxRegion>({
+        context,
+        algaEntityType: 'tax_code',
+        loadAlgaEntities: getTaxRegions,
+        mapAlga: (region) => ({
+          id: region.region_code,
+          name: region.region_name ?? region.region_code
+        })
+      });
     },
     create(context, input) {
       return createMapping({
@@ -177,8 +166,8 @@ function createTaxCodeModule(): AccountingMappingModule {
         algaEntityType: 'tax_code'
       });
     },
-    update(context, mappingId, input) {
-      return updateMapping(context, mappingId, input);
+    update(_context, mappingId, input) {
+      return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
       await deleteExternalEntityMapping(mappingId);
@@ -186,47 +175,9 @@ function createTaxCodeModule(): AccountingMappingModule {
   };
 }
 
-async function loadTaxCodeMappings(
-  context: AccountingMappingContext
-): Promise<AccountingMappingLoadResult> {
-  const [taxCodeMappings, legacyTaxRegionMappings, algaRegions, externalTaxCodes] =
-    await Promise.all([
-      getExternalEntityMappings({
-        integrationType: ADAPTER_TYPE,
-        algaEntityType: 'tax_code',
-        externalRealmId: context.realmId ?? undefined
-      }),
-      getExternalEntityMappings({
-        integrationType: ADAPTER_TYPE,
-        algaEntityType: 'tax_region',
-        externalRealmId: context.realmId ?? undefined
-      }),
-      getTaxRegions(),
-      getQboTaxCodes({ realmId: context.realmId ?? null })
-    ]);
-
-  const combinedMappings = [
-    ...taxCodeMappings,
-    ...legacyTaxRegionMappings
-  ];
-  const uniqueMappings = Array.from(new Map(combinedMappings.map((m) => [m.id, m])).values());
-
-  return {
-    mappings: uniqueMappings,
-    algaEntities: algaRegions.map((region) => ({
-      id: region.region_code,
-      name: region.region_name ?? region.region_code
-    })),
-    externalEntities: externalTaxCodes.map((taxCode) => ({
-      id: taxCode.id,
-      name: taxCode.name
-    }))
-  };
-}
-
 function createPaymentTermModule(): AccountingMappingModule {
   return {
-    id: 'qbo-term-mappings',
+    id: 'qbcsv-term-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'payment_term',
     externalEntityType: 'Term',
@@ -251,30 +202,23 @@ function createPaymentTermModule(): AccountingMappingModule {
         cancelLabel: 'Cancel'
       }
     },
-    resolveOverrides: resolveAccountingOverrides(ADAPTER_TYPE, 'qbo-term-mappings'),
     metadata: {
       enableJsonEditor: true
     },
     elements: {
-      addButton: 'add-qbo-term-mapping-button',
-      table: 'qbo-term-mappings-table',
-      dialog: 'qbo-term-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-qbo-term-mapping-dialog',
-      editMenuPrefix: 'edit-qbo-term-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-qbo-term-mapping-menu-item-'
+      addButton: 'add-qbcsv-term-mapping-button',
+      table: 'qbcsv-term-mappings-table',
+      dialog: 'qbcsv-term-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-qbcsv-term-mapping-dialog',
+      editMenuPrefix: 'edit-qbcsv-term-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-qbcsv-term-mapping-menu-item-'
     },
     load(context) {
-      return loadMappings<IPaymentTermOption, QboTerm>({
+      return loadMappings<IPaymentTermOption>({
         context,
         algaEntityType: 'payment_term',
         loadAlgaEntities: getPaymentTermsList,
         mapAlga: (term) => ({
-          id: term.id,
-          name: term.name
-        }),
-        loadExternalEntities: (loadContext) =>
-          getQboTerms({ realmId: loadContext.realmId ?? null }),
-        mapExternal: (term) => ({
           id: term.id,
           name: term.name
         })
@@ -287,8 +231,8 @@ function createPaymentTermModule(): AccountingMappingModule {
         algaEntityType: 'payment_term'
       });
     },
-    update(context, mappingId, input) {
-      return updateMapping(context, mappingId, input);
+    update(_context, mappingId, input) {
+      return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
       await deleteExternalEntityMapping(mappingId);
@@ -296,28 +240,27 @@ function createPaymentTermModule(): AccountingMappingModule {
   };
 }
 
-async function loadMappings<TAlga, TExternal>({
+async function loadMappings<TAlga>({
   context,
   algaEntityType,
   loadAlgaEntities,
-  mapAlga,
-  loadExternalEntities,
-  mapExternal
-}: MappingLoadConfig<TAlga, TExternal>): Promise<AccountingMappingLoadResult> {
-  const [mappings, algaEntities, externalEntities] = await Promise.all([
+  mapAlga
+}: MappingLoadConfig<TAlga>): Promise<AccountingMappingLoadResult> {
+  const externalRealmId = context.realmId === undefined ? undefined : context.realmId;
+
+  const [mappings, algaEntities] = await Promise.all([
     getExternalEntityMappings({
       integrationType: ADAPTER_TYPE,
       algaEntityType,
-      externalRealmId: context.realmId ?? undefined
+      externalRealmId
     }),
-    loadAlgaEntities(context),
-    loadExternalEntities(context)
+    loadAlgaEntities(context)
   ]);
 
   return {
     mappings,
     algaEntities: algaEntities.map(mapAlga),
-    externalEntities: externalEntities.map(mapExternal)
+    externalEntities: []
   };
 }
 
@@ -348,7 +291,6 @@ function createMapping({
 }
 
 function updateMapping(
-  context: AccountingMappingContext,
   mappingId: string,
   input: {
     externalEntityId: string;
@@ -363,32 +305,5 @@ function updateMapping(
   return updateExternalEntityMapping(mappingId, payload);
 }
 
-function resolveAccountingOverrides(
-  adapterType: string,
-  moduleKey: string,
-  fallbackKey?: string
-) {
-  return (): AccountingMappingOverrides | undefined => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    const globalWithMocks = window as typeof window & {
-      __ALGA_PLAYWRIGHT_ACCOUNTING__?: Record<string, Record<string, AccountingMappingOverrides>>;
-      __ALGA_PLAYWRIGHT_QBO__?: Record<string, AccountingMappingOverrides>;
-    };
-
-    const generic = globalWithMocks.__ALGA_PLAYWRIGHT_ACCOUNTING__?.[adapterType]?.[moduleKey];
-    if (generic) {
-      return generic;
-    }
-
-    if (fallbackKey) {
-      return globalWithMocks.__ALGA_PLAYWRIGHT_QBO__?.[fallbackKey];
-    }
-
-    return undefined;
-  };
-}
-
 type IServicesResult = Pick<IService, 'service_id' | 'service_name'>;
+

@@ -13,9 +13,8 @@ import { handleApiError, ForbiddenError } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
 import { getCSVTaxImportService } from '../../services/csvTaxImportService';
 import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
+import { AccountingExportService } from '../../services/accountingExportService';
 import { QuickBooksCSVAdapter } from '../../adapters/accounting/quickBooksCSVAdapter';
-import { AccountingExportBatch, AccountingExportLine } from '../../../interfaces/accountingExport.interfaces';
-import { v4 as uuid4 } from 'uuid';
 import logger from '@shared/core/logger';
 
 type CSVAccountingPermission = 'export' | 'import';
@@ -100,51 +99,63 @@ export class ApiCSVAccountingController extends ApiBaseController {
           );
         }
 
-        // 2. Build context for adapter
-        const batchId = uuid4();
-        const batch: AccountingExportBatch = {
-          tenant: apiRequest.context.tenant,
-          batch_id: batchId,
+        // 2. Persist batch + lines and execute through the unified accounting export service.
+        const exportService = await AccountingExportService.create();
+        const batch = await exportService.createBatch({
           adapter_type: QuickBooksCSVAdapter.TYPE,
           target_realm: null,
           export_type: 'invoice',
-          filters: filters as Record<string, any>,
-          status: 'pending',
-          queued_at: new Date().toISOString(),
-          created_by: apiRequest.context.userId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
+          filters: filters as Record<string, unknown>,
+          created_by: apiRequest.context.userId
+        });
 
-        const exportLines: AccountingExportLine[] = lines.map((line, index) => ({
-          tenant: apiRequest.context.tenant,
-          line_id: `${batchId}-${index}`,
-          batch_id: batchId,
-          invoice_id: line.invoiceId,
-          invoice_charge_id: line.chargeId,
-          client_id: null, // Will be resolved from invoice
-          amount_cents: line.amountCents,
-          currency_code: line.currencyCode || 'USD',
-          service_period_start: line.servicePeriodStart ?? null,
-          service_period_end: line.servicePeriodEnd ?? null,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
+        await exportService.appendLines(batch.batch_id, {
+          lines: lines.map((line) => ({
+            batch_id: batch.batch_id,
+            invoice_id: line.invoiceId,
+            invoice_charge_id: line.chargeId ?? null,
+            client_id: null,
+            amount_cents: line.amountCents,
+            currency_code: line.currencyCode || 'USD',
+            service_period_start: line.servicePeriodStart ?? null,
+            service_period_end: line.servicePeriodEnd ?? null,
+            status: 'pending'
+          }))
+        });
 
-        const context = {
-          batch,
-          lines: exportLines
-        };
+        let deliveryResult;
+        try {
+          deliveryResult = await exportService.executeBatch(batch.batch_id);
+        } catch (error: any) {
+          const details = await exportService.getBatchWithDetails(batch.batch_id);
+          const mappingErrors = details.errors.map((e) => ({
+            code: e.code,
+            message: e.message,
+            line_id: e.line_id
+          }));
 
-        // 3. Run adapter transform and deliver
-        const adapter = await QuickBooksCSVAdapter.create();
-        const transformResult = await adapter.transform(context);
-        const deliveryResult = await adapter.deliver(transformResult, context);
+          logger.warn('[ApiCSVAccountingController] CSV export failed during batch execution', {
+            tenant: apiRequest.context.tenant,
+            batchId: batch.batch_id,
+            status: details.batch?.status,
+            error: error?.message,
+            errorCount: mappingErrors.length
+          });
 
-        // 4. Extract file from delivery result
+          return NextResponse.json(
+            {
+              error: 'export_failed',
+              message: error?.message ?? 'Export failed',
+              batchId: batch.batch_id,
+              status: details.batch?.status,
+              errors: mappingErrors
+            },
+            { status: 400 }
+          );
+        }
+
         const files = (deliveryResult.metadata as any)?.files ?? [];
-        if (files.length === 0) {
+        if (!Array.isArray(files) || files.length === 0) {
           return NextResponse.json(
             { error: 'export_failed', message: 'No CSV file was generated' },
             { status: 500 }
@@ -152,22 +163,24 @@ export class ApiCSVAccountingController extends ApiBaseController {
         }
 
         const file = files[0];
+        const invoiceCount = new Set(lines.map((l) => l.invoiceId)).size;
 
         logger.info('[ApiCSVAccountingController] CSV export completed', {
           tenant: apiRequest.context.tenant,
+          batchId: batch.batch_id,
           filename: file.filename,
           rowCount: deliveryResult.artifacts?.rowCount,
-          invoiceCount: transformResult.documents.length
+          invoiceCount
         });
 
-        // 5. Return CSV file as download
         return new NextResponse(file.content, {
           status: 200,
           headers: {
             'Content-Type': file.contentType,
             'Content-Disposition': `attachment; filename="${file.filename}"`,
-            'X-Invoice-Count': String(transformResult.documents.length),
-            'X-Row-Count': String(deliveryResult.artifacts?.rowCount ?? 0)
+            'X-Invoice-Count': String(invoiceCount),
+            'X-Row-Count': String(deliveryResult.artifacts?.rowCount ?? 0),
+            'X-Accounting-Export-Batch-Id': batch.batch_id
           }
         });
       });

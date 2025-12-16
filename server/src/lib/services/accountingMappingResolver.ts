@@ -84,9 +84,20 @@ export class AccountingMappingResolver {
     if (!params.taxRegionId) {
       return null;
     }
-    return this.resolveGenericMapping({
+    const primary = await this.resolveGenericMapping({
       adapterType: params.adapterType,
       entityType: 'tax_code',
+      entityId: params.taxRegionId,
+      source: 'tax_code',
+      targetRealm: params.targetRealm ?? null
+    });
+    if (primary) {
+      return primary;
+    }
+    // Backward compatibility: older tenants used alga_entity_type = 'tax_region' for tax mappings.
+    return this.resolveGenericMapping({
+      adapterType: params.adapterType,
+      entityType: 'tax_region',
       entityId: params.taxRegionId,
       source: 'tax_code',
       targetRealm: params.targetRealm ?? null
