@@ -22,9 +22,17 @@ import { createTenantKnex } from '../db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import logger from '@shared/core/logger';
+import { getSession } from 'server/src/lib/auth/getSession';
+import { resolveUserTimeZone } from 'server/src/lib/utils/workDate';
 
 // Special value to indicate end of period
 const END_OF_PERIOD = 0;
+
+// Input type for server actions - accepts string dates (Next.js can't serialize Temporal.PlainDate)
+interface TimePeriodInput {
+  start_date: string;
+  end_date: string;
+}
 
 export async function getLatestTimePeriod(): Promise<ITimePeriod | null> {
   try {
@@ -49,26 +57,19 @@ export async function getTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
 }
 
 export async function createTimePeriod(
-  timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>
+  input: TimePeriodInput
 ): Promise<ITimePeriod> {
-  console.log('Starting createTimePeriod function with data:', timePeriodData);
-  console.log('start_date type:', typeof timePeriodData.start_date);
-  console.log('end_date type:', typeof timePeriodData.end_date);
-  console.log('start_date value:', timePeriodData.start_date);
-  console.log('end_date value:', timePeriodData.end_date);
-  console.log('start_date constructor:', timePeriodData.start_date?.constructor?.name);
-  console.log('end_date constructor:', timePeriodData.end_date?.constructor?.name);
+  // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
+  const timePeriodData = {
+    start_date: toPlainDate(input.start_date),
+    end_date: toPlainDate(input.end_date)
+  };
 
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      console.log('Fetching active time period settings...');
       const settings = await TimePeriodSettings.getActiveSettings(trx);
       const validatedSettings = validateArray(timePeriodSettingsSchema, settings);
-      console.log('Active settings fetched:', validatedSettings);
-
-      const activeSetting = validatedSettings[0];
-      console.log('Using active setting:', activeSetting);
 
       // Check for overlapping periods
       const overlappingPeriod = await TimePeriod.findOverlapping(trx, timePeriodData.start_date, timePeriodData.end_date);
@@ -76,35 +77,16 @@ export async function createTimePeriod(
         throw new Error('Cannot create time period: overlaps with existing period');
       }
 
-      console.log('No overlapping periods found.');
-
-      console.log('Creating new time period...');
-      console.log('Data being sent to create:', {
-        ...timePeriodData,
-        start_date: timePeriodData.start_date,
-        end_date: timePeriodData.end_date
-      });
-
       const timePeriod = await TimePeriod.create(trx, timePeriodData);
-      console.log('Time period created, before validation:', timePeriod);
-      console.log('Time period start_date type:', typeof timePeriod.start_date);
-      console.log('Time period end_date type:', typeof timePeriod.end_date);
-      console.log('Time period start_date constructor:', timePeriod.start_date?.constructor?.name);
-      console.log('Time period end_date constructor:', timePeriod.end_date?.constructor?.name);
-
       const validatedPeriod = validateData(timePeriodSchema, timePeriod);
-      console.log('Time period after validation:', validatedPeriod);
 
       // revalidatePath only works in request context, not from background jobs
       try {
         revalidatePath('/msp/time-entry');
-        console.log('Revalidated path: /msp/time-entry');
       } catch {
         // Ignore revalidation errors when called outside request context (e.g., from jobs)
-        console.log('Skipping revalidatePath (not in request context)');
       }
 
-      console.log('createTimePeriod function completed successfully.');
       return validatedPeriod;
     } catch (error) {
       console.error('Error in createTimePeriod function:', error);
@@ -145,8 +127,8 @@ export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
 }
 
 // Utility function to get current date as Temporal.PlainDate
-function getCurrentDate(): Temporal.PlainDate {
-  return Temporal.Now.plainDateISO();
+function getCurrentDate(timeZone: string): Temporal.PlainDate {
+  return Temporal.Now.plainDateISO(timeZone);
 }
 
 // Internal helper: fetch all time periods using provided transaction (for use within transactions)
@@ -195,8 +177,13 @@ function toModelPeriodsWithPlainDate(periods: ITimePeriodView[]): ITimePeriodWit
 
 export async function getCurrentTimePeriod(): Promise<ITimePeriodView | null> {
   try {
-    const { knex } = await createTenantKnex();
-    const currentDate = getCurrentDate().toString();
+    const { knex, tenant } = await createTenantKnex();
+    const session = await getSession();
+
+    const userId = session?.user?.id || null;
+    const userTimeZone = tenant && userId ? await resolveUserTimeZone(knex, tenant, userId) : 'UTC';
+
+    const currentDate = getCurrentDate(userTimeZone).toString();
     const currentPeriod = await TimePeriod.findByDate(knex, currentDate);
     if (!currentPeriod) return null;
 
@@ -386,8 +373,13 @@ export async function deleteTimePeriod(periodId: string): Promise<void> {
 
 export async function updateTimePeriod(
   periodId: string,
-  updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
+  input: Partial<TimePeriodInput>
 ): Promise<ITimePeriod> {
+  // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
+  const updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>> = {};
+  if (input.start_date) updates.start_date = toPlainDate(input.start_date);
+  if (input.end_date) updates.end_date = toPlainDate(input.end_date);
+
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -492,7 +484,8 @@ export async function createNextTimePeriod(
 
   try {
     return await withTransaction(db, async (trx) => {
-      const currentDate = getCurrentDate();
+      // Use UTC for background jobs since there's no user session
+      const currentDate = getCurrentDate('UTC');
       const createdPeriods: ITimePeriod[] = [];
 
       // Get initial existing time periods using the transaction

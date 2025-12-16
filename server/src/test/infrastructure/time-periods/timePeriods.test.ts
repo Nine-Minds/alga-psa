@@ -27,6 +27,7 @@ import {
   unfreezeTime,
   dateHelpers
 } from '../../../../test-utils/dateUtils';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
 describe('Time Periods Infrastructure', () => {
   const context = new TestContext({
@@ -86,23 +87,21 @@ describe('Time Periods Infrastructure', () => {
     await context.db('time_period_settings').insert(setting);
 
     const timePeriodData: Omit<ITimePeriod, 'period_id'> = {
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      end_date: createTestDateISO({ year: 2023, month: 1, day: 7 }),
+      start_date: '2023-01-01',
+      end_date: '2023-01-07',
       tenant: tenantId,
     };
 
     const result = await createTimePeriod(timePeriodData);
 
-    expect(result).toMatchObject({
-      start_date: '2023-01-01T00:00:00Z',
-      end_date: '2023-01-07T00:00:00Z',
-      tenant: tenantId,
-    });
+    expect(result.tenant).toBe(tenantId);
+    expect(toPlainDate(result.start_date).toString()).toBe('2023-01-01');
+    expect(toPlainDate(result.end_date).toString()).toBe('2023-01-07');
 
     const savedPeriod = await context.db('time_periods').where('period_id', result.period_id).first();
     expect(savedPeriod).toBeDefined();
-    expect(savedPeriod.start_date).toEqual(createTestDate({ year: 2023, month: 1, day: 1 }));
-    expect(savedPeriod.end_date).toEqual(createTestDate({ year: 2023, month: 1, day: 7 }));
+    expect(toPlainDate(savedPeriod.start_date).toString()).toBe('2023-01-01');
+    expect(toPlainDate(savedPeriod.end_date).toString()).toBe('2023-01-07');
   });
 
   it('should generate and save multiple time periods', async () => {
@@ -123,26 +122,18 @@ describe('Time Periods Infrastructure', () => {
     await context.db('time_period_settings').insert(setting);
 
     const result = await generateAndSaveTimePeriods(
-      createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      createTestDateISO({ year: 2023, month: 2, day: 1 })
+      '2023-01-01',
+      '2023-02-01'
     );
 
     expect(result).toHaveLength(4);
-    expect(result[0]).toMatchObject({
-      start_date: '2023-01-01T00:00:00Z',
-      end_date: '2023-01-08T00:00:00Z',
-      tenant: tenantId,
-    });
-    expect(result[1]).toMatchObject({
-      start_date: '2023-01-08T00:00:00Z',
-      end_date: '2023-01-15T00:00:00Z',
-      tenant: tenantId,
-    });
-    expect(result[2]).toMatchObject({
-      start_date: '2023-01-15T00:00:00Z',
-      end_date: '2023-01-22T00:00:00Z',
-      tenant: tenantId,
-    });
+    expect(result[0].tenant).toBe(tenantId);
+    expect(toPlainDate(result[0].start_date).toString()).toBe('2023-01-01');
+    expect(toPlainDate(result[0].end_date).toString()).toBe('2023-01-08');
+    expect(toPlainDate(result[1].start_date).toString()).toBe('2023-01-08');
+    expect(toPlainDate(result[1].end_date).toString()).toBe('2023-01-15');
+    expect(toPlainDate(result[2].start_date).toString()).toBe('2023-01-15');
+    expect(toPlainDate(result[2].end_date).toString()).toBe('2023-01-22');
   });
 
   it('should handle multiple non-overlapping settings', async () => {
@@ -178,27 +169,21 @@ describe('Time Periods Infrastructure', () => {
     await context.db('time_period_settings').insert(settings);
 
     const result = await generateAndSaveTimePeriods(
-      createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      createTestDateISO({ year: 2023, month: 4, day: 1 })
+      '2023-01-01',
+      '2023-04-01'
     );
 
-    result.sort((a: ITimePeriod, b: ITimePeriod) => a.start_date < b.start_date ? -1 : 1);
+    result.sort((a: ITimePeriod, b: ITimePeriod) =>
+      toPlainDate(a.start_date).toString() < toPlainDate(b.start_date).toString() ? -1 : 1
+    );
 
-    expect(result[0]).toMatchObject({
-      start_date: '2023-01-01T00:00:00Z',
-      end_date: '2023-01-15T00:00:00Z',
-      tenant: tenantId,
-    });
-    expect(result[1]).toMatchObject({
-      start_date: '2023-01-15T00:00:00Z',
-      end_date: '2023-01-29T00:00:00Z',
-      tenant: tenantId,
-    });
-    expect(result[2]).toMatchObject({
-      start_date: '2023-02-01T00:00:00Z',
-      end_date: '2023-03-01T00:00:00Z',
-      tenant: tenantId,
-    });
+    expect(result[0].tenant).toBe(tenantId);
+    expect(toPlainDate(result[0].start_date).toString()).toBe('2023-01-01');
+    expect(toPlainDate(result[0].end_date).toString()).toBe('2023-01-15');
+    expect(toPlainDate(result[1].start_date).toString()).toBe('2023-01-15');
+    expect(toPlainDate(result[1].end_date).toString()).toBe('2023-01-29');
+    expect(toPlainDate(result[2].start_date).toString()).toBe('2023-02-01');
+    expect(toPlainDate(result[2].end_date).toString()).toBe('2023-03-01');
   });
 
   it('should throw an error when trying to create overlapping time periods', async () => {
@@ -257,16 +242,16 @@ describe('Time Periods Infrastructure', () => {
     await context.db('time_period_settings').insert(setting);
 
     const existingPeriod: Omit<ITimePeriod, 'period_id'> = {
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 15 }),
-      end_date: createTestDateISO({ year: 2023, month: 1, day: 21 }),
+      start_date: '2023-01-15',
+      end_date: '2023-01-21',
       tenant: tenantId,
     };
     await createTimePeriod(existingPeriod);
 
     await expectError(
       () => generateAndSaveTimePeriods(
-        createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        createTestDateISO({ year: 2023, month: 2, day: 1 })
+        '2023-01-01',
+        '2023-02-01'
       )
     );
   });
@@ -303,32 +288,31 @@ describe('Time Periods Infrastructure', () => {
 
     const periods = await generateTimePeriods(
       settings,
-      createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      createTestDateISO({ year: 2023, month: 5, day: 1 })
+      '2023-01-01',
+      '2023-05-01'
     );
 
-    periods.sort((a: ITimePeriod, b: ITimePeriod) => a.start_date < b.start_date ? -1 : 1);
+    periods.sort((a: any, b: any) =>
+      toPlainDate(a.start_date).toString() < toPlainDate(b.start_date).toString() ? -1 : 1
+    );
 
-    const findPeriodByStartDate = (periods: ITimePeriod[], startDateStr: string) => 
-      periods.find(period => period.start_date === startDateStr);
+    const findPeriodByStartDate = (periods: any[], startDateStr: string) =>
+      periods.find(period => toPlainDate(period.start_date).toString() === startDateStr);
 
-    const janFirstPeriod = findPeriodByStartDate(periods, '2023-01-01T00:00:00Z');
-    expect(janFirstPeriod).toMatchObject({
-      start_date: '2023-01-01T00:00:00Z',
-      end_date: '2023-01-15T00:00:00Z',
-    });
+    const janFirstPeriod = findPeriodByStartDate(periods, '2023-01-01');
+    expect(janFirstPeriod).toBeDefined();
+    expect(toPlainDate(janFirstPeriod.start_date).toString()).toBe('2023-01-01');
+    expect(toPlainDate(janFirstPeriod.end_date).toString()).toBe('2023-01-15');
 
-    const febFirstPeriod = findPeriodByStartDate(periods, '2023-02-01T00:00:00Z');
-    expect(febFirstPeriod).toMatchObject({
-      start_date: '2023-02-01T00:00:00Z',
-      end_date: '2023-02-15T00:00:00Z',
-    });
+    const febFirstPeriod = findPeriodByStartDate(periods, '2023-02-01');
+    expect(febFirstPeriod).toBeDefined();
+    expect(toPlainDate(febFirstPeriod.start_date).toString()).toBe('2023-02-01');
+    expect(toPlainDate(febFirstPeriod.end_date).toString()).toBe('2023-02-15');
 
-    const aprFirstPeriod = findPeriodByStartDate(periods, '2023-04-01T00:00:00Z');
-    expect(aprFirstPeriod).toMatchObject({
-      start_date: '2023-04-01T00:00:00Z',
-      end_date: '2023-04-15T00:00:00Z',
-    });
+    const aprFirstPeriod = findPeriodByStartDate(periods, '2023-04-01');
+    expect(aprFirstPeriod).toBeDefined();
+    expect(toPlainDate(aprFirstPeriod.start_date).toString()).toBe('2023-04-01');
+    expect(toPlainDate(aprFirstPeriod.end_date).toString()).toBe('2023-04-15');
   });
 
   describe('createNextTimePeriod', () => {
@@ -356,8 +340,8 @@ describe('Time Periods Infrastructure', () => {
       }];
 
       const initialPeriod: Omit<ITimePeriod, 'period_id'> = {
-        start_date: createTestDateISO({ year: 2024, month: 1, day: 15 }),
-        end_date: createTestDateISO({ year: 2024, month: 1, day: 22 }),
+        start_date: '2024-01-15',
+        end_date: '2024-01-22',
         tenant: tenantId,
       };
       await createTimePeriod(initialPeriod);
@@ -365,11 +349,9 @@ describe('Time Periods Infrastructure', () => {
       const result = await createNextTimePeriod(settings, 7);
 
       expect(result).not.toBeNull();
-      expect(result).toMatchObject({
-        start_date: '2024-01-22T00:00:00Z',
-        end_date: '2024-01-29T00:00:00Z',
-        tenant: tenantId,
-      });
+      expect(result!.tenant).toBe(tenantId);
+      expect(toPlainDate(result!.start_date).toString()).toBe('2024-01-22');
+      expect(toPlainDate(result!.end_date).toString()).toBe('2024-01-29');
     });
 
     it('should not create next period when outside threshold days', async () => {
@@ -388,8 +370,8 @@ describe('Time Periods Infrastructure', () => {
       }];
 
       const initialPeriod: Omit<ITimePeriod, 'period_id'> = {
-        start_date: createTestDateISO({ year: 2024, month: 1, day: 15 }),
-        end_date: createTestDateISO({ year: 2024, month: 2, day: 15 }),
+        start_date: '2024-01-15',
+        end_date: '2024-02-15',
         tenant: tenantId,
       };
       await createTimePeriod(initialPeriod);

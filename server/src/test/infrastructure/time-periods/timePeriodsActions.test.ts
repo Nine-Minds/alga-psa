@@ -24,6 +24,7 @@ import {
   unfreezeTime,
   dateHelpers
 } from '../../../../test-utils/dateUtils';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
 describe('Time Periods Actions', () => {
   const context = new TestContext({
@@ -75,9 +76,9 @@ describe('Time Periods Actions', () => {
 
   it('should generate and save time periods based on settings', async () => {
     // Arrange
-    const startDate = createTestDateISO({ year: 2026, month: 1, day: 1 });
-    const endDate = createTestDateISO({ year: 2027, month: 3, day: 1 });
-    const expectedEndDateToExist = createTestDateISO({ year: 2026, month: 3, day: 1 });
+    const startDate = '2026-01-01';
+    const endDate = '2027-03-01';
+    const expectedEndDateToExist = '2026-03-01';
 
     // Act
     const result = await generateAndSaveTimePeriods(startDate, endDate);
@@ -97,18 +98,21 @@ describe('Time Periods Actions', () => {
 
     // Verify that at least one period has the correct structure
     const hasValidPeriod = savedPeriods.some(period => {
-      return period.tenant === context.tenantId &&
-             period.start_date instanceof Date &&
-             period.end_date instanceof Date;
+      if (period.tenant !== context.tenantId) return false;
+      try {
+        return Boolean(toPlainDate(period.start_date).toString()) && Boolean(toPlainDate(period.end_date).toString());
+      } catch {
+        return false;
+      }
     });
     expect(hasValidPeriod).toBe(true);
 
     // Verify that the date range is covered
     const startDateExists = savedPeriods.some(period => 
-      period.start_date.toISOString() === startDate
+      toPlainDate(period.start_date).toString() === startDate
     );
     const endDateExists = savedPeriods.some(period => 
-      period.end_date.toISOString() === expectedEndDateToExist
+      toPlainDate(period.end_date).toString() === expectedEndDateToExist
     );
 
     expect(startDateExists).toBe(true);

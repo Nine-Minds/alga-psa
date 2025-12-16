@@ -4,6 +4,16 @@ import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatISO } from 'date-fns';
+import { Temporal } from '@js-temporal/polyfill';
+
+// Helper to get the last inclusive day from an exclusive end_date
+// end_date is the day AFTER the period ends (exclusive boundary)
+function getLastInclusiveDay(exclusiveEndDate: string): string {
+  const endDate = Temporal.PlainDate.from(exclusiveEndDate.slice(0, 10));
+  const lastDay = endDate.subtract({ days: 1 });
+  return lastDay.toString();
+}
 
 interface TimePeriodListProps {
   timePeriods: ITimePeriodWithStatusView[];
@@ -27,6 +37,8 @@ const getStatusDisplay = (status: TimeSheetStatus): { text: string; color: strin
 
 export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodListProps) {
   const router = useRouter();
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
 
   const navigateToTimeSettings = () => {
     // Navigate to Time Entry tab and then to Time Periods nested tab
@@ -34,10 +46,11 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
   };
 
   const isCurrentPeriod = (start: string, end: string) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatISO(new Date(), { representation: 'date' });
     const s = start.slice(0, 10);
     const e = end.slice(0, 10);
-    return today >= s && today <= e;
+    // Periods are treated as half-open: [start_date, end_date)
+    return today >= s && today < e;
   };
 
   return (
@@ -66,9 +79,10 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
           },
           {
             title: 'End Date',
-            dataIndex: 'end_date', 
+            dataIndex: 'end_date',
             width: '25%',
-            render: (value) => value.slice(0, 10)
+            // Show the last inclusive day (end_date is exclusive - the day AFTER the period)
+            render: (value) => getLastInclusiveDay(value)
           },
           {
             title: 'Status',
@@ -105,7 +119,14 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
             )
           }
         ]}
-        pagination={false}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={(newSize) => {
+          setPageSize(newSize);
+          setCurrentPage(1);
+        }}
         onRowClick={(row: ITimePeriodWithStatusView) => onSelectTimePeriod(row)}
         rowClassName={(row: ITimePeriodWithStatusView) => {
           const classes: string[] = [];

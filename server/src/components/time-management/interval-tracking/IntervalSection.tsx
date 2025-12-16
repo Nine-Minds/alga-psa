@@ -12,6 +12,11 @@ import { fetchOrCreateTimeSheet } from '../../../lib/actions/timeEntryActions';
 import TimeEntryDialog from '../../time-management/time-entry/time-sheet/TimeEntryDialog';
 import { Tooltip } from '../../ui/Tooltip';
 
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 interface IntervalSectionProps {
   userId: string;
   timePeriod: ITimePeriodView;
@@ -42,12 +47,13 @@ export function IntervalSection({
       const allIntervals = await intervalService.getUserIntervals(userId);
       
       // Filter intervals that fall within the time period
-      const startDate = new Date(timePeriod.start_date);
-      const endDate = new Date(timePeriod.end_date);
+      const startDate = parseLocalDate(timePeriod.start_date);
+      const endDate = parseLocalDate(timePeriod.end_date);
       
       const filteredIntervals = allIntervals.filter(interval => {
         const intervalStart = new Date(interval.startTime);
-        return intervalStart >= startDate && intervalStart <= endDate;
+        // Periods are treated as half-open: [start_date, end_date)
+        return intervalStart >= startDate && intervalStart < endDate;
       });
       
       setIntervals(filteredIntervals);
