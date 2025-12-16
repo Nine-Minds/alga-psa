@@ -257,8 +257,11 @@ function SplitNodeView({
     );
   }
 
+  const dividerClass =
+    node.direction === "row" ? "divide-x divide-primary-500/60" : "divide-y divide-primary-500/60";
+
   return (
-    <div className="h-full w-full flex" style={{ flexDirection: node.direction }}>
+    <div className={`h-full w-full flex ${dividerClass}`} style={{ flexDirection: node.direction }}>
       <div className="h-full w-full overflow-hidden" style={{ flex: node.ratio, minWidth: 0, minHeight: 0 }}>
         <SplitNodeView
           node={node.first}
