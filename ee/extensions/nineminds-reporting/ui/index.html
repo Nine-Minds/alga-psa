@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nine Minds Reporting</title>
+    <style>
+      :root {
+        --alga-bg: #fff;
+        --alga-fg: #111827;
+        --alga-muted-fg: #6b7280;
+        --alga-border: #e5e7eb;
+        --alga-primary: #2563eb;
+        --alga-primary-foreground: #ffffff;
+        --alga-success: #16a34a;
+        --alga-warning: #d97706;
+        --alga-danger: #dc2626;
+        --alga-card-bg: #f9fafb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: var(--alga-fg);
+        background: var(--alga-bg);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--alga-border);
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 10;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+      nav { display: flex; gap: 8px; }
+      nav button {
+        padding: 8px 16px;
+        border: 1px solid var(--alga-border);
+        background: var(--alga-bg);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.15s;
+      }
+      nav button:hover {
+        background: var(--alga-card-bg);
+        border-color: var(--alga-primary);
+      }
+      nav button.active {
+        background: var(--alga-primary);
+        color: var(--alga-primary-foreground);
+        border-color: var(--alga-primary);
+      }
+      main { padding: 20px; }
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        color: var(--alga-muted-fg);
+      }
+      .error {
+        padding: 16px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        color: var(--alga-danger);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Nine Minds Reporting</h1>
+      <nav id="nav">
+        <button class="active" data-view="reports">Reports</button>
+        <button data-view="external">External Data</button>
+        <button data-view="generate">Generate</button>
+      </nav>
+    </header>
+    <main>
+      <div id="root"></div>
+    </main>
+
+    <script type="module" src="./dist/iframe/main.js"></script>
+  </body>
+</html>
