@@ -831,10 +831,36 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           id="delete-contact-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          onConfirm={showDeactivateOption ? handleMarkContactInactive : confirmDelete}
+          onConfirm={contactToDelete?.is_inactive && showDeactivateOption ? resetDeleteState : showDeactivateOption ? handleMarkContactInactive : confirmDelete}
           title="Delete Contact"
           message={
-            showDeactivateOption && deleteDependencies ? (
+            contactToDelete?.is_inactive && showDeactivateOption && deleteDependencies ? (
+              <div className="space-y-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                  <p className="text-amber-800">
+                    <span className="font-semibold">Note:</span> This contact is already marked as inactive.
+                  </p>
+                </div>
+                <p className="text-gray-700">Unable to delete this contact due to the following associated records:</p>
+                <div>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+                <p className="text-gray-700">Please remove or reassign these items before the contact can be deleted.</p>
+              </div>
+            ) : showDeactivateOption && deleteDependencies ? (
               <div className="space-y-4">
                 <p className="text-gray-700">Unable to delete this contact.</p>
                 <div>
@@ -863,7 +889,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
               </div>
             ) : deleteError ? deleteError : "Are you sure you want to delete this contact? This action cannot be undone."
           }
-          confirmLabel={showDeactivateOption ? "Mark as Inactive" : "Delete"}
+          confirmLabel={contactToDelete?.is_inactive && showDeactivateOption ? "Close" : showDeactivateOption ? "Mark as Inactive" : "Delete"}
           cancelLabel="Cancel"
           isConfirming={false}
         />

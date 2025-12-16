@@ -1071,7 +1071,33 @@ const Clients: React.FC = () => {
       >
         <DialogContent>
           <div className="space-y-4">
-            {showDeactivateOption && deleteDependencies ? (
+            {clientToDelete?.is_inactive && showDeactivateOption && deleteDependencies ? (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                  <p className="text-amber-800">
+                    <span className="font-semibold">Note:</span> This client is already marked as inactive.
+                  </p>
+                </div>
+                <p className="text-gray-700">Unable to delete this client due to the following associated records:</p>
+                <div>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                  </ul>
+                </div>
+                <p className="text-gray-700">Please remove or reassign these items before the client can be deleted.</p>
+              </>
+            ) : showDeactivateOption && deleteDependencies ? (
               <>
                 <p className="text-gray-700">Unable to delete this client.</p>
                 <div>
@@ -1119,7 +1145,15 @@ const Clients: React.FC = () => {
                 Cancel
               </Button>
 
-              {showDeactivateOption ? (
+              {clientToDelete?.is_inactive && showDeactivateOption ? (
+                <Button
+                  variant="default"
+                  onClick={resetDeleteState}
+                  id="single-delete-close"
+                >
+                  Close
+                </Button>
+              ) : showDeactivateOption ? (
                 <Button
                   variant="default"
                   onClick={() => void handleMarkClientInactive()}

@@ -1324,10 +1324,34 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          onConfirm={showDeactivateOption ? handleMarkClientInactive : confirmDelete}
+          onConfirm={editedClient.is_inactive && showDeactivateOption ? resetDeleteState : showDeactivateOption ? handleMarkClientInactive : confirmDelete}
           title="Delete Client"
           message={
-            showDeactivateOption && deleteDependencies ? (
+            editedClient.is_inactive && showDeactivateOption && deleteDependencies ? (
+              <div className="space-y-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                  <p className="text-amber-800">
+                    <span className="font-semibold">Note:</span> This client is already marked as inactive.
+                  </p>
+                </div>
+                <p className="text-gray-700">Unable to delete this client due to the following associated records:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
+                  {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                    <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
+                    <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.projects && deleteDependencies.projects > 0 && (
+                    <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
+                    <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                  )}
+                </ul>
+                <p className="text-gray-700">Please remove or reassign these items before deleting the client.</p>
+              </div>
+            ) : showDeactivateOption && deleteDependencies ? (
               <div className="space-y-4">
                 <p className="text-gray-700">Unable to delete this client.</p>
                 <div>
@@ -1360,7 +1384,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               "Are you sure you want to delete this client? This action cannot be undone."
             )
           }
-          confirmLabel={showDeactivateOption ? "Mark as Inactive" : "Delete"}
+          confirmLabel={editedClient.is_inactive && showDeactivateOption ? "Close" : showDeactivateOption ? "Mark as Inactive" : "Delete"}
           cancelLabel="Cancel"
           isConfirming={false}
         />
