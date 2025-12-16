@@ -1,0 +1,167 @@
+{
+  "feature": "xero-csv-export",
+  "title": "Xero CSV Export/Import Integration",
+  "description": "CSV-based invoice export to Xero and tax import from Xero, bypassing OAuth requirements. Enables customers to use Alga PSA with Xero immediately while OAuth app approval is pending.",
+  "branch": "feature/xero-csv-export",
+  "created": "2024-12-16",
+  "status": "in-progress",
+  "tasks": {
+    "backend": [
+      {
+        "id": "adapter-create",
+        "description": "Create XeroCsvAdapter class following QuickBooksDesktopAdapter pattern with file-based delivery mode",
+        "file": "server/src/lib/adapters/accounting/xeroCsvAdapter.ts",
+        "done": false
+      },
+      {
+        "id": "adapter-register",
+        "description": "Register XeroCsvAdapter in the accounting adapter registry",
+        "file": "server/src/lib/adapters/accounting/registry.ts",
+        "done": false
+      },
+      {
+        "id": "tax-import-service",
+        "description": "Create XeroCsvTaxImportService to parse Xero Invoice Details Report and import tax amounts",
+        "file": "server/src/lib/services/xeroCsvTaxImportService.ts",
+        "done": false
+      },
+      {
+        "id": "server-actions",
+        "description": "Create server actions for CSV settings, tax import preview, and tax import execution",
+        "file": "server/src/lib/actions/integrations/xeroCsvActions.ts",
+        "done": false
+      },
+      {
+        "id": "api-download",
+        "description": "Create API route for downloading CSV export files",
+        "file": "server/src/app/api/accounting-export/[batchId]/download/route.ts",
+        "done": false
+      },
+      {
+        "id": "api-tax-import",
+        "description": "Create API route for uploading and processing tax import CSV",
+        "file": "server/src/app/api/accounting-export/xero-csv/tax-import/route.ts",
+        "done": false
+      }
+    ],
+    "frontend": [
+      {
+        "id": "settings-csv-panel",
+        "description": "Create XeroCsvSettings component for CSV mode configuration",
+        "file": "server/src/components/settings/integrations/XeroCsvSettings.tsx",
+        "done": false
+      },
+      {
+        "id": "settings-mode-toggle",
+        "description": "Update XeroIntegrationSettings to add OAuth/CSV mode toggle",
+        "file": "server/src/components/settings/integrations/XeroIntegrationSettings.tsx",
+        "done": false
+      },
+      {
+        "id": "export-panel",
+        "description": "Create XeroCsvExportPanel component for downloading CSV exports",
+        "file": "server/src/components/billing-dashboard/accounting/XeroCsvExportPanel.tsx",
+        "done": false
+      },
+      {
+        "id": "import-panel",
+        "description": "Create XeroCsvTaxImportPanel component for uploading and previewing tax imports",
+        "file": "server/src/components/billing-dashboard/accounting/XeroCsvTaxImportPanel.tsx",
+        "done": false
+      },
+      {
+        "id": "exports-tab-update",
+        "description": "Update AccountingExportsTab to include Xero CSV adapter option",
+        "file": "server/src/components/billing-dashboard/accounting/AccountingExportsTab.tsx",
+        "done": false
+      }
+    ],
+    "documentation": [
+      {
+        "id": "user-instructions",
+        "description": "Create user-facing instructions for Xero tracking category setup, export workflow, and tax import workflow",
+        "file": "ee/docs/guides/xero-csv-integration.md",
+        "done": false
+      }
+    ],
+    "testing": [
+      {
+        "id": "adapter-tests",
+        "description": "Unit tests for XeroCsvAdapter CSV generation and tracking categories",
+        "file": "server/src/test/unit/accounting/xeroCsvAdapter.spec.ts",
+        "done": false
+      },
+      {
+        "id": "import-tests",
+        "description": "Unit tests for XeroCsvTaxImportService parsing and matching",
+        "file": "server/src/test/unit/accounting/xeroCsvTaxImportService.spec.ts",
+        "done": false
+      },
+      {
+        "id": "integration-tests",
+        "description": "Integration tests for full export/import workflow",
+        "file": "server/src/test/integration/accounting/xeroCsvExport.integration.test.ts",
+        "done": false
+      }
+    ]
+  },
+  "keyDecisions": {
+    "trackingCategories": {
+      "description": "Use fixed tracking category names for invoice reconciliation",
+      "sourceSystem": {
+        "name": "Source System",
+        "value": "AlgaPSA"
+      },
+      "externalInvoiceId": {
+        "name": "External Invoice ID",
+        "value": "{invoice_id}"
+      }
+    },
+    "taxImportFormat": {
+      "description": "Parse Xero's Invoice Details Report CSV for tax import",
+      "reportName": "Invoice Details Report"
+    },
+    "invoiceStatus": {
+      "description": "Always export invoices as Draft so Xero calculates tax",
+      "status": "DRAFT"
+    },
+    "adapterType": {
+      "description": "New adapter type separate from OAuth-based xero adapter",
+      "type": "xero_csv"
+    }
+  },
+  "dataFlow": {
+    "export": [
+      "User selects invoices for export",
+      "Create batch with adapter_type: 'xero_csv'",
+      "XeroCsvAdapter.transform() generates CSV with tracking categories",
+      "User downloads CSV file",
+      "User imports CSV to Xero as Draft",
+      "Xero calculates tax on draft invoices"
+    ],
+    "import": [
+      "User exports Invoice Details Report from Xero",
+      "User uploads CSV to XeroCsvTaxImportPanel",
+      "System matches invoices via External Invoice ID tracking category",
+      "Preview shows matched/unmatched invoices",
+      "User confirms import",
+      "Tax applied to invoice_charges",
+      "invoice.tax_source updated to 'external'"
+    ]
+  },
+  "dependencies": {
+    "existingInfrastructure": [
+      "accounting_export_batches table (adapter_type column)",
+      "external_tax_imports table",
+      "invoice_charges.external_tax_* fields",
+      "invoices.tax_source enum",
+      "tenant_external_entity_mappings for service/tax mappings",
+      "csvParser.ts utilities"
+    ],
+    "referenceImplementations": [
+      "quickBooksDesktopAdapter.ts (file-based delivery pattern)",
+      "xeroAdapter.ts (invoice transformation logic)",
+      "externalTaxImportService.ts (tax import patterns)"
+    ]
+  }
+}
