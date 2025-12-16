@@ -398,7 +398,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete contact:', error);
-      setDeleteError(error.message || 'Failed to delete contact. Please try again.');
+      const errorMessage = error.message || 'Failed to delete contact. Please try again.';
+      setDeleteError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
   };
 
@@ -425,6 +431,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         title: "Contact Deactivated",
         description: "Contact and associated user have been marked as inactive successfully.",
       });
+      router.refresh();
     } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
       setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
@@ -452,6 +459,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         title: "Contact Deactivated",
         description: "Contact and associated user have been marked as inactive successfully.",
       });
+      router.refresh();
     } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
       toast({
@@ -483,6 +491,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         title: "Contact Reactivated",
         description: "Contact and associated user have been reactivated successfully.",
       });
+      router.refresh();
     } catch (error: any) {
       console.error('Error reactivating contact:', error);
       toast({

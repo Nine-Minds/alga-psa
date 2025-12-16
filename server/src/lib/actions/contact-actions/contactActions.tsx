@@ -377,7 +377,7 @@ export async function archiveContact(contactId: string): Promise<{
     }
 
     // Check permission for contact updating (archiving is an update operation)
-    if (!await hasPermission(currentUser.user_id, tenant, 'contacts.update')) {
+    if (!await hasPermission(currentUser, 'contact', 'update')) {
       throw new Error('Permission denied: Cannot archive contacts');
     }
 
@@ -440,7 +440,7 @@ export async function reactivateContact(contactId: string): Promise<{
     }
 
     // Check permission for contact updating (reactivating is an update operation)
-    if (!await hasPermission(currentUser.user_id, tenant, 'contacts.update')) {
+    if (!await hasPermission(currentUser, 'contact', 'update')) {
       throw new Error('Permission denied: Cannot reactivate contacts');
     }
 

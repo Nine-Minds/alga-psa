@@ -908,7 +908,7 @@ export async function archiveClient(clientId: string): Promise<{
     }
 
     // Check permission for client updating (archiving is an update operation)
-    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+    if (!await hasPermission(currentUser, 'client', 'update')) {
       throw new Error('Permission denied: Cannot archive clients');
     }
 
@@ -1008,7 +1008,7 @@ export async function reactivateClient(clientId: string): Promise<{
     }
 
     // Check permission for client updating (reactivating is an update operation)
-    if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+    if (!await hasPermission(currentUser, 'client', 'update')) {
       throw new Error('Permission denied: Cannot reactivate clients');
     }
 
@@ -1350,11 +1350,11 @@ export async function importClientsFromCSV(
   }
 
   // Check permissions for both create and update operations since import can do both
-  if (!await hasPermission(currentUser.user_id, tenant, 'clients.create')) {
+  if (!await hasPermission(currentUser, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create clients');
   }
 
-  if (updateExisting && !await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+  if (updateExisting && !await hasPermission(currentUser, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update clients');
   }
 
@@ -1534,7 +1534,7 @@ export async function uploadClientLogo(
   }
 
   // Check permission for client updating (logo upload is an update operation)
-  if (!await hasPermission(currentUser.user_id, tenant, 'clients.update')) {
+  if (!await hasPermission(currentUser, 'client', 'update')) {
     return { success: false, message: 'Permission denied: Cannot update client logo' };
   }
 

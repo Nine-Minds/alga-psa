@@ -269,7 +269,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete client:', error);
-      setDeleteError(error.message || 'Failed to delete client. Please try again.');
+      const errorMessage = error.message || 'Failed to delete client. Please try again.';
+      setDeleteError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -289,6 +291,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setEditedClient(prev => ({ ...prev, is_inactive: true }));
 
       toast.success("Client and all associated contacts have been marked as inactive successfully.");
+      router.refresh();
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
       setDeleteError('An error occurred while marking the client as inactive. Please try again.');
@@ -297,16 +300,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   // Handler for the direct "Mark as Inactive" button (not from delete dialog)
   const handleDirectMarkInactive = async () => {
-    // Fetch active contacts for this client
-    const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
-    const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
+    try {
+      // Fetch active contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
 
-    if (activeContacts.length > 0) {
-      setActiveContactsToDeactivate(activeContacts);
-      setIsDeactivateDialogOpen(true);
-    } else {
-      // No contacts to warn about, just deactivate
-      try {
+      if (activeContacts.length > 0) {
+        setActiveContactsToDeactivate(activeContacts);
+        setIsDeactivateDialogOpen(true);
+      } else {
+        // No contacts to warn about, just deactivate
         const result = await archiveClient(editedClient.client_id);
 
         if (!result.success) {
@@ -317,25 +320,26 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         // Update local state immediately
         setEditedClient(prev => ({ ...prev, is_inactive: true }));
         toast.success("Client has been marked as inactive successfully.");
-      } catch (error: any) {
-        console.error('Error marking client as inactive:', error);
-        toast.error('An error occurred while marking the client as inactive. Please try again.');
+        router.refresh();
       }
+    } catch (error: any) {
+      console.error('Error marking client as inactive:', error);
+      toast.error('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
   // Handler for the direct "Reactivate" button
   const handleDirectReactivate = async () => {
-    // Fetch inactive contacts for this client
-    const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
-    const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
+    try {
+      // Fetch inactive contacts for this client
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const inactiveContacts = await getContactsByClient(editedClient.client_id, 'inactive');
 
-    if (inactiveContacts.length > 0) {
-      setInactiveContactsToReactivate(inactiveContacts);
-      setIsReactivateDialogOpen(true);
-    } else {
-      // No contacts to ask about, just reactivate
-      try {
+      if (inactiveContacts.length > 0) {
+        setInactiveContactsToReactivate(inactiveContacts);
+        setIsReactivateDialogOpen(true);
+      } else {
+        // No contacts to ask about, just reactivate
         const result = await reactivateClient(editedClient.client_id);
 
         if (!result.success) {
@@ -346,10 +350,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         // Update local state immediately
         setEditedClient(prev => ({ ...prev, is_inactive: false }));
         toast.success("Client has been reactivated successfully.");
-      } catch (error: any) {
-        console.error('Error reactivating client:', error);
-        toast.error('An error occurred while reactivating the client. Please try again.');
+        router.refresh();
       }
+    } catch (error: any) {
+      console.error('Error reactivating client:', error);
+      toast.error('An error occurred while reactivating the client. Please try again.');
     }
   };
 
@@ -382,6 +387,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
 
       setIsReactivateDialogOpen(false);
+      router.refresh();
     } catch (error: any) {
       console.error('Error reactivating client:', error);
       toast.error('An error occurred while reactivating the client. Please try again.');
@@ -410,6 +416,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       toast.success(`Client and ${activeContactsToDeactivate.length} contact(s) have been deactivated successfully.`);
       setIsDeactivateDialogOpen(false);
+      router.refresh();
     } catch (error: any) {
       console.error('Error deactivating client:', error);
       toast.error('An error occurred while deactivating the client. Please try again.');
