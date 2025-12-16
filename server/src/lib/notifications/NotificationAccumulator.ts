@@ -435,8 +435,8 @@ export class NotificationAccumulator {
         return { pendingCount: 0 };
       }
 
-      // Get the oldest entry
-      const oldest = await this.redis.zRange(flushTimesKey, 0, 0, { REV: false });
+      // Get the oldest entry (lowest score = earliest flush time)
+      const oldest = await this.redis.zRange(flushTimesKey, 0, 0);
 
       if (oldest.length > 0) {
         const score = await this.redis.zScore(flushTimesKey, oldest[0]);
