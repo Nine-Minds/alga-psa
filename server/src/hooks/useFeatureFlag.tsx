@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import type { Session } from 'next-auth';
 import { usePostHog } from 'posthog-js/react';
-
-// Track if we've already warned about SessionProvider to avoid console spam
-let hasWarnedAboutSessionProvider = false;
 
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
 const featureFlagsDisabled =
@@ -37,19 +33,7 @@ export function useFeatureFlag(
   loading: boolean;
   error: Error | null;
 } {
-  // Safely get session - handle cases where SessionProvider isn't available
-  let session: Session | null = null;
-  try {
-    const sessionResult = useSession();
-    session = sessionResult?.data ?? null;
-  } catch (error) {
-    // SessionProvider not available, continue without session
-    if (!hasWarnedAboutSessionProvider) {
-      console.warn('useSession hook called outside of SessionProvider context');
-      hasWarnedAboutSessionProvider = true;
-    }
-  }
-
+  const { data: session } = useSession();
   const posthog = usePostHog();
   const [enabled, setEnabled] = useState<boolean>(() => {
     if (featureFlagsDisabled) {

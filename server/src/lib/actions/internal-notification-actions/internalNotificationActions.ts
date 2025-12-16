@@ -351,30 +351,16 @@ export async function getNotificationsAction(
   });
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    try {
-      // Check if the internal_notifications table exists
-      const tableExists = await trx.schema.hasTable('internal_notifications');
+    const limit = request.limit || 20;
+    const offset = request.offset || 0;
 
-      if (!tableExists) {
-        console.warn('internal_notifications table does not exist, returning empty list');
-        return {
-          notifications: [],
-          total: 0,
-          unread_count: 0,
-          has_more: false
-        };
-      }
-
-      const limit = request.limit || 20;
-      const offset = request.offset || 0;
-
-      // Build base query
-      let query = trx('internal_notifications')
-        .where({
-          tenant: request.tenant,
-          user_id: request.user_id
-        })
-        .whereNull('deleted_at');
+    // Build base query
+    let query = trx('internal_notifications')
+      .where({
+        tenant: request.tenant,
+        user_id: request.user_id
+      })
+      .whereNull('deleted_at');
 
     // Apply filters
     if (request.is_read !== undefined) {
@@ -410,16 +396,6 @@ export async function getNotificationsAction(
       unread_count: Number(unreadCount),
       has_more: Number(totalCount) > offset + limit
     };
-    } catch (error: any) {
-      // If the table doesn't exist or other database errors, return empty result
-      console.error('Error fetching notifications:', error);
-      return {
-        notifications: [],
-        total: 0,
-        unread_count: 0,
-        has_more: false
-      };
-    }
   });
 }
 
@@ -458,42 +434,25 @@ export async function getUnreadCountAction(
   const { knex } = await (await import("../../db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    try {
-      // Check if the internal_notifications table exists
-      const tableExists = await trx.schema.hasTable('internal_notifications');
+    // Get total unread count
+    const [{ count: unreadCount }] = await trx('internal_notifications')
+      .where({
+        tenant,
+        user_id: userId,
+        is_read: false
+      })
+      .whereNull('deleted_at')
+      .count('* as count');
 
-      if (!tableExists) {
-        console.warn('internal_notifications table does not exist, returning zero counts');
-        const response: UnreadCountResponse = {
-          unread_count: 0
-        };
+    const response: UnreadCountResponse = {
+      unread_count: Number(unreadCount)
+    };
 
-        if (byCategory) {
-          response.by_category = {};
-        }
-
-        return response;
-      }
-
-      // Get total unread count
-      const [{ count: unreadCount }] = await trx('internal_notifications')
+    // Get counts by category if requested
+    if (byCategory) {
+      const categoryCounts = await trx('internal_notifications')
         .where({
           tenant,
-          user_id: userId,
-          is_read: false
-        })
-        .whereNull('deleted_at')
-        .count('* as count');
-
-      const response: UnreadCountResponse = {
-        unread_count: Number(unreadCount)
-      };
-
-      // Get counts by category if requested
-      if (byCategory) {
-        const categoryCounts = await trx('internal_notifications')
-          .where({
-            tenant,
           user_id: userId,
           is_read: false
         })
@@ -503,26 +462,13 @@ export async function getUnreadCountAction(
         .count('* as count')
         .groupBy('category');
 
-        response.by_category = categoryCounts.reduce<Record<string, number>>((acc, row) => {
-          acc[row.category] = Number(row.count);
-          return acc;
-        }, {});
-      }
-
-      return response;
-    } catch (error: any) {
-      // If the table doesn't exist or other database errors, return zero counts
-      console.error('Error fetching unread notification counts:', error);
-      const response: UnreadCountResponse = {
-        unread_count: 0
-      };
-
-      if (byCategory) {
-        response.by_category = {};
-      }
-
-      return response;
+      response.by_category = categoryCounts.reduce<Record<string, number>>((acc, row) => {
+        acc[row.category] = Number(row.count);
+        return acc;
+      }, {});
     }
+
+    return response;
   });
 }
 
