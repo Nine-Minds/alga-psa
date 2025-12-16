@@ -374,7 +374,7 @@ async function initializeJobScheduler(storageService: StorageService) {
           return;
         }
 
-        const result = await createNextTimePeriod(tenantKnex, settings);
+        const result = await createNextTimePeriod(settings);
         const details =
           result
             ? `Created new time period ${result.start_date} to ${result.end_date}`

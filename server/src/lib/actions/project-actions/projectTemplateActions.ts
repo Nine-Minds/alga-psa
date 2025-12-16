@@ -8,7 +8,8 @@ import {
   IProjectTemplate,
   IProjectTemplateWithDetails,
   IProjectTemplatePhase,
-  IProjectTemplateTask
+  IProjectTemplateTask,
+  IProjectTemplateChecklistItem
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import { addDays } from 'date-fns';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -280,7 +281,8 @@ export async function createTemplateFromProject(
                 template_task_id: newTaskId,
                 item_name: item.item_name,
                 description: item.description,
-                order_number: item.order_number
+                order_number: item.order_number,
+                completed: item.completed ?? false
               });
           }
         }
@@ -738,7 +740,7 @@ export async function applyTemplate(
               item_name: templateItem.item_name,
               description: templateItem.description,
               order_number: templateItem.order_number,
-              completed: false
+              completed: templateItem.completed ?? false
             });
         }
         }
@@ -1133,7 +1135,8 @@ export async function duplicateTemplate(templateId: string): Promise<string> {
                 template_task_id: newTaskId,
                 item_name: item.item_name,
                 description: item.description,
-                order_number: item.order_number
+                order_number: item.order_number,
+                completed: item.completed ?? false
               });
           }
         }
@@ -2003,5 +2006,309 @@ export async function removeTaskAdditionalAgent(
           .update({ updated_at: trx.fn.now() });
       }
     }
+  });
+}
+
+// ============================================================
+// TEMPLATE CHECKLIST ACTIONS
+// ============================================================
+
+/**
+ * Get all checklist items for a template task
+ */
+export async function getTemplateTaskChecklistItems(
+  taskId: string
+): Promise<IProjectTemplateChecklistItem[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  const items = await knex('project_template_checklist_items')
+    .where({ template_task_id: taskId, tenant })
+    .orderBy('order_number');
+
+  return items;
+}
+
+/**
+ * Add a checklist item to a template task
+ */
+export async function addTemplateChecklistItem(
+  taskId: string,
+  data: {
+    item_name: string;
+    description?: string;
+    completed?: boolean;
+    order_number?: number;
+  }
+): Promise<IProjectTemplateChecklistItem> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Verify task exists
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Use provided order_number or calculate from max
+    let orderNumber = data.order_number;
+    if (orderNumber === undefined) {
+      const maxOrder = await trx('project_template_checklist_items')
+        .where({ template_task_id: taskId, tenant })
+        .max('order_number as max')
+        .first();
+      orderNumber = (maxOrder?.max ?? -1) + 1;
+    }
+
+    // Insert checklist item
+    const [item] = await trx('project_template_checklist_items')
+      .insert({
+        tenant,
+        template_task_id: taskId,
+        item_name: data.item_name,
+        description: data.description || null,
+        order_number: orderNumber,
+        completed: data.completed ?? false
+      })
+      .returning('*');
+
+    // Update template timestamp via phase
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: task.template_phase_id, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+
+    return item;
+  });
+}
+
+/**
+ * Update a template checklist item
+ */
+export async function updateTemplateChecklistItem(
+  checklistId: string,
+  data: {
+    item_name?: string;
+    description?: string;
+    order_number?: number;
+    completed?: boolean;
+  }
+): Promise<IProjectTemplateChecklistItem> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    const [updated] = await trx('project_template_checklist_items')
+      .where({ template_checklist_id: checklistId, tenant })
+      .update({
+        ...(data.item_name !== undefined && { item_name: data.item_name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.order_number !== undefined && { order_number: data.order_number }),
+        ...(data.completed !== undefined && { completed: data.completed })
+      })
+      .returning('*');
+
+    if (!updated) {
+      throw new Error('Checklist item not found');
+    }
+
+    // Update template timestamp via task -> phase
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: updated.template_task_id, tenant })
+      .first();
+
+    if (task) {
+      const phase = await trx('project_template_phases')
+        .where({ template_phase_id: task.template_phase_id, tenant })
+        .first();
+
+      if (phase) {
+        await trx('project_templates')
+          .where({ template_id: phase.template_id, tenant })
+          .update({ updated_at: trx.fn.now() });
+      }
+    }
+
+    return updated;
+  });
+}
+
+/**
+ * Delete a template checklist item
+ */
+export async function deleteTemplateChecklistItem(
+  checklistId: string
+): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Get item first to find task for timestamp update
+    const item = await trx('project_template_checklist_items')
+      .where({ template_checklist_id: checklistId, tenant })
+      .first();
+
+    if (!item) {
+      throw new Error('Checklist item not found');
+    }
+
+    // Delete the item
+    await trx('project_template_checklist_items')
+      .where({ template_checklist_id: checklistId, tenant })
+      .delete();
+
+    // Update template timestamp via task -> phase
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: item.template_task_id, tenant })
+      .first();
+
+    if (task) {
+      const phase = await trx('project_template_phases')
+        .where({ template_phase_id: task.template_phase_id, tenant })
+        .first();
+
+      if (phase) {
+        await trx('project_templates')
+          .where({ template_id: phase.template_id, tenant })
+          .update({ updated_at: trx.fn.now() });
+      }
+    }
+  });
+}
+
+/**
+ * Batch save checklist items for a template task.
+ * Handles creates, updates, and deletes in a single transaction for atomicity.
+ *
+ * @param taskId - The template task ID
+ * @param items - Array of checklist items to save. Items with "temp_" prefix ids are new items to create.
+ * @returns The saved checklist items
+ */
+export async function saveTemplateChecklistItems(
+  taskId: string,
+  items: Array<{
+    id: string; // template_checklist_id for existing, "temp_..." for new
+    item_name: string;
+    description?: string;
+    completed: boolean;
+    order_number: number;
+  }>
+): Promise<IProjectTemplateChecklistItem[]> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await checkPermission(currentUser, 'project', 'update', trx);
+
+    // Verify task exists
+    const task = await trx('project_template_tasks')
+      .where({ template_task_id: taskId, tenant })
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // Get existing items for this task
+    const existingItems = await trx('project_template_checklist_items')
+      .where({ template_task_id: taskId, tenant });
+
+    const existingIds = new Set(existingItems.map(i => i.template_checklist_id));
+    const newItemIds = new Set(items.map(i => i.id));
+    const savedItems: IProjectTemplateChecklistItem[] = [];
+
+    // Delete items that are no longer in the list
+    const idsToDelete = existingItems
+      .filter(e => !newItemIds.has(e.template_checklist_id))
+      .map(e => e.template_checklist_id);
+
+    if (idsToDelete.length > 0) {
+      await trx('project_template_checklist_items')
+        .whereIn('template_checklist_id', idsToDelete)
+        .andWhere({ tenant })
+        .delete();
+    }
+
+    // Process each item - create new or update existing
+    for (const item of items) {
+      if (!item.item_name.trim()) {
+        continue; // Skip empty items
+      }
+
+      if (item.id.startsWith('temp_')) {
+        // Create new item
+        const [created] = await trx('project_template_checklist_items')
+          .insert({
+            tenant,
+            template_task_id: taskId,
+            item_name: item.item_name.trim(),
+            description: item.description || null,
+            order_number: item.order_number,
+            completed: item.completed
+          })
+          .returning('*');
+        savedItems.push(created);
+      } else if (existingIds.has(item.id)) {
+        // Update existing item
+        const [updated] = await trx('project_template_checklist_items')
+          .where({ template_checklist_id: item.id, tenant })
+          .update({
+            item_name: item.item_name.trim(),
+            description: item.description || null,
+            order_number: item.order_number,
+            completed: item.completed
+          })
+          .returning('*');
+        savedItems.push(updated);
+      }
+    }
+
+    // Update template timestamp
+    const phase = await trx('project_template_phases')
+      .where({ template_phase_id: task.template_phase_id, tenant })
+      .first();
+
+    if (phase) {
+      await trx('project_templates')
+        .where({ template_id: phase.template_id, tenant })
+        .update({ updated_at: trx.fn.now() });
+    }
+
+    return savedItems;
   });
 }

@@ -185,6 +185,7 @@ export async function createTemplateFromWizard(data: TemplateWizardData): Promis
           item_name: item.item_name.trim(),
           description: item.description?.trim() || null,
           order_number: item.order_number,
+          completed: item.completed ?? false,
         }));
 
       if (checklistInserts.length > 0) {
@@ -366,6 +367,7 @@ export async function updateTemplateFromEditor(
           item_name: item.item_name.trim(),
           description: item.description?.trim() || null,
           order_number: item.order_number,
+          completed: item.completed ?? false,
         }));
 
       if (checklistInserts.length > 0) {
@@ -531,6 +533,7 @@ export async function saveTemplateAsNew(
             item_name: item.item_name,
             description: item.description,
             order_number: item.order_number,
+            completed: item.completed ?? false,
           });
         }
       }

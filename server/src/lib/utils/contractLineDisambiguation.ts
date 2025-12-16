@@ -3,6 +3,7 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
 import { IClientContractLine } from '../../interfaces/billing.interfaces';
+import { formatISO } from 'date-fns';
 
 type EligibleContractLine = IClientContractLine & {
   contract_line_type: string;
@@ -86,22 +87,20 @@ export async function getEligibleContractLines(
   }
   
   // Build the query to get eligible contract lines
-  const query = knex('client_contract_lines')
+  // NOTE: client_contract_lines table was dropped - contracts are now client-specific via client_contracts
+  // Path: client_contracts -> contracts -> contract_lines -> contract_line_services
+  const query = knex('client_contracts')
+    .join('contracts', function() {
+      this.on('client_contracts.contract_id', '=', 'contracts.contract_id')
+          .andOn('contracts.tenant', '=', 'client_contracts.tenant');
+    })
     .join('contract_lines', function() {
-      this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
-          .andOn('contract_lines.tenant', '=', 'client_contract_lines.tenant');
+      this.on('contracts.contract_id', '=', 'contract_lines.contract_id')
+          .andOn('contract_lines.tenant', '=', 'contracts.tenant');
     })
     .join('contract_line_services', function() {
       this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id')
           .andOn('contract_line_services.tenant', '=', 'contract_lines.tenant');
-    })
-    .leftJoin('client_contracts', function() {
-      this.on('client_contract_lines.client_contract_id', '=', 'client_contracts.client_contract_id')
-          .andOn('client_contracts.tenant', '=', 'client_contract_lines.tenant');
-    })
-    .leftJoin('contracts', function() {
-      this.on('client_contracts.contract_id', '=', 'contracts.contract_id')
-          .andOn('contracts.tenant', '=', 'client_contracts.tenant');
     })
     .leftJoin('contract_line_service_configuration as bucket_config', function() {
       this.on('bucket_config.contract_line_id', '=', 'contract_lines.contract_line_id')
@@ -114,42 +113,28 @@ export async function getEligibleContractLines(
           .andOn('bucket_details.tenant', '=', 'bucket_config.tenant');
     })
     .where({
-      'client_contract_lines.client_id': clientId,
-      'client_contract_lines.is_active': true,
-      'client_contract_lines.tenant': tenant,
+      'client_contracts.client_id': clientId,
+      'client_contracts.is_active': true,
+      'client_contracts.tenant': tenant,
       'contract_line_services.service_id': serviceId
     })
     .where(function(this: Knex.QueryBuilder) {
-      this.whereNull('client_contract_lines.end_date')
-        .orWhere('client_contract_lines.end_date', '>', new Date().toISOString());
+      this.whereNull('client_contracts.end_date')
+        .orWhere('client_contracts.end_date', '>', new Date().toISOString());
     });
-
-  // Filter by service category if available
-  if (serviceInfo.category_id) {
-    // Filter contract lines based on the service_category field in client_contract_lines
-    // This ensures we only get contract lines that are assigned to the same category as the service
-    query.where(function() {
-      this.where('client_contract_lines.service_category', serviceInfo.category_id)
-          .orWhereNull('client_contract_lines.service_category'); // Also include contract lines with no category specified
-    });
-  }
-
-  // Filter by service type to ensure compatibility
-  // if (serviceInfo.service_type) {
-  //   // Make sure the contract line type is compatible with the service type
-  //   // For example, Time services should only be used with Hourly contract lines; Bucket overlays ride on top of existing lines.
-  //   if (serviceInfo.service_type === 'Time') {
-  //     query.where('contract_lines.contract_line_type', 'Hourly');
-  //   } else if (serviceInfo.service_type === 'Fixed') {
-  //     query.where('contract_lines.contract_line_type', 'Fixed');
-  //   } else if (serviceInfo.service_type === 'Usage') {
-  //     query.where('contract_lines.contract_line_type', 'Usage');
-  //   }
-  // }
 
   // Execute the query and return the results
+  // Use contract_line_id as the identifier (since client_contract_lines table no longer exists)
   const rows = await query.select(
-    'client_contract_lines.*',
+    'contract_lines.contract_line_id as client_contract_line_id', // Map to expected field name for compatibility
+    'client_contracts.client_id',
+    'contract_lines.contract_line_id',
+    'client_contracts.start_date',
+    'client_contracts.end_date',
+    'client_contracts.is_active',
+    'client_contracts.tenant',
+    'client_contracts.client_contract_id',
+    'contracts.contract_id',
     'contract_lines.contract_line_type',
     'contract_lines.contract_line_name',
     'contracts.contract_name',
@@ -165,6 +150,8 @@ export async function getEligibleContractLines(
       bucket_total_minutes,
       bucket_overage_rate,
       bucket_allow_rollover,
+      start_date,
+      end_date,
       ...rest
     } = row as Record<string, any>;
 
@@ -181,6 +168,9 @@ export async function getEligibleContractLines(
 
     return {
       ...restWithoutOverlay,
+      // Format dates to ISO strings
+      start_date: start_date ? formatISO(start_date) : '',
+      end_date: end_date ? formatISO(end_date) : null,
       bucket_overlay
     } as EligibleContractLine;
   });

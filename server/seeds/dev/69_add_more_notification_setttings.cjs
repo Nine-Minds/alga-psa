@@ -138,17 +138,23 @@ exports.seed = async function(knex) {
   }
   console.log(`  ✓ Upserted ${subtypeCount} notification subtypes`);
 
-  // Upsert default notification settings for tenant
-  await knex('notification_settings')
-    .insert({
+  // Ensure notification settings exist for tenant.
+  // NOTE: Some schemas do not enforce uniqueness on (tenant), so ON CONFLICT (tenant) may fail.
+  const existingSettings = await knex('notification_settings')
+    .where({ tenant: tenant.tenant })
+    .first('id');
+
+  if (!existingSettings) {
+    await knex('notification_settings').insert({
       tenant: tenant.tenant,
       is_enabled: true,
       rate_limit_per_minute: 60
-    })
-    .onConflict('tenant')
-    .merge({
-      updated_at: knex.fn.now()
     });
+  } else {
+    await knex('notification_settings')
+      .where({ tenant: tenant.tenant })
+      .update({ updated_at: knex.fn.now() });
+  }
   console.log(`  ✓ Ensured notification settings exist for tenant`);
 
   console.log('Notification seed completed (non-destructive)');

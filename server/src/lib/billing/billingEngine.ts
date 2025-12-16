@@ -30,6 +30,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
 import { getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Removed getClientTaxRate
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { IClient } from 'server/src/interfaces';
 import { get } from 'http';
@@ -2411,11 +2412,20 @@ export class BillingEngine {
       // Parse nextPeriodStart robustly
       const newStartInstant = parseDateRobustly(nextPeriodStart, 'nextPeriodStart');
       const newEndInstant = newStartInstant.add({ milliseconds: durationMs });
+
+      const workTimeZone =
+        entry.work_timezone
+        || await resolveUserTimeZone(this.knex, entry.tenant, entry.user_id)
+        || 'UTC';
+      const { work_date, work_timezone } = computeWorkDateFields(newStartInstant.toString(), workTimeZone);
+
       await this.knex('time_entries')
-        .where({ entry_id: entry.entry_id })
+        .where({ entry_id: entry.entry_id, tenant: entry.tenant })
         .update({
           start_time: newStartInstant.toString(),
-          end_time: newEndInstant.toString()
+          end_time: newEndInstant.toString(),
+          work_date,
+          work_timezone
         });
     }
 

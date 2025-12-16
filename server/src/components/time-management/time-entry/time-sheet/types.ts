@@ -54,3 +54,15 @@ export interface TimeEntryReadOnlyProps {
   onEdit: (index: number) => void;
   onDelete: (index: number) => Promise<void>;
 }
+
+export interface TimeSheetDateNavigatorState {
+  dateRangeDisplay: string;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  hasMultiplePages: boolean;
+  currentPage: number;
+  totalPages: number;
+  isAnimating: boolean;
+  goToPreviousPage: () => void;
+  goToNextPage: () => void;
+}

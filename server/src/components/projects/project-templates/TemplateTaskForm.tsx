@@ -10,20 +10,47 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { TaskTypeSelector } from 'server/src/components/projects/TaskTypeSelector';
+import { ListChecks } from 'lucide-react';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import {
   IProjectTemplateTask,
   IProjectTemplateStatusMapping,
   IProjectTemplateTaskAssignment,
+  IProjectTemplateChecklistItem,
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 
+/**
+ * Local checklist item - unified type for both new and existing items.
+ * Used for local state management before saving to the database.
+ */
+export interface LocalChecklistItem {
+  /**
+   * Item identifier:
+   * - For existing items: the actual `template_checklist_id` UUID from the database
+   * - For new items: a client-generated temporary id with "temp_" prefix (e.g., "temp_1234567890")
+   *   These temp ids are NOT real UUIDs and are replaced with actual UUIDs when saved to the database.
+   */
+  id: string;
+  item_name: string;
+  description?: string;
+  completed: boolean;
+  order_number: number;
+  /** True for items created in this editing session (not yet saved to DB) */
+  isNew?: boolean;
+}
+
 interface TemplateTaskFormProps {
   open: boolean;
   onClose: () => void;
-  onSave: (taskData: Partial<IProjectTemplateTask>, additionalAgents?: string[]) => void;
+  onSave: (
+    taskData: Partial<IProjectTemplateTask>,
+    additionalAgents?: string[],
+    checklistItems?: LocalChecklistItem[]
+  ) => void;
   task: IProjectTemplateTask | null;
   taskAssignments?: IProjectTemplateTaskAssignment[];
   statusMappings: IProjectTemplateStatusMapping[];
@@ -32,6 +59,8 @@ interface TemplateTaskFormProps {
   taskTypes: ITaskType[];
   /** Initial status mapping ID for new tasks (e.g., when clicking + on a status column) */
   initialStatusMappingId?: string | null;
+  /** Checklist items for the task being edited */
+  checklistItems?: IProjectTemplateChecklistItem[];
 }
 
 export function TemplateTaskForm({
@@ -45,6 +74,7 @@ export function TemplateTaskForm({
   users,
   taskTypes,
   initialStatusMappingId,
+  checklistItems = [],
 }: TemplateTaskFormProps) {
   const [taskName, setTaskName] = useState('');
   const [description, setDescription] = useState('');
@@ -59,6 +89,10 @@ export function TemplateTaskForm({
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Checklist state - unified approach like projects
+  const [localChecklistItems, setLocalChecklistItems] = useState<LocalChecklistItem[]>([]);
+  const [isEditingChecklist, setIsEditingChecklist] = useState(false);
 
   // Fetch services on mount
   useEffect(() => {
@@ -92,8 +126,19 @@ export function TemplateTaskForm({
         setAdditionalAgents(taskAdditionalAgents);
         setStatusMappingId(task.template_status_mapping_id || statusMappings[0]?.template_status_mapping_id || '');
         setServiceId(task.service_id || '');
+        // Initialize checklist from props
+        setLocalChecklistItems(
+          checklistItems.map(item => ({
+            id: item.template_checklist_id,
+            item_name: item.item_name,
+            description: item.description,
+            completed: item.completed,
+            order_number: item.order_number,
+            isNew: false,
+          }))
+        );
       } else {
-        // New task - use initialStatusMappingId if provided (e.g., when clicking + on a status column)
+        // New task
         setTaskName('');
         setDescription('');
         setEstimatedHours('');
@@ -104,10 +149,12 @@ export function TemplateTaskForm({
         setAdditionalAgents([]);
         setStatusMappingId(initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '');
         setServiceId('');
+        setLocalChecklistItems([]);
       }
       setError(null);
+      setIsEditingChecklist(false);
     }
-  }, [open, task, taskAssignments, statusMappings, initialStatusMappingId]);
+  }, [open, task, taskAssignments, statusMappings, initialStatusMappingId, checklistItems]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,23 +168,55 @@ export function TemplateTaskForm({
     setError(null);
 
     try {
-      await onSave({
-        task_name: taskName.trim(),
-        description: description.trim() || undefined,
-        // Convert from hours (display) to minutes (storage)
-        estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
-        duration_days: durationDays ? parseInt(durationDays) : undefined,
-        task_type_key: taskTypeKey || undefined,
-        priority_id: priorityId || undefined,
-        assigned_to: assignedTo || undefined,
-        template_status_mapping_id: statusMappingId || undefined,
-        service_id: serviceId || null,
-      }, additionalAgents);
+      // Filter out empty items before saving
+      const validChecklistItems = localChecklistItems.filter(item => item.item_name.trim());
+
+      await onSave(
+        {
+          task_name: taskName.trim(),
+          description: description.trim() || undefined,
+          // Convert from hours (display) to minutes (storage)
+          estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
+          duration_days: durationDays ? parseInt(durationDays) : undefined,
+          task_type_key: taskTypeKey || undefined,
+          priority_id: priorityId || undefined,
+          assigned_to: assignedTo || undefined,
+          template_status_mapping_id: statusMappingId || undefined,
+          service_id: serviceId || null,
+        },
+        additionalAgents,
+        validChecklistItems
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save task');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Checklist handlers - direct state updates like projects
+  const addChecklistItem = () => {
+    const newItem: LocalChecklistItem = {
+      id: `temp_${Date.now()}`,
+      item_name: '',
+      completed: false,
+      order_number: localChecklistItems.length,
+      isNew: true,
+    };
+    setLocalChecklistItems([...localChecklistItems, newItem]);
+    setIsEditingChecklist(true);
+  };
+
+  const updateChecklistItem = (id: string, field: keyof LocalChecklistItem, value: string | boolean) => {
+    setLocalChecklistItems(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const removeChecklistItem = (id: string) => {
+    setLocalChecklistItems(prev => prev.filter(item => item.id !== id));
   };
 
   return (
@@ -342,6 +421,94 @@ export function TemplateTaskForm({
               <p className="text-xs text-gray-500 mt-1">
                 Additional team members to assign to this task
               </p>
+            </div>
+
+            {/* Checklist Items - Same pattern as projects */}
+            {/* Note: Items with "temp_" prefix ids are client-generated temporary ids for new items */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold">Checklist</h3>
+                <button
+                  id="toggle-checklist-edit"
+                  type="button"
+                  onClick={() => setIsEditingChecklist(!isEditingChecklist)}
+                  className="text-gray-500 hover:text-gray-700"
+                  title={isEditingChecklist ? "Done editing" : "Edit checklist"}
+                >
+                  <ListChecks className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="flex flex-col space-y-2 mb-3">
+                {localChecklistItems
+                  .sort((a, b) => a.order_number - b.order_number)
+                  .map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-2 w-full">
+                      {isEditingChecklist ? (
+                        <>
+                          <Checkbox
+                            id={`checklist-item-${index}-completed`}
+                            checked={item.completed}
+                            onChange={(e) => updateChecklistItem(item.id, 'completed', e.target.checked)}
+                            className="flex-none"
+                          />
+                          <div className="flex-1">
+                            <TextArea
+                              id={`checklist-item-${index}-name`}
+                              value={item.item_name}
+                              onChange={(e) => updateChecklistItem(item.id, 'item_name', e.target.value)}
+                              onBlur={() => {
+                                // Remove empty items on blur
+                                if (!item.item_name.trim()) {
+                                  removeChecklistItem(item.id);
+                                }
+                              }}
+                              placeholder="Checklist item"
+                              className={`w-full ${item.completed ? 'line-through text-gray-500' : ''}`}
+                              rows={1}
+                              autoFocus={item.isNew && !item.item_name}
+                            />
+                          </div>
+                          <button
+                            id={`checklist-item-${index}-remove`}
+                            type="button"
+                            onClick={() => removeChecklistItem(item.id)}
+                            className="text-red-500 flex-none"
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            Remove
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Checkbox
+                            id={`checklist-item-${index}-completed`}
+                            checked={item.completed}
+                            onChange={(e) => updateChecklistItem(item.id, 'completed', e.target.checked)}
+                            className="flex-none"
+                          />
+                          <span
+                            className={`flex-1 whitespace-pre-wrap cursor-pointer ${item.completed ? 'line-through text-gray-500' : ''}`}
+                            onClick={() => setIsEditingChecklist(true)}
+                          >
+                            {item.item_name || <span className="text-gray-400 italic">Empty item</span>}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+              </div>
+
+              {isEditingChecklist && (
+                <Button
+                  id="add-checklist-item"
+                  type="button"
+                  variant="soft"
+                  onClick={addChecklistItem}
+                >
+                  Add an item
+                </Button>
+              )}
             </div>
           </div>
 

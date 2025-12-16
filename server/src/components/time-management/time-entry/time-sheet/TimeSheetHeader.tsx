@@ -6,7 +6,8 @@ import { Button } from 'server/src/components/ui/Button';
 import { ArrowLeftIcon } from '@radix-ui/react-icons';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
-import { Clock } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { TimeSheetDateNavigatorState } from './types';
 
 interface TimeSheetHeaderProps {
     status: TimeSheetStatus;
@@ -15,6 +16,7 @@ interface TimeSheetHeaderProps {
     onBack: () => void;
     showIntervals?: boolean;
     onToggleIntervals?: () => void;
+    dateNavigator?: TimeSheetDateNavigatorState | null;
 }
 
 export function TimeSheetHeader({
@@ -23,7 +25,8 @@ export function TimeSheetHeader({
     onSubmit,
     onBack,
     showIntervals = false,
-    onToggleIntervals
+    onToggleIntervals,
+    dateNavigator
 }: TimeSheetHeaderProps): JSX.Element {
     const getStatusDisplay = (status: TimeSheetStatus): { text: string; className: string } => {
         switch (status) {
@@ -44,26 +47,74 @@ export function TimeSheetHeader({
 
     return (
         <>
-            <div className="flex items-center mb-4">
-                <Button
-                    id="back-button"
-                    onClick={onBack}
-                    variant="soft"
-                    className="mr-4"
-                >
-                    <ArrowLeftIcon className="mr-1" /> Back
-                </Button>
-                <h2 className="text-2xl font-bold">Time Sheet</h2>
-            </div>
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                    <span className="text-lg font-medium flex items-center mr-6">
-                        Status:&nbsp; {'  '}
-                        <span className={statusDisplay.className}> {statusDisplay.text}</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6">
+                <div className="flex items-center gap-4 min-w-0 shrink-0">
+                    <Button
+                        id="back-button"
+                        onClick={onBack}
+                        variant="soft"
+                        className="shrink-0"
+                    >
+                        <ArrowLeftIcon className="mr-1" /> Back
+                    </Button>
+                    <h2 className="text-2xl font-bold truncate">Time Sheet</h2>
+                </div>
+
+                {dateNavigator?.dateRangeDisplay && (
+                    <div className="flex items-center justify-center flex-1 min-w-[280px]">
+                        <div className="flex items-center">
+                            <div className="inline-flex items-center bg-white border border-gray-200 rounded-lg px-2 py-1.5 shadow-sm">
+                                <button
+                                    onClick={dateNavigator.goToPreviousPage}
+                                    disabled={!dateNavigator.canGoBack || dateNavigator.isAnimating}
+                                    className={`p-1.5 rounded-md transition-colors ${
+                                        dateNavigator.canGoBack && !dateNavigator.isAnimating
+                                            ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                            : 'text-gray-300 cursor-not-allowed'
+                                    }`}
+                                    aria-label="Previous week"
+                                >
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+
+                                <div className="flex items-center px-3 min-w-[200px] justify-center">
+                                    <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                                    <span className="text-sm font-medium text-gray-900">
+                                        {dateNavigator.dateRangeDisplay}
+                                    </span>
+                                </div>
+
+                                <button
+                                    onClick={dateNavigator.goToNextPage}
+                                    disabled={!dateNavigator.canGoForward || dateNavigator.isAnimating}
+                                    className={`p-1.5 rounded-md transition-colors ${
+                                        dateNavigator.canGoForward && !dateNavigator.isAnimating
+                                            ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                            : 'text-gray-300 cursor-not-allowed'
+                                    }`}
+                                    aria-label="Next week"
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {dateNavigator.hasMultiplePages && (
+                                <div className="ml-3 text-xs text-gray-500 whitespace-nowrap">
+                                    Page {dateNavigator.currentPage + 1} of {dateNavigator.totalPages}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2 w-full lg:w-auto lg:ml-auto">
+                    <span className="text-sm font-medium flex items-center whitespace-nowrap">
+                        Status:&nbsp;
+                        <span className={statusDisplay.className}>{statusDisplay.text}</span>
                     </span>
-                    
+
                     {onToggleIntervals && (
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
                             <Switch
                                 id="show-intervals-toggle"
                                 checked={showIntervals}
@@ -73,22 +124,22 @@ export function TimeSheetHeader({
                             />
                             <Label htmlFor="show-intervals-toggle" className="flex items-center">
                                 <Clock className="h-4 w-4 mr-1" />
-                                Show Ticket Intervals
+                                Show intervals
                             </Label>
                         </div>
                     )}
+
+                    {isEditable && (
+                        <Button
+                            id="submit-timesheet-button"
+                            onClick={onSubmit}
+                            variant="default"
+                            className="bg-primary-500 hover:bg-primary-600 text-white"
+                        >
+                            Submit Time Sheet
+                        </Button>
+                    )}
                 </div>
-                
-                {isEditable && (
-                    <Button
-                        id="submit-timesheet-button"
-                        onClick={onSubmit}
-                        variant="default"
-                        className="bg-primary-500 hover:bg-primary-600 text-white"
-                    >
-                        Submit Time Sheet
-                    </Button>
-                )}
             </div>
         </>
     );

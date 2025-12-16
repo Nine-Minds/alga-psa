@@ -199,7 +199,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
               <ChevronDown className="w-4 h-4 rotate-180" />
             </RadixSelect.ScrollUpButton>
             
-            <RadixSelect.Viewport className="p-1">
+            <RadixSelect.Viewport className="p-1 max-h-[300px] overflow-y-auto">
               {/* Add a placeholder option if needed */}
               <RadixSelect.Item
                 value={PLACEHOLDER_VALUE}

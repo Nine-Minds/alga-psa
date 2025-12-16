@@ -838,6 +838,8 @@ export async function updateInternalCategoryAction(
     // Build update object with only defined values, defaulting to existing or true
     const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
     const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
+    // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
+    const now = new Date();
 
     // Upsert into tenant-specific settings table
     await trx('tenant_internal_notification_category_settings')
@@ -851,7 +853,7 @@ export async function updateInternalCategoryAction(
       .merge({
         is_enabled,
         is_default_enabled,
-        updated_at: trx.fn.now()
+        updated_at: now
       });
 
     return {
@@ -908,6 +910,8 @@ export async function updateInternalSubtypeAction(
     // Build update object with only defined values, defaulting to existing or true
     const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
     const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
+    // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
+    const now = new Date();
 
     // Upsert into tenant-specific settings table
     await trx('tenant_internal_notification_subtype_settings')
@@ -921,7 +925,7 @@ export async function updateInternalSubtypeAction(
       .merge({
         is_enabled,
         is_default_enabled,
-        updated_at: trx.fn.now()
+        updated_at: now
       });
 
     return {

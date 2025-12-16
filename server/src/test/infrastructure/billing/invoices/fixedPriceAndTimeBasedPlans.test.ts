@@ -369,6 +369,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         user_id: context.userId,
         start_time: createTestDateISO({ year: 2023, month: 1, day: 15, hour: 10 }),
         end_time: createTestDateISO({ year: 2023, month: 1, day: 15, hour: 12 }),
+        work_timezone: 'UTC',
+        work_date: '2023-01-15',
         work_item_id: ticketId,
         work_item_type: 'ticket',
         approval_status: 'APPROVED',
