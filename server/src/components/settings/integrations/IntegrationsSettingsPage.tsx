@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import QboIntegrationSettings from './QboIntegrationSettings';
 import XeroIntegrationSettings from './XeroIntegrationSettings';
+import CSVIntegrationSettings from './CSVIntegrationSettings';
 import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 import dynamic from 'next/dynamic';
@@ -134,6 +135,12 @@ const IntegrationsSettingsPage: React.FC = () => {
           name: 'Xero',
           description: 'Sync invoices and payments with Xero',
           component: XeroIntegrationSettings,
+        },
+        {
+          id: 'csv',
+          name: 'QuickBooks CSV',
+          description: 'Export invoices to CSV for QuickBooks and import tax data',
+          component: CSVIntegrationSettings,
         },
       ],
     },
