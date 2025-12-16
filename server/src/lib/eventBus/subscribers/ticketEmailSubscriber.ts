@@ -312,10 +312,49 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
     }
 
     case 'priority_id': {
+      // Check tenant-specific priorities table first
       const priority = await db('priorities')
         .where({ priority_id: value, tenant: tenantId })
         .first();
-      return priority?.priority_name || String(value);
+      if (priority?.priority_name) {
+        return priority.priority_name;
+      }
+      // Fall back to global standard_priorities table
+      const standardPriority = await db('standard_priorities')
+        .where({ priority_id: value })
+        .first();
+      return standardPriority?.priority_name || String(value);
+    }
+
+    case 'board_id': {
+      // Check tenant-specific boards table first
+      const board = await db('boards')
+        .where({ board_id: value, tenant: tenantId })
+        .first();
+      if (board?.board_name) {
+        return board.board_name;
+      }
+      // Fall back to global standard_boards table (uses 'id' not 'board_id')
+      const standardBoard = await db('standard_boards')
+        .where({ id: value })
+        .first();
+      return standardBoard?.board_name || String(value);
+    }
+
+    case 'category_id':
+    case 'subcategory_id': {
+      // Check tenant-specific categories table first
+      const category = await db('categories')
+        .where({ category_id: value, tenant: tenantId })
+        .first();
+      if (category?.category_name) {
+        return category.category_name;
+      }
+      // Fall back to global standard_categories table (uses 'id' not 'category_id')
+      const standardCategory = await db('standard_categories')
+        .where({ id: value })
+        .first();
+      return standardCategory?.category_name || String(value);
     }
 
     default:
@@ -803,20 +842,12 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
     const assignedEmail = safeString(ticket.assigned_to_email);
 
-    if (!primaryEmail) {
-      console.warn('[EmailSubscriber] Ticket found but missing both contact and client email:', {
-        eventId: event.id,
-        ticketId: payload.ticketId,
-        clientId: ticket.client_id
-      });
-      return;
-    }
-
     console.log('[EmailSubscriber] Found ticket:', {
       ticketId: ticket.ticket_id,
       title: ticket.title,
       clientId: ticket.client_id,
-      primaryEmail,
+      primaryEmail: primaryEmail || 'none',
+      assignedEmail: assignedEmail || 'none',
       status: ticket.status_name
     });
 
@@ -957,18 +988,20 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
 
     // Send to primary recipient (contact or client) - external user, no userId
-    await sendNotificationIfEnabled({
-      tenantId,
-      to: primaryEmail,
-      subject: `Ticket Updated: ${ticket.title}`,
-      template: 'ticket-updated',
-      context: buildContext(portalUrl),
-      replyContext: {
-        ticketId: ticket.ticket_id || payload.ticketId,
-        threadId: ticket.email_metadata?.threadId
-      },
-      from: ticketingFromAddress
-    }, 'Ticket Updated');
+    if (primaryEmail) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: primaryEmail,
+        subject: `Ticket Updated: ${ticket.title}`,
+        template: 'ticket-updated',
+        context: buildContext(portalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        },
+        from: ticketingFromAddress
+      }, 'Ticket Updated');
+    }
 
     // Send to assigned user if different from primary recipient
     if (assignedEmail && assignedEmail !== primaryEmail) {
