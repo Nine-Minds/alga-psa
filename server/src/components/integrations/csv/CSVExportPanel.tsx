@@ -6,6 +6,12 @@ import { Button } from '../../ui/Button';
 import { StringDateRangePicker } from '../../ui/DateRangePicker';
 import { Label } from '../../ui/Label';
 import { Download, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import {
+  INVOICE_STATUS_METADATA,
+  INVOICE_STATUS_DISPLAY_ORDER,
+  DEFAULT_ACCOUNTING_EXPORT_STATUSES,
+  InvoiceStatus
+} from '../../../interfaces/invoice.interfaces';
 
 interface ExportFilters {
   startDate?: string;
@@ -17,27 +23,23 @@ interface CSVExportPanelProps {
   onExportComplete?: (result: { filename: string; invoiceCount: number }) => void;
 }
 
-const INVOICE_STATUS_OPTIONS = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'sent', label: 'Sent' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'partial', label: 'Partially Paid' }
-];
+// Build status options from the canonical invoice status metadata
+const INVOICE_STATUS_OPTIONS = INVOICE_STATUS_DISPLAY_ORDER.map((status) => ({
+  value: status,
+  label: INVOICE_STATUS_METADATA[status].label
+}));
 
 export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
   const [dateRange, setDateRange] = useState<{ from: string; to: string }>({
     from: '',
     to: ''
   });
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['approved', 'sent']);
+  const [selectedStatuses, setSelectedStatuses] = useState<InvoiceStatus[]>(DEFAULT_ACCOUNTING_EXPORT_STATUSES);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ filename: string; invoiceCount: number } | null>(null);
 
-  const handleStatusToggle = useCallback((status: string) => {
+  const handleStatusToggle = useCallback((status: InvoiceStatus) => {
     setSelectedStatuses((prev) =>
       prev.includes(status)
         ? prev.filter((s) => s !== status)
