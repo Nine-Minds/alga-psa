@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { bootstrapIframe } from '@ee/lib/extensions/ui/iframeBridge';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
@@ -8,6 +8,64 @@ type Props = {
   domain: string;
   extensionId: string;
 };
+
+/**
+ * Extracts theme variables from the host app's computed styles and maps them
+ * to standardized CSS variable names for extensions.
+ */
+function extractThemeVariables(): Record<string, string> {
+  if (typeof document === 'undefined') return {};
+
+  const root = document.documentElement;
+  const computed = getComputedStyle(root);
+
+  // Helper to get RGB variable and convert to hex
+  const rgbToHex = (rgb: string): string => {
+    const parts = rgb.trim().split(/\s+/).map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return rgb;
+    return '#' + parts.map(n => n.toString(16).padStart(2, '0')).join('');
+  };
+
+  // Helper to get a CSS variable value
+  const getVar = (name: string): string => computed.getPropertyValue(name).trim();
+
+  // Map host variables to extension-friendly names
+  return {
+    // Primary (Purple)
+    '--alga-primary': rgbToHex(getVar('--color-primary-500')),
+    '--alga-primary-light': rgbToHex(getVar('--color-primary-400')),
+    '--alga-primary-dark': rgbToHex(getVar('--color-primary-600')),
+    '--alga-primary-50': rgbToHex(getVar('--color-primary-50')),
+    '--alga-primary-100': rgbToHex(getVar('--color-primary-100')),
+
+    // Secondary (Blue)
+    '--alga-secondary': rgbToHex(getVar('--color-secondary-500')),
+    '--alga-secondary-light': rgbToHex(getVar('--color-secondary-400')),
+
+    // Accent (Orange)
+    '--alga-accent': rgbToHex(getVar('--color-accent-500')),
+
+    // Destructive (Orange - brand color for deletions)
+    '--alga-danger': rgbToHex(getVar('--color-accent-500')),
+    '--alga-danger-dark': rgbToHex(getVar('--color-accent-600')),
+
+    // Text colors
+    '--alga-fg': rgbToHex(getVar('--color-text-900')),
+    '--alga-muted-fg': rgbToHex(getVar('--color-text-500')),
+
+    // Border colors
+    '--alga-border': rgbToHex(getVar('--color-border-200')),
+    '--alga-border-light': rgbToHex(getVar('--color-border-100')),
+
+    // Backgrounds
+    '--alga-bg': rgbToHex(getVar('--background') || '255 255 255'),
+    '--alga-card-bg': rgbToHex(getVar('--color-border-50')),
+
+    // Success/Warning (keeping standard colors)
+    '--alga-success': '#16a34a',
+    '--alga-warning': '#d97706',
+  };
+}
 
 export default function ExtensionIframe({ domain, extensionId }: Props) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -37,6 +95,15 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
       allowedOrigin = `https://${domain}`;
     } catch {}
 
+    // Send theme to the iframe
+    const sendTheme = () => {
+      const theme = extractThemeVariables();
+      iframe.contentWindow?.postMessage(
+        { alga: true, version: '1', type: 'theme', payload: theme },
+        allowedOrigin || '*'
+      );
+    };
+
     // Listen for the 'ready' message from the extension to hide loading state
     const handleMessage = (ev: MessageEvent) => {
       // Validate origin matches the expected extension domain
@@ -46,6 +113,8 @@ export default function ExtensionIframe({ domain, extensionId }: Props) {
       // Check for Alga envelope format with ready message
       if (data?.alga === true && data?.version === '1' && data?.type === 'ready') {
         setIsLoading(false);
+        // Send theme to the extension once it's ready
+        sendTheme();
       }
     };
 

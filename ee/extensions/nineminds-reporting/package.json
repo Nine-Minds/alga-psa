@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@alga-psa/extension-runtime": "^0.2.0",
+    "@alga-psa/ui-kit": "file:../../../packages/ui-kit",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

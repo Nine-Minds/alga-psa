@@ -1,14 +1,15 @@
 import React from 'react';
 
 export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
-  tone?: 'default' | 'success' | 'warning' | 'danger';
+  tone?: 'default' | 'info' | 'success' | 'warning' | 'danger';
 };
 
 const tones: Record<NonNullable<BadgeProps['tone']>, React.CSSProperties> = {
-  default: { background: 'var(--alga-muted)', color: 'var(--alga-fg)', borderColor: 'var(--alga-border)' },
-  success: { background: 'color-mix(in oklab, var(--alga-success) 15%, white)', color: 'var(--alga-fg)', borderColor: 'var(--alga-success)' },
-  warning: { background: 'color-mix(in oklab, var(--alga-warning) 15%, white)', color: 'var(--alga-fg)', borderColor: 'var(--alga-warning)' },
-  danger: { background: 'color-mix(in oklab, var(--alga-danger) 15%, white)', color: 'var(--alga-fg)', borderColor: 'var(--alga-danger)' },
+  default: { background: 'var(--alga-muted, #f3f4f6)', color: 'var(--alga-fg)', borderColor: 'var(--alga-border)' },
+  info: { background: 'var(--alga-primary-50, #f0e6fd)', color: 'var(--alga-primary-dark, #6b3dab)', borderColor: 'var(--alga-primary, #8a4dea)' },
+  success: { background: '#dcfce7', color: '#166534', borderColor: 'var(--alga-success, #16a34a)' },
+  warning: { background: '#fef3c7', color: '#92400e', borderColor: 'var(--alga-warning, #d97706)' },
+  danger: { background: '#fff7ed', color: '#c2410c', borderColor: 'var(--alga-danger, #ff9c30)' },
 };
 
 export function Badge({ tone = 'default', style, ...rest }: BadgeProps) {
