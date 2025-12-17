@@ -10,9 +10,11 @@
         --alga-bg: #fff;
         --alga-fg: #111827;
         --alga-muted-fg: #6b7280;
+        --alga-muted: #f3f4f6;
         --alga-border: #e5e7eb;
         --alga-border-light: #f3f4f6;
         --alga-card-bg: #f9fafb;
+        --alga-radius: 8px;
 
         /* Alga brand colors (defaults, overridden by host) */
         --alga-primary: #8a4dea;           /* Purple */
@@ -34,9 +36,13 @@
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         color: var(--alga-fg);
         background: var(--alga-bg);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       header {
         display: flex;

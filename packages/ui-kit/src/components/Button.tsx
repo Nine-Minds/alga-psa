@@ -6,8 +6,8 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const baseStyle: React.CSSProperties = {
-  borderRadius: 'var(--alga-radius)',
-  border: '1px solid var(--alga-border)',
+  borderRadius: 'var(--alga-radius, 8px)',
+  border: '1px solid var(--alga-border, #e5e7eb)',
   cursor: 'pointer',
   fontWeight: 500,
 };

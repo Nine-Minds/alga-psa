@@ -60,10 +60,14 @@ function extractThemeVariables(): Record<string, string> {
     // Backgrounds
     '--alga-bg': rgbToHex(getVar('--background') || '255 255 255'),
     '--alga-card-bg': rgbToHex(getVar('--color-border-50')),
+    '--alga-muted': rgbToHex(getVar('--color-border-100')),
 
     // Success/Warning (keeping standard colors)
     '--alga-success': '#16a34a',
     '--alga-warning': '#d97706',
+
+    // Layout
+    '--alga-radius': '8px',
   };
 }
 
