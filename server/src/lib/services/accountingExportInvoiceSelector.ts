@@ -256,7 +256,7 @@ export class AccountingExportInvoiceSelector {
 
 function shouldIncludePendingExternalDrafts(
   adapterType: string,
-  invoiceStatusesForQuery: string[] | null
+  invoiceStatusesForQuery: string[] | null | undefined
 ): boolean {
   if (!adapterType) {
     return false;
