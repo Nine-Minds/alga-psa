@@ -1,6 +1,6 @@
 import type { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/extension-runtime';
 
-// Inline jsonResponse to avoid external dependency for jco componentize
+// Inline encoders to avoid external dependency for jco componentize
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -26,22 +26,32 @@ const routes: Route[] = [
   {
     pattern: /^\/reports$/,
     method: 'GET',
-    handler: handleGetReports,
+    handler: handleListReports,
   },
   {
-    pattern: /^\/reports\/(\w+)$/,
+    pattern: /^\/reports$/,
+    method: 'POST',
+    handler: handleCreateReport,
+  },
+  {
+    pattern: /^\/reports\/([0-9a-f-]+)$/,
     method: 'GET',
     handler: handleGetReportById,
   },
   {
-    pattern: /^\/reports\/generate$/,
-    method: 'POST',
-    handler: handleGenerateReport,
+    pattern: /^\/reports\/([0-9a-f-]+)$/,
+    method: 'PUT',
+    handler: handleUpdateReport,
   },
   {
-    pattern: /^\/external-data$/,
-    method: 'GET',
-    handler: handleFetchExternalData,
+    pattern: /^\/reports\/([0-9a-f-]+)$/,
+    method: 'DELETE',
+    handler: handleDeleteReport,
+  },
+  {
+    pattern: /^\/reports\/([0-9a-f-]+)\/execute$/,
+    method: 'POST',
+    handler: handleExecuteReport,
   },
   {
     pattern: /^\/health$/,
@@ -97,13 +107,15 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   return jsonResponse({
     ok: true,
     message: 'Nine Minds Reporting Extension',
-    version: '0.1.0',
+    version: '0.2.0',
     build: BUILD_STAMP,
     endpoints: [
-      'GET /reports - List all reports',
+      'GET /reports - List all platform reports',
+      'POST /reports - Create a new report',
       'GET /reports/:id - Get report by ID',
-      'POST /reports/generate - Generate a new report',
-      'GET /external-data - Fetch data from external API',
+      'PUT /reports/:id - Update a report',
+      'DELETE /reports/:id - Delete a report',
+      'POST /reports/:id/execute - Execute a report',
       'GET /health - Health check',
     ],
     context: {
@@ -114,23 +126,141 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   });
 }
 
-// Handler: Get list of reports
-async function handleGetReports(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  await safeLog(host, 'info', '[nineminds-reporting] fetching reports list');
+/**
+ * Get the host base URL from install config or context
+ */
+function getHostBaseUrl(request: ExecuteRequest): string {
+  // Priority: install config > context hostUrl > default
+  const configUrl = request.context.config?.hostBaseUrl;
+  if (configUrl && typeof configUrl === 'string') {
+    return configUrl;
+  }
 
-  // Mock data - in real implementation, this would fetch from storage or external API
-  const reports = [
-    { id: 'rpt-001', name: 'Monthly Revenue Report', status: 'completed', createdAt: '2024-01-15' },
-    { id: 'rpt-002', name: 'Ticket Volume Analysis', status: 'completed', createdAt: '2024-01-14' },
-    { id: 'rpt-003', name: 'SLA Compliance Report', status: 'pending', createdAt: '2024-01-13' },
-    { id: 'rpt-004', name: 'Resource Utilization', status: 'completed', createdAt: '2024-01-12' },
+  // Try to get from context
+  const contextUrl = (request.context as unknown as Record<string, unknown>).hostUrl;
+  if (contextUrl && typeof contextUrl === 'string') {
+    return contextUrl;
+  }
+
+  // Fallback to localhost
+  return 'http://localhost:3000';
+}
+
+/**
+ * Build auth headers to forward to the platform API
+ */
+function getAuthHeaders(request: ExecuteRequest): Array<{ name: string; value: string }> {
+  const headers: Array<{ name: string; value: string }> = [
+    { name: 'content-type', value: 'application/json' },
   ];
 
-  return jsonResponse({
-    ok: true,
-    reports,
-    total: reports.length,
-  });
+  // Forward tenant ID as header
+  if (request.context.tenantId) {
+    headers.push({ name: 'x-alga-tenant', value: request.context.tenantId });
+  }
+
+  // Forward extension ID as header - this allows the platform API to recognize
+  // internal extension calls and bypass user session requirements
+  if (request.context.extensionId) {
+    headers.push({ name: 'x-alga-extension', value: request.context.extensionId });
+  }
+
+  // Forward any existing auth headers from the request
+  const incomingHeaders = request.http.headers || [];
+  for (const h of incomingHeaders) {
+    const name = h.name.toLowerCase();
+    if (name === 'authorization' || name === 'cookie') {
+      headers.push(h);
+    }
+  }
+
+  return headers;
+}
+
+/**
+ * Call the platform reports API
+ */
+async function callPlatformReportsAPI(
+  host: HostBindings,
+  request: ExecuteRequest,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  body?: unknown
+): Promise<{ status: number; data: unknown }> {
+  const baseUrl = getHostBaseUrl(request);
+  const url = `${baseUrl}/api/v1/platform-reports${path}`;
+
+  await safeLog(host, 'info', `[nineminds-reporting] calling platform API: ${method} ${url}`);
+
+  const fetchRequest: Parameters<typeof host.http.fetch>[0] = {
+    method,
+    url,
+    headers: getAuthHeaders(request),
+  };
+
+  if (body) {
+    fetchRequest.body = encoder.encode(JSON.stringify(body));
+  }
+
+  const response = await host.http.fetch(fetchRequest);
+
+  await safeLog(host, 'info', `[nineminds-reporting] platform API response: status=${response.status}`);
+
+  let data: unknown;
+  try {
+    const text = decoder.decode(new Uint8Array(response.body ?? []));
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+
+  return { status: response.status, data };
+}
+
+// Handler: List all platform reports
+async function handleListReports(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-reporting] listing platform reports');
+
+  try {
+    const result = await callPlatformReportsAPI(host, request, 'GET', '');
+    return jsonResponse(result.data, { status: result.status });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    await safeLog(host, 'error', `[nineminds-reporting] failed to list reports: ${reason}`);
+    return jsonResponse(
+      { success: false, error: 'Failed to fetch reports', detail: reason },
+      { status: 500 }
+    );
+  }
+}
+
+// Handler: Create a new platform report
+async function handleCreateReport(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-reporting] creating platform report');
+
+  try {
+    let body: unknown = {};
+    if (request.http.body) {
+      try {
+        body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      } catch {
+        return jsonResponse(
+          { success: false, error: 'Invalid JSON body' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const result = await callPlatformReportsAPI(host, request, 'POST', '', body);
+    return jsonResponse(result.data, { status: result.status });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    await safeLog(host, 'error', `[nineminds-reporting] failed to create report: ${reason}`);
+    return jsonResponse(
+      { success: false, error: 'Failed to create report', detail: reason },
+      { status: 500 }
+    );
+  }
 }
 
 // Handler: Get report by ID
@@ -142,124 +272,108 @@ async function handleGetReportById(
   const reportId = params.param0;
   await safeLog(host, 'info', `[nineminds-reporting] fetching report id=${reportId}`);
 
-  // Mock data
-  const report = {
-    id: reportId,
-    name: 'Monthly Revenue Report',
-    status: 'completed',
-    createdAt: '2024-01-15',
-    data: {
-      totalRevenue: 125000,
-      ticketsClosed: 342,
-      avgResolutionTime: '4.2 hours',
-      customerSatisfaction: 4.7,
-    },
-    charts: [
-      { type: 'line', title: 'Revenue Trend', dataPoints: 30 },
-      { type: 'bar', title: 'Tickets by Category', dataPoints: 8 },
-    ],
-  };
-
-  return jsonResponse({
-    ok: true,
-    report,
-  });
-}
-
-// Handler: Generate a new report
-async function handleGenerateReport(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  await safeLog(host, 'info', '[nineminds-reporting] generating new report');
-
-  // Parse request body if present
-  let reportConfig: Record<string, unknown> = {};
-  if (request.http.body) {
-    try {
-      reportConfig = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
-    } catch {
-      return jsonResponse({ error: 'invalid_body', message: 'Request body must be valid JSON' }, { status: 400 });
-    }
+  try {
+    const result = await callPlatformReportsAPI(host, request, 'GET', `/${reportId}`);
+    return jsonResponse(result.data, { status: result.status });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    await safeLog(host, 'error', `[nineminds-reporting] failed to get report: ${reason}`);
+    return jsonResponse(
+      { success: false, error: 'Failed to fetch report', detail: reason },
+      { status: 500 }
+    );
   }
-
-  // Mock report generation
-  const newReport = {
-    id: `rpt-${Date.now()}`,
-    name: reportConfig.name || 'New Report',
-    type: reportConfig.type || 'general',
-    status: 'processing',
-    createdAt: new Date().toISOString(),
-    estimatedCompletion: new Date(Date.now() + 60000).toISOString(),
-  };
-
-  return jsonResponse({
-    ok: true,
-    message: 'Report generation started',
-    report: newReport,
-  });
 }
 
-// Handler: Fetch external data using HTTP capability
-async function handleFetchExternalData(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  await safeLog(host, 'info', '[nineminds-reporting] fetching external data via http.fetch');
+// Handler: Update a report
+async function handleUpdateReport(
+  request: ExecuteRequest,
+  host: HostBindings,
+  params: Record<string, string>
+): Promise<ExecuteResponse> {
+  const reportId = params.param0;
+  await safeLog(host, 'info', `[nineminds-reporting] updating report id=${reportId}`);
 
   try {
-    // Example: Fetch a dad joke from external API (for demo purposes)
-    // In real reporting, this would fetch from reporting data sources
-    const externalResponse = await host.http.fetch({
-      method: 'GET',
-      url: 'https://icanhazdadjoke.com/',
-      headers: [
-        { name: 'Accept', value: 'application/json' },
-        { name: 'User-Agent', value: 'NineMindsReporting/0.1.0' },
-      ],
-    });
-
-    await safeLog(host, 'info', `[nineminds-reporting] http.fetch response status=${externalResponse.status}`);
-
-    if (externalResponse.status !== 200) {
-      return jsonResponse(
-        {
-          ok: false,
-          error: 'external_api_error',
-          message: `External API returned status ${externalResponse.status}`,
-        },
-        { status: 502 }
-      );
-    }
-
-    // Parse the response
-    let externalData: unknown = null;
-    if (externalResponse.body) {
+    let body: unknown = {};
+    if (request.http.body) {
       try {
-        externalData = JSON.parse(decoder.decode(new Uint8Array(externalResponse.body)));
+        body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
       } catch {
-        externalData = { raw: decoder.decode(new Uint8Array(externalResponse.body)) };
+        return jsonResponse(
+          { success: false, error: 'Invalid JSON body' },
+          { status: 400 }
+        );
       }
     }
 
-    return jsonResponse({
-      ok: true,
-      message: 'External data fetched successfully',
-      source: 'https://icanhazdadjoke.com/',
-      data: externalData,
-      fetchedAt: new Date().toISOString(),
-    });
+    const result = await callPlatformReportsAPI(host, request, 'PUT', `/${reportId}`, body);
+    return jsonResponse(result.data, { status: result.status });
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] http.fetch failed: ${reason}`);
+    await safeLog(host, 'error', `[nineminds-reporting] failed to update report: ${reason}`);
     return jsonResponse(
-      {
-        ok: false,
-        error: 'fetch_failed',
-        message: 'Failed to fetch external data',
-        detail: reason,
-      },
+      { success: false, error: 'Failed to update report', detail: reason },
+      { status: 500 }
+    );
+  }
+}
+
+// Handler: Delete a report
+async function handleDeleteReport(
+  request: ExecuteRequest,
+  host: HostBindings,
+  params: Record<string, string>
+): Promise<ExecuteResponse> {
+  const reportId = params.param0;
+  await safeLog(host, 'info', `[nineminds-reporting] deleting report id=${reportId}`);
+
+  try {
+    const result = await callPlatformReportsAPI(host, request, 'DELETE', `/${reportId}`);
+    return jsonResponse(result.data, { status: result.status });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    await safeLog(host, 'error', `[nineminds-reporting] failed to delete report: ${reason}`);
+    return jsonResponse(
+      { success: false, error: 'Failed to delete report', detail: reason },
+      { status: 500 }
+    );
+  }
+}
+
+// Handler: Execute a report
+async function handleExecuteReport(
+  request: ExecuteRequest,
+  host: HostBindings,
+  params: Record<string, string>
+): Promise<ExecuteResponse> {
+  const reportId = params.param0;
+  await safeLog(host, 'info', `[nineminds-reporting] executing report id=${reportId}`);
+
+  try {
+    let body: unknown = {};
+    if (request.http.body) {
+      try {
+        body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      } catch {
+        // Empty body is fine for execute
+      }
+    }
+
+    const result = await callPlatformReportsAPI(host, request, 'POST', `/${reportId}/execute`, body);
+    return jsonResponse(result.data, { status: result.status });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    await safeLog(host, 'error', `[nineminds-reporting] failed to execute report: ${reason}`);
+    return jsonResponse(
+      { success: false, error: 'Failed to execute report', detail: reason },
       { status: 500 }
     );
   }
 }
 
 // Handler: Health check
-async function handleHealth(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+async function handleHealth(_request: ExecuteRequest, _host: HostBindings): Promise<ExecuteResponse> {
   return jsonResponse({
     ok: true,
     status: 'healthy',
