@@ -36,3 +36,5 @@ jobs:
       - name: Run TypeScript type check
         working-directory: ./server
         run: npx tsc --noEmit
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
