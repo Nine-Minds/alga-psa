@@ -1,5 +1,90 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import {
+  Button,
+  Input,
+  CustomSelect,
+  Card,
+  Badge,
+  DataTable,
+  Text,
+  Alert,
+  type Column,
+  type SelectOption,
+} from '@alga-psa/ui-kit';
+
+// ============================================================================
+// Theme Bridge - Receives theme from host app and applies CSS variables
+// ============================================================================
+
+/**
+ * Apply theme variables to the document root
+ */
+function applyTheme(vars: Record<string, string>) {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([key, value]) => {
+    root.style.setProperty(key, value);
+  });
+}
+
+/**
+ * Get the parent origin for postMessage
+ */
+function getParentOrigin(): string {
+  const params = new URLSearchParams(window.location.search);
+  const parentOrigin = params.get('parentOrigin');
+  if (parentOrigin) return parentOrigin;
+
+  if (document.referrer) {
+    try {
+      return new URL(document.referrer).origin;
+    } catch {
+      // Invalid referrer
+    }
+  }
+  return '*';
+}
+
+/**
+ * Send ready message to parent and set up theme listener
+ */
+function initializeThemeBridge() {
+  const parentOrigin = getParentOrigin();
+
+  // Listen for theme messages from parent
+  const handleMessage = (ev: MessageEvent) => {
+    const data = ev.data;
+    if (!data || typeof data !== 'object') return;
+
+    // Check for Alga envelope format with theme message
+    if (data.alga === true && data.version === '1' && data.type === 'theme') {
+      console.log('[Extension] Received theme from host:', data.payload);
+      applyTheme(data.payload || {});
+    }
+  };
+
+  window.addEventListener('message', handleMessage);
+
+  // Send ready message to parent so it knows to send theme
+  window.parent.postMessage(
+    { alga: true, version: '1', type: 'ready' },
+    parentOrigin
+  );
+
+  console.log('[Extension] Sent ready message to parent:', parentOrigin);
+
+  return () => window.removeEventListener('message', handleMessage);
+}
+
+// Initialize theme bridge on load
+if (typeof window !== 'undefined') {
+  initializeThemeBridge();
+}
+
+// ============================================================================
+// Types
+// ============================================================================
 
 // Types
 interface PlatformReport {
@@ -151,8 +236,8 @@ interface ReportResult {
 function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'white',
+      background: 'linear-gradient(135deg, var(--alga-primary) 0%, var(--alga-primary-light) 100%)',
+      color: 'var(--alga-primary-foreground)',
       borderRadius: '12px',
       padding: '20px',
       minWidth: '200px',
@@ -168,10 +253,10 @@ function StatCard({ title, value, subtitle }: { title: string; value: string | n
 function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
   if (!Array.isArray(data) || data.length === 0) {
     return (
-      <div className="card">
+      <Card>
         <h4 style={{ marginTop: 0 }}>{title}</h4>
-        <p style={{ color: 'var(--alga-muted-fg)' }}>No data returned</p>
-      </div>
+        <Text tone="muted">No data returned</Text>
+      </Card>
     );
   }
 
@@ -198,7 +283,7 @@ function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
   };
 
   return (
-    <div className="card">
+    <Card>
       <h4 style={{ marginTop: 0 }}>{title}</h4>
       <div style={{ overflowX: 'auto' }}>
         <table>
@@ -220,10 +305,10 @@ function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)', marginTop: '8px' }}>
+      <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '8px' }}>
         {data.length} row{data.length !== 1 ? 's' : ''}
-      </div>
-    </div>
+      </Text>
+    </Card>
   );
 }
 
@@ -239,7 +324,7 @@ function SimpleBarChart({ data, labelKey, valueKey, title }: {
   const maxValue = Math.max(...data.map(d => Number((d as Record<string, unknown>)[valueKey]) || 0));
 
   return (
-    <div className="card">
+    <Card>
       <h4 style={{ marginTop: 0 }}>{title}</h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {data.map((item, idx) => {
@@ -252,11 +337,11 @@ function SimpleBarChart({ data, labelKey, valueKey, title }: {
               <div style={{ width: '120px', fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {label}
               </div>
-              <div style={{ flex: 1, background: '#e5e7eb', borderRadius: '4px', height: '24px', overflow: 'hidden' }}>
+              <div style={{ flex: 1, background: 'var(--alga-border)', borderRadius: '4px', height: '24px', overflow: 'hidden' }}>
                 <div style={{
                   width: `${percentage}%`,
                   height: '100%',
-                  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                  background: 'linear-gradient(90deg, var(--alga-primary) 0%, var(--alga-secondary) 100%)',
                   borderRadius: '4px',
                   transition: 'width 0.3s ease',
                 }} />
@@ -268,7 +353,7 @@ function SimpleBarChart({ data, labelKey, valueKey, title }: {
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -300,7 +385,7 @@ function ResultsRenderer({ results }: { results: ReportResult }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Execution metadata */}
-      <div className="card" style={{ background: '#f9fafb' }}>
+      <Card style={{ background: 'var(--alga-muted)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>Executed At</div>
@@ -319,7 +404,7 @@ function ResultsRenderer({ results }: { results: ReportResult }) {
             <div style={{ fontWeight: 500 }}>{metadata.cacheHit ? 'Hit' : 'Miss'}</div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Render each metric */}
       {Object.entries(metrics).map(([metricId, data]) => {
@@ -396,16 +481,16 @@ function ReportsList() {
   }
 
   if (loading) {
-    return <div className="loading">Loading reports...</div>;
+    return <Text tone="muted">Loading reports...</Text>;
   }
 
   if (error) {
     return (
       <div>
-        <div className="error">{error}</div>
-        <button className="btn" style={{ marginTop: '16px' }} onClick={fetchReports}>
+        <Alert tone="danger">{error}</Alert>
+        <Button style={{ marginTop: '16px' }} onClick={fetchReports}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -420,69 +505,85 @@ function ReportsList() {
     );
   }
 
+  const columns: Column<PlatformReport>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (row) => (
+        <div>
+          <strong>{row.name}</strong>
+          {row.description && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+              {row.description}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      render: (row) => row.category ? (
+        <Badge tone="info">{row.category}</Badge>
+      ) : null,
+    },
+    {
+      key: 'is_active',
+      header: 'Status',
+      render: (row) => (
+        <Badge tone={row.is_active ? 'success' : 'warning'}>
+          {row.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      render: (row) => (
+        <Text tone="muted" style={{ fontSize: '0.875rem' }}>
+          {new Date(row.created_at).toLocaleDateString()}
+        </Text>
+      ),
+    },
+    {
+      key: 'report_id',
+      header: 'Actions',
+      sortable: false,
+      render: (row) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setSelectedReport(row)}
+        >
+          View Details
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Platform Reports</h2>
-        <button className="btn btn-secondary" onClick={fetchReports}>
+        <Button variant="secondary" onClick={fetchReports}>
           Refresh
-        </button>
+        </Button>
       </div>
 
       {reports.length === 0 ? (
-        <div className="card">
-          <p style={{ color: 'var(--alga-muted-fg)', margin: 0 }}>
+        <Card>
+          <Text tone="muted">
             No reports found. Create your first report using the "Create Report" tab.
-          </p>
-        </div>
+          </Text>
+        </Card>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((report) => (
-              <tr key={report.report_id}>
-                <td>
-                  <strong>{report.name}</strong>
-                  {report.description && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
-                      {report.description}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  {report.category && (
-                    <span className="badge badge-info">{report.category}</span>
-                  )}
-                </td>
-                <td>
-                  <span className={`badge ${report.is_active ? 'badge-success' : 'badge-warning'}`}>
-                    {report.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td style={{ color: 'var(--alga-muted-fg)', fontSize: '0.875rem' }}>
-                  {new Date(report.created_at).toLocaleDateString()}
-                </td>
-                <td>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ padding: '6px 12px', fontSize: '0.75rem' }}
-                    onClick={() => setSelectedReport(report)}
-                  >
-                    View Details
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          columns={columns}
+          data={reports}
+          paginate
+          defaultPageSize={10}
+          initialSortKey="created_at"
+        />
       )}
     </div>
   );
@@ -538,52 +639,53 @@ function ReportDetail({
 
   return (
     <div>
-      <button
-        className="btn btn-secondary"
+      <Button
+        variant="ghost"
         style={{ marginBottom: '20px' }}
         onClick={onBack}
       >
-        Back to Reports
-      </button>
+        ← Back to Reports
+      </Button>
 
-      <div className="card">
+      <Card>
         <h2 style={{ marginTop: 0 }}>{report.name}</h2>
         {report.description && (
-          <p style={{ color: 'var(--alga-muted-fg)' }}>{report.description}</p>
+          <Text tone="muted" style={{ display: 'block', marginBottom: '12px' }}>{report.description}</Text>
         )}
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           {report.category && (
-            <span className="badge badge-info">{report.category}</span>
+            <Badge tone="info">{report.category}</Badge>
           )}
-          <span className={`badge ${report.is_active ? 'badge-success' : 'badge-warning'}`}>
+          <Badge tone={report.is_active ? 'success' : 'warning'}>
             {report.is_active ? 'Active' : 'Inactive'}
-          </span>
+          </Badge>
         </div>
 
-        <div style={{ fontSize: '0.875rem', color: 'var(--alga-muted-fg)', marginBottom: '20px' }}>
+        <Text tone="muted" style={{ display: 'block', fontSize: '0.875rem', marginBottom: '20px' }}>
           <div>Created: {new Date(report.created_at).toLocaleString()}</div>
           <div>Updated: {new Date(report.updated_at).toLocaleString()}</div>
-        </div>
+        </Text>
 
         <h3>Report Definition</h3>
-        <pre>{JSON.stringify(report.report_definition, null, 2)}</pre>
+        <pre style={{ background: 'var(--alga-muted)', padding: '12px', borderRadius: 'var(--alga-radius)', overflow: 'auto' }}>
+          {JSON.stringify(report.report_definition, null, 2)}
+        </pre>
 
         <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
-          <button
-            className="btn btn-success"
+          <Button
             onClick={handleExecute}
             disabled={executing}
           >
             {executing ? 'Executing...' : 'Execute Report'}
-          </button>
-          <button className="btn btn-danger" onClick={handleDelete}>
+          </Button>
+          <Button variant="danger" onClick={handleDelete}>
             Delete Report
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
-      {error && <div className="error" style={{ marginTop: '16px' }}>{error}</div>}
+      {error && <Alert tone="danger" style={{ marginTop: '16px' }}>{error}</Alert>}
 
       {results && (
         <div style={{ marginTop: '16px' }}>
@@ -594,6 +696,43 @@ function ReportDetail({
     </div>
   );
 }
+
+// Shared textarea style to match Input component
+const textareaStyle: React.CSSProperties = {
+  borderRadius: 'var(--alga-radius)',
+  border: '1px solid var(--alga-border)',
+  background: 'var(--alga-bg)',
+  color: 'var(--alga-fg)',
+  padding: '8px 10px',
+  fontSize: 14,
+  lineHeight: '20px',
+  width: '100%',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+};
+
+// Category options for Select
+const CATEGORY_OPTIONS: SelectOption[] = [
+  { value: 'tenants', label: 'Tenants' },
+  { value: 'users', label: 'Users' },
+  { value: 'tickets', label: 'Tickets' },
+  { value: 'billing', label: 'Billing' },
+  { value: 'analytics', label: 'Analytics' },
+];
+
+// Metric type options for Select
+const METRIC_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'count', label: 'Count' },
+  { value: 'sum', label: 'Sum' },
+  { value: 'avg', label: 'Average' },
+  { value: 'query', label: 'Custom Query' },
+];
+
+// Table options for Select
+const TABLE_OPTIONS: SelectOption[] = ALLOWED_TABLES.map(t => ({ value: t.value, label: t.label }));
+
+// Operator options for Select
+const OPERATOR_OPTIONS: SelectOption[] = OPERATORS.map(op => ({ value: op.value, label: op.label }));
 
 function CreateReport() {
   const [name, setName] = useState('');
@@ -717,170 +856,151 @@ function CreateReport() {
     return table?.columns || [];
   };
 
+  const getFieldOptions = (tableName: string): SelectOption[] => {
+    return getTableColumns(tableName).map(col => ({ value: col, label: col }));
+  };
+
   return (
     <div>
       <h2 style={{ marginTop: 0 }}>Create New Report</h2>
 
       <form onSubmit={handleSubmit}>
-        <div className="card">
+        <Card style={{ marginBottom: '16px' }}>
           <h3 style={{ marginTop: 0 }}>Basic Information</h3>
 
-          <div className="form-group">
-            <label className="label">Report Name *</label>
-            <input
+          <div style={{ marginBottom: '16px' }}>
+            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Report Name *</Text>
+            <Input
               type="text"
-              className="input"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Tenant User Summary"
+              style={{ width: '100%' }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="label">Description</label>
+          <div style={{ marginBottom: '16px' }}>
+            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Description</Text>
             <textarea
-              className="input"
+              style={{ ...textareaStyle, resize: 'vertical' }}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what this report shows..."
               rows={3}
-              style={{ resize: 'vertical' }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="label">Category</label>
-            <select
-              className="input"
+          <div style={{ marginBottom: '16px' }}>
+            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Category</Text>
+            <CustomSelect
+              options={CATEGORY_OPTIONS}
+              placeholder="Select a category..."
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="">Select a category...</option>
-              <option value="tenants">Tenants</option>
-              <option value="users">Users</option>
-              <option value="tickets">Tickets</option>
-              <option value="billing">Billing</option>
-              <option value="analytics">Analytics</option>
-            </select>
+              onValueChange={setCategory}
+            />
           </div>
-        </div>
+        </Card>
 
-        <div className="card">
+        <Card style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ margin: 0 }}>Metrics</h3>
-            <button type="button" className="btn btn-secondary" onClick={addMetric}>
+            <Button type="button" variant="secondary" onClick={addMetric}>
               + Add Metric
-            </button>
+            </Button>
           </div>
 
           {metrics.length === 0 ? (
-            <p style={{ color: 'var(--alga-muted-fg)' }}>
+            <Text tone="muted">
               No metrics added yet. Click "Add Metric" to define what data this report should query.
-            </p>
+            </Text>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {metrics.map((metric, index) => (
-                <div
+                <Card
                   key={metric.id}
-                  style={{
-                    border: '1px solid var(--alga-border)',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    background: '#fff',
-                  }}
+                  style={{ background: 'var(--alga-card-bg)' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                     <strong>Metric {index + 1}</strong>
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-danger"
-                      style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                      variant="danger"
+                      size="sm"
                       onClick={() => removeMetric(index)}
                     >
                       Remove
-                    </button>
+                    </Button>
                   </div>
 
-                  <div className="form-group">
-                    <label className="label">Metric Name</label>
-                    <input
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Metric Name</Text>
+                    <Input
                       type="text"
-                      className="input"
                       value={metric.name}
                       onChange={(e) => updateMetric(index, { name: e.target.value })}
                       placeholder="e.g., Active Users Count"
+                      style={{ width: '100%' }}
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label className="label">Metric Type</label>
-                    <select
-                      className="input"
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Metric Type</Text>
+                    <CustomSelect
+                      options={METRIC_TYPE_OPTIONS}
                       value={metric.type}
-                      onChange={(e) => updateMetric(index, { type: e.target.value as 'count' | 'sum' | 'avg' | 'query' })}
-                    >
-                      <option value="count">Count</option>
-                      <option value="sum">Sum</option>
-                      <option value="avg">Average</option>
-                      <option value="query">Custom Query</option>
-                    </select>
+                      onValueChange={(value) => updateMetric(index, { type: value as 'count' | 'sum' | 'avg' | 'query' })}
+                    />
                   </div>
 
-                  <div className="form-group">
-                    <label className="label">Table</label>
-                    <select
-                      className="input"
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Table</Text>
+                    <CustomSelect
+                      options={TABLE_OPTIONS}
                       value={metric.query.table}
-                      onChange={(e) => updateQuery(index, { table: e.target.value, fields: ['COUNT(*) as count'] })}
-                    >
-                      {ALLOWED_TABLES.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => updateQuery(index, { table: value, fields: ['COUNT(*) as count'] })}
+                    />
                   </div>
 
-                  <div className="form-group">
-                    <label className="label">Fields (comma-separated)</label>
-                    <input
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Fields (comma-separated)</Text>
+                    <Input
                       type="text"
-                      className="input"
                       value={metric.query.fields.join(', ')}
                       onChange={(e) => updateQuery(index, {
                         fields: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
                       })}
                       placeholder="e.g., tenant, COUNT(*) as count"
+                      style={{ width: '100%' }}
                     />
-                    <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)', marginTop: '4px' }}>
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
                       Available columns: {getTableColumns(metric.query.table).join(', ')}
-                    </div>
+                    </Text>
                   </div>
 
-                  <div className="form-group">
-                    <label className="label">Group By (comma-separated)</label>
-                    <input
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Group By (comma-separated)</Text>
+                    <Input
                       type="text"
-                      className="input"
                       value={(metric.query.groupBy || []).join(', ')}
                       onChange={(e) => updateQuery(index, {
                         groupBy: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
                       })}
                       placeholder="e.g., tenant"
+                      style={{ width: '100%' }}
                     />
                   </div>
 
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <label className="label" style={{ margin: 0 }}>Filters</label>
-                      <button
+                      <Text style={{ fontWeight: 500 }}>Filters</Text>
+                      <Button
                         type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                        variant="secondary"
+                        size="sm"
                         onClick={() => addFilter(index)}
                       >
                         + Add Filter
-                      </button>
+                      </Button>
                     </div>
 
                     {(metric.query.filters || []).map((filter, filterIndex) => (
@@ -893,75 +1013,54 @@ function CreateReport() {
                           alignItems: 'center',
                         }}
                       >
-                        <select
-                          className="input"
-                          style={{ flex: 1 }}
+                        <CustomSelect
+                          options={getFieldOptions(metric.query.table)}
+                          placeholder="Select field..."
                           value={filter.field}
-                          onChange={(e) => updateFilter(index, filterIndex, { field: e.target.value })}
-                        >
-                          <option value="">Select field...</option>
-                          {getTableColumns(metric.query.table).map((col) => (
-                            <option key={col} value={col}>
-                              {col}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          className="input"
-                          style={{ width: '100px' }}
-                          value={filter.operator}
-                          onChange={(e) => updateFilter(index, filterIndex, { operator: e.target.value as FilterDefinition['operator'] })}
-                        >
-                          {OPERATORS.map((op) => (
-                            <option key={op.value} value={op.value}>
-                              {op.label}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          className="input"
+                          onValueChange={(value) => updateFilter(index, filterIndex, { field: value })}
                           style={{ flex: 1 }}
+                        />
+                        <CustomSelect
+                          options={OPERATOR_OPTIONS}
+                          value={filter.operator}
+                          onValueChange={(value) => updateFilter(index, filterIndex, { operator: value as FilterDefinition['operator'] })}
+                          style={{ width: '100px' }}
+                        />
+                        <Input
+                          type="text"
                           value={String(filter.value)}
                           onChange={(e) => updateFilter(index, filterIndex, { value: e.target.value })}
                           placeholder="Value"
+                          style={{ flex: 1 }}
                         />
-                        <button
+                        <Button
                           type="button"
-                          className="btn btn-danger"
-                          style={{ padding: '8px' }}
+                          variant="danger"
+                          size="sm"
                           onClick={() => removeFilter(index, filterIndex)}
                         >
                           X
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
-        {error && <div className="error" style={{ marginBottom: '16px' }}>{error}</div>}
+        {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
 
         {success && (
-          <div
-            style={{
-              padding: '16px',
-              background: '#dcfce7',
-              borderRadius: '8px',
-              border: '1px solid #bbf7d0',
-              marginBottom: '16px',
-            }}
-          >
+          <Alert tone="success" style={{ marginBottom: '16px' }}>
             Report created successfully! View it in the "Reports" tab.
-          </div>
+          </Alert>
         )}
 
-        <button type="submit" className="btn" disabled={creating}>
+        <Button type="submit" disabled={creating}>
           {creating ? 'Creating...' : 'Create Report'}
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -990,6 +1089,12 @@ function ExecuteReport() {
   }, []);
 
   const selectedReport = reports.find(r => r.report_id === selectedReportId);
+
+  // Build report options for Select
+  const reportOptions: SelectOption[] = reports.map(report => ({
+    value: report.report_id,
+    label: `${report.name}${report.category ? ` (${report.category})` : ''}`,
+  }));
 
   const handleExecute = async () => {
     if (!selectedReportId) {
@@ -1024,85 +1129,68 @@ function ExecuteReport() {
   };
 
   if (loading) {
-    return <div className="loading">Loading reports...</div>;
+    return <Text tone="muted">Loading reports...</Text>;
   }
 
   return (
     <div>
       <h2 style={{ marginTop: 0 }}>Execute Report</h2>
 
-      <div className="card">
-        <div className="form-group">
-          <label className="label">Select Report</label>
-          <select
-            className="input"
+      <Card>
+        <div style={{ marginBottom: '16px' }}>
+          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Select Report</Text>
+          <CustomSelect
+            options={reportOptions}
+            placeholder="Choose a report..."
             value={selectedReportId}
-            onChange={(e) => {
-              setSelectedReportId(e.target.value);
+            onValueChange={(value) => {
+              setSelectedReportId(value);
               setResults(null);
               setError(null);
             }}
-          >
-            <option value="">Choose a report...</option>
-            {reports.map((report) => (
-              <option key={report.report_id} value={report.report_id}>
-                {report.name} {report.category ? `(${report.category})` : ''}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         {selectedReport && (
-          <div style={{
-            background: '#f0f9ff',
-            border: '1px solid #bae6fd',
-            borderRadius: '8px',
-            padding: '12px',
+          <Card style={{
+            background: 'var(--alga-primary-50)',
+            borderColor: 'var(--alga-primary-100)',
             marginBottom: '16px',
             fontSize: '0.875rem',
           }}>
             <strong>{selectedReport.name}</strong>
             {selectedReport.description && (
-              <div style={{ color: 'var(--alga-muted-fg)', marginTop: '4px' }}>
+              <Text tone="muted" style={{ display: 'block', marginTop: '4px' }}>
                 {selectedReport.description}
-              </div>
+              </Text>
             )}
             <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {selectedReport.category && (
-                <span className="badge badge-info">{selectedReport.category}</span>
+                <Badge tone="info">{selectedReport.category}</Badge>
               )}
-              <span className="badge badge-success">
+              <Badge tone="success">
                 {selectedReport.report_definition.metrics?.length || 0} metric(s)
-              </span>
+              </Badge>
             </div>
-          </div>
+          </Card>
         )}
 
-        <div className="form-group">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label className="label" style={{ margin: 0 }}>Parameters (JSON)</label>
-            <button
-              type="button"
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <Text style={{ fontWeight: 500 }}>Parameters (JSON)</Text>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowParamsHelp(!showParamsHelp)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#667eea',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                padding: '4px 8px',
-              }}
+              style={{ fontSize: '0.75rem' }}
             >
               {showParamsHelp ? 'Hide Help' : 'What are parameters?'}
-            </button>
+            </Button>
           </div>
 
           {showParamsHelp && (
-            <div style={{
-              background: '#fefce8',
-              border: '1px solid #fef08a',
-              borderRadius: '8px',
-              padding: '12px',
+            <Card style={{
+              background: 'var(--alga-card-bg)',
               marginBottom: '12px',
               fontSize: '0.8rem',
             }}>
@@ -1115,12 +1203,13 @@ function ExecuteReport() {
               <div style={{ marginTop: '12px' }}>
                 <strong>Examples:</strong>
                 <pre style={{
-                  background: '#fff',
+                  background: 'var(--alga-bg)',
                   padding: '8px',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--alga-radius)',
                   margin: '4px 0',
                   fontSize: '0.75rem',
                   overflow: 'auto',
+                  border: '1px solid var(--alga-border)',
                 }}>
 {`// Empty - uses defaults
 {}
@@ -1135,31 +1224,29 @@ function ExecuteReport() {
 }`}
                 </pre>
               </div>
-            </div>
+            </Card>
           )}
 
           <textarea
-            className="input"
+            style={{ ...textareaStyle, fontFamily: 'monospace', resize: 'vertical', fontSize: '0.875rem' }}
             value={parameters}
             onChange={(e) => setParameters(e.target.value)}
             rows={3}
-            style={{ fontFamily: 'monospace', resize: 'vertical', fontSize: '0.875rem' }}
             placeholder='{}'
           />
-          <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)', marginTop: '4px' }}>
+          <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
             Leave empty <code>{'{}'}</code> to use default parameters
-          </div>
+          </Text>
         </div>
 
-        <button
-          className="btn"
+        <Button
           onClick={handleExecute}
           disabled={executing || !selectedReportId}
           style={{ minWidth: '150px' }}
         >
           {executing ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-              <span className="spinner" style={{
+              <span style={{
                 width: '14px',
                 height: '14px',
                 border: '2px solid rgba(255,255,255,0.3)',
@@ -1170,10 +1257,10 @@ function ExecuteReport() {
               Executing...
             </span>
           ) : 'Execute Report'}
-        </button>
-      </div>
+        </Button>
+      </Card>
 
-      {error && <div className="error" style={{ marginTop: '16px' }}>{error}</div>}
+      {error && <Alert tone="danger" style={{ marginTop: '16px' }}>{error}</Alert>}
 
       {results && (
         <div style={{ marginTop: '16px' }}>

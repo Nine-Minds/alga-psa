@@ -6,20 +6,30 @@
     <title>Nine Minds Reporting</title>
     <style>
       :root {
+        /* These are defaults that get overridden by host theme */
         --alga-bg: #fff;
         --alga-fg: #111827;
         --alga-muted-fg: #6b7280;
         --alga-border: #e5e7eb;
-        /* Alga brand colors */
+        --alga-border-light: #f3f4f6;
+        --alga-card-bg: #f9fafb;
+
+        /* Alga brand colors (defaults, overridden by host) */
         --alga-primary: #8a4dea;           /* Purple */
         --alga-primary-light: #a673f2;     /* Lighter purple for hover */
+        --alga-primary-dark: #7c45d3;
+        --alga-primary-50: #f6f0fe;
+        --alga-primary-100: #ede2fd;
         --alga-primary-foreground: #ffffff;
+
         --alga-secondary: #40cff9;         /* Blue */
+        --alga-secondary-light: #66dffb;
         --alga-accent: #ff9c30;            /* Orange */
+
         --alga-success: #16a34a;
         --alga-warning: #d97706;
-        --alga-danger: #dc2626;
-        --alga-card-bg: #f9fafb;
+        --alga-danger: #ff9c30;            /* Orange - brand destructive */
+        --alga-danger-dark: #e68a2a;
       }
       * { box-sizing: border-box; }
       body {
@@ -36,7 +46,7 @@
         border-bottom: 1px solid var(--alga-border);
         position: sticky;
         top: 0;
-        background: #fff;
+        background: var(--alga-bg);
         z-index: 10;
       }
       header h1 {
@@ -109,21 +119,43 @@
         border-color: var(--alga-primary);
         color: var(--alga-primary);
       }
+      .btn-ghost {
+        background: transparent;
+        color: var(--alga-muted-fg);
+        border: none;
+      }
+      .btn-ghost:hover {
+        background: var(--alga-card-bg);
+        color: var(--alga-primary);
+      }
       .btn-danger { background: var(--alga-danger); }
-      .btn-danger:hover { background: #b91c1c; }
-      .btn-success { background: var(--alga-success); }
-      .btn-success:hover { background: #15803d; }
+      .btn-danger:hover { background: var(--alga-danger-dark); }
       .input {
         width: 100%;
         padding: 10px 12px;
         border: 1px solid var(--alga-border);
         border-radius: 6px;
         font-size: 0.875rem;
+        background: var(--alga-bg);
+        color: var(--alga-fg);
       }
       .input:focus {
         outline: none;
         border-color: var(--alga-primary);
         box-shadow: 0 0 0 3px rgba(138, 77, 234, 0.15);
+      }
+      /* Custom select styling to match main app */
+      select.input {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 36px;
+        cursor: pointer;
+      }
+      select.input:hover {
+        background-color: var(--alga-primary-50);
+        border-color: var(--alga-primary);
       }
       .label {
         display: block;
@@ -140,7 +172,7 @@
       }
       .badge-success { background: #dcfce7; color: #166534; }
       .badge-warning { background: #fef3c7; color: #92400e; }
-      .badge-info { background: #f0e6fd; color: #6b3dab; }
+      .badge-info { background: var(--alga-primary-50); color: var(--alga-primary-dark); }
       pre {
         background: #1f2937;
         color: #f9fafb;
