@@ -10,9 +10,11 @@ import {
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
 import { getPaymentTermsList } from 'server/src/lib/actions/billingAndTax';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import type { IService } from 'server/src/interfaces/billing.interfaces';
 import type { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import type { IPaymentTermOption } from 'server/src/lib/actions/billingAndTax';
+import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type {
   AccountingMappingContext,
   AccountingMappingModule,
@@ -30,10 +32,76 @@ type MappingLoadConfig<TAlga> = {
 
 export function createCsvMappingModules(): AccountingMappingModule[] {
   return [
+    createCustomerModule(),
     createServiceModule(),
     createTaxCodeModule(),
     createPaymentTermModule()
   ];
+}
+
+function createCustomerModule(): AccountingMappingModule {
+  return {
+    id: 'qbcsv-customer-mappings',
+    adapterType: ADAPTER_TYPE,
+    algaEntityType: 'client',
+    externalEntityType: 'Customer',
+    labels: {
+      tab: 'Clients',
+      addButton: 'Add Customer Mapping',
+      algaColumn: 'Alga Client',
+      externalColumn: 'QuickBooks Customer',
+      dialog: {
+        addTitle: 'Add QuickBooks Customer Mapping',
+        editTitle: 'Edit QuickBooks Customer Mapping',
+        algaField: 'Alga Client',
+        externalField: 'QuickBooks Customer'
+      },
+      deleteConfirmation: {
+        title: 'Delete Customer Mapping',
+        message: ({ algaName, externalName }) =>
+          `Delete mapping${algaName ? ` for ${algaName}` : ''}${
+            externalName ? ` ↔ ${externalName}` : ''
+          }? This action cannot be undone.`,
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel'
+      }
+    },
+    metadata: {
+      enableJsonEditor: true
+    },
+    elements: {
+      addButton: 'add-qbcsv-customer-mapping-button',
+      table: 'qbcsv-customer-mappings-table',
+      dialog: 'qbcsv-customer-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-qbcsv-customer-mapping-dialog',
+      editMenuPrefix: 'edit-qbcsv-customer-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-qbcsv-customer-mapping-menu-item-'
+    },
+    load(context) {
+      return loadMappings<IClient>({
+        context,
+        algaEntityType: 'client',
+        loadAlgaEntities: async () => getAllClients(true),
+        mapAlga: (client) => ({
+          id: client.client_id,
+          name: client.client_name
+        })
+      });
+    },
+    create(context, input) {
+      return createMapping({
+        context,
+        input,
+        algaEntityType: 'client'
+      });
+    },
+    update(_context, mappingId, input) {
+      return updateMapping(mappingId, input);
+    },
+    async remove(_context, mappingId) {
+      await deleteExternalEntityMapping(mappingId);
+    }
+  };
 }
 
 function createServiceModule(): AccountingMappingModule {
@@ -306,4 +374,3 @@ function updateMapping(
 }
 
 type IServicesResult = Pick<IService, 'service_id' | 'service_name'>;
-

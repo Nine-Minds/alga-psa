@@ -239,25 +239,33 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
           taxCode = taxMapping?.external_entity_id ?? '';
         }
 
-        // Resolve payment terms
-        let terms = '';
-        if (client.payment_terms) {
-          const termMapping = await resolver.resolvePaymentTermMapping({
-            adapterType: this.type,
-            paymentTermId: client.payment_terms,
-            targetRealm: context.batch.target_realm
-          });
-          terms = termMapping?.external_entity_id ?? client.payment_terms;
-        }
+      // Resolve payment terms
+      let terms = '';
+      if (client.payment_terms) {
+        const termMapping = await resolver.resolvePaymentTermMapping({
+          adapterType: this.type,
+          paymentTermId: client.payment_terms,
+          targetRealm: context.batch.target_realm
+        });
+        terms = termMapping?.external_entity_id ?? client.payment_terms;
+      }
 
-        const csvRow: QuickBooksCSVRow = {
-          '*InvoiceNo': invoice.invoice_number,
-          '*Customer': client.client_name,
-          '*InvoiceDate': this.formatDate(invoice.invoice_date),
-          '*DueDate': this.formatDate(invoice.due_date) || this.formatDate(invoice.invoice_date),
-          '*Item': itemName,
-          ItemDescription: charge.description ?? '',
-          '*ItemQuantity': quantity.toString(),
+      // Resolve optional client/customer mapping
+      const customerMapping = await resolver.resolveClientMapping({
+        adapterType: this.type,
+        clientId,
+        targetRealm: context.batch.target_realm
+      });
+      const customerName = customerMapping?.external_entity_id ?? client.client_name;
+
+      const csvRow: QuickBooksCSVRow = {
+        '*InvoiceNo': invoice.invoice_number,
+        '*Customer': customerName,
+        '*InvoiceDate': this.formatDate(invoice.invoice_date),
+        '*DueDate': this.formatDate(invoice.due_date) || this.formatDate(invoice.invoice_date),
+        '*Item': itemName,
+        ItemDescription: charge.description ?? '',
+        '*ItemQuantity': quantity.toString(),
           '*ItemRate': this.centsToAmount(unitPrice).toFixed(2),
           '*ItemAmount': this.centsToAmount(lineAmount).toFixed(2),
           Terms: terms,
