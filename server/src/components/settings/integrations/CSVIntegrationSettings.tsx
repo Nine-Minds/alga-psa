@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
 import { CSVExportPanel } from '../../integrations/csv/CSVExportPanel';
+import { CSVExportLockResetPanel } from '../../integrations/csv/CSVExportLockResetPanel';
 import { CSVTaxImportPanel } from '../../integrations/csv/CSVTaxImportPanel';
 import { FileSpreadsheet } from 'lucide-react';
 import { CSVMappingManager } from '../../integrations/csv/CSVMappingManager';
@@ -64,6 +65,8 @@ const CSVIntegrationSettings: React.FC = () => {
 
       {/* Export Panel */}
       <CSVExportPanel />
+
+      <CSVExportLockResetPanel />
 
       {/* Import Panel */}
       <CSVTaxImportPanel />

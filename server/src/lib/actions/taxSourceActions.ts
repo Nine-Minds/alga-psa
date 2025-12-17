@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '../db';
 import { TaxSource } from '../../interfaces/tax.interfaces';
+import { getTaxImportState } from '../../interfaces/invoice.interfaces';
 
 /**
  * Client-specific tax source resolution result.
@@ -107,7 +108,7 @@ export async function validateInvoiceFinalization(
   }
 
   // Check if invoice has pending external tax
-  if (invoice.tax_source === 'pending_external') {
+  if (getTaxImportState(invoice.tax_source as TaxSource) === 'pending') {
     return {
       canFinalize: false,
       error: 'Cannot finalize invoice with pending external tax. Please import tax from the accounting system first.',

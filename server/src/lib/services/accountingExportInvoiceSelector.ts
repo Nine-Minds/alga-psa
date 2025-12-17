@@ -3,6 +3,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
 import { AccountingExportService } from './accountingExportService';
 import { AccountingExportBatch } from '../../interfaces/accountingExport.interfaces';
+import { AppError } from '../errors';
 
 type Nullable<T> = T | null | undefined;
 
@@ -58,7 +59,11 @@ export class AccountingExportInvoiceSelector {
 
   async previewInvoiceLines(filters: InvoiceSelectionFilters): Promise<InvoicePreviewLine[]> {
     const tenantId = this.tenantId;
+    const adapterType = filters.adapterType?.trim() ?? '';
     const invoiceStatusesForQuery = expandInvoiceStatuses(filters.invoiceStatuses);
+    const includePendingExternalDrafts =
+      shouldIncludePendingExternalDrafts(adapterType, invoiceStatusesForQuery);
+
     const query = this.knex('invoices as inv')
       .join('invoice_charges as ch', function joinCharges() {
         this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
@@ -71,6 +76,7 @@ export class AccountingExportInvoiceSelector {
         'inv.invoice_number',
         'inv.invoice_date',
         'inv.status as invoice_status',
+        'inv.tax_source',
         'inv.client_id',
         'cli.client_name',
         'inv.currency_code',
@@ -94,7 +100,14 @@ export class AccountingExportInvoiceSelector {
     }
 
     if (invoiceStatusesForQuery && invoiceStatusesForQuery.length > 0) {
-      query.andWhere((builder) => builder.whereIn('inv.status', invoiceStatusesForQuery));
+      query.andWhere((builder) => {
+        builder.whereIn('inv.status', invoiceStatusesForQuery);
+        if (includePendingExternalDrafts) {
+          builder.orWhere((orBuilder) =>
+            orBuilder.where('inv.status', 'draft').andWhere('inv.tax_source', 'pending_external')
+          );
+        }
+      });
     }
 
     if (filters.clientIds && filters.clientIds.length > 0) {
@@ -104,7 +117,6 @@ export class AccountingExportInvoiceSelector {
       query.andWhereRaw('LOWER(cli.client_name) LIKE ?', [searchValue]);
     }
 
-    const adapterType = filters.adapterType?.trim() ?? '';
     const targetRealm = filters.targetRealm ? String(filters.targetRealm).trim() : null;
     // Immutability rule: once an invoice is synced for an adapter+realm, it should not be selected again.
     const shouldExcludeSynced = Boolean(adapterType);
@@ -175,6 +187,14 @@ export class AccountingExportInvoiceSelector {
       excludeSyncedInvoices: options.filters.excludeSyncedInvoices ?? true
     });
 
+    if (preview.length === 0) {
+      throw new AppError(
+        'ACCOUNTING_EXPORT_EMPTY_BATCH',
+        'No invoices match the selected filters (or all matching invoices have already been exported).',
+        { filters: normalizeFilters(options.filters) }
+      );
+    }
+
     const exportService = await AccountingExportService.create();
     const batch = await exportService.createBatch({
       adapter_type: options.adapterType,
@@ -184,10 +204,6 @@ export class AccountingExportInvoiceSelector {
       notes: options.notes ?? null,
       created_by: options.createdBy ?? null
     });
-
-    if (preview.length === 0) {
-      return { batch, lines: [] };
-    }
 
     const lineInputs = preview.map((line) => ({
       batch_id: batch.batch_id,
@@ -236,6 +252,40 @@ export class AccountingExportInvoiceSelector {
     }
     return map;
   }
+}
+
+function shouldIncludePendingExternalDrafts(
+  adapterType: string,
+  invoiceStatusesForQuery: string[] | null
+): boolean {
+  if (!adapterType) {
+    return false;
+  }
+
+  const adapterSupportsTaxDelegation =
+    adapterType === 'quickbooks_csv' ||
+    adapterType === 'quickbooks_online' ||
+    adapterType === 'quickbooks_desktop' ||
+    adapterType === 'xero';
+
+  if (!adapterSupportsTaxDelegation) {
+    return false;
+  }
+
+  if (!invoiceStatusesForQuery || invoiceStatusesForQuery.length === 0) {
+    return false;
+  }
+
+  const includesDraft = invoiceStatusesForQuery.some(
+    (status) => String(status).toLowerCase() === 'draft'
+  );
+  if (includesDraft) {
+    return false;
+  }
+
+  // Draft invoices awaiting external tax import are effectively "blocked" and should be exportable
+  // without requiring users to manually include all draft invoices.
+  return true;
 }
 
 function toInteger(value: unknown): number {

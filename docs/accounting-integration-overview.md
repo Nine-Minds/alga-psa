@@ -135,7 +135,10 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
 5. Refresh data via tab reload (automatic after create/update/delete).
 
 ### Running Exports
-1. From **Settings → Integrations → Accounting → QuickBooks CSV**:
+1. From **Billing → Accounting Exports**:
+   - Create a new batch for **QuickBooks CSV** (or other adapters when enabled).
+   - Execute the batch; file-based adapters return a downloadable artifact.
+2. From **Settings → Integrations → Accounting → QuickBooks CSV**:
    - Choose invoice filters (date range + statuses) and click **Export CSV**.
    - The export creates (or reuses) an `accounting_export_batch`, validates mappings, and generates the file.
 2. Fix issues and retry:

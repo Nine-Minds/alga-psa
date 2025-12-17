@@ -53,7 +53,10 @@ export class AccountingExportService {
     const exportType = input.export_type ?? 'invoice';
     const normalizedFilters = input.filters && Object.keys(input.filters).length > 0 ? input.filters : null;
 
-    const blockingStatuses: AccountingExportStatus[] = ['pending', 'validating', 'needs_attention', 'ready', 'delivered', 'posted'];
+    // Only block duplicates when a batch is still actionable. Delivered/posted/failed/cancelled
+    // batches are historical records, and users may legitimately need to run another export later
+    // (e.g. after clearing an export lock or changing mappings).
+    const blockingStatuses: AccountingExportStatus[] = ['pending', 'validating', 'needs_attention', 'ready'];
     const existing = await this.repository.findActiveBatchByFilters({
       adapterType: input.adapter_type,
       exportType,
@@ -116,9 +119,30 @@ export class AccountingExportService {
   }
 
   async executeBatch(batchId: string): Promise<AccountingExportDeliveryResult> {
-    const { batch } = await this.getBatchWithDetails(batchId);
+    const initial = await this.getBatchWithDetails(batchId);
+    const batch = initial.batch;
     if (!batch) {
       throw new Error(`Export batch ${batchId} not found`);
+    }
+
+    if (initial.lines.length === 0) {
+      const now = new Date().toISOString();
+      await this.repository.updateBatchStatus(batchId, {
+        status: 'needs_attention',
+        validated_at: now,
+        notes: 'No invoices match the selected filters (or all matching invoices have already been exported).'
+      });
+      await this.repository.addError({
+        batch_id: batchId,
+        code: 'ACCOUNTING_EXPORT_EMPTY_BATCH',
+        message: 'No invoices match the selected filters (or all matching invoices have already been exported).',
+        metadata: { adapterType: batch.adapter_type, exportType: batch.export_type }
+      });
+      throw new AppError(
+        'ACCOUNTING_EXPORT_EMPTY_BATCH',
+        'No invoices match the selected filters (or all matching invoices have already been exported).',
+        { batchId }
+      );
     }
 
     const nonExecutableStates: AccountingExportStatus[] = ['cancelled', 'posted', 'delivered', 'validating'];
