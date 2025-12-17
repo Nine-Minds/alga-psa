@@ -218,11 +218,17 @@ const IntegrationsSettingsPage: React.FC = () => {
     content: (
       <div className="space-y-6">
         {/* Category header */}
-        <div className="flex items-start gap-3 pb-4 border-b">
-          <category.icon className="h-6 w-6 text-primary mt-0.5" />
-          <div>
-            <h3 className="text-lg font-semibold">{category.label} Integrations</h3>
-            <p className="text-sm text-muted-foreground">{category.description}</p>
+        <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
+          <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
+            <div className="flex items-center justify-center gap-3">
+              <category.icon className="h-7 w-7 text-primary" />
+              <h2 className="text-3xl font-bold tracking-tight">
+                {category.label} Integrations
+              </h2>
+            </div>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              {category.description}
+            </p>
           </div>
         </div>
 
