@@ -106,6 +106,19 @@ export class AccountingMappingResolver {
     });
   }
 
+  async resolveClientMapping(params: { adapterType: string; clientId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+    if (!params.clientId) {
+      return null;
+    }
+    return this.resolveGenericMapping({
+      adapterType: params.adapterType,
+      entityType: 'client',
+      entityId: params.clientId,
+      source: 'company',
+      targetRealm: params.targetRealm ?? null
+    });
+  }
+
   async ensureCompanyMapping(params: {
     tenantId: string;
     adapterType: string;
@@ -209,7 +222,12 @@ export class AccountingMappingResolver {
   }
 
   private normalizeAdapterType(adapterType: string): AccountingAdapterType | null {
-    if (adapterType === 'xero' || adapterType === 'quickbooks_online' || adapterType === 'quickbooks_desktop') {
+    if (
+      adapterType === 'xero' ||
+      adapterType === 'quickbooks_online' ||
+      adapterType === 'quickbooks_desktop' ||
+      adapterType === 'quickbooks_csv'
+    ) {
       return adapterType;
     }
     return null;

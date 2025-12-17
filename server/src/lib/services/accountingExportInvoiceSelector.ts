@@ -3,6 +3,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
 import { AccountingExportService } from './accountingExportService';
 import { AccountingExportBatch } from '../../interfaces/accountingExport.interfaces';
+import { AppError } from '../errors';
 
 type Nullable<T> = T | null | undefined;
 
@@ -58,6 +59,11 @@ export class AccountingExportInvoiceSelector {
 
   async previewInvoiceLines(filters: InvoiceSelectionFilters): Promise<InvoicePreviewLine[]> {
     const tenantId = this.tenantId;
+    const adapterType = filters.adapterType?.trim() ?? '';
+    const invoiceStatusesForQuery = expandInvoiceStatuses(filters.invoiceStatuses);
+    const includePendingExternalDrafts =
+      shouldIncludePendingExternalDrafts(adapterType, invoiceStatusesForQuery);
+
     const query = this.knex('invoices as inv')
       .join('invoice_charges as ch', function joinCharges() {
         this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
@@ -70,6 +76,7 @@ export class AccountingExportInvoiceSelector {
         'inv.invoice_number',
         'inv.invoice_date',
         'inv.status as invoice_status',
+        'inv.tax_source',
         'inv.client_id',
         'cli.client_name',
         'inv.currency_code',
@@ -92,8 +99,15 @@ export class AccountingExportInvoiceSelector {
       query.andWhere('inv.invoice_date', '<=', filters.endDate);
     }
 
-    if (filters.invoiceStatuses && filters.invoiceStatuses.length > 0) {
-      query.andWhere((builder) => builder.whereIn('inv.status', filters.invoiceStatuses!));
+    if (invoiceStatusesForQuery && invoiceStatusesForQuery.length > 0) {
+      query.andWhere((builder) => {
+        builder.whereIn('inv.status', invoiceStatusesForQuery);
+        if (includePendingExternalDrafts) {
+          builder.orWhere((orBuilder) =>
+            orBuilder.where('inv.status', 'draft').andWhere('inv.tax_source', 'pending_external')
+          );
+        }
+      });
     }
 
     if (filters.clientIds && filters.clientIds.length > 0) {
@@ -103,9 +117,9 @@ export class AccountingExportInvoiceSelector {
       query.andWhereRaw('LOWER(cli.client_name) LIKE ?', [searchValue]);
     }
 
-    const adapterType = filters.adapterType?.trim() ?? '';
     const targetRealm = filters.targetRealm ? String(filters.targetRealm).trim() : null;
-    const shouldExcludeSynced = Boolean(filters.excludeSyncedInvoices !== false && adapterType);
+    // Immutability rule: once an invoice is synced for an adapter+realm, it should not be selected again.
+    const shouldExcludeSynced = Boolean(adapterType);
 
     if (shouldExcludeSynced) {
       const knex = this.knex;
@@ -173,6 +187,14 @@ export class AccountingExportInvoiceSelector {
       excludeSyncedInvoices: options.filters.excludeSyncedInvoices ?? true
     });
 
+    if (preview.length === 0) {
+      throw new AppError(
+        'ACCOUNTING_EXPORT_EMPTY_BATCH',
+        'No invoices match the selected filters (or all matching invoices have already been exported).',
+        { filters: normalizeFilters(options.filters) }
+      );
+    }
+
     const exportService = await AccountingExportService.create();
     const batch = await exportService.createBatch({
       adapter_type: options.adapterType,
@@ -182,10 +204,6 @@ export class AccountingExportInvoiceSelector {
       notes: options.notes ?? null,
       created_by: options.createdBy ?? null
     });
-
-    if (preview.length === 0) {
-      return { batch, lines: [] };
-    }
 
     const lineInputs = preview.map((line) => ({
       batch_id: batch.batch_id,
@@ -236,6 +254,40 @@ export class AccountingExportInvoiceSelector {
   }
 }
 
+function shouldIncludePendingExternalDrafts(
+  adapterType: string,
+  invoiceStatusesForQuery: string[] | null | undefined
+): boolean {
+  if (!adapterType) {
+    return false;
+  }
+
+  const adapterSupportsTaxDelegation =
+    adapterType === 'quickbooks_csv' ||
+    adapterType === 'quickbooks_online' ||
+    adapterType === 'quickbooks_desktop' ||
+    adapterType === 'xero';
+
+  if (!adapterSupportsTaxDelegation) {
+    return false;
+  }
+
+  if (!invoiceStatusesForQuery || invoiceStatusesForQuery.length === 0) {
+    return false;
+  }
+
+  const includesDraft = invoiceStatusesForQuery.some(
+    (status) => String(status).toLowerCase() === 'draft'
+  );
+  if (includesDraft) {
+    return false;
+  }
+
+  // Draft invoices awaiting external tax import are effectively "blocked" and should be exportable
+  // without requiring users to manually include all draft invoices.
+  return true;
+}
+
 function toInteger(value: unknown): number {
   if (value === null || value === undefined) {
     return 0;
@@ -250,6 +302,37 @@ function toInteger(value: unknown): number {
     }
   }
   return 0;
+}
+
+function expandInvoiceStatuses(input?: string[]): string[] | undefined {
+  if (!input || input.length === 0) {
+    return undefined;
+  }
+
+  const normalized = new Set(input.map((s) => String(s).trim()).filter(Boolean));
+  if (normalized.size === 0) {
+    return undefined;
+  }
+
+  // Backward compatibility: some tenants store invoice statuses in legacy Title Case forms
+  // (e.g. "Unpaid") while the UI uses canonical status keys (e.g. "sent", "overdue").
+  const lower = new Set(Array.from(normalized).map((s) => s.toLowerCase()));
+  const includesAny = (values: string[]) => values.some((v) => lower.has(v));
+
+  if (includesAny(['sent', 'overdue', 'pending', 'prepayment', 'partially_applied'])) {
+    normalized.add('Unpaid');
+  }
+  if (lower.has('paid')) {
+    normalized.add('Paid');
+  }
+  if (lower.has('draft')) {
+    normalized.add('Draft');
+  }
+  if (includesAny(['cancelled', 'canceled'])) {
+    normalized.add('Cancelled');
+  }
+
+  return Array.from(normalized);
 }
 
 function normalizeFilters(filters: InvoiceSelectionFilters): Record<string, unknown> | null {
