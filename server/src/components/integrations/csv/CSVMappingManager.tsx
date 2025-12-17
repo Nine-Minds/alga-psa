@@ -19,7 +19,7 @@ export function CSVMappingManager() {
       modules={modules}
       context={context}
       tabStyles={tabStyles}
-      defaultTabId="Items / Services"
+      defaultTabId="Clients"
     />
   );
 }

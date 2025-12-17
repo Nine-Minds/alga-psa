@@ -47,7 +47,7 @@ function createCustomerModule(): AccountingMappingModule {
     externalEntityType: 'Customer',
     labels: {
       tab: 'Clients',
-      addButton: 'Add Customer Mapping',
+      addButton: 'Add Client Mapping',
       algaColumn: 'Alga Client',
       externalColumn: 'QuickBooks Customer',
       dialog: {
@@ -57,7 +57,7 @@ function createCustomerModule(): AccountingMappingModule {
         externalField: 'QuickBooks Customer'
       },
       deleteConfirmation: {
-        title: 'Delete Customer Mapping',
+        title: 'Delete Client Mapping',
         message: ({ algaName, externalName }) =>
           `Delete mapping${algaName ? ` for ${algaName}` : ''}${
             externalName ? ` ↔ ${externalName}` : ''

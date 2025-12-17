@@ -54,7 +54,7 @@ const CSVIntegrationSettings: React.FC = () => {
         <CardHeader>
           <CardTitle>QuickBooks CSV Mappings</CardTitle>
           <CardDescription>
-            Map Alga customers, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.
+            Map Alga clients, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.
           </CardDescription>
         </CardHeader>
         <CardContent>
