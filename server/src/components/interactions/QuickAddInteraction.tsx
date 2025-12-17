@@ -452,8 +452,8 @@ export function QuickAddInteraction({
 
   return (
     <ReflectionContainer id={id} label="Quick Add Interaction">
-      <Dialog 
-        isOpen={isOpen} 
+      <Dialog
+        isOpen={isOpen}
         onClose={() => {
           setHasAttemptedSubmit(false);
           setValidationErrors([]);
@@ -462,6 +462,7 @@ export function QuickAddInteraction({
         title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
         className="max-w-2xl"
         hideCloseButton={false}
+        disableFocusTrap
       >
         <DialogContent className="max-h-[80vh]">
             {hasAttemptedSubmit && validationErrors.length > 0 && (
