@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/Dialog';
+import { ToggleGroup, ToggleGroupItem } from '../../ui/ToggleGroup';
 import { AlertCircle, RotateCcw } from 'lucide-react';
 
 export function CSVExportLockResetPanel() {
@@ -80,24 +81,31 @@ export function CSVExportLockResetPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button
+        <ToggleGroup
+          type="single"
+          value={mode}
+          onValueChange={(value) => {
+            if (value === 'invoice' || value === 'batch') {
+              setMode(value);
+            }
+          }}
+          aria-label="Reset export lock mode"
+        >
+          <ToggleGroupItem
             id="qbcsv-reset-export-lock-mode-invoice"
-            variant={mode === 'invoice' ? 'default' : 'outline'}
-            onClick={() => setMode('invoice')}
+            value="invoice"
             disabled={isLoading}
           >
             Invoice
-          </Button>
-          <Button
+          </ToggleGroupItem>
+          <ToggleGroupItem
             id="qbcsv-reset-export-lock-mode-batch"
-            variant={mode === 'batch' ? 'default' : 'outline'}
-            onClick={() => setMode('batch')}
+            value="batch"
             disabled={isLoading}
           >
             Batch
-          </Button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
 
         {mode === 'invoice' ? (
           <Input
