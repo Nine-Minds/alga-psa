@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
-import { CSVExportPanel } from '../../integrations/csv/CSVExportPanel';
-import { CSVExportLockResetPanel } from '../../integrations/csv/CSVExportLockResetPanel';
-import { CSVTaxImportPanel } from '../../integrations/csv/CSVTaxImportPanel';
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../ui/Card';
 import { FileSpreadsheet } from 'lucide-react';
 import { CSVMappingManager } from '../../integrations/csv/CSVMappingManager';
+import { Button } from '../../ui/Button';
+import { FileText, ExternalLink } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../../ui/Alert';
 
 /**
  * CSV Integration Settings Component
@@ -45,7 +46,7 @@ const CSVIntegrationSettings: React.FC = () => {
               </li>
             </ul>
             <p className="text-xs">
-              Note: Configure mappings below before exporting. These mappings are stored separately from the OAuth-based QuickBooks Online integration.
+              Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.
             </p>
           </div>
         </CardContent>
@@ -63,13 +64,37 @@ const CSVIntegrationSettings: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Export Panel */}
-      <CSVExportPanel />
-
-      <CSVExportLockResetPanel />
-
-      {/* Import Panel */}
-      <CSVTaxImportPanel />
+      <Card id="qbcsv-export-navigation-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Accounting Exports
+          </CardTitle>
+          <CardDescription>
+            Create export batches, download CSV files, import tax reports, and review export history.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert variant="info">
+            <AlertTitle>Managed from Billing</AlertTitle>
+            <AlertDescription>
+              Go to{' '}
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-mono text-muted-foreground">
+                Billing → Accounting Exports
+              </span>{' '}
+              to select invoices, generate QuickBooks CSV exports, import tax reports, and manage batches.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+        <CardFooter className="justify-end">
+          <Button id="qbcsv-open-accounting-exports" asChild size="lg">
+            <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+              Open Accounting Exports
+              <ExternalLink className="h-4 w-4 opacity-90" />
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };
