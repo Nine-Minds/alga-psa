@@ -21,6 +21,7 @@ import {
 import { createTenantKnex } from '../../db';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { unparseCSV } from '../../utils/csvParser';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 
 /**
  * Database types for invoices and charges
@@ -320,6 +321,14 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   ): Promise<AccountingExportDeliveryResult> {
     const tenantId = context.batch.tenant;
 
+    if (!tenantId) {
+      throw new Error('QuickBooks CSV adapter requires batch tenant identifier for delivery');
+    }
+
+    const { knex } = await createTenantKnex();
+    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
+    const deliveredAt = new Date().toISOString();
+
     logger.info('[QuickBooksCSVAdapter] Starting delivery (file generation)', {
       tenant: tenantId,
       batchId: context.batch.batch_id,
@@ -353,6 +362,23 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `quickbooks-invoices-${timestamp}.csv`;
+
+    for (const document of transformResult.documents) {
+      const payload = document.payload as unknown as InvoiceDocumentPayload;
+      const externalRef = `csv:${payload.invoiceNumber}`;
+      await invoiceMappingRepository.upsertInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId: document.documentId,
+        externalInvoiceId: externalRef,
+        targetRealm: context.batch.target_realm ?? null,
+        metadata: {
+          last_exported_at: deliveredAt,
+          filename,
+          invoiceNumber: payload.invoiceNumber
+        }
+      });
+    }
 
     // Create file attachment
     const files: AccountingExportFileAttachment[] = [{

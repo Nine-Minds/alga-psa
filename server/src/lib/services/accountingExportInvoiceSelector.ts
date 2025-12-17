@@ -58,6 +58,7 @@ export class AccountingExportInvoiceSelector {
 
   async previewInvoiceLines(filters: InvoiceSelectionFilters): Promise<InvoicePreviewLine[]> {
     const tenantId = this.tenantId;
+    const invoiceStatusesForQuery = expandInvoiceStatuses(filters.invoiceStatuses);
     const query = this.knex('invoices as inv')
       .join('invoice_charges as ch', function joinCharges() {
         this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
@@ -92,8 +93,8 @@ export class AccountingExportInvoiceSelector {
       query.andWhere('inv.invoice_date', '<=', filters.endDate);
     }
 
-    if (filters.invoiceStatuses && filters.invoiceStatuses.length > 0) {
-      query.andWhere((builder) => builder.whereIn('inv.status', filters.invoiceStatuses!));
+    if (invoiceStatusesForQuery && invoiceStatusesForQuery.length > 0) {
+      query.andWhere((builder) => builder.whereIn('inv.status', invoiceStatusesForQuery));
     }
 
     if (filters.clientIds && filters.clientIds.length > 0) {
@@ -105,7 +106,8 @@ export class AccountingExportInvoiceSelector {
 
     const adapterType = filters.adapterType?.trim() ?? '';
     const targetRealm = filters.targetRealm ? String(filters.targetRealm).trim() : null;
-    const shouldExcludeSynced = Boolean(filters.excludeSyncedInvoices !== false && adapterType);
+    // Immutability rule: once an invoice is synced for an adapter+realm, it should not be selected again.
+    const shouldExcludeSynced = Boolean(adapterType);
 
     if (shouldExcludeSynced) {
       const knex = this.knex;
@@ -250,6 +252,37 @@ function toInteger(value: unknown): number {
     }
   }
   return 0;
+}
+
+function expandInvoiceStatuses(input?: string[]): string[] | undefined {
+  if (!input || input.length === 0) {
+    return undefined;
+  }
+
+  const normalized = new Set(input.map((s) => String(s).trim()).filter(Boolean));
+  if (normalized.size === 0) {
+    return undefined;
+  }
+
+  // Backward compatibility: some tenants store invoice statuses in legacy Title Case forms
+  // (e.g. "Unpaid") while the UI uses canonical status keys (e.g. "sent", "overdue").
+  const lower = new Set(Array.from(normalized).map((s) => s.toLowerCase()));
+  const includesAny = (values: string[]) => values.some((v) => lower.has(v));
+
+  if (includesAny(['sent', 'overdue', 'pending', 'prepayment', 'partially_applied'])) {
+    normalized.add('Unpaid');
+  }
+  if (lower.has('paid')) {
+    normalized.add('Paid');
+  }
+  if (lower.has('draft')) {
+    normalized.add('Draft');
+  }
+  if (includesAny(['cancelled', 'canceled'])) {
+    normalized.add('Cancelled');
+  }
+
+  return Array.from(normalized);
 }
 
 function normalizeFilters(filters: InvoiceSelectionFilters): Record<string, unknown> | null {

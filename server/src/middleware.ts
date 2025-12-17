@@ -52,6 +52,8 @@ const _middleware = auth((request) => {
       '/api/email/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
+      // Internal MSP UI endpoints (session-authenticated)
+      '/api/accounting/csv/',
       '/api/webhooks/stripe',
       '/api/ext-proxy/'
     ];

@@ -1,7 +1,8 @@
 export type AccountingAdapterType =
   | 'xero'
   | 'quickbooks_online'
-  | 'quickbooks_desktop';
+  | 'quickbooks_desktop'
+  | 'quickbooks_csv';
 
 export interface NormalizedCompanyAddress {
   line1?: string | null;

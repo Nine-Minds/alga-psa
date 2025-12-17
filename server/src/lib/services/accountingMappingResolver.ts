@@ -220,7 +220,12 @@ export class AccountingMappingResolver {
   }
 
   private normalizeAdapterType(adapterType: string): AccountingAdapterType | null {
-    if (adapterType === 'xero' || adapterType === 'quickbooks_online' || adapterType === 'quickbooks_desktop') {
+    if (
+      adapterType === 'xero' ||
+      adapterType === 'quickbooks_online' ||
+      adapterType === 'quickbooks_desktop' ||
+      adapterType === 'quickbooks_csv'
+    ) {
       return adapterType;
     }
     return null;

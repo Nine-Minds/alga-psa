@@ -213,7 +213,7 @@ export async function previewAccountingExport(
       clientSearch: toOptionalString(filters.clientSearch),
       adapterType: toOptionalString(filters.adapterType),
       targetRealm: toOptionalString(filters.targetRealm) ?? null,
-      excludeSyncedInvoices: filters.excludeSyncedInvoices !== false
+      excludeSyncedInvoices: true
     };
 
     const lines = await selector.previewInvoiceLines(normalizedFilters);

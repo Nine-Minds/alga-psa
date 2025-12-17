@@ -13,6 +13,20 @@ export class AccountingExportValidation {
 
     const lines = await repo.listLines(batchId);
     const { knex } = await createTenantKnex();
+    const validationTimestamp = new Date().toISOString();
+
+    // Clear prior unresolved validation errors so each validation run reflects current mappings.
+    await knex('accounting_export_errors')
+      .where({
+        tenant: batch.tenant,
+        batch_id: batchId,
+        resolution_state: 'open'
+      })
+      .update({
+        resolution_state: 'resolved',
+        resolved_at: validationTimestamp
+      });
+
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;
     const isQuickBooks = adapterType === 'quickbooks_online' || adapterType === 'quickbooks_csv';
@@ -70,6 +84,23 @@ export class AccountingExportValidation {
     const checkedPaymentTerms = new Set<string>();
     const missingPaymentTerms = new Set<string>();
     const missingClientRefs = new Set<string>();
+    const checkedServiceMappings = new Set<string>();
+    const missingServiceMappings = new Set<string>();
+
+    const serviceIds = new Set<string>();
+    for (const charge of charges) {
+      if (charge.service_id) {
+        serviceIds.add(charge.service_id);
+      }
+    }
+
+    const services = serviceIds.size > 0
+      ? await knex('service_catalog')
+          .select('service_id', 'service_name')
+          .whereIn('service_id', Array.from(serviceIds))
+          .andWhere({ tenant: batch.tenant })
+      : [];
+    const serviceNameById = new Map<string, string>(services.map((row: any) => [row.service_id, row.service_name]));
 
     for (const line of lines) {
       if (!line.invoice_charge_id) {
@@ -93,19 +124,29 @@ export class AccountingExportValidation {
         continue;
       }
 
-      const mapping = await resolver.resolveServiceMapping({
-        adapterType,
-        targetRealm: batch.target_realm,
-        serviceId: charge.service_id
-      });
-
-      if (!mapping) {
-        await repo.addError({
-          batch_id: batchId,
-          line_id: line.line_id,
-          code: 'missing_service_mapping',
-          message: `No mapping for service ${charge.service_id}`
+      const serviceMappingKey = `${charge.service_id}:${batch.target_realm ?? 'default'}`;
+      if (!checkedServiceMappings.has(serviceMappingKey)) {
+        const mapping = await resolver.resolveServiceMapping({
+          adapterType,
+          targetRealm: batch.target_realm,
+          serviceId: charge.service_id
         });
+
+        if (!mapping && !missingServiceMappings.has(serviceMappingKey)) {
+          const serviceName = serviceNameById.get(charge.service_id) ?? null;
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'missing_service_mapping',
+            message: serviceName ? `No mapping for service "${serviceName}"` : `No mapping for service ${charge.service_id}`,
+            metadata: {
+              service_id: charge.service_id,
+              service_name: serviceName
+            }
+          });
+          missingServiceMappings.add(serviceMappingKey);
+        }
+        checkedServiceMappings.add(serviceMappingKey);
       }
 
       const invoiceTaxSource = line.invoice_id ? invoiceTaxSourceById.get(line.invoice_id) : null;
@@ -188,7 +229,8 @@ export class AccountingExportValidation {
     }
 
     const errors = await repo.listErrors(batchId);
-    const cleanedStatus = errors.length === 0 ? 'ready' : 'needs_attention';
+    const openErrors = errors.filter((item) => item.resolution_state === 'open');
+    const cleanedStatus = openErrors.length === 0 ? 'ready' : 'needs_attention';
     const service = await AccountingExportService.create();
     await service.updateBatchStatus(batchId, { status: cleanedStatus });
   }

@@ -164,7 +164,10 @@ export class ApiAccountingExportController extends ApiBaseController {
           clientIds: Array.isArray(filters.clientIds)
             ? (filters.clientIds as unknown[]).map((id) => String(id)).filter(Boolean)
             : undefined,
-          clientSearch: typeof filters.clientSearch === 'string' && filters.clientSearch ? filters.clientSearch : undefined
+          clientSearch: typeof filters.clientSearch === 'string' && filters.clientSearch ? filters.clientSearch : undefined,
+          adapterType: typeof filters.adapterType === 'string' && filters.adapterType ? filters.adapterType : undefined,
+          targetRealm: typeof filters.targetRealm === 'string' && filters.targetRealm ? filters.targetRealm : undefined,
+          excludeSyncedInvoices: true
         };
 
         const lines = await selector.previewInvoiceLines(normalizedFilters);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { StringDateRangePicker } from '../../ui/DateRangePicker';
@@ -23,6 +23,13 @@ interface CSVExportPanelProps {
   onExportComplete?: (result: { filename: string; invoiceCount: number }) => void;
 }
 
+type ExportErrorDetail = {
+  code: string;
+  message: string;
+  line_id?: string | null;
+  metadata?: Record<string, any> | null;
+};
+
 // Build status options from the canonical invoice status metadata
 const INVOICE_STATUS_OPTIONS = INVOICE_STATUS_DISPLAY_ORDER.map((status) => ({
   value: status,
@@ -37,7 +44,30 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
   const [selectedStatuses, setSelectedStatuses] = useState<InvoiceStatus[]>(DEFAULT_ACCOUNTING_EXPORT_STATUSES);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportErrors, setExportErrors] = useState<ExportErrorDetail[] | null>(null);
   const [success, setSuccess] = useState<{ filename: string; invoiceCount: number } | null>(null);
+
+  const summarizedErrors = useMemo(() => {
+    if (!exportErrors) {
+      return [];
+    }
+    const seen = new Set<string>();
+    const unique: ExportErrorDetail[] = [];
+    for (const item of exportErrors) {
+      const key =
+        `${item.code}:` +
+        (item.metadata?.service_id ||
+          item.metadata?.tax_region_id ||
+          item.metadata?.payment_term_id ||
+          item.message);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      unique.push(item);
+    }
+    return unique.slice(0, 8);
+  }, [exportErrors]);
 
   const handleStatusToggle = useCallback((status: InvoiceStatus) => {
     setSelectedStatuses((prev) =>
@@ -50,6 +80,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
   const handleExport = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setExportErrors(null);
     setSuccess(null);
 
     try {
@@ -74,8 +105,15 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Export failed');
+        const data = await response.json().catch(() => null);
+        const message =
+          (data && typeof data.message === 'string' && data.message) ||
+          (data && typeof data.error?.message === 'string' && data.error.message) ||
+          'Export failed';
+        const errors = data && Array.isArray(data.errors) ? (data.errors as ExportErrorDetail[]) : null;
+        setError(message);
+        setExportErrors(errors);
+        return;
       }
 
       // Get metadata from headers
@@ -148,9 +186,27 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
 
         {/* Error Message */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="p-3 bg-red-50 text-red-700 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+            {summarizedErrors.length > 0 && (
+              <ul className="mt-2 ml-7 list-disc space-y-1 text-sm">
+                {summarizedErrors.map((item, index) => {
+                  const serviceName = item.metadata?.service_name as string | undefined;
+                  const serviceId = item.metadata?.service_id as string | undefined;
+                  const label =
+                    item.code === 'missing_service_mapping'
+                      ? `Missing item mapping${serviceName ? `: ${serviceName}` : ''}${!serviceName && serviceId ? ` (${serviceId})` : ''}`
+                      : item.message;
+                  return <li key={`${item.code}-${index}`}>{label}</li>;
+                })}
+              </ul>
+            )}
+            <div className="mt-2 ml-7 text-sm text-red-700/80">
+              Configure missing mappings above, then retry the export.
+            </div>
           </div>
         )}
 

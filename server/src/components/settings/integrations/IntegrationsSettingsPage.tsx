@@ -17,12 +17,9 @@ import {
   Monitor,
   Mail,
   Calendar,
-  ChevronRight,
   CreditCard,
 } from 'lucide-react';
-import QboIntegrationSettings from './QboIntegrationSettings';
-import XeroIntegrationSettings from './XeroIntegrationSettings';
-import CSVIntegrationSettings from './CSVIntegrationSettings';
+import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import { EmailProviderConfiguration } from '../../EmailProviderConfiguration';
 import { CalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 import dynamic from 'next/dynamic';
@@ -121,27 +118,15 @@ const IntegrationsSettingsPage: React.FC = () => {
     {
       id: 'accounting',
       label: 'Accounting',
-      description: 'Connect accounting software to sync invoices and payments',
+      description: 'Select an accounting package to configure synchronization for invoices, payments, and tax data.',
       icon: Building2,
       integrations: [
         {
-          id: 'qbo',
-          name: 'QuickBooks Online',
-          description: 'Sync invoices and payments with QuickBooks Online',
-          component: QboIntegrationSettings,
-        },
-        {
-          id: 'xero',
-          name: 'Xero',
-          description: 'Sync invoices and payments with Xero',
-          component: XeroIntegrationSettings,
-        },
-        {
-          id: 'csv',
-          name: 'QuickBooks CSV',
-          description: 'Export invoices to CSV for QuickBooks and import tax data',
-          component: CSVIntegrationSettings,
-        },
+          id: 'accounting-setup',
+          name: 'Accounting Integrations',
+          description: 'Configure accounting synchronization and exports',
+          component: AccountingIntegrationsSetup,
+        }
       ],
     },
     {

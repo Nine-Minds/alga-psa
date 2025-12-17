@@ -9,13 +9,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { runWithTenant } from '../../db';
-import { handleApiError, ForbiddenError } from '../middleware/apiMiddleware';
+import { handleApiError, ForbiddenError, UnauthorizedError } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
 import { getCSVTaxImportService } from '../../services/csvTaxImportService';
 import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
 import { AccountingExportService } from '../../services/accountingExportService';
 import { QuickBooksCSVAdapter } from '../../adapters/accounting/quickBooksCSVAdapter';
+import { getSession } from '../../auth/getSession';
+import { findUserById } from '../../actions/user-actions/userActions';
 import logger from '@shared/core/logger';
+import { AppError } from '../../errors';
 
 type CSVAccountingPermission = 'export' | 'import';
 
@@ -40,8 +43,39 @@ const noopService: BaseService = {
 export class ApiCSVAccountingController extends ApiBaseController {
   constructor() {
     super(noopService, {
-      resource: 'accountingExports'
+      // CSV integration is managed from the settings UI; use billing settings permissions
+      // so MSP users who can manage mappings can also run CSV exports/imports.
+      resource: 'billing_settings'
     });
+  }
+
+  protected override async authenticate(req: NextRequest): Promise<any> {
+    const apiKey = req.headers.get('x-api-key');
+    if (apiKey) {
+      return super.authenticate(req);
+    }
+
+    const session = await getSession();
+    const sessionUser = session?.user as any;
+    const tenant = typeof sessionUser?.tenant === 'string' ? sessionUser.tenant : null;
+    const userId = typeof sessionUser?.id === 'string' ? sessionUser.id : null;
+
+    if (!tenant || !userId) {
+      throw new UnauthorizedError('Unauthorized');
+    }
+
+    const user = await findUserById(userId);
+    if (!user) {
+      throw new UnauthorizedError('Unauthorized');
+    }
+
+    const apiRequest = req as any;
+    apiRequest.context = {
+      userId,
+      tenant,
+      user
+    };
+    return apiRequest;
   }
 
   private async authorize(apiRequest: any, action: CSVAccountingPermission): Promise<void> {
@@ -49,12 +83,8 @@ export class ApiCSVAccountingController extends ApiBaseController {
     if (user && user.user_type === 'client') {
       throw new ForbiddenError('Client portal users are not permitted to manage accounting exports');
     }
-    // Map CSV actions to standard accounting export permissions
-    const permissionMap: Record<CSVAccountingPermission, string> = {
-      export: 'create',
-      import: 'create'
-    };
-    await this.checkPermission(apiRequest, permissionMap[action]);
+    // Treat both export/import as billing settings updates (same gate as mapping changes)
+    await this.checkPermission(apiRequest, 'update');
   }
 
   /**
@@ -89,10 +119,23 @@ export class ApiCSVAccountingController extends ApiBaseController {
           startDate: filters.startDate,
           endDate: filters.endDate,
           invoiceStatuses: filters.invoiceStatuses,
-          clientIds: filters.clientIds
+          clientIds: filters.clientIds,
+          adapterType: QuickBooksCSVAdapter.TYPE,
+          targetRealm: null,
+          excludeSyncedInvoices: true
+        });
+        const invoiceCount = new Set(lines.map((l) => l.invoiceId)).size;
+        logger.info('[ApiCSVAccountingController] CSV export selection complete', {
+          tenant: apiRequest.context.tenant,
+          invoiceCount,
+          lineCount: lines.length
         });
 
         if (lines.length === 0) {
+          logger.warn('[ApiCSVAccountingController] No invoices matched CSV export filters', {
+            tenant: apiRequest.context.tenant,
+            filters
+          });
           return NextResponse.json(
             { error: 'no_invoices', message: 'No invoices match the specified filters' },
             { status: 400 }
@@ -101,42 +144,64 @@ export class ApiCSVAccountingController extends ApiBaseController {
 
         // 2. Persist batch + lines and execute through the unified accounting export service.
         const exportService = await AccountingExportService.create();
-        const batch = await exportService.createBatch({
-          adapter_type: QuickBooksCSVAdapter.TYPE,
-          target_realm: null,
-          export_type: 'invoice',
-          filters: filters as Record<string, unknown>,
-          created_by: apiRequest.context.userId
-        });
+        let batchId: string;
+        let createdNewBatch = false;
 
-        await exportService.appendLines(batch.batch_id, {
-          lines: lines.map((line) => ({
-            batch_id: batch.batch_id,
-            invoice_id: line.invoiceId,
-            invoice_charge_id: line.chargeId ?? null,
-            client_id: null,
-            amount_cents: line.amountCents,
-            currency_code: line.currencyCode || 'USD',
-            service_period_start: line.servicePeriodStart ?? null,
-            service_period_end: line.servicePeriodEnd ?? null,
-            status: 'pending'
-          }))
-        });
+        try {
+          const batch = await exportService.createBatch({
+            adapter_type: QuickBooksCSVAdapter.TYPE,
+            target_realm: null,
+            export_type: 'invoice',
+            filters: filters as Record<string, unknown>,
+            created_by: apiRequest.context.userId
+          });
+
+          batchId = batch.batch_id;
+          createdNewBatch = true;
+
+          await exportService.appendLines(batchId, {
+            lines: lines.map((line) => ({
+              batch_id: batchId,
+              invoice_id: line.invoiceId,
+              invoice_charge_id: line.chargeId ?? null,
+              client_id: null,
+              amount_cents: line.amountCents,
+              currency_code: line.currencyCode || 'USD',
+              service_period_start: line.servicePeriodStart ?? null,
+              service_period_end: line.servicePeriodEnd ?? null,
+              status: 'pending'
+            }))
+          });
+        } catch (error: any) {
+          if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_DUPLICATE') {
+            const existingBatchId = error.details?.batchId;
+            if (!existingBatchId || typeof existingBatchId !== 'string') {
+              throw error;
+            }
+            batchId = existingBatchId;
+            createdNewBatch = false;
+          } else {
+            throw error;
+          }
+        }
 
         let deliveryResult;
         try {
-          deliveryResult = await exportService.executeBatch(batch.batch_id);
+          deliveryResult = await exportService.executeBatch(batchId);
         } catch (error: any) {
-          const details = await exportService.getBatchWithDetails(batch.batch_id);
-          const mappingErrors = details.errors.map((e) => ({
+          const details = await exportService.getBatchWithDetails(batchId);
+          const mappingErrors = details.errors
+            .filter((e) => e.resolution_state === 'open')
+            .map((e) => ({
             code: e.code,
             message: e.message,
-            line_id: e.line_id
+            line_id: e.line_id,
+            metadata: e.metadata ?? null
           }));
 
           logger.warn('[ApiCSVAccountingController] CSV export failed during batch execution', {
             tenant: apiRequest.context.tenant,
-            batchId: batch.batch_id,
+            batchId,
             status: details.batch?.status,
             error: error?.message,
             errorCount: mappingErrors.length
@@ -146,9 +211,10 @@ export class ApiCSVAccountingController extends ApiBaseController {
             {
               error: 'export_failed',
               message: error?.message ?? 'Export failed',
-              batchId: batch.batch_id,
+              batchId,
               status: details.batch?.status,
-              errors: mappingErrors
+              errors: mappingErrors,
+              reusedExistingBatch: !createdNewBatch
             },
             { status: 400 }
           );
@@ -163,11 +229,10 @@ export class ApiCSVAccountingController extends ApiBaseController {
         }
 
         const file = files[0];
-        const invoiceCount = new Set(lines.map((l) => l.invoiceId)).size;
 
         logger.info('[ApiCSVAccountingController] CSV export completed', {
           tenant: apiRequest.context.tenant,
-          batchId: batch.batch_id,
+          batchId,
           filename: file.filename,
           rowCount: deliveryResult.artifacts?.rowCount,
           invoiceCount
@@ -180,7 +245,7 @@ export class ApiCSVAccountingController extends ApiBaseController {
             'Content-Disposition': `attachment; filename="${file.filename}"`,
             'X-Invoice-Count': String(invoiceCount),
             'X-Row-Count': String(deliveryResult.artifacts?.rowCount ?? 0),
-            'X-Accounting-Export-Batch-Id': batch.batch_id
+            'X-Accounting-Export-Batch-Id': batchId
           }
         });
       });
