@@ -75,6 +75,86 @@
         border-radius: 8px;
         color: var(--alga-danger);
       }
+      .card {
+        background: var(--alga-card-bg);
+        border: 1px solid var(--alga-border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .btn {
+        padding: 10px 20px;
+        background: var(--alga-primary);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+      .btn:hover { opacity: 0.9; }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn-secondary {
+        background: var(--alga-bg);
+        color: var(--alga-fg);
+        border: 1px solid var(--alga-border);
+      }
+      .btn-danger { background: var(--alga-danger); }
+      .btn-success { background: var(--alga-success); }
+      .input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--alga-border);
+        border-radius: 6px;
+        font-size: 0.875rem;
+      }
+      .input:focus {
+        outline: none;
+        border-color: var(--alga-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+      .label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        font-size: 0.875rem;
+      }
+      .form-group { margin-bottom: 16px; }
+      .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+      .badge-success { background: #dcfce7; color: #166534; }
+      .badge-warning { background: #fef3c7; color: #92400e; }
+      .badge-info { background: #dbeafe; color: #1e40af; }
+      pre {
+        background: #1f2937;
+        color: #f9fafb;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 0.875rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        text-align: left;
+        padding: 12px 8px;
+      }
+      th {
+        border-bottom: 2px solid var(--alga-border);
+        font-weight: 600;
+      }
+      td {
+        border-bottom: 1px solid var(--alga-border);
+      }
+      tr:hover td {
+        background: var(--alga-card-bg);
+      }
     </style>
   </head>
   <body>
@@ -82,8 +162,8 @@
       <h1>Nine Minds Reporting</h1>
       <nav id="nav">
         <button class="active" data-view="reports">Reports</button>
-        <button data-view="external">External Data</button>
-        <button data-view="generate">Generate</button>
+        <button data-view="create">Create Report</button>
+        <button data-view="execute">Execute</button>
       </nav>
     </header>
     <main>
