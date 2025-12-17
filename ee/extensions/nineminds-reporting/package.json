@@ -6,9 +6,10 @@
   "description": "Nine Minds Reporting Extension - Fetch and display reporting data",
   "scripts": {
     "clean": "rm -rf dist ui/dist",
-    "build": "alga build",
+    "build:backend": "esbuild src/index.ts --bundle --format=esm --outfile=dist/js/handler.js --platform=neutral --external:alga:extension/secrets --external:alga:extension/http --external:alga:extension/storage --external:alga:extension/logging --external:alga:extension/ui-proxy --external:alga:extension/context",
+    "build:component": "npx jco componentize dist/js/handler.js --wit ./wit/extension-runner.wit --world-name runner --disable all --out dist/main.wasm",
     "build:ui": "vite build -c vite.iframe.config.ts",
-    "build:all": "npm run build && npm run build:ui",
+    "build": "npm run clean && npm run build:backend && npm run build:component && npm run build:ui",
     "pack": "alga pack",
     "dev": "vite",
     "type-check": "tsc --noEmit"
@@ -20,10 +21,12 @@
   },
   "devDependencies": {
     "@alga-psa/cli": "^0.2.0",
+    "@bytecodealliance/componentize-js": "^0.19.3",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.0",
+    "esbuild": "^0.20.0",
     "typescript": "^5.3.0",
     "vite": "^5.0.0"
   }

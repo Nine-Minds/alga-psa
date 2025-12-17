@@ -142,8 +142,9 @@ function getHostBaseUrl(request: ExecuteRequest): string {
     return contextUrl;
   }
 
-  // Fallback to localhost
-  return 'http://localhost:3000';
+  // Fallback to host.docker.internal for Docker environments
+  // This allows the extension running in Docker to reach the host machine
+  return 'http://host.docker.internal:3000';
 }
 
 /**
@@ -191,6 +192,7 @@ async function callPlatformReportsAPI(
   const url = `${baseUrl}/api/v1/platform-reports${path}`;
 
   await safeLog(host, 'info', `[nineminds-reporting] calling platform API: ${method} ${url}`);
+  await safeLog(host, 'info', `[nineminds-reporting] request body: ${body ? JSON.stringify(body).slice(0, 500) : 'none'}`);
 
   const fetchRequest: Parameters<typeof host.http.fetch>[0] = {
     method,
@@ -202,19 +204,26 @@ async function callPlatformReportsAPI(
     fetchRequest.body = encoder.encode(JSON.stringify(body));
   }
 
-  const response = await host.http.fetch(fetchRequest);
-
-  await safeLog(host, 'info', `[nineminds-reporting] platform API response: status=${response.status}`);
-
-  let data: unknown;
   try {
-    const text = decoder.decode(new Uint8Array(response.body ?? []));
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = null;
-  }
+    const response = await host.http.fetch(fetchRequest);
 
-  return { status: response.status, data };
+    await safeLog(host, 'info', `[nineminds-reporting] platform API response: status=${response.status}`);
+
+    let data: unknown;
+    try {
+      const text = decoder.decode(new Uint8Array(response.body ?? []));
+      await safeLog(host, 'info', `[nineminds-reporting] response body: ${text.slice(0, 500)}`);
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+
+    return { status: response.status, data };
+  } catch (fetchErr) {
+    const reason = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+    await safeLog(host, 'error', `[nineminds-reporting] http.fetch failed: ${reason}`);
+    throw fetchErr;
+  }
 }
 
 // Handler: List all platform reports
