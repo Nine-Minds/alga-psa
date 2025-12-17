@@ -112,14 +112,14 @@ async function callExtensionApi<T>(path: string, options: RequestInit = {}): Pro
   }
 }
 
-// Allowed tables for query builder (matches server-side allowlist)
+// Allowed tables for query builder (matches actual database schema)
 const ALLOWED_TABLES = [
-  { value: 'tenants', label: 'Tenants', columns: ['tenant', 'company_name', 'created_at', 'updated_at', 'is_active'] },
-  { value: 'users', label: 'Users', columns: ['user_id', 'tenant', 'username', 'email', 'created_at', 'last_login', 'is_inactive'] },
-  { value: 'tickets', label: 'Tickets', columns: ['ticket_id', 'tenant', 'created_at', 'updated_at', 'status_id', 'priority_id', 'channel_id'] },
-  { value: 'invoices', label: 'Invoices', columns: ['invoice_id', 'tenant', 'created_at', 'due_date', 'total', 'status', 'is_paid'] },
-  { value: 'time_entries', label: 'Time Entries', columns: ['entry_id', 'tenant', 'user_id', 'created_at', 'billable_duration', 'work_item_type'] },
-  { value: 'companies', label: 'Companies', columns: ['company_id', 'tenant', 'company_name', 'created_at', 'is_inactive'] },
+  { value: 'tenants', label: 'Tenants', columns: ['tenant', 'client_name', 'email', 'phone_number', 'industry', 'plan', 'licensed_user_count', 'created_at', 'updated_at'] },
+  { value: 'users', label: 'Users', columns: ['user_id', 'tenant', 'username', 'email', 'first_name', 'last_name', 'user_type', 'is_inactive', 'created_at', 'last_login_at'] },
+  { value: 'tickets', label: 'Tickets', columns: ['ticket_id', 'tenant', 'ticket_number', 'title', 'status_id', 'priority_id', 'category_id', 'assigned_to', 'is_closed', 'entered_at', 'updated_at', 'closed_at'] },
+  { value: 'invoices', label: 'Invoices', columns: ['invoice_id', 'tenant', 'invoice_number', 'invoice_date', 'due_date', 'total_amount', 'subtotal', 'tax', 'status', 'created_at'] },
+  { value: 'time_entries', label: 'Time Entries', columns: ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'billable_duration', 'start_time', 'end_time', 'approval_status', 'created_at'] },
+  { value: 'clients', label: 'Clients', columns: ['client_id', 'tenant', 'client_name', 'email', 'phone', 'is_inactive', 'created_at', 'updated_at'] },
 ];
 
 const OPERATORS = [
@@ -131,6 +131,246 @@ const OPERATORS = [
   { value: 'lte', label: '<=' },
   { value: 'like', label: 'LIKE' },
 ];
+
+// Result rendering types
+interface ReportResult {
+  reportId: string;
+  reportName: string;
+  executedAt: string;
+  parameters: Record<string, unknown>;
+  metrics: Record<string, unknown[]>;
+  metadata: {
+    version: string;
+    category: string;
+    executionTime: number;
+    cacheHit: boolean;
+  };
+}
+
+// Stat Card for single-value metrics (counts, sums, etc.)
+function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      borderRadius: '12px',
+      padding: '20px',
+      minWidth: '200px',
+    }}>
+      <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '4px' }}>{title}</div>
+      <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{value}</div>
+      {subtitle && <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '4px' }}>{subtitle}</div>}
+    </div>
+  );
+}
+
+// Table for displaying metric rows
+function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
+  if (!Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="card">
+        <h4 style={{ marginTop: 0 }}>{title}</h4>
+        <p style={{ color: 'var(--alga-muted-fg)' }}>No data returned</p>
+      </div>
+    );
+  }
+
+  // Get columns from first row
+  const firstRow = data[0] as Record<string, unknown>;
+  const columns = Object.keys(firstRow);
+
+  // Format cell value
+  const formatValue = (value: unknown): string => {
+    if (value === null || value === undefined) return '—';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'number') return value.toLocaleString();
+    if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
+      return new Date(value).toLocaleString();
+    }
+    return String(value);
+  };
+
+  // Format column header
+  const formatHeader = (col: string): string => {
+    return col
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  return (
+    <div className="card">
+      <h4 style={{ marginTop: 0 }}>{title}</h4>
+      <div style={{ overflowX: 'auto' }}>
+        <table>
+          <thead>
+            <tr>
+              {columns.map(col => (
+                <th key={col}>{formatHeader(col)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, idx) => (
+              <tr key={idx}>
+                {columns.map(col => (
+                  <td key={col}>{formatValue((row as Record<string, unknown>)[col])}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)', marginTop: '8px' }}>
+        {data.length} row{data.length !== 1 ? 's' : ''}
+      </div>
+    </div>
+  );
+}
+
+// Bar chart for grouped count data
+function SimpleBarChart({ data, labelKey, valueKey, title }: {
+  data: unknown[];
+  labelKey: string;
+  valueKey: string;
+  title: string;
+}) {
+  if (!Array.isArray(data) || data.length === 0) return null;
+
+  const maxValue = Math.max(...data.map(d => Number((d as Record<string, unknown>)[valueKey]) || 0));
+
+  return (
+    <div className="card">
+      <h4 style={{ marginTop: 0 }}>{title}</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {data.map((item, idx) => {
+          const label = String((item as Record<string, unknown>)[labelKey] || `Item ${idx + 1}`);
+          const value = Number((item as Record<string, unknown>)[valueKey]) || 0;
+          const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+          return (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '120px', fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {label}
+              </div>
+              <div style={{ flex: 1, background: '#e5e7eb', borderRadius: '4px', height: '24px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${percentage}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+              <div style={{ width: '60px', textAlign: 'right', fontWeight: 'bold' }}>
+                {value.toLocaleString()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Intelligent results renderer
+function ResultsRenderer({ results }: { results: ReportResult }) {
+  const { metrics, metadata, parameters, executedAt } = results;
+
+  // Detect if data is a single count result
+  const isSingleCount = (data: unknown[]): boolean => {
+    if (data.length !== 1) return false;
+    const row = data[0] as Record<string, unknown>;
+    const keys = Object.keys(row);
+    return keys.length === 1 && (keys[0] === 'count' || keys[0].endsWith('_count'));
+  };
+
+  // Detect if data is grouped counts (for bar chart)
+  const isGroupedCounts = (data: unknown[]): { labelKey: string; valueKey: string } | null => {
+    if (data.length === 0) return null;
+    const row = data[0] as Record<string, unknown>;
+    const keys = Object.keys(row);
+    if (keys.length !== 2) return null;
+    const countKey = keys.find(k => k === 'count' || k.endsWith('_count'));
+    if (!countKey) return null;
+    const labelKey = keys.find(k => k !== countKey);
+    if (!labelKey) return null;
+    return { labelKey, valueKey: countKey };
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Execution metadata */}
+      <div className="card" style={{ background: '#f9fafb' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>Executed At</div>
+            <div style={{ fontWeight: 500 }}>{new Date(executedAt).toLocaleString()}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>Execution Time</div>
+            <div style={{ fontWeight: 500 }}>{metadata.executionTime}ms</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>Category</div>
+            <div style={{ fontWeight: 500 }}>{metadata.category || '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>Cache</div>
+            <div style={{ fontWeight: 500 }}>{metadata.cacheHit ? 'Hit' : 'Miss'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Render each metric */}
+      {Object.entries(metrics).map(([metricId, data]) => {
+        if (!Array.isArray(data)) return null;
+
+        // Single count value → StatCard
+        if (isSingleCount(data)) {
+          const row = data[0] as Record<string, unknown>;
+          const countKey = Object.keys(row)[0];
+          return (
+            <StatCard
+              key={metricId}
+              title={metricId.replace(/_/g, ' ').replace(/metric /i, '')}
+              value={Number(row[countKey]).toLocaleString()}
+              subtitle="Total count"
+            />
+          );
+        }
+
+        // Grouped counts → Bar chart + Table
+        const grouped = isGroupedCounts(data);
+        if (grouped && data.length <= 20) {
+          return (
+            <div key={metricId} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <SimpleBarChart
+                data={data}
+                labelKey={grouped.labelKey}
+                valueKey={grouped.valueKey}
+                title={`${metricId.replace(/_/g, ' ')} (Chart)`}
+              />
+              <ResultsTable data={data} title={`${metricId.replace(/_/g, ' ')} (Data)`} />
+            </div>
+          );
+        }
+
+        // Default → Table
+        return <ResultsTable key={metricId} data={data} title={metricId.replace(/_/g, ' ')} />;
+      })}
+
+      {/* Raw JSON toggle */}
+      <details style={{ marginTop: '8px' }}>
+        <summary style={{ cursor: 'pointer', color: 'var(--alga-muted-fg)', fontSize: '0.875rem' }}>
+          View Raw JSON
+        </summary>
+        <pre style={{ marginTop: '8px', fontSize: '0.75rem' }}>
+          {JSON.stringify(results, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
 
 // Components
 function ReportsList() {
@@ -258,7 +498,7 @@ function ReportDetail({
   onRefresh: () => void;
 }) {
   const [executing, setExecuting] = useState(false);
-  const [results, setResults] = useState<unknown>(null);
+  const [results, setResults] = useState<ReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleExecute = async () => {
@@ -266,7 +506,7 @@ function ReportDetail({
     setError(null);
     setResults(null);
 
-    const result = await callExtensionApi(`/reports/${report.report_id}/execute`, {
+    const result = await callExtensionApi<ReportResult>(`/reports/${report.report_id}/execute`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
@@ -346,9 +586,9 @@ function ReportDetail({
       {error && <div className="error" style={{ marginTop: '16px' }}>{error}</div>}
 
       {results && (
-        <div className="card" style={{ marginTop: '16px' }}>
-          <h3 style={{ marginTop: 0 }}>Results</h3>
-          <pre>{JSON.stringify(results, null, 2)}</pre>
+        <div style={{ marginTop: '16px' }}>
+          <h3>Results</h3>
+          <ResultsRenderer results={results} />
         </div>
       )}
     </div>
@@ -733,8 +973,9 @@ function ExecuteReport() {
   const [parameters, setParameters] = useState('{}');
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
-  const [results, setResults] = useState<unknown>(null);
+  const [results, setResults] = useState<ReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showParamsHelp, setShowParamsHelp] = useState(false);
 
   useEffect(() => {
     async function fetchReports() {
@@ -747,6 +988,8 @@ function ExecuteReport() {
     }
     fetchReports();
   }, []);
+
+  const selectedReport = reports.find(r => r.report_id === selectedReportId);
 
   const handleExecute = async () => {
     if (!selectedReportId) {
@@ -767,7 +1010,7 @@ function ExecuteReport() {
       return;
     }
 
-    const result = await callExtensionApi(`/reports/${selectedReportId}/execute`, {
+    const result = await callExtensionApi<ReportResult>(`/reports/${selectedReportId}/execute`, {
       method: 'POST',
       body: JSON.stringify(parsedParams),
     });
@@ -794,7 +1037,11 @@ function ExecuteReport() {
           <select
             className="input"
             value={selectedReportId}
-            onChange={(e) => setSelectedReportId(e.target.value)}
+            onChange={(e) => {
+              setSelectedReportId(e.target.value);
+              setResults(null);
+              setError(null);
+            }}
           >
             <option value="">Choose a report...</option>
             {reports.map((report) => (
@@ -805,18 +1052,102 @@ function ExecuteReport() {
           </select>
         </div>
 
+        {selectedReport && (
+          <div style={{
+            background: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '16px',
+            fontSize: '0.875rem',
+          }}>
+            <strong>{selectedReport.name}</strong>
+            {selectedReport.description && (
+              <div style={{ color: 'var(--alga-muted-fg)', marginTop: '4px' }}>
+                {selectedReport.description}
+              </div>
+            )}
+            <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {selectedReport.category && (
+                <span className="badge badge-info">{selectedReport.category}</span>
+              )}
+              <span className="badge badge-success">
+                {selectedReport.report_definition.metrics?.length || 0} metric(s)
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="form-group">
-          <label className="label">Parameters (JSON)</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label className="label" style={{ margin: 0 }}>Parameters (JSON)</label>
+            <button
+              type="button"
+              onClick={() => setShowParamsHelp(!showParamsHelp)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#667eea',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                padding: '4px 8px',
+              }}
+            >
+              {showParamsHelp ? 'Hide Help' : 'What are parameters?'}
+            </button>
+          </div>
+
+          {showParamsHelp && (
+            <div style={{
+              background: '#fefce8',
+              border: '1px solid #fef08a',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '12px',
+              fontSize: '0.8rem',
+            }}>
+              <strong>Parameters</strong> let you customize report execution:
+              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                <li><strong>Date filters:</strong> Override auto-generated date ranges</li>
+                <li><strong>Entity filters:</strong> Filter by specific tenant, user, etc.</li>
+                <li><strong>Custom values:</strong> Pass any values your report queries expect</li>
+              </ul>
+              <div style={{ marginTop: '12px' }}>
+                <strong>Examples:</strong>
+                <pre style={{
+                  background: '#fff',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  margin: '4px 0',
+                  fontSize: '0.75rem',
+                  overflow: 'auto',
+                }}>
+{`// Empty - uses defaults
+{}
+
+// Filter by tenant
+{"tenant_id": "abc-123"}
+
+// Custom date range
+{
+  "start_of_month": "2024-01-01T00:00:00Z",
+  "end_of_month": "2024-01-31T23:59:59Z"
+}`}
+                </pre>
+              </div>
+            </div>
+          )}
+
           <textarea
             className="input"
             value={parameters}
             onChange={(e) => setParameters(e.target.value)}
-            rows={5}
-            style={{ fontFamily: 'monospace', resize: 'vertical' }}
-            placeholder='{"startDate": "2024-01-01", "endDate": "2024-12-31"}'
+            rows={3}
+            style={{ fontFamily: 'monospace', resize: 'vertical', fontSize: '0.875rem' }}
+            placeholder='{}'
           />
           <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)', marginTop: '4px' }}>
-            Optional: Pass parameters as JSON object to filter results
+            Leave empty <code>{'{}'}</code> to use default parameters
           </div>
         </div>
 
@@ -824,19 +1155,38 @@ function ExecuteReport() {
           className="btn"
           onClick={handleExecute}
           disabled={executing || !selectedReportId}
+          style={{ minWidth: '150px' }}
         >
-          {executing ? 'Executing...' : 'Execute Report'}
+          {executing ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+              <span className="spinner" style={{
+                width: '14px',
+                height: '14px',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderTopColor: 'white',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+              }} />
+              Executing...
+            </span>
+          ) : 'Execute Report'}
         </button>
       </div>
 
       {error && <div className="error" style={{ marginTop: '16px' }}>{error}</div>}
 
       {results && (
-        <div className="card" style={{ marginTop: '16px' }}>
-          <h3 style={{ marginTop: 0 }}>Results</h3>
-          <pre>{JSON.stringify(results, null, 2)}</pre>
+        <div style={{ marginTop: '16px' }}>
+          <h3>Results</h3>
+          <ResultsRenderer results={results} />
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -13,10 +13,14 @@ export const PLATFORM_REPORT_ALLOWLIST: Record<string, string[]> = {
   // Tenant metadata
   tenants: [
     'tenant',
-    'company_name',
+    'client_name',
+    'email',
+    'phone_number',
+    'industry',
+    'plan',
+    'licensed_user_count',
     'created_at',
     'updated_at',
-    'is_active',
   ],
 
   // User metadata (no passwords, personal data)
@@ -25,20 +29,27 @@ export const PLATFORM_REPORT_ALLOWLIST: Record<string, string[]> = {
     'tenant',
     'username',
     'email',
-    'created_at',
-    'last_login',
+    'first_name',
+    'last_name',
+    'user_type',
     'is_inactive',
+    'created_at',
+    'last_login_at',
   ],
 
-  // Ticket metadata (no title, description, comments)
+  // Ticket metadata (no description, comments)
   tickets: [
     'ticket_id',
     'tenant',
-    'created_at',
-    'updated_at',
+    'ticket_number',
+    'title',
     'status_id',
     'priority_id',
-    'channel_id',
+    'category_id',
+    'assigned_to',
+    'is_closed',
+    'entered_at',
+    'updated_at',
     'closed_at',
   ],
 
@@ -46,11 +57,14 @@ export const PLATFORM_REPORT_ALLOWLIST: Record<string, string[]> = {
   invoices: [
     'invoice_id',
     'tenant',
-    'created_at',
+    'invoice_number',
+    'invoice_date',
     'due_date',
-    'total',
+    'total_amount',
+    'subtotal',
+    'tax',
     'status',
-    'is_paid',
+    'created_at',
   ],
 
   // Time entry metadata (no work descriptions)
@@ -58,18 +72,25 @@ export const PLATFORM_REPORT_ALLOWLIST: Record<string, string[]> = {
     'entry_id',
     'tenant',
     'user_id',
-    'created_at',
-    'billable_duration',
+    'work_item_id',
     'work_item_type',
+    'billable_duration',
+    'start_time',
+    'end_time',
+    'approval_status',
+    'created_at',
   ],
 
-  // Company metadata
-  companies: [
-    'company_id',
+  // Client metadata
+  clients: [
+    'client_id',
     'tenant',
-    'company_name',
-    'created_at',
+    'client_name',
+    'email',
+    'phone',
     'is_inactive',
+    'created_at',
+    'updated_at',
   ],
 
   // Project metadata (no descriptions)
@@ -83,7 +104,7 @@ export const PLATFORM_REPORT_ALLOWLIST: Record<string, string[]> = {
     'is_inactive',
   ],
 
-  // Contract metadata (no terms/details)
+  // Service catalog metadata (no terms/details)
   service_catalog: [
     'service_id',
     'tenant',
