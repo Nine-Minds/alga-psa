@@ -9,11 +9,9 @@ import {
 } from 'server/src/lib/actions/externalMappingActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
-import { getPaymentTermsList } from 'server/src/lib/actions/billingAndTax';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import type { IService } from 'server/src/interfaces/billing.interfaces';
 import type { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
-import type { IPaymentTermOption } from 'server/src/lib/actions/billingAndTax';
 import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type {
   AccountingMappingContext,
@@ -29,6 +27,17 @@ type MappingLoadConfig<TAlga> = {
   loadAlgaEntities: (context: AccountingMappingContext) => Promise<TAlga[]>;
   mapAlga: (entity: TAlga) => { id: string; name: string };
 };
+
+type PaymentTermOption = {
+  id: string;
+  name: string;
+};
+
+const PAYMENT_TERMS: PaymentTermOption[] = [
+  { id: 'net_30', name: 'Net 30' },
+  { id: 'net_15', name: 'Net 15' },
+  { id: 'due_on_receipt', name: 'Due on receipt' }
+];
 
 export function createCsvMappingModules(): AccountingMappingModule[] {
   return [
@@ -282,10 +291,10 @@ function createPaymentTermModule(): AccountingMappingModule {
       deleteMenuPrefix: 'delete-qbcsv-term-mapping-menu-item-'
     },
     load(context) {
-      return loadMappings<IPaymentTermOption>({
+      return loadMappings<PaymentTermOption>({
         context,
         algaEntityType: 'payment_term',
-        loadAlgaEntities: getPaymentTermsList,
+        loadAlgaEntities: async () => PAYMENT_TERMS,
         mapAlga: (term) => ({
           id: term.id,
           name: term.name

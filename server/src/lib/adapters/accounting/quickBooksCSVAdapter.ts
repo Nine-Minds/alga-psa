@@ -240,15 +240,13 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         }
 
       // Resolve payment terms
-      let terms = '';
-      if (client.payment_terms) {
-        const termMapping = await resolver.resolvePaymentTermMapping({
-          adapterType: this.type,
-          paymentTermId: client.payment_terms,
-          targetRealm: context.batch.target_realm
-        });
-        terms = termMapping?.external_entity_id ?? client.payment_terms;
-      }
+      const paymentTermId = client.payment_terms ?? 'net_30';
+      const termMapping = await resolver.resolvePaymentTermMapping({
+        adapterType: this.type,
+        paymentTermId,
+        targetRealm: context.batch.target_realm
+      });
+      const terms = termMapping?.external_entity_id ?? paymentTermId;
 
       // Resolve optional client/customer mapping
       const customerMapping = await resolver.resolveClientMapping({
