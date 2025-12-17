@@ -471,7 +471,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       {/* Filter section */}
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {/* Search bar */}
-        <div className="relative">
+        <div className="relative p-0.5">
           <Input
             type="text"
             placeholder="Search projects"

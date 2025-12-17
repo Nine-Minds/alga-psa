@@ -48,7 +48,7 @@ const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
 // Memoized search input component to prevent re-renders
 const SearchInput = memo(({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
   return (
-    <div className="relative">
+    <div className="relative p-0.5">
       <Input
         id="search-clients"
         data-automation-id="search-clients"

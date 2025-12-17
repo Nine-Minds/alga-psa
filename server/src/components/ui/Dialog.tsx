@@ -156,20 +156,38 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
     cursor: isDragging ? 'move' : 'auto',
   };
 
+  // Handle overlay click - only close if clicking directly on the overlay, not on portaled content
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only close if the click target is the overlay itself
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <RadixDialog.Root open={isOpen} onOpenChange={onClose} modal={!disableFocusTrap}>
+    <RadixDialog.Root open={isOpen} onOpenChange={(open) => { if (!open && !disableFocusTrap) onClose(); }} modal={!disableFocusTrap}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay
           className="fixed inset-0 bg-black/50 z-50"
-          onClick={disableFocusTrap ? onClose : undefined}
+          onClick={disableFocusTrap ? handleOverlayClick : undefined}
         />
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
           className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
-          onKeyDown={onKeyDown}
+          onKeyDown={(e) => {
+            // Handle Escape key manually when focus trap is disabled
+            if (disableFocusTrap && e.key === 'Escape') {
+              onClose();
+            }
+            onKeyDown?.(e);
+          }}
           onOpenAutoFocus={onOpenAutoFocus}
+          // Prevent automatic closing when interacting with portaled elements (like dropdowns)
+          onInteractOutside={disableFocusTrap ? (e) => e.preventDefault() : undefined}
+          onPointerDownOutside={disableFocusTrap ? (e) => e.preventDefault() : undefined}
+          onFocusOutside={disableFocusTrap ? (e) => e.preventDefault() : undefined}
         >
           {/* Drag handle area - always present for consistent dragging */}
           <div

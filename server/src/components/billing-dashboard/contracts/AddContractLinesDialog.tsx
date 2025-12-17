@@ -340,10 +340,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
         <DialogTitle>Select Contract Line Presets to Add</DialogTitle>
       </DialogHeader>
 
-      <DialogContent className="max-h-[70vh] overflow-hidden flex flex-col">
-        <div className="space-y-4">
-          {/* Search and Filter Row */}
-          <div className="flex flex-wrap items-center gap-2">
+      <DialogContent className="max-h-[70vh] flex flex-col">
+        <div className="space-y-4 flex flex-col h-full">
+          {/* Search and Filter Row - outside overflow container */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Search Input */}
             <div className="relative flex-1 min-w-[200px]">
               <Search
