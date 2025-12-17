@@ -148,7 +148,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   }
 
   return (
-    <Dialog isOpen={open} onClose={onClose} title="Create Project from Template" className="max-w-3xl">
+    <Dialog isOpen={open} onClose={onClose} title="Create Project from Template" className="max-w-3xl" disableFocusTrap>
       <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium mb-2">

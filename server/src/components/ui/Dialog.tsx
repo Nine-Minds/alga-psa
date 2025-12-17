@@ -156,20 +156,74 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
     cursor: isDragging ? 'move' : 'auto',
   };
 
+  // Handle click outside for dialogs with disabled focus trap
+  // We need to detect clicks that are truly outside the dialog AND any portaled content (dropdowns, etc.)
+  useEffect(() => {
+    if (!isOpen || !disableFocusTrap) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Check if click is inside the dialog content
+      if (dialogRef.current?.contains(target)) return;
+
+      // Check if click is inside any Radix portal content (dropdowns, popovers, etc.)
+      // Radix components use various data attributes and roles
+      const isInsidePortaledContent =
+        // Radix popper/portal wrappers
+        target.closest('[data-radix-popper-content-wrapper]') ||
+        target.closest('[data-radix-portal]') ||
+        // Radix Select
+        target.closest('[data-radix-select-content]') ||
+        target.closest('[data-radix-select-viewport]') ||
+        // Radix Popover
+        target.closest('[data-radix-popover-content]') ||
+        // Radix Dropdown Menu
+        target.closest('[data-radix-dropdown-menu-content]') ||
+        // Radix Menu
+        target.closest('[data-radix-menu-content]') ||
+        // Common roles used by Radix
+        target.closest('[role="listbox"]') ||
+        target.closest('[role="menu"]') ||
+        target.closest('[role="option"]') ||
+        // High z-index portaled elements (typically have z-index > 9999)
+        target.closest('[style*="z-index: 10"]') ||
+        // Check if target itself has Radix data attributes
+        target.hasAttribute('data-radix-collection-item');
+
+      if (isInsidePortaledContent) return;
+
+      // Click is truly outside - close the dialog
+      onClose();
+    };
+
+    // Use mousedown to catch clicks before they propagate
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, disableFocusTrap, onClose]);
+
   return (
-    <RadixDialog.Root open={isOpen} onOpenChange={onClose} modal={!disableFocusTrap}>
+    <RadixDialog.Root open={isOpen} onOpenChange={(open) => { if (!open && !disableFocusTrap) onClose(); }} modal={!disableFocusTrap}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay
-          className="fixed inset-0 bg-black/50 z-50"
-          onClick={disableFocusTrap ? onClose : undefined}
-        />
+        <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
           className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
-          onKeyDown={onKeyDown}
+          onKeyDown={(e) => {
+            // Handle Escape key manually when focus trap is disabled
+            if (disableFocusTrap && e.key === 'Escape') {
+              onClose();
+            }
+            onKeyDown?.(e);
+          }}
           onOpenAutoFocus={onOpenAutoFocus}
+          // When disableFocusTrap is true, we handle closing via our own mousedown listener
+          // Don't use onInteractOutside/onPointerDownOutside as they can interfere with nested dropdowns
         >
           {/* Drag handle area - always present for consistent dragging */}
           <div
@@ -196,14 +250,24 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
             </ReflectionParentContext.Provider>
           </div>
           {!hideCloseButton && (
-            <RadixDialog.Close asChild>
+            disableFocusTrap ? (
               <button
+                onClick={onClose}
                 className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                 aria-label="Close"
               >
                 <Cross2Icon />
               </button>
-            </RadixDialog.Close>
+            ) : (
+              <RadixDialog.Close asChild>
+                <button
+                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
+                  aria-label="Close"
+                >
+                  <Cross2Icon />
+                </button>
+              </RadixDialog.Close>
+            )
           )}
         </RadixDialog.Content>
       </RadixDialog.Portal>

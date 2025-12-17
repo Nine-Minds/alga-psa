@@ -163,11 +163,11 @@ export function ServiceSelectionDialog({
       id="service-selection-dialog" 
       title="Add Services to Plan"
     >
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-        
-        <div className="flex flex-col space-y-4 overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+
+        <div className="flex flex-col space-y-4 h-full">
           {/* Search and filters */}
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4 shrink-0">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input

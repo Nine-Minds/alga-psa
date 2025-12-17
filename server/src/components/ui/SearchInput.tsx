@@ -30,7 +30,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps & Autom
     }, [value, updateMetadata]);
 
     return (
-      <div className="relative">
+      <div className="relative p-0.5">
         <input
           {...textProps}
           type="text"
