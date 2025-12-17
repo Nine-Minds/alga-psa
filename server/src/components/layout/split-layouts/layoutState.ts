@@ -103,6 +103,19 @@ export function swapLeafContents(layout: LayoutNode, aId: string, bId: string): 
   });
 }
 
+export function setSplitRatio(layout: LayoutNode, splitId: string, ratio: number): LayoutNode {
+  const clamped = Math.max(0.15, Math.min(0.85, ratio));
+  return mapLayout(layout, (node) => {
+    if (node.type !== "split") {
+      return node;
+    }
+    if (node.id !== splitId) {
+      return node;
+    }
+    return { ...node, ratio: clamped };
+  });
+}
+
 export function removeLeaf(layout: LayoutNode, leafId: string): LayoutNode {
   // Don’t allow removing the inline leaf in this prototype.
   const leaf = findLeaf(layout, leafId);
@@ -177,4 +190,3 @@ export function loadEnabledFromStorage(): boolean {
 export function saveEnabledToStorage(enabled: boolean) {
   localStorage.setItem(STORAGE_KEY_ENABLED, enabled ? "1" : "0");
 }
-

@@ -7,6 +7,7 @@ import {
   loadLayoutModeFromStorage,
   makeDefaultLayout,
   removeLeaf,
+  setSplitRatio,
   saveLayoutModeToStorage,
   saveLayoutToStorage,
   splitLeaf,
@@ -235,6 +236,7 @@ function SplitNodeView({
   onSplitDrop,
   onSwapDrop,
   onClose,
+  onResizeSplit,
 }: {
   node: LayoutNode;
   layoutMode: boolean;
@@ -242,6 +244,7 @@ function SplitNodeView({
   onSplitDrop: (leafId: string, zone: DropZone, menu: MenuItemPayload) => void;
   onSwapDrop: (fromLeafId: string, toLeafId: string) => void;
   onClose: (leafId: string) => void;
+  onResizeSplit: (splitId: string, ratio: number) => void;
 }) {
   if (node.type === "leaf") {
     return (
@@ -257,11 +260,69 @@ function SplitNodeView({
     );
   }
 
-  const dividerClass =
-    node.direction === "row" ? "divide-x divide-primary-500/60" : "divide-y divide-primary-500/60";
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const axis = node.direction === "row" ? "x" : "y";
+    const rect = container.getBoundingClientRect();
+    const startPos = axis === "x" ? e.clientX : e.clientY;
+    const size = axis === "x" ? rect.width : rect.height;
+    const startRatio = node.ratio;
+
+    const target = e.currentTarget as HTMLElement;
+    if (target.setPointerCapture) {
+      try {
+        target.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+
+    const onMove = (ev: PointerEvent) => {
+      const pos = axis === "x" ? ev.clientX : ev.clientY;
+      const delta = pos - startPos;
+      const next = startRatio + delta / Math.max(1, size);
+      onResizeSplit(node.id, next);
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  const divider =
+    node.direction === "row" ? (
+      <div
+        className="w-[3px] bg-primary-500/60 hover:bg-primary-500/80 cursor-col-resize flex-shrink-0"
+        onPointerDown={handlePointerDown}
+        role="separator"
+        aria-orientation="vertical"
+        tabIndex={-1}
+      />
+    ) : (
+      <div
+        className="h-[3px] bg-primary-500/60 hover:bg-primary-500/80 cursor-row-resize flex-shrink-0"
+        onPointerDown={handlePointerDown}
+        role="separator"
+        aria-orientation="horizontal"
+        tabIndex={-1}
+      />
+    );
 
   return (
-    <div className={`h-full w-full flex ${dividerClass}`} style={{ flexDirection: node.direction }}>
+    <div ref={containerRef} className="h-full w-full flex" style={{ flexDirection: node.direction }}>
       <div className="h-full w-full overflow-hidden" style={{ flex: node.ratio, minWidth: 0, minHeight: 0 }}>
         <SplitNodeView
           node={node.first}
@@ -270,8 +331,10 @@ function SplitNodeView({
           onSplitDrop={onSplitDrop}
           onSwapDrop={onSwapDrop}
           onClose={onClose}
+          onResizeSplit={onResizeSplit}
         />
       </div>
+      {divider}
       <div className="h-full w-full overflow-hidden" style={{ flex: 1 - node.ratio, minWidth: 0, minHeight: 0 }}>
         <SplitNodeView
           node={node.second}
@@ -280,6 +343,7 @@ function SplitNodeView({
           onSplitDrop={onSplitDrop}
           onSwapDrop={onSwapDrop}
           onClose={onClose}
+          onResizeSplit={onResizeSplit}
         />
       </div>
     </div>
@@ -319,6 +383,10 @@ export function SplitLayoutHost({ inlineContent }: { inlineContent: React.ReactN
 
   const onClose = (leafId: string) => {
     setLayout((prev) => removeLeaf(prev, leafId));
+  };
+
+  const onResizeSplit = (splitId: string, ratio: number) => {
+    setLayout((prev) => setSplitRatio(prev, splitId, ratio));
   };
 
   const reset = () => setLayout(makeDefaultLayout());
@@ -361,6 +429,7 @@ export function SplitLayoutHost({ inlineContent }: { inlineContent: React.ReactN
         onSplitDrop={onSplitDrop}
         onSwapDrop={onSwapDrop}
         onClose={onClose}
+        onResizeSplit={onResizeSplit}
       />
     </div>
   );
