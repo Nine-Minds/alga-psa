@@ -68,7 +68,6 @@ export default function AccountingIntegrationsSetup() {
         id: 'quickbooks_online',
         title: 'QuickBooks Online',
         description: 'Connect your realm to sync invoices and manage mappings.',
-        badge: { label: 'Coming soon', variant: 'warning' },
         disabled: true,
         highlights: [
           { label: 'Sync', value: '2-way' },
@@ -79,7 +78,6 @@ export default function AccountingIntegrationsSetup() {
         id: 'xero',
         title: 'Xero',
         description: 'Connect your organisation to sync accounting exports and mappings.',
-        badge: { label: 'Coming soon', variant: 'warning' },
         disabled: true,
         highlights: [
           { label: 'Sync', value: '2-way' },

@@ -1,14 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable
-} from '@tanstack/react-table';
 import { MoreVertical } from 'lucide-react';
 
 import { Button } from 'server/src/components/ui/Button';
+import { DataTable } from 'server/src/components/ui/DataTable';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,14 +10,6 @@ import {
   DropdownMenuTrigger
 } from 'server/src/components/ui/DropdownMenu';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from 'server/src/components/ui/Table';
 import type { ExternalEntityMapping } from 'server/src/lib/actions/externalMappingActions';
 import {
   AccountingMappingContext,
@@ -31,6 +17,7 @@ import {
   AccountingMappingOverrides
 } from './types';
 import { AccountingMappingDialog } from './AccountingMappingDialog';
+import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 type DisplayMapping = ExternalEntityMapping & {
   algaName?: string;
@@ -146,34 +133,38 @@ export function AccountingMappingModuleView({
     }
   }, [context, loadData, module, overrides, pendingDeleteId]);
 
-  const columns = useMemo<ColumnDef<DisplayMapping>[]>(
+  const columns = useMemo<ColumnDefinition<DisplayMapping>[]>(
     () => [
       {
-        accessorKey: 'algaName',
-        header: module.labels.algaColumn,
-        cell: ({ row }) => row.original.algaName ?? row.original.alga_entity_id ?? 'N/A'
+        title: module.labels.algaColumn,
+        dataIndex: 'algaName',
+        render: (_value: unknown, record: DisplayMapping) =>
+          record.algaName ?? record.alga_entity_id ?? 'N/A'
       },
       {
-        accessorKey: 'externalName',
-        header: module.labels.externalColumn,
-        cell: ({ row }) =>
-          row.original.externalName ?? row.original.external_entity_id ?? 'N/A'
+        title: module.labels.externalColumn,
+        dataIndex: 'externalName',
+        render: (_value: unknown, record: DisplayMapping) =>
+          record.externalName ?? record.external_entity_id ?? 'N/A'
       },
       {
-        id: 'actions',
-        cell: ({ row }) => {
-          const mapping = row.original;
+        title: 'Actions',
+        dataIndex: 'id',
+        sortable: false,
+        width: '1%',
+        render: (_value: unknown, record: DisplayMapping) => {
           const editMenuId = module.elements?.editMenuPrefix
-            ? `${module.elements.editMenuPrefix}${mapping.id}`
+            ? `${module.elements.editMenuPrefix}${record.id}`
             : undefined;
           const deleteMenuId = module.elements?.deleteMenuPrefix
-            ? `${module.elements.deleteMenuPrefix}${mapping.id}`
+            ? `${module.elements.deleteMenuPrefix}${record.id}`
             : undefined;
+
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  id={`${module.id}-actions-${mapping.id}`}
+                  id={`${module.id}-actions-${record.id}`}
                   variant="ghost"
                   className="h-8 w-8 p-0"
                   onClick={(event) => event.stopPropagation()}
@@ -187,7 +178,7 @@ export function AccountingMappingModuleView({
                   id={editMenuId}
                   onClick={(event) => {
                     event.stopPropagation();
-                    setEditingMapping(mapping);
+                    setEditingMapping(record);
                     setDialogOpen(true);
                   }}
                 >
@@ -198,7 +189,7 @@ export function AccountingMappingModuleView({
                   className="text-red-600 focus:text-red-600"
                   onClick={(event) => {
                     event.stopPropagation();
-                    setPendingDeleteId(mapping.id);
+                    setPendingDeleteId(record.id);
                     setConfirmOpen(true);
                   }}
                 >
@@ -212,18 +203,6 @@ export function AccountingMappingModuleView({
     ],
     [module.labels]
   );
-
-  const table = useReactTable({
-    data: mappings,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10
-      }
-    }
-  });
 
   if (isLoading) {
     return <div>Loading mappings…</div>;
@@ -257,63 +236,18 @@ export function AccountingMappingModuleView({
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table id={tableId}>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No mappings found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          id={`${module.id}-prev-page`}
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          id={`${module.id}-next-page`}
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
-      </div>
+      {mappings.length === 0 ? (
+        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No mappings found.
+        </div>
+      ) : (
+        <DataTable
+          id={tableId}
+          data={mappings}
+          columns={columns}
+          pagination
+        />
+      )}
 
       {dialogOpen ? (
         <AccountingMappingDialog
