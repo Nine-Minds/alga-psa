@@ -1120,21 +1120,20 @@ export async function importContactsFromCSV(
 
           if (existingContact && updateExisting) {
             // Prepare update data with proper sanitization
-            // Exclude tags from updateData - it's handled separately below
-            const { tags, ...contactDataWithoutTags } = contactData;
+            // Exclude tags and tenant from updateData - tags handled separately, tenant is partition key
+            const { tags, tenant: _tenant, ...contactDataWithoutTagsAndTenant } = contactData;
             const updateData = {
-              ...contactDataWithoutTags,
+              ...contactDataWithoutTagsAndTenant,
               full_name: contactData.full_name.trim(),
               email: contactData.email?.trim().toLowerCase() || existingContact.email,
               phone_number: contactData.phone_number?.trim() || existingContact.phone_number,
               role: contactData.role?.trim() || existingContact.role,
               notes: contactData.notes?.trim() || existingContact.notes,
-              tenant: existingContact.tenant,
               updated_at: new Date().toISOString()
             };
 
             [savedContact] = await trx('contacts')
-              .where({ contact_name_id: existingContact.contact_name_id })
+              .where({ contact_name_id: existingContact.contact_name_id, tenant })
               .update(updateData)
               .returning('*');
 

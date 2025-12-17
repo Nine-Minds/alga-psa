@@ -1095,6 +1095,27 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
       };
     }
 
+    if (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) {
+      structuredChanges.board_id = {
+        old: currentTicket.board_id,
+        new: updateData.board_id
+      };
+    }
+
+    if (updateData.category_id !== undefined && updateData.category_id !== currentTicket.category_id) {
+      structuredChanges.category_id = {
+        old: currentTicket.category_id,
+        new: updateData.category_id
+      };
+    }
+
+    if (updateData.subcategory_id !== undefined && updateData.subcategory_id !== currentTicket.subcategory_id) {
+      structuredChanges.subcategory_id = {
+        old: currentTicket.subcategory_id,
+        new: updateData.subcategory_id
+      };
+    }
+
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed

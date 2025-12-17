@@ -665,15 +665,22 @@ export function TimeSheetTable({
                                                                             setHoveredCell(null);
                                                                         }
                                                                     }}
-                                                                    onBlur={() => {
-                                                                        // Clear input when focus is lost
-                                                                        setTimeout(() => {
-                                                                            setQuickInputValues(prev => {
-                                                                                const newValues = { ...prev };
-                                                                                delete newValues[cellKey];
-                                                                                return newValues;
-                                                                            });
-                                                                        }, 200);
+                                                                    onBlur={(e) => {
+                                                                        // Check if focus is moving to one of our buttons
+                                                                        // If so, don't clear - let the button handler do its job
+                                                                        const relatedTarget = e.relatedTarget as HTMLElement | null;
+                                                                        const isClickingButton = relatedTarget?.closest('#quick-save-time-entry, #quick-cancel-time-entry');
+
+                                                                        if (!isClickingButton) {
+                                                                            // Clear input when focus is truly lost (not to our buttons)
+                                                                            setTimeout(() => {
+                                                                                setQuickInputValues(prev => {
+                                                                                    const newValues = { ...prev };
+                                                                                    delete newValues[cellKey];
+                                                                                    return newValues;
+                                                                                });
+                                                                            }, 200);
+                                                                        }
                                                                     }}
                                                                         autoFocus
                                                                     />
