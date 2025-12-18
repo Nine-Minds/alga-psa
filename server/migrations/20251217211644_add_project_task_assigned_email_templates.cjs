@@ -122,7 +122,7 @@ function generateTaskAssignedHtml(t, isPrimary) {
 function generateTaskAssignedText(t) {
   return `${t.header}
 
-${t.greeting.replace(/{{#if recipientName}} {{recipientName}}{{\/if}}/g, '{{#if recipientName}} {{recipientName}}{{/if}}')}
+${t.greeting}
 
 ${t.assignedBadge}
 
