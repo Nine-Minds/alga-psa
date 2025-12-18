@@ -19,6 +19,26 @@ export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
+/** CORS headers for extension iframe access */
+function corsHeaders(request: NextRequest): HeadersInit {
+  const origin = request.headers.get('origin') || '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
+
+function jsonResponse(data: unknown, init: ResponseInit & { request?: NextRequest } = {}): NextResponse {
+  const headers = init.request ? corsHeaders(init.request) : {};
+  return NextResponse.json(data, { ...init, headers: { ...headers, ...init.headers } });
+}
+
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+}
+
 /**
  * Verify the caller has access to audit logs.
  */
@@ -63,10 +83,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Check if stats are requested
     if (searchParams.get('stats') === 'true') {
       const stats = await auditService.getStats();
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         data: stats,
-      });
+      }, { request });
     }
 
     const logs = await auditService.listLogs({
@@ -79,10 +99,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       offset: offset ? parseInt(offset, 10) : 0,
     });
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       data: logs,
-    });
+    }, { request });
   } catch (error) {
     console.error('[platform-reports/audit] GET error:', error);
 
@@ -91,16 +111,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return NextResponse.json(
+        return jsonResponse(
           { success: false, error: error.message },
-          { status: 403 }
+          { status: 403, request }
         );
       }
     }
 
-    return NextResponse.json(
+    return jsonResponse(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, request }
     );
   }
 }

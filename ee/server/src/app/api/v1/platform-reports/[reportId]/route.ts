@@ -22,6 +22,26 @@ export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
+/** CORS headers for extension iframe access */
+function corsHeaders(request: NextRequest): HeadersInit {
+  const origin = request.headers.get('origin') || '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
+
+function jsonResponse(data: unknown, init: ResponseInit & { request?: NextRequest } = {}): NextResponse {
+  const headers = init.request ? corsHeaders(init.request) : {};
+  return NextResponse.json(data, { ...init, headers: { ...headers, ...init.headers } });
+}
+
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+}
+
 /**
  * Verify the caller has access to platform reports.
  *
@@ -73,9 +93,9 @@ export async function GET(
     const report = await service.getReport(reportId);
 
     if (!report) {
-      return NextResponse.json(
+      return jsonResponse(
         { success: false, error: 'Report not found' },
-        { status: 404 }
+        { status: 404, request }
       );
     }
 
@@ -90,10 +110,10 @@ export async function GET(
       ...clientInfo,
     });
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       data: report,
-    });
+    }, { request });
   } catch (error) {
     console.error('[platform-reports/:id] GET error:', error);
 
@@ -102,16 +122,16 @@ export async function GET(
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return NextResponse.json(
+        return jsonResponse(
           { success: false, error: error.message },
-          { status: 403 }
+          { status: 403, request }
         );
       }
     }
 
-    return NextResponse.json(
+    return jsonResponse(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, request }
     );
   }
 }
@@ -136,9 +156,9 @@ export async function PUT(
     const report = await service.updateReport(reportId, body);
 
     if (!report) {
-      return NextResponse.json(
+      return jsonResponse(
         { success: false, error: 'Report not found' },
-        { status: 404 }
+        { status: 404, request }
       );
     }
 
@@ -154,10 +174,10 @@ export async function PUT(
       ...clientInfo,
     });
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       data: report,
-    });
+    }, { request });
   } catch (error) {
     console.error('[platform-reports/:id] PUT error:', error);
 
@@ -166,24 +186,24 @@ export async function PUT(
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return NextResponse.json(
+        return jsonResponse(
           { success: false, error: error.message },
-          { status: 403 }
+          { status: 403, request }
         );
       }
 
       // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
-        return NextResponse.json(
+        return jsonResponse(
           { success: false, error: error.message },
-          { status: 400 }
+          { status: 400, request }
         );
       }
     }
 
-    return NextResponse.json(
+    return jsonResponse(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, request }
     );
   }
 }
@@ -210,9 +230,9 @@ export async function DELETE(
     const deleted = await service.deleteReport(reportId);
 
     if (!deleted) {
-      return NextResponse.json(
+      return jsonResponse(
         { success: false, error: 'Report not found' },
-        { status: 404 }
+        { status: 404, request }
       );
     }
 
@@ -227,10 +247,10 @@ export async function DELETE(
       ...clientInfo,
     });
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       message: 'Report deleted',
-    });
+    }, { request });
   } catch (error) {
     console.error('[platform-reports/:id] DELETE error:', error);
 
@@ -239,16 +259,16 @@ export async function DELETE(
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return NextResponse.json(
+        return jsonResponse(
           { success: false, error: error.message },
-          { status: 403 }
+          { status: 403, request }
         );
       }
     }
 
-    return NextResponse.json(
+    return jsonResponse(
       { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { status: 500, request }
     );
   }
 }

@@ -196,19 +196,12 @@ function getHostOrigin(): string {
   return window.location.origin;
 }
 
-// Simple API client that calls through the extension handler
+// Simple API client that calls the platform API directly
+// This bypasses the WASM handler to avoid wasmtime http.fetch issues
 async function callExtensionApi<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-  // Get extension context from URL params
-  const params = new URLSearchParams(window.location.search);
-  const extensionId = params.get('extensionId') || params.get('ext') || '';
-
-  if (!extensionId) {
-    console.error('No extensionId provided in URL params');
-    return { success: false, error: 'Extension ID not provided' };
-  }
-
   const hostOrigin = getHostOrigin();
-  const baseUrl = `${hostOrigin}/api/ext/${extensionId}`;
+  // Call platform-reports API directly instead of going through extension handler
+  const baseUrl = `${hostOrigin}/api/v1/platform-reports`;
 
   try {
     const response = await fetch(`${baseUrl}${path}`, {
@@ -219,7 +212,19 @@ async function callExtensionApi<T>(path: string, options: RequestInit = {}): Pro
         ...options.headers,
       },
     });
-    return await response.json();
+
+    const data = await response.json();
+
+    // Normalize response format
+    if (response.ok) {
+      // If response has 'data' field, extract it; otherwise wrap the response
+      if ('success' in data) {
+        return data;
+      }
+      return { success: true, data: data as T };
+    } else {
+      return { success: false, error: data.error || data.message || 'Request failed' };
+    }
   } catch (error) {
     console.error('API call failed:', error);
     return { success: false, error: String(error) };
@@ -1284,32 +1289,133 @@ function CreateReport() {
                   </div>
 
                   <div style={{ marginBottom: '16px' }}>
-                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Fields (comma-separated)</Text>
-                    <Input
-                      type="text"
-                      value={metric.query.fields.join(', ')}
-                      onChange={(e) => updateQuery(index, {
-                        fields: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
-                      })}
-                      placeholder="e.g., tenant, COUNT(*) as count"
-                      style={{ width: '100%' }}
-                    />
-                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
-                      Available columns: {getTableColumns(metric.query.table).join(', ')}
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Fields</Text>
+
+                    {/* Selected fields as removable chips */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px', minHeight: '32px', padding: '8px', background: 'var(--alga-bg)', border: '1px solid var(--alga-border)', borderRadius: 'var(--alga-radius)' }}>
+                      {metric.query.fields.length === 0 ? (
+                        <Text tone="muted" style={{ fontSize: '0.75rem' }}>No fields selected. Click columns below to add.</Text>
+                      ) : (
+                        metric.query.fields.map((field, fieldIndex) => (
+                          <Badge
+                            key={fieldIndex}
+                            tone="info"
+                            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => updateQuery(index, { fields: metric.query.fields.filter((_, i) => i !== fieldIndex) })}
+                          >
+                            {field}
+                            <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>×</span>
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Available columns - click to add */}
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>
+                      Click to add column:
                     </Text>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                      {getTableColumns(metric.query.table).map((col) => (
+                        <Button
+                          key={col}
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                          onClick={() => {
+                            if (!metric.query.fields.includes(col)) {
+                              updateQuery(index, { fields: [...metric.query.fields, col] });
+                            }
+                          }}
+                          disabled={metric.query.fields.includes(col)}
+                        >
+                          {col}
+                        </Button>
+                      ))}
+                    </div>
+
+                    {/* Custom expression input */}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Input
+                        type="text"
+                        id={`custom-field-${index}`}
+                        placeholder="Custom: COUNT(*) as count, SUM(amount), etc."
+                        style={{ flex: 1 }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const input = e.target as HTMLInputElement;
+                            const value = input.value.trim();
+                            if (value && !metric.query.fields.includes(value)) {
+                              updateQuery(index, { fields: [...metric.query.fields, value] });
+                              input.value = '';
+                            }
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          const input = document.getElementById(`custom-field-${index}`) as HTMLInputElement;
+                          if (input) {
+                            const value = input.value.trim();
+                            if (value && !metric.query.fields.includes(value)) {
+                              updateQuery(index, { fields: [...metric.query.fields, value] });
+                              input.value = '';
+                            }
+                          }
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
                   </div>
 
                   <div style={{ marginBottom: '16px' }}>
-                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Group By (comma-separated)</Text>
-                    <Input
-                      type="text"
-                      value={(metric.query.groupBy || []).join(', ')}
-                      onChange={(e) => updateQuery(index, {
-                        groupBy: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
-                      })}
-                      placeholder="e.g., tenant"
-                      style={{ width: '100%' }}
-                    />
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Group By</Text>
+
+                    {/* Selected group by fields as removable chips */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px', minHeight: '28px', padding: '6px', background: 'var(--alga-bg)', border: '1px solid var(--alga-border)', borderRadius: 'var(--alga-radius)' }}>
+                      {(metric.query.groupBy || []).length === 0 ? (
+                        <Text tone="muted" style={{ fontSize: '0.75rem' }}>No grouping. Click columns below to add.</Text>
+                      ) : (
+                        (metric.query.groupBy || []).map((field, fieldIndex) => (
+                          <Badge
+                            key={fieldIndex}
+                            tone="info"
+                            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => updateQuery(index, { groupBy: (metric.query.groupBy || []).filter((_, i) => i !== fieldIndex) })}
+                          >
+                            {field}
+                            <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>×</span>
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Available columns - click to add */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {getTableColumns(metric.query.table).map((col) => (
+                        <Button
+                          key={col}
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          onClick={() => {
+                            const currentGroupBy = metric.query.groupBy || [];
+                            if (!currentGroupBy.includes(col)) {
+                              updateQuery(index, { groupBy: [...currentGroupBy, col] });
+                            }
+                          }}
+                          disabled={(metric.query.groupBy || []).includes(col)}
+                        >
+                          {col}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
 
                   <div style={{ marginBottom: '12px' }}>
@@ -2248,32 +2354,133 @@ function EditReport({
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Fields (comma-separated)</Text>
-                  <Input
-                    type="text"
-                    value={metric.query.fields.join(', ')}
-                    onChange={(e) => updateQuery(index, {
-                      fields: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
-                    })}
-                    placeholder="e.g., tenant, COUNT(*) as count"
-                    style={{ width: '100%' }}
-                  />
-                  <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
-                    Available columns: {getTableColumns(metric.query.table).join(', ')}
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Fields</Text>
+
+                  {/* Selected fields as removable chips */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px', minHeight: '32px', padding: '8px', background: 'var(--alga-bg)', border: '1px solid var(--alga-border)', borderRadius: 'var(--alga-radius)' }}>
+                    {metric.query.fields.length === 0 ? (
+                      <Text tone="muted" style={{ fontSize: '0.75rem' }}>No fields selected. Click columns below to add.</Text>
+                    ) : (
+                      metric.query.fields.map((field, fieldIndex) => (
+                        <Badge
+                          key={fieldIndex}
+                          tone="info"
+                          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => updateQuery(index, { fields: metric.query.fields.filter((_, i) => i !== fieldIndex) })}
+                        >
+                          {field}
+                          <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>×</span>
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Available columns - click to add */}
+                  <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>
+                    Click to add column:
                   </Text>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                    {getTableColumns(metric.query.table).map((col) => (
+                      <Button
+                        key={col}
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                        onClick={() => {
+                          if (!metric.query.fields.includes(col)) {
+                            updateQuery(index, { fields: [...metric.query.fields, col] });
+                          }
+                        }}
+                        disabled={metric.query.fields.includes(col)}
+                      >
+                        {col}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Custom expression input */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Input
+                      type="text"
+                      id={`edit-custom-field-${index}`}
+                      placeholder="Custom: COUNT(*) as count, SUM(amount), etc."
+                      style={{ flex: 1 }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const input = e.target as HTMLInputElement;
+                          const value = input.value.trim();
+                          if (value && !metric.query.fields.includes(value)) {
+                            updateQuery(index, { fields: [...metric.query.fields, value] });
+                            input.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        const input = document.getElementById(`edit-custom-field-${index}`) as HTMLInputElement;
+                        if (input) {
+                          const value = input.value.trim();
+                          if (value && !metric.query.fields.includes(value)) {
+                            updateQuery(index, { fields: [...metric.query.fields, value] });
+                            input.value = '';
+                          }
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Group By (comma-separated)</Text>
-                  <Input
-                    type="text"
-                    value={(metric.query.groupBy || []).join(', ')}
-                    onChange={(e) => updateQuery(index, {
-                      groupBy: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
-                    })}
-                    placeholder="e.g., tenant"
-                    style={{ width: '100%' }}
-                  />
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Group By</Text>
+
+                  {/* Selected group by fields as removable chips */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px', minHeight: '28px', padding: '6px', background: 'var(--alga-bg)', border: '1px solid var(--alga-border)', borderRadius: 'var(--alga-radius)' }}>
+                    {(metric.query.groupBy || []).length === 0 ? (
+                      <Text tone="muted" style={{ fontSize: '0.75rem' }}>No grouping. Click columns below to add.</Text>
+                    ) : (
+                      (metric.query.groupBy || []).map((field, fieldIndex) => (
+                        <Badge
+                          key={fieldIndex}
+                          tone="info"
+                          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => updateQuery(index, { groupBy: (metric.query.groupBy || []).filter((_, i) => i !== fieldIndex) })}
+                        >
+                          {field}
+                          <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>×</span>
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Available columns - click to add */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {getTableColumns(metric.query.table).map((col) => (
+                      <Button
+                        key={col}
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                        onClick={() => {
+                          const currentGroupBy = metric.query.groupBy || [];
+                          if (!currentGroupBy.includes(col)) {
+                            updateQuery(index, { groupBy: [...currentGroupBy, col] });
+                          }
+                        }}
+                        disabled={(metric.query.groupBy || []).includes(col)}
+                      >
+                        {col}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '12px' }}>
