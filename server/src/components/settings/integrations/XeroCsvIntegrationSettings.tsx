@@ -1,28 +1,30 @@
 'use client';
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card';
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../ui/Card';
+import { FileSpreadsheet, FileText, ExternalLink, Info, Download, Upload } from 'lucide-react';
+import { XeroCsvMappingManager } from '../../integrations/csv/XeroCsvMappingManager';
 import { Button } from '../../ui/Button';
-import { Alert, AlertDescription } from '../../ui/Alert';
+import { Alert, AlertDescription, AlertTitle } from '../../ui/Alert';
 import LoadingIndicator from '../../ui/LoadingIndicator';
 import CustomSelect from '../../ui/CustomSelect';
-import { Info, FileText, Upload, Download } from 'lucide-react';
 import {
   getXeroCsvSettings,
   updateXeroCsvSettings,
   XeroCsvSettings as XeroCsvSettingsType
 } from 'server/src/lib/actions/integrations/xeroCsvActions';
 
-interface XeroCsvSettingsProps {
-  /** Optional callback when settings are saved */
-  onSettingsSaved?: () => void;
-}
-
 /**
- * Settings panel for Xero CSV integration mode.
- * Allows configuring date format, currency, and shows setup instructions.
+ * Xero CSV Integration Settings Component
+ *
+ * Provides CSV-based export/import for Xero as an alternative
+ * to OAuth-based integration. Useful when:
+ * - OAuth integration is not available or pending Xero app approval
+ * - Manual import process is preferred
+ * - External tax calculation with report-based feedback is needed
  */
-const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) => {
+const XeroCsvIntegrationSettings: React.FC = () => {
   const [settings, setSettings] = useState<XeroCsvSettingsType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -55,7 +57,6 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
         setSuccessMessage('Settings saved successfully');
         setError(null);
         setTimeout(() => setSuccessMessage(null), 3000);
-        onSettingsSaved?.();
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to save settings';
         setError(message);
@@ -97,9 +98,40 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
         </Alert>
       )}
 
-      {/* Setup Instructions Card */}
+      {/* Overview Card */}
+      <Card id="xero-csv-integration-overview-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="h-5 w-5" />
+            Xero CSV Integration
+          </CardTitle>
+          <CardDescription>
+            Export invoices to CSV for manual import into Xero, and import tax data from Xero reports.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded border border-border/60 bg-muted/40 p-4 text-sm leading-6 text-muted-foreground space-y-3">
+            <p>
+              This integration provides an alternative to OAuth-based Xero connectivity:
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>Export</strong>: Generate CSV files compatible with Xero&apos;s invoice import feature
+              </li>
+              <li>
+                <strong>Tax Import</strong>: When using external tax calculation, import tax amounts from Xero&apos;s Invoice Details Report
+              </li>
+            </ul>
+            <p className="text-xs">
+              Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Xero Setup Instructions - shown if setup not acknowledged */}
       {!settings?.setupAcknowledged && (
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card id="xero-csv-setup-card" className="border-blue-200 bg-blue-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Info className="h-5 w-5 text-blue-500" />
@@ -114,11 +146,11 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
               <div>
                 <h4 className="font-medium text-foreground">Step 1: Create Tracking Categories</h4>
                 <p className="text-muted-foreground mt-1">
-                  In Xero, go to <strong>Settings &rarr; Tracking Categories</strong> and create these two categories:
+                  In Xero, go to <strong>Settings → Tracking Categories</strong> and create these two categories:
                 </p>
                 <ul className="list-disc pl-5 mt-2 text-muted-foreground">
                   <li>
-                    <strong>Source System</strong> - Add an option called &quot;AlgaPSA&quot;
+                    <strong>Source System</strong> - Add an option called <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">AlgaPSA</code>
                   </li>
                   <li>
                     <strong>External Invoice ID</strong> - Options will be created automatically when importing
@@ -130,14 +162,14 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
                 <h4 className="font-medium text-foreground">Step 2: Configure Tax Rates</h4>
                 <p className="text-muted-foreground mt-1">
                   Ensure your Xero organisation has the tax rates you need configured under{' '}
-                  <strong>Settings &rarr; Tax Rates</strong>.
+                  <strong>Settings → Tax Rates</strong>.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-medium text-foreground">Step 3: Map Services and Tax Regions</h4>
                 <p className="text-muted-foreground mt-1">
-                  Use the mapping section below to link your Alga services to Xero item codes and account codes,
+                  Use the mapping section below to link your Alga services to Xero item codes,
                   and your tax regions to Xero tax rates.
                 </p>
               </div>
@@ -150,8 +182,8 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
         </Card>
       )}
 
-      {/* Settings Card */}
-      <Card>
+      {/* CSV Export Settings Card */}
+      <Card id="xero-csv-settings-card">
         <CardHeader>
           <CardTitle>CSV Export Settings</CardTitle>
           <CardDescription>
@@ -161,7 +193,7 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-foreground" htmlFor="date-format">
+              <label className="text-sm font-medium text-foreground" htmlFor="xero-date-format">
                 Date Format
               </label>
               <p className="text-xs text-muted-foreground mb-2">
@@ -178,14 +210,14 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-foreground" htmlFor="default-currency">
+              <label className="text-sm font-medium text-foreground" htmlFor="xero-default-currency">
                 Default Currency
               </label>
               <p className="text-xs text-muted-foreground mb-2">
                 Leave blank to use invoice currency.
               </p>
               <input
-                id="default-currency"
+                id="xero-default-currency"
                 type="text"
                 className="w-full rounded-md border px-3 py-2 text-sm"
                 placeholder="e.g., NZD, USD, AUD"
@@ -199,8 +231,21 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
         </CardContent>
       </Card>
 
+      {/* Mappings Card */}
+      <Card id="xero-csv-mapping-settings-card">
+        <CardHeader>
+          <CardTitle>Xero CSV Mappings</CardTitle>
+          <CardDescription>
+            Map Alga clients, services, tax codes, and payment terms to the identifiers used in your Xero organisation. These values are used when generating the CSV export.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <XeroCsvMappingManager />
+        </CardContent>
+      </Card>
+
       {/* Workflow Guide Card */}
-      <Card>
+      <Card id="xero-csv-workflow-card">
         <CardHeader>
           <CardTitle>CSV Workflow</CardTitle>
           <CardDescription>
@@ -217,10 +262,10 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
             <div>
               <h4 className="font-medium text-foreground">Export Invoices</h4>
               <ol className="list-decimal pl-5 mt-2 text-sm text-muted-foreground space-y-1">
-                <li>Go to Billing &rarr; Accounting Exports</li>
-                <li>Select invoices and choose &quot;Xero (CSV)&quot; as the adapter</li>
+                <li>Go to Billing → Accounting Exports</li>
+                <li>Select invoices and choose &quot;Xero CSV&quot; as the adapter</li>
                 <li>Download the generated CSV file</li>
-                <li>In Xero: Business &rarr; Invoices &rarr; Import</li>
+                <li>In Xero: Business → Invoices → Import</li>
                 <li>Upload the CSV and import as Draft invoices</li>
                 <li>Xero will calculate tax based on your tax settings</li>
               </ol>
@@ -236,9 +281,9 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
             <div>
               <h4 className="font-medium text-foreground">Import Tax Calculations</h4>
               <ol className="list-decimal pl-5 mt-2 text-sm text-muted-foreground space-y-1">
-                <li>In Xero: Reports &rarr; All Reports &rarr; Invoice Details</li>
+                <li>In Xero: Reports → All Reports → Invoice Details</li>
                 <li>Set date range and export as CSV</li>
-                <li>In Alga: Billing &rarr; Accounting Exports &rarr; Import Tax</li>
+                <li>In Alga: Billing → Accounting Exports → Import Tax</li>
                 <li>Upload the Xero report CSV</li>
                 <li>Review matched invoices and confirm import</li>
               </ol>
@@ -260,8 +305,41 @@ const XeroCsvSettings: React.FC<XeroCsvSettingsProps> = ({ onSettingsSaved }) =>
           </div>
         </CardContent>
       </Card>
+
+      {/* Navigation Card */}
+      <Card id="xero-csv-export-navigation-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Accounting Exports
+          </CardTitle>
+          <CardDescription>
+            Create export batches, download CSV files, import tax reports, and review export history.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert variant="info">
+            <AlertTitle>Managed from Billing</AlertTitle>
+            <AlertDescription>
+              Go to{' '}
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-mono text-muted-foreground">
+                Billing → Accounting Exports
+              </span>{' '}
+              to select invoices, generate Xero CSV exports, import tax reports, and manage batches.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+        <CardFooter className="justify-end">
+          <Button id="xero-csv-open-accounting-exports" asChild size="lg">
+            <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+              Open Accounting Exports
+              <ExternalLink className="h-4 w-4 opacity-90" />
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 };
 
-export default XeroCsvSettings;
+export default XeroCsvIntegrationSettings;

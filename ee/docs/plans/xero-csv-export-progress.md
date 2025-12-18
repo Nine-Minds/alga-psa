@@ -15,12 +15,12 @@ This document tracks the implementation progress of the Xero CSV Export/Import f
 
 | Category | Completed | Total | Progress |
 |----------|-----------|-------|----------|
-| Backend | 5 | 9 | 56% |
-| Frontend | 5 | 7 | 71% |
+| Backend | 6 | 9 | 67% |
+| Frontend | 7 | 7 | 100% |
 | Data model / migrations | 0 | 2 | 0% |
 | Documentation | 1 | 1 | 100% |
 | Testing | 0 | 5 | 0% |
-| **Overall** | **11** | **24** | **46%** |
+| **Overall** | **14** | **24** | **58%** |
 
 ---
 
@@ -73,6 +73,23 @@ This document tracks the implementation progress of the Xero CSV Export/Import f
   - Lock reset and batch reversal documentation
   - Troubleshooting guide
 
+### 2025-12-18 - Integration with Unified Accounting Setup
+
+After merging release/0.15.0, adapted Xero CSV integration to work with the new unified accounting integrations infrastructure:
+
+**Infrastructure Integration:**
+- [x] Updated `AccountingIntegrationsSetup.tsx` to add `xero_csv` as a fourth integration option
+- [x] Created `XeroCsvIntegrationSettings.tsx` following the `CSVIntegrationSettings` pattern
+  - Merged settings from old `XeroCsvSettings.tsx` (date format, currency, setup acknowledgement)
+  - Added mapping manager integration
+  - Added workflow guide and navigation
+- [x] Created `xeroCsvMappingModules.ts` for Xero CSV-specific mapping modules
+  - Clients, Items/Services, Tax Codes, Payment Terms
+  - Xero-specific terminology and identifiers
+- [x] Created `XeroCsvMappingManager.tsx` component using the shared `AccountingMappingManager`
+- [x] Updated CSV integration index exports
+- [x] Removed old `XeroCsvSettings.tsx` (merged into `XeroCsvIntegrationSettings.tsx`)
+
 ---
 
 ## Backend Tasks
@@ -96,12 +113,12 @@ This document tracks the implementation progress of the Xero CSV Export/Import f
 
 ### 3. CSV Mapping Modules (mapping-modules)
 **File:** `server/src/components/integrations/csv/xeroCsvMappingModules.ts`
-**Status:** Not Started
+**Status:** DONE
 
-- [ ] Implement mapping modules for `adapterType: 'xero_csv'`
-- [ ] Support mappings for: Clients, Items/Services, Tax Codes, Payment Terms
-- [ ] Ensure terminology uses “Clients” (not “Customers”) throughout UI/config
-- [ ] Default the mapping tab view to “Clients”
+- [x] Implement mapping modules for `adapterType: 'xero_csv'`
+- [x] Support mappings for: Clients, Items/Services, Tax Codes, Payment Terms
+- [x] Ensure terminology uses "Clients" (not "Customers") throughout UI/config
+- [x] Default the mapping tab view to "Clients"
 
 ### 4. Client Export/Import (client-export-import)
 **Files:**
@@ -179,7 +196,7 @@ This document tracks the implementation progress of the Xero CSV Export/Import f
 ## Frontend Tasks
 
 ### 10. Xero CSV Integration Settings Panel (xero-csv-settings)
-**File:** `server/src/components/settings/integrations/XeroCsvSettings.tsx`
+**File:** `server/src/components/settings/integrations/XeroCsvIntegrationSettings.tsx`
 **Status:** DONE
 
 - [x] Show instructions for manual import/export workflows (contacts + invoices + tax import)
@@ -187,20 +204,20 @@ This document tracks the implementation progress of the Xero CSV Export/Import f
 - [x] Link users to mapping setup (must complete before exporting)
 
 ### 11. Accounting Integrations Setup Wiring (integrations-setup)
-**File:** `server/src/components/settings/integrations/XeroIntegrationSettings.tsx`
+**File:** `server/src/components/settings/integrations/AccountingIntegrationsSetup.tsx`
 **Status:** DONE
 
 - [x] Keep Xero OAuth visible but disabled / "Coming soon" when in CSV mode
-- [x] Add Xero CSV as a selectable integration option (mode toggle)
-- [x] Ensure only the selected mode's panes are displayed
+- [x] Add Xero CSV as a selectable integration option (fourth card)
+- [x] Ensure only the selected integration's panes are displayed
 
 ### 12. Mapping Manager UI (mapping-manager)
-**Files:** reuse shared mapping module view + tabs
-**Status:** Not Started
+**File:** `server/src/components/integrations/csv/XeroCsvMappingManager.tsx`
+**Status:** DONE
 
-- [ ] Use shared mapping manager UI (standard tab control + primary color)
-- [ ] Default to the "Clients" tab on load
-- [ ] Ensure "Add Client Mapping" language (not "Customer")
+- [x] Use shared mapping manager UI (standard tab control + primary color)
+- [x] Default to the "Clients" tab on load
+- [x] Ensure "Add Client Mapping" language (not "Customer")
 
 ### 13. Xero CSV Export UI (export-panel)
 **File:** `server/src/components/billing-dashboard/accounting/XeroCsvExportPanel.tsx`
@@ -315,4 +332,4 @@ This document tracks the implementation progress of the Xero CSV Export/Import f
 
 ---
 
-*Last Updated: 2025-12-18 (Implementation Phase 1 Complete - 46%)*
+*Last Updated: 2025-12-18 (Frontend Complete - 58%)*

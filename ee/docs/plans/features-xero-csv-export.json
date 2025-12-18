@@ -24,7 +24,7 @@
         "id": "mapping-modules",
         "description": "Create Xero CSV mapping modules (Clients, Items/Services, Tax Codes, Payment Terms) for adapter type xero_csv",
         "file": "server/src/components/integrations/csv/xeroCsvMappingModules.ts",
-        "done": false
+        "done": true
       },
       {
         "id": "client-export-import",
@@ -67,20 +67,20 @@
       {
         "id": "xero-csv-settings",
         "description": "Create Xero CSV integration settings panel (instructions, defaults, and entry points to mappings/export/import)",
-        "file": "server/src/components/settings/integrations/XeroCsvSettings.tsx",
+        "file": "server/src/components/settings/integrations/XeroCsvIntegrationSettings.tsx",
         "done": true
       },
       {
         "id": "integrations-setup",
         "description": "Wire Xero CSV into the unified Accounting Integrations setup; keep Xero OAuth visible but disabled/coming-soon",
-        "file": "server/src/components/settings/integrations/XeroIntegrationSettings.tsx",
+        "file": "server/src/components/settings/integrations/AccountingIntegrationsSetup.tsx",
         "done": true
       },
       {
         "id": "mapping-manager",
         "description": "Use the shared mapping manager UI with standard tab control; default to Clients tab and use \"Client\" terminology throughout",
-        "file": "server/src/components/integrations/csv/CSVMappingManager.tsx",
-        "done": false
+        "file": "server/src/components/integrations/csv/XeroCsvMappingManager.tsx",
+        "done": true
       },
       {
         "id": "export-panel",

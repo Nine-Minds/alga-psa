@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../../ui/Button';
 import { Badge } from '../../ui/Badge';
 import CSVIntegrationSettings from './CSVIntegrationSettings';
+import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from 'server/src/lib/utils';
 
-type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv';
+type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv';
 
 type AccountingIntegrationOption = {
   id: AccountingIntegrationId;
@@ -43,6 +44,10 @@ function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) 
       <BannerIcon className="bg-green-500 text-xl font-bold text-white">Q</BannerIcon>
     ) : option.id === 'xero' ? (
       <BannerIcon className="bg-sky-500 text-xl font-bold text-white">X</BannerIcon>
+    ) : option.id === 'xero_csv' ? (
+      <BannerIcon className="bg-sky-500 text-[11px] font-bold tracking-wider text-white">
+        X·CSV
+      </BannerIcon>
     ) : (
       <BannerIcon className="bg-slate-800 text-[11px] font-bold tracking-wider text-white">
         CSV
@@ -92,6 +97,15 @@ export default function AccountingIntegrationsSetup() {
           { label: 'Export', value: 'Manual' },
           { label: 'Format', value: 'CSV' }
         ]
+      },
+      {
+        id: 'xero_csv',
+        title: 'Xero CSV',
+        description: 'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.',
+        highlights: [
+          { label: 'Export', value: 'Manual' },
+          { label: 'Format', value: 'CSV' }
+        ]
       }
     ],
     []
@@ -102,7 +116,7 @@ export default function AccountingIntegrationsSetup() {
 
   return (
     <div className="space-y-6" id="accounting-integrations-setup">
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {options.map((option) => {
           const isSelected = option.id === selected;
           const isDisabled = Boolean(option.disabled);
@@ -169,12 +183,14 @@ export default function AccountingIntegrationsSetup() {
 
         {selected === 'quickbooks_csv' ? (
           <CSVIntegrationSettings />
+        ) : selected === 'xero_csv' ? (
+          <XeroCsvIntegrationSettings />
         ) : (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Configuration unavailable</CardTitle>
               <CardDescription>
-                This integration is not yet available. Select QuickBooks CSV to configure manual exports.
+                This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.
               </CardDescription>
             </CardHeader>
           </Card>
