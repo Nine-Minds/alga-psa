@@ -315,14 +315,19 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
           {showHelp && (
             <div className="px-4 pb-4 space-y-3 text-sm text-gray-600">
               {source === 'xero' ? (
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>In Xero, go to <strong>Reports &gt; All Reports</strong></li>
-                  <li>Select <strong>Sales (Invoices and Revenue)</strong></li>
-                  <li>Run the <strong>Invoice Details</strong> report</li>
-                  <li>Set the date range to match your exported invoices</li>
-                  <li>Click <strong>Export</strong> and choose <strong>CSV</strong></li>
-                  <li>Upload the exported file here</li>
-                </ol>
+                <>
+                  <ol className="list-decimal list-inside space-y-2">
+                    <li>In Xero, go to <strong>Sales &gt; Invoices</strong></li>
+                    <li>Select the invoice tab you want to export from (e.g., Paid, Awaiting Payment)</li>
+                    <li>(Optional) Click <strong>Search</strong> to filter by Start date, End date, or Date type</li>
+                    <li>Click <strong>Export</strong></li>
+                    <li>Xero downloads a CSV file to your computer</li>
+                    <li>Upload that CSV file here</li>
+                  </ol>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Note: Only invoices originally exported from Alga PSA (with Source System = AlgaPSA tracking) will be matched.
+                  </p>
+                </>
               ) : (
                 <ol className="list-decimal list-inside space-y-2">
                   <li>In QuickBooks, go to <strong>Reports &gt; All Reports</strong></li>
@@ -334,7 +339,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
               )}
               <p className="text-gray-500">
                 {source === 'xero'
-                  ? 'The report should include columns for Invoice Number, Contact Name, Line Amount, and Tax Amount.'
+                  ? 'The exported CSV includes Invoice Number, Contact Name, Line Amount, Tax Amount, and tracking categories.'
                   : 'The CSV must include Invoice Number, Invoice Date, and Tax Amount columns.'}
               </p>
             </div>
@@ -431,6 +436,28 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
               <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>{xeroPreviewResult.alreadyImportedCount} invoice(s) already have imported tax.</span>
+              </div>
+            )}
+
+            {xeroPreviewResult.notPendingCount > 0 && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 text-amber-700 rounded-lg text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-medium">{xeroPreviewResult.notPendingCount} invoice(s) don't use external tax calculation.</span>
+                  <p className="text-xs mt-1 text-amber-600">
+                    These invoices were created with internal tax calculation. To import tax from Xero, invoices must be set up with "Pending External" tax source when exported.
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    {xeroPreviewResult.preview
+                      .filter(p => p.status === 'not_pending')
+                      .slice(0, 3)
+                      .map((item, index) => (
+                        <div key={index} className="text-xs bg-amber-100 px-2 py-1 rounded">
+                          {item.xeroInvoiceNumber} ({item.contactName}): {item.reason}
+                        </div>
+                      ))}
+                  </div>
+                </div>
               </div>
             )}
 

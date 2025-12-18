@@ -1,4 +1,4 @@
-import { v4 as uuid4 } from 'uuid';
+import { v4 as uuid4, validate as uuidValidate } from 'uuid';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../db';
 import { TaxSource } from '../../interfaces/tax.interfaces';
@@ -160,20 +160,41 @@ export class XeroCsvTaxImportService {
   private buildColumnMap(headers: string[]): Map<string, number> {
     const map = new Map<string, number>();
 
+    // Log headers for debugging
+    logger.debug('[XeroCsvTaxImportService] CSV headers found', { headers });
+
+    // Column variants to handle different Xero export formats:
+    // - Invoice Details Report (line-level)
+    // - Sales Invoices export (invoice-level)
     const columnVariants: Record<string, string[]> = {
-      invoiceNumber: ['invoice number', 'invoicenumber', 'invoice no', 'invoice #', 'inv no'],
-      invoiceDate: ['invoice date', 'invoicedate', 'date'],
-      dueDate: ['due date', 'duedate'],
+      invoiceNumber: [
+        'invoice number', 'invoicenumber', 'invoice no', 'invoice #', 'inv no',
+        '*invoicenumber', 'invoiceno'
+      ],
+      invoiceDate: [
+        'invoice date', 'invoicedate', 'date',
+        '*invoicedate'
+      ],
+      dueDate: ['due date', 'duedate', '*duedate'],
       status: ['status', 'invoice status'],
-      reference: ['reference', 'ref'],
-      contactName: ['contact name', 'contactname', 'contact', 'customer', 'customer name'],
-      lineDescription: ['description', 'line description', 'item', 'line item'],
-      quantity: ['quantity', 'qty'],
-      unitAmount: ['unit amount', 'unitamount', 'unit price', 'rate'],
-      lineAmount: ['line amount', 'lineamount', 'amount', 'line total'],
+      reference: ['reference', 'ref', '*reference'],
+      contactName: [
+        'contact name', 'contactname', 'contact', 'customer', 'customer name',
+        '*contactname', 'name'
+      ],
+      lineDescription: ['description', 'line description', 'item', 'line item', '*description'],
+      quantity: ['quantity', 'qty', '*quantity'],
+      unitAmount: ['unit amount', 'unitamount', 'unit price', 'rate', '*unitamount'],
+      lineAmount: [
+        'line amount', 'lineamount', 'amount', 'line total',
+        'total', '*total', 'subtotal', 'total excl tax', 'total excluding tax'
+      ],
       taxType: ['tax type', 'taxtype', 'tax code', 'tax rate name'],
       taxRate: ['tax rate', 'taxrate', 'tax %', 'tax percent'],
-      taxAmount: ['tax amount', 'taxamount', 'tax', 'line tax'],
+      taxAmount: [
+        'tax amount', 'taxamount', 'tax', 'line tax',
+        'total tax', '*taxamount', 'tax total'
+      ],
       trackingCategory1Name: ['tracking name 1', 'trackingname1', 'tracking category 1'],
       trackingCategory1Option: ['tracking option 1', 'trackingoption1', 'tracking value 1'],
       trackingCategory2Name: ['tracking name 2', 'trackingname2', 'tracking category 2'],
@@ -191,6 +212,10 @@ export class XeroCsvTaxImportService {
         }
       }
     }
+
+    // Log which columns were mapped
+    const mappedFields = Array.from(map.entries()).map(([field, idx]) => `${field}:${idx}`);
+    logger.debug('[XeroCsvTaxImportService] Column mapping', { mappedFields });
 
     return map;
   }
@@ -224,6 +249,11 @@ export class XeroCsvTaxImportService {
 
     // Skip rows without essential data
     if (!invoiceNumber || !contactName || lineAmount === undefined) {
+      logger.debug('[XeroCsvTaxImportService] Skipping row - missing essential data', {
+        hasInvoiceNumber: !!invoiceNumber,
+        hasContactName: !!contactName,
+        hasLineAmount: lineAmount !== undefined
+      });
       return null;
     }
 
@@ -295,6 +325,33 @@ export class XeroCsvTaxImportService {
     const matched = new Map<string, MatchedInvoice>();
 
     for (const [xeroInvoiceNumber, lines] of invoiceGroups) {
+      // Check if this invoice originated from Alga by checking the Source System tracking category
+      let sourceSystem: string | undefined = lines[0]?.sourceSystem;
+
+      // Check tracking categories if direct sourceSystem column not found
+      if (!sourceSystem) {
+        for (const line of lines) {
+          if (line.trackingCategory1Name?.toLowerCase() === 'source system') {
+            sourceSystem = line.trackingCategory1Option;
+            break;
+          }
+          if (line.trackingCategory2Name?.toLowerCase() === 'source system') {
+            sourceSystem = line.trackingCategory2Option;
+            break;
+          }
+        }
+      }
+
+      // Skip invoices that have a source system but it's not AlgaPSA
+      // (invoices without source system tracking may still match by invoice number)
+      if (sourceSystem && sourceSystem.toLowerCase() !== TRACKING_CATEGORY_SOURCE_VALUE.toLowerCase()) {
+        logger.debug('[XeroCsvTaxImportService] Skipping non-Alga invoice', {
+          xeroInvoiceNumber,
+          sourceSystem
+        });
+        continue;
+      }
+
       // Try to find Alga invoice ID from tracking categories
       let algaInvoiceId: string | null = null;
 
@@ -321,15 +378,25 @@ export class XeroCsvTaxImportService {
       if (!algaInvoiceId) {
         const reference = lines[0]?.reference;
         if (reference) {
-          // Reference might be the invoice_id
-          const invoice = await knex('invoices')
+          // Reference might be the invoice_id (UUID) or invoice_number
+          // Only search by invoice_id if reference looks like a valid UUID
+          const isValidUuid = uuidValidate(reference);
+
+          const query = knex('invoices')
             .where({ tenant })
-            .where(function() {
+            .select('invoice_id');
+
+          if (isValidUuid) {
+            query.where(function() {
               this.where('invoice_id', reference)
                 .orWhere('invoice_number', reference);
-            })
-            .select('invoice_id')
-            .first();
+            });
+          } else {
+            // Not a UUID, only search by invoice_number
+            query.where('invoice_number', reference);
+          }
+
+          const invoice = await query.first();
 
           if (invoice) {
             algaInvoiceId = invoice.invoice_id;

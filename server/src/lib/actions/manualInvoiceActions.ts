@@ -146,8 +146,8 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
           name: '',
           address: ''
         },
-        invoice_date: Temporal.PlainDate.from(currentDate),
-        due_date: Temporal.PlainDate.from(currentDate),
+        invoice_date: currentDate, // ISO date string
+        due_date: currentDate, // ISO date string
         status: 'draft',
         currencyCode: invoice.currency_code,
         subtotal: Math.ceil(subtotal),
@@ -271,8 +271,8 @@ export async function updateManualInvoice(
       name: '',
       address: ''
     },
-    invoice_date: toPlainDate(existingInvoice.invoice_date),
-    due_date: toPlainDate(existingInvoice.due_date),
+    invoice_date: toPlainDate(existingInvoice.invoice_date).toString(),
+    due_date: toPlainDate(existingInvoice.due_date).toString(),
     status: existingInvoice.status,
     currencyCode: updatedInvoice.currency_code,
     subtotal: updatedInvoice.subtotal,

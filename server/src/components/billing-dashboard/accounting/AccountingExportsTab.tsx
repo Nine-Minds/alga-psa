@@ -91,7 +91,7 @@ const ADAPTER_OPTIONS = [
   { label: 'QuickBooks Online', value: 'quickbooks_online' },
   { label: 'QuickBooks Desktop', value: 'quickbooks_desktop' },
   { label: 'Xero', value: 'xero' },
-  { label: 'Xero (CSV)', value: 'xero_csv' }
+  { label: 'Xero CSV', value: 'xero_csv' }
 ];
 
 /** Adapters that use file-based delivery and support downloads */
@@ -473,7 +473,7 @@ const AccountingExportsTab: React.FC = () => {
             case 'xero':
               return 'Xero (OAuth)';
             case 'xero_csv':
-              return 'Xero (CSV)';
+              return 'Xero CSV';
             default:
               return value;
           }
@@ -976,7 +976,7 @@ const AccountingExportsTab: React.FC = () => {
                     : selectedRow.adapter_type === 'quickbooks_desktop'
                       ? 'QuickBooks Desktop'
                       : selectedRow.adapter_type === 'xero_csv'
-                        ? 'Xero (CSV)'
+                        ? 'Xero CSV'
                         : 'Xero (OAuth)'}
                 </p>
               </div>
@@ -1261,7 +1261,7 @@ const AccountingExportsTab: React.FC = () => {
                 <option value="quickbooks_online">QuickBooks Online</option>
                 <option value="quickbooks_desktop">QuickBooks Desktop</option>
                 <option value="xero">Xero (OAuth)</option>
-                <option value="xero_csv">Xero (CSV)</option>
+                <option value="xero_csv">Xero CSV</option>
               </select>
             </div>
             <div>
