@@ -56,6 +56,7 @@ export interface CreateMappingData {
 }
 
 export interface UpdateMappingData {
+  alga_entity_id?: string;
   external_entity_id?: string;
   sync_status?: 'synced' | 'pending' | 'error' | 'manual_link' | null;
   metadata?: Record<string, unknown> | null;

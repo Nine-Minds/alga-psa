@@ -3,11 +3,14 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getXeroCsvTaxImportService } from 'server/src/lib/services/xeroCsvTaxImportService';
 import {
-  getXeroCsvTaxImportService,
-  TaxImportPreviewResult,
-  TaxImportResult
-} from 'server/src/lib/services/xeroCsvTaxImportService';
+  getXeroCsvClientSyncService,
+  ClientExportResult,
+  ClientImportPreviewResult,
+  ClientImportResult,
+  ClientImportOptions
+} from 'server/src/lib/services/xeroCsvClientSyncService';
 import logger from '@shared/core/logger';
 
 /**
@@ -26,7 +29,7 @@ export interface XeroCsvSettings {
 
 const DEFAULT_SETTINGS: XeroCsvSettings = {
   integrationMode: 'oauth',
-  dateFormat: 'DD/MM/YYYY',
+  dateFormat: 'MM/DD/YYYY',
   defaultCurrency: '',
   setupAcknowledged: false
 };
@@ -73,9 +76,9 @@ export async function updateXeroCsvSettings(
     throw new Error('User must be authenticated');
   }
 
-  const canManageIntegrations = await hasPermission(user, 'settings:integrations:manage');
+  const canManageIntegrations = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageIntegrations) {
-    throw new Error('User does not have permission to manage integrations');
+    throw new Error('User does not have permission to manage integration settings');
   }
 
   // Get current settings
@@ -145,7 +148,7 @@ export async function previewXeroCsvTaxImport(
     throw new Error('User must be authenticated');
   }
 
-  const canManageBilling = await hasPermission(user, 'billing:manage');
+  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
     throw new Error('User does not have permission to manage billing');
   }
@@ -186,7 +189,7 @@ export async function executeXeroCsvTaxImport(
     throw new Error('User must be authenticated');
   }
 
-  const canManageBilling = await hasPermission(user, 'billing:manage');
+  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
   if (!canManageBilling) {
     throw new Error('User does not have permission to manage billing');
   }
@@ -216,4 +219,159 @@ export async function executeXeroCsvTaxImport(
 export async function getXeroIntegrationMode(): Promise<'oauth' | 'csv'> {
   const settings = await getXeroCsvSettings();
   return settings.integrationMode;
+}
+
+// =============================================================================
+// Client Sync Actions
+// =============================================================================
+
+/**
+ * Export Alga clients to Xero Contacts CSV format.
+ */
+export async function exportClientsToXeroCsv(
+  clientIds?: string[]
+): Promise<ClientExportResult> {
+  const { tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  // Check user permissions
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
+  if (!canManageBilling) {
+    throw new Error('User does not have permission to manage billing');
+  }
+
+  const service = getXeroCsvClientSyncService();
+  const result = await service.exportClientsToXeroCsv(clientIds);
+
+  logger.info('[XeroCsvActions] Client export completed', {
+    tenant,
+    clientCount: result.clientCount,
+    filename: result.filename
+  });
+
+  return result;
+}
+
+/**
+ * Preview importing Xero Contacts CSV into Alga.
+ */
+export async function previewXeroCsvClientImport(
+  csvContent: string,
+  options?: Partial<ClientImportOptions>
+): Promise<ClientImportPreviewResult> {
+  const { tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  // Check user permissions
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
+  if (!canManageBilling) {
+    throw new Error('User does not have permission to manage billing');
+  }
+
+  if (!csvContent || csvContent.trim().length === 0) {
+    throw new Error('CSV content is required');
+  }
+
+  const service = getXeroCsvClientSyncService();
+  const result = await service.previewClientImport(csvContent, options);
+
+  logger.info('[XeroCsvActions] Client import preview generated', {
+    tenant,
+    totalRows: result.totalRows,
+    toCreate: result.toCreate,
+    toUpdate: result.toUpdate,
+    toSkip: result.toSkip
+  });
+
+  return result;
+}
+
+/**
+ * Execute importing Xero Contacts CSV into Alga.
+ */
+export async function executeXeroCsvClientImport(
+  csvContent: string,
+  options?: Partial<ClientImportOptions>
+): Promise<ClientImportResult> {
+  const { tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  // Check user permissions
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
+  if (!canManageBilling) {
+    throw new Error('User does not have permission to manage billing');
+  }
+
+  if (!csvContent || csvContent.trim().length === 0) {
+    throw new Error('CSV content is required');
+  }
+
+  const service = getXeroCsvClientSyncService();
+  const result = await service.importClients(csvContent, options, user.user_id);
+
+  logger.info('[XeroCsvActions] Client import executed', {
+    tenant,
+    totalProcessed: result.totalProcessed,
+    created: result.created,
+    updated: result.updated,
+    skipped: result.skipped,
+    errors: result.errors.length,
+    mappingsCreated: result.mappingsCreated
+  });
+
+  return result;
+}
+
+/**
+ * Get all Xero CSV client mappings.
+ */
+export async function getXeroCsvClientMappings(): Promise<Array<{
+  clientId: string;
+  clientName: string;
+  xeroContactName: string;
+  lastSyncedAt: string | null;
+}>> {
+  const { tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  // Check user permissions
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User must be authenticated');
+  }
+
+  const canReadBilling = await hasPermission(user, 'billing_settings', 'read');
+  if (!canReadBilling) {
+    throw new Error('User does not have permission to view billing settings');
+  }
+
+  const service = getXeroCsvClientSyncService();
+  return service.getClientMappings();
 }

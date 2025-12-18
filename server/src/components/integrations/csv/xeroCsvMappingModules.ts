@@ -28,25 +28,11 @@ type MappingLoadConfig<TAlga> = {
   mapAlga: (entity: TAlga) => { id: string; name: string };
 };
 
-type PaymentTermOption = {
-  id: string;
-  name: string;
-};
-
-// Xero payment terms (different from QuickBooks)
-const PAYMENT_TERMS: PaymentTermOption[] = [
-  { id: 'DAYSAFTERBILLDATE', name: 'Day(s) after bill date' },
-  { id: 'DAYSAFTERBILLMONTH', name: 'Day(s) after bill month' },
-  { id: 'OFCURRENTMONTH', name: 'Of the current month' },
-  { id: 'OFFOLLOWINGMONTH', name: 'Of the following month' }
-];
-
 export function createXeroCsvMappingModules(): AccountingMappingModule[] {
   return [
     createClientModule(),
     createServiceModule(),
-    createTaxCodeModule(),
-    createPaymentTermModule()
+    createTaxCodeModule()
   ];
 }
 
@@ -58,6 +44,7 @@ function createClientModule(): AccountingMappingModule {
     externalEntityType: 'Contact',
     labels: {
       tab: 'Clients',
+      description: 'Map Alga clients to Xero contact names. The contact name appears in the "ContactName" column of the CSV export.',
       addButton: 'Add Client Mapping',
       algaColumn: 'Alga Client',
       externalColumn: 'Xero Contact',
@@ -65,7 +52,8 @@ function createClientModule(): AccountingMappingModule {
         addTitle: 'Add Xero Contact Mapping',
         editTitle: 'Edit Xero Contact Mapping',
         algaField: 'Alga Client',
-        externalField: 'Xero Contact Name'
+        externalField: 'Xero Contact Name',
+        helpText: 'Enter the exact contact name as it appears in Xero.'
       },
       deleteConfirmation: {
         title: 'Delete Client Mapping',
@@ -124,6 +112,7 @@ function createServiceModule(): AccountingMappingModule {
     overridesKey: 'itemMappingOverrides',
     labels: {
       tab: 'Items / Services',
+      description: 'Map Alga services to Xero inventory item codes. The item code appears in the "InventoryItemCode" column of the CSV export.',
       addButton: 'Add Item Mapping',
       algaColumn: 'Alga Service',
       externalColumn: 'Xero Item',
@@ -131,7 +120,8 @@ function createServiceModule(): AccountingMappingModule {
         addTitle: 'Add Xero Item Mapping',
         editTitle: 'Edit Xero Item Mapping',
         algaField: 'Alga Service',
-        externalField: 'Xero Item Code'
+        externalField: 'Xero Item Code',
+        helpText: 'Enter the item code from Xero (found in Products and Services).'
       },
       deleteConfirmation: {
         title: 'Delete Item Mapping',
@@ -197,6 +187,7 @@ function createTaxCodeModule(): AccountingMappingModule {
     externalEntityType: 'TaxType',
     labels: {
       tab: 'Tax Codes',
+      description: 'Map Alga tax regions to Xero tax types. The tax type appears in the "TaxType" column of the CSV export. Find tax types in Xero under Settings → Tax Rates.',
       addButton: 'Add Tax Code Mapping',
       algaColumn: 'Alga Tax Region',
       externalColumn: 'Xero Tax Type',
@@ -204,7 +195,8 @@ function createTaxCodeModule(): AccountingMappingModule {
         addTitle: 'Add Xero Tax Type Mapping',
         editTitle: 'Edit Xero Tax Type Mapping',
         algaField: 'Alga Tax Region',
-        externalField: 'Xero Tax Type (e.g., OUTPUT2, ZERORATEDINPUT)'
+        externalField: 'Xero Tax Type',
+        helpText: 'Enter the tax type code from Xero (e.g., OUTPUT2, ZERORATEDINPUT, TAX001). Find these under Settings → Tax Rates in Xero.'
       },
       deleteConfirmation: {
         title: 'Delete Tax Code Mapping',
@@ -243,71 +235,6 @@ function createTaxCodeModule(): AccountingMappingModule {
         context,
         input,
         algaEntityType: 'tax_code'
-      });
-    },
-    update(_context, mappingId, input) {
-      return updateMapping(mappingId, input);
-    },
-    async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
-    }
-  };
-}
-
-function createPaymentTermModule(): AccountingMappingModule {
-  return {
-    id: 'xero-csv-term-mappings',
-    adapterType: ADAPTER_TYPE,
-    algaEntityType: 'payment_term',
-    externalEntityType: 'PaymentTerm',
-    labels: {
-      tab: 'Payment Terms',
-      addButton: 'Add Term Mapping',
-      algaColumn: 'Alga Payment Term',
-      externalColumn: 'Xero Payment Term',
-      dialog: {
-        addTitle: 'Add Xero Payment Term Mapping',
-        editTitle: 'Edit Xero Payment Term Mapping',
-        algaField: 'Alga Payment Term',
-        externalField: 'Xero Payment Term'
-      },
-      deleteConfirmation: {
-        title: 'Delete Term Mapping',
-        message: ({ algaName, externalName }) =>
-          `Delete mapping${algaName ? ` for ${algaName}` : ''}${
-            externalName ? ` ↔ ${externalName}` : ''
-          }?`,
-        confirmLabel: 'Delete',
-        cancelLabel: 'Cancel'
-      }
-    },
-    metadata: {
-      enableJsonEditor: true
-    },
-    elements: {
-      addButton: 'add-xero-csv-term-mapping-button',
-      table: 'xero-csv-term-mappings-table',
-      dialog: 'xero-csv-term-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-xero-csv-term-mapping-dialog',
-      editMenuPrefix: 'edit-xero-csv-term-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-xero-csv-term-mapping-menu-item-'
-    },
-    load(context) {
-      return loadMappings<PaymentTermOption>({
-        context,
-        algaEntityType: 'payment_term',
-        loadAlgaEntities: async () => PAYMENT_TERMS,
-        mapAlga: (term) => ({
-          id: term.id,
-          name: term.name
-        })
-      });
-    },
-    create(context, input) {
-      return createMapping({
-        context,
-        input,
-        algaEntityType: 'payment_term'
       });
     },
     update(_context, mappingId, input) {
@@ -372,6 +299,7 @@ function createMapping({
 function updateMapping(
   mappingId: string,
   input: {
+    algaEntityId?: string;
     externalEntityId: string;
     metadata?: Record<string, unknown> | null;
   }
@@ -380,6 +308,11 @@ function updateMapping(
     external_entity_id: input.externalEntityId,
     metadata: input.metadata ?? null
   };
+
+  // Include alga_entity_id if provided (allows changing the Alga entity)
+  if (input.algaEntityId) {
+    payload.alga_entity_id = input.algaEntityId;
+  }
 
   return updateExternalEntityMapping(mappingId, payload);
 }

@@ -47,6 +47,8 @@ export type AccountingMappingOverrides = {
 
 export type AccountingMappingLabels = {
   tab: string;
+  /** Optional description shown below the tab heading */
+  description?: string;
   addButton: string;
   algaColumn: string;
   externalColumn: string;
@@ -55,6 +57,8 @@ export type AccountingMappingLabels = {
     editTitle: string;
     algaField: string;
     externalField: string;
+    /** Optional help text shown in the dialog */
+    helpText?: string;
   };
   deleteConfirmation: {
     title: string;

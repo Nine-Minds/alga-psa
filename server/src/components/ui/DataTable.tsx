@@ -404,15 +404,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     if (!manualSorting) {
       // Always filter sorting to only include visible columns
       setSorting(prev => {
-        const validSorting = prev.filter(sort => visibleColumnIds.includes(sort.id));
+        const filteredSorting = prev.filter(sort => visibleColumnIds.includes(sort.id));
         // If current sorting became invalid, try to use initialSorting
-        if (validSorting.length === 0 && initialSorting && initialSorting.length > 0) {
+        if (filteredSorting.length === 0 && initialSorting && initialSorting.length > 0) {
           return initialSorting.filter(sort => visibleColumnIds.includes(sort.id));
         }
-        return validSorting;
+        return filteredSorting;
       });
     }
   }, [initialSorting, manualSorting, visibleColumnIds]);
+
+  // Filter sorting to only include columns that exist in visibleColumnIds
+  // This prevents TanStack Table errors when columns are hidden due to responsive layout
+  const validSorting = useMemo(
+    () => sorting.filter(sort => visibleColumnIds.includes(sort.id)),
+    [sorting, visibleColumnIds]
+  );
 
   const table = useReactTable({
     data,
@@ -429,7 +436,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         pageIndex,
         pageSize: currentPageSize,
       },
-      sorting,
+      sorting: validSorting,
     },
     onPaginationChange: setPagination,
     onSortingChange: (updater) => {

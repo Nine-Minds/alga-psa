@@ -16,6 +16,7 @@ import {
   AccountingExportAdapterContext,
   TaxDelegationMode
 } from 'server/src/lib/adapters/accounting/accountingExportAdapter';
+import { getXeroCsvSettings } from 'server/src/lib/actions/integrations/xeroCsvActions';
 import logger from '@shared/core/logger';
 
 export async function GET(
@@ -32,7 +33,7 @@ export async function GET(
     }
 
     // Check permissions
-    const canManageBilling = await hasPermission(user, 'billing:manage');
+    const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
     if (!canManageBilling) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -71,12 +72,29 @@ export async function GET(
       );
     }
 
+    // Load adapter-specific settings
+    let adapterSettings: Record<string, unknown> | undefined;
+    if (batch.adapter_type === 'xero_csv') {
+      try {
+        const xeroCsvSettings = await getXeroCsvSettings();
+        adapterSettings = {
+          dateFormat: xeroCsvSettings.dateFormat,
+          defaultCurrency: xeroCsvSettings.defaultCurrency
+        };
+      } catch (error) {
+        logger.warn('[AccountingExportDownload] Failed to load Xero CSV settings, using defaults', {
+          error: (error as Error).message
+        });
+      }
+    }
+
     // Regenerate the file content by running transform
     const context: AccountingExportAdapterContext = {
       batch,
       lines,
       taxDelegationMode: 'none' as TaxDelegationMode, // Use none for regeneration
-      excludeTaxFromExport: false
+      excludeTaxFromExport: false,
+      adapterSettings
     };
 
     const transformResult = await adapter.transform(context);

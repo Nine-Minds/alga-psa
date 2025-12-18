@@ -10,6 +10,7 @@ import {
 } from './accountingExportAdapter';
 import { createTenantKnex } from '../../db';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { AppError } from '../../errors';
 import { unparseCSV } from '../../utils/csvParser';
 
@@ -161,6 +162,9 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     const documents: AccountingExportDocument[] = [];
     const allCsvRows: XeroCsvRow[] = [];
 
+    // Extract date format from adapter settings (default to MM/DD/YYYY)
+    const dateFormat: XeroDateFormat = (context.adapterSettings?.dateFormat as XeroDateFormat) || 'MM/DD/YYYY';
+
     for (const [invoiceId, exportLines] of linesByInvoice.entries()) {
       const invoice = invoicesById.get(invoiceId);
       if (!invoice) {
@@ -182,8 +186,8 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       }
 
       const invoiceNumber = invoice.invoice_number ?? invoiceId;
-      const invoiceDate = formatDateForXero(invoice.invoice_date);
-      const dueDate = formatDateForXero(invoice.due_date) ?? invoiceDate;
+      const invoiceDate = formatDateForXero(invoice.invoice_date, dateFormat);
+      const dueDate = formatDateForXero(invoice.due_date, dateFormat) ?? invoiceDate;
       const currency = invoice.currency_code ?? '';
 
       const invoiceRows: XeroCsvRow[] = [];
@@ -328,8 +332,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       'Currency'
     ];
 
-    const csvData = allCsvRows.map(row => csvHeaders.map(header => row[header as keyof XeroCsvRow] ?? ''));
-    const csvContent = unparseCSV([csvHeaders, ...csvData]);
+    const csvContent = unparseCSV(allCsvRows, csvHeaders);
 
     const filename = `xero-invoice-export-${context.batch.batch_id}.csv`;
 
@@ -368,7 +371,15 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     transformResult: AccountingExportTransformResult,
     context: AccountingExportAdapterContext
   ): Promise<AccountingExportDeliveryResult> {
+    const tenantId = context.batch.tenant;
+    if (!tenantId) {
+      throw new AppError('XERO_CSV_TENANT_REQUIRED', 'Xero CSV delivery requires batch tenant identifier');
+    }
+
+    const { knex } = await createTenantKnex();
+    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
     const artifact = transformResult.files?.[0];
+    const deliveredAt = new Date().toISOString();
 
     logger.info('[XeroCsvAdapter] prepared CSV artifact for download', {
       batchId: context.batch.batch_id,
@@ -383,6 +394,36 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         externalDocumentRef: artifact?.filename ?? null
       }))
     );
+
+    // Create invoice mappings to mark invoices as exported (prevents re-export)
+    for (const document of transformResult.documents) {
+      const payload = document.payload as unknown as XeroCsvDocumentPayload;
+      const externalRef = `csv:${payload.invoiceNumber}`;
+
+      await invoiceMappingRepository.upsertInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId: document.documentId,
+        externalInvoiceId: externalRef,
+        targetRealm: context.batch.target_realm ?? null,
+        metadata: {
+          last_exported_at: deliveredAt,
+          filename: artifact?.filename,
+          invoiceNumber: payload.invoiceNumber,
+          trackingCategories: {
+            sourceSystem: TRACKING_CATEGORY_SOURCE_SYSTEM,
+            sourceValue: TRACKING_CATEGORY_SOURCE_VALUE,
+            invoiceId: TRACKING_CATEGORY_INVOICE_ID
+          }
+        }
+      });
+    }
+
+    logger.info('[XeroCsvAdapter] created invoice mappings', {
+      batchId: context.batch.batch_id,
+      tenant: tenantId,
+      invoiceCount: transformResult.documents.length
+    });
 
     return {
       deliveredLines,
@@ -503,19 +544,37 @@ function safeString(value: unknown): string | undefined {
   return undefined;
 }
 
-function formatDateForXero(value?: string | Date | null): string {
+type XeroDateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY';
+
+function formatDateForXero(value?: string | Date | null, dateFormat: XeroDateFormat = 'MM/DD/YYYY'): string {
   if (!value) {
-    return new Date().toISOString().split('T')[0];
+    return formatCurrentDate(dateFormat);
   }
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) {
-    return new Date().toISOString().split('T')[0];
+    return formatCurrentDate(dateFormat);
   }
-  // Xero expects DD/MM/YYYY format
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
+
+  if (dateFormat === 'DD/MM/YYYY') {
+    return `${day}/${month}/${year}`;
+  }
+  // MM/DD/YYYY format
+  return `${month}/${day}/${year}`;
+}
+
+function formatCurrentDate(dateFormat: XeroDateFormat): string {
+  const now = new Date();
+  const day = now.getDate().toString().padStart(2, '0');
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const year = now.getFullYear();
+
+  if (dateFormat === 'DD/MM/YYYY') {
+    return `${day}/${month}/${year}`;
+  }
+  return `${month}/${day}/${year}`;
 }
 
 function normalizeMapping(mapping: MappingRowRaw): MappingRow {

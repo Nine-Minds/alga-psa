@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../ui/Card';
 import { FileSpreadsheet, FileText, ExternalLink, Info, Download, Upload } from 'lucide-react';
 import { XeroCsvMappingManager } from '../../integrations/csv/XeroCsvMappingManager';
+import { XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';
 import { Button } from '../../ui/Button';
 import { Alert, AlertDescription, AlertTitle } from '../../ui/Alert';
 import LoadingIndicator from '../../ui/LoadingIndicator';
@@ -201,7 +202,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
               </p>
               <CustomSelect
                 options={dateFormatOptions}
-                value={settings?.dateFormat ?? 'DD/MM/YYYY'}
+                value={settings?.dateFormat ?? 'MM/DD/YYYY'}
                 onValueChange={(value) =>
                   handleSave({ dateFormat: value as 'DD/MM/YYYY' | 'MM/DD/YYYY' })
                 }
@@ -236,13 +237,16 @@ const XeroCsvIntegrationSettings: React.FC = () => {
         <CardHeader>
           <CardTitle>Xero CSV Mappings</CardTitle>
           <CardDescription>
-            Map Alga clients, services, tax codes, and payment terms to the identifiers used in your Xero organisation. These values are used when generating the CSV export.
+            Map Alga clients, services, and tax codes to the identifiers used in your Xero organisation. These values are used when generating the CSV export.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <XeroCsvMappingManager />
         </CardContent>
       </Card>
+
+      {/* Client Sync Card */}
+      <XeroCsvClientSyncPanel />
 
       {/* Workflow Guide Card */}
       <Card id="xero-csv-workflow-card">

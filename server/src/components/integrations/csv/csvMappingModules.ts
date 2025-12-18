@@ -370,6 +370,7 @@ function createMapping({
 function updateMapping(
   mappingId: string,
   input: {
+    algaEntityId?: string;
     externalEntityId: string;
     metadata?: Record<string, unknown> | null;
   }
@@ -378,6 +379,11 @@ function updateMapping(
     external_entity_id: input.externalEntityId,
     metadata: input.metadata ?? null
   };
+
+  // Include alga_entity_id if provided (allows changing the Alga entity)
+  if (input.algaEntityId) {
+    payload.alga_entity_id = input.algaEntityId;
+  }
 
   return updateExternalEntityMapping(mappingId, payload);
 }

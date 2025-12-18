@@ -32,7 +32,11 @@ interface ManualInvoiceRequest {
   currency_code?: string;
 }
 
-export async function generateManualInvoice(request: ManualInvoiceRequest): Promise<InvoiceViewModel> {
+export type ManualInvoiceResult =
+  | { success: true; invoice: InvoiceViewModel }
+  | { success: false; error: string };
+
+export async function generateManualInvoice(request: ManualInvoiceRequest): Promise<ManualInvoiceResult> {
   // Validate session and tenant context
   const { session, knex, tenant } = await invoiceService.validateSessionAndTenant();
   const { clientId, items, expirationDate, isPrepayment } = request;
@@ -41,7 +45,10 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
   const client = await invoiceService.getClientDetails(knex, tenant, clientId);
 
   // Validate that the client has a billing email (required for online payments)
-  await invoiceService.validateClientBillingEmail(knex, tenant, clientId, client.client_name);
+  const emailValidation = await invoiceService.validateClientBillingEmail(knex, tenant, clientId, client.client_name);
+  if (!emailValidation.valid) {
+    return { success: false, error: emailValidation.error! };
+  }
 
   const currentDate = Temporal.Now.plainDateISO().toString();
 
@@ -125,48 +132,51 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
 
     // Return invoice view model
     return {
-      invoice_id: invoiceId,
-      invoice_number: invoiceNumber,
-      client_id: clientId,
-      client: {
-        name: client.client_name,
-        logo: client.logoUrl || '',
-        address: client.location_address || ''
-      },
-      contact: {
-        name: '',
-        address: ''
-      },
-      invoice_date: Temporal.PlainDate.from(currentDate),
-      due_date: Temporal.PlainDate.from(currentDate),
-      status: 'draft',
-      currencyCode: invoice.currency_code,
-      subtotal: Math.ceil(subtotal),
-      tax: Math.ceil(computedTotalTax),
-      total: Math.ceil(subtotal + computedTotalTax),
-      total_amount: Math.ceil(subtotal + computedTotalTax),
-      invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
-        item_id: item.item_id,
+      success: true as const,
+      invoice: {
         invoice_id: invoiceId,
-        service_id: item.service_id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: parseInt(item.unit_price.toString()),
-        total_price: parseInt(item.total_price.toString()),
-        tax_amount: parseInt(item.tax_amount.toString()),
-        net_amount: parseInt(item.net_amount.toString()),
-        tenant,
-        is_manual: true,
-        is_discount: item.is_discount || false,
-        discount_type: item.discount_type,
-        applies_to_item_id: item.applies_to_item_id,
-        applies_to_service_id: item.applies_to_service_id, // Add the new field
-        created_by: session.user.id,
-        created_at: item.created_at,
-        rate: parseInt(item.unit_price.toString()) // Use unit_price as rate
-      })),
-      credit_applied: 0,
-      is_manual: true
+        invoice_number: invoiceNumber,
+        client_id: clientId,
+        client: {
+          name: client.client_name,
+          logo: client.logoUrl || '',
+          address: client.location_address || ''
+        },
+        contact: {
+          name: '',
+          address: ''
+        },
+        invoice_date: Temporal.PlainDate.from(currentDate),
+        due_date: Temporal.PlainDate.from(currentDate),
+        status: 'draft',
+        currencyCode: invoice.currency_code,
+        subtotal: Math.ceil(subtotal),
+        tax: Math.ceil(computedTotalTax),
+        total: Math.ceil(subtotal + computedTotalTax),
+        total_amount: Math.ceil(subtotal + computedTotalTax),
+        invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
+          item_id: item.item_id,
+          invoice_id: invoiceId,
+          service_id: item.service_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: parseInt(item.unit_price.toString()),
+          total_price: parseInt(item.total_price.toString()),
+          tax_amount: parseInt(item.tax_amount.toString()),
+          net_amount: parseInt(item.net_amount.toString()),
+          tenant,
+          is_manual: true,
+          is_discount: item.is_discount || false,
+          discount_type: item.discount_type,
+          applies_to_item_id: item.applies_to_item_id,
+          applies_to_service_id: item.applies_to_service_id, // Add the new field
+          created_by: session.user.id,
+          created_at: item.created_at,
+          rate: parseInt(item.unit_price.toString()) // Use unit_price as rate
+        })),
+        credit_applied: 0,
+        is_manual: true
+      }
     };
   });
 }

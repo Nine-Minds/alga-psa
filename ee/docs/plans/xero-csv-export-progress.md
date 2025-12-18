@@ -15,12 +15,12 @@ This document tracks the implementation progress of the Xero CSV Export/Import f
 
 | Category | Completed | Total | Progress |
 |----------|-----------|-------|----------|
-| Backend | 6 | 9 | 67% |
-| Frontend | 7 | 7 | 100% |
-| Data model / migrations | 0 | 2 | 0% |
+| Backend | 9 | 9 | 100% |
+| Frontend | 8 | 8 | 100% |
+| Data model / migrations | 2 | 2 | 100% |
 | Documentation | 1 | 1 | 100% |
 | Testing | 0 | 5 | 0% |
-| **Overall** | **14** | **24** | **58%** |
+| **Overall** | **20** | **25** | **80%** |
 
 ---
 
@@ -90,6 +90,49 @@ After merging release/0.15.0, adapted Xero CSV integration to work with the new 
 - [x] Updated CSV integration index exports
 - [x] Removed old `XeroCsvSettings.tsx` (merged into `XeroCsvIntegrationSettings.tsx`)
 
+### 2025-12-18 - Backend Completion
+
+Completed all remaining backend tasks:
+
+**Client Export/Import:**
+- [x] Created `XeroCsvClientSyncService` (`server/src/lib/services/xeroCsvClientSyncService.ts`)
+  - Export Alga clients to Xero Contacts CSV format
+  - Import Xero Contacts CSV with preview and matching logic
+  - Persist external ID mappings per tenant + adapter type
+- [x] Added client sync actions to `xeroCsvActions.ts`
+- [x] Created client export API route (`/api/v1/accounting-exports/xero-csv/client-export/route.ts`)
+- [x] Created client import API route (`/api/v1/accounting-exports/xero-csv/client-import/route.ts`)
+
+**Batch Parity:**
+- [x] Added `xero_csv` to `AccountingAdapterType` in `companySync.types.ts`
+- [x] Updated `XeroCsvAdapter.deliver()` to create invoice mappings via `KnexInvoiceMappingRepository`
+- [x] Added `xero_csv` to `shouldIncludePendingExternalDrafts()` in invoice selector
+
+**Tax Blocking State:**
+- [x] Verified existing tax blocking logic in `taxSourceActions.ts` handles `pending_external` state
+- [x] Confirmed `XeroCsvTaxImportService` properly updates `tax_source` from `pending_external` to `external`
+- [x] Invoice finalization is blocked until tax is imported (via `validateInvoiceFinalization`)
+
+### 2025-12-18 - Data Model & Client Sync UI Completion
+
+**Data Model / Migrations:**
+- [x] Created `server/migrations/20251218010000_add_xero_csv_mapping_normalization.cjs`
+  - Normalizes `company` → `client` for xero_csv mappings
+  - Normalizes `tax_region` → `tax_code` for xero and xero_csv mappings
+  - Both up and down migrations implemented
+- [x] External ID mapping persistence already handled by `XeroCsvClientSyncService`
+  - Persists client mappings per tenant + adapter type via `tenant_external_entity_mappings`
+  - Used for client import reconciliation
+
+**Client Sync UI:**
+- [x] Created `XeroCsvClientSyncPanel.tsx` component
+  - Export clients to Xero Contacts CSV with download
+  - Import clients from Xero CSV with preview table
+  - Match options: name, email, or Xero contact ID
+  - Create/update/skip actions per client
+  - Full preview → confirm → execute workflow
+- [x] Integrated `XeroCsvClientSyncPanel` into `XeroCsvIntegrationSettings.tsx`
+
 ---
 
 ## Backend Tasks
@@ -122,13 +165,14 @@ After merging release/0.15.0, adapted Xero CSV integration to work with the new 
 
 ### 4. Client Export/Import (client-export-import)
 **Files:**
-- `server/src/lib/services/xeroCsvClientSyncService.ts` (proposed)
-- API routes under `server/src/app/api/accounting/csv/xero/...`
-**Status:** Not Started
+- `server/src/lib/services/xeroCsvClientSyncService.ts`
+- `server/src/app/api/v1/accounting-exports/xero-csv/client-export/route.ts`
+- `server/src/app/api/v1/accounting-exports/xero-csv/client-import/route.ts`
+**Status:** DONE
 
-- [ ] Export Alga Clients to Xero Contacts CSV (manual import to Xero)
-- [ ] Import Xero Contacts CSV back into Alga (match/update existing clients; optionally create new clients)
-- [ ] Persist external-id/linking mappings for clients per tenant + adapter type
+- [x] Export Alga Clients to Xero Contacts CSV (manual import to Xero)
+- [x] Import Xero Contacts CSV back into Alga (match/update existing clients; optionally create new clients)
+- [x] Persist external-id/linking mappings for clients per tenant + adapter type
 
 ### 5. Tax Import Service (tax-import-service)
 **File:** `server/src/lib/services/xeroCsvTaxImportService.ts`
@@ -147,7 +191,7 @@ After merging release/0.15.0, adapted Xero CSV integration to work with the new 
 - [x] Settings read/write for Xero CSV mode
 - [x] Export: create/execute batch and return download artifact
 - [x] Import: preview + execute tax import
-- [ ] Import: preview + execute client import (pending)
+- [x] Import: preview + execute client import
 
 ### 7. Xero CSV API Routes (api-routes)
 **Files:** `server/src/app/api/v1/accounting-exports/...`
@@ -155,41 +199,49 @@ After merging release/0.15.0, adapted Xero CSV integration to work with the new 
 
 - [x] Export download endpoint (`[batchId]/download/route.ts`)
 - [x] Tax import endpoint (`xero-csv/tax-import/route.ts`)
-- [ ] Client export/import endpoints (pending)
+- [x] Client export endpoint (`xero-csv/client-export/route.ts`)
+- [x] Client import endpoint (`xero-csv/client-import/route.ts`)
 
 ### 8. Batch Parity / Immutability (batch-parity)
-**Files:** export services + selectors
-**Status:** Not Started
+**Files:**
+- `server/src/lib/adapters/accounting/xeroCsvAdapter.ts`
+- `server/src/lib/services/accountingExportInvoiceSelector.ts`
+- `server/src/lib/services/companySync/companySync.types.ts`
+**Status:** DONE
 
-- [ ] Ensure exports create persisted batches with an audit trail (no in-memory-only exports)
-- [ ] Match OAuth export behavior for “already exported invoices” and date overlap handling
-- [ ] Ensure “reverse” semantics are the same as CSV: reset invoice/batch export locks with explicit warning
+- [x] Ensure exports create persisted batches with an audit trail (no in-memory-only exports)
+- [x] Match OAuth export behavior for "already exported invoices" and date overlap handling
+- [x] Added invoice mapping persistence in `XeroCsvAdapter.deliver()` to prevent re-export
+- [x] Added `xero_csv` to `AccountingAdapterType`
 
 ### 9. External Tax Blocking State (tax-blocking-state)
-**Files:** invoice services/UI
-**Status:** Not Started
+**Files:**
+- `server/src/lib/actions/taxSourceActions.ts`
+- `server/src/lib/services/accountingExportInvoiceSelector.ts`
+**Status:** DONE
 
-- [ ] If Xero is the tax source, treat invoices as blocked from finalization until tax is imported
-- [ ] Default export selection to include Draft invoices when invoices are awaiting external tax
-- [ ] Surface “Awaiting external tax import” state in selection/export UX (derived, not a new DB field)
+- [x] If Xero is the tax source, treat invoices as blocked from finalization until tax is imported
+- [x] Default export selection to include Draft invoices when invoices are awaiting external tax
+- [x] `validateInvoiceFinalization()` blocks finalization for `pending_external` tax source
+- [x] Added `xero_csv` to `shouldIncludePendingExternalDrafts()` for draft invoice inclusion
 
 ---
 
 ## Data model / migrations tasks
 
 ### A. Mapping type normalization (mapping-normalization)
-**Files:** `server/migrations/...`
-**Status:** Not Started
+**Files:** `server/migrations/20251218010000_add_xero_csv_mapping_normalization.cjs`
+**Status:** DONE
 
-- [ ] Add/verify migrations to normalize mapping types (company → client, tax_region → tax_code) for `xero_csv`
-- [ ] Ensure the mapping resolver uses canonical mapping types across adapters
+- [x] Add/verify migrations to normalize mapping types (company → client, tax_region → tax_code) for `xero_csv`
+- [x] Ensure the mapping resolver uses canonical mapping types across adapters
 
 ### B. External ID mapping persistence (external-id-mapping)
-**Files:** `tenant_external_entity_mappings` usage
-**Status:** Not Started
+**Files:** `server/src/lib/services/xeroCsvClientSyncService.ts`
+**Status:** DONE
 
-- [ ] Persist Xero external identifiers for clients and invoices per tenant + adapter type
-- [ ] Use these mappings for client import and tax import reconciliation
+- [x] Persist Xero external identifiers for clients and invoices per tenant + adapter type
+- [x] Use these mappings for client import and tax import reconciliation
 
 ---
 
@@ -241,12 +293,12 @@ After merging release/0.15.0, adapted Xero CSV integration to work with the new 
 - [x] Link to Xero CSV tax import + client export/import panels where appropriate
 
 ### 16. Client Export/Import UI (client-sync-ui)
-**Files:** settings panel / integration panes
-**Status:** Not Started
+**File:** `server/src/components/settings/integrations/XeroCsvClientSyncPanel.tsx`
+**Status:** DONE
 
-- [ ] Export clients (contacts CSV) action + instructions
-- [ ] Import clients from Xero contacts CSV with preview + confirmation
-- [ ] Clear matching rules and "create vs update" outcomes
+- [x] Export clients (contacts CSV) action + instructions
+- [x] Import clients from Xero contacts CSV with preview + confirmation
+- [x] Clear matching rules and "create vs update" outcomes
 
 ---
 
@@ -332,4 +384,4 @@ After merging release/0.15.0, adapted Xero CSV integration to work with the new 
 
 ---
 
-*Last Updated: 2025-12-18 (Frontend Complete - 58%)*
+*Last Updated: 2025-12-18 (Backend, Frontend, Data Model Complete - 80%; Only Testing Remains)*

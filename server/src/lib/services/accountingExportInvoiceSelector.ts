@@ -266,7 +266,8 @@ function shouldIncludePendingExternalDrafts(
     adapterType === 'quickbooks_csv' ||
     adapterType === 'quickbooks_online' ||
     adapterType === 'quickbooks_desktop' ||
-    adapterType === 'xero';
+    adapterType === 'xero' ||
+    adapterType === 'xero_csv';
 
   if (!adapterSupportsTaxDelegation) {
     return false;

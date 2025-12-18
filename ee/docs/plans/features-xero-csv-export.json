@@ -30,7 +30,7 @@
         "id": "client-export-import",
         "description": "Implement client (contact) export/import services and persistence of per-tenant external mappings for xero_csv",
         "file": "server/src/lib/services/xeroCsvClientSyncService.ts",
-        "done": false
+        "done": true
       },
       {
         "id": "tax-import-service",
@@ -54,13 +54,13 @@
         "id": "batch-parity",
         "description": "Ensure Xero CSV exports use persisted batches, mapping validation, and consistent handling for overlapping ranges / already-exported invoices (with lock reset warnings)",
         "file": "server/src/lib/services/accountingExportInvoiceSelector.ts",
-        "done": false
+        "done": true
       },
       {
         "id": "tax-blocking-state",
         "description": "Derive and enforce \"awaiting external tax import\" blocking state when Xero is tax source; include Draft invoices by default for external-tax workflows",
-        "file": "server/src/lib/services/invoiceFinalizationService.ts",
-        "done": false
+        "file": "server/src/lib/actions/taxSourceActions.ts",
+        "done": true
       }
     ],
     "frontend": [
@@ -103,22 +103,22 @@
       {
         "id": "client-sync-ui",
         "description": "Add client (contacts) export/import UI with preview and confirmation",
-        "file": "server/src/components/settings/integrations/XeroCsvSettings.tsx",
-        "done": false
+        "file": "server/src/components/settings/integrations/XeroCsvClientSyncPanel.tsx",
+        "done": true
       }
     ],
     "dataModel": [
       {
         "id": "mapping-normalization",
         "description": "Ensure mapping types match current naming (e.g., company→client, tax_region→tax_code) and are consistent across adapters",
-        "file": "server/migrations",
-        "done": false
+        "file": "server/migrations/20251218010000_add_xero_csv_mapping_normalization.cjs",
+        "done": true
       },
       {
         "id": "external-id-mapping",
         "description": "Persist and reconcile external identifiers for Xero CSV (clients and invoices) per tenant and adapter type",
-        "file": "server/src/lib/services/accountingMappingResolver.ts",
-        "done": false
+        "file": "server/src/lib/services/xeroCsvClientSyncService.ts",
+        "done": true
       }
     ],
     "documentation": [

@@ -23,7 +23,7 @@ import { Badge, BadgeVariant } from 'server/src/components/ui/Badge';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { CSVExportLockResetPanel } from 'server/src/components/integrations/csv/CSVExportLockResetPanel';
-import { CSVTaxImportPanel } from 'server/src/components/integrations/csv/CSVTaxImportPanel';
+import { UnifiedCsvTaxImportPanel } from 'server/src/components/integrations/csv/UnifiedCsvTaxImportPanel';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
 import {
   listAccountingExportBatches,
@@ -929,7 +929,7 @@ const AccountingExportsTab: React.FC = () => {
 
       <CSVExportLockResetPanel />
 
-      <CSVTaxImportPanel />
+      <UnifiedCsvTaxImportPanel />
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">

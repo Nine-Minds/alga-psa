@@ -506,13 +506,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         const newInvoiceNumberInput = document.getElementById('new-invoice-number-input') as HTMLInputElement;
         const newInvoiceNumber = newInvoiceNumberInput?.value || undefined;
 
-        await generateManualInvoice({
+        const result = await generateManualInvoice({
           clientId: selectedClient || '',
           // invoiceNumber: newInvoiceNumber, // Remove - ManualInvoiceRequest doesn't have this
           isPrepayment,
           expirationDate: isPrepayment ? expirationDate : undefined,
           items: itemsToSave
         });
+
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
 
         onGenerateSuccess(); // Callback to parent
       }
