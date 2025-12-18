@@ -65,10 +65,11 @@
         padding: 8px 16px;
         border: 1px solid var(--alga-border);
         background: var(--alga-bg);
-        border-radius: 6px;
+        border-radius: var(--alga-radius);
         cursor: pointer;
         font-size: 0.875rem;
         font-weight: 500;
+        font-family: inherit;
         transition: all 0.15s;
       }
       nav button:hover {
@@ -106,19 +107,20 @@
         padding: 10px 20px;
         background: var(--alga-primary);
         color: white;
-        border: none;
-        border-radius: 6px;
+        border: 1px solid transparent;
+        border-radius: var(--alga-radius);
         cursor: pointer;
         font-size: 0.875rem;
         font-weight: 500;
-        transition: background-color 0.15s ease;
+        font-family: inherit;
+        transition: all 0.15s ease;
       }
       .btn:hover { background: var(--alga-primary-light); }
       .btn:disabled { opacity: 0.5; cursor: not-allowed; }
       .btn-secondary {
-        background: var(--alga-bg);
+        background: var(--alga-muted);
         color: var(--alga-fg);
-        border: 1px solid var(--alga-border);
+        border-color: var(--alga-border);
       }
       .btn-secondary:hover {
         background: var(--alga-card-bg);
@@ -128,20 +130,21 @@
       .btn-ghost {
         background: transparent;
         color: var(--alga-muted-fg);
-        border: none;
+        border-color: transparent;
       }
       .btn-ghost:hover {
         background: var(--alga-card-bg);
         color: var(--alga-primary);
       }
-      .btn-danger { background: var(--alga-danger); }
+      .btn-danger { background: var(--alga-danger); border-color: transparent; }
       .btn-danger:hover { background: var(--alga-danger-dark); }
       .input {
         width: 100%;
         padding: 10px 12px;
         border: 1px solid var(--alga-border);
-        border-radius: 6px;
+        border-radius: var(--alga-radius);
         font-size: 0.875rem;
+        font-family: inherit;
         background: var(--alga-bg);
         color: var(--alga-fg);
       }
@@ -214,6 +217,7 @@
         <button class="active" data-view="reports">Reports</button>
         <button data-view="create">Create Report</button>
         <button data-view="execute">Execute</button>
+        <button data-view="audit">Audit Logs</button>
       </nav>
     </header>
     <main>

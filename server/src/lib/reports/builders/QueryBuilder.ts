@@ -41,7 +41,14 @@ export class QueryBuilder {
           );
           query = query.select(trx.raw(aggregationField));
         } else {
-          query = query.select(queryDef.fields);
+          // Process fields - wrap SQL expressions with raw()
+          const selectFields = queryDef.fields.map(field => {
+            if (this.isSqlExpression(field)) {
+              return trx.raw(field);
+            }
+            return field;
+          });
+          query = query.select(selectFields);
         }
       } else if (queryDef.aggregation) {
         // Handle aggregation queries without specific fields
@@ -207,19 +214,50 @@ export class QueryBuilder {
   private static resolveFilterValue(value: any, parameters: ReportParameters): any {
     if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
       const paramName = value.slice(2, -2);
-      
+
       if (!(paramName in parameters)) {
         throw new ReportExecutionError(
           `Parameter placeholder '${paramName}' not found in parameters`
         );
       }
-      
+
       return parameters[paramName];
     }
-    
+
     return value;
   }
-  
+
+  /**
+   * Check if a field string contains SQL expressions that need raw() wrapping.
+   * Detects aggregate functions, arithmetic, and aliasing.
+   */
+  private static isSqlExpression(field: string): boolean {
+    const lowerField = field.toLowerCase();
+
+    // Contains SQL function calls (parentheses)
+    if (field.includes('(') && field.includes(')')) {
+      return true;
+    }
+
+    // Contains AS keyword for aliasing
+    if (lowerField.includes(' as ')) {
+      return true;
+    }
+
+    // Contains arithmetic operators
+    if (/[+\-*/]/.test(field)) {
+      return true;
+    }
+
+    // Contains common aggregate functions
+    const aggregates = ['count', 'sum', 'avg', 'min', 'max', 'coalesce', 'distinct'];
+    if (aggregates.some(agg => lowerField.includes(agg))) {
+      return true;
+    }
+
+    return false;
+  }
+
   /**
    * Validate query definition before building
    */

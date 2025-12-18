@@ -7,9 +7,11 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const baseStyle: React.CSSProperties = {
   borderRadius: 'var(--alga-radius, 8px)',
-  border: '1px solid var(--alga-border, #e5e7eb)',
+  border: '1px solid transparent',
   cursor: 'pointer',
   fontWeight: 500,
+  fontFamily: 'inherit',
+  transition: 'all 0.15s ease',
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, React.CSSProperties> = {
@@ -27,10 +29,12 @@ const variants: Record<NonNullable<ButtonProps['variant']>, React.CSSProperties>
   secondary: {
     background: 'var(--alga-muted)',
     color: 'var(--alga-fg)',
+    borderColor: 'var(--alga-border)',
   },
   ghost: {
     background: 'transparent',
-    color: 'var(--alga-fg)',
+    color: 'var(--alga-muted-fg)',
+    borderColor: 'transparent',
   },
   danger: {
     background: 'var(--alga-danger)',

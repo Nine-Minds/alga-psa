@@ -54,6 +54,11 @@ const routes: Route[] = [
     handler: handleExecuteReport,
   },
   {
+    pattern: /^\/audit$/,
+    method: 'GET',
+    handler: handleListAuditLogs,
+  },
+  {
     pattern: /^\/health$/,
     method: 'GET',
     handler: handleHealth,
@@ -107,7 +112,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   return jsonResponse({
     ok: true,
     message: 'Nine Minds Reporting Extension',
-    version: '0.2.0',
+    version: '0.3.0',
     build: BUILD_STAMP,
     endpoints: [
       'GET /reports - List all platform reports',
@@ -116,6 +121,7 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
       'PUT /reports/:id - Update a report',
       'DELETE /reports/:id - Delete a report',
       'POST /reports/:id/execute - Execute a report',
+      'GET /audit - List audit logs',
       'GET /health - Health check',
     ],
     context: {
@@ -376,6 +382,28 @@ async function handleExecuteReport(
     await safeLog(host, 'error', `[nineminds-reporting] failed to execute report: ${reason}`);
     return jsonResponse(
       { success: false, error: 'Failed to execute report', detail: reason },
+      { status: 500 }
+    );
+  }
+}
+
+// Handler: List audit logs
+async function handleListAuditLogs(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-reporting] listing audit logs');
+
+  try {
+    // Pass through query parameters from the URL
+    const url = request.http.url || '/audit';
+    const queryString = url.includes('?') ? url.split('?')[1] : '';
+    const path = queryString ? `/audit?${queryString}` : '/audit';
+
+    const result = await callPlatformReportsAPI(host, request, 'GET', path);
+    return jsonResponse(result.data, { status: result.status });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    await safeLog(host, 'error', `[nineminds-reporting] failed to list audit logs: ${reason}`);
+    return jsonResponse(
+      { success: false, error: 'Failed to fetch audit logs', detail: reason },
       { status: 500 }
     );
   }
