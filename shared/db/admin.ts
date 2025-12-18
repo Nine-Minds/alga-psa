@@ -1,6 +1,7 @@
 import knex, { Knex } from 'knex';
 import knexfile from './knexfile';
 import { getSecret } from '../core/getSecret';
+import logger from '@alga-psa/shared/core/logger';
 
 let adminConnection: Knex | null = null;
 export async function getAdminConnection(): Promise<Knex> {
@@ -24,14 +25,29 @@ export async function getAdminConnection(): Promise<Knex> {
 
     const environment = process.env.NODE_ENV || 'development';
     const dbPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
+    const base = (knexfile as any)[environment] ?? {};
+    const baseConn = (base as any).connection ?? {};
+
+    const resolvedHost = process.env.DB_HOST || baseConn.host;
+    const resolvedPort = Number(process.env.DB_PORT ?? baseConn.port);
+    const resolvedUser = process.env.DB_USER_ADMIN || baseConn.user || 'postgres';
+    const resolvedDatabase = process.env.DB_NAME_SERVER || baseConn.database || 'server';
+
+    if (!process.env.DB_NAME_SERVER) {
+        logger.warn('[shared/db/admin] DB_NAME_SERVER is not set; falling back to default database', {
+            environment,
+            database: resolvedDatabase,
+        });
+    }
+
     const config = {
-        ...knexfile[environment],
+        ...base,
         connection: {
-            host: process.env.DB_HOST,
-            port: Number(process.env.DB_PORT),
-            user: process.env.DB_USER_ADMIN,
+            host: resolvedHost,
+            port: Number.isFinite(resolvedPort) ? resolvedPort : 5432,
+            user: resolvedUser,
             password: dbPassword,
-            database: process.env.DB_NAME_SERVER
+            database: resolvedDatabase,
         },
         // Add connection pool configuration for long-running services
         pool: {

@@ -1287,42 +1287,44 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
             return true; // Allow sign in
         },
-        async jwt({ token, user }) {
-            console.log('JWT callback - initial token:', {
-                id: token.id,
-                email: token.email,
-                clientId: token.clientId,
-                hasUser: !!user
-            });
+	        async jwt({ token, user }) {
+	            console.log('JWT callback - initial token:', {
+	                id: token.id,
+	                email: token.email,
+	                clientId: token.clientId,
+	                hasUser: !!user
+	            });
 
-            if (user) {
-                const extendedUser = user as ExtendedUser;
-                console.log('JWT callback - new user login:', {
-                    id: extendedUser.id,
-                    email: extendedUser.email,
-                    tenant: extendedUser.tenant,
-                    clientId: extendedUser.clientId
-                });
+	            if (user) {
+	                const extendedUser = user as ExtendedUser;
+	                console.log('JWT callback - new user login:', {
+	                    id: extendedUser.id,
+	                    email: extendedUser.email,
+	                    tenant: extendedUser.tenant,
+	                    clientId: extendedUser.clientId
+	                });
                 if (!extendedUser.tenantSlug && extendedUser.tenant) {
                     extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
                 }
-                token.id = extendedUser.id;
-                token.email = extendedUser.email;
-                token.name = extendedUser.name;
-                token.username = extendedUser.username;
-                token.image = extendedUser.image;
-                token.proToken = extendedUser.proToken;
+	                token.id = extendedUser.id;
+	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
+	                token.sub = extendedUser.id;
+	                token.email = extendedUser.email;
+	                token.name = extendedUser.name;
+	                token.username = extendedUser.username;
+	                token.image = extendedUser.image;
+	                token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.tenantSlug = extendedUser.tenantSlug;
-                token.user_type = extendedUser.user_type;
-                token.clientId = extendedUser.clientId;
-                token.contactId = extendedUser.contactId;
-              }
+	                token.user_type = extendedUser.user_type;
+	                token.clientId = extendedUser.clientId;
+	                token.contactId = extendedUser.contactId;
+	              }
 
-            // NEW: Create session record on initial sign-in
-            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-            if ((user as any)?.deviceInfo && !token.session_id) {
-                try {
+	            // NEW: Create session record on initial sign-in
+	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
+	            if ((user as any)?.deviceInfo && !token.session_id) {
+	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 
@@ -2018,34 +2020,36 @@ export const options: NextAuthConfig = {
                 hasUser: !!user
             });
 
-            if (user) {
-                const extendedUser = user as ExtendedUser;
-                console.log('JWT callback - new user login:', {
-                    id: extendedUser.id,
-                    email: extendedUser.email,
-                    tenant: extendedUser.tenant,
-                    clientId: extendedUser.clientId
-                });
+	            if (user) {
+	                const extendedUser = user as ExtendedUser;
+	                console.log('JWT callback - new user login:', {
+	                    id: extendedUser.id,
+	                    email: extendedUser.email,
+	                    tenant: extendedUser.tenant,
+	                    clientId: extendedUser.clientId
+	                });
                 if (!extendedUser.tenantSlug && extendedUser.tenant) {
                     extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
                 }
-                token.id = extendedUser.id;
-                token.email = extendedUser.email;
-                token.name = extendedUser.name;
-                token.username = extendedUser.username;
-                token.image = extendedUser.image;
-                token.proToken = extendedUser.proToken;
+	                token.id = extendedUser.id;
+	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
+	                token.sub = extendedUser.id;
+	                token.email = extendedUser.email;
+	                token.name = extendedUser.name;
+	                token.username = extendedUser.username;
+	                token.image = extendedUser.image;
+	                token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.tenantSlug = extendedUser.tenantSlug;
-                token.user_type = extendedUser.user_type;
-                token.clientId = extendedUser.clientId;
-                token.contactId = extendedUser.contactId;
-              }
+	                token.user_type = extendedUser.user_type;
+	                token.clientId = extendedUser.clientId;
+	                token.contactId = extendedUser.contactId;
+	              }
 
-            // NEW: Create session record on initial sign-in
-            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-            if ((user as any)?.deviceInfo && !token.session_id) {
-                try {
+	            // NEW: Create session record on initial sign-in
+	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
+	            if ((user as any)?.deviceInfo && !token.session_id) {
+	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 
