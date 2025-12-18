@@ -1,15 +1,16 @@
 {
   "feature": "xero-csv-export",
-  "title": "Xero CSV Export/Import Integration",
-  "description": "CSV-based invoice export to Xero and tax import from Xero, bypassing OAuth requirements. Enables customers to use Alga PSA with Xero immediately while OAuth app approval is pending.",
+  "title": "Xero CSV Export/Import Integration (Invoices, Clients, Tax Import)",
+  "description": "CSV-based Xero integration: export invoices and clients (contacts) for manual import into Xero, and import tax data back into Alga. Designed to match the outcomes and invariants of automated accounting exports (mappings, batches, audit trail, and \"already exported\" behavior) while OAuth approval is pending.",
   "branch": "feature/xero-csv-export",
   "created": "2024-12-16",
+  "lastUpdated": "2025-12-18",
   "status": "in-progress",
   "tasks": {
     "backend": [
       {
         "id": "adapter-create",
-        "description": "Create XeroCsvAdapter class following QuickBooksDesktopAdapter pattern with file-based delivery mode",
+        "description": "Create XeroCsvAdapter (file-based) that generates Xero-compatible invoice CSV including stable reconciliation identifiers",
         "file": "server/src/lib/adapters/accounting/xeroCsvAdapter.ts",
         "done": false
       },
@@ -20,66 +21,110 @@
         "done": false
       },
       {
+        "id": "mapping-modules",
+        "description": "Create Xero CSV mapping modules (Clients, Items/Services, Tax Codes, Payment Terms) for adapter type xero_csv",
+        "file": "server/src/components/integrations/csv/xeroCsvMappingModules.ts",
+        "done": false
+      },
+      {
+        "id": "client-export-import",
+        "description": "Implement client (contact) export/import services and persistence of per-tenant external mappings for xero_csv",
+        "file": "server/src/lib/services/xeroCsvClientSyncService.ts",
+        "done": false
+      },
+      {
         "id": "tax-import-service",
-        "description": "Create XeroCsvTaxImportService to parse Xero Invoice Details Report and import tax amounts",
+        "description": "Create XeroCsvTaxImportService to parse Xero exports/reports, match invoices via reconciliation identifiers, and import tax amounts with audit trail",
         "file": "server/src/lib/services/xeroCsvTaxImportService.ts",
         "done": false
       },
       {
         "id": "server-actions",
-        "description": "Create server actions for CSV settings, tax import preview, and tax import execution",
+        "description": "Create (or reuse generic) server actions for Xero CSV settings, invoice export, tax import, and client import",
         "file": "server/src/lib/actions/integrations/xeroCsvActions.ts",
         "done": false
       },
       {
-        "id": "api-download",
-        "description": "Create API route for downloading CSV export files",
-        "file": "server/src/app/api/accounting-export/[batchId]/download/route.ts",
+        "id": "api-routes",
+        "description": "Add Xero CSV API routes for export/download, tax import (preview/execute/history/rollback), and client export/import",
+        "file": "server/src/app/api/accounting/csv/xero",
         "done": false
       },
       {
-        "id": "api-tax-import",
-        "description": "Create API route for uploading and processing tax import CSV",
-        "file": "server/src/app/api/accounting-export/xero-csv/tax-import/route.ts",
+        "id": "batch-parity",
+        "description": "Ensure Xero CSV exports use persisted batches, mapping validation, and consistent handling for overlapping ranges / already-exported invoices (with lock reset warnings)",
+        "file": "server/src/lib/services/accountingExportInvoiceSelector.ts",
+        "done": false
+      },
+      {
+        "id": "tax-blocking-state",
+        "description": "Derive and enforce \"awaiting external tax import\" blocking state when Xero is tax source; include Draft invoices by default for external-tax workflows",
+        "file": "server/src/lib/services/invoiceFinalizationService.ts",
         "done": false
       }
     ],
     "frontend": [
       {
-        "id": "settings-csv-panel",
-        "description": "Create XeroCsvSettings component for CSV mode configuration",
-        "file": "server/src/components/settings/integrations/XeroCsvSettings.tsx",
+        "id": "xero-csv-settings",
+        "description": "Create Xero CSV integration settings panel (instructions, defaults, and entry points to mappings/export/import)",
+        "file": "server/src/components/settings/integrations/XeroCSVIntegrationSettings.tsx",
         "done": false
       },
       {
-        "id": "settings-mode-toggle",
-        "description": "Update XeroIntegrationSettings to add OAuth/CSV mode toggle",
-        "file": "server/src/components/settings/integrations/XeroIntegrationSettings.tsx",
+        "id": "integrations-setup",
+        "description": "Wire Xero CSV into the unified Accounting Integrations setup; keep Xero OAuth visible but disabled/coming-soon",
+        "file": "server/src/components/settings/integrations/AccountingIntegrationsSetup.tsx",
+        "done": false
+      },
+      {
+        "id": "mapping-manager",
+        "description": "Use the shared mapping manager UI with standard tab control; default to Clients tab and use \"Client\" terminology throughout",
+        "file": "server/src/components/integrations/csv/CSVMappingManager.tsx",
         "done": false
       },
       {
         "id": "export-panel",
-        "description": "Create XeroCsvExportPanel component for downloading CSV exports",
-        "file": "server/src/components/billing-dashboard/accounting/XeroCsvExportPanel.tsx",
+        "description": "Implement Xero CSV export UI (reuse generic CSV export panel patterns) with lock reset / reverse warnings",
+        "file": "server/src/components/integrations/csv/CSVExportPanel.tsx",
         "done": false
       },
       {
-        "id": "import-panel",
-        "description": "Create XeroCsvTaxImportPanel component for uploading and previewing tax imports",
-        "file": "server/src/components/billing-dashboard/accounting/XeroCsvTaxImportPanel.tsx",
+        "id": "tax-import-panel",
+        "description": "Implement Xero CSV tax import UI (reuse generic CSV tax import patterns) with history/rollback",
+        "file": "server/src/components/integrations/csv/CSVTaxImportPanel.tsx",
         "done": false
       },
       {
         "id": "exports-tab-update",
-        "description": "Update AccountingExportsTab to include Xero CSV adapter option",
+        "description": "Update AccountingExportsTab for Xero CSV batches (download, errors, lines, links to import panels)",
         "file": "server/src/components/billing-dashboard/accounting/AccountingExportsTab.tsx",
+        "done": false
+      },
+      {
+        "id": "client-sync-ui",
+        "description": "Add client (contacts) export/import UI with preview and confirmation",
+        "file": "server/src/components/settings/integrations/XeroCSVIntegrationSettings.tsx",
+        "done": false
+      }
+    ],
+    "dataModel": [
+      {
+        "id": "mapping-normalization",
+        "description": "Ensure mapping types match current naming (e.g., company→client, tax_region→tax_code) and are consistent across adapters",
+        "file": "server/migrations",
+        "done": false
+      },
+      {
+        "id": "external-id-mapping",
+        "description": "Persist and reconcile external identifiers for Xero CSV (clients and invoices) per tenant and adapter type",
+        "file": "server/src/lib/services/accountingMappingResolver.ts",
         "done": false
       }
     ],
     "documentation": [
       {
         "id": "user-instructions",
-        "description": "Create user-facing instructions for Xero tracking category setup, export workflow, and tax import workflow",
+        "description": "Create user-facing instructions for client (contacts) export/import, invoice export workflow, tax import workflow, and reversal/lock reset semantics",
         "file": "ee/docs/guides/xero-csv-integration.md",
         "done": false
       }
@@ -87,7 +132,7 @@
     "testing": [
       {
         "id": "adapter-tests",
-        "description": "Unit tests for XeroCsvAdapter CSV generation and tracking categories",
+        "description": "Unit tests for XeroCsvAdapter CSV generation and reconciliation identifiers",
         "file": "server/src/test/unit/accounting/xeroCsvAdapter.spec.ts",
         "done": false
       },
@@ -98,32 +143,42 @@
         "done": false
       },
       {
+        "id": "client-sync-tests",
+        "description": "Unit tests for Xero CSV client export/import matching and creation",
+        "file": "server/src/test/unit/accounting/xeroCsvClientSyncService.spec.ts",
+        "done": false
+      },
+      {
         "id": "integration-tests",
         "description": "Integration tests for full export/import workflow",
         "file": "server/src/test/integration/accounting/xeroCsvExport.integration.test.ts",
+        "done": false
+      },
+      {
+        "id": "ui-smoke-tests",
+        "description": "Playwright smoke tests for Integrations navigation, mappings default tab, export, and tax import",
+        "file": "server/src/test/playwright/accounting/xeroCsv.spec.ts",
         "done": false
       }
     ]
   },
   "keyDecisions": {
-    "trackingCategories": {
-      "description": "Use fixed tracking category names for invoice reconciliation",
-      "sourceSystem": {
-        "name": "Source System",
-        "value": "AlgaPSA"
-      },
-      "externalInvoiceId": {
-        "name": "External Invoice ID",
-        "value": "{invoice_id}"
-      }
+    "terminology": {
+      "description": "Use Alga terminology in UI; \"Customers\" are called \"Clients\" in Alga PSA",
+      "clientLabel": "Client"
+    },
+    "reconciliationIdentifiers": {
+      "description": "Embed stable identifiers in the exported invoice CSV so imports/reports can be matched back to Alga reliably",
+      "invoiceNumber": "{invoice.invoice_number}",
+      "reference": "Alga Invoice ID: {invoice.id}"
+    },
+    "immutability": {
+      "description": "Exports are immutable; re-export is done via explicit lock reset with warnings (invoice-level and batch-level)",
+      "strategy": "reset_export_lock_with_warning"
     },
     "taxImportFormat": {
-      "description": "Parse Xero's Invoice Details Report CSV for tax import",
-      "reportName": "Invoice Details Report"
-    },
-    "invoiceStatus": {
-      "description": "Always export invoices as Draft so Xero calculates tax",
-      "status": "DRAFT"
+      "description": "Parse a Xero export/report format that contains invoice-level tax details (final format to be confirmed)",
+      "reportName": "TBD"
     },
     "adapterType": {
       "description": "New adapter type separate from OAuth-based xero adapter",
@@ -132,21 +187,33 @@
   },
   "dataFlow": {
     "export": [
+      "User configures mappings (Clients, Items/Services, Tax Codes, Payment Terms)",
       "User selects invoices for export",
       "Create batch with adapter_type: 'xero_csv'",
-      "XeroCsvAdapter.transform() generates CSV with tracking categories",
+      "XeroCsvAdapter.transform() generates CSV with reconciliation identifiers",
       "User downloads CSV file",
       "User imports CSV to Xero as Draft",
       "Xero calculates tax on draft invoices"
     ],
+    "clientExport": [
+      "User exports Clients to Xero Contacts CSV",
+      "User imports Contacts CSV into Xero",
+      "Alga persists external mappings for reconciliation/import"
+    ],
     "import": [
-      "User exports Invoice Details Report from Xero",
-      "User uploads CSV to XeroCsvTaxImportPanel",
-      "System matches invoices via External Invoice ID tracking category",
+      "User exports the agreed Xero report/export that includes invoice-level tax information",
+      "User uploads CSV to the Xero CSV tax import panel",
+      "System matches invoices via reconciliation identifiers (InvoiceNumber/Reference)",
       "Preview shows matched/unmatched invoices",
       "User confirms import",
       "Tax applied to invoice_charges",
       "invoice.tax_source updated to 'external'"
+    ],
+    "clientImport": [
+      "User exports Contacts from Xero (CSV)",
+      "User uploads Contacts CSV to the client import panel",
+      "System matches clients and updates/creates as configured",
+      "External mappings are recorded per tenant and adapter type"
     ]
   },
   "dependencies": {
@@ -161,7 +228,8 @@
     "referenceImplementations": [
       "quickBooksDesktopAdapter.ts (file-based delivery pattern)",
       "xeroAdapter.ts (invoice transformation logic)",
-      "externalTaxImportService.ts (tax import patterns)"
+      "externalTaxImportService.ts (tax import patterns)",
+      "CSV integration panels + mapping manager patterns from QuickBooks CSV work"
     ]
   }
 }
