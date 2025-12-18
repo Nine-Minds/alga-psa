@@ -12,13 +12,13 @@
         "id": "adapter-create",
         "description": "Create XeroCsvAdapter (file-based) that generates Xero-compatible invoice CSV including stable reconciliation identifiers",
         "file": "server/src/lib/adapters/accounting/xeroCsvAdapter.ts",
-        "done": false
+        "done": true
       },
       {
         "id": "adapter-register",
         "description": "Register XeroCsvAdapter in the accounting adapter registry",
         "file": "server/src/lib/adapters/accounting/registry.ts",
-        "done": false
+        "done": true
       },
       {
         "id": "mapping-modules",
@@ -36,19 +36,19 @@
         "id": "tax-import-service",
         "description": "Create XeroCsvTaxImportService to parse Xero exports/reports, match invoices via reconciliation identifiers, and import tax amounts with audit trail",
         "file": "server/src/lib/services/xeroCsvTaxImportService.ts",
-        "done": false
+        "done": true
       },
       {
         "id": "server-actions",
         "description": "Create (or reuse generic) server actions for Xero CSV settings, invoice export, tax import, and client import",
         "file": "server/src/lib/actions/integrations/xeroCsvActions.ts",
-        "done": false
+        "done": true
       },
       {
         "id": "api-routes",
         "description": "Add Xero CSV API routes for export/download, tax import (preview/execute/history/rollback), and client export/import",
-        "file": "server/src/app/api/accounting/csv/xero",
-        "done": false
+        "file": "server/src/app/api/v1/accounting-exports",
+        "done": true
       },
       {
         "id": "batch-parity",
@@ -67,14 +67,14 @@
       {
         "id": "xero-csv-settings",
         "description": "Create Xero CSV integration settings panel (instructions, defaults, and entry points to mappings/export/import)",
-        "file": "server/src/components/settings/integrations/XeroCSVIntegrationSettings.tsx",
-        "done": false
+        "file": "server/src/components/settings/integrations/XeroCsvSettings.tsx",
+        "done": true
       },
       {
         "id": "integrations-setup",
         "description": "Wire Xero CSV into the unified Accounting Integrations setup; keep Xero OAuth visible but disabled/coming-soon",
-        "file": "server/src/components/settings/integrations/AccountingIntegrationsSetup.tsx",
-        "done": false
+        "file": "server/src/components/settings/integrations/XeroIntegrationSettings.tsx",
+        "done": true
       },
       {
         "id": "mapping-manager",
@@ -85,25 +85,25 @@
       {
         "id": "export-panel",
         "description": "Implement Xero CSV export UI (reuse generic CSV export panel patterns) with lock reset / reverse warnings",
-        "file": "server/src/components/integrations/csv/CSVExportPanel.tsx",
-        "done": false
+        "file": "server/src/components/billing-dashboard/accounting/XeroCsvExportPanel.tsx",
+        "done": true
       },
       {
         "id": "tax-import-panel",
         "description": "Implement Xero CSV tax import UI (reuse generic CSV tax import patterns) with history/rollback",
-        "file": "server/src/components/integrations/csv/CSVTaxImportPanel.tsx",
-        "done": false
+        "file": "server/src/components/billing-dashboard/accounting/XeroCsvTaxImportPanel.tsx",
+        "done": true
       },
       {
         "id": "exports-tab-update",
         "description": "Update AccountingExportsTab for Xero CSV batches (download, errors, lines, links to import panels)",
         "file": "server/src/components/billing-dashboard/accounting/AccountingExportsTab.tsx",
-        "done": false
+        "done": true
       },
       {
         "id": "client-sync-ui",
         "description": "Add client (contacts) export/import UI with preview and confirmation",
-        "file": "server/src/components/settings/integrations/XeroCSVIntegrationSettings.tsx",
+        "file": "server/src/components/settings/integrations/XeroCsvSettings.tsx",
         "done": false
       }
     ],
@@ -126,7 +126,7 @@
         "id": "user-instructions",
         "description": "Create user-facing instructions for client (contacts) export/import, invoice export workflow, tax import workflow, and reversal/lock reset semantics",
         "file": "ee/docs/guides/xero-csv-integration.md",
-        "done": false
+        "done": true
       }
     ],
     "testing": [

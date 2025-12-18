@@ -6,12 +6,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../../ui/Button';
 import { Alert, AlertDescription } from '../../ui/Alert';
 import LoadingIndicator from '../../ui/LoadingIndicator';
-import { Link } from 'lucide-react';
+import { Link, FileSpreadsheet, Cloud } from 'lucide-react';
 import { XeroMappingManager } from '../../integrations/xero/XeroMappingManager';
+import XeroCsvSettings from './XeroCsvSettings';
 import {
   getXeroConnectionStatus,
   type XeroConnectionStatus
 } from 'server/src/lib/actions/integrations/xeroActions';
+import {
+  getXeroCsvSettings,
+  updateXeroCsvSettings,
+  type XeroCsvSettings as XeroCsvSettingsType
+} from 'server/src/lib/actions/integrations/xeroCsvActions';
 
 type PlaywrightAccountingMocks = {
   status?: {
@@ -29,13 +35,18 @@ function getPlaywrightAccountingMocks(): PlaywrightAccountingMocks | undefined {
   return globalWithMocks.__ALGA_PLAYWRIGHT_ACCOUNTING__;
 }
 
+type IntegrationMode = 'oauth' | 'csv';
+
 const XeroIntegrationSettings: React.FC = () => {
+  const [integrationMode, setIntegrationMode] = useState<IntegrationMode>('oauth');
+  const [csvSettings, setCsvSettings] = useState<XeroCsvSettingsType | null>(null);
   const [status, setStatus] = useState<XeroConnectionStatus | null>(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, startRefresh] = useTransition();
+  const [isSwitchingMode, startModeSwitch] = useTransition();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -77,48 +88,88 @@ const XeroIntegrationSettings: React.FC = () => {
       setIsLoading(false);
       return;
     }
-    refreshStatus();
+    loadInitialData();
   }, []);
+
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    try {
+      // Load CSV settings first to determine mode
+      const csvSettingsResult = await getXeroCsvSettings();
+      setCsvSettings(csvSettingsResult);
+      setIntegrationMode(csvSettingsResult.integrationMode);
+
+      // Always load OAuth status too (for displaying connection info)
+      await refreshStatusInternal();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load settings';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshStatusInternal = async () => {
+    try {
+      const mocks = getPlaywrightAccountingMocks()?.status?.xero;
+      if (mocks) {
+        setStatus(mocks);
+        setSelectedConnectionId((prev) => {
+          const options = mocks.connections ?? [];
+          const nextDefault = mocks.defaultConnectionId ?? options[0]?.connectionId ?? null;
+          const stillValid = prev && options.some((connection) => connection.connectionId === prev);
+          return stillValid ? prev : nextDefault ?? null;
+        });
+        setError(mocks.error ?? null);
+        if (mocks.error) {
+          setSuccessMessage(null);
+        }
+      } else {
+        const result = await getXeroConnectionStatus();
+        setStatus(result);
+        setSelectedConnectionId((prev) => {
+          const options = result.connections ?? [];
+          const nextDefault = result.defaultConnectionId ?? options[0]?.connectionId ?? null;
+          const stillValid = prev && options.some((connection) => connection.connectionId === prev);
+          return stillValid ? prev : nextDefault ?? null;
+        });
+        setError(result.error ?? null);
+        if (!result.connections?.length || result.error) {
+          setSuccessMessage(null);
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load Xero status.';
+      setError(message);
+      setStatus(null);
+      setSelectedConnectionId(null);
+      setSuccessMessage(null);
+    }
+  };
 
   const refreshStatus = () => {
     startRefresh(async () => {
       setIsLoading(true);
       try {
-        const mocks = getPlaywrightAccountingMocks()?.status?.xero;
-        if (mocks) {
-          setStatus(mocks);
-          setSelectedConnectionId((prev) => {
-            const options = mocks.connections ?? [];
-            const nextDefault = mocks.defaultConnectionId ?? options[0]?.connectionId ?? null;
-            const stillValid = prev && options.some((connection) => connection.connectionId === prev);
-            return stillValid ? prev : nextDefault ?? null;
-          });
-          setError(mocks.error ?? null);
-          if (mocks.error) {
-            setSuccessMessage(null);
-          }
-        } else {
-          const result = await getXeroConnectionStatus();
-          setStatus(result);
-          setSelectedConnectionId((prev) => {
-            const options = result.connections ?? [];
-            const nextDefault = result.defaultConnectionId ?? options[0]?.connectionId ?? null;
-            const stillValid = prev && options.some((connection) => connection.connectionId === prev);
-            return stillValid ? prev : nextDefault ?? null;
-          });
-          setError(result.error ?? null);
-          if (!result.connections?.length || result.error) {
-            setSuccessMessage(null);
-          }
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load Xero status.';
-        setError(message);
-        setStatus(null);
-        setSelectedConnectionId(null);
-        setSuccessMessage(null);
+        await refreshStatusInternal();
       } finally {
         setIsLoading(false);
+      }
+    });
+  };
+
+  const handleModeChange = (newMode: IntegrationMode) => {
+    startModeSwitch(async () => {
+      try {
+        await updateXeroCsvSettings({ integrationMode: newMode });
+        setIntegrationMode(newMode);
+        setSuccessMessage(`Switched to ${newMode === 'csv' ? 'CSV' : 'OAuth'} mode`);
+        setError(null);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to switch mode';
+        setError(message);
+        setSuccessMessage(null);
       }
     });
   };
@@ -198,13 +249,81 @@ const XeroIntegrationSettings: React.FC = () => {
 
   return (
     <>
-      <Card id="xero-integration-settings-card">
+      {/* Integration Mode Toggle Card */}
+      <Card id="xero-integration-mode-card">
         <CardHeader>
-          <CardTitle>Xero Integration</CardTitle>
+          <CardTitle>Xero Integration Mode</CardTitle>
           <CardDescription>
-            Connect your Xero organisation to enable accounting exports and manage mapping configuration.
+            Choose how to integrate with Xero. OAuth provides direct API access, while CSV mode uses file-based import/export.
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => handleModeChange('oauth')}
+              disabled={isSwitchingMode || isLoading}
+              className={`flex-1 rounded-lg border-2 p-4 text-left transition-colors ${
+                integrationMode === 'oauth'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Cloud className={`h-6 w-6 ${integrationMode === 'oauth' ? 'text-primary' : 'text-muted-foreground'}`} />
+                <div>
+                  <p className="font-medium text-foreground">OAuth Integration</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Connect directly to Xero via OAuth for automatic invoice sync and real-time updates.
+                  </p>
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange('csv')}
+              disabled={isSwitchingMode || isLoading}
+              className={`flex-1 rounded-lg border-2 p-4 text-left transition-colors ${
+                integrationMode === 'csv'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <FileSpreadsheet className={`h-6 w-6 ${integrationMode === 'csv' ? 'text-primary' : 'text-muted-foreground'}`} />
+                <div>
+                  <p className="font-medium text-foreground">CSV Import/Export</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Use CSV files to export invoices to Xero and import tax calculations back.
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+          {isSwitchingMode && (
+            <div className="mt-4">
+              <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Switching mode..." />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* CSV Mode Content */}
+      {integrationMode === 'csv' && (
+        <div className="mt-6">
+          <XeroCsvSettings />
+        </div>
+      )}
+
+      {/* OAuth Mode Content */}
+      {integrationMode === 'oauth' && (
+        <Card id="xero-integration-settings-card" className="mt-6">
+          <CardHeader>
+            <CardTitle>Xero OAuth Connection</CardTitle>
+            <CardDescription>
+              Connect your Xero organisation to enable direct API access for accounting exports.
+            </CardDescription>
+          </CardHeader>
         <CardContent className="space-y-4">
           {successMessage ? (
             <Alert variant="success">
@@ -263,13 +382,16 @@ const XeroIntegrationSettings: React.FC = () => {
           </div>
         </CardFooter>
       </Card>
+      )}
 
-      {hasConnection ? (
+      {/* Mappings Card - Available for both OAuth and CSV modes when OAuth connection exists */}
+      {hasConnection && (
         <Card id="xero-mapping-card" className="mt-6">
           <CardHeader>
             <CardTitle>Xero Mappings</CardTitle>
             <CardDescription>
               Map Alga services and tax regions to the corresponding Xero items, accounts, and tax rates.
+              {integrationMode === 'csv' && ' These mappings are used when generating CSV exports.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -329,7 +451,34 @@ const XeroIntegrationSettings: React.FC = () => {
             )}
           </CardContent>
         </Card>
-      ) : null}
+      )}
+
+      {/* CSV Mode - Show mappings info even without OAuth connection */}
+      {integrationMode === 'csv' && !hasConnection && (
+        <Card id="xero-mapping-info-card" className="mt-6">
+          <CardHeader>
+            <CardTitle>Xero Mappings</CardTitle>
+            <CardDescription>
+              Configure mappings to specify which Xero item codes and tax rates to use in CSV exports.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded border border-dashed border-border/50 p-4 text-sm text-muted-foreground">
+              <p>
+                To configure mappings for CSV export, you can either:
+              </p>
+              <ul className="list-disc pl-5 mt-2">
+                <li>Connect to Xero via OAuth (even temporarily) to fetch available items and tax rates</li>
+                <li>Or manually configure mappings in the database</li>
+              </ul>
+              <p className="mt-2">
+                Mappings tell the CSV export which Xero item codes and account codes to use for each service,
+                and which Xero tax rate codes to use for each tax region.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 };
