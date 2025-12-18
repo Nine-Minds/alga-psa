@@ -176,7 +176,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
               </div>
             </div>
 
-            <Button onClick={handleAcknowledgeSetup} disabled={isSaving}>
+            <Button id="xero-csv-integration-acknowledge-setup-button" onClick={handleAcknowledgeSetup} disabled={isSaving}>
               I&apos;ve completed the setup
             </Button>
           </CardContent>

@@ -130,6 +130,7 @@ const XeroCsvExportPanel: React.FC<XeroCsvExportPanelProps> = ({ batch, onDownlo
         {/* Download Button */}
         <div className="pt-2">
           <Button
+            id="xero-csv-export-download-button"
             onClick={handleDownload}
             disabled={!isDownloadable || isDownloading}
             className="w-full sm:w-auto"

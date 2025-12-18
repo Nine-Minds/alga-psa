@@ -124,7 +124,7 @@ export class XeroCsvTaxImportService {
    * Parse Xero Invoice Details Report CSV content.
    */
   parseInvoiceDetailsReport(csvContent: string): XeroInvoiceDetailsRow[] {
-    const parsed = parseCSV(csvContent);
+    const parsed = parseCSV(csvContent) as string[][];
 
     if (parsed.length === 0) {
       return [];

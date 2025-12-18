@@ -89,7 +89,6 @@ export function AccountingMappingModuleView({
           });
         } else {
           await module.update(context, input.mappingId, {
-            algaEntityId: input.algaEntityId,
             externalEntityId: input.externalEntityId,
             metadata: input.metadata ?? undefined
           });

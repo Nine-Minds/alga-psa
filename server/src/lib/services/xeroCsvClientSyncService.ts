@@ -15,7 +15,7 @@ import logger from '@shared/core/logger';
 import { createTenantKnex } from '../db';
 import { unparseCSV, parseCSV } from '../utils/csvParser';
 import { withTransaction } from '@shared/db';
-import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces.tsx';
+import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 
 const ADAPTER_TYPE = 'xero_csv';
 
@@ -628,7 +628,7 @@ export class XeroCsvClientSyncService {
    * Parse Xero Contacts CSV content.
    */
   private parseXeroContactsCsv(csvContent: string): ParsedXeroContact[] {
-    const parsed = parseCSV(csvContent, { header: true });
+    const parsed = parseCSV(csvContent, { header: true }) as Record<string, string>[];
 
     if (!parsed || parsed.length === 0) {
       return [];

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check permissions
-    const canManageBilling = await hasPermission(user, 'billing:manage');
+    const canManageBilling = await hasPermission(user, 'billing', 'manage');
     if (!canManageBilling) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

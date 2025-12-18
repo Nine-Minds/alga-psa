@@ -260,7 +260,7 @@ const XeroCsvTaxImportPanel: React.FC<XeroCsvTaxImportPanelProps> = ({ onImportC
                 <span className="text-muted-foreground">File:</span>{' '}
                 <span className="font-medium">{fileName}</span>
               </div>
-              <Button variant="outline" size="sm" onClick={handleReset}>
+              <Button id="xero-csv-tax-import-reset-button" variant="outline" size="sm" onClick={handleReset}>
                 <RefreshCw className="mr-2 h-3 w-3" />
                 Choose Different File
               </Button>
@@ -386,7 +386,7 @@ const XeroCsvTaxImportPanel: React.FC<XeroCsvTaxImportPanelProps> = ({ onImportC
               </Alert>
             )}
 
-            <Button onClick={handleReset} className="w-full">
+            <Button id="xero-csv-tax-import-reset-complete-button" onClick={handleReset} className="w-full">
               Import Another File
             </Button>
           </>
@@ -395,10 +395,10 @@ const XeroCsvTaxImportPanel: React.FC<XeroCsvTaxImportPanelProps> = ({ onImportC
 
       {step === 'preview' && preview && preview.matchedCount > 0 && (
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={handleReset}>
+          <Button id="xero-csv-tax-import-cancel-button" variant="outline" onClick={handleReset}>
             Cancel
           </Button>
-          <Button onClick={handleImport} disabled={isLoading}>
+          <Button id="xero-csv-tax-import-confirm-button" onClick={handleImport} disabled={isLoading}>
             <Upload className="mr-2 h-4 w-4" />
             Import {preview.matchedCount} Invoice{preview.matchedCount !== 1 ? 's' : ''}
           </Button>

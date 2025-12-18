@@ -168,6 +168,7 @@ export function XeroCsvClientSyncPanel() {
           )}
 
           <Button
+            id="xero-csv-client-sync-export-button"
             onClick={handleExportClients}
             disabled={isExporting}
             variant="outline"
@@ -269,6 +270,7 @@ export function XeroCsvClientSyncPanel() {
                   id="xero-contacts-csv-input"
                 />
                 <Button
+                  id="xero-csv-client-sync-select-file-button"
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
                   className="gap-2"
@@ -378,10 +380,10 @@ export function XeroCsvClientSyncPanel() {
               )}
 
               <div className="flex gap-3">
-                <Button onClick={handleExecuteImport} disabled={previewResult.toUpdate + previewResult.toCreate === 0}>
+                <Button id="xero-csv-client-sync-execute-import-button" onClick={handleExecuteImport} disabled={previewResult.toUpdate + previewResult.toCreate === 0}>
                   Import {previewResult.toUpdate + previewResult.toCreate} Contacts
                 </Button>
-                <Button variant="outline" onClick={handleCancelImport}>
+                <Button id="xero-csv-client-sync-cancel-import-button" variant="outline" onClick={handleCancelImport}>
                   Cancel
                 </Button>
               </div>
@@ -445,7 +447,7 @@ export function XeroCsvClientSyncPanel() {
                 </Alert>
               )}
 
-              <Button variant="outline" onClick={handleStartNewImport}>
+              <Button id="xero-csv-client-sync-start-new-import-button" variant="outline" onClick={handleStartNewImport}>
                 Start New Import
               </Button>
             </div>
