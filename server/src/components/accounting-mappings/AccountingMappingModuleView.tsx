@@ -83,6 +83,7 @@ export function AccountingMappingModuleView({
       if (input.mappingId) {
         if (overrides?.updateMapping) {
           await overrides.updateMapping(context, input.mappingId, {
+            alga_entity_id: input.algaEntityId,
             external_entity_id: input.externalEntityId,
             metadata: input.metadata ?? undefined
           });
@@ -224,6 +225,9 @@ export function AccountingMappingModuleView({
 
   return (
     <div className="space-y-4">
+      {module.labels.description && (
+        <p className="text-sm text-muted-foreground">{module.labels.description}</p>
+      )}
       <div className="flex justify-end">
         <Button
           id={addButtonId}

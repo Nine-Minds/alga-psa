@@ -85,19 +85,26 @@ export async function getClientBillingEmail(knex: Knex, tenant: string, clientId
   return location?.email || null;
 }
 
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
 /**
  * Validates that a client has a billing email address set.
  * This is required for online payments via Stripe.
- * Throws an error with a user-friendly message if no email is found.
+ * Returns a validation result instead of throwing an error.
  */
-export async function validateClientBillingEmail(knex: Knex, tenant: string, clientId: string, clientName: string): Promise<void> {
+export async function validateClientBillingEmail(knex: Knex, tenant: string, clientId: string, clientName: string): Promise<ValidationResult> {
   const billingEmail = await getClientBillingEmail(knex, tenant, clientId);
   if (!billingEmail) {
-    throw new Error(
-      `Cannot generate invoice: No billing email address for "${clientName}". ` +
-      `Please set an email address on the client's billing location before generating invoices.`
-    );
+    return {
+      valid: false,
+      error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
+        `Please set an email address on the client's billing location before generating invoices.`
+    };
   }
+  return { valid: true };
 }
 
 // Renamed interface for clarity within manual context

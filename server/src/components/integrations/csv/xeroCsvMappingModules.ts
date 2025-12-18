@@ -19,7 +19,7 @@ import type {
   AccountingMappingLoadResult
 } from 'server/src/components/accounting-mappings/types';
 
-const ADAPTER_TYPE = 'quickbooks_csv';
+const ADAPTER_TYPE = 'xero_csv';
 
 type MappingLoadConfig<TAlga> = {
   context: AccountingMappingContext;
@@ -28,42 +28,32 @@ type MappingLoadConfig<TAlga> = {
   mapAlga: (entity: TAlga) => { id: string; name: string };
 };
 
-type PaymentTermOption = {
-  id: string;
-  name: string;
-};
-
-const PAYMENT_TERMS: PaymentTermOption[] = [
-  { id: 'net_30', name: 'Net 30' },
-  { id: 'net_15', name: 'Net 15' },
-  { id: 'due_on_receipt', name: 'Due on receipt' }
-];
-
-export function createCsvMappingModules(): AccountingMappingModule[] {
+export function createXeroCsvMappingModules(): AccountingMappingModule[] {
   return [
-    createCustomerModule(),
+    createClientModule(),
     createServiceModule(),
-    createTaxCodeModule(),
-    createPaymentTermModule()
+    createTaxCodeModule()
   ];
 }
 
-function createCustomerModule(): AccountingMappingModule {
+function createClientModule(): AccountingMappingModule {
   return {
-    id: 'qbcsv-customer-mappings',
+    id: 'xero-csv-client-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'client',
-    externalEntityType: 'Customer',
+    externalEntityType: 'Contact',
     labels: {
       tab: 'Clients',
+      description: 'Map Alga clients to Xero contact names. The contact name appears in the "ContactName" column of the CSV export.',
       addButton: 'Add Client Mapping',
       algaColumn: 'Alga Client',
-      externalColumn: 'QuickBooks Customer',
+      externalColumn: 'Xero Contact',
       dialog: {
-        addTitle: 'Add QuickBooks Customer Mapping',
-        editTitle: 'Edit QuickBooks Customer Mapping',
+        addTitle: 'Add Xero Contact Mapping',
+        editTitle: 'Edit Xero Contact Mapping',
         algaField: 'Alga Client',
-        externalField: 'QuickBooks Customer'
+        externalField: 'Xero Contact Name',
+        helpText: 'Enter the exact contact name as it appears in Xero.'
       },
       deleteConfirmation: {
         title: 'Delete Client Mapping',
@@ -79,12 +69,12 @@ function createCustomerModule(): AccountingMappingModule {
       enableJsonEditor: true
     },
     elements: {
-      addButton: 'add-qbcsv-customer-mapping-button',
-      table: 'qbcsv-customer-mappings-table',
-      dialog: 'qbcsv-customer-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-qbcsv-customer-mapping-dialog',
-      editMenuPrefix: 'edit-qbcsv-customer-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-qbcsv-customer-mapping-menu-item-'
+      addButton: 'add-xero-csv-client-mapping-button',
+      table: 'xero-csv-client-mappings-table',
+      dialog: 'xero-csv-client-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-xero-csv-client-mapping-dialog',
+      editMenuPrefix: 'edit-xero-csv-client-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-xero-csv-client-mapping-menu-item-'
     },
     load(context) {
       return loadMappings<IClient>({
@@ -115,21 +105,23 @@ function createCustomerModule(): AccountingMappingModule {
 
 function createServiceModule(): AccountingMappingModule {
   return {
-    id: 'qbcsv-service-mappings',
+    id: 'xero-csv-service-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'service',
     externalEntityType: 'Item',
     overridesKey: 'itemMappingOverrides',
     labels: {
       tab: 'Items / Services',
+      description: 'Map Alga services to Xero inventory item codes. The item code appears in the "InventoryItemCode" column of the CSV export.',
       addButton: 'Add Item Mapping',
       algaColumn: 'Alga Service',
-      externalColumn: 'QuickBooks Item',
+      externalColumn: 'Xero Item',
       dialog: {
-        addTitle: 'Add QuickBooks Item Mapping',
-        editTitle: 'Edit QuickBooks Item Mapping',
+        addTitle: 'Add Xero Item Mapping',
+        editTitle: 'Edit Xero Item Mapping',
         algaField: 'Alga Service',
-        externalField: 'QuickBooks Item'
+        externalField: 'Xero Item Code',
+        helpText: 'Enter the item code from Xero (found in Products and Services).'
       },
       deleteConfirmation: {
         title: 'Delete Item Mapping',
@@ -145,12 +137,12 @@ function createServiceModule(): AccountingMappingModule {
       enableJsonEditor: true
     },
     elements: {
-      addButton: 'add-qbcsv-item-mapping-button',
-      table: 'qbcsv-item-mappings-table',
-      dialog: 'qbcsv-item-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-qbcsv-item-mapping-dialog',
-      editMenuPrefix: 'edit-qbcsv-item-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-qbcsv-item-mapping-menu-item-'
+      addButton: 'add-xero-csv-item-mapping-button',
+      table: 'xero-csv-item-mappings-table',
+      dialog: 'xero-csv-item-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-xero-csv-item-mapping-dialog',
+      editMenuPrefix: 'edit-xero-csv-item-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-xero-csv-item-mapping-menu-item-'
     },
     load(context) {
       return loadMappings<IServicesResult>({
@@ -189,20 +181,22 @@ function createServiceModule(): AccountingMappingModule {
 
 function createTaxCodeModule(): AccountingMappingModule {
   return {
-    id: 'qbcsv-tax-code-mappings',
+    id: 'xero-csv-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'tax_code',
-    externalEntityType: 'TaxCode',
+    externalEntityType: 'TaxType',
     labels: {
       tab: 'Tax Codes',
+      description: 'Map Alga tax regions to Xero tax types. The tax type appears in the "TaxType" column of the CSV export. Find tax types in Xero under Settings → Tax Rates.',
       addButton: 'Add Tax Code Mapping',
       algaColumn: 'Alga Tax Region',
-      externalColumn: 'QuickBooks Tax Code',
+      externalColumn: 'Xero Tax Type',
       dialog: {
-        addTitle: 'Add QuickBooks Tax Code Mapping',
-        editTitle: 'Edit QuickBooks Tax Code Mapping',
+        addTitle: 'Add Xero Tax Type Mapping',
+        editTitle: 'Edit Xero Tax Type Mapping',
         algaField: 'Alga Tax Region',
-        externalField: 'QuickBooks Tax Code'
+        externalField: 'Xero Tax Type',
+        helpText: 'Enter the tax type code from Xero (e.g., OUTPUT2, ZERORATEDINPUT, TAX001). Find these under Settings → Tax Rates in Xero.'
       },
       deleteConfirmation: {
         title: 'Delete Tax Code Mapping',
@@ -218,12 +212,12 @@ function createTaxCodeModule(): AccountingMappingModule {
       enableJsonEditor: true
     },
     elements: {
-      addButton: 'add-qbcsv-taxcode-mapping-button',
-      table: 'qbcsv-taxcode-mappings-table',
-      dialog: 'qbcsv-taxcode-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-qbcsv-taxcode-mapping-dialog',
-      editMenuPrefix: 'edit-qbcsv-taxcode-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-qbcsv-taxcode-mapping-menu-item-'
+      addButton: 'add-xero-csv-taxcode-mapping-button',
+      table: 'xero-csv-taxcode-mappings-table',
+      dialog: 'xero-csv-taxcode-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-xero-csv-taxcode-mapping-dialog',
+      editMenuPrefix: 'edit-xero-csv-taxcode-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-xero-csv-taxcode-mapping-menu-item-'
     },
     load(context) {
       return loadMappings<ITaxRegion>({
@@ -241,71 +235,6 @@ function createTaxCodeModule(): AccountingMappingModule {
         context,
         input,
         algaEntityType: 'tax_code'
-      });
-    },
-    update(_context, mappingId, input) {
-      return updateMapping(mappingId, input);
-    },
-    async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
-    }
-  };
-}
-
-function createPaymentTermModule(): AccountingMappingModule {
-  return {
-    id: 'qbcsv-term-mappings',
-    adapterType: ADAPTER_TYPE,
-    algaEntityType: 'payment_term',
-    externalEntityType: 'Term',
-    labels: {
-      tab: 'Payment Terms',
-      addButton: 'Add Term Mapping',
-      algaColumn: 'Alga Payment Term',
-      externalColumn: 'QuickBooks Term',
-      dialog: {
-        addTitle: 'Add QuickBooks Term Mapping',
-        editTitle: 'Edit QuickBooks Term Mapping',
-        algaField: 'Alga Payment Term',
-        externalField: 'QuickBooks Term'
-      },
-      deleteConfirmation: {
-        title: 'Delete Term Mapping',
-        message: ({ algaName, externalName }) =>
-          `Delete mapping${algaName ? ` for ${algaName}` : ''}${
-            externalName ? ` ↔ ${externalName}` : ''
-          }?`,
-        confirmLabel: 'Delete',
-        cancelLabel: 'Cancel'
-      }
-    },
-    metadata: {
-      enableJsonEditor: true
-    },
-    elements: {
-      addButton: 'add-qbcsv-term-mapping-button',
-      table: 'qbcsv-term-mappings-table',
-      dialog: 'qbcsv-term-mapping-dialog',
-      deleteDialogPrefix: 'confirm-delete-qbcsv-term-mapping-dialog',
-      editMenuPrefix: 'edit-qbcsv-term-mapping-menu-item-',
-      deleteMenuPrefix: 'delete-qbcsv-term-mapping-menu-item-'
-    },
-    load(context) {
-      return loadMappings<PaymentTermOption>({
-        context,
-        algaEntityType: 'payment_term',
-        loadAlgaEntities: async () => PAYMENT_TERMS,
-        mapAlga: (term) => ({
-          id: term.id,
-          name: term.name
-        })
-      });
-    },
-    create(context, input) {
-      return createMapping({
-        context,
-        input,
-        algaEntityType: 'payment_term'
       });
     },
     update(_context, mappingId, input) {

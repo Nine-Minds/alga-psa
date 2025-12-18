@@ -138,7 +138,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
 
     try {
       const text = await uploadedFile.text();
-      const rows = parseCSV(text);
+      const rows = parseCSV(text) as string[][];
       
       if (rows.length < 2) {
         throw new Error('CSV file is empty or invalid');

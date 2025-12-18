@@ -103,7 +103,7 @@ export class CSVTaxImportService {
 
     try {
       // 1. Parse CSV
-      const csvRows = parseCSV(csvContent);
+      const csvRows = parseCSV(csvContent) as string[][];
 
       // 2. Validate CSV
       const validation = await validateCSVForTaxImport(

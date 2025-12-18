@@ -1,5 +1,6 @@
 export type AccountingAdapterType =
   | 'xero'
+  | 'xero_csv'
   | 'quickbooks_online'
   | 'quickbooks_desktop'
   | 'quickbooks_csv';

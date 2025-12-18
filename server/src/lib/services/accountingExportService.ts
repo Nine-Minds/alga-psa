@@ -23,6 +23,7 @@ import { AccountingExportValidation } from '../validation/accountingExportValida
 import { publishEvent } from '../eventBus/publishers';
 import { AppError } from '../errors';
 import { getExternalTaxImportService } from './externalTaxImportService';
+import { getXeroCsvSettings } from '../actions/integrations/xeroCsvActions';
 import logger from '@shared/core/logger';
 
 export interface CreateExportBatchOptions extends CreateExportBatchInput {}
@@ -200,11 +201,28 @@ export class AccountingExportService {
     const taxDelegationMode = await this.determineTaxDelegationMode(refreshed.lines);
     const excludeTaxFromExport = taxDelegationMode === 'delegate';
 
+    // Load adapter-specific settings
+    let adapterSettings: Record<string, unknown> | undefined;
+    if (normalizedBatch.adapter_type === 'xero_csv') {
+      try {
+        const xeroCsvSettings = await getXeroCsvSettings();
+        adapterSettings = {
+          dateFormat: xeroCsvSettings.dateFormat,
+          defaultCurrency: xeroCsvSettings.defaultCurrency
+        };
+      } catch (error) {
+        logger.warn('[AccountingExportService] Failed to load Xero CSV settings, using defaults', {
+          error: (error as Error).message
+        });
+      }
+    }
+
     const context: AccountingExportAdapterContext = {
       batch: normalizedBatch,
       lines: refreshed.lines,
       taxDelegationMode,
-      excludeTaxFromExport
+      excludeTaxFromExport,
+      adapterSettings
     };
 
     let transformResult: AccountingExportTransformResult | null = null;
