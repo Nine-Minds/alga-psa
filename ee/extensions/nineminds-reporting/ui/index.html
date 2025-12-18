@@ -24,6 +24,10 @@
         --alga-primary-100: #ede2fd;
         --alga-primary-foreground: #ffffff;
 
+        /* Focus ring - purple to match brand */
+        --alga-ring: #8a4dea;
+        --alga-ring-opacity: 0.25;
+
         --alga-secondary: #40cff9;         /* Blue */
         --alga-secondary-light: #66dffb;
         --alga-accent: #ff9c30;            /* Orange */
@@ -150,8 +154,28 @@
       }
       .input:focus {
         outline: none;
-        border-color: var(--alga-primary);
-        box-shadow: 0 0 0 3px rgba(138, 77, 234, 0.15);
+        border-color: var(--alga-ring);
+        box-shadow: 0 0 0 3px rgba(138, 77, 234, var(--alga-ring-opacity));
+      }
+      /* Purple ring ONLY for text inputs and textareas */
+      input[type="text"]:focus, input[type="text"]:focus-visible,
+      input[type="email"]:focus, input[type="email"]:focus-visible,
+      input[type="password"]:focus, input[type="password"]:focus-visible,
+      input[type="number"]:focus, input[type="number"]:focus-visible,
+      input[type="search"]:focus, input[type="search"]:focus-visible,
+      input:not([type]):focus, input:not([type]):focus-visible,
+      textarea:focus, textarea:focus-visible {
+        outline: none !important;
+        border-color: var(--alga-ring) !important;
+        box-shadow: 0 0 0 2px rgba(138, 77, 234, var(--alga-ring-opacity)) !important;
+      }
+      /* Remove ring from buttons and selects/dropdowns */
+      button:focus, button:focus-visible,
+      select:focus, select:focus-visible,
+      [role="combobox"]:focus, [role="listbox"]:focus,
+      [data-radix-popper-content-wrapper] *:focus {
+        outline: none !important;
+        box-shadow: none !important;
       }
       /* Custom select styling to match main app */
       select.input {
