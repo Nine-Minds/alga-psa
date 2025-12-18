@@ -8,7 +8,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { PlatformReportService } from '@ee/lib/platformReports';
+import {
+  PlatformReportService,
+  PlatformReportAuditService,
+  extractClientInfo,
+} from '@ee/lib/platformReports';
 import { ReportParameters } from 'server/src/lib/reports/core/types';
 
 export const runtime = 'nodejs';
@@ -18,36 +22,26 @@ const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
 /**
  * Verify the caller has access to platform reports.
- * Accepts:
- * 1. User session from master billing tenant
- * 2. Internal extension calls (identified by x-alga-extension header) from any tenant
+ *
+ * SECURITY: Platform reports provide cross-tenant data access, so we MUST verify
+ * that the user belongs to the master billing tenant. We cannot trust headers alone
+ * as they can be spoofed by malicious clients.
  *
  * Returns the tenant ID to use for queries.
  */
-async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
+async function assertMasterTenantAccess(_request: NextRequest): Promise<string> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // Check for extension call - extensions can access reports for their tenant
-  const extensionId = request.headers.get('x-alga-extension');
-  const extensionTenant = request.headers.get('x-alga-tenant');
-
-  if (extensionId && extensionTenant) {
-    // This is an internal call from an extension
-    // For platform reports, we always use the master tenant for queries
-    // but we log which extension made the call
-    console.log('[platform-reports/:id/execute] Extension call:', { extensionId, extensionTenant });
-    return MASTER_BILLING_TENANT_ID;
-  }
-
-  // Standard user session auth
+  // ALWAYS validate the user session - headers can be spoofed!
   const user = await getCurrentUser();
 
   if (!user) {
     throw new Error('Authentication required');
   }
 
+  // User MUST be from the master billing tenant to access cross-tenant reports
   if (user.tenant !== MASTER_BILLING_TENANT_ID) {
     throw new Error('Access denied: Platform reports require master tenant access');
   }
@@ -69,9 +63,11 @@ export async function POST(
 ): Promise<NextResponse> {
   try {
     const masterTenantId = await assertMasterTenantAccess(request);
+    const user = await getCurrentUser();
     const { reportId } = await context.params;
 
     const service = new PlatformReportService(masterTenantId);
+    const auditService = new PlatformReportAuditService(masterTenantId);
 
     // Get optional parameters from request body
     let parameters: ReportParameters = {};
@@ -88,6 +84,22 @@ export async function POST(
     }
 
     const result = await service.executeReport(reportId, parameters);
+
+    // Log the execute action
+    const clientInfo = extractClientInfo(request);
+    await auditService.logEvent({
+      eventType: 'report.execute',
+      userId: user?.user_id,
+      userEmail: user?.email,
+      reportId: reportId,
+      reportName: result.reportName,
+      details: {
+        parameters,
+        executionTime: result.metadata?.executionTime,
+        metricsCount: Object.keys(result.metrics || {}).length,
+      },
+      ...clientInfo,
+    });
 
     return NextResponse.json({
       success: true,
@@ -121,7 +133,7 @@ export async function POST(
         );
       }
 
-      // Report permission errors (allowlist violations)
+      // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
         return NextResponse.json(
           { success: false, error: error.message },

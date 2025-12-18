@@ -12,9 +12,20 @@ export type {
 } from './platformReportService';
 
 export {
-  PLATFORM_REPORT_ALLOWLIST,
   BLOCKED_TABLES,
+  BLOCKED_COLUMN_PATTERNS,
   isTableAllowed,
   isColumnAllowed,
-  getAllowedColumns,
-} from './allowlist';
+  filterAllowedColumns,
+} from './blocklist';
+
+export {
+  PlatformReportAuditService,
+  extractClientInfo,
+} from './auditService';
+export type {
+  AuditEventType,
+  AuditLogEntry,
+  LogEventInput,
+  ListLogsOptions,
+} from './auditService';

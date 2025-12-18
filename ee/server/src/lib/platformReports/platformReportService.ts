@@ -23,12 +23,10 @@ import {
   FormattedMetricValue,
 } from 'server/src/lib/reports/core/types';
 import {
-  PLATFORM_REPORT_ALLOWLIST,
   BLOCKED_TABLES,
   isTableAllowed,
   isColumnAllowed,
-  getAllowedColumns,
-} from './allowlist';
+} from './blocklist';
 
 /**
  * Custom report as stored in the database
@@ -346,31 +344,25 @@ export class PlatformReportService {
   }
 
   /**
-   * Validate a query definition against the security allowlist
+   * Validate a query definition against the security blocklist.
+   * Uses blocklist approach: everything allowed except explicitly blocked.
    */
   private validateQueryDefinition(query: QueryDefinition): void {
     const table = query.table;
 
-    // Block forbidden tables
-    if (BLOCKED_TABLES.includes(table)) {
+    // Check table is not blocked
+    if (!isTableAllowed(table)) {
       throw new ReportPermissionError(
         `Table '${table}' is blocked for platform reports`
       );
     }
 
-    // Check table is in allowlist
-    if (!isTableAllowed(table)) {
-      throw new ReportPermissionError(
-        `Table '${table}' is not in the platform report allowlist. ` +
-        `Allowed tables: ${Object.keys(PLATFORM_REPORT_ALLOWLIST).join(', ')}`
-      );
-    }
-
-    // Validate all fields against column allowlist
-    const allowedColumns = getAllowedColumns(table);
+    // Validate all fields against column blocklist
     for (const field of query.fields ?? []) {
       // Handle table.column format
-      const columnName = field.includes('.') ? field.split('.')[1] : field;
+      const fieldParts = field.split('.');
+      const fieldTable = fieldParts.length > 1 ? fieldParts[0] : table;
+      const columnName = fieldParts.length > 1 ? fieldParts[1] : field;
 
       // Skip SQL expressions (contain spaces, parentheses, or common SQL keywords)
       if (
@@ -384,39 +376,45 @@ export class PlatformReportService {
         continue;
       }
 
-      if (!isColumnAllowed(table, columnName)) {
+      // Validate the field's table is allowed (if different from main table)
+      if (fieldTable !== table && !isTableAllowed(fieldTable)) {
         throw new ReportPermissionError(
-          `Column '${columnName}' is not allowed for table '${table}'. ` +
-          `Allowed columns: ${allowedColumns.join(', ')}`
+          `Field references blocked table '${fieldTable}'`
+        );
+      }
+
+      if (!isColumnAllowed(fieldTable, columnName)) {
+        throw new ReportPermissionError(
+          `Column '${columnName}' is blocked for security reasons`
         );
       }
     }
 
     // Validate join tables
     for (const join of query.joins ?? []) {
-      if (BLOCKED_TABLES.includes(join.table)) {
+      if (!isTableAllowed(join.table)) {
         throw new ReportPermissionError(
           `Join table '${join.table}' is blocked for platform reports`
         );
       }
-
-      if (!isTableAllowed(join.table)) {
-        throw new ReportPermissionError(
-          `Join table '${join.table}' is not in the platform report allowlist`
-        );
-      }
     }
 
-    // Validate filter fields don't reference blocked tables
+    // Validate filter fields don't reference blocked columns
     for (const filter of query.filters ?? []) {
       const fieldParts = filter.field.split('.');
-      if (fieldParts.length > 1) {
-        const filterTable = fieldParts[0];
-        if (BLOCKED_TABLES.includes(filterTable)) {
-          throw new ReportPermissionError(
-            `Filter references blocked table '${filterTable}'`
-          );
-        }
+      const filterTable = fieldParts.length > 1 ? fieldParts[0] : table;
+      const filterColumn = fieldParts.length > 1 ? fieldParts[1] : filter.field;
+
+      if (!isTableAllowed(filterTable)) {
+        throw new ReportPermissionError(
+          `Filter references blocked table '${filterTable}'`
+        );
+      }
+
+      if (!isColumnAllowed(filterTable, filterColumn)) {
+        throw new ReportPermissionError(
+          `Filter references blocked column '${filterColumn}'`
+        );
       }
     }
   }

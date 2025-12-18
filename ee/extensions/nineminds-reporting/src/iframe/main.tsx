@@ -122,6 +122,7 @@ interface QueryDefinition {
   table: string;
   fields: string[];
   filters?: FilterDefinition[];
+  joins?: JoinDefinition[];
   groupBy?: string[];
   orderBy?: OrderByDefinition[];
   limit?: number;
@@ -138,10 +139,38 @@ interface OrderByDefinition {
   direction: 'asc' | 'desc';
 }
 
+type JoinType = 'inner' | 'left' | 'right' | 'full';
+
+interface JoinCondition {
+  left: string;
+  right: string;
+  operator?: string;
+}
+
+interface JoinDefinition {
+  type: JoinType;
+  table: string;
+  on: JoinCondition[];
+}
+
 interface ApiResponse<T> {
   success: boolean;
   error?: string;
   data?: T;
+}
+
+// Audit log types
+interface AuditLogEntry {
+  log_id: string;
+  event_type: string;
+  user_id: string | null;
+  user_email: string | null;
+  report_id: string | null;
+  report_name: string | null;
+  details: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
 }
 
 // Get host origin from referrer (the main app that embeds this iframe)
@@ -197,15 +226,96 @@ async function callExtensionApi<T>(path: string, options: RequestInit = {}): Pro
   }
 }
 
-// Allowed tables for query builder (matches actual database schema)
-const ALLOWED_TABLES = [
-  { value: 'tenants', label: 'Tenants', columns: ['tenant', 'client_name', 'email', 'phone_number', 'industry', 'plan', 'licensed_user_count', 'created_at', 'updated_at'] },
-  { value: 'users', label: 'Users', columns: ['user_id', 'tenant', 'username', 'email', 'first_name', 'last_name', 'user_type', 'is_inactive', 'created_at', 'last_login_at'] },
-  { value: 'tickets', label: 'Tickets', columns: ['ticket_id', 'tenant', 'ticket_number', 'title', 'status_id', 'priority_id', 'category_id', 'assigned_to', 'is_closed', 'entered_at', 'updated_at', 'closed_at'] },
-  { value: 'invoices', label: 'Invoices', columns: ['invoice_id', 'tenant', 'invoice_number', 'invoice_date', 'due_date', 'total_amount', 'subtotal', 'tax', 'status', 'created_at'] },
-  { value: 'time_entries', label: 'Time Entries', columns: ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'billable_duration', 'start_time', 'end_time', 'approval_status', 'created_at'] },
-  { value: 'clients', label: 'Clients', columns: ['client_id', 'tenant', 'client_name', 'email', 'phone', 'is_inactive', 'created_at', 'updated_at'] },
-];
+// ============================================================================
+// Dynamic Schema - Fetched from server (blocklist-filtered)
+// ============================================================================
+
+interface TableSchema {
+  name: string;
+  columns: string[];
+}
+
+interface SchemaResponse {
+  tables: TableSchema[];
+}
+
+// Schema cache to avoid refetching
+let schemaCache: TableSchema[] | null = null;
+let schemaPromise: Promise<TableSchema[]> | null = null;
+
+/**
+ * Fetch available tables and columns from the server.
+ * The server filters the schema using a blocklist for security.
+ */
+async function fetchSchema(): Promise<TableSchema[]> {
+  if (schemaCache) {
+    return schemaCache;
+  }
+
+  if (schemaPromise) {
+    return schemaPromise;
+  }
+
+  schemaPromise = (async () => {
+    try {
+      const hostOrigin = getHostOrigin();
+      const response = await fetch(`${hostOrigin}/api/v1/platform-reports/schema`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result: ApiResponse<SchemaResponse> = await response.json();
+
+      if (result.success && result.data?.tables) {
+        schemaCache = result.data.tables;
+        return schemaCache;
+      }
+
+      console.error('[Schema] Failed to fetch:', result.error);
+      return [];
+    } catch (error) {
+      console.error('[Schema] Fetch error:', error);
+      return [];
+    }
+  })();
+
+  return schemaPromise;
+}
+
+/**
+ * Hook to load and use the dynamic schema
+ */
+function useSchema() {
+  const [tables, setTables] = useState<TableSchema[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchSchema()
+      .then(schema => {
+        setTables(schema);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(String(err));
+        setLoading(false);
+      });
+  }, []);
+
+  const getTableColumns = useCallback((tableName: string): string[] => {
+    const table = tables.find(t => t.name === tableName);
+    return table?.columns || [];
+  }, [tables]);
+
+  const tableOptions: SelectOption[] = tables.map(t => ({
+    value: t.name,
+    label: t.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+  }));
+
+  return { tables, tableOptions, getTableColumns, loading, error };
+}
 
 const OPERATORS = [
   { value: 'eq', label: '=' },
@@ -601,6 +711,18 @@ function ReportDetail({
   const [executing, setExecuting] = useState(false);
   const [results, setResults] = useState<ReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // If editing, render the EditReport component
+  if (isEditing) {
+    return (
+      <EditReport
+        report={report}
+        onBack={() => setIsEditing(false)}
+        onSave={onRefresh}
+      />
+    );
+  }
 
   const handleExecute = async () => {
     setExecuting(true);
@@ -668,7 +790,16 @@ function ReportDetail({
         </Text>
 
         <h3>Report Definition</h3>
-        <pre style={{ background: 'var(--alga-muted)', padding: '12px', borderRadius: 'var(--alga-radius)', overflow: 'auto' }}>
+        <pre style={{
+          background: 'var(--alga-muted)',
+          color: 'var(--alga-fg)',
+          padding: '12px',
+          borderRadius: 'var(--alga-radius)',
+          overflow: 'auto',
+          fontSize: '0.8125rem',
+          lineHeight: '1.5',
+          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+        }}>
           {JSON.stringify(report.report_definition, null, 2)}
         </pre>
 
@@ -678,6 +809,9 @@ function ReportDetail({
             disabled={executing}
           >
             {executing ? 'Executing...' : 'Execute Report'}
+          </Button>
+          <Button variant="secondary" onClick={() => setIsEditing(true)}>
+            Edit Report
           </Button>
           <Button variant="danger" onClick={handleDelete}>
             Delete Report
@@ -728,11 +862,16 @@ const METRIC_TYPE_OPTIONS: SelectOption[] = [
   { value: 'query', label: 'Custom Query' },
 ];
 
-// Table options for Select
-const TABLE_OPTIONS: SelectOption[] = ALLOWED_TABLES.map(t => ({ value: t.value, label: t.label }));
-
 // Operator options for Select
 const OPERATOR_OPTIONS: SelectOption[] = OPERATORS.map(op => ({ value: op.value, label: op.label }));
+
+// Join type options for Select
+const JOIN_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'inner', label: 'INNER JOIN' },
+  { value: 'left', label: 'LEFT JOIN' },
+  { value: 'right', label: 'RIGHT JOIN' },
+  { value: 'full', label: 'FULL JOIN' },
+];
 
 function CreateReport() {
   const [name, setName] = useState('');
@@ -743,7 +882,12 @@ function CreateReport() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use dynamic schema from server
+  const { tables, tableOptions, getTableColumns, loading: schemaLoading } = useSchema();
+
   const addMetric = () => {
+    // Use first available table, or empty string if schema not loaded yet
+    const defaultTable = tables.length > 0 ? tables[0].name : '';
     setMetrics([
       ...metrics,
       {
@@ -751,7 +895,7 @@ function CreateReport() {
         name: '',
         type: 'count',
         query: {
-          table: 'tenants',
+          table: defaultTable,
           fields: ['COUNT(*) as count'],
           filters: [],
           groupBy: [],
@@ -802,6 +946,71 @@ function CreateReport() {
     setMetrics(newMetrics);
   };
 
+  const addJoin = (metricIndex: number) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    const defaultTable = tables.length > 0 ? tables[0].name : '';
+    joins.push({
+      type: 'left',
+      table: defaultTable,
+      on: [{ left: '', right: '' }],
+    });
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const updateJoin = (metricIndex: number, joinIndex: number, updates: Partial<JoinDefinition>) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    joins[joinIndex] = { ...joins[joinIndex], ...updates };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const updateJoinCondition = (
+    metricIndex: number,
+    joinIndex: number,
+    conditionIndex: number,
+    updates: Partial<JoinCondition>
+  ) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    const conditions = [...joins[joinIndex].on];
+    conditions[conditionIndex] = { ...conditions[conditionIndex], ...updates };
+    joins[joinIndex] = { ...joins[joinIndex], on: conditions };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const addJoinCondition = (metricIndex: number, joinIndex: number) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    joins[joinIndex] = {
+      ...joins[joinIndex],
+      on: [...joins[joinIndex].on, { left: '', right: '' }],
+    };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const removeJoinCondition = (metricIndex: number, joinIndex: number, conditionIndex: number) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    joins[joinIndex] = {
+      ...joins[joinIndex],
+      on: joins[joinIndex].on.filter((_, i) => i !== conditionIndex),
+    };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const removeJoin = (metricIndex: number, joinIndex: number) => {
+    const newMetrics = [...metrics];
+    newMetrics[metricIndex].query.joins = (newMetrics[metricIndex].query.joins || [])
+      .filter((_, i) => i !== joinIndex);
+    setMetrics(newMetrics);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -849,11 +1058,6 @@ function CreateReport() {
       setError(result.error || 'Failed to create report');
     }
     setCreating(false);
-  };
-
-  const getTableColumns = (tableName: string) => {
-    const table = ALLOWED_TABLES.find((t) => t.value === tableName);
-    return table?.columns || [];
   };
 
   const getFieldOptions = (tableName: string): SelectOption[] => {
@@ -955,10 +1159,128 @@ function CreateReport() {
                   <div style={{ marginBottom: '16px' }}>
                     <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Table</Text>
                     <CustomSelect
-                      options={TABLE_OPTIONS}
+                      options={tableOptions}
                       value={metric.query.table}
                       onValueChange={(value) => updateQuery(index, { table: value, fields: ['COUNT(*) as count'] })}
+                      disabled={schemaLoading}
                     />
+                    {schemaLoading && (
+                      <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+                        Loading available tables...
+                      </Text>
+                    )}
+                  </div>
+
+                  {/* Joins Section */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <Text style={{ fontWeight: 500 }}>Joins</Text>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => addJoin(index)}
+                      >
+                        + Add Join
+                      </Button>
+                    </div>
+
+                    {(metric.query.joins || []).length === 0 ? (
+                      <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+                        No joins. Add a join to query data from multiple tables.
+                      </Text>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {(metric.query.joins || []).map((join, joinIndex) => (
+                          <Card key={joinIndex} style={{ background: 'var(--alga-muted)', padding: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <Badge tone="info">Join {joinIndex + 1}</Badge>
+                              <Button
+                                type="button"
+                                variant="danger"
+                                size="sm"
+                                onClick={() => removeJoin(index, joinIndex)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                              <div style={{ flex: 1 }}>
+                                <Text style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>Join Type</Text>
+                                <CustomSelect
+                                  options={JOIN_TYPE_OPTIONS}
+                                  value={join.type}
+                                  onValueChange={(value) => updateJoin(index, joinIndex, { type: value as JoinType })}
+                                />
+                              </div>
+                              <div style={{ flex: 2 }}>
+                                <Text style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>Join Table</Text>
+                                <CustomSelect
+                                  options={tableOptions}
+                                  value={join.table}
+                                  onValueChange={(value) => updateJoin(index, joinIndex, { table: value })}
+                                />
+                              </div>
+                            </div>
+
+                            <div style={{ marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <Text style={{ fontSize: '0.75rem' }}>ON Conditions</Text>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => addJoinCondition(index, joinIndex)}
+                                  style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                                >
+                                  + Add
+                                </Button>
+                              </div>
+
+                              {join.on.map((condition, conditionIndex) => (
+                                <div
+                                  key={conditionIndex}
+                                  style={{ display: 'flex', gap: '4px', alignItems: 'center', marginBottom: '4px' }}
+                                >
+                                  <Input
+                                    type="text"
+                                    value={condition.left}
+                                    onChange={(e) => updateJoinCondition(index, joinIndex, conditionIndex, { left: e.target.value })}
+                                    placeholder={`${metric.query.table}.column`}
+                                    style={{ flex: 1, fontSize: '0.8125rem' }}
+                                  />
+                                  <Text style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>=</Text>
+                                  <Input
+                                    type="text"
+                                    value={condition.right}
+                                    onChange={(e) => updateJoinCondition(index, joinIndex, conditionIndex, { right: e.target.value })}
+                                    placeholder={`${join.table}.column`}
+                                    style={{ flex: 1, fontSize: '0.8125rem' }}
+                                  />
+                                  {join.on.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="danger"
+                                      size="sm"
+                                      onClick={() => removeJoinCondition(index, joinIndex, conditionIndex)}
+                                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                                    >
+                                      X
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            <Text tone="muted" style={{ display: 'block', fontSize: '0.7rem' }}>
+                              Available in {join.table}: {getTableColumns(join.table).slice(0, 5).join(', ')}
+                              {getTableColumns(join.table).length > 5 && '...'}
+                            </Text>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ marginBottom: '16px' }}>
@@ -1278,8 +1600,758 @@ function ExecuteReport() {
   );
 }
 
+// Audit event type options for Select
+const AUDIT_EVENT_TYPE_OPTIONS: SelectOption[] = [
+  { value: '', label: 'All Events' },
+  { value: 'report.list', label: 'Report List' },
+  { value: 'report.view', label: 'Report View' },
+  { value: 'report.create', label: 'Report Create' },
+  { value: 'report.update', label: 'Report Update' },
+  { value: 'report.delete', label: 'Report Delete' },
+  { value: 'report.execute', label: 'Report Execute' },
+  { value: 'schema.view', label: 'Schema View' },
+  { value: 'extension.access', label: 'Extension Access' },
+];
+
+function AuditLogs() {
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [eventTypeFilter, setEventTypeFilter] = useState('');
+  const [reportIdFilter, setReportIdFilter] = useState('');
+  const [limit, setLimit] = useState(50);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const params = new URLSearchParams();
+    if (eventTypeFilter) params.set('eventType', eventTypeFilter);
+    if (reportIdFilter) params.set('reportId', reportIdFilter);
+    params.set('limit', String(limit));
+
+    const queryString = params.toString();
+    const path = queryString ? `/audit?${queryString}` : '/audit';
+
+    const result = await callExtensionApi<AuditLogEntry[]>(path);
+
+    if (result.success && result.data) {
+      setLogs(result.data);
+    } else {
+      setError(result.error || 'Failed to fetch audit logs');
+    }
+    setLoading(false);
+  }, [eventTypeFilter, reportIdFilter, limit]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  const formatEventType = (type: string): string => {
+    return type
+      .replace(/\./g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const getEventBadgeTone = (type: string): 'success' | 'warning' | 'info' | 'danger' => {
+    if (type.includes('create')) return 'success';
+    if (type.includes('delete')) return 'danger';
+    if (type.includes('update')) return 'warning';
+    return 'info';
+  };
+
+  const columns: Column<AuditLogEntry>[] = [
+    {
+      key: 'created_at',
+      header: 'Time',
+      render: (row) => (
+        <Text style={{ fontSize: '0.8125rem' }}>
+          {new Date(row.created_at).toLocaleString()}
+        </Text>
+      ),
+    },
+    {
+      key: 'event_type',
+      header: 'Event',
+      render: (row) => (
+        <Badge tone={getEventBadgeTone(row.event_type)}>
+          {formatEventType(row.event_type)}
+        </Badge>
+      ),
+    },
+    {
+      key: 'user_email',
+      header: 'User',
+      render: (row) => (
+        <div>
+          {row.user_email ? (
+            <>
+              <div style={{ fontWeight: 500 }}>{row.user_email}</div>
+              {row.user_id && (
+                <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+                  {row.user_id.slice(0, 8)}...
+                </div>
+              )}
+            </>
+          ) : (
+            <Text tone="muted">System</Text>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'report_name',
+      header: 'Report',
+      render: (row) => row.report_name ? (
+        <div>
+          <div style={{ fontWeight: 500 }}>{row.report_name}</div>
+          {row.report_id && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+              {row.report_id.slice(0, 8)}...
+            </div>
+          )}
+        </div>
+      ) : (
+        <Text tone="muted">—</Text>
+      ),
+    },
+    {
+      key: 'details',
+      header: 'Details',
+      render: (row) => row.details ? (
+        <details style={{ fontSize: '0.75rem' }}>
+          <summary style={{ cursor: 'pointer', color: 'var(--alga-primary)' }}>
+            View Details
+          </summary>
+          <pre style={{
+            marginTop: '4px',
+            fontSize: '0.7rem',
+            background: 'var(--alga-muted)',
+            padding: '8px',
+            borderRadius: '4px',
+            overflow: 'auto',
+            maxWidth: '300px',
+          }}>
+            {JSON.stringify(row.details, null, 2)}
+          </pre>
+        </details>
+      ) : (
+        <Text tone="muted">—</Text>
+      ),
+    },
+    {
+      key: 'ip_address',
+      header: 'IP',
+      render: (row) => (
+        <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+          {row.ip_address || '—'}
+        </Text>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0 }}>Audit Logs</h2>
+        <Button variant="secondary" onClick={fetchLogs} disabled={loading}>
+          {loading ? 'Loading...' : 'Refresh'}
+        </Button>
+      </div>
+
+      <Card style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ minWidth: '200px' }}>
+            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Event Type</Text>
+            <CustomSelect
+              options={AUDIT_EVENT_TYPE_OPTIONS}
+              value={eventTypeFilter}
+              onValueChange={setEventTypeFilter}
+            />
+          </div>
+          <div style={{ minWidth: '200px' }}>
+            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Report ID</Text>
+            <Input
+              type="text"
+              value={reportIdFilter}
+              onChange={(e) => setReportIdFilter(e.target.value)}
+              placeholder="Filter by report ID..."
+            />
+          </div>
+          <div style={{ minWidth: '120px' }}>
+            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Limit</Text>
+            <CustomSelect
+              options={[
+                { value: '25', label: '25' },
+                { value: '50', label: '50' },
+                { value: '100', label: '100' },
+                { value: '200', label: '200' },
+              ]}
+              value={String(limit)}
+              onValueChange={(v) => setLimit(parseInt(v, 10))}
+            />
+          </div>
+        </div>
+      </Card>
+
+      {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
+
+      {loading ? (
+        <Text tone="muted">Loading audit logs...</Text>
+      ) : logs.length === 0 ? (
+        <Card>
+          <Text tone="muted">
+            No audit logs found. Activity will be recorded here when reports are accessed.
+          </Text>
+        </Card>
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={logs}
+            paginate
+            defaultPageSize={10}
+            initialSortKey="created_at"
+          />
+          <Text tone="muted" style={{ display: 'block', marginTop: '8px', fontSize: '0.75rem' }}>
+            Showing {logs.length} log entries
+          </Text>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Edit Report component
+function EditReport({
+  report,
+  onBack,
+  onSave,
+}: {
+  report: PlatformReport;
+  onBack: () => void;
+  onSave: () => void;
+}) {
+  const [name, setName] = useState(report.name);
+  const [description, setDescription] = useState(report.description || '');
+  const [category, setCategory] = useState(report.category || '');
+  const [isActive, setIsActive] = useState(report.is_active);
+  const [metrics, setMetrics] = useState<MetricDefinition[]>(
+    report.report_definition.metrics || []
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Use dynamic schema from server
+  const { tables, tableOptions, getTableColumns, loading: schemaLoading } = useSchema();
+
+  const updateMetric = (index: number, updates: Partial<MetricDefinition>) => {
+    const newMetrics = [...metrics];
+    newMetrics[index] = { ...newMetrics[index], ...updates };
+    setMetrics(newMetrics);
+  };
+
+  const updateQuery = (index: number, updates: Partial<QueryDefinition>) => {
+    const newMetrics = [...metrics];
+    newMetrics[index] = {
+      ...newMetrics[index],
+      query: { ...newMetrics[index].query, ...updates },
+    };
+    setMetrics(newMetrics);
+  };
+
+  const removeMetric = (index: number) => {
+    setMetrics(metrics.filter((_, i) => i !== index));
+  };
+
+  const addMetric = () => {
+    const defaultTable = tables.length > 0 ? tables[0].name : '';
+    setMetrics([
+      ...metrics,
+      {
+        id: `metric_${Date.now()}`,
+        name: '',
+        type: 'count',
+        query: {
+          table: defaultTable,
+          fields: ['COUNT(*) as count'],
+          filters: [],
+          groupBy: [],
+        },
+      },
+    ]);
+  };
+
+  const addFilter = (metricIndex: number) => {
+    const newMetrics = [...metrics];
+    const filters = [...(newMetrics[metricIndex].query.filters || [])];
+    filters.push({ field: '', operator: 'eq', value: '' });
+    newMetrics[metricIndex].query.filters = filters;
+    setMetrics(newMetrics);
+  };
+
+  const updateFilter = (metricIndex: number, filterIndex: number, updates: Partial<FilterDefinition>) => {
+    const newMetrics = [...metrics];
+    const filters = [...(newMetrics[metricIndex].query.filters || [])];
+    filters[filterIndex] = { ...filters[filterIndex], ...updates };
+    newMetrics[metricIndex].query.filters = filters;
+    setMetrics(newMetrics);
+  };
+
+  const removeFilter = (metricIndex: number, filterIndex: number) => {
+    const newMetrics = [...metrics];
+    newMetrics[metricIndex].query.filters = (newMetrics[metricIndex].query.filters || [])
+      .filter((_, i) => i !== filterIndex);
+    setMetrics(newMetrics);
+  };
+
+  const addJoin = (metricIndex: number) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    const defaultTable = tables.length > 0 ? tables[0].name : '';
+    joins.push({
+      type: 'left',
+      table: defaultTable,
+      on: [{ left: '', right: '' }],
+    });
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const updateJoin = (metricIndex: number, joinIndex: number, updates: Partial<JoinDefinition>) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    joins[joinIndex] = { ...joins[joinIndex], ...updates };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const updateJoinCondition = (
+    metricIndex: number,
+    joinIndex: number,
+    conditionIndex: number,
+    updates: Partial<JoinCondition>
+  ) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    const conditions = [...joins[joinIndex].on];
+    conditions[conditionIndex] = { ...conditions[conditionIndex], ...updates };
+    joins[joinIndex] = { ...joins[joinIndex], on: conditions };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const addJoinCondition = (metricIndex: number, joinIndex: number) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    joins[joinIndex] = {
+      ...joins[joinIndex],
+      on: [...joins[joinIndex].on, { left: '', right: '' }],
+    };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const removeJoinCondition = (metricIndex: number, joinIndex: number, conditionIndex: number) => {
+    const newMetrics = [...metrics];
+    const joins = [...(newMetrics[metricIndex].query.joins || [])];
+    joins[joinIndex] = {
+      ...joins[joinIndex],
+      on: joins[joinIndex].on.filter((_, i) => i !== conditionIndex),
+    };
+    newMetrics[metricIndex].query.joins = joins;
+    setMetrics(newMetrics);
+  };
+
+  const removeJoin = (metricIndex: number, joinIndex: number) => {
+    const newMetrics = [...metrics];
+    newMetrics[metricIndex].query.joins = (newMetrics[metricIndex].query.joins || [])
+      .filter((_, i) => i !== joinIndex);
+    setMetrics(newMetrics);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+
+    if (!name.trim()) {
+      setError('Report name is required');
+      setSaving(false);
+      return;
+    }
+
+    const updatedDefinition: ReportDefinition = {
+      ...report.report_definition,
+      name,
+      description,
+      category,
+      metrics,
+    };
+
+    const result = await callExtensionApi(`/reports/${report.report_id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name,
+        description: description || null,
+        category: category || null,
+        is_active: isActive,
+        report_definition: updatedDefinition,
+      }),
+    });
+
+    if (result.success) {
+      onSave();
+      onBack();
+    } else {
+      setError(result.error || 'Failed to update report');
+    }
+    setSaving(false);
+  };
+
+  const getFieldOptions = (tableName: string): SelectOption[] => {
+    return getTableColumns(tableName).map(col => ({ value: col, label: col }));
+  };
+
+  return (
+    <div>
+      <Button
+        variant="ghost"
+        style={{ marginBottom: '20px' }}
+        onClick={onBack}
+      >
+        ← Back to Report
+      </Button>
+
+      <h2 style={{ marginTop: 0 }}>Edit Report</h2>
+
+      <Card style={{ marginBottom: '16px' }}>
+        <h3 style={{ marginTop: 0 }}>Basic Information</h3>
+
+        <div style={{ marginBottom: '16px' }}>
+          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Report Name *</Text>
+          <Input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Tenant User Summary"
+            style={{ width: '100%' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Description</Text>
+          <textarea
+            style={{ ...textareaStyle, resize: 'vertical' }}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe what this report shows..."
+            rows={3}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Category</Text>
+          <CustomSelect
+            options={CATEGORY_OPTIONS}
+            placeholder="Select a category..."
+            value={category}
+            onValueChange={setCategory}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+            />
+            <Text style={{ fontWeight: 500 }}>Active</Text>
+          </label>
+          <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+            Inactive reports cannot be executed
+          </Text>
+        </div>
+      </Card>
+
+      <Card style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ margin: 0 }}>Metrics</h3>
+          <Button type="button" variant="secondary" onClick={addMetric}>
+            + Add Metric
+          </Button>
+        </div>
+
+        {metrics.length === 0 ? (
+          <Text tone="muted">
+            No metrics defined. Click "Add Metric" to add one.
+          </Text>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {metrics.map((metric, index) => (
+              <Card
+                key={metric.id}
+                style={{ background: 'var(--alga-card-bg)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <strong>Metric {index + 1}</strong>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={() => removeMetric(index)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Metric Name</Text>
+                  <Input
+                    type="text"
+                    value={metric.name}
+                    onChange={(e) => updateMetric(index, { name: e.target.value })}
+                    placeholder="e.g., Active Users Count"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Metric Type</Text>
+                  <CustomSelect
+                    options={METRIC_TYPE_OPTIONS}
+                    value={metric.type}
+                    onValueChange={(value) => updateMetric(index, { type: value as 'count' | 'sum' | 'avg' | 'query' })}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Table</Text>
+                  <CustomSelect
+                    options={tableOptions}
+                    value={metric.query.table}
+                    onValueChange={(value) => updateQuery(index, { table: value })}
+                    disabled={schemaLoading}
+                  />
+                </div>
+
+                {/* Joins Section */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <Text style={{ fontWeight: 500 }}>Joins</Text>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => addJoin(index)}
+                    >
+                      + Add Join
+                    </Button>
+                  </div>
+
+                  {(metric.query.joins || []).length === 0 ? (
+                    <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+                      No joins. Add a join to query data from multiple tables.
+                    </Text>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {(metric.query.joins || []).map((join, joinIndex) => (
+                        <Card key={joinIndex} style={{ background: 'var(--alga-muted)', padding: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <Badge tone="info">Join {joinIndex + 1}</Badge>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => removeJoin(index, joinIndex)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <Text style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>Join Type</Text>
+                              <CustomSelect
+                                options={JOIN_TYPE_OPTIONS}
+                                value={join.type}
+                                onValueChange={(value) => updateJoin(index, joinIndex, { type: value as JoinType })}
+                              />
+                            </div>
+                            <div style={{ flex: 2 }}>
+                              <Text style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>Join Table</Text>
+                              <CustomSelect
+                                options={tableOptions}
+                                value={join.table}
+                                onValueChange={(value) => updateJoin(index, joinIndex, { table: value })}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <Text style={{ fontSize: '0.75rem' }}>ON Conditions</Text>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => addJoinCondition(index, joinIndex)}
+                                style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                              >
+                                + Add
+                              </Button>
+                            </div>
+
+                            {join.on.map((condition, conditionIndex) => (
+                              <div
+                                key={conditionIndex}
+                                style={{ display: 'flex', gap: '4px', alignItems: 'center', marginBottom: '4px' }}
+                              >
+                                <Input
+                                  type="text"
+                                  value={condition.left}
+                                  onChange={(e) => updateJoinCondition(index, joinIndex, conditionIndex, { left: e.target.value })}
+                                  placeholder={`${metric.query.table}.column`}
+                                  style={{ flex: 1, fontSize: '0.8125rem' }}
+                                />
+                                <Text style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>=</Text>
+                                <Input
+                                  type="text"
+                                  value={condition.right}
+                                  onChange={(e) => updateJoinCondition(index, joinIndex, conditionIndex, { right: e.target.value })}
+                                  placeholder={`${join.table}.column`}
+                                  style={{ flex: 1, fontSize: '0.8125rem' }}
+                                />
+                                {join.on.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => removeJoinCondition(index, joinIndex, conditionIndex)}
+                                    style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                                  >
+                                    X
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          <Text tone="muted" style={{ display: 'block', fontSize: '0.7rem' }}>
+                            Available in {join.table}: {getTableColumns(join.table).slice(0, 5).join(', ')}
+                            {getTableColumns(join.table).length > 5 && '...'}
+                          </Text>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Fields (comma-separated)</Text>
+                  <Input
+                    type="text"
+                    value={metric.query.fields.join(', ')}
+                    onChange={(e) => updateQuery(index, {
+                      fields: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
+                    })}
+                    placeholder="e.g., tenant, COUNT(*) as count"
+                    style={{ width: '100%' }}
+                  />
+                  <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+                    Available columns: {getTableColumns(metric.query.table).join(', ')}
+                  </Text>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Group By (comma-separated)</Text>
+                  <Input
+                    type="text"
+                    value={(metric.query.groupBy || []).join(', ')}
+                    onChange={(e) => updateQuery(index, {
+                      groupBy: e.target.value.split(',').map((f) => f.trim()).filter(Boolean)
+                    })}
+                    placeholder="e.g., tenant"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <Text style={{ fontWeight: 500 }}>Filters</Text>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => addFilter(index)}
+                    >
+                      + Add Filter
+                    </Button>
+                  </div>
+
+                  {(metric.query.filters || []).map((filter, filterIndex) => (
+                    <div
+                      key={filterIndex}
+                      style={{
+                        display: 'flex',
+                        gap: '8px',
+                        marginBottom: '8px',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <CustomSelect
+                        options={getFieldOptions(metric.query.table)}
+                        placeholder="Select field..."
+                        value={filter.field}
+                        onValueChange={(value) => updateFilter(index, filterIndex, { field: value })}
+                        style={{ flex: 1 }}
+                      />
+                      <CustomSelect
+                        options={OPERATOR_OPTIONS}
+                        value={filter.operator}
+                        onValueChange={(value) => updateFilter(index, filterIndex, { operator: value as FilterDefinition['operator'] })}
+                        style={{ width: '100px' }}
+                      />
+                      <Input
+                        type="text"
+                        value={String(filter.value)}
+                        onChange={(e) => updateFilter(index, filterIndex, { value: e.target.value })}
+                        placeholder="Value"
+                        style={{ flex: 1 }}
+                      />
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        onClick={() => removeFilter(index, filterIndex)}
+                      >
+                        X
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
+
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
+        <Button variant="secondary" onClick={onBack}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Main App
-type View = 'reports' | 'create' | 'execute';
+type View = 'reports' | 'create' | 'execute' | 'audit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('reports');
@@ -1308,6 +2380,7 @@ function App() {
       {currentView === 'reports' && <ReportsList />}
       {currentView === 'create' && <CreateReport />}
       {currentView === 'execute' && <ExecuteReport />}
+      {currentView === 'audit' && <AuditLogs />}
     </>
   );
 }
