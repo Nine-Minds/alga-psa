@@ -83,18 +83,20 @@ export async function GET(request: NextRequest) {
     // Get the secret provider instance
     const secretProvider = await getSecretProviderInstance();
 
-    // Retrieve NinjaOne Client ID (App-level secret) with fallback to environment variable
-    let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-    if (!clientId) {
-      clientId = process.env.NINJAONE_CLIENT_ID;
-    }
+    // Retrieve NinjaOne Client ID from tenant secrets
+    const clientId = await secretProvider.getTenantSecret(tenantId, NINJAONE_CLIENT_ID_SECRET);
 
     if (!clientId) {
-      console.error('[NinjaOne Connect] Missing NinjaOne Client ID in secrets or environment variables.');
-      return NextResponse.json(
-        { error: 'NinjaOne integration is not configured correctly. Please set NINJAONE_CLIENT_ID environment variable or configure the secret.' },
-        { status: 500 }
-      );
+      console.error(`[NinjaOne Connect] No NinjaOne Client ID configured for tenant ${tenantId}.`);
+      // Redirect back to settings with error
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+      const failureUrl = new URL('/msp/settings', baseUrl);
+      failureUrl.searchParams.set('tab', 'integrations');
+      failureUrl.searchParams.set('category', 'rmm');
+      failureUrl.searchParams.set('ninjaone_status', 'failure');
+      failureUrl.searchParams.set('error', 'credentials_not_configured');
+      failureUrl.searchParams.set('message', 'Please configure your NinjaOne API credentials before connecting.');
+      return NextResponse.redirect(failureUrl);
     }
 
     // Generate secure CSRF token

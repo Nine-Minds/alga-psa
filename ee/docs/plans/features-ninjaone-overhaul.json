@@ -1,0 +1,169 @@
+{
+  "feature": "NinjaOne Per-Tenant Credentials",
+  "description": "Switch NinjaOne integration from centralized OAuth app credentials (owned by Nine Minds) to per-tenant configuration where each tenant provides their own NinjaOne API Client ID and Client Secret.",
+  "branch": "feat/ninjaone-custom-credentials",
+  "createdAt": "2024-12-16",
+  "tasks": [
+    {
+      "id": "1",
+      "category": "Server Actions",
+      "description": "Add saveNinjaOneCredentials() action to store client ID and secret in tenant secrets",
+      "file": "ee/server/src/lib/actions/integrations/ninjaoneActions.ts",
+      "done": false
+    },
+    {
+      "id": "2",
+      "category": "Server Actions",
+      "description": "Add getNinjaOneCredentialsStatus() action to check if credentials exist and return masked secret",
+      "file": "ee/server/src/lib/actions/integrations/ninjaoneActions.ts",
+      "done": false
+    },
+    {
+      "id": "3",
+      "category": "Server Actions",
+      "description": "Update disconnectNinjaOneIntegration() to clear client credentials on disconnect",
+      "file": "ee/server/src/lib/actions/integrations/ninjaoneActions.ts",
+      "done": false
+    },
+    {
+      "id": "4",
+      "category": "OAuth Connect Route",
+      "description": "Change credential retrieval from getAppSecret to getTenantSecret",
+      "file": "ee/server/src/app/api/integrations/ninjaone/connect/route.ts",
+      "done": false
+    },
+    {
+      "id": "5",
+      "category": "OAuth Connect Route",
+      "description": "Remove environment variable fallback for client ID",
+      "file": "ee/server/src/app/api/integrations/ninjaone/connect/route.ts",
+      "done": false
+    },
+    {
+      "id": "6",
+      "category": "OAuth Connect Route",
+      "description": "Add proper error redirect when credentials not configured",
+      "file": "ee/server/src/app/api/integrations/ninjaone/connect/route.ts",
+      "done": false
+    },
+    {
+      "id": "7",
+      "category": "OAuth Callback Route",
+      "description": "Change credential retrieval from getAppSecret to getTenantSecret",
+      "file": "ee/server/src/app/api/integrations/ninjaone/callback/route.ts",
+      "done": false
+    },
+    {
+      "id": "8",
+      "category": "OAuth Callback Route",
+      "description": "Remove environment variable fallback for client ID and secret",
+      "file": "ee/server/src/app/api/integrations/ninjaone/callback/route.ts",
+      "done": false
+    },
+    {
+      "id": "9",
+      "category": "OAuth Callback Route",
+      "description": "Add proper error handling when tenant credentials not found",
+      "file": "ee/server/src/app/api/integrations/ninjaone/callback/route.ts",
+      "done": false
+    },
+    {
+      "id": "10",
+      "category": "Setup UI",
+      "description": "Add state variables for clientId, clientSecret, showSecret, and credentialsStatus",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "11",
+      "category": "Setup UI",
+      "description": "Add setup instructions card with step-by-step guide for creating NinjaOne API app",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "12",
+      "category": "Setup UI",
+      "description": "Add external link button to NinjaOne API settings page",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "13",
+      "category": "Setup UI",
+      "description": "Add Client ID input field",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "14",
+      "category": "Setup UI",
+      "description": "Add Client Secret input field with show/hide toggle",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "15",
+      "category": "Setup UI",
+      "description": "Add Save Credentials button with loading state",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "16",
+      "category": "Setup UI",
+      "description": "Display dynamic redirect URI for users to configure in NinjaOne",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "17",
+      "category": "Setup UI",
+      "description": "Enable Connect button only when credentials are saved (remove disabled={true})",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "18",
+      "category": "Setup UI",
+      "description": "Remove 'waiting for NinjaOne approval' message",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "19",
+      "category": "Setup UI",
+      "description": "Add useEffect to load credential status on component mount",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "20",
+      "category": "Setup UI",
+      "description": "Show saved credentials status (client ID visible, secret masked)",
+      "file": "ee/server/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
+      "done": false
+    },
+    {
+      "id": "21",
+      "category": "Testing",
+      "description": "Test end-to-end OAuth flow with tenant credentials",
+      "file": null,
+      "done": false
+    },
+    {
+      "id": "22",
+      "category": "Testing",
+      "description": "Test credential save/load/clear functionality",
+      "file": null,
+      "done": false
+    },
+    {
+      "id": "23",
+      "category": "Testing",
+      "description": "Test disconnect properly clears all credentials",
+      "file": null,
+      "done": false
+    }
+  ]
+}

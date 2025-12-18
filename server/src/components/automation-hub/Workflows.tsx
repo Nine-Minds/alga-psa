@@ -433,7 +433,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                   label="Show inactive workflows"
                 />
               </div>
-              <div className="relative w-64">
+              <div className="relative w-64 p-0.5">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="search-workflows-input"

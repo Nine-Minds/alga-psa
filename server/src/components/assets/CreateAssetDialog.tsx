@@ -249,6 +249,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
       isOpen={true}
       onClose={onClose}
       title="Create New Asset"
+      disableFocusTrap
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Error Display */}

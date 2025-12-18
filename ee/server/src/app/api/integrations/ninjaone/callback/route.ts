@@ -184,22 +184,15 @@ export async function GET(request: NextRequest) {
     // For now, we're relying on the state parameter containing tenant info
     console.log(`[NinjaOne Callback] Processing callback for tenant ${tenantId}`);
 
-    // 2. Get app secrets with fallback to environment variables
+    // 2. Get tenant-specific credentials
     const secretProvider = await getSecretProviderInstance();
-    let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-    let clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
-    
-    // Fallback to environment variables if not found in secrets
-    if (!clientId) {
-      clientId = process.env.NINJAONE_CLIENT_ID;
-    }
-    if (!clientSecret) {
-      clientSecret = process.env.NINJAONE_CLIENT_SECRET;
-    }
+    const clientId = await secretProvider.getTenantSecret(tenantId, NINJAONE_CLIENT_ID_SECRET);
+    const clientSecret = await secretProvider.getTenantSecret(tenantId, NINJAONE_CLIENT_SECRET_SECRET);
 
     if (!clientId || !clientSecret) {
-      console.error('[NinjaOne Callback] Missing NinjaOne Client ID or Secret in secrets or environment variables.');
-      return failureRedirect('config_error', 'NinjaOne integration is not configured correctly. Please set NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET environment variables or configure the secrets.');
+      console.error(`[NinjaOne Callback] Missing NinjaOne credentials for tenant ${tenantId}.`);
+      return failureRedirect('credentials_not_configured',
+        'NinjaOne API credentials are not configured. Please save your Client ID and Client Secret in settings before connecting.');
     }
 
     // 3. Exchange authorization code for tokens

@@ -152,8 +152,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   };
 
   return (
-    <Dialog 
-      isOpen={true} 
+    <Dialog
+      isOpen={true}
       onClose={() => {
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
@@ -161,6 +161,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       }}
       title="Add New Project"
       className="max-w-[600px]"
+      disableFocusTrap
     >
       <DialogContent>
           {hasAttemptedSubmit && validationErrors.length > 0 && (

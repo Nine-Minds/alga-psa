@@ -12,13 +12,17 @@ import { cloneTemplateContractLine } from '../../billing/utils/templateClone';
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractLineId: string): Promise<Date | null> {
   // First, get the client_contract_id associated with the clientContractLineId
-  const planInfo = await db('client_contract_lines')
-    .select('client_id', 'contract_line_id', 'client_contract_id')
-    .where({ client_contract_line_id: clientContractLineId, tenant: tenant })
+  const planInfo = await db('contract_lines as cl')
+    .join('client_contracts as cc', function(this: Knex.JoinClause) {
+      this.on('cl.contract_id', '=', 'cc.contract_id')
+          .andOn('cl.tenant', '=', 'cc.tenant');
+    })
+    .select('cc.client_id', 'cl.contract_line_id', 'cc.client_contract_id')
+    .where({ 'cl.contract_line_id': clientContractLineId, 'cl.tenant': tenant })
     .first();
 
   if (!planInfo) {
-    console.warn(`Client contract line ${clientContractLineId} not found for tenant ${tenant}`);
+    console.warn(`Contract line ${clientContractLineId} not found for tenant ${tenant}`);
     return null; // No contract line assignment found
   }
 
@@ -70,13 +74,36 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
   try {
     const {knex: db, tenant} = await createTenantKnex();
     const clientContractLine = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('client_contract_lines')
-        .where({ 
-          client_id: clientId, 
-          is_active: true,
-          tenant 
+      return await trx('contract_lines as cl')
+        .join('client_contracts as cc', function () {
+          this.on('cc.contract_id', '=', 'cl.contract_id')
+            .andOn('cc.tenant', '=', 'cl.tenant');
         })
-        .orderBy('start_date', 'desc');
+        .join('contracts as co', function () {
+          this.on('co.contract_id', '=', 'cl.contract_id')
+            .andOn('co.tenant', '=', 'cl.tenant');
+        })
+        .leftJoin('service_categories as sc', function () {
+          this.on('sc.category_id', '=', 'cl.service_category')
+            .andOn('sc.tenant', '=', 'cl.tenant');
+        })
+        .where({ 
+          'cc.client_id': clientId, 
+          'cl.is_active': true,
+          'cl.tenant': tenant 
+        })
+        .select([
+          'cl.*',
+          'cl.contract_line_id as client_contract_line_id', // Map to expected interface field
+          'cc.client_id',
+          'cc.client_contract_id',
+          'cc.start_date',
+          'cc.end_date',
+          'cc.template_contract_id',
+          'co.contract_name',
+          'sc.category_name as service_category_name'
+        ])
+        .orderBy('cc.start_date', 'desc');
     });
 
     return clientContractLine.map((billing: IClientContractLine): IClientContractLine => ({
@@ -101,12 +128,25 @@ export async function updateClientContractLine(clientContractLineId: string, upd
   try {
     const {knex: db, tenant} = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('client_contract_lines')
+      // Filter updates to include only columns that exist on contract_lines
+      const {
+        client_contract_line_id,
+        client_id,
+        start_date,
+        end_date,
+        client_contract_id,
+        template_contract_id,
+        contract_name,
+        service_category_name,
+        ...validUpdates
+      } = updates as any;
+
+      return await trx('contract_lines')
         .where({ 
-          client_contract_line_id: clientContractLineId,
+          contract_line_id: clientContractLineId,
           tenant 
         })
-        .update(updates);
+        .update(validUpdates);
     });
 
     if (result === 0) {
@@ -254,12 +294,12 @@ export async function removeClientContractLine(clientContractLineId: string): Pr
     // --- Validation End ---
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('client_contract_lines')
+      return await trx('contract_lines')
         .where({
-          client_contract_line_id: clientContractLineId,
+          contract_line_id: clientContractLineId,
           tenant
         })
-        .update({ is_active: false, end_date: now }); // Use the 'now' variable
+        .update({ is_active: false }); // end_date removed as it's not on contract_lines
     });
 
     if (result === 0) {
@@ -333,12 +373,25 @@ export async function editClientContractLine(clientContractLineId: string, updat
     // --- Validation End ---
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('client_contract_lines')
+      // Filter updates to include only columns that exist on contract_lines
+      const {
+        client_contract_line_id,
+        client_id,
+        start_date,
+        end_date,
+        client_contract_id,
+        template_contract_id,
+        contract_name,
+        service_category_name,
+        ...validUpdates
+      } = updateData as any;
+
+      return await trx('contract_lines')
         .where({
-          client_contract_line_id: clientContractLineId,
+          contract_line_id: clientContractLineId,
           tenant
         })
-        .update(updateData);
+        .update(validUpdates);
     });
 
     if (result === 0) {

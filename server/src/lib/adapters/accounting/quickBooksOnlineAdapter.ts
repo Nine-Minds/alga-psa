@@ -557,7 +557,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .select('*')
       .where('tenant', tenantId)
       .andWhere('integration_type', this.type)
-      .whereIn('alga_entity_type', ['client', 'company'])
+      .whereIn('alga_entity_type', ['client'])
       .whereIn('alga_entity_id', Array.from(clientIds))
       .modify((qb) => {
         if (context.batch.target_realm) {
@@ -572,10 +572,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const mappingMap = new Map<string, MappingRow>();
     mappingRows.forEach((row: MappingRowRaw) => {
       const normalized = normalizeMapping(row);
-      const existing = mappingMap.get(normalized.alga_entity_id);
-      if (!existing || existing.alga_entity_type !== 'company') {
-        mappingMap.set(normalized.alga_entity_id, normalized);
-      }
+      mappingMap.set(normalized.alga_entity_id, normalized);
     });
 
     return { clients: clientMap, mappings: mappingMap };
@@ -914,7 +911,7 @@ function mappingFromResolution(
   return {
     id: `runtime-${clientId}`,
     integration_type: adapterType,
-    alga_entity_type: 'company',
+    alga_entity_type: 'client',
     alga_entity_id: clientId,
     external_entity_id: resolution.external_entity_id,
     external_realm_id: targetRealm,

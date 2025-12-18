@@ -91,7 +91,10 @@ async function requireAccountingExportPermission(action: AccountingExportPermiss
   }
 
   const knex = await getConnection(tenant);
-  const allowed = await hasPermission(currentUser, 'accountingExports', action, knex);
+  // Accounting exports are currently managed from billing/integrations surfaces; gate with billing settings permissions.
+  // Map export actions to billing_settings read/update to align with mapping + CSV export permissions.
+  const billingAction = action === 'read' ? 'read' : 'update';
+  const allowed = await hasPermission(currentUser, 'billing_settings', billingAction, knex);
   if (!allowed) {
     throw new AppError(
       'ACCOUNTING_EXPORT_FORBIDDEN',
@@ -213,7 +216,7 @@ export async function previewAccountingExport(
       clientSearch: toOptionalString(filters.clientSearch),
       adapterType: toOptionalString(filters.adapterType),
       targetRealm: toOptionalString(filters.targetRealm) ?? null,
-      excludeSyncedInvoices: filters.excludeSyncedInvoices !== false
+      excludeSyncedInvoices: true
     };
 
     const lines = await selector.previewInvoiceLines(normalizedFilters);
