@@ -21,6 +21,7 @@ interface BoardPickerProps {
   onFilterStateChange: (state: 'active' | 'inactive' | 'all') => void;
   fitContent?: boolean;
   placeholder?: string;
+  modal?: boolean;
 }
 
 export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
@@ -32,6 +33,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
   onFilterStateChange,
   fitContent = false,
   placeholder = 'Select Board',
+  modal = true,
   "data-automation-type": dataAutomationType = 'picker'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -206,6 +208,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
                   options={opts}
                   placeholder="Filter by status"
                   label="Status Filter"
+                  modal={modal}
                 />
               </div>
               <div className="whitespace-nowrap">

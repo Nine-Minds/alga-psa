@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useId } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
+import { useModality } from './ModalityContext';
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
@@ -33,6 +34,8 @@ interface CustomSelectProps {
   required?: boolean;
   /** Whether to allow clearing the selection */
   allowClear?: boolean;
+  /** Whether the select should be modal (prevents interaction with outside elements) */
+  modal?: boolean;
 }
 
 const PLACEHOLDER_VALUE = '__SELECT_PLACEHOLDER__';
@@ -52,8 +55,11 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   "data-automation-id": dataAutomationId,
   required = false,
   allowClear = false, // Added default value
+  modal = true,
   ...props
 }): JSX.Element => {
+  const { modal: parentModal } = useModality();
+  
   // Generate a stable ID for this select instance
   const generatedId = useId();
   const selectId = id || generatedId;
@@ -126,6 +132,9 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
         : value;
   const selectedOption = uniqueOptions.find((option) => option.value === value);
 
+  // Explicit prop overrides parent modality context
+  const isModal = props.modal !== undefined ? props.modal : parentModal;
+
   return (
     <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType} suppressHydrationWarning>
       {label && (
@@ -135,6 +144,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
       )}
       <RadixSelect.Root
         value={radixValue}
+        modal={isModal}
         // Use internal handler to intercept clear action
         onValueChange={(newValue) => {
           if (allowClear && newValue === '__CLEAR__') {
@@ -149,6 +159,16 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
         }}
         disabled={disabled}
         required={required}
+        onOpenChange={(open) => {
+          // When select closes, mark it on the document to prevent dialog from closing
+          // This helps with the portal timing issue
+          if (!open) {
+            document.body.setAttribute('data-radix-select-just-closed', 'true');
+            setTimeout(() => {
+              document.body.removeAttribute('data-radix-select-just-closed');
+            }, 100);
+          }
+        }}
       >
         <RadixSelect.Trigger
           {...finalAutomationProps}
@@ -167,6 +187,12 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
           `}
           aria-label={placeholder}
           suppressHydrationWarning
+          onPointerDown={(e) => {
+            // Prevent click events from bubbling up to parent dialogs
+            // This prevents dialogs from closing when clicking the select trigger
+            // to toggle the dropdown open/closed state
+            e.stopPropagation();
+          }}
         >
           <RadixSelect.Value
             placeholder={placeholder}
