@@ -1287,37 +1287,102 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
             return true; // Allow sign in
         },
-        async jwt({ token, user }) {
-            console.log('JWT callback - initial token:', {
-                id: token.id,
-                email: token.email,
-                clientId: token.clientId,
-                hasUser: !!user
-            });
+	        async jwt({ token, user }) {
+	            console.log('JWT callback - initial token:', {
+	                id: token.id,
+	                email: token.email,
+	                clientId: token.clientId,
+	                hasUser: !!user
+	            });
 
-            if (user) {
-                const extendedUser = user as ExtendedUser;
-                console.log('JWT callback - new user login:', {
-                    id: extendedUser.id,
-                    email: extendedUser.email,
-                    tenant: extendedUser.tenant,
-                    clientId: extendedUser.clientId
-                });
+	            if (user) {
+	                const extendedUser = user as ExtendedUser;
+	                console.log('JWT callback - new user login:', {
+	                    id: extendedUser.id,
+	                    email: extendedUser.email,
+	                    tenant: extendedUser.tenant,
+	                    clientId: extendedUser.clientId
+	                });
                 if (!extendedUser.tenantSlug && extendedUser.tenant) {
                     extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
                 }
-                token.id = extendedUser.id;
-                token.email = extendedUser.email;
-                token.name = extendedUser.name;
-                token.username = extendedUser.username;
-                token.image = extendedUser.image;
-                token.proToken = extendedUser.proToken;
+	                token.id = extendedUser.id;
+	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
+	                token.sub = extendedUser.id;
+	                token.email = extendedUser.email;
+	                token.name = extendedUser.name;
+	                token.username = extendedUser.username;
+	                token.image = extendedUser.image;
+	                token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.tenantSlug = extendedUser.tenantSlug;
                 token.user_type = extendedUser.user_type;
                 token.clientId = extendedUser.clientId;
                 token.contactId = extendedUser.contactId;
               }
+
+            // CRITICAL SAFETY: session.user.id is treated as `users.user_id` throughout the MSP app.
+            // If the OAuth profile mapper ever returns an id that doesn't exist in `users` for the tenant,
+            // downstream lookups (getCurrentUser/hasPermission) fail and the user gets access denied.
+            if (user && typeof token.tenant === 'string' && typeof token.id === 'string') {
+                try {
+                    const tenant = token.tenant;
+                    const tokenUserId = token.id;
+                    const knex = await getConnection(tenant);
+
+                    const exists = await knex('users')
+                        .select('user_id')
+                        .where({ tenant, user_id: tokenUserId })
+                        .first();
+
+                    if (!exists) {
+                        const emailCandidate =
+                            typeof token.email === 'string' ? token.email.trim().toLowerCase() : undefined;
+                        const userTypeCandidate =
+                            typeof token.user_type === 'string' ? token.user_type : undefined;
+
+                        if (emailCandidate) {
+                            const query = knex('users')
+                                .select('user_id')
+                                .where({ tenant })
+                                .andWhereRaw('lower(email) = ?', [emailCandidate]);
+
+                            if (userTypeCandidate) {
+                                query.andWhere('user_type', userTypeCandidate);
+                            }
+
+                            const resolved = await query.first();
+                            if (resolved?.user_id && resolved.user_id !== tokenUserId) {
+                                console.error('[auth] JWT user id mismatch detected; correcting token.id', {
+                                    tenant,
+                                    email: emailCandidate,
+                                    user_type: userTypeCandidate,
+                                    tokenUserId,
+                                    dbUserId: resolved.user_id,
+                                });
+	                                token.id = resolved.user_id;
+	                                // Keep `sub` consistent for any consumers that rely on it.
+	                                token.sub = resolved.user_id;
+	                            } else {
+	                                console.error('[auth] JWT user id does not resolve to a user record', {
+	                                    tenant,
+	                                    email: emailCandidate,
+	                                    user_type: userTypeCandidate,
+                                    tokenUserId,
+                                });
+                            }
+                        } else {
+                            console.error('[auth] JWT user id missing email; cannot self-heal token.id', {
+                                tenant,
+                                tokenUserId,
+                                tokenKeys: Object.keys(token),
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.warn('[auth] Failed to validate/correct JWT user id', error);
+                }
+            }
 
             // NEW: Create session record on initial sign-in
             // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
@@ -2018,34 +2083,98 @@ export const options: NextAuthConfig = {
                 hasUser: !!user
             });
 
-            if (user) {
-                const extendedUser = user as ExtendedUser;
-                console.log('JWT callback - new user login:', {
-                    id: extendedUser.id,
-                    email: extendedUser.email,
-                    tenant: extendedUser.tenant,
-                    clientId: extendedUser.clientId
-                });
+	            if (user) {
+	                const extendedUser = user as ExtendedUser;
+	                console.log('JWT callback - new user login:', {
+	                    id: extendedUser.id,
+	                    email: extendedUser.email,
+	                    tenant: extendedUser.tenant,
+	                    clientId: extendedUser.clientId
+	                });
                 if (!extendedUser.tenantSlug && extendedUser.tenant) {
                     extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
                 }
-                token.id = extendedUser.id;
-                token.email = extendedUser.email;
-                token.name = extendedUser.name;
-                token.username = extendedUser.username;
-                token.image = extendedUser.image;
-                token.proToken = extendedUser.proToken;
+	                token.id = extendedUser.id;
+	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
+	                token.sub = extendedUser.id;
+	                token.email = extendedUser.email;
+	                token.name = extendedUser.name;
+	                token.username = extendedUser.username;
+	                token.image = extendedUser.image;
+	                token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.tenantSlug = extendedUser.tenantSlug;
-                token.user_type = extendedUser.user_type;
-                token.clientId = extendedUser.clientId;
-                token.contactId = extendedUser.contactId;
-              }
+	                token.user_type = extendedUser.user_type;
+	                token.clientId = extendedUser.clientId;
+	                token.contactId = extendedUser.contactId;
+	              }
 
-            // NEW: Create session record on initial sign-in
-            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-            if ((user as any)?.deviceInfo && !token.session_id) {
-                try {
+	            // CRITICAL SAFETY: session.user.id is treated as `users.user_id` throughout the MSP app.
+	            // If the OAuth profile mapper ever returns an id that doesn't exist in `users` for the tenant,
+	            // downstream lookups (getCurrentUser/hasPermission) fail and the user gets access denied.
+	            if (user && typeof token.tenant === 'string' && typeof token.id === 'string') {
+	                try {
+	                    const tenant = token.tenant;
+	                    const tokenUserId = token.id;
+	                    const knex = await getConnection(tenant);
+
+	                    const exists = await knex('users')
+	                        .select('user_id')
+	                        .where({ tenant, user_id: tokenUserId })
+	                        .first();
+
+	                    if (!exists) {
+	                        const emailCandidate =
+	                            typeof token.email === 'string' ? token.email.trim().toLowerCase() : undefined;
+	                        const userTypeCandidate =
+	                            typeof token.user_type === 'string' ? token.user_type : undefined;
+
+	                        if (emailCandidate) {
+	                            const query = knex('users')
+	                                .select('user_id')
+	                                .where({ tenant })
+	                                .andWhereRaw('lower(email) = ?', [emailCandidate]);
+
+	                            if (userTypeCandidate) {
+	                                query.andWhere('user_type', userTypeCandidate);
+	                            }
+
+	                            const resolved = await query.first();
+	                            if (resolved?.user_id && resolved.user_id !== tokenUserId) {
+	                                console.error('[auth] JWT user id mismatch detected; correcting token.id', {
+	                                    tenant,
+	                                    email: emailCandidate,
+	                                    user_type: userTypeCandidate,
+	                                    tokenUserId,
+	                                    dbUserId: resolved.user_id,
+	                                });
+	                                token.id = resolved.user_id;
+	                                token.sub = resolved.user_id;
+	                            } else {
+	                                console.error('[auth] JWT user id does not resolve to a user record', {
+	                                    tenant,
+	                                    email: emailCandidate,
+	                                    user_type: userTypeCandidate,
+	                                    tokenUserId,
+	                                });
+	                            }
+	                        } else {
+	                            console.error('[auth] JWT user id missing email; cannot self-heal token.id', {
+	                                tenant,
+	                                tokenUserId,
+	                                tokenKeys: Object.keys(token),
+	                            });
+	                        }
+	                    }
+	                } catch (error) {
+	                    console.warn('[auth] Failed to validate/correct JWT user id', error);
+	                }
+	            }
+
+	            // NEW: Create session record on initial sign-in
+	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
+	            if ((user as any)?.deviceInfo && !token.session_id) {
+	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
 
