@@ -272,8 +272,12 @@ export class PlatformReportService {
           metrics[metric.id] = this.formatMetricValue(value, metric.formatting);
         } catch (error) {
           console.error(`Error executing metric ${metric.id}:`, error);
-          // Continue with other metrics, setting this one to null
-          metrics[metric.id] = null;
+          // Return error details so user can debug their query
+          metrics[metric.id] = {
+            error: true,
+            message: error instanceof Error ? error.message : 'Unknown error',
+            metricName: metric.name,
+          };
         }
       }
 

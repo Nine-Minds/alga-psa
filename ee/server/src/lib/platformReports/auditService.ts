@@ -1,21 +1,43 @@
 /**
- * Platform Reports Audit Service
+ * Extension Audit Service
  *
- * Tracks all access and actions on platform reports for security and debugging.
- * Logs are stored in the custom_reports_audit table.
+ * Tracks ALL extension activity for security and debugging.
+ * Logs are stored in the extension_audit_logs table.
+ *
+ * Supports:
+ * - Platform reports (report.list, report.create, report.execute, etc.)
+ * - Tenant management (tenant.list, tenant.create, tenant.resend_email, etc.)
+ * - Any future extension features
  */
 
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
-export type AuditEventType =
+// Report-related events
+export type ReportEventType =
   | 'report.list'
   | 'report.view'
   | 'report.create'
   | 'report.update'
   | 'report.delete'
   | 'report.execute'
-  | 'schema.view'
-  | 'extension.access';
+  | 'schema.view';
+
+// Tenant management events
+export type TenantEventType =
+  | 'tenant.list'
+  | 'tenant.view'
+  | 'tenant.create'
+  | 'tenant.resend_email'
+  | 'tenant.cancel_subscription'
+  | 'tenant.delete';
+
+// General events
+export type GeneralEventType = 'extension.access';
+
+export type AuditEventType = ReportEventType | TenantEventType | GeneralEventType;
+
+export type ResourceType = 'report' | 'tenant' | 'user' | 'subscription';
+export type AuditStatus = 'pending' | 'completed' | 'failed' | 'running';
 
 export interface AuditLogEntry {
   log_id: string;
@@ -23,8 +45,12 @@ export interface AuditLogEntry {
   event_type: AuditEventType;
   user_id: string | null;
   user_email: string | null;
-  report_id: string | null;
-  report_name: string | null;
+  resource_type: ResourceType | null;
+  resource_id: string | null;
+  resource_name: string | null;
+  workflow_id: string | null;
+  status: AuditStatus | null;
+  error_message: string | null;
   details: Record<string, unknown> | null;
   ip_address: string | null;
   user_agent: string | null;
@@ -35,8 +61,12 @@ export interface LogEventInput {
   eventType: AuditEventType;
   userId?: string | null;
   userEmail?: string | null;
-  reportId?: string | null;
-  reportName?: string | null;
+  resourceType?: ResourceType | null;
+  resourceId?: string | null;
+  resourceName?: string | null;
+  workflowId?: string | null;
+  status?: AuditStatus | null;
+  errorMessage?: string | null;
   details?: Record<string, unknown>;
   ipAddress?: string | null;
   userAgent?: string | null;
@@ -44,15 +74,18 @@ export interface LogEventInput {
 
 export interface ListLogsOptions {
   eventType?: AuditEventType;
+  eventTypePrefix?: string;  // e.g., 'tenant.' to get all tenant events
   userId?: string;
-  reportId?: string;
+  resourceType?: ResourceType;
+  resourceId?: string;
+  status?: AuditStatus;
   startDate?: Date;
   endDate?: Date;
   limit?: number;
   offset?: number;
 }
 
-export class PlatformReportAuditService {
+export class ExtensionAuditService {
   private masterTenantId: string;
 
   constructor(masterTenantId: string) {
@@ -62,24 +95,62 @@ export class PlatformReportAuditService {
   /**
    * Log an audit event
    */
-  async logEvent(input: LogEventInput): Promise<void> {
+  async logEvent(input: LogEventInput): Promise<string | null> {
     try {
       const knex = await getAdminConnection();
 
-      await knex('custom_reports_audit').insert({
-        tenant: this.masterTenantId,
-        event_type: input.eventType,
-        user_id: input.userId || null,
-        user_email: input.userEmail || null,
-        report_id: input.reportId || null,
-        report_name: input.reportName || null,
-        details: input.details ? JSON.stringify(input.details) : null,
-        ip_address: input.ipAddress || null,
-        user_agent: input.userAgent || null,
-      });
+      const [result] = await knex('extension_audit_logs')
+        .insert({
+          tenant: this.masterTenantId,
+          event_type: input.eventType,
+          user_id: input.userId || null,
+          user_email: input.userEmail || null,
+          resource_type: input.resourceType || null,
+          resource_id: input.resourceId || null,
+          resource_name: input.resourceName || null,
+          workflow_id: input.workflowId || null,
+          status: input.status || null,
+          error_message: input.errorMessage || null,
+          details: input.details ? JSON.stringify(input.details) : null,
+          ip_address: input.ipAddress || null,
+          user_agent: input.userAgent || null,
+        })
+        .returning('log_id');
+
+      return result?.log_id || null;
     } catch (error) {
       // Don't fail the request if logging fails - just log to console
-      console.error('[PlatformReportAuditService] Failed to log event:', error);
+      console.error('[ExtensionAuditService] Failed to log event:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update an existing audit log entry (e.g., to update status after workflow completes)
+   */
+  async updateLog(
+    logId: string,
+    updates: {
+      status?: AuditStatus;
+      workflowId?: string;
+      errorMessage?: string;
+      details?: Record<string, unknown>;
+    }
+  ): Promise<void> {
+    try {
+      const knex = await getAdminConnection();
+
+      const updateData: Record<string, unknown> = {};
+      if (updates.status) updateData.status = updates.status;
+      if (updates.workflowId) updateData.workflow_id = updates.workflowId;
+      if (updates.errorMessage) updateData.error_message = updates.errorMessage;
+      if (updates.details) updateData.details = JSON.stringify(updates.details);
+
+      await knex('extension_audit_logs')
+        .where({ tenant: this.masterTenantId, log_id: logId })
+        .update(updateData);
+    } catch (error) {
+      console.error('[ExtensionAuditService] Failed to update log:', error);
     }
   }
 
@@ -89,7 +160,7 @@ export class PlatformReportAuditService {
   async listLogs(options: ListLogsOptions = {}): Promise<AuditLogEntry[]> {
     const knex = await getAdminConnection();
 
-    let query = knex('custom_reports_audit')
+    let query = knex('extension_audit_logs')
       .where('tenant', this.masterTenantId)
       .select('*')
       .orderBy('created_at', 'desc');
@@ -98,12 +169,24 @@ export class PlatformReportAuditService {
       query = query.where('event_type', options.eventType);
     }
 
+    if (options.eventTypePrefix) {
+      query = query.where('event_type', 'like', `${options.eventTypePrefix}%`);
+    }
+
     if (options.userId) {
       query = query.where('user_id', options.userId);
     }
 
-    if (options.reportId) {
-      query = query.where('report_id', options.reportId);
+    if (options.resourceType) {
+      query = query.where('resource_type', options.resourceType);
+    }
+
+    if (options.resourceId) {
+      query = query.where('resource_id', options.resourceId);
+    }
+
+    if (options.status) {
+      query = query.where('status', options.status);
     }
 
     if (options.startDate) {
@@ -143,12 +226,12 @@ export class PlatformReportAuditService {
     const knex = await getAdminConnection();
 
     // Total events
-    const [{ count: totalEvents }] = await knex('custom_reports_audit')
+    const [{ count: totalEvents }] = await knex('extension_audit_logs')
       .where('tenant', this.masterTenantId)
       .count('* as count');
 
     // Events by type
-    const eventsByTypeRows = await knex('custom_reports_audit')
+    const eventsByTypeRows = await knex('extension_audit_logs')
       .where('tenant', this.masterTenantId)
       .select('event_type')
       .count('* as count')
@@ -163,7 +246,7 @@ export class PlatformReportAuditService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentUsers = await knex('custom_reports_audit')
+    const recentUsers = await knex('extension_audit_logs')
       .where('tenant', this.masterTenantId)
       .where('created_at', '>=', thirtyDaysAgo)
       .whereNotNull('user_id')
@@ -184,6 +267,9 @@ export class PlatformReportAuditService {
     };
   }
 }
+
+// Backwards compatibility alias
+export const PlatformReportAuditService = ExtensionAuditService;
 
 /**
  * Helper to extract client info from request

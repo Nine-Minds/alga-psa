@@ -111,8 +111,9 @@ export async function POST(
       eventType: 'report.execute',
       userId: user?.user_id,
       userEmail: user?.email,
-      reportId: reportId,
-      reportName: result.reportName,
+      resourceType: 'report',
+      resourceId: reportId,
+      resourceName: result.reportName,
       details: {
         parameters,
         executionTime: result.metadata?.executionTime,
