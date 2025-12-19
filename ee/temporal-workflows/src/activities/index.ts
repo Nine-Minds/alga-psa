@@ -15,3 +15,4 @@ export * from "./job-activities";
 export * from "./email-webhook-maintenance-activities";
 export * from "./calendar-webhook-maintenance-activities";
 export * from "./ninjaone-sync-activities";
+export * from "./resend-welcome-email-activities";

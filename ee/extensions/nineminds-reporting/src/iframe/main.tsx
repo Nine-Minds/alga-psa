@@ -2054,7 +2054,460 @@ const AUDIT_EVENT_TYPE_OPTIONS: SelectOption[] = [
   { value: 'report.execute', label: 'Report Execute' },
   { value: 'schema.view', label: 'Schema View' },
   { value: 'extension.access', label: 'Extension Access' },
+  { value: 'tenant.list', label: 'Tenant List' },
+  { value: 'tenant.view', label: 'Tenant View' },
+  { value: 'tenant.create', label: 'Tenant Create' },
+  { value: 'tenant.resend_email', label: 'Resend Email' },
+  { value: 'tenant.cancel_subscription', label: 'Cancel Subscription' },
 ];
+
+// ============================================================================
+// Tenant Management Types and API
+// ============================================================================
+
+interface Tenant {
+  tenant: string;
+  client_name: string;
+  portal_domain: string | null;
+  subscription_status: string | null;
+  created_at: string;
+}
+
+interface TenantManagementResponse<T> {
+  success: boolean;
+  error?: string;
+  data?: T;
+  message?: string;
+  workflowId?: string;
+  tenantId?: string;
+  adminUserId?: string;
+  email?: string;
+  tenantName?: string;
+}
+
+// API client for tenant management endpoints
+async function callTenantManagementApi<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<TenantManagementResponse<T>> {
+  const hostOrigin = getHostOrigin();
+  const baseUrl = `${hostOrigin}/api/v1/tenant-management`;
+
+  try {
+    const response = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      if ('success' in data) {
+        return data;
+      }
+      return { success: true, data: data as T };
+    } else {
+      return { success: false, error: data.error || data.message || 'Request failed' };
+    }
+  } catch (error) {
+    console.error('Tenant Management API call failed:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// ============================================================================
+// Tenant Management View
+// ============================================================================
+
+function TenantManagementView() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    companyName: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    licenseCount: 5,
+  });
+
+  // Fetch tenants
+  const fetchTenants = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const result = await callTenantManagementApi<Tenant[]>('/tenants');
+    if (result.success && result.data) {
+      setTenants(result.data);
+    } else {
+      setError(result.error || 'Failed to fetch tenants');
+    }
+    setLoading(false);
+  }, []);
+
+  // Fetch tenant management audit logs
+  const fetchAuditLogs = useCallback(async () => {
+    const hostOrigin = getHostOrigin();
+    try {
+      const response = await fetch(
+        `${hostOrigin}/api/v1/tenant-management/audit?eventTypePrefix=tenant.&limit=50`,
+        { credentials: 'include', headers: { 'Content-Type': 'application/json' } }
+      );
+      const result = await response.json();
+      if (result.success && result.data) {
+        setAuditLogs(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch audit logs:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTenants();
+    fetchAuditLogs();
+  }, [fetchTenants, fetchAuditLogs]);
+
+  // Handle resend welcome email
+  const handleResendWelcomeEmail = async (tenantId: string, tenantName: string) => {
+    if (!confirm(`Send new welcome email with reset password to admin of "${tenantName}"?`)) {
+      return;
+    }
+
+    setActionInProgress(tenantId);
+    try {
+      const result = await callTenantManagementApi<void>('/resend-welcome-email', {
+        method: 'POST',
+        body: JSON.stringify({ tenantId }),
+      });
+
+      if (result.success) {
+        alert(result.message || `Welcome email sent to ${result.email}`);
+        fetchAuditLogs();
+      } else {
+        alert(`Failed: ${result.error}`);
+      }
+    } catch (err) {
+      alert(`Error: ${err}`);
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Handle create tenant
+  const handleCreateTenant = async () => {
+    const { companyName, firstName, lastName, email, licenseCount } = createForm;
+
+    if (!companyName.trim() || !firstName.trim() || !lastName.trim() || !email.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    if (!confirm(`Create tenant "${companyName}" with admin user ${email}?`)) {
+      return;
+    }
+
+    setActionInProgress('create');
+    try {
+      const result = await callTenantManagementApi<void>('/create-tenant', {
+        method: 'POST',
+        body: JSON.stringify({
+          companyName: companyName.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
+          licenseCount,
+        }),
+      });
+
+      if (result.success) {
+        alert(result.message || `Tenant "${companyName}" created successfully`);
+        setShowCreateForm(false);
+        setCreateForm({
+          companyName: '',
+          firstName: '',
+          lastName: '',
+          email: '',
+          licenseCount: 5,
+        });
+        fetchTenants();
+        fetchAuditLogs();
+      } else {
+        alert(`Failed: ${result.error}`);
+      }
+    } catch (err) {
+      alert(`Error: ${err}`);
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  const getStatusBadgeTone = (status: string | null): 'success' | 'warning' | 'info' | 'danger' => {
+    if (!status) return 'info';
+    if (status === 'active') return 'success';
+    if (status === 'canceled' || status === 'cancelled') return 'danger';
+    if (status === 'past_due' || status === 'unpaid') return 'warning';
+    return 'info';
+  };
+
+  const getAuditStatusBadgeTone = (status: string | null): 'success' | 'warning' | 'info' | 'danger' => {
+    if (!status) return 'info';
+    if (status === 'completed') return 'success';
+    if (status === 'failed') return 'danger';
+    if (status === 'pending' || status === 'running') return 'warning';
+    return 'info';
+  };
+
+  const tenantColumns: Column<Tenant>[] = [
+    {
+      key: 'client_name',
+      header: 'Tenant Name',
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{row.client_name}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+            {row.tenant.slice(0, 8)}...
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'subscription_status',
+      header: 'Status',
+      render: (row) => (
+        <Badge tone={getStatusBadgeTone(row.subscription_status)}>
+          {row.subscription_status || 'No subscription'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      render: (row) => (
+        <Text tone="muted" style={{ fontSize: '0.875rem' }}>
+          {new Date(row.created_at).toLocaleDateString()}
+        </Text>
+      ),
+    },
+    {
+      key: 'tenant',
+      header: 'Actions',
+      sortable: false,
+      render: (row) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => handleResendWelcomeEmail(row.tenant, row.client_name)}
+          disabled={actionInProgress === row.tenant}
+        >
+          {actionInProgress === row.tenant ? 'Sending...' : 'Resend Email'}
+        </Button>
+      ),
+    },
+  ];
+
+  const auditColumns: Column<AuditLogEntry>[] = [
+    {
+      key: 'created_at',
+      header: 'Time',
+      width: '20%',
+      render: (row) => (
+        <Text style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+          {new Date(row.created_at).toLocaleString()}
+        </Text>
+      ),
+    },
+    {
+      key: 'event_type',
+      header: 'Event',
+      width: '15%',
+      render: (row) => {
+        const getTone = (type: string): 'success' | 'warning' | 'info' | 'danger' => {
+          if (type.includes('create')) return 'success';
+          if (type.includes('delete') || type.includes('cancel')) return 'danger';
+          return 'info';
+        };
+        return (
+          <Badge tone={getTone(row.event_type)}>
+            {row.event_type.replace(/\./g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: 'user_email',
+      header: 'User',
+      width: '25%',
+      render: (row) => (
+        <Text style={{ fontSize: '0.8125rem', wordBreak: 'break-word' }}>
+          {row.user_email || 'System'}
+        </Text>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '15%',
+      render: (row) => row.status ? (
+        <Badge tone={getAuditStatusBadgeTone(row.status)}>
+          {row.status}
+        </Badge>
+      ) : null,
+    },
+    {
+      key: 'resource_name',
+      header: 'Target',
+      width: '25%',
+      render: (row) => (
+        <Text style={{ fontSize: '0.8125rem', wordBreak: 'break-word' }}>
+          {row.resource_name || row.resource_id?.slice(0, 8) || '—'}
+        </Text>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0 }}>Tenant Management</h2>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="secondary" onClick={() => { fetchTenants(); fetchAuditLogs(); }} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </Button>
+          <Button onClick={() => setShowCreateForm(true)}>
+            Create Tenant
+          </Button>
+        </div>
+      </div>
+
+      {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
+
+      {/* Create Tenant Form */}
+      {showCreateForm && (
+        <Card style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0 }}>Create New Tenant</h3>
+            <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)}>✕</Button>
+          </div>
+
+          <div style={{ display: 'grid', gap: '16px' }}>
+            <div>
+              <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Company Name *</Text>
+              <Input
+                type="text"
+                value={createForm.companyName}
+                onChange={(e) => setCreateForm({ ...createForm, companyName: e.target.value })}
+                placeholder="Acme Inc."
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Admin First Name *</Text>
+                <Input
+                  type="text"
+                  value={createForm.firstName}
+                  onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                  placeholder="John"
+                />
+              </div>
+              <div>
+                <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Admin Last Name *</Text>
+                <Input
+                  type="text"
+                  value={createForm.lastName}
+                  onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                  placeholder="Doe"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Admin Email *</Text>
+              <Input
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                placeholder="admin@company.com"
+              />
+            </div>
+
+            <div>
+              <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Licensed Users</Text>
+              <Input
+                type="number"
+                min={1}
+                value={createForm.licenseCount}
+                onChange={(e) => setCreateForm({ ...createForm, licenseCount: parseInt(e.target.value) || 5 })}
+              />
+              <Text tone="muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                Number of licensed users for the tenant
+              </Text>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <Button variant="secondary" onClick={() => setShowCreateForm(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateTenant}
+                disabled={actionInProgress === 'create'}
+              >
+                {actionInProgress === 'create' ? 'Creating...' : 'Create Tenant'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Tenants List */}
+      <Card style={{ marginBottom: '20px' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Tenants</h3>
+        {loading ? (
+          <Text tone="muted">Loading tenants...</Text>
+        ) : tenants.length === 0 ? (
+          <Text tone="muted">No tenants found.</Text>
+        ) : (
+          <DataTable
+            columns={tenantColumns}
+            data={tenants}
+            paginate
+            defaultPageSize={10}
+            initialSortKey="client_name"
+          />
+        )}
+      </Card>
+
+      {/* Recent Actions (Audit Log) */}
+      <Card>
+        <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Recent Actions</h3>
+        {auditLogs.length === 0 ? (
+          <Text tone="muted">No recent tenant management actions.</Text>
+        ) : (
+          <DataTable
+            columns={auditColumns}
+            data={auditLogs}
+            paginate
+            defaultPageSize={5}
+          />
+        )}
+      </Card>
+    </div>
+  );
+}
 
 function AuditLogs() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
@@ -3089,7 +3542,7 @@ function EditReport({
 }
 
 // Main App
-type View = 'reports' | 'create' | 'execute' | 'audit';
+type View = 'reports' | 'create' | 'execute' | 'tenants' | 'audit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('reports');
@@ -3142,6 +3595,7 @@ function App() {
       {currentView === 'reports' && <ReportsList />}
       {currentView === 'create' && <CreateReport />}
       {currentView === 'execute' && <ExecuteReport />}
+      {currentView === 'tenants' && <TenantManagementView />}
       {currentView === 'audit' && <AuditLogs />}
     </>
   );
