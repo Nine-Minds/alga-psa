@@ -159,14 +159,19 @@ interface ApiResponse<T> {
   data?: T;
 }
 
-// Audit log types
+// Audit log types - matches extension_audit_logs table
 interface AuditLogEntry {
   log_id: string;
+  tenant: string;
   event_type: string;
   user_id: string | null;
   user_email: string | null;
-  report_id: string | null;
-  report_name: string | null;
+  resource_type: 'report' | 'tenant' | 'user' | 'subscription' | null;
+  resource_id: string | null;
+  resource_name: string | null;
+  workflow_id: string | null;
+  status: 'pending' | 'completed' | 'failed' | 'running' | null;
+  error_message: string | null;
   details: Record<string, unknown> | null;
   ip_address: string | null;
   user_agent: string | null;
@@ -2056,7 +2061,7 @@ function AuditLogs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [eventTypeFilter, setEventTypeFilter] = useState('__all__');
-  const [reportIdFilter, setReportIdFilter] = useState('');
+  const [resourceIdFilter, setResourceIdFilter] = useState('');
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -2064,7 +2069,7 @@ function AuditLogs() {
 
     const params = new URLSearchParams();
     if (eventTypeFilter && eventTypeFilter !== '__all__') params.set('eventType', eventTypeFilter);
-    if (reportIdFilter) params.set('reportId', reportIdFilter);
+    if (resourceIdFilter) params.set('resourceId', resourceIdFilter);
     // Fetch up to 500 logs, let DataTable handle pagination display
     params.set('limit', '500');
 
@@ -2083,7 +2088,7 @@ function AuditLogs() {
       setError(result.error || 'Failed to fetch audit logs');
     }
     setLoading(false);
-  }, [eventTypeFilter, reportIdFilter]);
+  }, [eventTypeFilter, resourceIdFilter]);
 
   useEffect(() => {
     fetchLogs();
@@ -2145,17 +2150,16 @@ function AuditLogs() {
       ),
     },
     {
-      key: 'report_name',
-      header: 'Report',
+      key: 'resource_name',
+      header: 'Resource',
       width: '18%',
-      render: (row) => row.report_name ? (
+      render: (row) => row.resource_name ? (
         <div>
-          <div style={{ fontWeight: 500, wordBreak: 'break-word' }}>{row.report_name}</div>
-          {row.report_id && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
-              {row.report_id.slice(0, 8)}...
-            </div>
-          )}
+          <div style={{ fontWeight: 500, wordBreak: 'break-word' }}>{row.resource_name}</div>
+          <div style={{ display: 'flex', gap: '8px', fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
+            {row.resource_type && <span>{row.resource_type}</span>}
+            {row.resource_id && <span>{row.resource_id.slice(0, 8)}...</span>}
+          </div>
         </div>
       ) : (
         <Text tone="muted">—</Text>
@@ -2231,12 +2235,12 @@ function AuditLogs() {
             />
           </div>
           <div style={{ minWidth: '200px' }}>
-            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Report ID</Text>
+            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Resource ID</Text>
             <Input
               type="text"
-              value={reportIdFilter}
-              onChange={(e) => setReportIdFilter(e.target.value)}
-              placeholder="Filter by report ID..."
+              value={resourceIdFilter}
+              onChange={(e) => setResourceIdFilter(e.target.value)}
+              placeholder="Filter by resource ID..."
             />
           </div>
         </div>
