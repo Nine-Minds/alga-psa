@@ -105,10 +105,16 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
         .expect("http client")
 });
 
-static STORAGE_BASE_URL: Lazy<Option<String>> =
-    Lazy::new(|| std::env::var("STORAGE_API_BASE_URL").ok());
-static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> =
-    Lazy::new(|| std::env::var("RUNNER_STORAGE_API_TOKEN").ok());
+static STORAGE_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("STORAGE_API_BASE_URL")
+        .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
+        .ok()
+});
+static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("RUNNER_STORAGE_API_TOKEN")
+        .or_else(|_| std::env::var("RUNNER_SERVICE_TOKEN"))
+        .ok()
+});
 
 pub(crate) fn add_component_host(linker: &mut Linker<HostState>) -> anyhow::Result<()> {
     component::Runner::add_to_linker::<HostState, HasSelf<HostState>>(linker, |state| state)
@@ -325,6 +331,12 @@ impl secrets::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_SECRETS_GET) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "secrets capability denied - cap:secrets.get not granted"
+                );
                 return Err(SecretError::Denied);
             }
             let Some(secrets) = material else {
@@ -395,6 +407,12 @@ impl http::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_HTTP_FETCH) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "http capability denied - cap:http.fetch not granted"
+                );
                 return Err(HttpError::NotAllowed);
             }
 
@@ -405,11 +423,12 @@ impl http::HostWithStore for HasSelf<HostState> {
 
             let url = Url::parse(&route).map_err(|_| HttpError::InvalidUrl)?;
             if !is_host_allowed(&config.egress_allowlist, &url) {
-                tracing::warn!(
+                tracing::error!(
                     tenant=%tenant,
                     extension=%extension,
                     method=%method,
                     url=%route,
+                    egress_allowlist=?config.egress_allowlist,
                     "http capability denied by allowlist"
                 );
                 return Err(HttpError::NotAllowed);
@@ -554,9 +573,23 @@ impl storage::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -592,9 +625,23 @@ impl storage::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = entry.namespace.clone();
@@ -650,9 +697,23 @@ impl storage::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -692,9 +753,23 @@ impl storage::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -758,6 +833,12 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
         });
         async move {
             if !has_capability(&providers, CAP_UI_PROXY) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "ui_proxy capability denied - cap:ui.proxy not granted"
+                );
                 return Err(ProxyError::Denied);
             }
             let Some(base_url) = runtime.ui_proxy_base.clone() else {
@@ -1084,7 +1165,7 @@ impl user::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_USER_READ) {
-                tracing::warn!(
+                tracing::error!(
                     tenant = ?ctx.tenant_id,
                     extension = ?ctx.extension_id,
                     request_id = ?ctx.request_id,

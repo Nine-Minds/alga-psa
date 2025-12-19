@@ -48,5 +48,5 @@ where
 }
 
 pub fn default_capabilities() -> HashSet<&'static str> {
-    HashSet::from([CAP_CONTEXT_READ, CAP_LOG_EMIT])
+    HashSet::from([CAP_CONTEXT_READ, CAP_LOG_EMIT, CAP_USER_READ])
 }

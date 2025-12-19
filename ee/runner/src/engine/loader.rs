@@ -387,6 +387,7 @@ impl ModuleLoader {
             tenant=%tenant_id,
             extension=%extension_id,
             provider_count=%context.providers.len(),
+            providers=?context.providers,
             "Provider normalization complete"
         );
 

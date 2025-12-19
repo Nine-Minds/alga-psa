@@ -19,6 +19,7 @@ const isEnterpriseEdition =
 
 type EeInstallConfigModule = {
   getInstallConfig: (params: { tenantId: string; extensionId: string }) => Promise<{
+    installId: string;
     versionId: string;
     contentHash: string;
     providers?: string[];
@@ -28,6 +29,7 @@ type EeInstallConfigModule = {
 };
 
 type InstallContext = {
+  installId: string;
   versionId: string;
   contentHash: string;
   providers: string[];
@@ -59,6 +61,7 @@ async function resolveInstallContext(tenantId: string, extensionId: string): Pro
       const config = await eeModule.getInstallConfig({ tenantId, extensionId });
       if (config?.contentHash) {
         return {
+          installId: config.installId,
           versionId: config.versionId,
           contentHash: config.contentHash,
           providers: config.providers ?? [],
@@ -75,11 +78,12 @@ async function resolveInstallContext(tenantId: string, extensionId: string): Pro
   if (!install) {
     return null;
   }
-  const { content_hash, version_id } = await resolveVersion(install);
+  const { content_hash, version_id, install_id } = await resolveVersion(install);
   if (!content_hash) {
     return null;
   }
   return {
+    installId: install_id,
     versionId: version_id,
     contentHash: content_hash,
     providers: [],
@@ -95,9 +99,11 @@ interface UserInfo {
 }
 
 async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
+  const start = Date.now();
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser || !currentUser.tenant || currentUser.tenant !== tenantId) {
+      console.log('[api/ext] getUserInfo: no user or tenant mismatch');
       return null;
     }
 
@@ -114,12 +120,14 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
       console.error('[api/ext] Failed to fetch tenant company name:', err);
     }
 
-    return {
+    const info = {
       user_id: currentUser.user_id,
       user_email: currentUser.email || '',
       user_name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
       company_name: companyName,
     };
+    console.log('[api/ext] getUserInfo completed', { elapsed: Date.now() - start });
+    return info;
   } catch (err) {
     console.error('[api/ext] Failed to get user info:', err);
     return null;
@@ -174,6 +182,7 @@ function corsPreflight(origin: string | null): NextResponse {
 }
 
 async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: string; path?: string[] }> }) {
+  const start = Date.now();
   console.log('[api/ext] incoming request', {
     url: req.url,
     method: req.method,
@@ -196,17 +205,29 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
 
   try {
     const tenantId = await getTenantFromAuth(req);
-    console.log('[api/ext] tenant resolved', { tenantId, extensionId, method });
+    console.log('[api/ext] tenant resolved', { tenantId, extensionId, method, elapsed: Date.now() - start });
     await assertAccess(tenantId, extensionId, method, path);
 
     // Get user info for extension context
-    const userInfo = await getUserInfo(tenantId);
+    let userInfo = null;
+    try {
+      userInfo = await getUserInfo(tenantId);
+      console.log('[api/ext] user info resolved', { hasUserInfo: !!userInfo, userId: userInfo?.user_id, elapsed: Date.now() - start });
+    } catch (userInfoError) {
+      console.error('[api/ext] failed to get user info', { error: userInfoError, elapsed: Date.now() - start });
+    }
 
     const install = await resolveInstallContext(tenantId, extensionId);
+    console.log('[api/ext] install context resolved', {
+      hasInstall: !!install,
+      versionId: install?.versionId,
+      providers: install?.providers,
+      elapsed: Date.now() - start
+    });
     if (!install) {
       return applyCorsHeaders(NextResponse.json({ error: 'not_installed' }, { status: 404 }), corsOrigin);
     }
-    const { contentHash: content_hash, versionId: version_id, providers, secretEnvelope, config } = install;
+    const { installId: install_id, contentHash: content_hash, versionId: version_id, providers, secretEnvelope, config } = install;
 
     const headers = filterRequestHeaders(req.headers);
     headers['x-alga-tenant'] = tenantId;
@@ -232,6 +253,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
+      console.log('[api/ext] fetching from runner', { runnerUrl, requestId, elapsed: Date.now() - start });
       const resp = await fetch(`${runnerUrl}/v1/execute`, {
         method: 'POST',
         headers: {
@@ -246,6 +268,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
             request_id: requestId,
             tenant_id: tenantId,
             extension_id: extensionId,
+            install_id,
             content_hash,
             version_id,
             config,
@@ -260,6 +283,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       });
       clearTimeout(timeout);
       const rawBody = await resp.text();
+      console.log('[api/ext] runner response received', { status: resp.status, elapsed: Date.now() - start });
       if (!rawBody) {
         console.error('[api/ext] runner returned empty body', { status: resp.status, requestId, tenantId, extensionId });
         return applyCorsHeaders(
@@ -300,12 +324,20 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       );
     } catch (err) {
       clearTimeout(timeout);
+      console.error('[api/ext] runner execution failed', { error: err, requestId, tenantId, extensionId });
       return applyCorsHeaders(
         NextResponse.json({ error: 'bad_gateway', detail: String(err) }, { status: 502 }),
         corsOrigin
       );
     }
   } catch (err) {
+    console.error('[api/ext] unhandled error in gateway', {
+      error: err,
+      extensionId,
+      path,
+      method,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     return applyCorsHeaders(
       NextResponse.json({ error: 'internal_error', detail: String(err) }, { status: 500 }),
       corsOrigin
