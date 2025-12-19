@@ -32,9 +32,16 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Sync documents from props when they change
+  // Track previous document IDs to avoid infinite loops
+  const prevDocumentIdsRef = useRef<string>('');
+
+  // Sync documents from props when they change (by ID, not reference)
   useEffect(() => {
-    setDocuments(initialDocuments);
+    const currentIds = initialDocuments.map(d => d.document_id).sort().join(',');
+    if (currentIds !== prevDocumentIdsRef.current) {
+      prevDocumentIdsRef.current = currentIds;
+      setDocuments(initialDocuments);
+    }
   }, [initialDocuments]);
 
   // Fallback fetch function (only used if initialDocuments not provided)
