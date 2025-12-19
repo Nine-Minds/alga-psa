@@ -325,6 +325,12 @@ impl secrets::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_SECRETS_GET) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "secrets capability denied - cap:secrets.get not granted"
+                );
                 return Err(SecretError::Denied);
             }
             let Some(secrets) = material else {
@@ -395,6 +401,12 @@ impl http::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_HTTP_FETCH) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "http capability denied - cap:http.fetch not granted"
+                );
                 return Err(HttpError::NotAllowed);
             }
 
@@ -405,11 +417,12 @@ impl http::HostWithStore for HasSelf<HostState> {
 
             let url = Url::parse(&route).map_err(|_| HttpError::InvalidUrl)?;
             if !is_host_allowed(&config.egress_allowlist, &url) {
-                tracing::warn!(
+                tracing::error!(
                     tenant=%tenant,
                     extension=%extension,
                     method=%method,
                     url=%route,
+                    egress_allowlist=?config.egress_allowlist,
                     "http capability denied by allowlist"
                 );
                 return Err(HttpError::NotAllowed);
@@ -538,25 +551,25 @@ impl logging::HostWithStore for HasSelf<HostState> {
 }
 
 impl storage::HostWithStore for HasSelf<HostState> {
-    fn get<T>(
-        accessor: &Accessor<T, Self>,
-        namespace: String,
-        key: String,
-    ) -> impl std::future::Future<Output = Result<StorageEntry, StorageError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
-            (
-                state.context.providers.clone(),
-                state.context.install_id.clone(),
-                state.context.clone(),
-            )
-        });
-
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -758,6 +771,12 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
         });
         async move {
             if !has_capability(&providers, CAP_UI_PROXY) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "ui_proxy capability denied - cap:ui.proxy not granted"
+                );
                 return Err(ProxyError::Denied);
             }
             let Some(base_url) = runtime.ui_proxy_base.clone() else {
@@ -1084,7 +1103,7 @@ impl user::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_USER_READ) {
-                tracing::warn!(
+                tracing::error!(
                     tenant = ?ctx.tenant_id,
                     extension = ?ctx.extension_id,
                     request_id = ?ctx.request_id,
