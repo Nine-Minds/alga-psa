@@ -6,11 +6,11 @@ import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import { Card } from 'server/src/components/ui/Card';
 import TicketDocumentsSection from 'server/src/components/tickets/ticket/TicketDocumentsSection';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { 
-  getClientTicketDetails, 
+import {
+  getClientTicketDetails,
+  getClientTicketDocuments,
   addClientTicketComment,
   updateClientTicketComment,
   deleteClientTicketComment,
@@ -18,11 +18,10 @@ import {
 } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
-import { ITicket } from 'server/src/interfaces/ticket.interfaces';
+import { ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import TicketConversation from 'server/src/components/tickets/ticket/TicketConversation';
-import { DEFAULT_BLOCK } from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
@@ -36,22 +35,27 @@ interface TicketDetailsProps {
   isOpen: boolean;
   onClose: () => void;
   asStandalone?: boolean; // When true, renders without Dialog wrapper
+  // Pre-fetched data from server component (optional - will fetch client-side if not provided)
+  initialTicket?: ITicketWithDetails;
+  initialDocuments?: IDocument[];
+  initialStatusOptions?: IStatus[];
 }
 
-interface TicketWithDetails extends ITicket {
-  status_name?: string;
-  priority_name?: string;
-  priority_color?: string;
-  conversations?: IComment[];
-  documents?: IDocument[];
-  userMap?: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
-}
-
-export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false }: TicketDetailsProps) {
+export function TicketDetails({
+  ticketId,
+  isOpen,
+  onClose,
+  asStandalone = false,
+  initialTicket,
+  initialDocuments,
+  initialStatusOptions
+}: TicketDetailsProps) {
   const { t, i18n } = useTranslation('clientPortal');
   const dateLocale = getDateFnsLocale(i18n.language);
-  const [ticket, setTicket] = useState<TicketWithDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Use pre-fetched data if available, otherwise start with null/empty
+  const [ticket, setTicket] = useState<ITicketWithDetails | null>(initialTicket || null);
+  const [loading, setLoading] = useState(!initialTicket); // Not loading if we have initial data
+  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
   const [activeTab, setActiveTab] = useState(t('tickets.messages.comments', 'Comments'));
@@ -62,7 +66,7 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
   const [conversationVersion, setConversationVersion] = useState(0);
   // Local overrides for comments to ensure immediate UI reflection
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
-  const [statusOptions, setStatusOptions] = useState<IStatus[]>([]);
+  const [statusOptions, setStatusOptions] = useState<IStatus[]>(initialStatusOptions || []);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
   const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
@@ -87,6 +91,25 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
         return;
       }
 
+      // If we have pre-fetched data, only fetch the current user
+      if (initialTicket) {
+        try {
+          const user = await getCurrentUser();
+          if (user) {
+            setCurrentUser({
+              id: user.user_id,
+              name: `${user.first_name} ${user.last_name}`,
+              email: user.email,
+              avatarUrl: user.avatarUrl
+            });
+          }
+        } catch (err) {
+          console.error('Failed to get current user:', err);
+        }
+        return;
+      }
+
+      // No pre-fetched data, fetch everything client-side
       setLoading(true);
       setError(null);
       try {
@@ -95,14 +118,16 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
           getCurrentUser(),
           getTicketStatuses()
         ]);
-        setTicket(details);
+        const ticketDetails = details as ITicketWithDetails;
+        setTicket(ticketDetails);
+        setDocuments(ticketDetails.documents || []);
         setStatusOptions(statuses || []);
         if (user) {
           setCurrentUser({
             id: user.user_id,
             name: `${user.first_name} ${user.last_name}`,
             email: user.email,
-            avatarUrl: user.avatarUrl // Include avatarUrl from the fetched user object
+            avatarUrl: user.avatarUrl
           });
         }
         setLoading(false);
@@ -114,7 +139,7 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
     };
 
     loadTicketDetails();
-  }, [ticketId, isOpen, asStandalone, t]);
+  }, [ticketId, isOpen, asStandalone, t, initialTicket]);
 
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
@@ -173,10 +198,6 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
       toast.error(t('tickets.messages.commentError', 'Failed to add comment'));
       return false;
     }
-  };
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
   };
 
   const handleEdit = (comment: IComment) => {
@@ -242,7 +263,7 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
           }
           return conv;
         });
-        return { ...prev, conversations: updatedConversations } as TicketWithDetails;
+        return { ...prev, conversations: updatedConversations } as ITicketWithDetails;
       });
 
       // Set override to guarantee immediate child render with latest note
@@ -259,7 +280,7 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
       // Refresh ticket details to get the authoritative updated comment
       if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetching ticket details');
       const details = await getClientTicketDetails(ticketId);
-      const detailsWithExtras = details as TicketWithDetails;
+      const detailsWithExtras = details as ITicketWithDetails;
       const fetchedConv = (detailsWithExtras.conversations || []).find(c => c.comment_id === optimisticCommentId);
       if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetch result for edited comment', {
         comment_id: optimisticCommentId,
@@ -268,7 +289,7 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
       });
       // Merge: prefer our optimistic update if it’s newer than fetched data
       setTicket(() => {
-        const merged = { ...detailsWithExtras } as TicketWithDetails;
+        const merged = { ...detailsWithExtras } as ITicketWithDetails;
         merged.conversations = (detailsWithExtras.conversations || []).map(conv => {
           if (conv.comment_id === optimisticCommentId) {
             const fetchedTime = conv.updated_at ? new Date(conv.updated_at).getTime() : 0;
@@ -547,7 +568,15 @@ export function TicketDetails({ ticketId, isOpen, onClose, asStandalone = false 
           {ticket.ticket_id && (
             <div>
               <Card>
-                <TicketDocumentsSection ticketId={ticket.ticket_id} />
+                <TicketDocumentsSection
+                  ticketId={ticket.ticket_id}
+                  initialDocuments={documents}
+                  onDocumentCreated={async () => {
+                    // Refresh documents after creation
+                    const docs = await getClientTicketDocuments(ticketId);
+                    setDocuments(docs);
+                  }}
+                />
               </Card>
             </div>
           )}
