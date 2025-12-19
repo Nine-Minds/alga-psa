@@ -105,10 +105,16 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
         .expect("http client")
 });
 
-static STORAGE_BASE_URL: Lazy<Option<String>> =
-    Lazy::new(|| std::env::var("STORAGE_API_BASE_URL").ok());
-static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> =
-    Lazy::new(|| std::env::var("RUNNER_STORAGE_API_TOKEN").ok());
+static STORAGE_BASE_URL: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("STORAGE_API_BASE_URL")
+        .or_else(|_| std::env::var("REGISTRY_BASE_URL"))
+        .ok()
+});
+static RUNNER_STORAGE_API_TOKEN: Lazy<Option<String>> = Lazy::new(|| {
+    std::env::var("RUNNER_STORAGE_API_TOKEN")
+        .or_else(|_| std::env::var("RUNNER_SERVICE_TOKEN"))
+        .ok()
+});
 
 pub(crate) fn add_component_host(linker: &mut Linker<HostState>) -> anyhow::Result<()> {
     component::Runner::add_to_linker::<HostState, HasSelf<HostState>>(linker, |state| state)
