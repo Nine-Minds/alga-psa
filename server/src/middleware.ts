@@ -95,8 +95,21 @@ const _middleware = auth((request) => {
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
       '/api/webhooks/stripe',
-      '/api/ext-proxy/'
+      '/api/ext/',  // Extension API routes handle their own auth
+      '/api/ext-proxy/',
+      '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
     ];
+
+    // Log for debugging CORS issues
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[CORS Middleware]', {
+        pathname,
+        origin,
+        hasApiKey: !!apiKey,
+        skipped: skipPaths.some((path) => pathname.startsWith(path)),
+        method: request.method
+      });
+    }
 
     if (skipPaths.some((path) => pathname.startsWith(path))) {
       return applyCorsHeaders(response, origin);

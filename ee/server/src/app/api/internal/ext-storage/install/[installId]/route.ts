@@ -96,7 +96,7 @@ function mapError(error: unknown): NextResponse {
 }
 
 function ensureRunnerAuth(req: NextRequest): void {
-  const expected = process.env.RUNNER_STORAGE_API_TOKEN;
+  const expected = process.env.RUNNER_STORAGE_API_TOKEN || process.env.RUNNER_SERVICE_TOKEN;
   if (!expected) {
     throw new StorageServiceError('UNAUTHORIZED', 'Runner token not configured');
   }
