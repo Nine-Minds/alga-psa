@@ -209,7 +209,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     await assertAccess(tenantId, extensionId, method, path);
 
     // Get user info for extension context
-    let userInfo = null;
+    let userInfo: UserInfo | null = null;
     try {
       userInfo = await getUserInfo(tenantId);
       console.log('[api/ext] user info resolved', { hasUserInfo: !!userInfo, userId: userInfo?.user_id, elapsed: Date.now() - start });

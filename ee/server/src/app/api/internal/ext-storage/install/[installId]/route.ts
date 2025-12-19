@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { getStorageServiceForInstall } from '@/lib/extensions/storage/v2/factory';
+import { getStorageServiceForInstall } from '@ee/lib/extensions/storage/v2/factory';
 import {
   StorageServiceError,
   StorageValidationError,
-} from '@/lib/extensions/storage/v2/errors';
+} from '@ee/lib/extensions/storage/v2/errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,28 +56,30 @@ const bulkPutSchema = baseSchema.extend({
     .min(1),
 });
 
+function getStatusForErrorCode(code: string): number {
+  switch (code) {
+    case 'VALIDATION_FAILED':
+    case 'LIMIT_EXCEEDED':
+      return 400;
+    case 'UNAUTHORIZED':
+      return 401;
+    case 'NAMESPACE_DENIED':
+      return 403;
+    case 'NOT_FOUND':
+      return 404;
+    case 'REVISION_MISMATCH':
+      return 409;
+    case 'QUOTA_EXCEEDED':
+    case 'RATE_LIMITED':
+      return 429;
+    default:
+      return 500;
+  }
+}
+
 function mapError(error: unknown): NextResponse {
   if (error instanceof StorageServiceError || error instanceof StorageValidationError) {
-    const status = (() => {
-      switch (error.code) {
-        case 'VALIDATION_FAILED':
-        case 'LIMIT_EXCEEDED':
-          return 400;
-        case 'UNAUTHORIZED':
-          return 401;
-        case 'NAMESPACE_DENIED':
-          return 403;
-        case 'NOT_FOUND':
-          return 404;
-        case 'REVISION_MISMATCH':
-          return 409;
-        case 'QUOTA_EXCEEDED':
-        case 'RATE_LIMITED':
-          return 429;
-        default:
-          return 500;
-      }
-    })();
+    const status = getStatusForErrorCode(error.code);
     return NextResponse.json(
       { error: error.message, code: error.code, details: error.details ?? null },
       { status }
@@ -165,7 +167,14 @@ export async function POST(
         const input = bulkPutSchema.parse(raw);
         const result = await service.bulkPut({
           namespace: input.namespace,
-          items: input.items,
+          items: input.items.map((item) => ({
+            key: item.key,
+            value: item.value,
+            metadata: item.metadata,
+            ttlSeconds: item.ttlSeconds,
+            ifRevision: item.ifRevision,
+            schemaVersion: item.schemaVersion,
+          })),
         });
         return NextResponse.json(result, { status: 200 });
       }
