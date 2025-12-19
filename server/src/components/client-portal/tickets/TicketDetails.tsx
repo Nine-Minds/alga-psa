@@ -24,7 +24,6 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import TicketConversation from 'server/src/components/tickets/ticket/TicketConversation';
 import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import { IStatus } from 'server/src/interfaces/status.interface';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
@@ -35,10 +34,10 @@ interface TicketDetailsProps {
   isOpen: boolean;
   onClose: () => void;
   asStandalone?: boolean; // When true, renders without Dialog wrapper
-  // Pre-fetched data from server component (optional - will fetch client-side if not provided)
-  initialTicket?: ITicketWithDetails;
-  initialDocuments?: IDocument[];
-  initialStatusOptions?: IStatus[];
+  // Pre-fetched data from server component (required)
+  initialTicket: ITicketWithDetails;
+  initialDocuments: IDocument[];
+  initialStatusOptions: IStatus[];
 }
 
 export function TicketDetails({
@@ -52,10 +51,9 @@ export function TicketDetails({
 }: TicketDetailsProps) {
   const { t, i18n } = useTranslation('clientPortal');
   const dateLocale = getDateFnsLocale(i18n.language);
-  // Use pre-fetched data if available, otherwise start with null/empty
-  const [ticket, setTicket] = useState<ITicketWithDetails | null>(initialTicket || null);
-  const [loading, setLoading] = useState(!initialTicket); // Not loading if we have initial data
-  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
+  // Use pre-fetched data from server component
+  const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
+  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
   const [activeTab, setActiveTab] = useState(t('tickets.messages.comments', 'Comments'));
@@ -66,7 +64,7 @@ export function TicketDetails({
   const [conversationVersion, setConversationVersion] = useState(0);
   // Local overrides for comments to ensure immediate UI reflection
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
-  const [statusOptions, setStatusOptions] = useState<IStatus[]>(initialStatusOptions || []);
+  const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
   const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
@@ -83,45 +81,16 @@ export function TicketDetails({
   }]);
   // No component-level pending state needed; we’ll keep optimistic data within the save handler scope
 
+  // Fetch current user on mount (for comment authorship)
   useEffect(() => {
-    const loadTicketDetails = async () => {
-      // In standalone mode, always load. In dialog mode, only load when open
+    const fetchCurrentUser = async () => {
+      // In dialog mode, only load when open
       if (!asStandalone && !isOpen) {
-        // Don't load when dialog is closed, but preserve existing data for close animation
         return;
       }
 
-      // If we have pre-fetched data, only fetch the current user
-      if (initialTicket) {
-        try {
-          const user = await getCurrentUser();
-          if (user) {
-            setCurrentUser({
-              id: user.user_id,
-              name: `${user.first_name} ${user.last_name}`,
-              email: user.email,
-              avatarUrl: user.avatarUrl
-            });
-          }
-        } catch (err) {
-          console.error('Failed to get current user:', err);
-        }
-        return;
-      }
-
-      // No pre-fetched data, fetch everything client-side
-      setLoading(true);
-      setError(null);
       try {
-        const [details, user, statuses] = await Promise.all([
-          getClientTicketDetails(ticketId),
-          getCurrentUser(),
-          getTicketStatuses()
-        ]);
-        const ticketDetails = details as ITicketWithDetails;
-        setTicket(ticketDetails);
-        setDocuments(ticketDetails.documents || []);
-        setStatusOptions(statuses || []);
+        const user = await getCurrentUser();
         if (user) {
           setCurrentUser({
             id: user.user_id,
@@ -130,16 +99,13 @@ export function TicketDetails({
             avatarUrl: user.avatarUrl
           });
         }
-        setLoading(false);
       } catch (err) {
-        setError(t('tickets.messages.loadError', 'Failed to load ticket details'));
-        console.error(err);
-        setLoading(false);
+        console.error('Failed to get current user:', err);
       }
     };
 
-    loadTicketDetails();
-  }, [ticketId, isOpen, asStandalone, t, initialTicket]);
+    fetchCurrentUser();
+  }, [isOpen, asStandalone]);
 
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
@@ -245,7 +211,6 @@ export function TicketDetails({
 
       // Optimistically update the local ticket state so the UI reflects changes immediately
       setTicket(prev => {
-        if (!prev) return prev;
         const updatedConversations = (prev.conversations || []).map(conv => {
           if (conv.comment_id === optimisticCommentId) {
             if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][optimistic] Updating local state', {
@@ -377,7 +342,7 @@ export function TicketDetails({
       await updateTicketStatus(ticketId, newStatusId);
       toast.success(t('tickets.messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusName }));
 
-      setTicket(prevTicket => prevTicket ? { ...prevTicket, status_id: newStatusId, status_name: newStatusName } : null);
+      setTicket(prevTicket => ({ ...prevTicket, status_id: newStatusId, status_name: newStatusName }));
 
     } catch (error) {
       console.error('Failed to update ticket status:', error);
@@ -395,7 +360,7 @@ export function TicketDetails({
         </div>
       )}
 
-      {!loading && ticket && (
+      {ticket && (
         <div className="space-y-4">
           {/* Header with number and dates */}
           <div className="flex items-start justify-between mb-2">

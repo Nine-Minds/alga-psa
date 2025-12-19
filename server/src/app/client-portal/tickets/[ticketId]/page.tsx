@@ -2,6 +2,7 @@ import React from 'react';
 import { getClientTicketDetails } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import TicketDetailsContainer from './TicketDetailsContainer';
+import logger from '@alga-psa/shared/core/logger';
 
 interface TicketPageProps {
   params: Promise<{
@@ -30,7 +31,12 @@ export default async function TicketPage({ params }: TicketPageProps) {
       </div>
     );
   } catch (error) {
-    console.error(`Error fetching ticket with id ${ticketId}:`, error);
+    logger.error('[ClientPortal] Failed to fetch ticket details', {
+      ticketId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
     return (
       <div id="ticket-error-message" className="p-4 bg-red-50 border border-red-200 rounded-lg">
         <p className="text-red-700">
