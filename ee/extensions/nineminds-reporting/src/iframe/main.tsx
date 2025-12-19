@@ -586,7 +586,7 @@ function ReportsList() {
   async function fetchReports() {
     setLoading(true);
     setError(null);
-    const result = await callExtensionApi<PlatformReport[]>('/reports');
+    const result = await callExtensionApi<PlatformReport[]>('');
     if (result.success && result.data) {
       setReports(result.data);
     } else {
@@ -734,7 +734,7 @@ function ReportDetail({
     setError(null);
     setResults(null);
 
-    const result = await callExtensionApi<ReportResult>(`/reports/${report.report_id}/execute`, {
+    const result = await callExtensionApi<ReportResult>(`/${report.report_id}/execute`, {
       method: 'POST',
       body: JSON.stringify({}),
     });
@@ -752,7 +752,7 @@ function ReportDetail({
       return;
     }
 
-    const result = await callExtensionApi(`/reports/${report.report_id}`, {
+    const result = await callExtensionApi(`/${report.report_id}`, {
       method: 'DELETE',
     });
 
@@ -886,6 +886,9 @@ function CreateReport() {
   const [creating, setCreating] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Track which metrics are in "raw SQL" mode
+  const [rawSqlMode, setRawSqlMode] = useState<{ [key: string]: boolean }>({});
+  const [rawSqlText, setRawSqlText] = useState<{ [key: string]: string }>({});
 
   // Use dynamic schema from server
   const { tables, tableOptions, getTableColumns, loading: schemaLoading } = useSchema();
@@ -1043,7 +1046,7 @@ function CreateReport() {
       metrics: metrics,
     };
 
-    const result = await callExtensionApi('/reports', {
+    const result = await callExtensionApi('', {
       method: 'POST',
       body: JSON.stringify({
         name,
@@ -1068,6 +1071,63 @@ function CreateReport() {
   const getFieldOptions = (tableName: string): SelectOption[] => {
     return getTableColumns(tableName).map(col => ({ value: col, label: col }));
   };
+
+  // Get all field options from base table + all joined tables (for filters)
+  const getAllFieldOptions = (metric: MetricDefinition): SelectOption[] => {
+    const options: SelectOption[] = [];
+
+    // Base table columns
+    if (metric.query.table) {
+      getTableColumns(metric.query.table).forEach(col => {
+        options.push({ value: col, label: col });
+      });
+    }
+
+    // Joined table columns (with table prefix)
+    (metric.query.joins || []).forEach(join => {
+      if (join.table) {
+        getTableColumns(join.table).forEach(col => {
+          const fullCol = `${join.table}.${col}`;
+          options.push({ value: fullCol, label: fullCol });
+        });
+      }
+    });
+
+    return options;
+  };
+
+  // Get all columns from base table AND all joined tables
+  const getAllMetricColumns = (metric: MetricDefinition): { table: string; columns: string[] }[] => {
+    const result: { table: string; columns: string[] }[] = [];
+
+    // Base table columns
+    if (metric.query.table) {
+      result.push({
+        table: metric.query.table,
+        columns: getTableColumns(metric.query.table),
+      });
+    }
+
+    // Joined table columns
+    (metric.query.joins || []).forEach(join => {
+      if (join.table) {
+        result.push({
+          table: join.table,
+          columns: getTableColumns(join.table),
+        });
+      }
+    });
+
+    return result;
+  };
+
+  // State for table search filter
+  const [tableSearch, setTableSearch] = useState('');
+
+  // Filtered table options based on search
+  const filteredTableOptions = tableOptions.filter(opt =>
+    opt.label.toLowerCase().includes(tableSearch.toLowerCase())
+  );
 
   return (
     <div>
@@ -1161,10 +1221,101 @@ function CreateReport() {
                     />
                   </div>
 
+                  {/* Mode Toggle: Builder vs Raw SQL */}
+                  <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Text style={{ fontWeight: 500, fontSize: '0.875rem' }}>Mode:</Text>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <Button
+                        type="button"
+                        variant={!rawSqlMode[metric.id] ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => setRawSqlMode(prev => ({ ...prev, [metric.id]: false }))}
+                      >
+                        Builder
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={rawSqlMode[metric.id] ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => {
+                          setRawSqlMode(prev => ({ ...prev, [metric.id]: true }));
+                          // Initialize raw SQL from current query if not set
+                          if (!rawSqlText[metric.id]) {
+                            const fields = metric.query.fields.join(', ') || '*';
+                            const from = metric.query.table || 'table_name';
+                            let sql = `SELECT ${fields}\nFROM ${from}`;
+                            if ((metric.query.joins || []).length > 0) {
+                              metric.query.joins!.forEach(j => {
+                                const joinType = j.type.toUpperCase();
+                                const onClauses = j.on.map(c => `${c.left} = ${c.right}`).join(' AND ');
+                                sql += `\n${joinType} JOIN ${j.table} ON ${onClauses}`;
+                              });
+                            }
+                            if ((metric.query.filters || []).length > 0) {
+                              const whereClause = metric.query.filters!.map(f => `${f.field} ${f.operator} '${f.value}'`).join(' AND ');
+                              sql += `\nWHERE ${whereClause}`;
+                            }
+                            if ((metric.query.groupBy || []).length > 0) {
+                              sql += `\nGROUP BY ${metric.query.groupBy!.join(', ')}`;
+                            }
+                            setRawSqlText(prev => ({ ...prev, [metric.id]: sql }));
+                          }
+                        }}
+                      >
+                        Raw SQL
+                      </Button>
+                    </div>
+                    <Text tone="muted" style={{ fontSize: '0.7rem', marginLeft: '8px' }}>
+                      {rawSqlMode[metric.id] ? 'Write SQL directly' : 'Point-and-click query builder'}
+                    </Text>
+                  </div>
+
+                  {rawSqlMode[metric.id] ? (
+                    /* Raw SQL Mode */
+                    <div style={{ marginBottom: '16px' }}>
+                      <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>SQL Query</Text>
+                      <textarea
+                        value={rawSqlText[metric.id] || ''}
+                        onChange={(e) => {
+                          setRawSqlText(prev => ({ ...prev, [metric.id]: e.target.value }));
+                          // Store raw SQL in the query as a custom field
+                          updateQuery(index, {
+                            table: 'raw_sql',
+                            fields: [e.target.value],
+                          });
+                        }}
+                        placeholder="SELECT column1, column2&#10;FROM table_name&#10;WHERE condition&#10;GROUP BY column1"
+                        style={{
+                          width: '100%',
+                          minHeight: '200px',
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          padding: '12px',
+                          border: '1px solid var(--alga-border)',
+                          borderRadius: 'var(--alga-radius)',
+                          background: '#1f2937',
+                          color: '#f9fafb',
+                          resize: 'vertical',
+                        }}
+                      />
+                      <Text tone="muted" style={{ display: 'block', fontSize: '0.7rem', marginTop: '4px' }}>
+                        Write your SQL query. Only SELECT statements are allowed. Blocked tables and columns will be rejected.
+                      </Text>
+                    </div>
+                  ) : (
+                    /* Builder Mode */
+                    <>
                   <div style={{ marginBottom: '16px' }}>
                     <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Table</Text>
+                    <Input
+                      type="text"
+                      placeholder="Search tables..."
+                      value={tableSearch}
+                      onChange={(e) => setTableSearch(e.target.value)}
+                      style={{ marginBottom: '6px' }}
+                    />
                     <CustomSelect
-                      options={tableOptions}
+                      options={filteredTableOptions}
                       value={metric.query.table}
                       onValueChange={(value) => updateQuery(index, { table: value, fields: ['COUNT(*) as count'] })}
                       disabled={schemaLoading}
@@ -1172,6 +1323,11 @@ function CreateReport() {
                     {schemaLoading && (
                       <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
                         Loading available tables...
+                      </Text>
+                    )}
+                    {!schemaLoading && filteredTableOptions.length === 0 && tableSearch && (
+                      <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+                        No tables match "{tableSearch}"
                       </Text>
                     )}
                   </div>
@@ -1310,29 +1466,42 @@ function CreateReport() {
                       )}
                     </div>
 
-                    {/* Available columns - click to add */}
+                    {/* Available columns - click to add (from ALL tables including joins) */}
                     <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>
                       Click to add column:
                     </Text>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
-                      {getTableColumns(metric.query.table).map((col) => (
-                        <Button
-                          key={col}
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          style={{ fontSize: '0.75rem', padding: '2px 8px' }}
-                          onClick={() => {
-                            if (!metric.query.fields.includes(col)) {
-                              updateQuery(index, { fields: [...metric.query.fields, col] });
-                            }
-                          }}
-                          disabled={metric.query.fields.includes(col)}
-                        >
-                          {col}
-                        </Button>
-                      ))}
-                    </div>
+                    {getAllMetricColumns(metric).map(({ table, columns }) => (
+                      <div key={table} style={{ marginBottom: '8px' }}>
+                        <Text style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, color: 'var(--alga-primary)', marginBottom: '4px' }}>
+                          {table}:
+                        </Text>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {columns.map((col) => {
+                            const fullCol = `${table}.${col}`;
+                            const isSelected = metric.query.fields.includes(col) || metric.query.fields.includes(fullCol);
+                            return (
+                              <Button
+                                key={col}
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                                onClick={() => {
+                                  if (!isSelected) {
+                                    // Use table.column format for joined tables, just column for base table
+                                    const colName = table === metric.query.table ? col : fullCol;
+                                    updateQuery(index, { fields: [...metric.query.fields, colName] });
+                                  }
+                                }}
+                                disabled={isSelected}
+                              >
+                                {col}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
 
                     {/* Custom expression input */}
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -1395,27 +1564,39 @@ function CreateReport() {
                       )}
                     </div>
 
-                    {/* Available columns - click to add */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {getTableColumns(metric.query.table).map((col) => (
-                        <Button
-                          key={col}
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                          onClick={() => {
+                    {/* Available columns - click to add (from ALL tables including joins) */}
+                    {getAllMetricColumns(metric).map(({ table, columns }) => (
+                      <div key={table} style={{ marginBottom: '8px' }}>
+                        <Text style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, color: 'var(--alga-primary)', marginBottom: '4px' }}>
+                          {table}:
+                        </Text>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {columns.map((col) => {
+                            const fullCol = `${table}.${col}`;
                             const currentGroupBy = metric.query.groupBy || [];
-                            if (!currentGroupBy.includes(col)) {
-                              updateQuery(index, { groupBy: [...currentGroupBy, col] });
-                            }
-                          }}
-                          disabled={(metric.query.groupBy || []).includes(col)}
-                        >
-                          {col}
-                        </Button>
-                      ))}
-                    </div>
+                            const isSelected = currentGroupBy.includes(col) || currentGroupBy.includes(fullCol);
+                            return (
+                              <Button
+                                key={col}
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                                onClick={() => {
+                                  if (!isSelected) {
+                                    const colName = table === metric.query.table ? col : fullCol;
+                                    updateQuery(index, { groupBy: [...currentGroupBy, colName] });
+                                  }
+                                }}
+                                disabled={isSelected}
+                              >
+                                {col}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   <div style={{ marginBottom: '12px' }}>
@@ -1442,7 +1623,7 @@ function CreateReport() {
                         }}
                       >
                         <CustomSelect
-                          options={getFieldOptions(metric.query.table)}
+                          options={getAllFieldOptions(metric)}
                           placeholder="Select field..."
                           value={filter.field}
                           onValueChange={(value) => updateFilter(index, filterIndex, { field: value })}
@@ -1472,6 +1653,8 @@ function CreateReport() {
                       </div>
                     ))}
                   </div>
+                    </>
+                  )}
                 </Card>
               ))}
             </div>
@@ -1507,7 +1690,7 @@ function ExecuteReport() {
   useEffect(() => {
     async function fetchReports() {
       setLoading(true);
-      const result = await callExtensionApi<PlatformReport[]>('/reports');
+      const result = await callExtensionApi<PlatformReport[]>('');
       if (result.success && result.data) {
         setReports(result.data);
       }
@@ -1543,7 +1726,7 @@ function ExecuteReport() {
       return;
     }
 
-    const result = await callExtensionApi<ReportResult>(`/reports/${selectedReportId}/execute`, {
+    const result = await callExtensionApi<ReportResult>(`/${selectedReportId}/execute`, {
       method: 'POST',
       body: JSON.stringify(parsedParams),
     });
@@ -2094,7 +2277,7 @@ function EditReport({
       metrics,
     };
 
-    const result = await callExtensionApi(`/reports/${report.report_id}`, {
+    const result = await callExtensionApi(`/${report.report_id}`, {
       method: 'PUT',
       body: JSON.stringify({
         name,
