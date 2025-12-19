@@ -6,26 +6,26 @@ This document serves product, engineering, implementation, and support teams. It
 ---
 
 ## Terminology
-- **Adapter** – Concrete integration for an external accounting system (e.g., `quickbooks_online`, `quickbooks_desktop`, `xero`).
-- **Realm / Connection ID** – Adapter-specific identifier that scopes catalog data (QBO realm ID, Xero tenant ID, etc.).
-- **Mapping** – Tenant-scoped record linking an Alga entity (service, tax region, payment term, tracking dimension) to an external identifier plus optional metadata.
+- **Adapter** – Concrete integration for an external accounting system (e.g., `quickbooks_csv`, `quickbooks_online`, `quickbooks_desktop`, `xero`).
+- **Realm / Connection ID** – Adapter-specific identifier that scopes catalog data (QBO realm ID, Xero tenant ID, etc.). CSV exports typically use no realm.
+- **Mapping** – Tenant-scoped record linking an Alga entity (client, service, tax code, payment term) to an external identifier plus optional metadata.
 - **Canonical export payload** – Normalized invoice data produced by `AccountingExportService` prior to adapter formatting.
 - **Batch** – Logical export unit grouped by tenant, adapter, and filter set, tracked in `accounting_export_batches`.
 
 ---
 
 ## System Overview
-1. Finance or onboarding staff use Accounting Settings to connect an adapter (OAuth for QBO/Xero, manual for Desktop).
-2. The Mapping UI (generic `AccountingMappingManager`) loads adapter-provided modules that surface catalog options and CRUD operations backed by `tenant_external_entity_mappings`.
-3. When exports run (manually or via automation), `AccountingExportService` assembles canonical payloads from invoices/charges, resolves mappings, validates readiness, and persists `accounting_export_batches` plus line-level status.
-4. Adapter implementations transform canonical payloads into API or file requests, deliver them to the external system, and update batch/line status.
-5. Operators monitor export dashboards, resolve errors (often mapping gaps), and rerun batches as needed.
+1. Finance or onboarding staff use **Settings → Integrations → Accounting** to select an accounting package.
+2. Today, **QuickBooks CSV** is available (manual import/export). **QuickBooks Online (OAuth)** and **Xero (OAuth)** are shown as **Coming soon** and are disabled in the UI.
+3. The Mapping UI (generic `AccountingMappingManager`) loads adapter-provided modules and persists mappings in `tenant_external_entity_mappings`.
+4. When exports run, `AccountingExportService` assembles canonical payloads from invoices/charges, resolves mappings, validates readiness, and persists `accounting_export_batches` + line-level status in `accounting_export_lines` and `accounting_export_errors`.
+5. Adapters transform canonical payloads into API requests (OAuth adapters) or files (CSV) and update batch/line status.
 
 Key architecture artifacts come from:
 - UI unification plan (`ee/docs/plans/2025-10-28-accounting-mapping-ui-unification-plan.md`)
 - Export abstraction plan (`ee/docs/plans/2025-10-26-accounting-export-abstraction-plan.md`)
 - Generic mapping components under `server/src/components/accounting-mappings/`
-- Adapter-specific module factories, e.g., `server/src/components/integrations/xero/xeroMappingModules.ts`
+- CSV module factory: `server/src/components/integrations/csv/csvMappingModules.ts`
 
 ---
 
@@ -55,31 +55,27 @@ Key architecture artifacts come from:
 - `types.ts` defines configuration contracts: `AccountingMappingModule`, `AccountingMappingContext`, `AccountingMappingOverrides`, and metadata toggles.
 
 ### Module Configuration Pattern
-Each adapter defines a factory that returns `AccountingMappingModule[]`. Example: `createXeroMappingModules()` in `server/src/components/integrations/xero/xeroMappingModules.ts`.
+Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV, see `createCsvMappingModules()` in `server/src/components/integrations/csv/csvMappingModules.ts`.
 - Modules declare:
   - `id`, `adapterType`, `algaEntityType`, `externalEntityType`.
   - `labels` (tab names, table column headers, dialog copy, delete confirmations).
   - `elements` for deterministic DOM ids (support QA scripts).
-  - `load(context)` which fetches mappings and catalog options. Typically calls server actions such as `getServices`, `getTaxRegions`, `getXeroItems`, etc. Should respect `context.realmId`.
+  - `load(context)` which fetches mappings and catalog options. For CSV, Alga provides the catalog options (clients/services/tax codes/payment terms) and the external value is typically manually entered.
   - `create`, `update`, `remove` operations that wrap the server actions and set adapter-specific defaults (`sync_status: 'manual_link'`, metadata persistence).
   - Optional `metadata.enableJsonEditor` (enables JSON textarea in dialog).
   - Optional `resolveOverrides` returning `AccountingMappingOverrides` for test harness or niche adapter logic.
 
 ### Overrides & Testing Hooks
 - Playwright tests register overrides via `window.__ALGA_PLAYWRIGHT_ACCOUNTING__[adapterType][moduleId]` to stub load/create/update/delete during e2e tests.
-- Legacy `__ALGA_PLAYWRIGHT_QBO__` is still read for backward compatibility during rollout.
 - Modules can set `overridesKey` to reuse a shared override set across tabs when needed.
 
 ### Existing Adapter Modules
-- **QuickBooks Online/Desktop**: `createQboMappingModules(realmId)` (not shown above but follows same contract) surfaces Services, Tax Codes, Payment Terms, and additional metadata (classes, GL accounts). QBO UI now delegates to `AccountingMappingManager`.
-- **Xero** (`server/src/components/integrations/xero/XeroMappingManager.tsx` and `xeroMappingModules.ts`):
-  - Services/Items tab maps Alga services to Xero inventory/service codes (with JSON metadata for revenue accounts, tracking).
-  - Tax Rates tab maps tax regions to Xero tax types (metadata captures composite tax components).
-  - Additional modules (payment terms, tracking categories) are planned under the UI unification roadmap; metadata editor already accommodates richer payloads.
+- **QuickBooks CSV**: `createCsvMappingModules()` surfaces Client, Items/Services, Tax Codes, and Payment Terms mappings. The external identifier is entered manually (no OAuth catalog lookup).
+- **QuickBooks Online (OAuth)** and **Xero (OAuth)**: shown as **Coming soon** in the Accounting Integrations setup screen. When enabled, they will provide catalog-backed selectors and adapter-specific metadata where required.
 
 ### Realm Handling
-- `AccountingMappingContext.realmId` is optional. Xero passes the OAuth connection ID; QuickBooks Online uses realm IDs; Desktop modules omit it.
-- Dialog renders realm value read-only when provided to reduce accidental mismatches.
+- `AccountingMappingContext.realmId` is optional. OAuth adapters will pass realm/tenant identifiers; CSV exports omit it (single-tenant manual flow).
+- The dialog renders the realm value read-only when provided to reduce accidental mismatches.
 
 ---
 
@@ -120,20 +116,18 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. Example
 
 ### Prerequisites
 1. Ensure tenant has Accounting feature toggle enabled.
-2. Connect adapter:
-   - QBO: OAuth flow captures realm ID.
-   - Xero: OAuth connection yields tenant ID (connectionId).
-   - Desktop: configure export settings and ensure GL mappings exist.
+2. Select an accounting integration in **Settings → Integrations → Accounting**:
+   - **QuickBooks CSV**: available now (manual import/export).
+   - **QuickBooks Online (OAuth)** and **Xero (OAuth)**: coming soon (disabled in UI).
 3. Confirm user role grants `Billing Settings` permissions.
 
 ### Managing Mappings
 1. Navigate to **Settings → Accounting Integrations**.
-2. Select adapter tab (QuickBooks, Xero). Each shows sub-tabs rendered by `AccountingMappingManager`.
+2. Select **QuickBooks CSV**. The mapping tabs are rendered by `AccountingMappingManager`.
 3. For each tab:
-   - Click **Add Mapping**.
-   - Choose Alga entity (service, tax region, etc.). Locked when editing existing mapping.
-   - Select external entity from dropdown. If catalog is empty (due to permissions or connection issues), manually type the external identifier.
-   - (Optional) Provide metadata JSON when adapter requires extra fields (e.g., Xero tax component array).
+   - Click **Add … Mapping**.
+   - Choose an Alga entity (client/service/tax code/payment term). Locked when editing an existing mapping.
+   - Enter the external identifier (manual entry for CSV).
    - Save; dialog displays validation errors from server actions.
 4. To edit or delete:
    - Use the row action menu.
@@ -141,15 +135,17 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. Example
 5. Refresh data via tab reload (automatic after create/update/delete).
 
 ### Running Exports
-1. From **Billing → Accounting Exports** (Phase 6 in progress):
-   - Choose adapter/export type; define filters (date range, contract tags, etc.).
-   - Trigger export to create batch (records `ready` status once validations pass).
-2. Execute batch:
-   - Immediate execution via UI action or automation workflow.
-   - Monitor progress; delivered batches show completion timestamp and external document references.
-3. Download artifacts:
-   - For QuickBooks Desktop, download generated IIF/CSV.
-   - For API adapters, view reference IDs returned by external system.
+1. From **Billing → Accounting Exports**:
+   - Create a new batch for **QuickBooks CSV** (or other adapters when enabled).
+   - Execute the batch; file-based adapters return a downloadable artifact.
+2. From **Settings → Integrations → Accounting → QuickBooks CSV**:
+   - Choose invoice filters (date range + statuses) and click **Export CSV**.
+   - The export creates (or reuses) an `accounting_export_batch`, validates mappings, and generates the file.
+2. Fix issues and retry:
+   - Missing mappings transition the batch to `needs_attention` and the UI lists what to map.
+   - After adding mappings, retrying validates again and the same batch can proceed once it becomes `ready`.
+3. Download artifact:
+   - CSV exports return a downloadable CSV compatible with QuickBooks invoice import.
 4. Address failures:
    - Inspect `accounting_export_lines` for errors (UI surfaces message).
    - Resolve root cause (often missing mapping, invalid tax rate, or authentication).
@@ -158,9 +154,7 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. Example
 ### Troubleshooting Checklist
 - **Missing mapping error** – Create mapping in relevant tab; rerun export.
 - **Realm mismatch** – Verify connection ID shown in dialog matches authorized accounting tenant.
-- **Catalog empty** – Check adapter connection health; ensure integration user has rights to list items/tax rates.
-- **Metadata parse failure** – Validate JSON structure in mapping dialog; see adapter-specific schema notes.
-- **API rate limits** – Monitor adapter logs; QuickBooks Online rate limiting work is tracked in Export Plan Phase 4.
+- **Metadata parse failure** – Validate JSON structure in mapping dialog if your adapter expects metadata.
 
 ---
 
@@ -169,16 +163,16 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. Example
 - **Feature flags** – Rollout of unified mapping UI may be staged; confirm feature toggle status before enabling for tenants.
 - **Logging** – Server actions log create/update/delete events with tenant context. Export flows log batch lifecycle and adapter responses.
 - **Auditing** – `tenant_external_entity_mappings` retains timestamps; `accounting_export_batches` captures `triggered_by` user id for traceability.
-- **Backfills & migrations** – Schema renames (`invoice_items` → `invoice_charges`, etc.) coordinated under Export Plan Phase 1. Historical data requires backfill before enabling exports.
+- **Backfills & migrations** – Mappings are canonicalized to `alga_entity_type = 'client'` (customers) and `alga_entity_type = 'tax_code'` (tax). Migrations normalize legacy values in `tenant_external_entity_mappings`.
 - **Testing** – Use Playwright harness overrides for deterministic UI tests; Vitest covers module factories; integration tests execute export flows against sqlite/pg fixtures. Sandbox runs against QBO/Xero demo companies capture regression fixtures.
 
 ---
 
 ## Roadmap & Open Items
 - Complete remaining tasks in the UI unification plan:
-  - Add Xero modules for payment terms and tracking categories.
-  - Replace legacy QBO-specific globals in Playwright with generic registry.
-  - Capture screenshots for release notes and update `docs/accounting_exports.md` (to be authored once export dashboard ships).
+  - Enable OAuth-based adapters (QuickBooks Online, Xero) in the Accounting Integrations setup screen.
+  - Add optional catalog-backed selectors for external entities (when OAuth is available).
+  - Publish `docs/accounting_exports.md` once the Accounting Exports dashboard ships.
 - Export abstraction plan outstanding work:
   - Implement QuickBooks Online rate limiting and partial failure retries.
   - Deliver QuickBooks Desktop file export and download UI.
@@ -195,10 +189,12 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. Example
 - `server/src/components/accounting-mappings/AccountingMappingModuleView.tsx`
 - `server/src/components/accounting-mappings/AccountingMappingDialog.tsx`
 - `server/src/components/accounting-mappings/types.ts`
-- `server/src/components/integrations/xero/XeroMappingManager.tsx`
-- `server/src/components/integrations/xero/xeroMappingModules.ts`
+- `server/src/components/integrations/csv/CSVMappingManager.tsx`
+- `server/src/components/integrations/csv/csvMappingModules.ts`
 - `server/src/lib/actions/externalMappingActions.ts`
 - `server/src/lib/adapters/accounting/accountingExportAdapter.ts`
+- `server/src/lib/services/accountingExportService.ts`
+- `server/src/lib/adapters/accounting/quickBooksCSVAdapter.ts`
 - `ee/docs/plans/2025-10-28-accounting-mapping-ui-unification-plan.md`
 - `ee/docs/plans/2025-10-26-accounting-export-abstraction-plan.md`
 
@@ -222,4 +218,3 @@ Use the following outline when crafting tenant-facing guides:
 3. Export run book (filters, expected processing time, verification).
 4. Troubleshooting table (common errors, resolutions, escalation path).
 5. Change log capturing adapter updates, credential reauthorization windows, and contact info.
-

@@ -506,6 +506,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
         }}
         id="usage-form-dialog"
         title={editingUsage ? 'Edit Usage Record' : 'Add Usage Record'}
+        disableFocusTrap
       >
         <DialogContent>
           <div className="space-y-4">

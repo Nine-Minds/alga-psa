@@ -20,6 +20,7 @@ import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '../../services/TenantEmailService';
+import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -312,10 +313,49 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
     }
 
     case 'priority_id': {
+      // Check tenant-specific priorities table first
       const priority = await db('priorities')
         .where({ priority_id: value, tenant: tenantId })
         .first();
-      return priority?.priority_name || String(value);
+      if (priority?.priority_name) {
+        return priority.priority_name;
+      }
+      // Fall back to global standard_priorities table
+      const standardPriority = await db('standard_priorities')
+        .where({ priority_id: value })
+        .first();
+      return standardPriority?.priority_name || String(value);
+    }
+
+    case 'board_id': {
+      // Check tenant-specific boards table first
+      const board = await db('boards')
+        .where({ board_id: value, tenant: tenantId })
+        .first();
+      if (board?.board_name) {
+        return board.board_name;
+      }
+      // Fall back to global standard_boards table (uses 'id' not 'board_id')
+      const standardBoard = await db('standard_boards')
+        .where({ id: value })
+        .first();
+      return standardBoard?.board_name || String(value);
+    }
+
+    case 'category_id':
+    case 'subcategory_id': {
+      // Check tenant-specific categories table first
+      const category = await db('categories')
+        .where({ category_id: value, tenant: tenantId })
+        .first();
+      if (category?.category_name) {
+        return category.category_name;
+      }
+      // Fall back to global standard_categories table (uses 'id' not 'category_id')
+      const standardCategory = await db('standard_categories')
+        .where({ id: value })
+        .first();
+      return standardCategory?.category_name || String(value);
     }
 
     default:
@@ -803,20 +843,12 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
     const assignedEmail = safeString(ticket.assigned_to_email);
 
-    if (!primaryEmail) {
-      console.warn('[EmailSubscriber] Ticket found but missing both contact and client email:', {
-        eventId: event.id,
-        ticketId: payload.ticketId,
-        clientId: ticket.client_id
-      });
-      return;
-    }
-
     console.log('[EmailSubscriber] Found ticket:', {
       ticketId: ticket.ticket_id,
       title: ticket.title,
       clientId: ticket.client_id,
-      primaryEmail,
+      primaryEmail: primaryEmail || 'none',
+      assignedEmail: assignedEmail || 'none',
       status: ticket.status_name
     });
 
@@ -956,63 +988,136 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
 
-    // Send to primary recipient (contact or client) - external user, no userId
-    await sendNotificationIfEnabled({
-      tenantId,
-      to: primaryEmail,
-      subject: `Ticket Updated: ${ticket.title}`,
-      template: 'ticket-updated',
-      context: buildContext(portalUrl),
-      replyContext: {
-        ticketId: ticket.ticket_id || payload.ticketId,
-        threadId: ticket.email_metadata?.threadId
-      },
-      from: ticketingFromAddress
-    }, 'Ticket Updated');
+    // Check if notification accumulator is initialized
+    const accumulator = NotificationAccumulator.getInstance();
+    const useAccumulator = accumulator.isReady();
 
-    // Send to assigned user if different from primary recipient
-    if (assignedEmail && assignedEmail !== primaryEmail) {
-      await sendNotificationIfEnabled({
-      tenantId,
-      to: assignedEmail,
-      subject: `Ticket Updated: ${ticket.title}`,
-      template: 'ticket-updated',
-      context: buildContext(internalUrl),
-      replyContext: {
-        ticketId: ticket.ticket_id || payload.ticketId,
-        threadId: ticket.email_metadata?.threadId
-      },
-      from: ticketingFromAddress
-    }, 'Ticket Updated', ticket.assigned_to);
-    }
-
-    // Get and notify all additional resources
-    const additionalResources = await db('ticket_resources as tr')
-      .select('u.email as email', 'u.user_id as user_id')
-      .leftJoin('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id')
-            .andOn('tr.tenant', 'u.tenant');
-      })
-      .where({
-        'tr.ticket_id': payload.ticketId,
-        'tr.tenant': tenantId
+    if (useAccumulator) {
+      // Route through accumulator - notifications will be batched and sent later
+      logger.debug('[TicketEmailSubscriber] Routing ticket update through accumulator', {
+        ticketId: payload.ticketId,
+        tenantId
       });
 
-    // Send to all additional resources
-    for (const resource of additionalResources) {
-      if (resource.email) {
+      // Accumulate for primary recipient (contact or client) - external user
+      if (primaryEmail) {
+        await accumulator.accumulate({
+          tenantId,
+          ticketId: payload.ticketId,
+          recipientEmail: primaryEmail,
+          recipientUserId: undefined,
+          isInternal: false,
+          userId: payload.userId,
+          changes: payload.changes || {}
+        });
+      }
+
+      // Accumulate for assigned user if different from primary recipient
+      if (assignedEmail && assignedEmail !== primaryEmail) {
+        await accumulator.accumulate({
+          tenantId,
+          ticketId: payload.ticketId,
+          recipientEmail: assignedEmail,
+          recipientUserId: ticket.assigned_to,
+          isInternal: true,
+          userId: payload.userId,
+          changes: payload.changes || {}
+        });
+      }
+
+      // Get and accumulate for all additional resources
+      const additionalResources = await db('ticket_resources as tr')
+        .select('u.email as email', 'u.user_id as user_id')
+        .leftJoin('users as u', function() {
+          this.on('tr.additional_user_id', 'u.user_id')
+              .andOn('tr.tenant', 'u.tenant');
+        })
+        .where({
+          'tr.ticket_id': payload.ticketId,
+          'tr.tenant': tenantId
+        });
+
+      for (const resource of additionalResources) {
+        if (resource.email) {
+          await accumulator.accumulate({
+            tenantId,
+            ticketId: payload.ticketId,
+            recipientEmail: resource.email,
+            recipientUserId: resource.user_id,
+            isInternal: true,
+            userId: payload.userId,
+            changes: payload.changes || {}
+          });
+        }
+      }
+
+    } else {
+      // Fallback: Send immediately if accumulator is not initialized
+      logger.debug('[TicketEmailSubscriber] Accumulator not ready, sending immediately', {
+        ticketId: payload.ticketId,
+        tenantId
+      });
+
+      // Send to primary recipient (contact or client) - external user, no userId
+      if (primaryEmail) {
         await sendNotificationIfEnabled({
-        tenantId,
-        to: resource.email,
-        subject: `Ticket Updated: ${ticket.title}`,
-        template: 'ticket-updated',
-        context: buildContext(internalUrl),
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          threadId: ticket.email_metadata?.threadId
-        },
-        from: ticketingFromAddress
-      }, 'Ticket Updated', resource.user_id);
+          tenantId,
+          to: primaryEmail,
+          subject: `Ticket Updated: ${ticket.title}`,
+          template: 'ticket-updated',
+          context: buildContext(portalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: ticketingFromAddress
+        }, 'Ticket Updated');
+      }
+
+      // Send to assigned user if different from primary recipient
+      if (assignedEmail && assignedEmail !== primaryEmail) {
+        await sendNotificationIfEnabled({
+          tenantId,
+          to: assignedEmail,
+          subject: `Ticket Updated: ${ticket.title}`,
+          template: 'ticket-updated',
+          context: buildContext(internalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: ticketingFromAddress
+        }, 'Ticket Updated', ticket.assigned_to);
+      }
+
+      // Get and notify all additional resources
+      const additionalResources = await db('ticket_resources as tr')
+        .select('u.email as email', 'u.user_id as user_id')
+        .leftJoin('users as u', function() {
+          this.on('tr.additional_user_id', 'u.user_id')
+              .andOn('tr.tenant', 'u.tenant');
+        })
+        .where({
+          'tr.ticket_id': payload.ticketId,
+          'tr.tenant': tenantId
+        });
+
+      // Send to all additional resources
+      for (const resource of additionalResources) {
+        if (resource.email) {
+          await sendNotificationIfEnabled({
+            tenantId,
+            to: resource.email,
+            subject: `Ticket Updated: ${ticket.title}`,
+            template: 'ticket-updated',
+            context: buildContext(internalUrl),
+            replyContext: {
+              ticketId: ticket.ticket_id || payload.ticketId,
+              threadId: ticket.email_metadata?.threadId
+            },
+            from: ticketingFromAddress
+          }, 'Ticket Updated', resource.user_id);
+        }
       }
     }
 
@@ -1021,6 +1126,303 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       error,
       eventId: event.id,
       ticketId: payload.ticketId
+    });
+    throw error;
+  }
+}
+
+/**
+ * Format multiple accumulated changes into a readable string
+ */
+async function formatAccumulatedChanges(
+  db: any,
+  accumulatedChanges: AccumulatedChange[],
+  tenantId: string
+): Promise<string> {
+  const formattedSections: string[] = [];
+
+  for (const changeSet of accumulatedChanges) {
+    // Get updater's name
+    const updater = await db('users')
+      .where({ user_id: changeSet.userId, tenant: tenantId })
+      .first();
+    const updaterName = updater ? `${updater.first_name} ${updater.last_name}` : changeSet.userId;
+
+    const timestamp = new Date(changeSet.timestamp).toLocaleString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+
+    const formattedChanges = await Promise.all(
+      Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
+        if (typeof value === 'object' && value !== null) {
+          const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
+          if (oldVal !== undefined && newVal !== undefined) {
+            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId);
+            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId);
+            return `  • ${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
+          }
+        }
+        const resolvedValue = await resolveValue(db, field, value, tenantId);
+        return `  • ${formatFieldName(field)}: ${resolvedValue}`;
+      })
+    );
+
+    formattedSections.push(`${updaterName} (${timestamp}):\n${formattedChanges.join('\n')}`);
+  }
+
+  return formattedSections.join('\n\n');
+}
+
+/**
+ * Handle accumulated ticket updates - called by the NotificationAccumulator flush
+ */
+export async function handleAccumulatedTicketUpdates(notification: PendingNotification): Promise<void> {
+  const { tenantId, ticketId, recipientEmail, recipientUserId, isInternal, accumulatedChanges } = notification;
+
+  logger.info('[TicketEmailSubscriber] Processing accumulated ticket updates', {
+    tenantId,
+    ticketId,
+    recipientEmail,
+    changeCount: accumulatedChanges.length
+  });
+
+  try {
+    const db = await getConnection(tenantId);
+
+    // Get current ticket details (may have changed since accumulation started)
+    const ticket = await db('tickets as t')
+      .select(
+        't.*',
+        'dcl.email as client_email',
+        'c.client_name',
+        'co.email as contact_email',
+        'co.full_name as contact_name',
+        'co.phone_number as contact_phone',
+        'p.priority_name',
+        'p.color as priority_color',
+        's.name as status_name',
+        'au.email as assigned_to_email',
+        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
+        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
+        'ch.board_name',
+        'cat.category_name',
+        'subcat.category_name as subcategory_name',
+        'cl.location_name',
+        'cl.address_line1',
+        'cl.address_line2',
+        'cl.city',
+        'cl.state_province',
+        'cl.postal_code',
+        'cl.country_code'
+      )
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
+            .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 't.client_id')
+            .andOn('dcl.tenant', '=', 't.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
+      })
+      .leftJoin('contacts as co', function() {
+        this.on('t.contact_name_id', 'co.contact_name_id')
+            .andOn('t.tenant', 'co.tenant');
+      })
+      .leftJoin('users as au', function() {
+        this.on('t.assigned_to', 'au.user_id')
+            .andOn('t.tenant', 'au.tenant');
+      })
+      .leftJoin('users as eb', function() {
+        this.on('t.entered_by', 'eb.user_id')
+            .andOn('t.tenant', 'eb.tenant');
+      })
+      .leftJoin('priorities as p', function() {
+        this.on('t.priority_id', 'p.priority_id')
+            .andOn('t.tenant', 'p.tenant');
+      })
+      .leftJoin('statuses as s', function() {
+        this.on('t.status_id', 's.status_id')
+            .andOn('t.tenant', 's.tenant');
+      })
+      .leftJoin('boards as ch', function() {
+        this.on('t.board_id', 'ch.board_id')
+            .andOn('t.tenant', 'ch.tenant');
+      })
+      .leftJoin('categories as cat', function() {
+        this.on('t.category_id', 'cat.category_id')
+            .andOn('t.tenant', 'cat.tenant');
+      })
+      .leftJoin('categories as subcat', function() {
+        this.on('t.subcategory_id', 'subcat.category_id')
+            .andOn('t.tenant', 'subcat.tenant');
+      })
+      .leftJoin('client_locations as cl', function() {
+        this.on('t.location_id', 'cl.location_id')
+            .andOn('t.tenant', 'cl.tenant');
+      })
+      .where('t.ticket_id', ticketId)
+      .first();
+
+    if (!ticket) {
+      logger.warn('[TicketEmailSubscriber] Could not find ticket for accumulated notification:', {
+        ticketId,
+        tenantId
+      });
+      return;
+    }
+
+    const safeString = (value?: unknown) => {
+      if (typeof value === 'string') {
+        return value.trim();
+      }
+      if (value === null || value === undefined) {
+        return '';
+      }
+      return String(value).trim();
+    };
+
+    const priorityName = safeString(ticket.priority_name) || 'Unspecified';
+    const statusName = safeString(ticket.status_name) || 'Unknown';
+    const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
+    const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
+    const clientName = safeString(ticket.client_name) || 'Unassigned Client';
+
+    const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
+    const assignedEmail = safeString(ticket.assigned_to_email);
+    const assignedToEmailDisplay = assignedToName === 'Unassigned'
+      ? 'Not assigned'
+      : assignedEmail || 'Not provided';
+    const assignedDetails = assignedToName === 'Unassigned'
+      ? 'Unassigned'
+      : assignedEmail
+        ? `${assignedToName} (${assignedEmail})`
+        : assignedToName;
+
+    const requesterName = safeString(ticket.contact_name) || 'Not specified';
+    const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
+    const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
+    const requesterContactParts: string[] = [];
+    if (requesterEmail && requesterEmail !== 'Not provided') {
+      requesterContactParts.push(requesterEmail);
+    }
+    if (requesterPhone && requesterPhone !== 'Not provided') {
+      requesterContactParts.push(requesterPhone);
+    }
+    const requesterDetailsParts: string[] = [];
+    if (requesterName && requesterName !== 'Not specified') {
+      requesterDetailsParts.push(requesterName);
+    }
+    requesterDetailsParts.push(...requesterContactParts);
+    const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
+    const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
+
+    const boardName = safeString(ticket.board_name) || 'Not specified';
+    const categoryName = safeString(ticket.category_name);
+    const subcategoryName = safeString(ticket.subcategory_name);
+    const categoryDetails = categoryName && subcategoryName
+      ? `${categoryName} / ${subcategoryName}`
+      : categoryName || subcategoryName || 'Not categorized';
+
+    const locationSegments: string[] = [];
+    const locationName = safeString(ticket.location_name);
+    if (locationName) {
+      locationSegments.push(locationName);
+    }
+    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const locationDetailsParts = [...addressLines];
+    if (cityState) {
+      locationDetailsParts.push(cityState);
+    }
+    if (postalCountry) {
+      locationDetailsParts.push(postalCountry);
+    }
+    if (locationDetailsParts.length > 0) {
+      locationSegments.push(locationDetailsParts.join(' · '));
+    }
+    const locationSummary = locationSegments.length > 0 ? locationSegments.join(' • ') : 'Not specified';
+
+    let rawDescription = '';
+    if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
+      rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
+    }
+    if (!rawDescription && 'description' in ticket) {
+      rawDescription = safeString((ticket as Record<string, unknown>).description);
+    }
+    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
+    const descriptionText = descriptionFormatting.text || rawDescription;
+    const description = descriptionText || 'No description provided.';
+
+    // Format all accumulated changes
+    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId);
+
+    // Determine the URL based on whether recipient is internal or external
+    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+    const ticketUrl = isInternal ? internalUrl : portalUrl;
+
+    const ticketContext = {
+      id: ticket.ticket_number,
+      title: ticket.title,
+      description,
+      priority: priorityName,
+      priorityColor,
+      status: statusName,
+      metaLine,
+      clientName,
+      assignedToName,
+      assignedToEmail: assignedToEmailDisplay,
+      assignedDetails,
+      requesterName,
+      requesterEmail,
+      requesterPhone,
+      requesterContact,
+      requesterDetails,
+      board: boardName,
+      category: categoryName || 'Not categorized',
+      subcategory: subcategoryName || 'Not specified',
+      categoryDetails,
+      locationSummary,
+      changes: formattedChanges,
+      updateCount: accumulatedChanges.length,
+      url: ticketUrl
+    };
+
+    const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+
+    // Build subject line indicating multiple updates if applicable
+    const subjectSuffix = accumulatedChanges.length > 1 ? ` (${accumulatedChanges.length} updates)` : '';
+
+    await sendNotificationIfEnabled({
+      tenantId,
+      to: recipientEmail,
+      subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
+      template: 'ticket-updated',
+      context: { ticket: ticketContext },
+      replyContext: {
+        ticketId: ticket.ticket_id,
+        threadId: ticket.email_metadata?.threadId
+      },
+      from: ticketingFromAddress
+    }, 'Ticket Updated', recipientUserId);
+
+    logger.info('[TicketEmailSubscriber] Sent accumulated ticket update notification', {
+      tenantId,
+      ticketId,
+      recipientEmail,
+      changeCount: accumulatedChanges.length
+    });
+
+  } catch (error) {
+    logger.error('[TicketEmailSubscriber] Error sending accumulated ticket update:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tenantId,
+      ticketId,
+      recipientEmail
     });
     throw error;
   }
@@ -2129,5 +2531,39 @@ export async function unregisterTicketEmailSubscriber(): Promise<void> {
   } catch (error) {
     logger.error('Failed to unregister email notification subscribers:', error);
     throw error;
+  }
+}
+
+/**
+ * Initialize the notification accumulator for batching ticket update notifications
+ * Call this during app startup to enable notification batching
+ */
+export async function initializeNotificationAccumulator(config?: {
+  accumulationWindowMs?: number;
+  flushIntervalMs?: number;
+}): Promise<void> {
+  try {
+    const accumulator = NotificationAccumulator.getInstance(config);
+    await accumulator.initialize(handleAccumulatedTicketUpdates);
+    logger.info('[TicketEmailSubscriber] Notification accumulator initialized');
+  } catch (error) {
+    logger.error('[TicketEmailSubscriber] Failed to initialize notification accumulator:', error);
+    // Don't throw - the system will fall back to immediate sending
+  }
+}
+
+/**
+ * Shutdown the notification accumulator, flushing any pending notifications
+ * Call this during app shutdown
+ */
+export async function shutdownNotificationAccumulator(): Promise<void> {
+  try {
+    const accumulator = NotificationAccumulator.getInstance();
+    if (accumulator.isReady()) {
+      await accumulator.shutdown();
+      logger.info('[TicketEmailSubscriber] Notification accumulator shut down');
+    }
+  } catch (error) {
+    logger.error('[TicketEmailSubscriber] Error shutting down notification accumulator:', error);
   }
 }

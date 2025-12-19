@@ -18,27 +18,41 @@ exports.seed = async function(knex) {
     throw new Error('No tenant found in tenants table');
   }
 
+  const requiredSubtypeNames = [
+    'Ticket Created',
+    'Ticket Updated',
+    'Ticket Closed',
+    'Invoice Generated',
+    'Invoice Email',
+    'Payment Received',
+    'Payment Overdue',
+    'Project Created',
+    'Task Updated',
+    'Milestone Completed',
+    'Time Entry Submitted',
+    'Time Entry Approved',
+    'Time Entry Rejected'
+  ];
+
   // Get subtypes for reference
   const subtypes = await knex('notification_subtypes')
     .select('id', 'name')
-    .whereIn('name', [
-      'Ticket Created',
-      'Ticket Updated',
-      'Ticket Closed',
-      'Invoice Generated',
-      'Invoice Email',
-      'Payment Received',
-      'Payment Overdue',
-      'Project Created',
-      'Task Updated',
-      'Milestone Completed',
-      'Time Entry Submitted',
-      'Time Entry Approved',
-      'Time Entry Rejected'
-    ]);
+    .whereIn('name', requiredSubtypeNames);
 
   if (subtypes.length === 0) {
     throw new Error('No notification subtypes found. Make sure 20241220_add_default_notification_settings has been run.');
+  }
+
+  const subtypeIdByName = subtypes.reduce((acc, subtype) => {
+    acc[subtype.name] = subtype.id;
+    return acc;
+  }, {});
+
+  const missingSubtypeNames = requiredSubtypeNames.filter((name) => !subtypeIdByName[name]);
+  if (missingSubtypeNames.length > 0) {
+    console.warn(
+      `[seed 68_add_notification_templates] Missing notification subtypes (will skip related templates): ${missingSubtypeNames.join(', ')}`
+    );
   }
 
   // Clean up any existing notification templates (but keep authentication templates)
@@ -58,7 +72,7 @@ exports.seed = async function(knex) {
     .del();
 
   // Insert system-wide default templates
-  const systemTemplates = await knex('system_email_templates').insert([
+  const systemTemplatesPayload = [
     // Ticket templates
     {
       name: 'ticket-created',
@@ -722,7 +736,19 @@ Reason: {{timeEntry.rejectionReason}}
 View time entry at: {{timeEntry.url}}
       `
     }
-  ]).returning('*');
+  ];
+
+  const systemTemplatesToInsert = systemTemplatesPayload.filter((template) => {
+    if (template.notification_subtype_id) return true;
+    console.warn(
+      `[seed 68_add_notification_templates] Skipping system template '${template.name}' because notification_subtype_id is missing`
+    );
+    return false;
+  });
+
+  const systemTemplates = await knex('system_email_templates')
+    .insert(systemTemplatesToInsert)
+    .returning('*');
 
   const now = new Date();
   let surveysCategory = await knex('notification_categories').where({ name: SURVEY_CATEGORY_NAME }).first();

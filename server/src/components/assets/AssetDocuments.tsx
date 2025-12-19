@@ -1,44 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Documents from 'server/src/components/documents/Documents';
-import { useEffect, useState } from 'react';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 
 interface AssetDocumentsProps {
     assetId: string;
     tenant: string;
     initialDocuments?: IDocument[];
+    onDocumentCreated?: () => Promise<void>;
 }
 
-const AssetDocuments: React.FC<AssetDocumentsProps> = ({ assetId, tenant, initialDocuments }) => {
-    const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
-    const [isLoading, setIsLoading] = useState(!initialDocuments);
+const AssetDocuments: React.FC<AssetDocumentsProps> = ({
+    assetId,
+    tenant,
+    initialDocuments = [],
+    onDocumentCreated
+}) => {
+    const router = useRouter();
+    const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const loadDocuments = async () => {
-        try {
-            const response = await getDocumentsByEntity(assetId, 'asset');
-            // Handle both array and paginated response formats
-            const documentsList = Array.isArray(response)
-                ? response
-                : response.documents || [];
-            setDocuments(documentsList);
-        } catch (error) {
-            console.error('Error loading documents:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    // Sync from props when they change
     useEffect(() => {
-        if (initialDocuments && initialDocuments.length > 0) {
-            setDocuments(initialDocuments);
-            setIsLoading(false);
-            return;
+        setDocuments(initialDocuments);
+    }, [initialDocuments]);
+
+    const handleDocumentCreated = useCallback(async () => {
+        if (onDocumentCreated) {
+            await onDocumentCreated();
+        } else {
+            router.refresh();
         }
-        loadDocuments();
-    }, [assetId, initialDocuments]);
+    }, [onDocumentCreated, router]);
 
     return (
         <Documents
@@ -49,7 +44,7 @@ const AssetDocuments: React.FC<AssetDocumentsProps> = ({ assetId, tenant, initia
             entityId={assetId}
             entityType="asset"
             isLoading={isLoading}
-            onDocumentCreated={loadDocuments}
+            onDocumentCreated={handleDocumentCreated}
         />
     );
 };

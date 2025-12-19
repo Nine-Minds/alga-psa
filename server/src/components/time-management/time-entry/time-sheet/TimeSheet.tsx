@@ -22,6 +22,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { formatISO, parseISO } from 'date-fns';
 import { TimeSheetTable } from './TimeSheetTable';
 import { TimeSheetHeader } from './TimeSheetHeader';
+import { TimeSheetDateNavigatorState } from './types';
 import { TimeSheetComments } from 'server/src/components/time-management/approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
 import { IntervalSection } from 'server/src/components/time-management/interval-tracking/IntervalSection';
@@ -43,15 +44,19 @@ interface TimeSheetProps {
 
 import { Temporal } from '@js-temporal/polyfill';
 
+function parseLocalDate(dateStr: string): Date {
+    const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
 function getDatesInPeriod(timePeriod: ITimePeriodView): Date[] {
     const dates: Date[] = [];
     let currentDate = Temporal.PlainDate.from(timePeriod.start_date);
     const endDate = Temporal.PlainDate.from(timePeriod.end_date);
 
     while (Temporal.PlainDate.compare(currentDate, endDate) < 0) {
-        // Convert PlainDate to Date at midnight UTC
-        const dateStr = `${currentDate.toString()}T00:00:00Z`;
-        dates.push(new Date(dateStr));
+        // Convert PlainDate to a local Date at midnight to avoid UTC offset drift in the UI.
+        dates.push(new Date(currentDate.year, currentDate.month - 1, currentDate.day));
         currentDate = currentDate.add({ days: 1 });
     }
     return dates;
@@ -68,6 +73,8 @@ export function TimeSheet({
     onBack
 }: TimeSheetProps): JSX.Element {
     const [showIntervals, setShowIntervals] = useState(false);
+    const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
+    const [isLoadingTimeSheetData, setIsLoadingTimeSheetData] = useState(true);
     const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
     const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
     const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
@@ -110,49 +117,55 @@ export function TimeSheet({
 
     useEffect(() => {
         const loadData = async () => {
-            const [fetchedTimeEntries, fetchedWorkItems, updatedTimeSheet] = await Promise.all([
-                fetchTimeEntriesForTimeSheet(timeSheet.id),
-                fetchWorkItemsForTimeSheet(timeSheet.id),
-                fetchTimeSheet(timeSheet.id)
-            ]);
+            setIsLoadingTimeSheetData(true);
+            let groupedLocal: Record<string, ITimeEntryWithWorkItemString[]> = {};
+            try {
+                const [fetchedTimeEntries, fetchedWorkItems, updatedTimeSheet] = await Promise.all([
+                    fetchTimeEntriesForTimeSheet(timeSheet.id),
+                    fetchWorkItemsForTimeSheet(timeSheet.id),
+                    fetchTimeSheet(timeSheet.id)
+                ]);
 
-            setTimeSheet(updatedTimeSheet);
+                setTimeSheet(updatedTimeSheet);
 
-            let workItems = fetchedWorkItems;
-            if (initialWorkItem && !workItems.some(item => item.work_item_id === initialWorkItem.work_item_id)) {
-                workItems = [...workItems, initialWorkItem];
-            }
-
-            const fetchedWorkItemsByType = workItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
-                if (!acc[item.type]) {
-                    acc[item.type] = [];
+                let workItems = fetchedWorkItems;
+                if (initialWorkItem && !workItems.some(item => item.work_item_id === initialWorkItem.work_item_id)) {
+                    workItems = [...workItems, initialWorkItem];
                 }
-                acc[item.type].push(item);
-                return acc;
-            }, {});
-            setWorkItemsByType(fetchedWorkItemsByType);
 
-            const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
-                const key = `${entry.work_item_id}`;
-                if (!acc[key]) {
-                    acc[key] = [];
-                }
-                acc[key].push({
-                    ...entry,
-                    start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
-                    end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+                const fetchedWorkItemsByType = workItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
+                    if (!acc[item.type]) {
+                        acc[item.type] = [];
+                    }
+                    acc[item.type].push(item);
+                    return acc;
+                }, {});
+                setWorkItemsByType(fetchedWorkItemsByType);
+
+                groupedLocal = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
+                    const key = `${entry.work_item_id}`;
+                    if (!acc[key]) {
+                        acc[key] = [];
+                    }
+                    acc[key].push({
+                        ...entry,
+                        start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
+                        end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+                    });
+                    return acc;
+                }, {});
+
+                workItems.forEach(workItem => {
+                    const key = workItem.work_item_id;
+                    if (!groupedLocal[key]) {
+                        groupedLocal[key] = [];
+                    }
                 });
-                return acc;
-            }, {});
 
-            workItems.forEach(workItem => {
-                const key = workItem.work_item_id;
-                if (!grouped[key]) {
-                    grouped[key] = [];
-                }
-            });
-
-            setGroupedTimeEntries(grouped);
+                setGroupedTimeEntries(groupedLocal);
+            } finally {
+                setIsLoadingTimeSheetData(false);
+            }
 
             if (initialWorkItem && initialDateObj && initialDuration) {
                 let endTime = new Date();
@@ -182,8 +195,8 @@ export function TimeSheet({
 
                 setSelectedCell({
                     workItem: initialWorkItem,
-                    date: formatISO(initialDateObj),
-                    entries: grouped[initialWorkItem.work_item_id] || [],
+                    date: formatISO(initialDateObj, { representation: 'date' }),
+                    entries: groupedLocal[initialWorkItem.work_item_id] || [],
                     defaultStartTime: formatISO(startTime),
                     defaultEndTime: formatISO(endTime)
                 });
@@ -201,8 +214,10 @@ export function TimeSheet({
     }) => {
         const { workItem, date, durationInMinutes, existingEntry } = params;
         
-        // Set start time to 8 AM on the selected date
-        const startTime = parseISO(date);
+        const workDate = date.slice(0, 10);
+
+        // Set start time to 8 AM on the selected date (local time)
+        const startTime = parseLocalDate(workDate);
         startTime.setHours(8, 0, 0, 0);
         
         // Calculate end time based on duration
@@ -210,7 +225,11 @@ export function TimeSheet({
         
         // Get entries for this date to check for overlaps
         const entriesForDate = (groupedTimeEntries[workItem.work_item_id] || [])
-            .filter(entry => parseISO(entry.start_time).toDateString() === startTime.toDateString());
+            .filter(entry => {
+                const entryWorkDate = entry.work_date?.slice(0, 10);
+                if (entryWorkDate) return entryWorkDate === workDate;
+                return parseISO(entry.start_time).toDateString() === startTime.toDateString();
+            });
         
         // If there are existing entries for this date, start after the last one
         if (entriesForDate.length > 0) {
@@ -350,12 +369,12 @@ export function TimeSheet({
       }
       
       currentDate = timeSheet.time_period ?
-        new Date(timeSheet.time_period.start_date) :
+        parseLocalDate(timeSheet.time_period.start_date) :
         new Date();
     } else {
       // For other work items, set reasonable defaults
       currentDate = timeSheet.time_period ?
-        new Date(timeSheet.time_period.start_date) :
+        parseLocalDate(timeSheet.time_period.start_date) :
         new Date();
       defaultStartTime = new Date(currentDate);
       defaultStartTime.setHours(8, 0, 0, 0); // 8:00 AM
@@ -479,6 +498,7 @@ export function TimeSheet({
                 onBack={onBack}
                 showIntervals={showIntervals}
                 onToggleIntervals={() => setShowIntervals(!showIntervals)}
+                dateNavigator={dateNavigator}
             />
 
             {(timeSheet.approval_status === 'CHANGES_REQUESTED' || comments.length > 0) && (
@@ -513,9 +533,11 @@ export function TimeSheet({
                 workItemsByType={workItemsByType}
                 groupedTimeEntries={groupedTimeEntries}
                 isEditable={isEditable}
+                isLoading={isLoadingTimeSheetData}
                 onCellClick={setSelectedCell}
                 onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
                 onQuickAddTimeEntry={handleQuickAddTimeEntry}
+                onDateNavigatorChange={setDateNavigator}
             onWorkItemClick={(workItem: IExtendedWorkItem) => {
                 openDrawer(
                     <WorkItemDrawer
@@ -576,7 +598,7 @@ export function TimeSheet({
                     onClose={() => setSelectedCell(null)}
                     onSave={handleSaveTimeEntry}
                     workItem={selectedCell.workItem}
-                    date={parseISO(selectedCell.date)}
+                    date={parseLocalDate(selectedCell.date)}
                     existingEntries={selectedCell.entries.map((entry): ITimeEntryWithWorkItem => ({
                         ...entry,
                     }))}
@@ -600,7 +622,8 @@ export function TimeSheet({
                         if (selectedCell) {
                             const updatedEntries = entries.filter(entry => 
                                 entry.work_item_id === selectedCell.workItem.work_item_id &&
-                                parseISO(entry.start_time).toDateString() === parseISO(selectedCell.date).toDateString()
+                                (entry.work_date?.slice(0, 10) === selectedCell.date ||
+                                  parseISO(entry.start_time).toDateString() === parseLocalDate(selectedCell.date).toDateString())
                             );
                             setSelectedCell(prev => prev ? {
                                 ...prev,

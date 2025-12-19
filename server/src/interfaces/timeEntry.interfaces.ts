@@ -33,6 +33,15 @@ export interface ITimeEntry extends TenantEntity  {
   work_item_type: WorkItemType;
   start_time: ISO8601String;
   end_time: ISO8601String;
+  /**
+   * Calendar date the entry is attributed to (computed server-side from start_time in work_timezone).
+   * Stored as YYYY-MM-DD.
+   */
+  work_date?: ISO8601String;
+  /**
+   * IANA timezone used to compute work_date (e.g. America/Los_Angeles).
+   */
+  work_timezone?: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;
   billable_duration: number;

@@ -216,59 +216,48 @@ const Documents = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
+  // Track previous initialDocuments to avoid infinite loops
+  const prevInitialDocumentsRef = useRef<string>('');
+
   // Sync documents from props when they change (e.g., after router.refresh() in entity mode)
   useEffect(() => {
-    // In entity mode, always sync from initialDocuments when they change
+    // In entity mode, sync from initialDocuments when they actually change
     if (!inFolderMode) {
-      setDocumentsToDisplay(initialDocuments);
-      setTotalDocuments(initialDocuments.length);
+      // Compare document IDs to detect actual changes (not just reference changes)
+      const currentIds = initialDocuments.map(d => d.document_id).sort().join(',');
+      if (currentIds !== prevInitialDocumentsRef.current) {
+        prevInitialDocumentsRef.current = currentIds;
+        setDocumentsToDisplay(initialDocuments);
+        setTotalDocuments(initialDocuments.length);
+      }
     }
   }, [initialDocuments, inFolderMode]);
 
-  // Single effect to fetch documents
-  // In entity mode: uses initialDocuments passed from parent (no client-side fetch)
-  // In folder mode: fetches from server
+  // Folder mode: fetch documents from server
   useEffect(() => {
+    if (!inFolderMode) return;
+
     let cancelled = false;
 
     const fetchDocuments = async () => {
-      // Folder mode: fetch by folder
-      if (inFolderMode) {
-        try {
-          const includeSubfolders = filters?.showAllDocuments || false;
-          const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
+      try {
+        const includeSubfolders = filters?.showAllDocuments || false;
+        const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
 
-          const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
+        const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
 
-          if (!cancelled) {
-            setDocumentsToDisplay(response.documents);
-            setTotalDocuments(response.total);
-            setTotalPages(Math.ceil(response.total / pageSize));
-          }
-        } catch (err) {
-          if (!cancelled) {
-            console.error('Error fetching documents by folder:', err);
-            setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
-            setDocumentsToDisplay([]);
-            setTotalPages(1);
-          }
+        if (!cancelled) {
+          setDocumentsToDisplay(response.documents);
+          setTotalDocuments(response.total);
+          setTotalPages(Math.ceil(response.total / pageSize));
         }
-        return;
-      }
-
-      // Entity mode: use initialDocuments from parent (no client-side fetching)
-      // Parent component (e.g., ContractDetail) should fetch and pass documents
-      if (!cancelled) {
-        if (searchTermFromParent) {
-          const filtered = initialDocuments.filter(doc =>
-            doc.document_name.toLowerCase().includes(searchTermFromParent.toLowerCase())
-          );
-          setDocumentsToDisplay(filtered);
-        } else {
-          setDocumentsToDisplay(initialDocuments);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error fetching documents by folder:', err);
+          setError(t('documents.messages.fetchFailed', 'Failed to fetch documents.'));
+          setDocumentsToDisplay([]);
+          setTotalPages(1);
         }
-        setTotalDocuments(initialDocuments.length);
-        setTotalPages(1);
       }
     };
 
@@ -277,7 +266,22 @@ const Documents = ({
     return () => {
       cancelled = true;
     };
-  }, [currentPage, pageSize, searchTermFromParent, inFolderMode, currentFolder, filters, initialDocuments, t]);
+  }, [currentPage, pageSize, inFolderMode, currentFolder, filters, t]);
+
+  // Entity mode: handle search filtering
+  useEffect(() => {
+    if (inFolderMode) return;
+
+    if (searchTermFromParent) {
+      const filtered = initialDocuments.filter(doc =>
+        doc.document_name.toLowerCase().includes(searchTermFromParent.toLowerCase())
+      );
+      setDocumentsToDisplay(filtered);
+    } else {
+      // Restore full list when search is cleared
+      setDocumentsToDisplay(initialDocuments);
+    }
+  }, [searchTermFromParent, inFolderMode, initialDocuments]);
 
   // Refresh documents - handles both folder mode and entity mode
   const refreshDocuments = useCallback(async () => {

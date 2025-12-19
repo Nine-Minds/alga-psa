@@ -2,6 +2,8 @@
 import { TenantEntity } from ".";
 import { ITaggable } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
+import { IComment } from './comment.interface';
+import { IDocument } from './document.interface';
 
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
@@ -108,4 +110,20 @@ export interface ITicketCategory extends TenantEntity {
 export interface IAgentSchedule {
   userId: string;
   minutes: number;
+}
+
+export interface ITicketWithDetails extends ITicket {
+  status_name?: string;
+  priority_name?: string;
+  priority_color?: string;
+  conversations?: IComment[];
+  documents?: IDocument[];
+  userMap?: Record<string, {
+    first_name: string;
+    last_name: string;
+    user_id: string;
+    email?: string;
+    user_type: string;
+    avatarUrl: string | null;
+  }>;
 }

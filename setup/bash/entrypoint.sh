@@ -61,7 +61,13 @@ setup_db(){
     # Run migrations
     send_log info "Running database migrations..."
     cd /app && NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE migrate:latest
-    NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE seed:run
+
+    send_log info "Running database seeds..."
+    NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE seed:run || {
+        local exit_code=$?
+        send_log error "Seeds failed with exit code $exit_code"
+        exit $exit_code
+    }
 
     send_log info " ** Database setup completed **"
 }

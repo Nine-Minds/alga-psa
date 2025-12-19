@@ -24,6 +24,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -34,6 +35,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const result = await signIn('credentials', {
@@ -62,8 +64,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         message: 'An unexpected error occurred. Please try again.' 
       });
     } finally {
-      // Re-enable form elements after submission
-      const isFormValid = email.length > 0 && password.length > 0;
+      setIsSubmitting(false);
     }
   };
 
@@ -140,6 +141,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
           type="submit"
           className="w-full"
           id="msp-sign-in-button"
+          disabled={isSubmitting}
         >
           Sign in
         </Button>

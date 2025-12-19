@@ -15,15 +15,6 @@ try {
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-// DEBUG LOGGING - Remove after troubleshooting
-console.log('=== BUILD DEBUG ===');
-console.log('process.env.EDITION:', process.env.EDITION);
-console.log('process.env.NEXT_PUBLIC_EDITION:', process.env.NEXT_PUBLIC_EDITION);
-console.log('isEE result:', isEE);
-console.log('Current working directory:', process.cwd());
-console.log('__dirname:', __dirname);
-console.log('=== END DEBUG ===');
-
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
@@ -156,6 +147,10 @@ const nextConfig = {
       // Base app alias
       '@': './src',
       'server/src': './src', // Add explicit alias for server/src imports
+      '@/empty': isEE ? '../ee/server/src' : './src/empty',
+      '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
+      './src/empty': isEE ? '../ee/server/src' : './src/empty',
+      './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       '@ee': isEE ? '../ee/server/src' : './src/empty',
       '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
@@ -583,7 +578,8 @@ const nextConfig = {
         config.plugins = config.plugins || [];
         config.plugins.push(
           new webpack.NormalModuleReplacementPlugin(
-            /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+            // Removed (.*) prefix - was causing catastrophic backtracking on large strings
+            /(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
             path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
           )
         );

@@ -22,6 +22,7 @@ import {
 } from '../schemas/timeEntry';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { ValidationError } from '../middleware/apiMiddleware';
+import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -69,14 +70,10 @@ export class TimeEntryService extends BaseService<any> {
       query.where(`${this.tableName}.end_time`, '<=', filters.end_time_to);
     }
     if (filters.date_from) {
-      // Use timezone-aware date comparison to handle UTC timestamps correctly
-      const startOfDay = new Date(filters.date_from + 'T00:00:00.000Z');
-      query.where(`${this.tableName}.start_time`, '>=', startOfDay.toISOString());
+      query.where(`${this.tableName}.work_date`, '>=', filters.date_from);
     }
     if (filters.date_to) {
-      // Include the entire end date by going to the end of the day
-      const endOfDay = new Date(filters.date_to + 'T23:59:59.999Z');
-      query.where(`${this.tableName}.start_time`, '<=', endOfDay.toISOString());
+      query.where(`${this.tableName}.work_date`, '<=', filters.date_to);
     }
     if (filters.time_sheet_id) {
       query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);
@@ -207,6 +204,9 @@ export class TimeEntryService extends BaseService<any> {
 
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+
+    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
+    const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);
     
     // Calculate billable duration
     const startTime = new Date(data.start_time);
@@ -244,12 +244,14 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     // Get or create time sheet for the period
-    const timeSheetId = await this.getOrCreateTimeSheet(data.start_time, context.userId, context);
+    const timeSheetId = await this.getOrCreateTimeSheetForWorkDate(work_date, context.userId, context);
 
     const { is_billable, ...dataWithoutBillable } = data;
     const timeEntryData = {
       ...dataWithoutBillable,
       user_id: context.userId, // Always use authenticated user
+      work_date,
+      work_timezone,
       billable_duration: is_billable !== false ? billableDuration : 0,
       time_sheet_id: timeSheetId,
       approval_status: 'DRAFT',
@@ -310,6 +312,14 @@ export class TimeEntryService extends BaseService<any> {
       ...dataWithoutBillable,
       updated_at: new Date()
     };
+
+    // work_date/work_timezone are server-controlled; recompute when start_time changes.
+    if (data.start_time) {
+      const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
+      const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);
+      updateData.work_date = work_date;
+      updateData.work_timezone = work_timezone;
+    }
 
     // Recalculate duration if times changed
     if (data.start_time || data.end_time) {
@@ -461,14 +471,20 @@ export class TimeEntryService extends BaseService<any> {
       throw new Error('Active time tracking session already exists. Please stop the current session first.');
     }
 
+    const startTime = new Date();
+    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
+    const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
+
     // Create a time entry with null end_time to represent an active session
     const timeEntryData = {
       work_item_id: data.work_item_id,
       work_item_type: data.work_item_type,
       service_id: data.service_id,
       user_id: context.userId,
-      start_time: new Date(),
+      start_time: startTime,
       end_time: null, // Active session has no end time
+      work_date,
+      work_timezone,
       notes: data.notes || '',
       billable_duration: 0, // Will be calculated when stopped
       approval_status: 'DRAFT',
@@ -514,13 +530,24 @@ export class TimeEntryService extends BaseService<any> {
     const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
     
     // Update the time entry to complete the session
-    const updateData = {
+    const updateData: any = {
       end_time: endTime,
       notes: data.notes || session.notes,
       service_id: data.service_id || session.service_id,
       billable_duration: data.is_billable !== false ? billableDuration : 0,
       updated_at: new Date()
     };
+
+    // Backstop: if a legacy row is missing these fields, compute now using the stored work_timezone if present.
+    if (!session.work_date || !session.work_timezone) {
+      const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
+      const { work_date, work_timezone } = computeWorkDateFields(
+        session.start_time,
+        session.work_timezone || userTimeZone
+      );
+      updateData.work_date = work_date;
+      updateData.work_timezone = work_timezone;
+    }
 
     await knex(this.tableName)
       .where({ entry_id: sessionId, tenant: context.tenant })
@@ -870,12 +897,10 @@ export class TimeEntryService extends BaseService<any> {
       query.whereIn(`${this.tableName}.service_id`, searchData.service_ids);
     }
     if (searchData.date_from) {
-      const startOfDay = new Date(searchData.date_from + 'T00:00:00.000Z');
-      query.where(`${this.tableName}.start_time`, '>=', startOfDay.toISOString());
+      query.where(`${this.tableName}.work_date`, '>=', searchData.date_from);
     }
     if (searchData.date_to) {
-      const endOfDay = new Date(searchData.date_to + 'T23:59:59.999Z');
-      query.where(`${this.tableName}.start_time`, '<=', endOfDay.toISOString());
+      query.where(`${this.tableName}.work_date`, '<=', searchData.date_to);
     }
     if (searchData.billable_only) {
       query.where(`${this.tableName}.billable_duration`, '>', 0);
@@ -913,12 +938,10 @@ export class TimeEntryService extends BaseService<any> {
 
     // Apply date filters if provided
     if (filters?.date_from) {
-      const startOfDay = new Date(filters.date_from + 'T00:00:00.000Z');
-      query = query.where(`${this.tableName}.start_time`, '>=', startOfDay.toISOString());
+      query = query.where(`${this.tableName}.work_date`, '>=', filters.date_from);
     }
     if (filters?.date_to) {
-      const endOfDay = new Date(filters.date_to + 'T23:59:59.999Z');
-      query = query.where(`${this.tableName}.start_time`, '<=', endOfDay.toISOString());
+      query = query.where(`${this.tableName}.work_date`, '<=', filters.date_to);
     }
 
     const [basicStats, typeStats, statusStats, userStats, serviceStats, topWorkItems] = await Promise.all([
@@ -941,12 +964,10 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Helper methods
-  private async getOrCreateTimeSheet(startTime: string, userId: string, context: ServiceContext): Promise<string> {
+  private async getOrCreateTimeSheetForWorkDate(workDate: string, userId: string, context: ServiceContext): Promise<string> {
     const { knex } = await this.getKnex();
     
-    // Get time period for the start date
-    const startDate = new Date(startTime);
-    const period = await this.getTimePeriodForDate(startDate, context);
+    const period = await this.getTimePeriodForWorkDate(workDate, context);
     
     if (!period) {
       throw new Error('No time period found for this date');
@@ -978,14 +999,14 @@ export class TimeEntryService extends BaseService<any> {
     return timeSheet.id;
   }
 
-  private async getTimePeriodForDate(date: Date, context: ServiceContext): Promise<any> {
+  private async getTimePeriodForWorkDate(workDate: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
     return knex('time_periods')
       .where({
         tenant: context.tenant
       })
-      .where('start_date', '<=', date)
-      .where('end_date', '>=', date)
+      .where('start_date', '<=', workDate)
+      .where('end_date', '>', workDate)
       .first();
   }
 

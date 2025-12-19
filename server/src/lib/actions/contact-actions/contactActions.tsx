@@ -455,81 +455,14 @@ export async function getAllClients(): Promise<IClient[]> {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
 
-  try {
-    console.log('[getAllClients] Fetching clients for tenant:', tenant);
+  const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
+    return trx('clients')
+      .select('*')
+      .where('tenant', tenant)
+      .orderBy('client_name', 'asc');
+  });
 
-    // Start with basic clients query and fallback gracefully
-    let clients: any[] = [];
-    try {
-      clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('clients')
-          .select('*')
-          .where('tenant', tenant)
-          .orderBy('client_name', 'asc');
-      });
-
-      console.log('[getAllClients] Found', clients.length, 'clients');
-    } catch (dbErr: any) {
-      console.error('[getAllClients] Database error:', dbErr);
-
-      if (dbErr.message && (
-        dbErr.message.includes('relation') ||
-        dbErr.message.includes('does not exist') ||
-        dbErr.message.includes('table')
-      )) {
-        // Try fallback to companies table for company→client migration
-        console.log('[getAllClients] Clients table not found, trying companies table fallback...');
-        try {
-          const companies = await db('companies')
-            .select('*')
-            .where('tenant', tenant)
-            .orderBy('company_name', 'asc');
-
-          console.log('[getAllClients] Found', companies.length, 'companies, mapping to client structure');
-
-          // Map companies to client structure
-          clients = companies.map(company => ({
-            ...company,
-            client_id: company.company_id || company.id,
-            client_name: company.company_name || company.name,
-          }));
-        } catch (companiesErr) {
-          console.error('[getAllClients] Companies table also failed:', companiesErr);
-          // Return empty array instead of throwing error for this function
-          console.warn('[getAllClients] Returning empty array due to database schema issues');
-          return [];
-        }
-      } else {
-        // Return empty array instead of throwing error for this function
-        console.warn('[getAllClients] Returning empty array due to database error');
-        return [];
-      }
-    }
-
-    return clients as IClient[];
-  } catch (err) {
-    // Log the error for debugging
-    console.error('[getAllClients] Error fetching all clients:', err);
-
-    // Handle known error types
-    if (err instanceof Error) {
-      const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
-        throw err;
-      }
-
-      // Handle database-specific errors
-      if (message.includes('relation') && message.includes('does not exist')) {
-        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
-      }
-    }
-
-    // For unexpected errors, throw a generic system error
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving clients');
-  }
+  return clients as IClient[];
 }
 
 export async function getAllContacts(status: ContactFilterStatus = 'active', sortBy: string = 'full_name', sortDirection: 'asc' | 'desc' = 'asc'): Promise<IContact[]> {
@@ -1120,21 +1053,20 @@ export async function importContactsFromCSV(
 
           if (existingContact && updateExisting) {
             // Prepare update data with proper sanitization
-            // Exclude tags from updateData - it's handled separately below
-            const { tags, ...contactDataWithoutTags } = contactData;
+            // Exclude tags and tenant from updateData - tags handled separately, tenant is partition key
+            const { tags, tenant: _tenant, ...contactDataWithoutTagsAndTenant } = contactData;
             const updateData = {
-              ...contactDataWithoutTags,
+              ...contactDataWithoutTagsAndTenant,
               full_name: contactData.full_name.trim(),
               email: contactData.email?.trim().toLowerCase() || existingContact.email,
               phone_number: contactData.phone_number?.trim() || existingContact.phone_number,
               role: contactData.role?.trim() || existingContact.role,
               notes: contactData.notes?.trim() || existingContact.notes,
-              tenant: existingContact.tenant,
               updated_at: new Date().toISOString()
             };
 
             [savedContact] = await trx('contacts')
-              .where({ contact_name_id: existingContact.contact_name_id })
+              .where({ contact_name_id: existingContact.contact_name_id, tenant })
               .update(updateData)
               .returning('*');
 

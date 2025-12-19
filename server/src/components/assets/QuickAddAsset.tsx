@@ -73,6 +73,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const handleClose = () => {
     setOpen(false);
@@ -444,6 +446,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         title="Add New Asset"
         className="max-w-[480px] max-h-[90vh] overflow-y-auto"
         id="quick-add-asset"
+        disableFocusTrap
       >
         <DialogContent>
           {hasAttemptedSubmit && error && (
@@ -472,10 +475,10 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                       setSelectedClientId(id);
                       clearErrorIfSubmitted();
                     }}
-                    filterState="active"
-                    onFilterStateChange={() => {}}
-                    clientTypeFilter="all"
-                    onClientTypeFilterChange={() => {}}
+                    filterState={clientFilterState}
+                    onFilterStateChange={setClientFilterState}
+                    clientTypeFilter={clientTypeFilter}
+                    onClientTypeFilterChange={setClientTypeFilter}
                   />
                 </div>
               </div>

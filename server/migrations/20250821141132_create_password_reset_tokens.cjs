@@ -122,7 +122,7 @@ exports.up = async function(knex) {
             
             <div class="footer">
                 <p>If you're having trouble, please contact support at {{supportEmail}}</p>
-                <p>&copy; {{currentYear}} {{companyName}}. All rights reserved.</p>
+                <p>&copy; {{currentYear}} {{clientName}}. All rights reserved.</p>
             </div>
         </div>
     </div>
@@ -141,7 +141,7 @@ For security reasons, this link can only be used once.
 
 If you're having trouble, please contact support at {{supportEmail}}
 
-© {{currentYear}} {{companyName}}. All rights reserved.`,
+© {{currentYear}} {{clientName}}. All rights reserved.`,
       created_at: new Date(),
       updated_at: new Date()
     });

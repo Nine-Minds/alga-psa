@@ -1,4 +1,6 @@
-# QBO Invoice Sync Forms Migration Plan (for `20250509175818_add_qbo_invoice_sync_forms.cjs`)
+# (Archived) QBO Invoice Sync Forms Migration Plan (for `20250509175818_add_qbo_invoice_sync_forms.cjs`)
+
+**Status:** Archived. Alga PSA no longer uses the legacy QBO workflow-based sync described by this document. The currently supported QuickBooks integration path is **QuickBooks CSV** (manual export/import) via the shared accounting export pipeline.
 
 This document outlines the plan and details for the database migration that registers the System Forms and associated Task Definitions for the QuickBooks Online Invoice Sync workflow. This plan assumes that `FormRegistry.getForm()` will serve schemas as they are stored, without performing server-side resolution of named `$ref`s within `allOf` constructs. Therefore, all schemas stored by this migration must be fully self-contained.
 

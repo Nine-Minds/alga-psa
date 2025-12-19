@@ -1,6 +1,12 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { faker } from '@faker-js/faker';
+import { computeWorkDateFields } from 'server/src/lib/utils/workDate';
+
+function toDateOnly(value: Date | string): string {
+  if (typeof value === 'string') return value.slice(0, 10);
+  return value.toISOString().slice(0, 10);
+}
 
 export interface TimeEntry {
   entry_id: string;
@@ -11,6 +17,8 @@ export interface TimeEntry {
   user_id: string;
   start_time: Date;
   end_time: Date;
+  work_date?: string;
+  work_timezone?: string;
   billable_duration: number;
   notes?: string;
   time_sheet_id?: string;
@@ -39,8 +47,8 @@ export interface Service {
 export interface TimePeriod {
   period_id: string;
   tenant: string;
-  start_date: Date;
-  end_date: Date;
+  start_date: string;
+  end_date: string;
   is_closed: boolean;
   created_at: Date;
   updated_at: Date;
@@ -57,6 +65,9 @@ export async function createTestTimeEntry(
   const startTime = overrides.start_time || faker.date.recent({ days: 7 });
   const endTime = overrides.end_time || new Date(startTime.getTime() + faker.number.int({ min: 30, max: 480 }) * 60000);
   const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+
+  const workTimeZone = overrides.work_timezone || 'UTC';
+  const workDateFields = computeWorkDateFields(startTime, workTimeZone);
   
   const entryData: TimeEntry = {
     entry_id: overrides.entry_id || uuidv4(),
@@ -67,6 +78,8 @@ export async function createTestTimeEntry(
     user_id: overrides.user_id || uuidv4(),
     start_time: startTime,
     end_time: endTime,
+    work_date: overrides.work_date || workDateFields.work_date,
+    work_timezone: workDateFields.work_timezone,
     billable_duration: overrides.billable_duration !== undefined ? overrides.billable_duration : durationMinutes,
     notes: overrides.notes || faker.lorem.sentence(),
     time_sheet_id: overrides.time_sheet_id,
@@ -137,13 +150,13 @@ export async function createTestTimePeriod(
 ): Promise<TimePeriod> {
   const now = new Date();
   const startDate = overrides.start_date || faker.date.recent({ days: 14 });
-  const endDate = overrides.end_date || new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 1 week later
+  const endDate = overrides.end_date || new Date(new Date(startDate).getTime() + 7 * 24 * 60 * 60 * 1000); // 1 week later
   
   const periodData: TimePeriod = {
     period_id: overrides.period_id || uuidv4(),
     tenant: tenantId,
-    start_date: startDate,
-    end_date: endDate,
+    start_date: toDateOnly(startDate as any),
+    end_date: toDateOnly(endDate as any),
     is_closed: overrides.is_closed !== undefined ? overrides.is_closed : false,
     created_at: overrides.created_at || now,
     updated_at: overrides.updated_at || now

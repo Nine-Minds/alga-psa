@@ -515,94 +515,33 @@ export async function getAllClients(includeInactive: boolean = true): Promise<IC
     throw new Error('Tenant not found');
   }
 
-  try {
-    console.log('[getAllClients] Fetching clients for tenant:', tenant, 'includeInactive:', includeInactive);
+  const clients = await withTransaction(db, async (trx) => {
+    const query = trx('clients')
+      .select('*')
+      .where('tenant', tenant)
+      .orderBy('client_name', 'asc');
 
-    // Start with basic clients query and fallback gracefully
-    let clients: any[] = [];
-    try {
-      clients = await withTransaction(db, async (trx) => {
-        return await trx('clients')
-          .select('*')
-          .where('tenant', tenant);
-      });
-
-      console.log('[getAllClients] Found', clients.length, 'clients');
-    } catch (dbErr: any) {
-      console.error('[getAllClients] Database error:', dbErr);
-
-      if (dbErr.message && (
-        dbErr.message.includes('relation') ||
-        dbErr.message.includes('does not exist') ||
-        dbErr.message.includes('table')
-      )) {
-        // Try fallback to companies table for company→client migration
-        console.log('[getAllClients] Clients table not found, trying companies table fallback...');
-        try {
-          const companies = await withTransaction(db, async (trx) => {
-            return await trx('companies')
-              .select('*')
-              .where('tenant', tenant);
-          });
-
-          console.log('[getAllClients] Found', companies.length, 'companies, mapping to client structure');
-
-          // Map companies to client structure
-          clients = companies.map(company => ({
-            ...company,
-            client_id: company.company_id || company.id,
-            client_name: company.company_name || company.name,
-          }));
-        } catch (companiesErr) {
-          console.error('[getAllClients] Companies table also failed:', companiesErr);
-          throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
-        }
-      } else {
-        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
-      }
-    }
-
-    // Filter inactive clients if requested
     if (!includeInactive) {
-      clients = clients.filter(client => !client.is_inactive);
+      query.andWhere({ is_inactive: false });
     }
 
-    // Load logos for all clients
-    let clientsWithLogos = clients;
-    if (clients.length > 0) {
-      const clientIds = clients.map(c => c.client_id);
-      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+    return query;
+  });
 
-      clientsWithLogos = clients.map((client) => ({
-        ...client,
-        properties: client.properties || {},
-        logoUrl: logoUrlsMap.get(client.client_id) || null,
-      }));
-    }
-
-    console.log('[getAllClients] Returning', clientsWithLogos.length, 'clients (filtered for inactive:', !includeInactive, ')');
-    return clientsWithLogos as IClient[];
-  } catch (error: any) {
-    console.error('[getAllClients] Error fetching all clients:', error);
-
-    // Handle known error types
-    if (error instanceof Error) {
-      const message = error.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('SYSTEM_ERROR:')) {
-        throw error;
-      }
-
-      // Handle database-specific errors
-      if (message.includes('relation') && message.includes('does not exist')) {
-        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
-      }
-    }
-
-    // For unexpected errors, throw a generic system error
-    throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+  if (clients.length === 0) {
+    return [];
   }
+
+  const clientIds = clients.map((client: any) => client.client_id);
+  const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+
+  const clientsWithLogos = clients.map((client: any) => ({
+    ...client,
+    properties: client.properties || {},
+    logoUrl: logoUrlsMap.get(client.client_id) || null,
+  }));
+
+  return clientsWithLogos as IClient[];
 }
 
 export async function deleteClient(clientId: string): Promise<{ 
