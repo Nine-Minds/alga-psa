@@ -1,11 +1,12 @@
 import { Client, Connection } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
-import { tenantCreationWorkflow, healthCheckWorkflow, emailWebhookMaintenanceWorkflow, calendarWebhookMaintenanceWorkflow } from './workflows/index';
-import type { 
-  TenantCreationInput, 
+import { tenantCreationWorkflow, healthCheckWorkflow, emailWebhookMaintenanceWorkflow, calendarWebhookMaintenanceWorkflow, resendWelcomeEmailWorkflow } from './workflows/index';
+import type {
+  TenantCreationInput,
   TenantCreationResult,
-  TenantCreationWorkflowState 
+  TenantCreationWorkflowState
 } from './types/workflow-types.js';
+import type { ResendWelcomeEmailInput, ResendWelcomeEmailResult } from './workflows/resend-welcome-email-workflow.js';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -252,8 +253,8 @@ export class TenantWorkflowClient {
    */
   async startCalendarWebhookMaintenance(options: { tenantId?: string; lookAheadMinutes?: number }): Promise<string> {
     const workflowId = `calendar-webhook-maintenance-${options.tenantId || 'global'}-${Date.now()}`;
-    
-    logger.info('Starting calendar webhook maintenance workflow', { 
+
+    logger.info('Starting calendar webhook maintenance workflow', {
       workflowId,
       ...options
     });
@@ -266,6 +267,42 @@ export class TenantWorkflowClient {
     });
 
     return handle.workflowId;
+  }
+
+  /**
+   * Start resend welcome email workflow
+   */
+  async startResendWelcomeEmail(input: ResendWelcomeEmailInput): Promise<{
+    workflowId: string;
+    runId: string;
+    result: Promise<ResendWelcomeEmailResult>;
+  }> {
+    const workflowId = `resend-welcome-email-${input.tenantId}-${Date.now()}`;
+
+    logger.info('Starting resend welcome email workflow', {
+      workflowId,
+      tenantId: input.tenantId,
+      userId: input.userId,
+      triggeredBy: input.triggeredBy,
+    });
+
+    const handle = await this.client.workflow.start(resendWelcomeEmailWorkflow, {
+      args: [input],
+      taskQueue: this.config.taskQueue,
+      workflowId,
+      workflowExecutionTimeout: '5m',
+    });
+
+    logger.info('Resend welcome email workflow started', {
+      workflowId: handle.workflowId,
+      runId: handle.firstExecutionRunId,
+    });
+
+    return {
+      workflowId: handle.workflowId,
+      runId: handle.firstExecutionRunId,
+      result: handle.result(),
+    };
   }
 
   /**
