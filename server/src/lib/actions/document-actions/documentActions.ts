@@ -1279,7 +1279,10 @@ export async function getDocumentsByEntity(
         type_name: doc.type_name,
         type_icon: doc.type_icon,
         entered_at: doc.entered_at,
-        updated_at: doc.updated_at
+        updated_at: doc.updated_at,
+        thumbnail_file_id: doc.thumbnail_file_id,
+        preview_file_id: doc.preview_file_id,
+        preview_generated_at: doc.preview_generated_at
       };
       console.log('Processed document:', processedDoc);
       return processedDoc;
@@ -1787,7 +1790,10 @@ export async function getAllDocuments(
         type_name: doc.type_name,
         type_icon: doc.type_icon,
         entered_at: doc.entered_at,
-        updated_at: doc.updated_at
+        updated_at: doc.updated_at,
+        thumbnail_file_id: doc.thumbnail_file_id,
+        preview_file_id: doc.preview_file_id,
+        preview_generated_at: doc.preview_generated_at
       };
       console.log('Processed document:', processedDoc);
       return processedDoc;

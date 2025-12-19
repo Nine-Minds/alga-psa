@@ -365,11 +365,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   };
 
   return (
-    <Dialog 
-      id="quick-add-contact-dialog" 
-      isOpen={isOpen} 
-      onClose={onClose} 
+    <Dialog
+      id="quick-add-contact-dialog"
+      isOpen={isOpen}
+      onClose={onClose}
       title="Add New Contact"
+      disableFocusTrap
     >
       <DialogContent>
         {hasAttemptedSubmit && validationErrors.length > 0 && (

@@ -390,12 +390,12 @@ export async function sessionAuthMiddleware(
       return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
     }
 
-    // Store user info for downstream middleware
-    req.user = {
-      id: token.sub || '',
-      tenant: tenant,
-      userType: userType
-    };
+	    // Store user info for downstream middleware
+	    req.user = {
+	      id: (token as any).id || token.sub || '',
+	      tenant: tenant,
+	      userType: userType
+	    };
 
     return next();
   } catch (error) {

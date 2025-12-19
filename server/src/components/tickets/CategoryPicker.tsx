@@ -21,6 +21,7 @@ interface CategoryPickerProps {
   showReset?: boolean;
   allowEmpty?: boolean;
   disabled?: boolean;
+  modal?: boolean;
 }
 
 type CategoryType = 'parent' | 'child';
@@ -38,6 +39,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   showReset = false,
   allowEmpty = false,
   disabled = false,
+  modal = true,
   "data-automation-type": dataAutomationType = 'custom',
 }) => {
   // Register components with UI reflection system
@@ -258,6 +260,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           showReset={showReset}
           allowEmpty={allowEmpty}
           disabled={disabled}
+          modal={modal}
         />
       </div>
     </ReflectionContainer>

@@ -428,6 +428,7 @@ export function ContractWizard({
       onClose={() => onOpenChange(false)}
       title={editingContract ? 'Edit Contract' : 'Create New Contract'}
       className="max-w-4xl max-h-[90vh]"
+      disableFocusTrap
     >
       <div className="flex flex-col h-full">
         <div className="flex-shrink-0 px-6 pt-6">

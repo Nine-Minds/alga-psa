@@ -128,7 +128,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps & AutomationProps
     //   }
     // }, [tooltipText])
 
-    const content = (
+    // When asChild is true, Slot passes props to children, so we can't use a Fragment
+    // (Fragments don't accept className). Skip tooltip support for asChild buttons.
+    const content = asChild ? children : (
       <>
         {children}
         {tooltipText && (

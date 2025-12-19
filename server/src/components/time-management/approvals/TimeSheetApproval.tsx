@@ -62,50 +62,42 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
     onUpdateApprovalStatus(entry.entry_id as string, newStatus);
   };
 
-  const getButtonClasses = (status: TimeSheetStatus) => {
-    switch (status) {
-      case 'APPROVED':
-        return 'bg-green-500 hover:bg-green-600 text-white';
-      case 'CHANGES_REQUESTED':
-        return 'bg-orange-500 hover:bg-orange-600 text-white';
-      case 'DRAFT':
-        return 'bg-gray-500 hover:bg-gray-600 text-white';
-      default:
-        return 'bg-gray-500 hover:bg-gray-600 text-white';
-    }
-  };
-
-  const statusButtons = [
-    { status: 'APPROVED' as TimeSheetStatus, icon: Check, label: 'Approve' },
-    { status: 'CHANGES_REQUESTED' as TimeSheetStatus, icon: Undo, label: 'Request Changes' },
-    { status: 'DRAFT' as TimeSheetStatus, icon: Clock, label: 'Set to Draft' },
+  const statusButtons: Array<{
+    status: TimeSheetStatus;
+    icon: typeof Check;
+    label: string;
+    variant: 'default' | 'destructive' | 'outline';
+  }> = [
+    { status: 'APPROVED', icon: Check, label: 'Approve', variant: 'default' },
+    { status: 'CHANGES_REQUESTED', icon: Undo, label: 'Request Changes', variant: 'destructive' },
+    { status: 'DRAFT', icon: Clock, label: 'Set to Draft', variant: 'outline' },
   ];
 
   return (
-    <div className="p-4 bg-gray-50 border-t border-b border-gray-200">
-      <h4 className="font-semibold mb-2">Time Entry Details</h4>
-      <p><strong>Work Item:</strong> {entry.workItem ? `${entry.workItem.name} (${entry.workItem.type})` : 'N/A'}</p>
-      <p><strong>Duration:</strong> {((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / (1000 * 60 * 60)).toFixed(2)} hours</p>
-      <p><strong>Billable Duration:</strong> {(entry.billable_duration / 60).toFixed(2)} hours</p>
+    <div className="p-4 bg-[rgb(var(--color-border-100))] border-t border-b border-[rgb(var(--color-border-200))]">
+      <h4 className="font-semibold mb-2 text-[rgb(var(--color-text-900))]">Time Entry Details</h4>
+      <p className="text-[rgb(var(--color-text-700))]"><strong>Work Item:</strong> {entry.workItem ? `${entry.workItem.name} (${entry.workItem.type})` : 'N/A'}</p>
+      <p className="text-[rgb(var(--color-text-700))]"><strong>Duration:</strong> {((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / (1000 * 60 * 60)).toFixed(2)} hours</p>
+      <p className="text-[rgb(var(--color-text-700))]"><strong>Billable Duration:</strong> {(entry.billable_duration / 60).toFixed(2)} hours</p>
       <div className="mt-2">
-        <strong>Notes:</strong>
-        <p className="whitespace-pre-wrap">{entry.notes || 'No notes provided.'}</p>
+        <strong className="text-[rgb(var(--color-text-700))]">Notes:</strong>
+        <p className="whitespace-pre-wrap text-[rgb(var(--color-text-600))]">{entry.notes || 'No notes provided.'}</p>
       </div>
       <div className="mt-4">
-        <strong>Current Status:</strong> {entry.approval_status}
+        <strong className="text-[rgb(var(--color-text-700))]">Current Status:</strong> <span className="text-[rgb(var(--color-text-600))]">{entry.approval_status}</span>
       </div>
       <div className="mt-4">
-        <strong>Update Status:</strong>
+        <strong className="text-[rgb(var(--color-text-700))]">Update Status:</strong>
         <div className="flex space-x-2 mt-2">
-          {statusButtons.map(({ status, icon: Icon, label }):JSX.Element => (
+          {statusButtons.map(({ status, icon: Icon, label, variant }):JSX.Element => (
             <Button
               id={`update-status-${status}-btn`}
               key={status}
               onClick={() => handleStatusChange(status)}
-              className={getButtonClasses(status)}
+              variant={variant}
               disabled={entry.approval_status === status}
             >
-              <Icon className="mr-2" />
+              <Icon className="mr-2 h-4 w-4" />
               {label}
             </Button>
           ))}

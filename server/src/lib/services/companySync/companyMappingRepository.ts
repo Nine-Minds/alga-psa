@@ -17,9 +17,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
     companyId: string;
     targetRealm?: string | null;
   }): Promise<CompanyMappingLookupResult | null> {
-    const row =
-      (await this.lookupMapping(params, 'company')) ??
-      (await this.lookupMapping(params, 'client'));
+    const row = await this.lookupMapping(params);
     if (!row) {
       return null;
     }
@@ -51,9 +49,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         targetRealm: record.targetRealm ?? null
       };
 
-      const existing =
-        (await this.lookupMapping(lookupParams, 'company', trx)) ??
-        (await this.lookupMapping(lookupParams, 'client', trx));
+      const existing = await this.lookupMapping(lookupParams, trx);
 
       if (existing) {
         return;
@@ -63,7 +59,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         id: trx.raw('gen_random_uuid()'),
         tenant: record.tenantId,
         integration_type: record.adapterType,
-        alga_entity_type: 'company',
+        alga_entity_type: 'client',
         alga_entity_id: record.algaCompanyId,
         external_entity_id: record.externalCompanyId,
         external_realm_id: record.targetRealm ?? null,
@@ -87,14 +83,13 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
       companyId: string;
       targetRealm?: string | null;
     },
-    entityType: 'company' | 'client',
     executor: Knex | Knex.Transaction = this.knex
   ) {
     const query = executor(TABLE_NAME)
       .where({
         tenant: params.tenantId,
         integration_type: params.adapterType,
-        alga_entity_type: entityType,
+        alga_entity_type: 'client',
         alga_entity_id: params.companyId
       })
       .orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');

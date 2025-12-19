@@ -117,6 +117,13 @@ export function AccountingMappingDialog({
       }
     }
 
+    // Validate Alga entity selection
+    if (!selectedAlgaId) {
+      setError(`Please select ${module.labels.dialog.algaField.toLowerCase()}.`);
+      setIsSaving(false);
+      return;
+    }
+
     const trimmedExternalId = selectedExternalId.trim();
     if (!trimmedExternalId) {
       setError(`Please ${hasExternalOptions ? 'select' : 'enter'} ${module.labels.dialog.externalField.toLowerCase()}.`);
@@ -141,15 +148,24 @@ export function AccountingMappingDialog({
     }
   };
 
-  const renderManualEntryCaption = () => {
-    if (hasExternalOptions) {
-      return null;
+  const renderExternalFieldHelpText = () => {
+    // Show module-specific help text if available
+    if (module.labels.dialog.helpText) {
+      return (
+        <p className="text-xs text-muted-foreground">
+          {module.labels.dialog.helpText}
+        </p>
+      );
     }
-    return (
-      <p className="text-xs text-muted-foreground">
-        Catalog data is unavailable. Enter the identifier exactly as it appears in your accounting system.
-      </p>
-    );
+    // Fallback for manual entry when no catalog data
+    if (!hasExternalOptions) {
+      return (
+        <p className="text-xs text-muted-foreground">
+          Enter the identifier exactly as it appears in your accounting system.
+        </p>
+      );
+    }
+    return null;
   };
 
   return (
@@ -166,8 +182,7 @@ export function AccountingMappingDialog({
               value={selectedAlgaId}
               onValueChange={(value: string) => setSelectedAlgaId(value || '')}
               placeholder={`Select ${module.labels.dialog.algaField}...`}
-              disabled={isEditing}
-              required={!isEditing}
+              required
               className="w-full"
             />
           </div>
@@ -187,18 +202,16 @@ export function AccountingMappingDialog({
                 className="w-full"
               />
             ) : (
-              <>
-                <Input
-                  id={`${module.id}-external-manual-input`}
-                  value={selectedExternalId}
-                  onChange={(event) => setSelectedExternalId(event.target.value)}
-                  placeholder={`Enter ${module.labels.dialog.externalField}...`}
-                  className="w-full"
-                  required
-                />
-                {renderManualEntryCaption()}
-              </>
+              <Input
+                id={`${module.id}-external-manual-input`}
+                value={selectedExternalId}
+                onChange={(event) => setSelectedExternalId(event.target.value)}
+                placeholder={`Enter ${module.labels.dialog.externalField}...`}
+                className="w-full"
+                required
+              />
             )}
+            {renderExternalFieldHelpText()}
           </div>
 
           {context.realmId || context.realmDisplayValue ? (

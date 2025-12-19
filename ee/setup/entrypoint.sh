@@ -175,7 +175,9 @@ main() {
     if ! check_seeds_status; then
         log "Running seeds..."
         NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs || {
-            log "Seeds failed, but continuing since database may already be seeded"
+            local exit_code=$?
+            log "ERROR: Seeds failed with exit code $exit_code"
+            exit $exit_code
         }
         log "Seeds completed!"
     else

@@ -26,6 +26,7 @@ interface ClientPickerProps {
   fitContent?: boolean;
   className?: string;
   placeholder?: string;
+  modal?: boolean;
 }
 
 // Component for individual option buttons that registers with UI reflection
@@ -68,6 +69,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   fitContent = false,
   className = '',
   placeholder = 'Select Client',
+  modal = true,
   "data-automation-type": dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -363,6 +365,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                         onValueChange={handleFilterStateChange}
                         options={opts}
                         placeholder="Filter by status"
+                        modal={modal}
                       />
                     </div>
                     <div className="w-full">
@@ -372,6 +375,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                         onValueChange={handleClientTypeFilterChange}
                         options={clientTypes}
                         placeholder="Filter by client type"
+                        modal={modal}
                       />
                     </div>
                   </div>

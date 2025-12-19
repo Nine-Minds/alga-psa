@@ -215,6 +215,10 @@ export class JobScheduler implements IJobScheduler {
       retryBackoff: true,
       // Make singleton per-tenant, not global across all tenants
       singletonKey: key,
+      // Extend singleton protection to 24 hours after job creation
+      // This prevents duplicate jobs even after the previous job completes
+      // (singletonKey alone only blocks duplicates while job is in created/active state)
+      singletonHours: 24,
     });
 
     if (!id) {

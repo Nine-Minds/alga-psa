@@ -547,7 +547,7 @@ If you didn't expect this invitation, please contact us at {{companyLocationEmai
   <div class="footer">
     <p>This is an automated security email sent to {{email}}.</p>
     <p>For your security, we never include passwords in emails.</p>
-    <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+    <p>© {{currentYear}} {{clientName}}. All rights reserved.</p>
   </div>
 </body>
 </html>`;
@@ -586,7 +586,7 @@ Contact Support: {{supportEmail}}
 This is an automated security email sent to {{email}}.
 For your security, we never include passwords in emails.
 
-© {{currentYear}} {{companyName}}. All rights reserved.
+© {{currentYear}} {{clientName}}. All rights reserved.
 `;
 
   // Update portal-invitation template
@@ -739,7 +739,7 @@ If you didn't expect this invitation, please contact us at {{companyLocationEmai
             
             <div class="footer">
                 <p>If you're having trouble, please contact support at {{supportEmail}}</p>
-                <p>&copy; {{currentYear}} {{companyName}}. All rights reserved.</p>
+                <p>&copy; {{currentYear}} {{clientName}}. All rights reserved.</p>
             </div>
         </div>
     </div>
@@ -762,7 +762,7 @@ For security reasons, this link can only be used once.
 
 If you're having trouble, please contact support at {{supportEmail}}
 
-© {{currentYear}} {{companyName}}. All rights reserved.
+© {{currentYear}} {{clientName}}. All rights reserved.
 `;
 
   await knex('system_email_templates')

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Documents from 'server/src/components/documents/Documents';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -13,22 +14,40 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 interface TicketDocumentsSectionProps {
   id?: string;
   ticketId: string;
+  initialDocuments?: IDocument[];
+  onDocumentCreated?: () => Promise<void>;
 }
 
 const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   id = 'ticket-documents-section',
-  ticketId
+  ticketId,
+  initialDocuments = [],
+  onDocumentCreated
 }) => {
+  const router = useRouter();
   const { t } = useTranslation('clientPortal');
   const { data: session } = useSession();
   const userId = session?.user?.id || '';
-  
-  const [documents, setDocuments] = useState<IDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
+  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Track previous document IDs to avoid infinite loops
+  const prevDocumentIdsRef = useRef<string>('');
+
+  // Sync documents from props when they change (by ID, not reference)
+  useEffect(() => {
+    const currentIds = initialDocuments.map(d => d.document_id).sort().join(',');
+    if (currentIds !== prevDocumentIdsRef.current) {
+      prevDocumentIdsRef.current = currentIds;
+      setDocuments(initialDocuments);
+    }
+  }, [initialDocuments]);
+
+  // Fallback fetch function (only used if initialDocuments not provided)
   const fetchDocuments = async () => {
     if (!ticketId) return;
-    
+
     setIsLoading(true);
     try {
       const docs = await getDocumentByTicketId(ticketId);
@@ -40,9 +59,21 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
     }
   };
 
+  // Only fetch if we don't have initialDocuments
   useEffect(() => {
-    fetchDocuments();
+    if (initialDocuments.length === 0 && ticketId) {
+      fetchDocuments();
+    }
   }, [ticketId]);
+
+  // Handle document creation - use callback or router.refresh()
+  const handleDocumentCreated = useCallback(async () => {
+    if (onDocumentCreated) {
+      await onDocumentCreated();
+    } else {
+      router.refresh();
+    }
+  }, [onDocumentCreated, router]);
 
   // Create a ref for the upload form container
   const uploadFormRef = useRef<HTMLDivElement>(null);
@@ -61,7 +92,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             entityId={ticketId}
             entityType="ticket"
             isLoading={isLoading}
-            onDocumentCreated={fetchDocuments}
+            onDocumentCreated={handleDocumentCreated}
             uploadFormRef={uploadFormRef}
             namespace="clientPortal"
           />

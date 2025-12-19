@@ -1,4 +1,9 @@
 exports.seed = async function (knex) {
+    // As of 0.15.x the legacy `client_contract_lines` table may be removed.
+    // Skip gracefully if absent.
+    const hasClientContractLines = await knex.schema.hasTable('client_contract_lines');
+    if (!hasClientContractLines) return;
+
     const tenant = await knex('tenants').select('tenant').first();
     if (!tenant) return;
     

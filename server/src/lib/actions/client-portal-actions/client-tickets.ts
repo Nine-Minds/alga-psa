@@ -4,8 +4,9 @@ import { getConnection } from 'server/src/lib/db/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { validateData } from 'server/src/lib/utils/validation';
-import { ITicket, ITicketListItem } from 'server/src/interfaces/ticket.interfaces';
+import { ITicket, ITicketListItem, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { z } from 'zod';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -183,7 +184,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
   }
 }
 
-export async function getClientTicketDetails(ticketId: string): Promise<ITicket> {
+export async function getClientTicketDetails(ticketId: string): Promise<ITicketWithDetails> {
   try {
     const session = await getSession();
     if (!session?.user) {
@@ -753,6 +754,97 @@ export async function deleteClientTicketComment(commentId: string): Promise<void
   } catch (error) {
     console.error('Failed to delete comment:', error);
     throw new Error('Failed to delete comment');
+  }
+}
+
+export async function getClientTicketDocuments(ticketId: string): Promise<IDocument[]> {
+  try {
+    const session = await getSession();
+    if (!session?.user) {
+      throw new Error('Not authenticated');
+    }
+
+    if (!session.user.id) {
+      throw new Error('User ID not found in session');
+    }
+
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
+    const db = await getConnection(tenant);
+
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
+    if (!canRead) {
+      throw new Error('Insufficient permissions to view ticket documents');
+    }
+
+    const documents = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Verify user has access to this ticket
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant: tenant
+        })
+        .first();
+
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
+
+      const contact = await trx('contacts')
+        .where({
+          contact_name_id: user.contact_id,
+          tenant: tenant
+        })
+        .first();
+
+      if (!contact?.client_id) {
+        throw new Error('Contact not associated with a client');
+      }
+
+      // Verify ticket belongs to user's client
+      const ticket = await trx('tickets')
+        .where({
+          ticket_id: ticketId,
+          tenant: tenant,
+          client_id: contact.client_id
+        })
+        .first();
+
+      if (!ticket) {
+        throw new Error('Ticket not found or access denied');
+      }
+
+      // Get documents for the ticket
+      return trx('documents as d')
+        .select('d.*')
+        .join('document_associations as da', function() {
+          this.on('d.document_id', '=', 'da.document_id')
+              .andOn('d.tenant', '=', 'da.tenant');
+        })
+        .where({
+          'da.entity_id': ticketId,
+          'da.entity_type': 'ticket',
+          'd.tenant': tenant
+        });
+    });
+
+    return documents;
+  } catch (error) {
+    console.error('Failed to fetch ticket documents:', error);
+    throw new Error('Failed to fetch ticket documents');
   }
 }
 

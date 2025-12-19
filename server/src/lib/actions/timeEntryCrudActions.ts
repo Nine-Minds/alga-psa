@@ -24,6 +24,7 @@ import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
   const currentUser = await getCurrentUser();
@@ -192,6 +193,10 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
     end_time: formatISO(entry.end_time),
     updated_at: formatISO(entry.updated_at),
     created_at: formatISO(entry.created_at),
+    // work_date is a DATE column - convert to ISO string (YYYY-MM-DD)
+    work_date: entry.work_date instanceof Date
+      ? entry.work_date.toISOString().slice(0, 10)
+      : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
     workItem: workItemMap.get(entry.work_item_id),
   }));
 }
@@ -247,6 +252,9 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
+    const userTimeZone = await resolveUserTimeZone(db, tenant, session.user.id);
+    const { work_date, work_timezone } = computeWorkDateFields(start_time, userTimeZone);
+
     const startDate = new Date(start_time);
     const endDate = new Date(end_time);
     const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
@@ -269,6 +277,8 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       work_item_type,
       start_time,
       end_time,
+      work_date,
+      work_timezone,
       billable_duration: finalBillableDuration,
       notes,
       time_sheet_id,
@@ -343,10 +353,11 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         }
         oldDuration = originalEntryForUpdate.billable_duration || 0;
 
-        // Update existing entry
+        // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
+        const { tenant: _tenant, ...updateData } = cleanedEntry;
         const [updated] = await trx('time_entries')
           .where({ entry_id, tenant }) // Ensure tenant match
-          .update(cleanedEntry)
+          .update(updateData)
           .returning('*');
 
         if (!updated) {
@@ -734,8 +745,12 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
     }, currentUser.user_id);
 
     // Return the complete time entry with work item details
+    // Format work_date properly (DATE column comes back as Date object)
     const result: ITimeEntryWithWorkItem = {
       ...entry,
+      work_date: (entry.work_date as unknown) instanceof Date
+        ? (entry.work_date as unknown as Date).toISOString().slice(0, 10)
+        : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
       workItem: workItemDetails
     };
     return result;

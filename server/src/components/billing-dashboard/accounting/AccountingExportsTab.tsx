@@ -22,6 +22,8 @@ import { Button } from 'server/src/components/ui/Button';
 import { Badge, BadgeVariant } from 'server/src/components/ui/Badge';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { CSVExportLockResetPanel } from 'server/src/components/integrations/csv/CSVExportLockResetPanel';
+import { UnifiedCsvTaxImportPanel } from 'server/src/components/integrations/csv/UnifiedCsvTaxImportPanel';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
 import {
   listAccountingExportBatches,
@@ -60,7 +62,7 @@ interface AccountingExportRow {
   raw: AccountingExportBatch;
 }
 
-type AdapterType = 'quickbooks_online' | 'quickbooks_desktop' | 'xero';
+type AdapterType = 'quickbooks_csv' | 'quickbooks_online' | 'quickbooks_desktop' | 'xero' | 'xero_csv';
 
 interface CreateFormState {
   adapterType: AdapterType;
@@ -85,10 +87,15 @@ const STATUS_OPTIONS: Array<{ label: string; value: AccountingExportStatus | 'al
 
 const ADAPTER_OPTIONS = [
   { label: 'All', value: 'all' },
+  { label: 'QuickBooks CSV', value: 'quickbooks_csv' },
   { label: 'QuickBooks Online', value: 'quickbooks_online' },
   { label: 'QuickBooks Desktop', value: 'quickbooks_desktop' },
-  { label: 'Xero', value: 'xero' }
+  { label: 'Xero', value: 'xero' },
+  { label: 'Xero CSV', value: 'xero_csv' }
 ];
+
+/** Adapters that use file-based delivery and support downloads */
+const FILE_BASED_ADAPTERS = ['xero_csv', 'quickbooks_desktop'];
 
 const STATUS_VARIANT: Record<AccountingExportStatus, BadgeVariant> = {
   pending: 'outline',
@@ -112,7 +119,7 @@ const INVOICE_STATUS_OPTIONS = INVOICE_STATUS_DISPLAY_ORDER.map((status) => {
 });
 
 const createDefaultCreateForm = (): CreateFormState => ({
-  adapterType: 'quickbooks_online',
+  adapterType: 'quickbooks_csv',
   targetRealm: '',
   startDate: '',
   endDate: '',
@@ -457,12 +464,16 @@ const AccountingExportsTab: React.FC = () => {
         dataIndex: 'adapter_type',
         render: (value: string) => {
           switch (value) {
+            case 'quickbooks_csv':
+              return 'QuickBooks CSV';
             case 'quickbooks_online':
               return 'QuickBooks Online';
             case 'quickbooks_desktop':
               return 'QuickBooks Desktop';
             case 'xero':
-              return 'Xero';
+              return 'Xero (OAuth)';
+            case 'xero_csv':
+              return 'Xero CSV';
             default:
               return value;
           }
@@ -610,12 +621,82 @@ const AccountingExportsTab: React.FC = () => {
     setActionLoading(true);
     setDetailActionError(null);
     try {
-      await executeAccountingExportBatch(selectedRow.batch_id);
+      if (selectedRow.adapter_type === 'quickbooks_csv' || selectedRow.adapter_type === 'quickbooks_desktop') {
+        const response = await fetch(`/api/accounting/exports/${selectedRow.batch_id}/download`, {
+          method: 'POST'
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          const message =
+            (data && typeof data.message === 'string' && data.message) ||
+            (data && typeof data.error === 'string' && data.error) ||
+            (data && typeof data.error?.message === 'string' && data.error.message) ||
+            (data && typeof data.error?.code === 'string' && data.error.code) ||
+            'Execution failed.';
+          throw new Error(
+            message
+          );
+        }
+
+        const contentDisposition = response.headers.get('Content-Disposition') || '';
+        const filenameMatch = contentDisposition.match(/filename="(.+?)"/);
+        const filename = filenameMatch ? filenameMatch[1] : 'accounting-export.csv';
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        await executeAccountingExportBatch(selectedRow.batch_id);
+      }
       await refreshDetail();
       await fetchBatches();
     } catch (err: any) {
       console.error('Error executing batch:', err);
       setDetailActionError(err?.message ?? 'Execution failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDownloadCsv = async (batchId: string) => {
+    setActionLoading(true);
+    setDetailActionError(null);
+    try {
+      const response = await fetch(`/api/v1/accounting-exports/${batchId}/download`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error ?? `Download failed with status ${response.status}`);
+      }
+
+      // Get filename from Content-Disposition header or generate one
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `accounting-export-${batchId}.csv`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create blob and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Error downloading file:', err);
+      setDetailActionError(err?.message ?? 'Download failed.');
     } finally {
       setActionLoading(false);
     }
@@ -846,6 +927,10 @@ const AccountingExportsTab: React.FC = () => {
         </div>
       </div>
 
+      <CSVExportLockResetPanel />
+
+      <UnifiedCsvTaxImportPanel />
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
           {error}
@@ -884,11 +969,15 @@ const AccountingExportsTab: React.FC = () => {
                 <h2 className="text-xl font-semibold">Batch {selectedRow.batch_id}</h2>
                 <p className="text-sm text-gray-500">
                   Created {localDateString(selectedRow.created_at)} · Adapter:{' '}
-                  {selectedRow.adapter_type === 'quickbooks_online'
+                  {selectedRow.adapter_type === 'quickbooks_csv'
+                    ? 'QuickBooks CSV'
+                    : selectedRow.adapter_type === 'quickbooks_online'
                     ? 'QuickBooks Online'
                     : selectedRow.adapter_type === 'quickbooks_desktop'
                       ? 'QuickBooks Desktop'
-                      : 'Xero'}
+                      : selectedRow.adapter_type === 'xero_csv'
+                        ? 'Xero CSV'
+                        : 'Xero (OAuth)'}
                 </p>
               </div>
               <Badge variant={STATUS_VARIANT[selectedRow.status]}>{statusLabel(selectedRow.status)}</Badge>
@@ -905,7 +994,12 @@ const AccountingExportsTab: React.FC = () => {
                 id="accounting-export-execute"
                 variant="default"
                 onClick={executeBatch}
-                disabled={actionLoading || selectedRow.status === 'delivered' || selectedRow.status === 'posted'}
+                disabled={
+                  actionLoading ||
+                  selectedRow.status === 'delivered' ||
+                  selectedRow.status === 'posted' ||
+                  (Boolean(batchDetail) && (batchDetail?.lines?.length ?? 0) === 0)
+                }
               >
                 Execute Export
               </Button>
@@ -917,6 +1011,16 @@ const AccountingExportsTab: React.FC = () => {
               >
                 Mark as Posted
               </Button>
+              {FILE_BASED_ADAPTERS.includes(selectedRow.adapter_type) && (
+                <Button
+                  id="accounting-export-download"
+                  variant="secondary"
+                  onClick={() => handleDownloadCsv(selectedRow.batch_id)}
+                  disabled={actionLoading || (selectedRow.status !== 'delivered' && selectedRow.status !== 'posted')}
+                >
+                  Download File
+                </Button>
+              )}
               <Button
                 id="accounting-export-cancel"
                 variant="outline"
@@ -975,6 +1079,15 @@ const AccountingExportsTab: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {batchDetail.lines.length === 0 ? (
+                  <Alert variant="warning">
+                    <AlertDescription>
+                      This batch has no invoices to export. Adjust the batch filters or create a new export with a different
+                      date range/status selection.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
                 {selectedRow.adapter_type === 'quickbooks_online' ? (
                   <Alert variant="info">
@@ -1144,14 +1257,29 @@ const AccountingExportsTab: React.FC = () => {
                 onChange={(e) => updateCreateFormField('adapterType', e.target.value)}
                 className="border rounded-md w-full px-3 py-2 text-sm"
               >
+                <option value="quickbooks_csv">QuickBooks CSV</option>
                 <option value="quickbooks_online">QuickBooks Online</option>
                 <option value="quickbooks_desktop">QuickBooks Desktop</option>
-                <option value="xero">Xero</option>
+                <option value="xero">Xero (OAuth)</option>
+                <option value="xero_csv">Xero CSV</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Target Realm / Connection</label>
-              {createForm.adapterType === 'quickbooks_online' ? (
+              {createForm.adapterType === 'quickbooks_csv' ? (
+                <>
+                  <input
+                    type="text"
+                    value=""
+                    readOnly
+                    className="border rounded-md w-full px-3 py-2 text-sm bg-gray-50 text-gray-500"
+                    placeholder="Not applicable"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    QuickBooks CSV exports do not require a connected realm. Configure mappings before executing the batch.
+                  </p>
+                </>
+              ) : createForm.adapterType === 'quickbooks_online' ? (
                 <>
                   <select
                     value={createForm.targetRealm}
@@ -1201,6 +1329,20 @@ const AccountingExportsTab: React.FC = () => {
                         : xeroStatus?.connections?.length
                           ? 'Exports use the selected Xero connection. Ensure mappings are complete before delivery.'
                           : 'No Xero connections detected. Connect Xero in integration settings first.'}
+                  </p>
+                </>
+              ) : createForm.adapterType === 'xero_csv' ? (
+                <>
+                  <input
+                    type="text"
+                    value={createForm.targetRealm}
+                    onChange={(e) => updateCreateFormField('targetRealm', e.target.value)}
+                    className="border rounded-md w-full px-3 py-2 text-sm"
+                    placeholder="Optional Xero organisation identifier"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    CSV exports generate a file for manual import into Xero. No OAuth connection required.
+                    After executing the export, use the Download button to get the CSV file.
                   </p>
                 </>
               ) : (
@@ -1408,7 +1550,13 @@ const AccountingExportsTab: React.FC = () => {
             <Button
               id="accounting-export-create-submit"
               onClick={handleCreate}
-              disabled={creating || realmMissing || realmUnavailable}
+              disabled={
+                creating ||
+                realmMissing ||
+                realmUnavailable ||
+                previewLoading ||
+                (previewData ? previewData.lineCount === 0 : false)
+              }
             >
               {creating ? 'Creating…' : 'Create Export'}
             </Button>

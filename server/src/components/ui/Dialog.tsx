@@ -4,6 +4,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
+import { ModalityContext } from './ModalityContext';
 import { DialogComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -55,6 +56,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
   });
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const preventCloseRef = useRef(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -85,9 +87,8 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
 
   // Update dialog metadata when props change
   useEffect(() => {
-    console.log(`🔍 [DIALOG] ${id}-dialog open state changed:`, isOpen);
     updateMetadata({ open: isOpen, title });
-  }, [ isOpen, title, updateMetadata, id ]);
+  }, [ isOpen, title, updateMetadata, id, disableFocusTrap ]);
 
   // Reset position when dialog opens
   useEffect(() => {
@@ -156,20 +157,184 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
     cursor: isDragging ? 'move' : 'auto',
   };
 
+  // Handle click outside for dialogs with disabled focus trap.
+  // Use pointerdown + capture so we can reliably detect portaled content before it unmounts.
+  useEffect(() => {
+    if (!isOpen || !disableFocusTrap) return;
+
+    // Track if a select dropdown was recently closed to prevent dialog from closing
+    let selectCloseTimeout: NodeJS.Timeout | null = null;
+
+    const handlePointerDownOutside = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      const path = (typeof e.composedPath === 'function' ? e.composedPath() : []) as EventTarget[];
+      
+      const isComboboxTrigger = (element: HTMLElement | null): boolean => {
+        if (!element) return false;
+        if (element.getAttribute('role') === 'combobox') return true;
+        
+        let current: HTMLElement | null = element;
+        while (current && current !== document.body) {
+          if (current.getAttribute('role') === 'combobox') return true;
+          if (current.hasAttribute('data-radix-select-trigger')) return true;
+          current = current.parentElement;
+        }
+        
+        return path.some((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          return node.getAttribute('role') === 'combobox' || node.hasAttribute('data-radix-select-trigger');
+        });
+      };
+
+      const hadOpenSelect = document.querySelector('[data-radix-select-content]') !== null;
+
+      if (isComboboxTrigger(target)) {
+        const trigger = path.find((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          return node.getAttribute('role') === 'combobox' || node.hasAttribute('data-radix-select-trigger');
+        }) as HTMLElement | undefined;
+
+        if (
+          (target && dialogRef.current?.contains(target)) ||
+          (trigger && (trigger.getAttribute('data-state') === 'open' || trigger.getAttribute('aria-expanded') === 'true') && hadOpenSelect)
+        ) {
+          preventCloseRef.current = true;
+          if (selectCloseTimeout) clearTimeout(selectCloseTimeout);
+          selectCloseTimeout = setTimeout(() => {
+            preventCloseRef.current = false;
+          }, 200);
+          return;
+        }
+        return;
+      }
+
+      const selectJustClosedAttr = document.body.getAttribute('data-radix-select-just-closed') === 'true';
+      
+      const isInsideDialogRect = () => {
+        if (!dialogRef.current) return false;
+        const rect = dialogRef.current.getBoundingClientRect();
+        return (
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom
+        );
+      };
+
+      if (preventCloseRef.current || selectJustClosedAttr || isInsideDialogRect()) {
+        return;
+      }
+
+      if (target && dialogRef.current?.contains(target)) {
+        return;
+      }
+
+      const openSelectContent = document.querySelector('[data-radix-select-content]');
+      if (openSelectContent && dialogRef.current) {
+        const isSelectRelated = 
+          (target && (
+            target.closest('[data-radix-select-content]') !== null ||
+            target.closest('[data-radix-select-viewport]') !== null
+          )) ||
+          path.some((node) => {
+            if (!(node instanceof HTMLElement)) return false;
+            return node.hasAttribute('data-radix-select-content') ||
+                   node.hasAttribute('data-radix-select-viewport');
+          });
+        
+        if (isSelectRelated) return;
+      }
+
+      const isInsidePortaledContent = path.some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+
+        if (node.hasAttribute('data-radix-portal')) return true;
+        if (node.hasAttribute('data-radix-popper-content-wrapper')) return true;
+        if (node.hasAttribute('data-radix-select-content')) return true;
+        if (node.hasAttribute('data-radix-select-viewport')) return true;
+        if (node.hasAttribute('data-radix-popover-content')) return true;
+        if (node.hasAttribute('data-radix-dropdown-menu-content')) return true;
+        if (node.hasAttribute('data-radix-menu-content')) return true;
+        if (node.hasAttribute('data-radix-collection-item')) return true;
+
+        const role = node.getAttribute('role');
+        return role === 'listbox' || role === 'menu' || role === 'option';
+      });
+
+      if (isInsidePortaledContent) return;
+
+      onClose();
+    };
+
+    const handleMouseDownOutside = (e: MouseEvent) => {
+      handlePointerDownOutside(e as unknown as PointerEvent);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDownOutside, true);
+    document.addEventListener('mousedown', handleMouseDownOutside, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDownOutside, true);
+      document.removeEventListener('mousedown', handleMouseDownOutside, true);
+      if (selectCloseTimeout) clearTimeout(selectCloseTimeout);
+    };
+  }, [isOpen, disableFocusTrap, onClose]);
+
   return (
-    <RadixDialog.Root open={isOpen} onOpenChange={onClose} modal={!disableFocusTrap}>
+    <RadixDialog.Root 
+      open={isOpen} 
+      onOpenChange={(open) => { 
+        // Don't close if it's due to a select interaction
+        if (!open && !disableFocusTrap && !preventCloseRef.current) {
+          onClose();
+        }
+        // Reset the flag after a brief moment
+        if (!open && preventCloseRef.current) {
+          setTimeout(() => {
+            preventCloseRef.current = false;
+          }, 0);
+        }
+      }} 
+      modal={!disableFocusTrap}
+    >
       <RadixDialog.Portal>
-        <RadixDialog.Overlay
-          className="fixed inset-0 bg-black/50 z-50"
-          onClick={disableFocusTrap ? onClose : undefined}
-        />
+        <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
           className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
-          onKeyDown={onKeyDown}
+          onKeyDown={(e) => {
+            // Handle Escape key manually when focus trap is disabled
+            if (disableFocusTrap && e.key === 'Escape') {
+              onClose();
+            }
+            onKeyDown?.(e);
+          }}
           onOpenAutoFocus={onOpenAutoFocus}
+          onInteractOutside={(e) => {
+            // Prevent closing dialog when interacting with Radix Select components
+            const target = e.target as HTMLElement;
+            if (target) {
+              // Check if click is on a combobox trigger
+              if (target.getAttribute('role') === 'combobox' || 
+                  target.closest('[role="combobox"]') !== null) {
+                e.preventDefault();
+                return;
+              }
+              // Check if click is inside select content (portal)
+              if (target.closest('[data-radix-select-content]') !== null ||
+                  target.closest('[data-radix-select-viewport]') !== null) {
+                e.preventDefault();
+                return;
+              }
+            }
+            // When disableFocusTrap is true, we handle closing via our own mousedown listener
+            // But we still need to prevent Radix Dialog's default behavior for select interactions
+            if (disableFocusTrap) {
+              e.preventDefault();
+            }
+          }}
         >
           {/* Drag handle area - always present for consistent dragging */}
           <div
@@ -192,18 +357,30 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
           </div>
           <div className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'}`}>
             <ReflectionParentContext.Provider value={updateDialog.id}>
-              {children}
+              <ModalityContext.Provider value={{ modal: !disableFocusTrap }}>
+                {children}
+              </ModalityContext.Provider>
             </ReflectionParentContext.Provider>
           </div>
           {!hideCloseButton && (
-            <RadixDialog.Close asChild>
+            disableFocusTrap ? (
               <button
+                onClick={onClose}
                 className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                 aria-label="Close"
               >
                 <Cross2Icon />
               </button>
-            </RadixDialog.Close>
+            ) : (
+              <RadixDialog.Close asChild>
+                <button
+                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
+                  aria-label="Close"
+                >
+                  <Cross2Icon />
+                </button>
+              </RadixDialog.Close>
+            )
           )}
         </RadixDialog.Content>
       </RadixDialog.Portal>

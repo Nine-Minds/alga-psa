@@ -528,7 +528,7 @@ const fetchContacts = async (): Promise<void> => {
         )}
         <div className="flex justify-between mb-4">
           <div className="flex gap-6 items-center">
-            <div className="relative">
+            <div className="relative p-0.5">
               <Input
                 type="text"
                 placeholder="Search users"

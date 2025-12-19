@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { 
@@ -44,12 +45,19 @@ const DEFAULT_BLOCKS: PartialBlock[] = [{
 
 interface TaskDocumentsSimpleProps {
   taskId: string;
+  initialDocuments?: IDocument[];
+  onDocumentCreated?: () => Promise<void>;
 }
 
-export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps) {
-  const [documents, setDocuments] = useState<IDocument[]>([]);
+export default function TaskDocumentsSimple({
+  taskId,
+  initialDocuments,
+  onDocumentCreated
+}: TaskDocumentsSimpleProps) {
+  const router = useRouter();
+  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments || []);
   const [loading, setLoading] = useState(false);
-  const [documentsLoaded, setDocumentsLoaded] = useState(false);
+  const [documentsLoaded, setDocumentsLoaded] = useState(!!initialDocuments);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
@@ -81,7 +89,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
 
   const fetchUser = async () => {
     if (currentUser) return currentUser;
-    
+
     try {
       const user = await getCurrentUser();
       setCurrentUser(user);
@@ -92,9 +100,26 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
     }
   };
 
+  // Sync from props when initialDocuments changes
+  useEffect(() => {
+    if (initialDocuments !== undefined) {
+      setDocuments(initialDocuments);
+      setDocumentsLoaded(true);
+    }
+  }, [initialDocuments]);
+
+  // Handle document mutation - use callback or router.refresh()
+  const handleDocumentMutation = useCallback(async () => {
+    if (onDocumentCreated) {
+      await onDocumentCreated();
+    } else {
+      router.refresh();
+    }
+  }, [onDocumentCreated, router]);
+
   const fetchDocuments = async () => {
     if (documentsLoaded) return; // Don't refetch if already loaded
-    
+
     try {
       setLoading(true);
       const response = await getDocumentsByEntity(taskId, 'project_task');
@@ -108,12 +133,12 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
     }
   };
 
-  // Load documents when expanded or when performing actions
+  // Load documents when expanded - only if no initialDocuments provided
   useEffect(() => {
-    if (isExpanded && taskId && !documentsLoaded) {
+    if (isExpanded && taskId && !documentsLoaded && !initialDocuments) {
       fetchDocuments();
     }
-  }, [isExpanded, taskId]);
+  }, [isExpanded, taskId, documentsLoaded, initialDocuments]);
 
   const getFileIcon = (document: IDocument) => {
     if (!document.file_id) return <FileText className="h-4 w-4 text-blue-600" />;
@@ -218,8 +243,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
       });
 
       toast.success('Document created successfully');
-      setDocumentsLoaded(false); // Force refresh
-      await fetchDocuments();
+      await handleDocumentMutation();
       handleCloseDrawer();
       setIsCreatingNew(false);
       setSelectedFolderPath(null); // Reset folder selection
@@ -259,8 +283,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
       }
 
       toast.success('Document updated successfully');
-      setDocumentsLoaded(false); // Force refresh
-      await fetchDocuments();
+      await handleDocumentMutation();
       setHasContentChanged(false);
       setIsEditMode(false);
     } catch (error) {
@@ -283,8 +306,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
     try {
       await removeDocumentAssociations(taskId, 'project_task', [documentToDelete.document_id]);
       toast.success('Document removed successfully');
-      setDocumentsLoaded(false); // Force refresh
-      await fetchDocuments();
+      await handleDocumentMutation();
     } catch (error) {
       console.error('Error removing document:', error);
       toast.error('Failed to remove document');
@@ -441,8 +463,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
                 setShowUpload(false);
                 if (result?.success) {
                   toast.success('Document uploaded successfully');
-                  setDocumentsLoaded(false); // Force refresh
-                  await fetchDocuments();
+                  await handleDocumentMutation();
                 }
               }}
               onCancel={() => setShowUpload(false)}
@@ -510,8 +531,7 @@ export default function TaskDocumentsSimple({ taskId }: TaskDocumentsSimpleProps
           entityType="project_task"
           onDocumentsSelected={async () => {
             setShowSelector(false);
-            setDocumentsLoaded(false); // Force refresh
-            await fetchDocuments();
+            await handleDocumentMutation();
           }}
           isOpen={showSelector}
           onClose={() => setShowSelector(false)}

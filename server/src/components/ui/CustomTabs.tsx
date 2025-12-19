@@ -163,7 +163,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
 
   const defaultActiveTriggerClass = orientation === 'vertical'
     ? ''
-    : 'data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600';
+    : 'data-[state=active]:text-primary-600 data-[state=active]:border-b-2 data-[state=active]:border-primary-600';
 
   // Render grouped tabs if groups are provided and orientation is vertical
   const renderGroupedTabs = groups && groups.length > 0 && orientation === 'vertical';

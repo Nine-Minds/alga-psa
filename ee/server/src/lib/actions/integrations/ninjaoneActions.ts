@@ -38,8 +38,10 @@ import {
   NinjaOneOAuthCredentials,
 } from '../../../interfaces/ninjaone.interfaces';
 
-// Secret name for NinjaOne credentials
+// Secret names for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
+const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
+const NINJAONE_CLIENT_SECRET_SECRET = 'ninjaone_client_secret';
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
@@ -62,6 +64,141 @@ function extractErrorInfo(error: unknown): object {
     };
   }
   return { message: String(error) };
+}
+
+/**
+ * Save NinjaOne API credentials for a tenant
+ * These credentials are used for OAuth authentication with NinjaOne
+ */
+export async function saveNinjaOneCredentials(
+  clientId: string,
+  clientSecret: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check permission
+    const canUpdate = await hasPermission(user, 'settings', 'update');
+    if (!canUpdate) {
+      throw new Error('Insufficient permissions to update NinjaOne settings');
+    }
+
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // Validate inputs
+    if (!clientId || !clientId.trim()) {
+      throw new Error('Client ID is required');
+    }
+    if (!clientSecret || !clientSecret.trim()) {
+      throw new Error('Client Secret is required');
+    }
+
+    // Store credentials in tenant secrets
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.setTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET, clientId.trim());
+    await secretProvider.setTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET, clientSecret.trim());
+
+    logger.info('[NinjaOneActions] Successfully saved NinjaOne credentials', { tenant });
+    revalidatePath('/msp/settings');
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('[NinjaOneActions] Error saving NinjaOne credentials:', extractErrorInfo(error));
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Get the status of stored NinjaOne credentials
+ * Returns whether credentials exist and a masked version of the secret
+ */
+export async function getNinjaOneCredentialsStatus(): Promise<{
+  hasCredentials: boolean;
+  clientId?: string;
+  clientSecretMasked?: string;
+}> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check permission
+    const canView = await hasPermission(user, 'settings', 'read');
+    if (!canView) {
+      throw new Error('Insufficient permissions to view NinjaOne settings');
+    }
+
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    const clientSecret = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
+
+    if (!clientId || !clientSecret) {
+      return { hasCredentials: false };
+    }
+
+    // Mask the client secret - show only last 4 characters
+    const maskedSecret = clientSecret.length > 4
+      ? '•'.repeat(clientSecret.length - 4) + clientSecret.slice(-4)
+      : '•'.repeat(clientSecret.length);
+
+    return {
+      hasCredentials: true,
+      clientId,
+      clientSecretMasked: maskedSecret,
+    };
+  } catch (error) {
+    logger.error('[NinjaOneActions] Error getting NinjaOne credentials status:', extractErrorInfo(error));
+    return { hasCredentials: false };
+  }
+}
+
+/**
+ * Clear NinjaOne API credentials for a tenant
+ */
+export async function clearNinjaOneCredentials(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || !user.tenant) {
+      throw new Error('User not authenticated');
+    }
+
+    // Check permission
+    const canUpdate = await hasPermission(user, 'settings', 'update');
+    if (!canUpdate) {
+      throw new Error('Insufficient permissions to update NinjaOne settings');
+    }
+
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
+
+    logger.info('[NinjaOneActions] Successfully cleared NinjaOne credentials', { tenant });
+    revalidatePath('/msp/settings');
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('[NinjaOneActions] Error clearing NinjaOne credentials:', extractErrorInfo(error));
+    return { success: false, error: errorMessage };
+  }
 }
 
 /**
@@ -179,10 +316,16 @@ export async function disconnectNinjaOneIntegration(): Promise<{ success: boolea
       });
     }
 
-    // 2. Remove credentials from secret storage
+    // 2. Remove OAuth token credentials from secret storage
     await disconnectNinjaOne(tenant);
 
-    // 3. Update integration record (clear webhook-related settings)
+    // 3. Remove client credentials (client ID and secret) from secret storage
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    await secretProvider.deleteTenantSecret(tenant, NINJAONE_CLIENT_SECRET_SECRET);
+    logger.info('[NinjaOneActions] Cleared NinjaOne client credentials', { tenant });
+
+    // 4. Update integration record (clear webhook-related settings)
     const existingIntegration = await knex('rmm_integrations')
       .where({ tenant, provider: 'ninjaone' })
       .first();

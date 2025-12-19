@@ -477,6 +477,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
         onClose={handleClose}
         title={editingContract ? 'Edit Contract' : 'Quick Add Contract'}
         className="max-w-3xl max-h-[90vh]"
+        disableFocusTrap
       >
         <DialogContent className="overflow-y-auto max-h-[calc(90vh-120px)]">
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
