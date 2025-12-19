@@ -163,86 +163,51 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
     if (!isOpen || !disableFocusTrap) return;
 
     // Track if a select dropdown was recently closed to prevent dialog from closing
-    let selectJustClosed = false;
     let selectCloseTimeout: NodeJS.Timeout | null = null;
 
     const handlePointerDownOutside = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
       const path = (typeof e.composedPath === 'function' ? e.composedPath() : []) as EventTarget[];
       
-      // Helper function to check if an element is a Radix Select combobox trigger
-      // This must be very thorough to catch all cases, including child elements
       const isComboboxTrigger = (element: HTMLElement | null): boolean => {
         if (!element) return false;
-        
-        // Check if element itself is combobox
         if (element.getAttribute('role') === 'combobox') return true;
         
-        // Check if element is inside a combobox (walk up the tree)
         let current: HTMLElement | null = element;
         while (current && current !== document.body) {
           if (current.getAttribute('role') === 'combobox') return true;
-          // Also check for Radix Select trigger attributes
           if (current.hasAttribute('data-radix-select-trigger')) return true;
           current = current.parentElement;
         }
         
-        // Check event path for combobox (most reliable)
-        const hasComboboxInPath = path.some((node) => {
+        return path.some((node) => {
           if (!(node instanceof HTMLElement)) return false;
-          const role = node.getAttribute('role');
-          if (role === 'combobox') return true;
-          // Check for Radix Select specific attributes
-          if (node.hasAttribute('data-radix-select-trigger')) return true;
-          return false;
+          return node.getAttribute('role') === 'combobox' || node.hasAttribute('data-radix-select-trigger');
         });
-        
-        return hasComboboxInPath;
       };
 
-      // Check if there was an open select dropdown before this click
       const hadOpenSelect = document.querySelector('[data-radix-select-content]') !== null;
 
-      // CRITICAL: Check for combobox trigger FIRST, before checking dialog content
-      // This prevents portal timing issues where the dropdown closes before we check
       if (isComboboxTrigger(target)) {
-        // Find the actual trigger element to check its state
         const trigger = path.find((node) => {
           if (!(node instanceof HTMLElement)) return false;
-          const role = node.getAttribute('role');
-          if (role === 'combobox') return true;
-          if (node.hasAttribute('data-radix-select-trigger')) return true;
-          return false;
+          return node.getAttribute('role') === 'combobox' || node.hasAttribute('data-radix-select-trigger');
         }) as HTMLElement | undefined;
 
-        // If the combobox is inside the dialog, never close the dialog
-        // OR if the trigger is currently open (implies we are clicking it to close it), prevent close
-        // This second check helps if 'contains' fails for some reason (e.g. portal issues)
         if (
           (target && dialogRef.current?.contains(target)) ||
           (trigger && (trigger.getAttribute('data-state') === 'open' || trigger.getAttribute('aria-expanded') === 'true') && hadOpenSelect)
         ) {
-          // Always prevent closing when clicking a combobox trigger inside the dialog
-          // This handles both opening and closing the dropdown
           preventCloseRef.current = true;
-          selectJustClosed = true;
-          // Clear any existing timeout
-          if (selectCloseTimeout) {
-            clearTimeout(selectCloseTimeout);
-          }
-          // Reset the flags after a short delay to allow normal outside clicks
+          if (selectCloseTimeout) clearTimeout(selectCloseTimeout);
           selectCloseTimeout = setTimeout(() => {
-            selectJustClosed = false;
             preventCloseRef.current = false;
           }, 200);
           return;
         }
-        // Even if combobox is outside dialog, let Radix handle it
         return;
       }
 
-      // If a select just closed, don't close the dialog
-      // Also check document attribute set by CustomSelect
       const selectJustClosedAttr = document.body.getAttribute('data-radix-select-just-closed') === 'true';
       
       const isInsideDialogRect = () => {
@@ -256,22 +221,16 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
         );
       };
 
-      const insideRect = isInsideDialogRect();
-      
-      if (selectJustClosed || preventCloseRef.current || selectJustClosedAttr || insideRect) {
+      if (preventCloseRef.current || selectJustClosedAttr || isInsideDialogRect()) {
         return;
       }
 
-      // Check if click is inside the dialog content
       if (target && dialogRef.current?.contains(target)) {
-        // Click is inside dialog but not on combobox - don't close
         return;
       }
 
-      // Check if clicking outside but there's an open select dropdown related to this dialog
       const openSelectContent = document.querySelector('[data-radix-select-content]');
       if (openSelectContent && dialogRef.current) {
-        // Check if the click is related to the select content
         const isSelectRelated = 
           (target && (
             target.closest('[data-radix-select-content]') !== null ||
@@ -283,10 +242,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
                    node.hasAttribute('data-radix-select-viewport');
           });
         
-        if (isSelectRelated) {
-          // Click is related to an open select - don't close dialog
-          return;
-        }
+        if (isSelectRelated) return;
       }
 
       const isInsidePortaledContent = path.some((node) => {
@@ -302,9 +258,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
         if (node.hasAttribute('data-radix-collection-item')) return true;
 
         const role = node.getAttribute('role');
-        if (role === 'listbox' || role === 'menu' || role === 'option') return true;
-
-        return false;
+        return role === 'listbox' || role === 'menu' || role === 'option';
       });
 
       if (isInsidePortaledContent) return;
@@ -312,7 +266,6 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
       onClose();
     };
 
-    // Also handle mousedown as fallback for better compatibility
     const handleMouseDownOutside = (e: MouseEvent) => {
       handlePointerDownOutside(e as unknown as PointerEvent);
     };
@@ -323,9 +276,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
     return () => {
       document.removeEventListener('pointerdown', handlePointerDownOutside, true);
       document.removeEventListener('mousedown', handleMouseDownOutside, true);
-      if (selectCloseTimeout) {
-        clearTimeout(selectCloseTimeout);
-      }
+      if (selectCloseTimeout) clearTimeout(selectCloseTimeout);
     };
   }, [isOpen, disableFocusTrap, onClose]);
 

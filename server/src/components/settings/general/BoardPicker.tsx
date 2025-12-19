@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -152,18 +152,12 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
     { value: 'all', label: 'All Boards' },
   ], []);
 
-  const handleToggle = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent form submission
-    setIsOpen(!isOpen);
-  };
-
   return (
     <ReflectionContainer id={`${id}-board`} data-automation-type={dataAutomationType} label="Board Picker">
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger asChild>
           <Button
             variant="outline"
-            onClick={handleToggle}
             className="w-full justify-between"
             label={selectedBoard?.board_name || placeholder}
             type="button"
@@ -193,11 +187,12 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
             onEscapeKeyDown={() => setIsOpen(false)}
             onPointerDownOutside={(event) => {
               const target = event.target as HTMLElement;
+              // Prevent closing when clicking on a Radix Select trigger (which might be portaled)
               if (target.closest('[data-radix-select-trigger]')) {
                 event.preventDefault();
-              } else {
-                setIsOpen(false);
               }
+              // We don't call setIsOpen(false) here because Popover.Root's onOpenChange handles it.
+              // Calling it manually here causes conflicts with the trigger's own toggle logic.
             }}
           >
             <div className="p-3 space-y-3 bg-white">
