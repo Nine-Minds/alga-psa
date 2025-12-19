@@ -55,7 +55,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   "data-automation-id": dataAutomationId,
   required = false,
   allowClear = false, // Added default value
-  modal = true,
+  modal,
   ...props
 }): JSX.Element => {
   const { modal: parentModal } = useModality();
@@ -133,7 +133,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   const selectedOption = uniqueOptions.find((option) => option.value === value);
 
   // Explicit prop overrides parent modality context
-  const isModal = props.modal !== undefined ? props.modal : parentModal;
+  const isModal = modal !== undefined ? modal : parentModal;
 
   return (
     <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType} suppressHydrationWarning>
@@ -144,7 +144,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
       )}
       <RadixSelect.Root
         value={radixValue}
-        modal={isModal}
+        {...({ modal: isModal } as any)}
         // Use internal handler to intercept clear action
         onValueChange={(newValue) => {
           if (allowClear && newValue === '__CLEAR__') {

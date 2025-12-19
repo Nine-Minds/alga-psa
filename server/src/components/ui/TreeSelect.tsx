@@ -403,7 +403,7 @@ function TreeSelect<T extends string>({
           open={isOpen}
           onOpenChange={handleOpenChange}
           disabled={disabled}
-          modal={isModal}
+          {...({ modal: isModal } as any)}
         >
           <RadixSelect.Trigger
             className={`
