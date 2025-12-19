@@ -679,6 +679,16 @@ impl storage::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         namespace: String,
         key: String,
+    ) -> impl std::future::Future<Output = Result<(), StorageError>> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
                 tracing::error!(
