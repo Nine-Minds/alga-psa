@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useSyncExternalStore, useRef } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import { useModality } from './ModalityContext';
 import { AutomationProps } from '../../types/ui-reflection/types';
 import { Button } from './Button';
 import Spinner from './Spinner';
@@ -44,6 +45,7 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   showExclude?: boolean;
   showReset?: boolean;
   allowEmpty?: boolean;
+  modal?: boolean;
 }
 
 function TreeSelect<T extends string>({
@@ -62,12 +64,17 @@ function TreeSelect<T extends string>({
   showExclude = false,
   showReset = false,
   allowEmpty = false,
+  modal,
 }: TreeSelectProps<T>): JSX.Element {
+  const { modal: parentModal } = useModality();
   const isClient = useIsClient();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value);
   const [displayLabel, setDisplayLabel] = useState<string>('');
+
+  // Explicit prop overrides parent modality context
+  const isModal = modal !== undefined ? modal : parentModal;
 
   // Track when we're handling internal clicks to prevent Radix from closing prematurely
   const isHandlingInternalClick = useRef(false);
@@ -396,6 +403,7 @@ function TreeSelect<T extends string>({
           open={isOpen}
           onOpenChange={handleOpenChange}
           disabled={disabled}
+          {...({ modal: isModal } as any)}
         >
           <RadixSelect.Trigger
             className={`

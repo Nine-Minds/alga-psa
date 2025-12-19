@@ -24,6 +24,7 @@ interface ContactPickerProps {
   buttonWidth?: 'fit' | 'full';
   size?: 'sm' | 'lg';
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none';
+  modal?: boolean;
 }
 
 export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
@@ -37,6 +38,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
   disabled = false,
   className = '',
   buttonWidth = 'full',
+  modal = true,
   "data-automation-type": dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);

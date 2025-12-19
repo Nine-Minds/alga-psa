@@ -25,6 +25,7 @@ interface UserPickerProps {
   buttonWidth?: 'fit' | 'full';
   placeholder?: string;
   userTypeFilter?: string | string[] | null; // null means no filtering, string/array for specific types
+  modal?: boolean;
 }
 
 // Component for individual option buttons that registers with UI reflection
@@ -70,6 +71,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
   userTypeFilter = 'internal',
+  modal = true,
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-picker'
 }) => {
