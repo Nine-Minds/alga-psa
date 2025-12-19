@@ -551,6 +551,20 @@ impl logging::HostWithStore for HasSelf<HostState> {
 }
 
 impl storage::HostWithStore for HasSelf<HostState> {
+    fn get<T>(
+        accessor: &Accessor<T, Self>,
+        namespace: String,
+        key: String,
+    ) -> impl std::future::Future<Output = Result<StorageEntry, StorageError>> + Send {
+        let (providers, install_id, ctx) = accessor.with(|mut access| {
+            let state = access.get();
+            (
+                state.context.providers.clone(),
+                state.context.install_id.clone(),
+                state.context.clone(),
+            )
+        });
+
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
                 tracing::error!(
@@ -605,9 +619,23 @@ impl storage::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = entry.namespace.clone();
@@ -651,21 +679,25 @@ impl storage::HostWithStore for HasSelf<HostState> {
         accessor: &Accessor<T, Self>,
         namespace: String,
         key: String,
-    ) -> impl std::future::Future<Output = Result<(), StorageError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
-            (
-                state.context.providers.clone(),
-                state.context.install_id.clone(),
-                state.context.clone(),
-            )
-        });
-
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
@@ -705,9 +737,23 @@ impl storage::HostWithStore for HasSelf<HostState> {
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - cap:storage.kv not granted"
+                );
                 return Err(StorageError::Denied);
             }
-            let install_id = install_id.ok_or(StorageError::Denied)?;
+            let install_id = install_id.ok_or_else(|| {
+                tracing::error!(
+                    tenant = ?ctx.tenant_id,
+                    extension = ?ctx.extension_id,
+                    request_id = ?ctx.request_id,
+                    "storage capability denied - install_id missing"
+                );
+                StorageError::Denied
+            })?;
             let tenant = ctx.tenant_id.unwrap_or_default();
             let extension = ctx.extension_id.unwrap_or_default();
             let namespace_log = namespace.clone();
