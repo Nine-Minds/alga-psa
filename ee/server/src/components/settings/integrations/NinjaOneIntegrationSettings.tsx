@@ -374,32 +374,33 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           {!isConnected && (
             <div className="space-y-4">
               {/* Setup Instructions */}
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <div className="rounded-lg border-l-4 border-l-primary-500 border-y-0 border-r-0 bg-primary-50 p-4">
                 <div className="flex items-start gap-2">
-                  <Info className="mt-0.5 h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <Info className="mt-0.5 h-5 w-5 text-primary-600 flex-shrink-0" />
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-blue-900">Setup Instructions</p>
-                    <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                    <p className="text-sm font-medium text-primary-800">Setup Instructions</p>
+                    <ol className="list-decimal list-inside space-y-1 text-sm text-primary-800">
                       <li>Log into your NinjaOne dashboard</li>
                       <li>Navigate to Administration → Apps → API</li>
                       <li>Click &quot;Add&quot; to create a new API application</li>
                       <li>Set Application Platform to &quot;Web (Authorization Code Grant)&quot;</li>
                       <li>
                         Add the redirect URI:{' '}
-                        <code className="bg-blue-100 px-1 py-0.5 rounded text-xs break-all">
+                        <code className="bg-primary-100 px-1 py-0.5 rounded text-xs break-all">
                           {typeof window !== 'undefined'
                             ? `${window.location.origin}/api/integrations/ninjaone/callback`
                             : '/api/integrations/ninjaone/callback'}
                         </code>
                       </li>
+                      <li>Under &quot;Allowed grant types&quot;, ensure &quot;Refresh token&quot; is checked</li>
                       <li>Copy the Client ID and Client Secret below</li>
                     </ol>
                     <Button
                       id="ninjaone-open-api-settings"
                       variant="link"
                       size="sm"
-                      className="h-auto p-0 text-blue-700"
-                      onClick={() => window.open('https://app.ninjarmm.com/administration/apps/api', '_blank')}
+                      className="h-auto p-0 text-primary-700"
+                      onClick={() => window.open('https://app.ninjarmm.com/#/administration/apps/api/client', '_blank')}
                     >
                       <ExternalLink className="mr-1 h-3 w-3" />
                       Open NinjaOne API Settings
