@@ -13,6 +13,7 @@ const isEnterpriseEdition =
 
 type EeRouteModule = {
   GET: (req: Request) => Promise<Response>;
+  OPTIONS?: (req: Request) => Promise<Response>;
 };
 
 let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
@@ -53,4 +54,19 @@ export async function GET(request: Request): Promise<Response> {
     return eeUnavailable();
   }
   return eeRoute.GET(request);
+}
+
+export async function OPTIONS(request: Request): Promise<Response> {
+  const eeRoute = await loadEeRoute();
+  if (!eeRoute?.OPTIONS) {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
+  }
+  return eeRoute.OPTIONS(request);
 }

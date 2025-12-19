@@ -19,6 +19,7 @@ type EeRouteModule = {
   GET: (req: Request, context: RouteContext) => Promise<Response>;
   PUT: (req: Request, context: RouteContext) => Promise<Response>;
   DELETE: (req: Request, context: RouteContext) => Promise<Response>;
+  OPTIONS?: (req: Request) => Promise<Response>;
 };
 
 let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
@@ -84,4 +85,19 @@ export async function DELETE(
     return eeUnavailable();
   }
   return eeRoute.DELETE(request, context);
+}
+
+export async function OPTIONS(request: Request): Promise<Response> {
+  const eeRoute = await loadEeRoute();
+  if (!eeRoute?.OPTIONS) {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
+  }
+  return eeRoute.OPTIONS(request);
 }

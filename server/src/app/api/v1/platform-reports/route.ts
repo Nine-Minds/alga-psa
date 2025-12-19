@@ -14,6 +14,7 @@ const isEnterpriseEdition =
 type EeRouteModule = {
   GET: (req: Request) => Promise<Response>;
   POST: (req: Request) => Promise<Response>;
+  OPTIONS?: (req: Request) => Promise<Response>;
 };
 
 let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
@@ -62,4 +63,20 @@ export async function POST(request: Request): Promise<Response> {
     return eeUnavailable();
   }
   return eeRoute.POST(request);
+}
+
+export async function OPTIONS(request: Request): Promise<Response> {
+  const eeRoute = await loadEeRoute();
+  if (!eeRoute?.OPTIONS) {
+    // Return basic CORS response for CE
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
+  }
+  return eeRoute.OPTIONS(request);
 }
