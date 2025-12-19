@@ -74,7 +74,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
     const eventType = searchParams.get('eventType') as AuditEventType | null;
     const userId = searchParams.get('userId') || undefined;
-    const reportId = searchParams.get('reportId') || undefined;
+    const resourceType = searchParams.get('resourceType') || undefined;
+    const resourceId = searchParams.get('resourceId') || undefined;
+    const status = searchParams.get('status') || undefined;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const limit = searchParams.get('limit');
@@ -92,7 +94,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const logs = await auditService.listLogs({
       eventType: eventType || undefined,
       userId,
-      reportId,
+      resourceType: resourceType as 'report' | 'tenant' | 'user' | 'subscription' | undefined,
+      resourceId,
+      status: status as 'pending' | 'completed' | 'failed' | 'running' | undefined,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
       limit: limit ? parseInt(limit, 10) : 100,
