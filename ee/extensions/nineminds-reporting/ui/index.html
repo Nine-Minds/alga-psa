@@ -8,13 +8,15 @@
       :root {
         /* These are defaults that get overridden by host theme */
         --alga-bg: #fff;
-        --alga-fg: #111827;
-        --alga-muted-fg: #6b7280;
-        --alga-muted: #f3f4f6;
-        --alga-border: #e5e7eb;
-        --alga-border-light: #f3f4f6;
-        --alga-card-bg: #f9fafb;
-        --alga-radius: 8px;
+        --alga-fg: #334155;               /* Matches --color-text-700 */
+        --alga-fg-muted: #64748b;         /* Matches --color-text-500 */
+        --alga-fg-light: #94a3b8;         /* Matches --color-text-400 */
+        --alga-muted-fg: #64748b;
+        --alga-muted: #f8fafc;            /* Matches --color-border-50 */
+        --alga-border: #e2e8f0;           /* Matches --color-border-200 */
+        --alga-border-light: #f1f5f9;     /* Matches --color-border-100 */
+        --alga-card-bg: #f8fafc;
+        --alga-radius: 6px;
 
         /* Alga brand colors (defaults, overridden by host) */
         --alga-primary: #8a4dea;           /* Purple */
@@ -24,9 +26,10 @@
         --alga-primary-100: #ede2fd;
         --alga-primary-foreground: #ffffff;
 
-        /* Focus ring - purple to match brand */
+        /* Focus ring - purple to match brand, thicker ring */
         --alga-ring: #8a4dea;
-        --alga-ring-opacity: 0.25;
+        --alga-ring-width: 2px;
+        --alga-ring-opacity: 1;
 
         --alga-secondary: #40cff9;         /* Blue */
         --alga-secondary-light: #66dffb;
@@ -36,6 +39,11 @@
         --alga-warning: #d97706;
         --alga-danger: #ff9c30;            /* Orange - brand destructive */
         --alga-danger-dark: #e68a2a;
+
+        /* Row colors for alternating table rows */
+        --alga-row-even: #f9fafb;
+        --alga-row-odd: #ffffff;
+        --alga-row-hover: #eff6ff;
       }
       * { box-sizing: border-box; }
       body {
@@ -63,52 +71,99 @@
         margin: 0;
         font-size: 1.25rem;
         font-weight: 600;
+        color: #0f172a;                   /* Darker title text */
       }
-      nav { display: flex; gap: 8px; }
+      /* Tab-style navigation matching main app Tabs component */
+      nav {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--alga-border);
+        margin-bottom: -1px;              /* Overlap with header border */
+      }
       nav button {
         padding: 8px 16px;
-        border: 1px solid var(--alga-border);
-        background: var(--alga-bg);
-        border-radius: var(--alga-radius);
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: transparent;
         cursor: pointer;
         font-size: 0.875rem;
         font-weight: 500;
         font-family: inherit;
         transition: all 0.15s;
+        color: var(--alga-fg-muted);
+        position: relative;
       }
       nav button:hover {
-        background: var(--alga-card-bg);
-        border-color: var(--alga-primary);
+        color: var(--alga-fg);
+        background: transparent;
+      }
+      nav button:focus {
+        outline: none;
       }
       nav button.active {
-        background: var(--alga-primary);
-        color: var(--alga-primary-foreground);
-        border-color: var(--alga-primary);
+        color: #0f172a;
+        font-weight: 500;
+        border-bottom: 2px solid var(--alga-primary);
+        background: transparent;
       }
       main { padding: 20px; }
       .loading {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 40px;
-        color: var(--alga-muted-fg);
+        padding: 48px;
+        color: var(--alga-fg-muted);
+        flex-direction: column;
+        gap: 12px;
+      }
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--alga-border);
+        border-top-color: var(--alga-primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
       .error {
         padding: 16px;
         background: #fef2f2;
         border: 1px solid #fecaca;
-        border-radius: 8px;
-        color: var(--alga-danger);
+        border-radius: var(--alga-radius);
+        color: #dc2626;
+        font-size: 0.875rem;
+      }
+      .success {
+        padding: 16px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: var(--alga-radius);
+        color: #166534;
+        font-size: 0.875rem;
       }
       .card {
-        background: var(--alga-card-bg);
+        background: var(--alga-bg);
         border: 1px solid var(--alga-border);
         border-radius: 8px;
-        padding: 16px;
+        padding: 20px;
         margin-bottom: 16px;
       }
+      .card-header {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #0f172a;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--alga-border-light);
+      }
+      /* Button styles matching main app Button component */
       .btn {
-        padding: 10px 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 16px;
         background: var(--alga-primary);
         color: white;
         border: 1px solid transparent;
@@ -118,46 +173,74 @@
         font-weight: 500;
         font-family: inherit;
         transition: all 0.15s ease;
+        gap: 8px;
       }
       .btn:hover { background: var(--alga-primary-light); }
-      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.8125rem;
+      }
+      .btn-lg {
+        padding: 10px 20px;
+        font-size: 1rem;
+      }
       .btn-secondary {
-        background: var(--alga-muted);
+        background: var(--alga-bg);
         color: var(--alga-fg);
         border-color: var(--alga-border);
       }
       .btn-secondary:hover {
-        background: var(--alga-card-bg);
+        background: var(--alga-primary-50);
         border-color: var(--alga-primary);
         color: var(--alga-primary);
       }
       .btn-ghost {
         background: transparent;
-        color: var(--alga-muted-fg);
+        color: var(--alga-fg-muted);
         border-color: transparent;
       }
       .btn-ghost:hover {
         background: var(--alga-card-bg);
         color: var(--alga-primary);
       }
-      .btn-danger { background: var(--alga-danger); border-color: transparent; }
-      .btn-danger:hover { background: var(--alga-danger-dark); }
+      .btn-outline {
+        background: transparent;
+        color: var(--alga-primary);
+        border-color: var(--alga-primary);
+      }
+      .btn-outline:hover {
+        background: var(--alga-primary-50);
+      }
+      .btn-danger {
+        background: #dc2626;
+        border-color: transparent;
+      }
+      .btn-danger:hover { background: #b91c1c; }
       .input {
         width: 100%;
-        padding: 10px 12px;
+        padding: 8px 12px;
         border: 1px solid var(--alga-border);
         border-radius: var(--alga-radius);
         font-size: 0.875rem;
         font-family: inherit;
         background: var(--alga-bg);
         color: var(--alga-fg);
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       }
       .input:focus {
         outline: none;
-        border-color: var(--alga-ring);
-        box-shadow: 0 0 0 3px rgba(138, 77, 234, var(--alga-ring-opacity));
+        border-color: transparent;
+        box-shadow: 0 0 0 var(--alga-ring-width) rgba(138, 77, 234, var(--alga-ring-opacity));
       }
-      /* Purple ring ONLY for text inputs and textareas */
+      .input::placeholder {
+        color: var(--alga-fg-light);
+      }
+      /* Purple ring for text inputs and textareas - matches main app focus:ring-2 */
       input[type="text"]:focus, input[type="text"]:focus-visible,
       input[type="email"]:focus, input[type="email"]:focus-visible,
       input[type="password"]:focus, input[type="password"]:focus-visible,
@@ -166,8 +249,8 @@
       input:not([type]):focus, input:not([type]):focus-visible,
       textarea:focus, textarea:focus-visible {
         outline: none !important;
-        border-color: var(--alga-ring) !important;
-        box-shadow: 0 0 0 2px rgba(138, 77, 234, var(--alga-ring-opacity)) !important;
+        border-color: transparent !important;
+        box-shadow: 0 0 0 var(--alga-ring-width) rgba(138, 77, 234, var(--alga-ring-opacity)) !important;
       }
       /* Remove ring from buttons and selects/dropdowns */
       button:focus, button:focus-visible,
@@ -180,7 +263,7 @@
       /* Custom select styling to match main app */
       select.input {
         appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
         background-repeat: no-repeat;
         background-position: right 10px center;
         padding-right: 36px;
@@ -195,11 +278,23 @@
         margin-bottom: 6px;
         font-weight: 500;
         font-size: 0.875rem;
+        color: var(--alga-fg);
+      }
+      .label-muted {
+        color: var(--alga-fg-muted);
+        font-weight: 400;
       }
       .form-group { margin-bottom: 16px; }
+      .form-hint {
+        font-size: 0.8125rem;
+        color: var(--alga-fg-light);
+        margin-top: 4px;
+      }
       .badge {
-        padding: 4px 8px;
-        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 9999px;
         font-size: 0.75rem;
         font-weight: 500;
       }
@@ -214,23 +309,71 @@
         overflow-x: auto;
         font-size: 0.875rem;
       }
+      /* DataTable styles matching main app */
+      .datatable-container {
+        overflow: hidden;
+        background: var(--alga-bg);
+        border-radius: 8px;
+        border: 1px solid var(--alga-border);
+      }
       table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
       }
-      th, td {
-        text-align: left;
-        padding: 12px 8px;
+      thead {
+        background: var(--alga-bg);
       }
       th {
-        border-bottom: 2px solid var(--alga-border);
-        font-weight: 600;
+        text-align: left;
+        padding: 12px 24px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--alga-fg);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--alga-border);
+        white-space: nowrap;
+      }
+      th.sortable {
+        cursor: pointer;
+        transition: background-color 0.15s;
+      }
+      th.sortable:hover {
+        background: var(--alga-card-bg);
       }
       td {
-        border-bottom: 1px solid var(--alga-border);
+        text-align: left;
+        padding: 12px 24px;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--alga-fg);
+        border-bottom: 1px solid var(--alga-border-light);
+        vertical-align: top;
       }
-      tr:hover td {
-        background: var(--alga-card-bg);
+      /* Alternating row colors matching main app DataTable */
+      tbody tr:nth-child(even) {
+        background: var(--alga-row-even);
+      }
+      tbody tr:nth-child(odd) {
+        background: var(--alga-row-odd);
+      }
+      tbody tr:hover {
+        background: var(--alga-row-hover);
+      }
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+      /* Sort indicator styling */
+      .sort-indicator {
+        color: var(--alga-fg-light);
+        margin-left: 4px;
+      }
+      /* Empty state */
+      .table-empty {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--alga-fg-muted);
       }
     </style>
   </head>

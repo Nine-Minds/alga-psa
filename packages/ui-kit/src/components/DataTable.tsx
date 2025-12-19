@@ -14,6 +14,8 @@ export type DataTableProps<Row extends Record<string, any>> = {
   columns: Column<Row>[];
   data: Row[];
   initialSortKey?: keyof Row & string;
+  /** Initial sort direction. Defaults to 'asc' */
+  initialSortDir?: 'asc' | 'desc';
   /** Enable pagination. Default page sizes: [10, 25, 50, 100] */
   paginate?: boolean;
   /** Default page size. Defaults to 10 */
@@ -43,12 +45,13 @@ export function DataTable<Row extends Record<string, any>>({
   columns,
   data,
   initialSortKey,
+  initialSortDir = 'asc',
   paginate = false,
   defaultPageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
   onRowClick,
 }: DataTableProps<Row>) {
-  const [sort, setSort] = useState<SortState<Row>>(initialSortKey ? { key: initialSortKey, dir: 'asc' } : null);
+  const [sort, setSort] = useState<SortState<Row>>(initialSortKey ? { key: initialSortKey, dir: initialSortDir } : null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
 

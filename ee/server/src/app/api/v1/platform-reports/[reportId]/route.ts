@@ -105,8 +105,9 @@ export async function GET(
       eventType: 'report.view',
       userId: user?.user_id,
       userEmail: user?.email,
-      reportId: report.report_id,
-      reportName: report.name,
+      resourceType: 'report',
+      resourceId: report.report_id,
+      resourceName: report.name,
       ...clientInfo,
     });
 
@@ -168,8 +169,9 @@ export async function PUT(
       eventType: 'report.update',
       userId: user?.user_id,
       userEmail: user?.email,
-      reportId: report.report_id,
-      reportName: report.name,
+      resourceType: 'report',
+      resourceId: report.report_id,
+      resourceName: report.name,
       details: { updatedFields: Object.keys(body) },
       ...clientInfo,
     });
@@ -242,8 +244,9 @@ export async function DELETE(
       eventType: 'report.delete',
       userId: user?.user_id,
       userEmail: user?.email,
-      reportId: reportId,
-      reportName: report?.name,
+      resourceType: 'report',
+      resourceId: reportId,
+      resourceName: report?.name,
       ...clientInfo,
     });
 

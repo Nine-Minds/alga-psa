@@ -322,6 +322,127 @@ function useSchema() {
   return { tables, tableOptions, getTableColumns, loading, error };
 }
 
+/**
+ * Hook to load existing categories from reports
+ */
+function useCategories() {
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const result = await callExtensionApi<PlatformReport[]>('');
+        if (result.success && result.data) {
+          // Extract distinct non-empty categories using Set for deduplication
+          const allCategories = result.data
+            .map(r => r.category)
+            .filter((c): c is string => !!c && c.trim() !== '');
+          const distinctCategories = Array.from(new Set(allCategories)).sort();
+          setCategories(distinctCategories);
+        }
+      } catch (error) {
+        console.error('[Categories] Fetch error:', error);
+      }
+      setLoading(false);
+    }
+    fetchCategories();
+  }, []);
+
+  return { categories, loading };
+}
+
+/**
+ * Category selector component - allows selecting existing or adding new
+ */
+function CategorySelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { categories, loading } = useCategories();
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+
+  // Check if current value is a custom one (not in the list)
+  const isCustomValue = value && !categories.includes(value);
+
+  const handleSelectChange = (selected: string) => {
+    if (selected === '__new__') {
+      setIsAddingNew(true);
+      setNewCategory('');
+    } else {
+      setIsAddingNew(false);
+      onChange(selected);
+    }
+  };
+
+  const handleNewCategoryConfirm = () => {
+    if (newCategory.trim()) {
+      onChange(newCategory.trim());
+      setIsAddingNew(false);
+    }
+  };
+
+  const handleNewCategoryCancel = () => {
+    setIsAddingNew(false);
+    setNewCategory('');
+  };
+
+  if (loading) {
+    return <Input type="text" disabled placeholder="Loading categories..." />;
+  }
+
+  if (isAddingNew) {
+    return (
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <Input
+          type="text"
+          value={newCategory}
+          onChange={(e) => setNewCategory(e.target.value)}
+          placeholder="Enter new category name..."
+          style={{ flex: 1 }}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleNewCategoryConfirm();
+            } else if (e.key === 'Escape') {
+              handleNewCategoryCancel();
+            }
+          }}
+        />
+        <Button type="button" variant="primary" onClick={handleNewCategoryConfirm} disabled={!newCategory.trim()}>
+          Add
+        </Button>
+        <Button type="button" variant="ghost" onClick={handleNewCategoryCancel}>
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
+  // Build options: existing categories + "Add new..."
+  const options: SelectOption[] = [
+    { value: '', label: 'No category' },
+    ...categories.map(c => ({ value: c, label: c })),
+    // If current value is custom (not in list), add it as an option
+    ...(isCustomValue ? [{ value: value, label: `${value} (custom)` }] : []),
+    { value: '__new__', label: '+ Add new category...' },
+  ];
+
+  return (
+    <CustomSelect
+      options={options}
+      value={value}
+      onValueChange={handleSelectChange}
+      placeholder="Select or add category..."
+    />
+  );
+}
+
 const OPERATORS = [
   { value: 'eq', label: '=' },
   { value: 'neq', label: '!=' },
@@ -364,8 +485,10 @@ function StatCard({ title, value, subtitle }: { title: string; value: string | n
   );
 }
 
-// Table for displaying metric rows
+// Table for displaying metric rows with search and sorting
 function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
+  const [search, setSearch] = useState('');
+
   if (!Array.isArray(data) || data.length === 0) {
     return (
       <Card>
@@ -377,9 +500,16 @@ function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
 
   // Get columns from first row
   const firstRow = data[0] as Record<string, unknown>;
-  const columns = Object.keys(firstRow);
+  const columnKeys = Object.keys(firstRow);
 
-  // Format cell value
+  // Format column header
+  const formatHeader = (col: string): string => {
+    return col
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  // Format cell value for display
   const formatValue = (value: unknown): string => {
     if (value === null || value === undefined) return '—';
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
@@ -390,39 +520,43 @@ function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
     return String(value);
   };
 
-  // Format column header
-  const formatHeader = (col: string): string => {
-    return col
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
-  };
+  // Filter data by search term
+  const filteredData = search
+    ? data.filter(row => {
+        const rowStr = Object.values(row as Record<string, unknown>)
+          .map(v => String(v ?? '').toLowerCase())
+          .join(' ');
+        return rowStr.includes(search.toLowerCase());
+      })
+    : data;
+
+  // Build columns for DataTable
+  const columns: Column<Record<string, unknown>>[] = columnKeys.map(key => ({
+    key: key as keyof Record<string, unknown> & string,
+    header: formatHeader(key),
+    render: (row: Record<string, unknown>) => (
+      <span>{formatValue(row[key])}</span>
+    ),
+  }));
 
   return (
     <Card>
-      <h4 style={{ marginTop: 0 }}>{title}</h4>
-      <div style={{ overflowX: 'auto' }}>
-        <table>
-          <thead>
-            <tr>
-              {columns.map(col => (
-                <th key={col}>{formatHeader(col)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, idx) => (
-              <tr key={idx}>
-                {columns.map(col => (
-                  <td key={col}>{formatValue((row as Record<string, unknown>)[col])}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <h4 style={{ margin: 0 }}>{title}</h4>
+        <Input
+          type="text"
+          placeholder="Search results..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: '250px' }}
+        />
       </div>
-      <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '8px' }}>
-        {data.length} row{data.length !== 1 ? 's' : ''}
-      </Text>
+      <DataTable
+        columns={columns}
+        data={filteredData as Record<string, unknown>[]}
+        paginate
+        defaultPageSize={10}
+      />
     </Card>
   );
 }
@@ -523,6 +657,29 @@ function ResultsRenderer({ results }: { results: ReportResult }) {
 
       {/* Render each metric */}
       {Object.entries(metrics).map(([metricId, data]) => {
+        // Handle error objects
+        if (data && typeof data === 'object' && 'error' in data && (data as Record<string, unknown>).error === true) {
+          const errorData = data as unknown as { error: boolean; message: string; metricName: string };
+          return (
+            <Card key={metricId} style={{ background: 'var(--alga-danger-50)', borderColor: 'var(--alga-danger)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+                <div>
+                  <Text style={{ fontWeight: 600, color: 'var(--alga-danger)' }}>
+                    Error in metric: {errorData.metricName || metricId}
+                  </Text>
+                  <Text tone="muted" style={{ display: 'block', marginTop: '4px', fontSize: '0.875rem' }}>
+                    {errorData.message}
+                  </Text>
+                  <Text tone="muted" style={{ display: 'block', marginTop: '8px', fontSize: '0.75rem' }}>
+                    Tip: Check that all non-aggregated columns are included in GROUP BY, or use aggregate functions like COUNT(), SUM(), etc.
+                  </Text>
+                </div>
+              </div>
+            </Card>
+          );
+        }
+
         if (!Array.isArray(data)) return null;
 
         // Single count value → StatCard
@@ -850,14 +1007,6 @@ const textareaStyle: React.CSSProperties = {
   fontFamily: 'inherit',
 };
 
-// Category options for Select
-const CATEGORY_OPTIONS: SelectOption[] = [
-  { value: 'tenants', label: 'Tenants' },
-  { value: 'users', label: 'Users' },
-  { value: 'tickets', label: 'Tickets' },
-  { value: 'billing', label: 'Billing' },
-  { value: 'analytics', label: 'Analytics' },
-];
 
 // Metric type options for Select
 const METRIC_TYPE_OPTIONS: SelectOption[] = [
@@ -1161,12 +1310,7 @@ function CreateReport() {
 
           <div style={{ marginBottom: '16px' }}>
             <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Category</Text>
-            <CustomSelect
-              options={CATEGORY_OPTIONS}
-              placeholder="Select a category..."
-              value={category}
-              onValueChange={setCategory}
-            />
+            <CategorySelect value={category} onChange={setCategory} />
           </div>
         </Card>
 
@@ -1664,7 +1808,7 @@ function CreateReport() {
         {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
 
         {success && (
-          <Alert tone="success" style={{ marginBottom: '16px' }}>
+          <Alert tone="info" style={{ marginBottom: '16px' }}>
             Report created successfully! View it in the "Reports" tab.
           </Alert>
         )}
@@ -1805,35 +1949,40 @@ function ExecuteReport() {
               marginBottom: '12px',
               fontSize: '0.8rem',
             }}>
-              <strong>Parameters</strong> let you customize report execution:
-              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-                <li><strong>Date filters:</strong> Override auto-generated date ranges</li>
-                <li><strong>Entity filters:</strong> Filter by specific tenant, user, etc.</li>
-                <li><strong>Custom values:</strong> Pass any values your report queries expect</li>
-              </ul>
-              <div style={{ marginTop: '12px' }}>
-                <strong>Examples:</strong>
-                <pre style={{
-                  background: 'var(--alga-bg)',
-                  padding: '8px',
-                  borderRadius: 'var(--alga-radius)',
-                  margin: '4px 0',
-                  fontSize: '0.75rem',
-                  overflow: 'auto',
-                  border: '1px solid var(--alga-border)',
-                }}>
-{`// Empty - uses defaults
-{}
+              <div style={{ marginBottom: '12px' }}>
+                <strong>How Parameters Work</strong>
+                <p style={{ margin: '8px 0' }}>
+                  In your report filters, use <code style={{ background: 'var(--alga-muted)', padding: '2px 6px', borderRadius: '4px' }}>{'{{param_name}}'}</code> as the value.
+                  Then pass the actual value here when executing.
+                </p>
+              </div>
 
-// Filter by tenant
-{"tenant_id": "abc-123"}
+              <div style={{ marginBottom: '12px' }}>
+                <strong>Example: Report with status filter</strong>
+                <div style={{ background: 'var(--alga-muted)', padding: '8px', borderRadius: '4px', marginTop: '4px', fontSize: '0.75rem' }}>
+                  <div>Filter in report: <code>status</code> <code>eq</code> <code>{'{{status_filter}}'}</code></div>
+                  <div style={{ marginTop: '4px' }}>Parameters to pass: <code>{`{"status_filter": "active"}`}</code></div>
+                </div>
+              </div>
 
-// Custom date range
-{
-  "start_of_month": "2024-01-01T00:00:00Z",
-  "end_of_month": "2024-01-31T23:59:59Z"
-}`}
-                </pre>
+              <div style={{ marginBottom: '12px' }}>
+                <strong>Example: Date range filter</strong>
+                <div style={{ background: 'var(--alga-muted)', padding: '8px', borderRadius: '4px', marginTop: '4px', fontSize: '0.75rem' }}>
+                  <div>Filter 1: <code>created_at</code> <code>gte</code> <code>{'{{start_date}}'}</code></div>
+                  <div>Filter 2: <code>created_at</code> <code>lte</code> <code>{'{{end_date}}'}</code></div>
+                  <div style={{ marginTop: '4px' }}>Parameters: <code>{`{"start_date": "2025-01-01", "end_date": "2025-12-31"}`}</code></div>
+                </div>
+              </div>
+
+              <div>
+                <strong>Built-in Parameters (always available)</strong>
+                <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px', fontSize: '0.75rem' }}>
+                  <li><code>{'{{start_of_month}}'}</code> - First day of current month</li>
+                  <li><code>{'{{end_of_month}}'}</code> - First day of next month</li>
+                  <li><code>{'{{start_of_year}}'}</code> - January 1st of current year</li>
+                  <li><code>{'{{end_of_year}}'}</code> - January 1st of next year</li>
+                  <li><code>{'{{current_date}}'}</code> - Current timestamp</li>
+                </ul>
               </div>
             </Card>
           )}
@@ -1891,7 +2040,7 @@ function ExecuteReport() {
 
 // Audit event type options for Select
 const AUDIT_EVENT_TYPE_OPTIONS: SelectOption[] = [
-  { value: '', label: 'All Events' },
+  { value: '__all__', label: 'All Events' },
   { value: 'report.list', label: 'Report List' },
   { value: 'report.view', label: 'Report View' },
   { value: 'report.create', label: 'Report Create' },
@@ -1906,31 +2055,35 @@ function AuditLogs() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [eventTypeFilter, setEventTypeFilter] = useState('');
+  const [eventTypeFilter, setEventTypeFilter] = useState('__all__');
   const [reportIdFilter, setReportIdFilter] = useState('');
-  const [limit, setLimit] = useState(50);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     const params = new URLSearchParams();
-    if (eventTypeFilter) params.set('eventType', eventTypeFilter);
+    if (eventTypeFilter && eventTypeFilter !== '__all__') params.set('eventType', eventTypeFilter);
     if (reportIdFilter) params.set('reportId', reportIdFilter);
-    params.set('limit', String(limit));
+    // Fetch up to 500 logs, let DataTable handle pagination display
+    params.set('limit', '500');
 
     const queryString = params.toString();
     const path = queryString ? `/audit?${queryString}` : '/audit';
 
+    console.log('[AuditLogs] Fetching from path:', path);
     const result = await callExtensionApi<AuditLogEntry[]>(path);
+    console.log('[AuditLogs] API result:', result);
 
     if (result.success && result.data) {
+      console.log('[AuditLogs] Setting logs:', result.data.length, 'entries');
       setLogs(result.data);
     } else {
+      console.error('[AuditLogs] Error:', result.error);
       setError(result.error || 'Failed to fetch audit logs');
     }
     setLoading(false);
-  }, [eventTypeFilter, reportIdFilter, limit]);
+  }, [eventTypeFilter, reportIdFilter]);
 
   useEffect(() => {
     fetchLogs();
@@ -1953,8 +2106,9 @@ function AuditLogs() {
     {
       key: 'created_at',
       header: 'Time',
+      width: '15%',
       render: (row) => (
-        <Text style={{ fontSize: '0.8125rem' }}>
+        <Text style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
           {new Date(row.created_at).toLocaleString()}
         </Text>
       ),
@@ -1962,6 +2116,7 @@ function AuditLogs() {
     {
       key: 'event_type',
       header: 'Event',
+      width: '12%',
       render: (row) => (
         <Badge tone={getEventBadgeTone(row.event_type)}>
           {formatEventType(row.event_type)}
@@ -1971,11 +2126,12 @@ function AuditLogs() {
     {
       key: 'user_email',
       header: 'User',
+      width: '20%',
       render: (row) => (
         <div>
           {row.user_email ? (
             <>
-              <div style={{ fontWeight: 500 }}>{row.user_email}</div>
+              <div style={{ fontWeight: 500, wordBreak: 'break-word' }}>{row.user_email}</div>
               {row.user_id && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
                   {row.user_id.slice(0, 8)}...
@@ -1991,9 +2147,10 @@ function AuditLogs() {
     {
       key: 'report_name',
       header: 'Report',
+      width: '18%',
       render: (row) => row.report_name ? (
         <div>
-          <div style={{ fontWeight: 500 }}>{row.report_name}</div>
+          <div style={{ fontWeight: 500, wordBreak: 'break-word' }}>{row.report_name}</div>
           {row.report_id && (
             <div style={{ fontSize: '0.75rem', color: 'var(--alga-muted-fg)' }}>
               {row.report_id.slice(0, 8)}...
@@ -2007,19 +2164,33 @@ function AuditLogs() {
     {
       key: 'details',
       header: 'Details',
+      width: '25%',
       render: (row) => row.details ? (
-        <details style={{ fontSize: '0.75rem' }}>
-          <summary style={{ cursor: 'pointer', color: 'var(--alga-primary)' }}>
-            View Details
+        <details style={{ fontSize: '0.8125rem' }}>
+          <summary style={{
+            cursor: 'pointer',
+            color: 'var(--alga-primary-foreground)',
+            fontWeight: 500,
+            padding: '6px 10px',
+            background: 'var(--alga-primary)',
+            borderRadius: 'var(--alga-radius, 8px)',
+            display: 'inline-block',
+            fontSize: '12px',
+          }}>
+            View
           </summary>
           <pre style={{
-            marginTop: '4px',
-            fontSize: '0.7rem',
-            background: 'var(--alga-muted)',
-            padding: '8px',
-            borderRadius: '4px',
+            marginTop: '8px',
+            fontSize: '0.75rem',
+            background: 'var(--alga-bg)',
+            color: 'var(--alga-fg)',
+            padding: '12px',
+            borderRadius: 'var(--alga-radius, 6px)',
             overflow: 'auto',
-            maxWidth: '300px',
+            maxHeight: '200px',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            border: '1px solid var(--alga-border)',
           }}>
             {JSON.stringify(row.details, null, 2)}
           </pre>
@@ -2031,6 +2202,7 @@ function AuditLogs() {
     {
       key: 'ip_address',
       header: 'IP',
+      width: '10%',
       render: (row) => (
         <Text tone="muted" style={{ fontSize: '0.75rem' }}>
           {row.ip_address || '—'}
@@ -2067,19 +2239,6 @@ function AuditLogs() {
               placeholder="Filter by report ID..."
             />
           </div>
-          <div style={{ minWidth: '120px' }}>
-            <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Limit</Text>
-            <CustomSelect
-              options={[
-                { value: '25', label: '25' },
-                { value: '50', label: '50' },
-                { value: '100', label: '100' },
-                { value: '200', label: '200' },
-              ]}
-              value={String(limit)}
-              onValueChange={(v) => setLimit(parseInt(v, 10))}
-            />
-          </div>
         </div>
       </Card>
 
@@ -2099,11 +2258,13 @@ function AuditLogs() {
             columns={columns}
             data={logs}
             paginate
-            defaultPageSize={10}
+            defaultPageSize={25}
+            pageSizeOptions={[25, 50, 100, 200]}
             initialSortKey="created_at"
+            initialSortDir="desc"
           />
           <Text tone="muted" style={{ display: 'block', marginTop: '8px', fontSize: '0.75rem' }}>
-            Showing {logs.length} log entries
+            Total: {logs.length} log entries (use page size selector below to show more per page)
           </Text>
         </>
       )}
@@ -2133,6 +2294,17 @@ function EditReport({
 
   // Use dynamic schema from server
   const { tables, tableOptions, getTableColumns, loading: schemaLoading } = useSchema();
+
+  // Track which metrics are in "raw SQL" mode
+  const [rawSqlMode, setRawSqlMode] = useState<{ [key: string]: boolean }>({});
+  const [rawSqlText, setRawSqlText] = useState<{ [key: string]: string }>({});
+  // Table search filter
+  const [tableSearch, setTableSearch] = useState('');
+
+  // Filtered table options based on search
+  const filteredTableOptions = tableOptions.filter(opt =>
+    opt.label.toLowerCase().includes(tableSearch.toLowerCase())
+  );
 
   const updateMetric = (index: number, updates: Partial<MetricDefinition>) => {
     const newMetrics = [...metrics];
@@ -2301,6 +2473,55 @@ function EditReport({
     return getTableColumns(tableName).map(col => ({ value: col, label: col }));
   };
 
+  // Get all field options from base table + all joined tables (for filters)
+  const getAllFieldOptions = (metric: MetricDefinition): SelectOption[] => {
+    const options: SelectOption[] = [];
+
+    // Base table columns
+    if (metric.query.table) {
+      getTableColumns(metric.query.table).forEach(col => {
+        options.push({ value: col, label: col });
+      });
+    }
+
+    // Joined table columns (with table prefix)
+    (metric.query.joins || []).forEach(join => {
+      if (join.table) {
+        getTableColumns(join.table).forEach(col => {
+          const fullCol = `${join.table}.${col}`;
+          options.push({ value: fullCol, label: fullCol });
+        });
+      }
+    });
+
+    return options;
+  };
+
+  // Get all columns from base table AND all joined tables
+  const getAllMetricColumns = (metric: MetricDefinition): { table: string; columns: string[] }[] => {
+    const result: { table: string; columns: string[] }[] = [];
+
+    // Base table columns
+    if (metric.query.table) {
+      result.push({
+        table: metric.query.table,
+        columns: getTableColumns(metric.query.table),
+      });
+    }
+
+    // Joined table columns
+    (metric.query.joins || []).forEach(join => {
+      if (join.table) {
+        result.push({
+          table: join.table,
+          columns: getTableColumns(join.table),
+        });
+      }
+    });
+
+    return result;
+  };
+
   return (
     <div>
       <Button
@@ -2340,12 +2561,7 @@ function EditReport({
 
         <div style={{ marginBottom: '16px' }}>
           <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Category</Text>
-          <CustomSelect
-            options={CATEGORY_OPTIONS}
-            placeholder="Select a category..."
-            value={category}
-            onValueChange={setCategory}
-          />
+          <CategorySelect value={category} onChange={setCategory} />
         </div>
 
         <div style={{ marginBottom: '16px' }}>
@@ -2414,14 +2630,115 @@ function EditReport({
                   />
                 </div>
 
+                {/* Mode Toggle: Builder vs Raw SQL */}
+                <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Text style={{ fontWeight: 500, fontSize: '0.875rem' }}>Mode:</Text>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <Button
+                      type="button"
+                      variant={!rawSqlMode[metric.id] ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={() => setRawSqlMode(prev => ({ ...prev, [metric.id]: false }))}
+                    >
+                      Builder
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={rawSqlMode[metric.id] ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={() => {
+                        setRawSqlMode(prev => ({ ...prev, [metric.id]: true }));
+                        // Initialize raw SQL from current query if not set
+                        if (!rawSqlText[metric.id]) {
+                          const fields = metric.query.fields.join(', ') || '*';
+                          const from = metric.query.table || 'table_name';
+                          let sql = `SELECT ${fields}\nFROM ${from}`;
+                          if ((metric.query.joins || []).length > 0) {
+                            metric.query.joins!.forEach(j => {
+                              const joinType = j.type.toUpperCase();
+                              const onClauses = j.on.map(c => `${c.left} = ${c.right}`).join(' AND ');
+                              sql += `\n${joinType} JOIN ${j.table} ON ${onClauses}`;
+                            });
+                          }
+                          if ((metric.query.filters || []).length > 0) {
+                            const whereClause = metric.query.filters!.map(f => `${f.field} ${f.operator} '${f.value}'`).join(' AND ');
+                            sql += `\nWHERE ${whereClause}`;
+                          }
+                          if ((metric.query.groupBy || []).length > 0) {
+                            sql += `\nGROUP BY ${metric.query.groupBy!.join(', ')}`;
+                          }
+                          setRawSqlText(prev => ({ ...prev, [metric.id]: sql }));
+                        }
+                      }}
+                    >
+                      Raw SQL
+                    </Button>
+                  </div>
+                  <Text tone="muted" style={{ fontSize: '0.7rem', marginLeft: '8px' }}>
+                    {rawSqlMode[metric.id] ? 'Write SQL directly' : 'Point-and-click query builder'}
+                  </Text>
+                </div>
+
+                {rawSqlMode[metric.id] ? (
+                  /* Raw SQL Mode */
+                  <div style={{ marginBottom: '16px' }}>
+                    <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>SQL Query</Text>
+                    <textarea
+                      value={rawSqlText[metric.id] || ''}
+                      onChange={(e) => {
+                        setRawSqlText(prev => ({ ...prev, [metric.id]: e.target.value }));
+                        // Store raw SQL in the query as a custom field
+                        updateQuery(index, {
+                          table: 'raw_sql',
+                          fields: [e.target.value],
+                        });
+                      }}
+                      placeholder="SELECT column1, column2&#10;FROM table_name&#10;WHERE condition&#10;GROUP BY column1"
+                      style={{
+                        width: '100%',
+                        minHeight: '200px',
+                        fontFamily: 'monospace',
+                        fontSize: '0.875rem',
+                        padding: '12px',
+                        border: '1px solid var(--alga-border)',
+                        borderRadius: 'var(--alga-radius)',
+                        background: '#1f2937',
+                        color: '#f9fafb',
+                        resize: 'vertical',
+                      }}
+                    />
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.7rem', marginTop: '4px' }}>
+                      Write your SQL query. Only SELECT statements are allowed. Blocked tables and columns will be rejected.
+                    </Text>
+                  </div>
+                ) : (
+                  /* Builder Mode */
+                  <>
                 <div style={{ marginBottom: '16px' }}>
                   <Text style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Table</Text>
+                  <Input
+                    type="text"
+                    placeholder="Search tables..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    style={{ marginBottom: '6px' }}
+                  />
                   <CustomSelect
-                    options={tableOptions}
+                    options={filteredTableOptions}
                     value={metric.query.table}
-                    onValueChange={(value) => updateQuery(index, { table: value })}
+                    onValueChange={(value) => updateQuery(index, { table: value, fields: ['COUNT(*) as count'] })}
                     disabled={schemaLoading}
                   />
+                  {schemaLoading && (
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+                      Loading available tables...
+                    </Text>
+                  )}
+                  {!schemaLoading && filteredTableOptions.length === 0 && tableSearch && (
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+                      No tables match "{tableSearch}"
+                    </Text>
+                  )}
                 </div>
 
                 {/* Joins Section */}
@@ -2558,29 +2875,42 @@ function EditReport({
                     )}
                   </div>
 
-                  {/* Available columns - click to add */}
+                  {/* Available columns - click to add (from ALL tables including joins) */}
                   <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginBottom: '4px' }}>
                     Click to add column:
                   </Text>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
-                    {getTableColumns(metric.query.table).map((col) => (
-                      <Button
-                        key={col}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        style={{ fontSize: '0.75rem', padding: '2px 8px' }}
-                        onClick={() => {
-                          if (!metric.query.fields.includes(col)) {
-                            updateQuery(index, { fields: [...metric.query.fields, col] });
-                          }
-                        }}
-                        disabled={metric.query.fields.includes(col)}
-                      >
-                        {col}
-                      </Button>
-                    ))}
-                  </div>
+                  {getAllMetricColumns(metric).map(({ table, columns }) => (
+                    <div key={table} style={{ marginBottom: '8px' }}>
+                      <Text style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, color: 'var(--alga-primary)', marginBottom: '4px' }}>
+                        {table}:
+                      </Text>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {columns.map((col) => {
+                          const fullCol = `${table}.${col}`;
+                          const isSelected = metric.query.fields.includes(col) || metric.query.fields.includes(fullCol);
+                          return (
+                            <Button
+                              key={col}
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                              onClick={() => {
+                                if (!isSelected) {
+                                  // Use table.column format for joined tables, just column for base table
+                                  const colName = table === metric.query.table ? col : fullCol;
+                                  updateQuery(index, { fields: [...metric.query.fields, colName] });
+                                }
+                              }}
+                              disabled={isSelected}
+                            >
+                              {col}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
 
                   {/* Custom expression input */}
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -2643,27 +2973,39 @@ function EditReport({
                     )}
                   </div>
 
-                  {/* Available columns - click to add */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                    {getTableColumns(metric.query.table).map((col) => (
-                      <Button
-                        key={col}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                        onClick={() => {
+                  {/* Available columns - click to add (from ALL tables including joins) */}
+                  {getAllMetricColumns(metric).map(({ table, columns }) => (
+                    <div key={table} style={{ marginBottom: '8px' }}>
+                      <Text style={{ display: 'block', fontSize: '0.7rem', fontWeight: 500, color: 'var(--alga-primary)', marginBottom: '4px' }}>
+                        {table}:
+                      </Text>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {columns.map((col) => {
+                          const fullCol = `${table}.${col}`;
                           const currentGroupBy = metric.query.groupBy || [];
-                          if (!currentGroupBy.includes(col)) {
-                            updateQuery(index, { groupBy: [...currentGroupBy, col] });
-                          }
-                        }}
-                        disabled={(metric.query.groupBy || []).includes(col)}
-                      >
-                        {col}
-                      </Button>
-                    ))}
-                  </div>
+                          const isSelected = currentGroupBy.includes(col) || currentGroupBy.includes(fullCol);
+                          return (
+                            <Button
+                              key={col}
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                              onClick={() => {
+                                if (!isSelected) {
+                                  const colName = table === metric.query.table ? col : fullCol;
+                                  updateQuery(index, { groupBy: [...currentGroupBy, colName] });
+                                }
+                              }}
+                              disabled={isSelected}
+                            >
+                              {col}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <div style={{ marginBottom: '12px' }}>
@@ -2690,7 +3032,7 @@ function EditReport({
                       }}
                     >
                       <CustomSelect
-                        options={getFieldOptions(metric.query.table)}
+                        options={getAllFieldOptions(metric)}
                         placeholder="Select field..."
                         value={filter.field}
                         onValueChange={(value) => updateFilter(index, filterIndex, { field: value })}
@@ -2720,6 +3062,8 @@ function EditReport({
                     </div>
                   ))}
                 </div>
+                  </>
+                )}
               </Card>
             ))}
           </div>
@@ -2745,6 +3089,30 @@ type View = 'reports' | 'create' | 'execute' | 'audit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('reports');
+
+  // Log extension access on mount
+  useEffect(() => {
+    const logAccess = async () => {
+      try {
+        const hostOrigin = getHostOrigin();
+        await fetch(`${hostOrigin}/api/v1/platform-reports/access`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            details: {
+              source: 'iframe',
+              userAgent: navigator.userAgent,
+            },
+          }),
+        });
+      } catch (error) {
+        // Silently fail - access logging shouldn't break the app
+        console.debug('[nineminds-reporting] Failed to log access:', error);
+      }
+    };
+    logAccess();
+  }, []);
 
   // Handle navigation from header buttons
   useEffect(() => {

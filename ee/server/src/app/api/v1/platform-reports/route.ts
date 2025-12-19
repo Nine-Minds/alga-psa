@@ -182,8 +182,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       eventType: 'report.create',
       userId: user?.user_id,
       userEmail: user?.email,
-      reportId: report.report_id,
-      reportName: report.name,
+      resourceType: 'report',
+      resourceId: report.report_id,
+      resourceName: report.name,
       details: { category: report.category },
       ...clientInfo,
     });
