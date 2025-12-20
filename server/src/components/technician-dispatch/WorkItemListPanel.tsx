@@ -95,7 +95,7 @@ const WorkItemListPanel: React.FC<WorkItemListPanelProps> = ({
       </div>
 
       <div className="space-y-2 mb-4">
-        {workItems.map((item): JSX.Element => (
+        {workItems.map((item): React.JSX.Element => (
           <div
             key={item.work_item_id}
             className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white cursor-move hover:bg-[rgb(var(--color-border-50))] transition-colors"

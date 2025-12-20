@@ -10,7 +10,7 @@ import DisplaySettings from './DisplaySettings';
 import StatusSettings from './StatusSettings';
 import PrioritySettings from './PrioritySettings';
 
-const TicketingSettingsRefactored = (): JSX.Element => {
+const TicketingSettingsRefactored = (): React.JSX.Element => {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
   const typeParam = searchParams?.get('type');

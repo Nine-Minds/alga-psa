@@ -50,7 +50,7 @@ interface JobHistoryTableProps {
 export default function JobHistoryTable({ initialData = [] }: JobHistoryTableProps) {
   const [selectedJobId, setSelectedJobId] = React.useState<string | null>(null);
   const [data, setData] = React.useState<JobData[]>(initialData);
-  const intervalRef = React.useRef<NodeJS.Timeout>();
+  const intervalRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Pagination state
   const [currentPage, setCurrentPage] = React.useState(1);

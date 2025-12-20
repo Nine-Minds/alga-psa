@@ -100,7 +100,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[]>([]);
   const [showContractLineSelector, setShowContractLineSelector] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
-  const prevServiceIdRef = useRef<string | undefined | null>();
+  const prevServiceIdRef = useRef<string | undefined | null>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (entry?.start_time) {
       return parseISO(entry.start_time);

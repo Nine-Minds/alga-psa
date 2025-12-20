@@ -179,7 +179,7 @@ export function UnsavedChangesProvider({
   }), [setHasUnsavedChanges, hasAnyUnsavedChanges, confirmNavigation, unregister]);
 
   return (
-    <UnsavedChangesContext.Provider value={contextValue}>
+    <UnsavedChangesContext value={contextValue}>
       {children}
       <ConfirmationDialog
         id="unsaved-changes-dialog"
@@ -191,7 +191,7 @@ export function UnsavedChangesProvider({
         confirmLabel="Leave Without Saving"
         cancelLabel="Stay"
       />
-    </UnsavedChangesContext.Provider>
+    </UnsavedChangesContext>
   );
 }
 

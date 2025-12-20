@@ -54,129 +54,116 @@ export interface ButtonProps
   id: string;
   /** Label text for UI reflection system */
   label?: string;
+  /** Ref for the button element */
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps & AutomationProps>(
-  (
-    {
-      className,
-      variant,
-      size,
-      asChild = false,
-      tooltipText,
-      tooltip,
-      id,
-      label,
-      disabled,
-      children,
-      type = 'button',
-      ...props
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  tooltipText,
+  tooltip,
+  id,
+  label,
+  disabled,
+  children,
+  type = 'button',
+  ref: forwardedRef,
+  ...props
+}: ButtonProps & AutomationProps) {
+  const Comp = asChild ? Slot : 'button'
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null)
+  const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 })
+
+  const mergedRef = React.useCallback(
+    (node: HTMLButtonElement | null) => {
+      buttonRef.current = node;
+      if (typeof forwardedRef === 'function') {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        forwardedRef.current = node;
+      }
     },
-    ref
-  ) => {
-    const Comp = asChild ? Slot : 'button'
-    const buttonRef = React.useRef<HTMLButtonElement | null>(null)
-    const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 })
+    [forwardedRef]
+  );
 
-    // Get the current label text, trying multiple sources
-    const currentLabel = React.useMemo(() => {
-      if (label) return label;
-      if (typeof children === 'string') return children;
-      if (React.isValidElement(children) && typeof children.props.children === 'string') {
-        return children.props.children;
+  // Get the current label text, trying multiple sources
+  const currentLabel = React.useMemo(() => {
+    if (label) return label;
+    if (typeof children === 'string') return children;
+    if (React.isValidElement(children)) {
+      const childProps = children.props as { children?: React.ReactNode };
+      if (typeof childProps.children === 'string') {
+        return childProps.children;
       }
-      return undefined;
-    }, [label, children]);
+    }
+    return undefined;
+  }, [label, children]);
 
-    // Register with UI reflection system if id is provided
-    const { automationIdProps: buttonProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
-      type: 'button',
-      id,
-      label: currentLabel,
-      disabled,
-      variant: variant || undefined
-    }, () => [
-      CommonActions.click(currentLabel ? `Click ${currentLabel}` : 'Click this button'),
-      CommonActions.focus('Focus this button')
-    ]);
+  // Register with UI reflection system if id is provided
+  const { automationIdProps: buttonProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
+    type: 'button',
+    id,
+    label: currentLabel,
+    disabled,
+    variant: variant || undefined
+  }, () => [
+    CommonActions.click(currentLabel ? `Click ${currentLabel}` : 'Click this button'),
+    CommonActions.focus('Focus this button')
+  ]);
 
-    // Update metadata when disabled state or label changes
-    React.useEffect(() => {
-      if (updateMetadata) {
-        updateMetadata({
-          disabled,
-          label: currentLabel,
-          variant: variant || undefined
-        });
-      }
-    }, [disabled, currentLabel, variant, updateMetadata]);
+  // Update metadata when disabled state or label changes
+  React.useEffect(() => {
+    if (updateMetadata) {
+      updateMetadata({
+        disabled,
+        label: currentLabel,
+        variant: variant || undefined
+      });
+    }
+  }, [disabled, currentLabel, variant, updateMetadata]);
 
-    // Tooltip position effect
-    // React.useEffect(() => {
-    //   if (tooltipText && buttonRef.current) {
-    //     const button = buttonRef.current
-    //     const handleMouseEnter = () => {
-    //       const rect = button.getBoundingClientRect()
-    //       setTooltipPosition({
-    //         x: rect.left + rect.width / 2,
-    //         y: rect.top
-    //       })
-    //     }
-        
-    //     button.addEventListener('mouseenter', handleMouseEnter)
-    //     return () => button.removeEventListener('mouseenter', handleMouseEnter)
-    //   }
-    // }, [tooltipText])
+  // When asChild is true, Slot passes props to children, so we can't use a Fragment
+  // (Fragments don't accept className). Skip tooltip support for asChild buttons.
+  const content = asChild ? children : (
+    <>
+      {children}
+      {tooltipText && (
+        <span
+          className="fixed invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity
+          bg-white px-2 py-1 rounded-md text-gray-900 text-xs whitespace-nowrap
+          shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.14)]
+          border border-[rgba(0,0,0,0.05)]
+          z-[9999]"
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+            transform: 'translate(-50%, -100%) translateY(-8px)'
+          }}
+        >
+          {tooltipText}
+        </span>
+      )}
+    </>
+  );
 
-    // When asChild is true, Slot passes props to children, so we can't use a Fragment
-    // (Fragments don't accept className). Skip tooltip support for asChild buttons.
-    const content = asChild ? children : (
-      <>
-        {children}
-        {tooltipText && (
-          <span
-            className="fixed invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity
-            bg-white px-2 py-1 rounded-md text-gray-900 text-xs whitespace-nowrap
-            shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.14)]
-            border border-[rgba(0,0,0,0.05)]
-            z-[9999]"
-            style={{
-              left: `${tooltipPosition.x}px`,
-              top: `${tooltipPosition.y}px`,
-              transform: 'translate(-50%, -100%) translateY(-8px)'
-            }}
-          >
-            {tooltipText}
-          </span>
-        )}
-      </>
-    );
-
-    return (
-      <Comp
-        className={cn(
-          buttonVariants({ variant, size, tooltip, className }),
-          'group'
-        )}
-        type={type}
-        ref={(node) => {
-          if (typeof ref === 'function') {
-            ref(node)
-          } else if (ref) {
-            ref.current = node
-          }
-          buttonRef.current = node
-        }}
-        {...buttonProps}
-        disabled={disabled}
-        {...props}
-      >
-        {content}
-      </Comp>
-    )
-  }
-)
-
-Button.displayName = 'Button'
+  return (
+    <Comp
+      className={cn(
+        buttonVariants({ variant, size, tooltip, className }),
+        'group'
+      )}
+      type={type}
+      ref={mergedRef}
+      {...buttonProps}
+      disabled={disabled}
+      {...props}
+    >
+      {content}
+    </Comp>
+  )
+}
 
 export { Button, buttonVariants }

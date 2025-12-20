@@ -13,8 +13,8 @@ import type { IGetSubscriptionInfoResponse } from 'server/src/interfaces/subscri
 
 export default function LicensePurchaseSuccessPage() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
-  const isScheduled = searchParams.get('scheduled') === 'true';
+  const sessionId = searchParams?.get('session_id') ?? null;
+  const isScheduled = searchParams?.get('scheduled') === 'true';
   const [loading, setLoading] = useState(true);
   const [licenseCount, setLicenseCount] = useState<number | null>(null);
   const [scheduledDate, setScheduledDate] = useState<string | null>(null);

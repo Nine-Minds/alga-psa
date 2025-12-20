@@ -7,7 +7,7 @@ import PrioritySettings from 'server/src/components/settings/general/PrioritySet
  * Task Priority Settings
  * Wrapper component for managing project task priorities in Settings → Projects
  */
-const TaskPrioritySettings = (): JSX.Element => {
+const TaskPrioritySettings = (): React.JSX.Element => {
   return <PrioritySettings initialPriorityType="project_task" />;
 };
 

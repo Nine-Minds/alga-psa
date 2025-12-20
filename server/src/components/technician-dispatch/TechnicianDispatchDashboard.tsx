@@ -97,7 +97,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
   const [permissionError, setPermissionError] = useState<string | null>(null);
 
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef<DragState | null>(null);
   // Updated ref to use new state variables
@@ -108,7 +108,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     currentPage,
   });
 
-  const saveTimeoutRef = useRef<number>();
+  const saveTimeoutRef = useRef<number | undefined>(undefined);
 
   // Updated useEffect dependencies
   useEffect(() => {

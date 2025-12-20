@@ -311,7 +311,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             Roles
           </Text>
           <div className="space-y-2">
-            {roles.map((role: IRole): JSX.Element => (
+            {roles.map((role: IRole): React.JSX.Element => (
               <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                 <Text size="2">{role.role_name}</Text>
                 <Button

@@ -14,7 +14,7 @@ import {
 } from 'server/src/lib/actions/surveyActions';
 import type { SurveyTemplate, SurveyTrigger } from 'server/src/lib/actions/surveyActions';
 
-const SurveySettings = (): JSX.Element => {
+const SurveySettings = (): React.JSX.Element => {
   const { t } = useTranslation('common');
 
   const [templates, setTemplates] = useState<SurveyTemplate[]>([]);

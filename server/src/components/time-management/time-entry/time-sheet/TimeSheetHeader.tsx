@@ -27,7 +27,7 @@ export function TimeSheetHeader({
     showIntervals = false,
     onToggleIntervals,
     dateNavigator
-}: TimeSheetHeaderProps): JSX.Element {
+}: TimeSheetHeaderProps): React.JSX.Element {
     const getStatusDisplay = (status: TimeSheetStatus): { text: string; className: string } => {
         switch (status) {
             case 'DRAFT':

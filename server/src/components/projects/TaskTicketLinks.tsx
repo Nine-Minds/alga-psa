@@ -531,7 +531,7 @@ export default function TaskTicketLinks({
       </div>
 
       <div className="space-y-2">
-        {(taskTicketLinks || []).map((link): JSX.Element => (
+        {(taskTicketLinks || []).map((link): React.JSX.Element => (
           <div key={link.link_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
             <div className="flex flex-col">
               <span>{link.ticket_number} - {link.title}</span>

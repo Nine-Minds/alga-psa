@@ -229,7 +229,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
               {filteredBoards.length === 0 ? (
                 <div className="px-4 py-2 text-gray-500">No boards found</div>
               ) : (
-                filteredBoards.map((board): JSX.Element => (
+                filteredBoards.map((board): React.JSX.Element => (
                   <Button
                     key={board.board_id}
                     id={`${id}-board-picker-board-${board.board_id}`}

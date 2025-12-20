@@ -371,7 +371,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
           </OptionButton>
 
           {/* User options */}
-          {filteredUsers.map((user): JSX.Element => {
+          {filteredUsers.map((user): React.JSX.Element => {
             const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
             return (
               <OptionButton

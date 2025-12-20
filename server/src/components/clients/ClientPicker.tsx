@@ -422,7 +422,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                   {isOpen && filteredClients.length === 0 ? (
                     <div className="px-4 py-2 text-gray-500">No clients found</div>
                   ) : (
-                    filteredClients.map((client): JSX.Element => (
+                    filteredClients.map((client): React.JSX.Element => (
                       <OptionButton
                         key={client.client_id}
                         id={`${id}-client-picker-client-${client.client_id}`}
