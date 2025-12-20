@@ -11,12 +11,20 @@ interface SwitchProps extends Omit<React.ComponentPropsWithoutRef<typeof SwitchP
   id?: string;
   /** Whether the switch is required */
   required?: boolean;
+  /** Ref for the switch element */
+  ref?: React.Ref<React.ElementRef<typeof SwitchPrimitives.Root>>;
 }
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  SwitchProps & AutomationProps
->(({ className, label, id, required, checked, disabled, ...props }, ref) => {
+function Switch({
+  className,
+  label,
+  id,
+  required,
+  checked,
+  disabled,
+  ref,
+  ...props
+}: SwitchProps & AutomationProps) {
   // Register with UI reflection system
   const updateMetadata = useRegisterUIComponent<FormFieldComponent>({
     type: 'formField',
@@ -60,8 +68,6 @@ const Switch = React.forwardRef<
       )}
     </div>
   );
-});
-
-Switch.displayName = SwitchPrimitives.Root.displayName;
+}
 
 export { Switch };

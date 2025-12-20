@@ -218,7 +218,7 @@ export default function BillingSection() {
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {paymentMethods.map((method):JSX.Element => (
+                  {paymentMethods.map((method): React.JSX.Element => (
                     <div key={method.id} className="flex items-center justify-between">
                       <div>
                         <p className="text-sm">
@@ -423,7 +423,7 @@ export default function BillingSection() {
                 </td>
               </tr>
             ) : (
-              invoices.map((invoice):JSX.Element => (
+              invoices.map((invoice): React.JSX.Element => (
                 <tr key={invoice.id}>
                   <td>{invoice.number}</td>
                   <td>{invoice.date}</td>
@@ -469,7 +469,7 @@ export default function BillingSection() {
                 </td>
               </tr>
             ) : (
-              billingCycles.map((cycle):JSX.Element => (
+              billingCycles.map((cycle): React.JSX.Element => (
                 <tr key={cycle.id}>
                   <td>{cycle.period}</td>
                   <td>{cycle.startDate}</td>

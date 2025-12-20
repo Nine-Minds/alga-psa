@@ -65,7 +65,7 @@ function TreeSelect<T extends string>({
   showReset = false,
   allowEmpty = false,
   modal,
-}: TreeSelectProps<T>): JSX.Element {
+}: TreeSelectProps<T>): React.JSX.Element {
   const { modal: parentModal } = useModality();
   const isClient = useIsClient();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -148,14 +148,17 @@ function TreeSelect<T extends string>({
           return p.label;
         }
         // If label is JSX (e.g., with ITIL badge), extract the text content
-        if (React.isValidElement(p.label) && p.label.props.children) {
-          const children = p.label.props.children;
-          if (Array.isArray(children)) {
-            // Find the text content (usually the first string element)
-            const textContent = children.find(child => typeof child === 'string');
-            if (textContent) return textContent;
-          } else if (typeof children === 'string') {
-            return children;
+        if (React.isValidElement(p.label)) {
+          const labelProps = p.label.props as { children?: React.ReactNode };
+          if (labelProps.children) {
+            const children = labelProps.children;
+            if (Array.isArray(children)) {
+              // Find the text content (usually the first string element)
+              const textContent = children.find(child => typeof child === 'string');
+              if (textContent) return textContent;
+            } else if (typeof children === 'string') {
+              return children;
+            }
           }
         }
         return ''; // Don't fall back to value (UUID)
@@ -255,11 +258,11 @@ function TreeSelect<T extends string>({
     option: TreeSelectOption<T>,
     level: number = 0,
     ancestors: TreeSelectOption<T>[] = []
-  ): JSX.Element[] => {
+  ): React.JSX.Element[] => {
     const isExpanded = expandedItems.has(option.value);
     const hasChildren = option.children && option.children.length > 0;
 
-    const elements: JSX.Element[] = [];
+    const elements: React.JSX.Element[] = [];
 
     elements.push(
       <div

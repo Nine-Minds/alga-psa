@@ -1132,9 +1132,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   if (!shouldWrapInDialog) {
     return (
-      <EntryPopupContext.Provider value={contextValue}>
+      <EntryPopupContext value={contextValue}>
         {content}
-      </EntryPopupContext.Provider>
+      </EntryPopupContext>
     );
   }
 
@@ -1145,9 +1145,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       hideCloseButton={false}
       title={(isAppointmentRequest && appointmentRequestData && appointmentRequestData.status === 'pending') ? 'Appointment Request' : (viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry'))}
     >
-      <EntryPopupContext.Provider value={contextValue}>
+      <EntryPopupContext value={contextValue}>
         {content}
-      </EntryPopupContext.Provider>
+      </EntryPopupContext>
       
       <ConfirmationDialog
         className="max-w-[450px]"

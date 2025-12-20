@@ -84,7 +84,7 @@ export default function TaskForm({
   onPhaseChange,
   inDrawer = false,
   projectTreeData = []
-}: TaskFormProps): JSX.Element {
+}: TaskFormProps): React.JSX.Element {
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const [showDependencyConfirmation, setShowDependencyConfirmation] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState<React.FormEvent | null>(null);
@@ -885,9 +885,9 @@ export default function TaskForm({
             // Handle both string and ReactNode labels
             if (typeof opt.label === 'string') {
               return opt.label;
-            } else if (React.isValidElement(opt.label) && opt.label.props.children) {
+            } else if (React.isValidElement(opt.label) && (opt.label.props as { children?: React.ReactNode }).children) {
               // Extract text from JSX element
-              const children = opt.label.props.children;
+              const children = (opt.label.props as { children?: React.ReactNode }).children;
               if (typeof children === 'string') {
                 return children;
               } else if (Array.isArray(children)) {
@@ -1180,7 +1180,7 @@ export default function TaskForm({
               {/* Show list of additional agents below the pickers */}
               {(task?.task_id ? taskResources : tempTaskResources).length > 0 && (
                 <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
-                {(task?.task_id ? taskResources : tempTaskResources).map((resource): JSX.Element => (
+                {(task?.task_id ? taskResources : tempTaskResources).map((resource): React.JSX.Element => (
                   <div key={resource.assignment_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                     <div className="flex items-center gap-2">
                       <AvatarIcon
@@ -1237,7 +1237,7 @@ export default function TaskForm({
             </div>
 
                 <div className="flex flex-col space-y-2">
-                  {checklistItems.map((item, index): JSX.Element => (
+                  {checklistItems.map((item, index): React.JSX.Element => (
                     <div key={index} className="flex items-center gap-2 w-full">
                       {isEditingChecklist || editingChecklistItemId === item.checklist_item_id ? (
                         <>

@@ -38,7 +38,7 @@ export default function TaskQuickAdd({
   task,
   onPhaseChange,
   projectTreeData
-}: TaskQuickAddProps): JSX.Element {
+}: TaskQuickAddProps): React.JSX.Element {
   const handleSubmit = async (resultTask: IProjectTask | null) => {
     // Ensure assigned_to is null if empty string or undefined
     if (resultTask) {

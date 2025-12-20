@@ -666,7 +666,7 @@ const nextConfig = {
       bodySizeLimit: serverActionsBodyLimit,
     }
   },
-  // Skip static optimization for error pages
+  // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
     return 'build-' + Date.now();
   }

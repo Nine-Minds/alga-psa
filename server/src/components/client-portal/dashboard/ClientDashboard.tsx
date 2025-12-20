@@ -178,7 +178,7 @@ export function ClientDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-5">
-              {activities.map((activity: RecentActivity, index: number): JSX.Element => {
+              {activities.map((activity: RecentActivity, index: number): React.JSX.Element => {
                 let borderColor = 'border-[rgb(var(--color-primary-500))]';
                 let bgColor = 'bg-[rgb(var(--color-primary-50))]';
                 let textColor = 'text-[rgb(var(--color-primary-700))]';

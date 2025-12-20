@@ -188,7 +188,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
                   visible={true}
                 />
               )}
-              {sortedPhases.map((phase: IProjectPhase, index: number): JSX.Element => (
+              {sortedPhases.map((phase: IProjectPhase, index: number): React.JSX.Element => (
           <div key={phase.phase_id}>
             {/* Drop placeholder before phase - but not for first phase as it's handled above */}
             {phaseDropTarget?.phaseId === phase.phase_id && phaseDropTarget.position === 'before' && index > 0 && (

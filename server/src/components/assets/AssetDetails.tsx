@@ -531,7 +531,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
       <Card {...withDataAutomationId({ id: 'related-assets-card' })} className="p-6">
         <Text as="div" size="4" weight="medium" className="mb-4">Related Assets</Text>
         <div {...withDataAutomationId({ id: 'related-assets-list' })} className="space-y-2">
-          {asset.relationships.map((rel: AssetRelationship): JSX.Element => (
+          {asset.relationships.map((rel: AssetRelationship): React.JSX.Element => (
             <div {...withDataAutomationId({ id: `related-asset-${rel.parent_asset_id}-${rel.child_asset_id}` })}
                  key={`${rel.parent_asset_id}-${rel.child_asset_id}`}
                  className="flex justify-between items-center p-2 bg-gray-50 rounded">

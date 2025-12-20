@@ -17,7 +17,7 @@ interface TimeEntryListProps {
   editingIndex: number | null;
   totalDurations: number[];
   isEditable: boolean;
-  lastNoteInputRef: React.RefObject<HTMLInputElement>;
+  lastNoteInputRef: React.RefObject<HTMLInputElement | null>;
   onSave: (index: number) => Promise<void>;
   onDelete: (index: number) => Promise<void>;
   onEdit: (index: number) => void;
@@ -47,7 +47,7 @@ const TimeEntryList = memo(function TimeEntryList({
 }: TimeEntryListProps) {
   return (
     <div className="space-y-4">
-      {entries.map((entry, index): JSX.Element => (
+      {entries.map((entry, index): React.JSX.Element => (
         <div key={entry?.entry_id || entry?.tempId || `entry-${index}`}>
           {editingIndex === index ? (
             <TimeEntryEditForm

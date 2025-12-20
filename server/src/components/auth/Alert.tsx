@@ -7,7 +7,7 @@ import { AlertProps } from 'server/src/interfaces';
 
 
 const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) => {
-    const getAlertStyles = (): { bgColor: string; textColor: string; hoverColor: string; icon: JSX.Element } => {
+    const getAlertStyles = (): { bgColor: string; textColor: string; hoverColor: string; icon: React.JSX.Element } => {
         switch (type) {
           case 'error':
             return { bgColor: 'bg-rose-500', textColor: 'bg-rose-500', hoverColor: 'hover:bg-rose-700', icon: <ExclamationTriangleIcon className="w-12 h-12 text-white" /> };

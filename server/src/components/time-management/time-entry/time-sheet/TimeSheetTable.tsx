@@ -98,7 +98,7 @@ export function TimeSheetTable({
     onDeleteWorkItem,
     onQuickAddTimeEntry,
     onDateNavigatorChange
-}: TimeSheetTableProps): JSX.Element {
+}: TimeSheetTableProps): React.JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
     const [quickInputValues, setQuickInputValues] = useState<{ [key: string]: string }>({});
@@ -307,7 +307,7 @@ export function TimeSheetTable({
                                 Add Item
                             </button>
                         </th>
-                        {visibleDates.map((date, index): JSX.Element => {
+                        {visibleDates.map((date, index): React.JSX.Element => {
                             const isTodayDate = isToday(date);
                             const isLastHeaderCell = index === visibleDates.length - 1;
                             return (
@@ -349,7 +349,7 @@ export function TimeSheetTable({
                                         <div className="h-4 w-14 bg-gray-200 rounded-full" />
                                     </div>
                                 </td>
-                                {visibleDates.map((date): JSX.Element => (
+                                {visibleDates.map((date): React.JSX.Element => (
                                     <td
                                         key={`skeleton-${rowIndex}-${date.toISOString()}`}
                                         className="px-3 py-3 border-b border-r border-gray-200 last:border-r-0 h-20"
@@ -390,9 +390,9 @@ export function TimeSheetTable({
                             </td>
                         </tr>
                     ) : (
-                        Object.entries(workItemsByType).map(([type, workItems]): JSX.Element => (
+                        Object.entries(workItemsByType).map(([type, workItems]): React.JSX.Element => (
                             <React.Fragment key={type}>
-                                {workItems.map((workItem): JSX.Element => {
+                                {workItems.map((workItem): React.JSX.Element => {
                                     const isLastWorkItemRow = !!lastWorkItemId && workItem.work_item_id === lastWorkItemId;
                                     const entries = groupedTimeEntries[workItem.work_item_id] || [];
                                     return (
@@ -454,7 +454,7 @@ export function TimeSheetTable({
                                             </Button>
                                         )}
                                     </td>
-                                        {visibleDates.map((date): JSX.Element => {
+                                        {visibleDates.map((date): React.JSX.Element => {
                                             const dayEntries = entries.filter(entry =>
                                                 parseISO(entry.start_time).toDateString() === date.toDateString()
                                             );
@@ -772,7 +772,7 @@ export function TimeSheetTable({
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 border-t border-r border-gray-200 sticky left-0 z-10 bg-gray-100">
                             Weekly Total
                         </td>
-                        {visibleDates.map((date): JSX.Element => {
+                        {visibleDates.map((date): React.JSX.Element => {
                             const entriesForDate = Object.values(groupedTimeEntries).flat()
                                 .filter((entry) => parseISO(entry.start_time).toDateString() === date.toDateString());
 

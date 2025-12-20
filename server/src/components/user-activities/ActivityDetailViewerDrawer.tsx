@@ -176,7 +176,7 @@ export function ActivityDetailViewerDrawer({
   onClose,
   onActionComplete
 }: ActivityDetailViewerDrawerProps) {
-  const [content, setContent] = useState<JSX.Element | null>(null);
+  const [content, setContent] = useState<React.JSX.Element | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const tenant = useTenant();

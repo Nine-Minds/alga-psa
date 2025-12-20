@@ -71,7 +71,7 @@ export function TimeSheet({
     initialDate,
     initialDuration,
     onBack
-}: TimeSheetProps): JSX.Element {
+}: TimeSheetProps): React.JSX.Element {
     const [showIntervals, setShowIntervals] = useState(false);
     const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
     const [isLoadingTimeSheetData, setIsLoadingTimeSheetData] = useState(true);

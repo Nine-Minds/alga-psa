@@ -103,7 +103,7 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
               Enter 6-digit code from your two factor authenticator APP.
             </p>
             <div className="flex justify-between mb-4">
-              {code.map((digit, index): JSX.Element => (
+              {code.map((digit, index): React.JSX.Element => (
                 <Input
                   key={index}
                   ref={el => {

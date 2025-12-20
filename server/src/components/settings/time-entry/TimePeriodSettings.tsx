@@ -202,7 +202,7 @@ const TimePeriodSettings: React.FC = () => {
           </Alert>
           {/* End Help Text Section */}
 
-          {settings.map((setting): JSX.Element => (
+          {settings.map((setting): React.JSX.Element => (
             <TimePeriodSettingItem
               key={setting.time_period_settings_id}
               setting={setting}

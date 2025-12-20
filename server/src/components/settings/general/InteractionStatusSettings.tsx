@@ -27,7 +27,7 @@ import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
  * InteractionStatusSettings - Manages interaction statuses
  * This is for interaction statuses only
  */
-const InteractionStatusSettings = (): JSX.Element => {
+const InteractionStatusSettings = (): React.JSX.Element => {
   const STATUS_TYPE = 'interaction'; // Fixed to interaction type
 
   const [statuses, setStatuses] = useState<IStatus[]>([]);

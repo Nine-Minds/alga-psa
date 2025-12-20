@@ -89,7 +89,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
         <div>
           <h3 className="text-xl font-semibold">Sample Invoices</h3>
           <div className="grid grid-cols-1 gap-2 mt-4">
-            {sampleInvoices.map((invoice):JSX.Element => (
+            {sampleInvoices.map((invoice): React.JSX.Element => (
               <div
                 key={invoice.invoice_number}
                 className={`p-2 border rounded cursor-pointer hover:bg-gray-50 ${

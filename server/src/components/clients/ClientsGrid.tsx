@@ -50,7 +50,7 @@ const ClientsGrid = ({
     return (
         <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredClients.map((client): JSX.Element => (
+                {filteredClients.map((client): React.JSX.Element => (
                     <div key={client.client_id} className="relative">
                         <ClientGridCard
                             client={client}
