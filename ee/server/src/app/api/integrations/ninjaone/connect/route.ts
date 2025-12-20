@@ -20,30 +20,32 @@ const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
 // Path to ngrok URL file (written by ngrok-sync container)
 const NGROK_URL_FILE = '/app/ngrok/url';
 
-// Check if running in development mode
-const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
+const readNgrokUrl = () => {
+  try {
+    if (fs.existsSync(NGROK_URL_FILE)) {
+      const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+      if (ngrokUrl) {
+        console.log(`[NinjaOne Connect] Using ngrok URL for redirect URI: ${ngrokUrl}`);
+        return ngrokUrl;
+      }
+    }
+  } catch (error) {
+    // Ignore file read errors, fall back to env vars
+    console.debug('[NinjaOne Connect] Could not read ngrok URL file, using environment variables');
+  }
+  return null;
+};
 
-// Redirect URI - uses ngrok URL in development, otherwise NEXTAUTH_URL
+// Redirect URI - priority: NINJAONE_REDIRECT_URI, ngrok file, NEXTAUTH_URL
 const getRedirectUri = () => {
   // If explicitly set, use that
   if (process.env.NINJAONE_REDIRECT_URI) {
     return process.env.NINJAONE_REDIRECT_URI;
   }
 
-  // In development mode, check for ngrok URL file first
-  if (isDevelopment) {
-    try {
-      if (fs.existsSync(NGROK_URL_FILE)) {
-        const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
-        if (ngrokUrl) {
-          console.log(`[NinjaOne Connect] Using ngrok URL for redirect URI: ${ngrokUrl}`);
-          return `${ngrokUrl}/api/integrations/ninjaone/callback`;
-        }
-      }
-    } catch (error) {
-      // Ignore file read errors, fall back to env vars
-      console.debug('[NinjaOne Connect] Could not read ngrok URL file, using environment variables');
-    }
+  const ngrokUrl = readNgrokUrl();
+  if (ngrokUrl) {
+    return `${ngrokUrl}/api/integrations/ninjaone/callback`;
   }
 
   // Fall back to environment variables

@@ -1,0 +1,81 @@
+services:
+  temporal-dev:
+    image: temporalio/auto-setup:1.24.2
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_SEEDS=postgres
+      - POSTGRES_USER=postgres
+    entrypoint: ["/bin/sh"]
+    command:
+      - -c
+      - |
+        export POSTGRES_PWD=$(cat /run/secrets/postgres_password)
+        exec /etc/temporal/entrypoint.sh
+    secrets:
+      - postgres_password
+    depends_on:
+      postgres:
+        condition: service_started
+    networks:
+      - app-network
+
+  temporal-worker:
+    image: temporal-worker-dev
+    working_dir: /app/ee/temporal-workflows
+    entrypoint: ["docker-entrypoint.sh"]
+    command: ["node", "dist/ee/temporal-workflows/src/worker.js"]
+    environment:
+      - LOG_LEVEL=INFO
+      - SECRET_READ_CHAIN=filesystem,env
+      - APPLICATION_URL=${NEXTAUTH_URL}
+      - DB_HOST=${DB_HOST:-pgbouncer}
+      - DB_PORT=${DB_PORT:-6432}
+      - DB_NAME_SERVER=${DB_NAME_SERVER:-server}
+      - DB_USER_SERVER=${DB_USER_SERVER:-app_user}
+      - DB_USER_ADMIN=${DB_USER_ADMIN:-postgres}
+      - TEMPORAL_ADDRESS=${TEMPORAL_ADDRESS:-temporal-dev:7233}
+      - TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-default}
+      - TEMPORAL_TASK_QUEUE=${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      - TEMPORAL_TASK_QUEUES=tenant-workflows,portal-domain-workflows,email-domain-workflows,alga-jobs
+      - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+    volumes:
+      - type: bind
+        source: ./secrets/tenants
+        target: /run/secrets/tenants
+        read_only: true
+      - type: bind
+        source: ./secrets/postgres_password
+        target: /run/secrets/DB_PASSWORD_ADMIN
+        read_only: true
+    secrets:
+      - db_password_server
+      - postgres_password
+      - alga_auth_key
+      - nextauth_secret
+      - redis_password
+      - ninjaone_client_id
+      - ninjaone_client_secret
+    depends_on:
+      temporal-dev:
+        condition: service_started
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    environment:
+      - TEMPORAL_ADDRESS=temporal-dev:7233
+    ports:
+      - "8088:8080"
+    depends_on:
+      temporal-dev:
+        condition: service_started
+    networks:
+      - app-network

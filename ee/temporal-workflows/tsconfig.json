@@ -23,6 +23,10 @@
       "@shared/*": ["../../shared/*"],
       "@alga-psa/shared": ["../../shared"],
       "@alga-psa/shared/*": ["../../shared/*"],
+      "@ee": ["../server/src"],
+      "@ee/*": ["../server/src/*"],
+      "@/*": ["../server/src/*"],
+      "@/interfaces/*": ["../server/src/interfaces/*"],
       "@product/email-domains/entry": ["../../packages/product-email-domains/ee/entry"],
       "@product/email-domains/*": ["../../packages/product-email-domains/*"]
     }
