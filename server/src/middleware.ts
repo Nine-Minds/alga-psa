@@ -94,10 +94,12 @@ const _middleware = auth((request) => {
       '/api/email/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
+      '/api/integrations/ninjaone/callback',
       // Internal MSP UI endpoints (session-authenticated)
       '/api/accounting/csv/',
       '/api/accounting/exports/',
       '/api/webhooks/stripe',
+      '/api/webhooks/ninjaone',
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',
       '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token

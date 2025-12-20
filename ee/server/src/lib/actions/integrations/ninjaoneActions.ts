@@ -9,6 +9,8 @@
 
 import logger from '@shared/core/logger';
 import axios from 'axios';
+import crypto from 'crypto';
+import fs from 'fs';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
@@ -37,6 +39,39 @@ import {
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
 const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
 const NINJAONE_CLIENT_SECRET_SECRET = 'ninjaone_client_secret';
+const NINJAONE_SCOPES = 'monitoring management offline_access';
+
+// Path to ngrok URL file (written by ngrok-sync container)
+const NGROK_URL_FILE = '/app/ngrok/url';
+
+const readNgrokUrl = () => {
+  try {
+    if (fs.existsSync(NGROK_URL_FILE)) {
+      const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+      if (ngrokUrl) {
+        return ngrokUrl;
+      }
+    }
+  } catch {
+    // Ignore file read errors, fall back to env vars
+  }
+  return null;
+};
+
+// Redirect URI - priority: NINJAONE_REDIRECT_URI, ngrok file, NEXTAUTH_URL
+const getRedirectUri = () => {
+  if (process.env.NINJAONE_REDIRECT_URI) {
+    return process.env.NINJAONE_REDIRECT_URI;
+  }
+
+  const ngrokUrl = readNgrokUrl();
+  if (ngrokUrl) {
+    return `${ngrokUrl}/api/integrations/ninjaone/callback`;
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+  return `${baseUrl}/api/integrations/ninjaone/callback`;
+};
 
 /**
  * Extract safe error info for logging (avoids circular reference issues with axios errors)
@@ -592,14 +627,51 @@ export async function updateNinjaOneOrganizationMapping(
  * Get connect URL for NinjaOne OAuth
  */
 export async function getNinjaOneConnectUrl(region: NinjaOneRegion = 'US'): Promise<string> {
-  // Validate region
   if (!NINJAONE_REGIONS[region]) {
     throw new Error(`Invalid region: ${region}`);
   }
 
-  // Return the connect endpoint URL with region parameter
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
-  return `${baseUrl}/api/integrations/ninjaone/connect?region=${region}`;
+  const user = await getCurrentUser();
+  if (!user || !user.tenant) {
+    throw new Error('User not authenticated');
+  }
+
+  const canView = await hasPermission(user, 'settings', 'read');
+  if (!canView) {
+    throw new Error('Insufficient permissions to view NinjaOne settings');
+  }
+
+  const { tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const secretProvider = await getSecretProviderInstance();
+  const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+  if (!clientId) {
+    throw new Error('NinjaOne client ID not configured for this tenant.');
+  }
+
+  const csrfToken = crypto.randomBytes(16).toString('hex');
+  const statePayload = {
+    tenantId: tenant,
+    region,
+    csrf: csrfToken,
+    timestamp: Date.now(),
+  };
+  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+  const instanceUrl = NINJAONE_REGIONS[region];
+  const redirectUri = getRedirectUri();
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    scope: NINJAONE_SCOPES,
+    redirect_uri: redirectUri,
+    state,
+  });
+
+  return `${instanceUrl}/oauth/authorize?${params.toString()}`;
 }
 
 /**
