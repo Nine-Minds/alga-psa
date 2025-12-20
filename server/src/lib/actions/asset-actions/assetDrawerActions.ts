@@ -1,28 +1,27 @@
-import type {
+'use server';
+
+import {
   Asset,
   AssetHistory,
   AssetMaintenanceHistory,
   AssetMaintenanceReport,
   AssetTicketSummary,
-} from 'server/src/interfaces/asset.interfaces';
-import type { IDocument } from 'server/src/interfaces/document.interface';
+} from '../../../interfaces/asset.interfaces';
+import { IDocument } from '../../../interfaces/document.interface';
 import {
   getAsset,
   getAssetHistory,
   getAssetMaintenanceReport,
   getAssetLinkedTickets,
-} from 'server/src/lib/actions/asset-actions/assetActions';
-import { getAssetDocuments } from 'server/src/lib/actions/asset-actions/assetDocumentActions';
+} from './assetActions';
+import { getAssetDocuments } from './assetDocumentActions';
 import {
   ASSET_DRAWER_TABS,
   panelParamToTab,
-  type AssetDetailDrawerProps,
-  type AssetDrawerServerData,
-  type AssetDrawerTab,
-} from './AssetDetailDrawer.types';
-
-export { ASSET_DRAWER_TABS };
-export type { AssetDrawerTab };
+  AssetDetailDrawerProps,
+  AssetDrawerServerData,
+  AssetDrawerTab,
+} from 'server/src/components/assets/AssetDetailDrawer.types';
 
 export async function loadAssetDetailDrawerData({ assetId, panel }: AssetDetailDrawerProps) {
   const activeTab = panelParamToTab(panel ?? null);
