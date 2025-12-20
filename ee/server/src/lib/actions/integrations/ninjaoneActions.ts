@@ -17,13 +17,8 @@ import { createTenantKnex } from '@/db';
 import { auditLog } from '@/lib/logging/auditLog';
 import { createNinjaOneClient, disconnectNinjaOne } from '../../integrations/ninjaone';
 import { removeNinjaOneWebhook } from '../../integrations/ninjaone/webhooks/webhookRegistration';
-import {
-  NinjaOneSyncEngine,
-  runFullSync as runFullSyncEngine,
-  runIncrementalSync as runIncrementalSyncEngine,
-  syncSingleDevice,
-  SyncOptions,
-} from '../../integrations/ninjaone/sync/syncEngine';
+import type { SyncOptions } from '../../integrations/ninjaone/sync/syncEngine';
+import { getNinjaOneSyncStrategy } from '../../integrations/ninjaone/sync/syncStrategy';
 import {
   RmmConnectionStatus,
   RmmIntegration,
@@ -413,12 +408,6 @@ export async function testNinjaOneConnection(): Promise<{ success: boolean; erro
  * Sync organizations from NinjaOne
  */
 export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
-  const startTime = new Date().toISOString();
-  let itemsProcessed = 0;
-  let itemsCreated = 0;
-  let itemsUpdated = 0;
-  const errors: string[] = [];
-
   try {
     const user = await getCurrentUser();
     if (!user || !user.tenant) {
@@ -445,86 +434,16 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
       throw new Error('NinjaOne integration not configured');
     }
 
-    // Update sync status to syncing
-    await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
-      .update({
-        sync_status: 'syncing',
-        updated_at: knex.fn.now(),
-      });
-
-    // Create client and fetch organizations
-    const client = await createNinjaOneClient(tenant);
-    const organizations = await client.getOrganizations();
-
-    itemsProcessed = organizations.length;
-
-    // Process each organization
-    for (const org of organizations) {
-      try {
-        // Check if mapping already exists
-        const existingMapping = await knex('rmm_organization_mappings')
-          .where({
-            tenant,
-            integration_id: integration.integration_id,
-            external_organization_id: String(org.id),
-          })
-          .first();
-
-        if (existingMapping) {
-          // Update existing mapping
-          await knex('rmm_organization_mappings')
-            .where({ tenant, mapping_id: existingMapping.mapping_id })
-            .update({
-              external_organization_name: org.name,
-              metadata: JSON.stringify({ description: org.description, tags: org.tags }),
-              updated_at: knex.fn.now(),
-            });
-          itemsUpdated++;
-        } else {
-          // Create new mapping (unmapped initially)
-          await knex('rmm_organization_mappings').insert({
-            tenant,
-            integration_id: integration.integration_id,
-            external_organization_id: String(org.id),
-            external_organization_name: org.name,
-            auto_sync_assets: true,
-            auto_create_tickets: false,
-            metadata: JSON.stringify({ description: org.description, tags: org.tags }),
-          });
-          itemsCreated++;
-        }
-      } catch (orgError) {
-        const errorMessage = orgError instanceof Error ? orgError.message : String(orgError);
-        errors.push(`Failed to process organization ${org.id}: ${errorMessage}`);
-        logger.error('[NinjaOneActions] Error processing organization:', { orgId: org.id, error: orgError });
-      }
-    }
-
-    // Update sync status to completed
-    await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
-      .update({
-        sync_status: 'completed',
-        last_sync_at: knex.fn.now(),
-        sync_error: errors.length > 0 ? errors.join('; ') : null,
-        updated_at: knex.fn.now(),
-      });
+    const strategy = getNinjaOneSyncStrategy();
+    const result = await strategy.syncOrganizations({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      performedBy: user.user_id,
+    });
 
     revalidatePath('/msp/settings');
 
-    return {
-      success: errors.length === 0,
-      provider: 'ninjaone',
-      sync_type: 'organizations',
-      started_at: startTime,
-      completed_at: new Date().toISOString(),
-      items_processed: itemsProcessed,
-      items_created: itemsCreated,
-      items_updated: itemsUpdated,
-      items_failed: errors.length,
-      errors: errors.length > 0 ? errors : undefined,
-    };
+    return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('[NinjaOneActions] Error syncing organizations:', extractErrorInfo(error));
@@ -547,11 +466,11 @@ export async function syncNinjaOneOrganizations(): Promise<RmmSyncResult> {
       success: false,
       provider: 'ninjaone',
       sync_type: 'organizations',
-      started_at: startTime,
+      started_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
-      items_processed: itemsProcessed,
-      items_created: itemsCreated,
-      items_updated: itemsUpdated,
+      items_processed: 0,
+      items_created: 0,
+      items_updated: 0,
       items_failed: 1,
       errors: [errorMessage],
     };
@@ -715,10 +634,14 @@ export async function triggerNinjaOneFullSync(
       throw new Error('NinjaOne integration not configured');
     }
 
-    // Run the sync
-    const result = await runFullSyncEngine(tenant, integration.integration_id, {
-      ...options,
-      performedBy: user.user_id,
+    const strategy = getNinjaOneSyncStrategy();
+    const result = await strategy.syncDevicesFull({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      options: {
+        ...options,
+        performedBy: user.user_id,
+      },
     });
 
     revalidatePath('/msp/settings');
@@ -779,12 +702,13 @@ export async function triggerNinjaOneIncrementalSync(): Promise<RmmSyncResult> {
       || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Run the sync
-    const result = await runIncrementalSyncEngine(
-      tenant,
-      integration.integration_id,
-      new Date(since),
-      { performedBy: user.user_id }
-    );
+    const strategy = getNinjaOneSyncStrategy();
+    const result = await strategy.syncDevicesIncremental({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      since: new Date(since),
+      options: { performedBy: user.user_id },
+    });
 
     revalidatePath('/msp/settings');
     revalidatePath('/msp/assets');
@@ -843,7 +767,12 @@ export async function syncNinjaOneDevice(deviceId: number): Promise<{
     }
 
     // Sync the device
-    const asset = await syncSingleDevice(tenant, integration.integration_id, deviceId);
+    const strategy = getNinjaOneSyncStrategy();
+    const asset = await strategy.syncDevice({
+      tenantId: tenant,
+      integrationId: integration.integration_id,
+      deviceId,
+    });
 
     revalidatePath('/msp/assets');
     revalidatePath(`/msp/assets/${asset.asset_id}`);

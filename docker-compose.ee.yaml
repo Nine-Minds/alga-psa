@@ -22,6 +22,8 @@ services:
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
+      APP_EDITION: ${APP_EDITION:-enterprise}
+      NEXT_PUBLIC_EDITION: ${NEXT_PUBLIC_EDITION:-enterprise}
       HOST: ${HOST}
       VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
       REDIS_HOST: ${REDIS_HOST_DOCKER:-redis}
@@ -41,6 +43,9 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
       # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
       # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}

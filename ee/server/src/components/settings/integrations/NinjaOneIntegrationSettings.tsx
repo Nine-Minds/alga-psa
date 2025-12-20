@@ -28,12 +28,12 @@ import {
   Info,
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
+import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 import NinjaOneComplianceDashboard from './NinjaOneComplianceDashboard';
 import OrganizationMappingManager from './ninjaone/OrganizationMappingManager';
 import {
   getNinjaOneConnectionStatus,
   disconnectNinjaOneIntegration,
-  testNinjaOneConnection,
   syncNinjaOneOrganizations,
   triggerNinjaOneFullSync,
   getNinjaOneConnectUrl,
@@ -53,7 +53,6 @@ const NinjaOneIntegrationSettings: React.FC = () => {
   const [isDisconnecting, startDisconnectTransition] = useTransition();
   const [isSyncing, startSyncTransition] = useTransition();
   const [isSyncingDevices, startDeviceSyncTransition] = useTransition();
-  const [isTesting, startTestTransition] = useTransition();
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [orgMappingsRefreshKey, setOrgMappingsRefreshKey] = useState(0);
   const [fleetComplianceRefreshKey, setFleetComplianceRefreshKey] = useState(0);
@@ -200,24 +199,6 @@ const NinjaOneIntegrationSettings: React.FC = () => {
     });
   };
 
-  const handleTestConnection = () => {
-    startTestTransition(async () => {
-      setError(null);
-      setSuccessMessage(null);
-      try {
-        const result = await testNinjaOneConnection();
-        if (result.success) {
-          setSuccessMessage('NinjaOne connection test successful.');
-        } else {
-          setError(result.error ?? 'Connection test failed.');
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Connection test failed.';
-        setError(message);
-      }
-    });
-  };
-
   const handleSyncOrganizations = () => {
     startSyncTransition(async () => {
       setError(null);
@@ -347,6 +328,16 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
   return (
     <>
+      {(isLoading || isLoadingCredentials) && (
+        <SettingsTabSkeleton
+          title="NinjaOne RMM Integration"
+          description="Loading NinjaOne integration..."
+          showForm
+          showDropdowns
+          showTable={false}
+        />
+      )}
+      {!(isLoading || isLoadingCredentials) && (
       <Card id="ninjaone-integration-settings-card">
         <CardHeader>
           <CardTitle>NinjaOne RMM Integration</CardTitle>
@@ -526,14 +517,6 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   {isRefreshing ? 'Refreshing...' : 'Refresh Status'}
                 </Button>
                 <Button
-                  id="ninjaone-test-connection"
-                  variant="outline"
-                  onClick={handleTestConnection}
-                  disabled={isTesting}
-                >
-                  {isTesting ? 'Testing...' : 'Test Connection'}
-                </Button>
-                <Button
                   id="ninjaone-sync-orgs"
                   variant="secondary"
                   onClick={handleSyncOrganizations}
@@ -597,6 +580,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           </div>
         </CardFooter>
       </Card>
+      )}
 
       {/* Disconnect Confirmation Modal */}
       {showDisconnectConfirm && (
