@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { CustomSelect, SelectOption } from '@/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import CustomTabs from '@/components/ui/CustomTabs';
 import { Switch } from '@/components/ui/Switch';
 import { Label } from '@/components/ui/Label';
@@ -201,15 +201,18 @@ const getStepsAtPath = (steps: Step[], segments: PipeSegment[]): Step[] => {
   const step = steps[current.index];
   if (!step) return [];
   if (step.type === 'control.if') {
-    const branchSteps = current.branch === 'then' ? step.then : step.else ?? [];
+    const ifStep = step as IfBlock;
+    const branchSteps = current.branch === 'then' ? ifStep.then : ifStep.else ?? [];
     return getStepsAtPath(branchSteps, rest);
   }
   if (step.type === 'control.tryCatch') {
-    const branchSteps = current.branch === 'try' ? step.try : step.catch;
+    const tcStep = step as TryCatchBlock;
+    const branchSteps = current.branch === 'try' ? tcStep.try : tcStep.catch;
     return getStepsAtPath(branchSteps, rest);
   }
   if (step.type === 'control.forEach') {
-    return getStepsAtPath(step.body, rest);
+    const feStep = step as ForEachBlock;
+    return getStepsAtPath(feStep.body, rest);
   }
   return [];
 };
@@ -221,21 +224,24 @@ const updateStepsAtPath = (steps: Step[], segments: PipeSegment[], nextSteps: St
     if (index !== current.index) return step;
 
     if (step.type === 'control.if') {
+      const ifStep = step as IfBlock;
       if (current.branch === 'then') {
-        return { ...step, then: updateStepsAtPath(step.then, rest, nextSteps) };
+        return { ...ifStep, then: updateStepsAtPath(ifStep.then, rest, nextSteps) };
       }
-      return { ...step, else: updateStepsAtPath(step.else ?? [], rest, nextSteps) };
+      return { ...ifStep, else: updateStepsAtPath(ifStep.else ?? [], rest, nextSteps) };
     }
 
     if (step.type === 'control.tryCatch') {
+      const tcStep = step as TryCatchBlock;
       if (current.branch === 'try') {
-        return { ...step, try: updateStepsAtPath(step.try, rest, nextSteps) };
+        return { ...tcStep, try: updateStepsAtPath(tcStep.try, rest, nextSteps) };
       }
-      return { ...step, catch: updateStepsAtPath(step.catch, rest, nextSteps) };
+      return { ...tcStep, catch: updateStepsAtPath(tcStep.catch, rest, nextSteps) };
     }
 
     if (step.type === 'control.forEach') {
-      return { ...step, body: updateStepsAtPath(step.body, rest, nextSteps) };
+      const feStep = step as ForEachBlock;
+      return { ...feStep, body: updateStepsAtPath(feStep.body, rest, nextSteps) };
     }
 
     return step;
@@ -248,23 +254,26 @@ const updateStepById = (steps: Step[], stepId: string, updater: (step: Step) => 
       return updater(step);
     }
     if (step.type === 'control.if') {
+      const ifStep = step as IfBlock;
       return {
-        ...step,
-        then: updateStepById(step.then, stepId, updater),
-        else: step.else ? updateStepById(step.else, stepId, updater) : step.else
+        ...ifStep,
+        then: updateStepById(ifStep.then, stepId, updater),
+        else: ifStep.else ? updateStepById(ifStep.else, stepId, updater) : ifStep.else
       };
     }
     if (step.type === 'control.tryCatch') {
+      const tcStep = step as TryCatchBlock;
       return {
-        ...step,
-        try: updateStepById(step.try, stepId, updater),
-        catch: updateStepById(step.catch, stepId, updater)
+        ...tcStep,
+        try: updateStepById(tcStep.try, stepId, updater),
+        catch: updateStepById(tcStep.catch, stepId, updater)
       };
     }
     if (step.type === 'control.forEach') {
+      const feStep = step as ForEachBlock;
       return {
-        ...step,
-        body: updateStepById(step.body, stepId, updater)
+        ...feStep,
+        body: updateStepById(feStep.body, stepId, updater)
       };
     }
     return step;
@@ -275,23 +284,26 @@ const removeStepById = (steps: Step[], stepId: string): Step[] => {
   const filtered = steps.filter((step) => step.id !== stepId);
   return filtered.map((step) => {
     if (step.type === 'control.if') {
+      const ifStep = step as IfBlock;
       return {
-        ...step,
-        then: removeStepById(step.then, stepId),
-        else: step.else ? removeStepById(step.else, stepId) : step.else
+        ...ifStep,
+        then: removeStepById(ifStep.then, stepId),
+        else: ifStep.else ? removeStepById(ifStep.else, stepId) : ifStep.else
       };
     }
     if (step.type === 'control.tryCatch') {
+      const tcStep = step as TryCatchBlock;
       return {
-        ...step,
-        try: removeStepById(step.try, stepId),
-        catch: removeStepById(step.catch, stepId)
+        ...tcStep,
+        try: removeStepById(tcStep.try, stepId),
+        catch: removeStepById(tcStep.catch, stepId)
       };
     }
     if (step.type === 'control.forEach') {
+      const feStep = step as ForEachBlock;
       return {
-        ...step,
-        body: removeStepById(step.body, stepId)
+        ...feStep,
+        body: removeStepById(feStep.body, stepId)
       };
     }
     return step;
@@ -306,19 +318,22 @@ const buildStepPathMap = (steps: Step[], prefix = 'root'): Record<string, string
     map[step.id] = path;
 
     if (step.type === 'control.if') {
-      Object.assign(map, buildStepPathMap(step.then, `${path}.then`));
-      if (step.else) {
-        Object.assign(map, buildStepPathMap(step.else, `${path}.else`));
+      const ifStep = step as IfBlock;
+      Object.assign(map, buildStepPathMap(ifStep.then, `${path}.then`));
+      if (ifStep.else) {
+        Object.assign(map, buildStepPathMap(ifStep.else, `${path}.else`));
       }
     }
 
     if (step.type === 'control.tryCatch') {
-      Object.assign(map, buildStepPathMap(step.try, `${path}.try`));
-      Object.assign(map, buildStepPathMap(step.catch, `${path}.catch`));
+      const tcStep = step as TryCatchBlock;
+      Object.assign(map, buildStepPathMap(tcStep.try, `${path}.try`));
+      Object.assign(map, buildStepPathMap(tcStep.catch, `${path}.catch`));
     }
 
     if (step.type === 'control.forEach') {
-      Object.assign(map, buildStepPathMap(step.body, `${path}.body`));
+      const feStep = step as ForEachBlock;
+      Object.assign(map, buildStepPathMap(feStep.body, `${path}.body`));
     }
   });
 
@@ -333,24 +348,30 @@ const buildPathBreadcrumbs = (steps: Step[], targetPath: string): string[] => {
   while ((match = regex.exec(targetPath)) !== null) {
     const index = Number(match[1]);
     const step = currentSteps[index];
-    const label = step?.name || step?.type || `Step ${index + 1}`;
+    const label = (step && 'name' in step ? (step as NodeStep).name : undefined) || step?.type || `Step ${index + 1}`;
     crumbs.push(label);
     const branch = match[2];
     if (branch && step) {
       crumbs.push(branch.toUpperCase());
       if (step.type === 'control.if') {
-        currentSteps = branch === 'then' ? step.then : step.else ?? [];
+        const ifStep = step as IfBlock;
+        currentSteps = branch === 'then' ? ifStep.then : ifStep.else ?? [];
       } else if (step.type === 'control.tryCatch') {
-        currentSteps = branch === 'try' ? step.try : step.catch;
+        const tcStep = step as TryCatchBlock;
+        currentSteps = branch === 'try' ? tcStep.try : tcStep.catch;
       } else if (step.type === 'control.forEach') {
-        currentSteps = step.body;
+        const feStep = step as ForEachBlock;
+        currentSteps = feStep.body;
       }
     } else if (step && step.type === 'control.if') {
-      currentSteps = step.then;
+      const ifStep = step as IfBlock;
+      currentSteps = ifStep.then;
     } else if (step && step.type === 'control.tryCatch') {
-      currentSteps = step.try;
+      const tcStep = step as TryCatchBlock;
+      currentSteps = tcStep.try;
     } else if (step && step.type === 'control.forEach') {
-      currentSteps = step.body;
+      const feStep = step as ForEachBlock;
+      currentSteps = feStep.body;
     }
   }
   return crumbs;
@@ -509,7 +530,7 @@ const WorkflowDesigner: React.FC = () => {
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
 
   const stepPathMap = useMemo(() => {
-    return activeDefinition ? buildStepPathMap(activeDefinition.steps) : {};
+    return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
   }, [activeDefinition]);
 
   const fieldOptions = useMemo(() => buildFieldOptions(payloadSchema), [payloadSchema]);
@@ -522,27 +543,30 @@ const WorkflowDesigner: React.FC = () => {
       steps.forEach((step, index) => {
         const stepPath = `${prefix}.steps[${index}]`;
         if (step.type === 'control.if') {
+          const ifStep = step as IfBlock;
           locations.push({ pipePath: `${stepPath}.then`, label: `${getStepLabel(step, nodeRegistryMap)} THEN` });
           locations.push({ pipePath: `${stepPath}.else`, label: `${getStepLabel(step, nodeRegistryMap)} ELSE` });
-          visit(step.then, `${stepPath}.then`);
-          if (step.else) {
-            visit(step.else, `${stepPath}.else`);
+          visit(ifStep.then, `${stepPath}.then`);
+          if (ifStep.else) {
+            visit(ifStep.else, `${stepPath}.else`);
           }
         }
         if (step.type === 'control.tryCatch') {
+          const tcStep = step as TryCatchBlock;
           locations.push({ pipePath: `${stepPath}.try`, label: `${getStepLabel(step, nodeRegistryMap)} TRY` });
           locations.push({ pipePath: `${stepPath}.catch`, label: `${getStepLabel(step, nodeRegistryMap)} CATCH` });
-          visit(step.try, `${stepPath}.try`);
-          visit(step.catch, `${stepPath}.catch`);
+          visit(tcStep.try, `${stepPath}.try`);
+          visit(tcStep.catch, `${stepPath}.catch`);
         }
         if (step.type === 'control.forEach') {
+          const feStep = step as ForEachBlock;
           locations.push({ pipePath: `${stepPath}.body`, label: `${getStepLabel(step, nodeRegistryMap)} BODY` });
-          visit(step.body, `${stepPath}.body`);
+          visit(feStep.body, `${stepPath}.body`);
         }
       });
     };
 
-    visit(activeDefinition.steps, 'root');
+    visit(activeDefinition.steps as Step[], 'root');
     return locations;
   }, [activeDefinition, nodeRegistryMap]);
 
@@ -605,8 +629,8 @@ const WorkflowDesigner: React.FC = () => {
         listWorkflowRegistryNodesAction(),
         listWorkflowRegistryActionsAction()
       ]);
-      setNodeRegistry(nodes ?? []);
-      setActionRegistry(actions ?? []);
+      setNodeRegistry((nodes ?? []) as unknown as NodeRegistryItem[]);
+      setActionRegistry((actions ?? []) as unknown as ActionRegistryItem[]);
     } catch (error) {
       toast.error('Failed to load workflow registries');
     }
@@ -757,16 +781,16 @@ const WorkflowDesigner: React.FC = () => {
     if (!activeDefinition) return;
     const newStep = createStepFromPalette(type, nodeRegistryMap);
     const segments = parsePipePath(selectedPipePath);
-    const steps = getStepsAtPath(activeDefinition.steps, segments);
+    const steps = getStepsAtPath(activeDefinition.steps as Step[], segments);
     const nextSteps = [...steps, newStep];
-    const updatedSteps = updateStepsAtPath(activeDefinition.steps, segments, nextSteps);
+    const updatedSteps = updateStepsAtPath(activeDefinition.steps as Step[], segments, nextSteps);
     setActiveDefinition({ ...activeDefinition, steps: updatedSteps });
     setSelectedStepId(newStep.id);
   };
 
   const handleDeleteStep = (stepId: string) => {
     if (!activeDefinition) return;
-    setActiveDefinition({ ...activeDefinition, steps: removeStepById(activeDefinition.steps, stepId) });
+    setActiveDefinition({ ...activeDefinition, steps: removeStepById(activeDefinition.steps as Step[], stepId) });
     if (selectedStepId === stepId) {
       setSelectedStepId(null);
     }
@@ -776,7 +800,7 @@ const WorkflowDesigner: React.FC = () => {
     if (!activeDefinition) return;
     setActiveDefinition({
       ...activeDefinition,
-      steps: updateStepById(activeDefinition.steps, stepId, updater)
+      steps: updateStepById(activeDefinition.steps as Step[], stepId, updater)
     });
   };
 
@@ -789,20 +813,20 @@ const WorkflowDesigner: React.FC = () => {
     const destSegments = parsePipePath(destPipe);
 
     if (sourcePipe === destPipe) {
-      const steps = getStepsAtPath(activeDefinition.steps, sourceSegments);
+      const steps = getStepsAtPath(activeDefinition.steps as Step[], sourceSegments);
       const nextSteps = [...steps];
       const [moved] = nextSteps.splice(result.source.index, 1);
       nextSteps.splice(result.destination.index, 0, moved);
       setActiveDefinition({
         ...activeDefinition,
-        steps: updateStepsAtPath(activeDefinition.steps, sourceSegments, nextSteps)
+        steps: updateStepsAtPath(activeDefinition.steps as Step[], sourceSegments, nextSteps)
       });
       return;
     }
 
-    const sourceSteps = [...getStepsAtPath(activeDefinition.steps, sourceSegments)];
+    const sourceSteps = [...getStepsAtPath(activeDefinition.steps as Step[], sourceSegments)];
     const [moved] = sourceSteps.splice(result.source.index, 1);
-    let updated = updateStepsAtPath(activeDefinition.steps, sourceSegments, sourceSteps);
+    let updated = updateStepsAtPath(activeDefinition.steps as Step[], sourceSegments, sourceSteps);
     const destSteps = [...getStepsAtPath(updated, destSegments)];
     destSteps.splice(result.destination.index, 0, moved);
     updated = updateStepsAtPath(updated, destSegments, destSteps);
@@ -850,21 +874,24 @@ const WorkflowDesigner: React.FC = () => {
       for (const step of steps) {
         if (step.id === selectedStepId) return step;
         if (step.type === 'control.if') {
-          const found = findStep(step.then) || (step.else ? findStep(step.else) : null);
+          const ifStep = step as IfBlock;
+          const found = findStep(ifStep.then) || (ifStep.else ? findStep(ifStep.else) : null);
           if (found) return found;
         }
         if (step.type === 'control.tryCatch') {
-          const found = findStep(step.try) || findStep(step.catch);
+          const tcStep = step as TryCatchBlock;
+          const found = findStep(tcStep.try) || findStep(tcStep.catch);
           if (found) return found;
         }
         if (step.type === 'control.forEach') {
-          const found = findStep(step.body);
+          const feStep = step as ForEachBlock;
+          const found = findStep(feStep.body);
           if (found) return found;
         }
       }
       return null;
     };
-    return findStep(activeDefinition.steps);
+    return findStep(activeDefinition.steps as Step[]);
   }, [activeDefinition, selectedStepId]);
 
   const designerContent = (
@@ -1095,7 +1122,7 @@ const WorkflowDesigner: React.FC = () => {
                         <div className="text-xs font-semibold text-red-700">{error.code}</div>
                         <div className="text-sm text-gray-800">{error.message}</div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {buildPathBreadcrumbs(activeDefinition.steps, error.stepPath).join(' > ') || error.stepPath}
+                          {buildPathBreadcrumbs(activeDefinition.steps as Step[], error.stepPath).join(' > ') || error.stepPath}
                         </div>
                       </Card>
                     ))}
@@ -1152,8 +1179,6 @@ const WorkflowDesigner: React.FC = () => {
       canAdmin={canAdmin}
     />
   );
-
-  const activeWorkflowRecord = definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null;
 
   const auditContent = (
     <WorkflowDefinitionAudit
@@ -1360,86 +1385,95 @@ const StepCard: React.FC<{
         </div>
       </div>
 
-      {step.type === 'control.if' && (
-        <div className="mt-3 space-y-2">
-          <BlockSection title="THEN" idPrefix={`${step.id}-then`}>
-            <Pipe
-              steps={step.then}
-              pipePath={`${stepPath}.then`}
-              stepPathPrefix={`${stepPath}.then`}
-              selectedStepId={selectedStepId}
-              onSelectStep={onSelectStep}
-              onDeleteStep={onDeleteStep}
-              onSelectPipe={onSelectPipe}
-              nodeRegistry={nodeRegistry}
-              errorMap={errorMap}
-            />
-          </BlockSection>
-          <BlockSection title="ELSE" idPrefix={`${step.id}-else`}>
-            <Pipe
-              steps={step.else ?? []}
-              pipePath={`${stepPath}.else`}
-              stepPathPrefix={`${stepPath}.else`}
-              selectedStepId={selectedStepId}
-              onSelectStep={onSelectStep}
-              onDeleteStep={onDeleteStep}
-              onSelectPipe={onSelectPipe}
-              nodeRegistry={nodeRegistry}
-              errorMap={errorMap}
-            />
-          </BlockSection>
-        </div>
-      )}
+      {step.type === 'control.if' && (() => {
+        const ifStep = step as IfBlock;
+        return (
+          <div className="mt-3 space-y-2">
+            <BlockSection title="THEN" idPrefix={`${step.id}-then`}>
+              <Pipe
+                steps={ifStep.then}
+                pipePath={`${stepPath}.then`}
+                stepPathPrefix={`${stepPath}.then`}
+                selectedStepId={selectedStepId}
+                onSelectStep={onSelectStep}
+                onDeleteStep={onDeleteStep}
+                onSelectPipe={onSelectPipe}
+                nodeRegistry={nodeRegistry}
+                errorMap={errorMap}
+              />
+            </BlockSection>
+            <BlockSection title="ELSE" idPrefix={`${step.id}-else`}>
+              <Pipe
+                steps={ifStep.else ?? []}
+                pipePath={`${stepPath}.else`}
+                stepPathPrefix={`${stepPath}.else`}
+                selectedStepId={selectedStepId}
+                onSelectStep={onSelectStep}
+                onDeleteStep={onDeleteStep}
+                onSelectPipe={onSelectPipe}
+                nodeRegistry={nodeRegistry}
+                errorMap={errorMap}
+              />
+            </BlockSection>
+          </div>
+        );
+      })()}
 
-      {step.type === 'control.tryCatch' && (
-        <div className="mt-3 space-y-2">
-          <BlockSection title="TRY" idPrefix={`${step.id}-try`}>
-            <Pipe
-              steps={step.try}
-              pipePath={`${stepPath}.try`}
-              stepPathPrefix={`${stepPath}.try`}
-              selectedStepId={selectedStepId}
-              onSelectStep={onSelectStep}
-              onDeleteStep={onDeleteStep}
-              onSelectPipe={onSelectPipe}
-              nodeRegistry={nodeRegistry}
-              errorMap={errorMap}
-            />
-          </BlockSection>
-          <BlockSection title="CATCH" idPrefix={`${step.id}-catch`}>
-            <Pipe
-              steps={step.catch}
-              pipePath={`${stepPath}.catch`}
-              stepPathPrefix={`${stepPath}.catch`}
-              selectedStepId={selectedStepId}
-              onSelectStep={onSelectStep}
-              onDeleteStep={onDeleteStep}
-              onSelectPipe={onSelectPipe}
-              nodeRegistry={nodeRegistry}
-              errorMap={errorMap}
-            />
-          </BlockSection>
-        </div>
-      )}
+      {step.type === 'control.tryCatch' && (() => {
+        const tcStep = step as TryCatchBlock;
+        return (
+          <div className="mt-3 space-y-2">
+            <BlockSection title="TRY" idPrefix={`${step.id}-try`}>
+              <Pipe
+                steps={tcStep.try}
+                pipePath={`${stepPath}.try`}
+                stepPathPrefix={`${stepPath}.try`}
+                selectedStepId={selectedStepId}
+                onSelectStep={onSelectStep}
+                onDeleteStep={onDeleteStep}
+                onSelectPipe={onSelectPipe}
+                nodeRegistry={nodeRegistry}
+                errorMap={errorMap}
+              />
+            </BlockSection>
+            <BlockSection title="CATCH" idPrefix={`${step.id}-catch`}>
+              <Pipe
+                steps={tcStep.catch}
+                pipePath={`${stepPath}.catch`}
+                stepPathPrefix={`${stepPath}.catch`}
+                selectedStepId={selectedStepId}
+                onSelectStep={onSelectStep}
+                onDeleteStep={onDeleteStep}
+                onSelectPipe={onSelectPipe}
+                nodeRegistry={nodeRegistry}
+                errorMap={errorMap}
+              />
+            </BlockSection>
+          </div>
+        );
+      })()}
 
-      {step.type === 'control.forEach' && (
-        <div className="mt-3">
-          <div className="text-xs text-gray-500 mb-2">Item: {step.itemVar} | Concurrency: {step.concurrency ?? 1}</div>
-          <BlockSection title="BODY" idPrefix={`${step.id}-body`}>
-            <Pipe
-              steps={step.body}
-              pipePath={`${stepPath}.body`}
-              stepPathPrefix={`${stepPath}.body`}
-              selectedStepId={selectedStepId}
-              onSelectStep={onSelectStep}
-              onDeleteStep={onDeleteStep}
-              onSelectPipe={onSelectPipe}
-              nodeRegistry={nodeRegistry}
-              errorMap={errorMap}
-            />
-          </BlockSection>
-        </div>
-      )}
+      {step.type === 'control.forEach' && (() => {
+        const feStep = step as ForEachBlock;
+        return (
+          <div className="mt-3">
+            <div className="text-xs text-gray-500 mb-2">Item: {feStep.itemVar} | Concurrency: {feStep.concurrency ?? 1}</div>
+            <BlockSection title="BODY" idPrefix={`${step.id}-body`}>
+              <Pipe
+                steps={feStep.body}
+                pipePath={`${stepPath}.body`}
+                stepPathPrefix={`${stepPath}.body`}
+                selectedStepId={selectedStepId}
+                onSelectStep={onSelectStep}
+                onDeleteStep={onDeleteStep}
+                onSelectPipe={onSelectPipe}
+                nodeRegistry={nodeRegistry}
+                errorMap={errorMap}
+              />
+            </BlockSection>
+          </div>
+        );
+      })()}
     </Card>
   );
 };
@@ -1514,94 +1548,106 @@ const StepConfigPanel: React.FC<{
         />
       )}
 
-      {step.type === 'control.if' && (
-        <ExpressionField
-          idPrefix={`if-condition-${step.id}`}
-          label="Condition"
-          value={ensureExpr(step.condition)}
-          onChange={(expr) => onChange({ ...step, condition: expr })}
-          fieldOptions={fieldOptions}
-        />
-      )}
-
-      {step.type === 'control.forEach' && (
-        <div className="space-y-3">
+      {step.type === 'control.if' && (() => {
+        const ifStep = step as IfBlock;
+        return (
           <ExpressionField
-            idPrefix={`foreach-items-${step.id}`}
-            label="Items expression"
-            value={ensureExpr(step.items)}
-            onChange={(expr) => onChange({ ...step, items: expr })}
+            idPrefix={`if-condition-${step.id}`}
+            label="Condition"
+            value={ensureExpr(ifStep.condition)}
+            onChange={(expr) => onChange({ ...ifStep, condition: expr })}
             fieldOptions={fieldOptions}
           />
-          <Input
-            id={`foreach-itemvar-${step.id}`}
-            label="Item variable"
-            value={step.itemVar}
-            onChange={(event) => onChange({ ...step, itemVar: event.target.value })}
-          />
-          <Input
-            id={`foreach-concurrency-${step.id}`}
-            label="Concurrency"
-            type="number"
-            value={step.concurrency ?? 1}
-            onChange={(event) => onChange({ ...step, concurrency: Number(event.target.value) })}
-          />
-          <CustomSelect
-            id={`foreach-onitemerror-${step.id}`}
-            options={[
-              { value: 'continue', label: 'Continue' },
-              { value: 'fail', label: 'Fail' }
-            ]}
-            value={step.onItemError ?? 'continue'}
-            onValueChange={(value) => onChange({ ...step, onItemError: value as 'continue' | 'fail' })}
-            label="On item error"
-          />
-        </div>
-      )}
+        );
+      })()}
 
-      {step.type === 'control.tryCatch' && (
-        <Input
-          id={`trycatch-capture-${step.id}`}
-          label="Capture error as"
-          value={step.captureErrorAs ?? ''}
-          onChange={(event) => {
-            const value = event.target.value.trim();
-            onChange({ ...step, captureErrorAs: value ? value : undefined });
-          }}
-        />
-      )}
+      {step.type === 'control.forEach' && (() => {
+        const feStep = step as ForEachBlock;
+        return (
+          <div className="space-y-3">
+            <ExpressionField
+              idPrefix={`foreach-items-${step.id}`}
+              label="Items expression"
+              value={ensureExpr(feStep.items)}
+              onChange={(expr) => onChange({ ...feStep, items: expr })}
+              fieldOptions={fieldOptions}
+            />
+            <Input
+              id={`foreach-itemvar-${step.id}`}
+              label="Item variable"
+              value={feStep.itemVar}
+              onChange={(event) => onChange({ ...feStep, itemVar: event.target.value })}
+            />
+            <Input
+              id={`foreach-concurrency-${step.id}`}
+              label="Concurrency"
+              type="number"
+              value={feStep.concurrency ?? 1}
+              onChange={(event) => onChange({ ...feStep, concurrency: Number(event.target.value) })}
+            />
+            <CustomSelect
+              id={`foreach-onitemerror-${step.id}`}
+              options={[
+                { value: 'continue', label: 'Continue' },
+                { value: 'fail', label: 'Fail' }
+              ]}
+              value={feStep.onItemError ?? 'continue'}
+              onValueChange={(value) => onChange({ ...feStep, onItemError: value as 'continue' | 'fail' })}
+              label="On item error"
+            />
+          </div>
+        );
+      })()}
 
-      {step.type === 'control.callWorkflow' && (
-        <div className="space-y-3">
+      {step.type === 'control.tryCatch' && (() => {
+        const tcStep = step as TryCatchBlock;
+        return (
           <Input
-            id={`call-workflow-id-${step.id}`}
-            label="Workflow ID"
-            value={step.workflowId}
-            onChange={(event) => onChange({ ...step, workflowId: event.target.value })}
+            id={`trycatch-capture-${step.id}`}
+            label="Capture error as"
+            value={tcStep.captureErrorAs ?? ''}
+            onChange={(event) => {
+              const value = event.target.value.trim();
+              onChange({ ...tcStep, captureErrorAs: value ? value : undefined });
+            }}
           />
-          <Input
-            id={`call-workflow-version-${step.id}`}
-            label="Workflow version"
-            type="number"
-            value={step.workflowVersion}
-            onChange={(event) => onChange({ ...step, workflowVersion: Number(event.target.value) })}
-          />
-          <MappingExprEditor
-            idPrefix={`call-workflow-input-${step.id}`}
-            label="Input mapping"
-            value={step.inputMapping ?? {}}
-            onChange={(mapping) => onChange({ ...step, inputMapping: mapping })}
-            fieldOptions={fieldOptions}
-          />
-          <MappingExprEditor
-            idPrefix={`call-workflow-output-${step.id}`}
-            label="Output mapping"
-            value={step.outputMapping ?? {}}
-            onChange={(mapping) => onChange({ ...step, outputMapping: mapping })}
-            fieldOptions={fieldOptions}
-          />
-        </div>
-      )}
+        );
+      })()}
+
+      {step.type === 'control.callWorkflow' && (() => {
+        const cwStep = step as CallWorkflowBlock;
+        return (
+          <div className="space-y-3">
+            <Input
+              id={`call-workflow-id-${step.id}`}
+              label="Workflow ID"
+              value={cwStep.workflowId}
+              onChange={(event) => onChange({ ...cwStep, workflowId: event.target.value })}
+            />
+            <Input
+              id={`call-workflow-version-${step.id}`}
+              label="Workflow version"
+              type="number"
+              value={cwStep.workflowVersion}
+              onChange={(event) => onChange({ ...cwStep, workflowVersion: Number(event.target.value) })}
+            />
+            <MappingExprEditor
+              idPrefix={`call-workflow-input-${step.id}`}
+              label="Input mapping"
+              value={cwStep.inputMapping ?? {}}
+              onChange={(mapping) => onChange({ ...cwStep, inputMapping: mapping })}
+              fieldOptions={fieldOptions}
+            />
+            <MappingExprEditor
+              idPrefix={`call-workflow-output-${step.id}`}
+              label="Output mapping"
+              value={cwStep.outputMapping ?? {}}
+              onChange={(mapping) => onChange({ ...cwStep, outputMapping: mapping })}
+              fieldOptions={fieldOptions}
+            />
+          </div>
+        );
+      })()}
 
       {step.type === 'control.return' && (
         <div className="text-sm text-gray-500">Return stops workflow execution.</div>

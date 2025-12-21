@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { CustomSelect, SelectOption } from '@/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
@@ -30,7 +30,7 @@ import {
   retryWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 
-import type { WorkflowDefinition, Step } from '@shared/workflow/runtime';
+import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@shared/workflow/runtime';
 import { pathDepth } from '@shared/workflow/runtime/utils/nodePathUtils';
 
 type WorkflowRunRecord = {
@@ -229,15 +229,18 @@ const buildStepTypeMap = (definition?: WorkflowDefinition | null) => {
     steps.forEach((step) => {
       map.set(step.id, step.type);
       if (step.type === 'control.if') {
-        walk(step.then);
-        if (step.else) {
-          walk(step.else);
+        const ifStep = step as IfBlock;
+        walk(ifStep.then);
+        if (ifStep.else) {
+          walk(ifStep.else);
         }
       } else if (step.type === 'control.forEach') {
-        walk(step.body);
+        const feStep = step as ForEachBlock;
+        walk(feStep.body);
       } else if (step.type === 'control.tryCatch') {
-        walk(step.try);
-        walk(step.catch);
+        const tcStep = step as TryCatchBlock;
+        walk(tcStep.try);
+        walk(tcStep.catch);
       }
     });
   };
@@ -1320,7 +1323,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               label="Payload (JSON)"
               value={replayPayload}
               onChange={(event) => setReplayPayload(event.target.value)}
-              placeholder="{\"example\": true}"
+              placeholder={'{"example": true}'}
               className="font-mono text-xs"
               rows={6}
             />

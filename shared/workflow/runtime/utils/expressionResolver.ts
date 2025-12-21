@@ -12,7 +12,7 @@ export async function resolveExpressions(value: unknown, ctx: ExpressionContext)
     }
   }
   if (Array.isArray(value)) {
-    const resolved = [];
+    const resolved: unknown[] = [];
     for (const item of value) {
       resolved.push(await resolveExpressions(item, ctx));
     }
