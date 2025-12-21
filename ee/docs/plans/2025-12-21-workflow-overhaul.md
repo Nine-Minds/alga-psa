@@ -564,6 +564,123 @@ if jitter:
 
 ---
 
+## 14. Operational Support, Observability, and Governance
+
+The MVP runtime and designer must be production‑ready for operators and tenant admins. This section defines the operational surfaces needed to observe, debug, and safely control workflows in production.
+
+### 14.1 Run List (Operational Index)
+
+**Purpose:** Provide a tenant‑scoped list of workflow runs with filterable status, time windows, and workflow versions.
+
+**Required UI capabilities**
+- Filter by status, workflow ID, workflow version, and date range.
+- Search by run ID, correlation key, or payload fields (limited to indexed fields).
+- Bulk actions (cancel, resume) when permitted.
+- Saved views (optional) for common filters (e.g., “Failed in last 24h”).
+
+**Required API surface**
+- `GET /workflow-runs` with filters: `status[]`, `workflowId`, `version`, `from`, `to`, `cursor`, `limit`, `sort`.
+- `GET /workflow-runs/summary` with aggregate counts by status/time bucket.
+
+### 14.2 Run Details (Timeline + Debug)
+
+**Purpose:** Provide step‑level provenance, attempts, error context, and redacted payload history.
+
+**Required UI capabilities**
+- Timeline view of steps with attempt count, duration, and status.
+- Step detail panel showing:
+  - Redacted envelope snapshot for the step.
+  - Action invocation inputs/outputs (sanitized).
+  - Retry schedule and failure category.
+- Event wait/resume details (correlation key, event name, timeout).
+
+**Required API surface**
+- `GET /workflow-runs/{runId}/timeline` (steps, attempts, durations, statuses).
+- `GET /workflow-runs/{runId}/snapshots` (redacted snapshots with pagination).
+- `GET /workflow-runs/{runId}/invocations` (action call logs with redaction).
+- `GET /workflow-runs/{runId}/waits` (wait history: event/human/retry/timeout).
+
+### 14.3 Tenant‑Visible Logs and History
+
+**Purpose:** Allow tenant admins to review historical workflow behavior without exposing secrets.
+
+**Design principles**
+- All logs must be redacted per `env.meta.redactions` and `secretRef` rules.
+- Payload field visibility is role‑based; sensitive fields masked by default.
+- Log entries are immutable and append‑only.
+
+**Required API surface**
+- `GET /workflow-runs/{runId}/logs` (structured log entries).
+- `GET /workflow-runs/{runId}/events` (runtime events correlated to waits/resumes).
+
+### 14.4 Audit Trail and Governance
+
+**Purpose:** Provide compliance‑grade history for publish, resume, cancel, and manual interventions.
+
+**Audit requirements**
+- Record actor, action, timestamp, target run/definition, and diff summary.
+- Capture publish metadata: who published, from which draft hash.
+- Capture manual resume/cancel and reason fields.
+
+### 14.5 RBAC and Permissions
+
+**Purpose:** Ensure operational tools are available only to permitted roles.
+
+**Required policy controls**
+- Separate permissions for view, manage, publish, and admin actions.
+- Field‑level redaction based on role.
+- Support “view only” for read‑only roles.
+
+### 14.6 Retention, Export, and Compliance
+
+**Purpose:** Support data retention and legal/compliance obligations.
+
+**Requirements**
+- Retention policy per tenant for runs, snapshots, and invocation logs.
+- Export run history to CSV/JSON with redactions applied.
+- Purge jobs with audit logging.
+
+### 14.7 Metrics, Health, and Alerting
+
+**Purpose:** Provide operational telemetry for reliability and on‑call support.
+
+**Metrics**
+- Run success/failure rate by workflow and version.
+- Step latency distribution and retry rates.
+- Backlog size (WAITING + RUNNING) and lease utilization.
+
+**Alerting**
+- Threshold alerts for failure rate, backlog growth, and repeated retries.
+- Optional webhooks for workflow failure notifications.
+
+### 14.8 Operational Controls (Safe Recovery)
+
+**Purpose:** Enable safe human intervention in exceptional cases.
+
+**Controls**
+- Admin resume for WAITING runs (audited).
+- Cancel run with cleanup of waits/leases.
+- Retry or replay from a selected step (controlled re‑execution).
+- Dead‑letter queue for repeatedly failing runs.
+
+### 14.9 Event Observability and Correlation
+
+**Purpose:** Trace external events through waits/resumes to runs.
+
+**Requirements**
+- Event stream view with correlation keys and matched run IDs.
+- Show unmatched events and TTL for retention.
+- Link from event to run timeline and vice‑versa.
+
+### 14.10 Performance and Reliability Targets
+
+**Targets**
+- UI queries must be paginated and bounded.
+- Snapshot storage capped per run and per tenant.
+- Deterministic execution with idempotency enforcement.
+
+---
+
 ## Appendix A: Validation Error Format (Publish-Time)
 
 ```typescript
