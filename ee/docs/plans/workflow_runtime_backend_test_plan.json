@@ -2,1101 +2,1101 @@
   {
     "description": "Expression engine evaluates a literal and returns a JSON-serializable value. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine reads payload fields via path selectors. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine reads vars/meta/error context values. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine exposes only allowlisted helpers (nowIso and safe helpers). Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine rejects user-defined functions. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine blocks access to Node.js/global objects. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine enforces evaluation timeout at 25ms. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine enforces max output size of 256KB. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine rejects non-JSON-serializable outputs (e.g., Date/function). Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine compile fails on invalid syntax. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression engine compile succeeds on valid syntax. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression resolver evaluates Expr inside nested objects recursively. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression resolver evaluates Expr inside arrays recursively. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expression resolver leaves non-Expr values unchanged. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Transform assign applies multiple path updates atomically. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Transform assign rolls back all updates on any path failure. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Transform assign rejects writes to disallowed payload paths. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Transform assign supports writing to vars paths. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Redaction masks JSON pointer fields in payload snapshots. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Redaction always masks secretRef fields regardless of pointer list. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Redaction handles arrays of objects without leaking secrets. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Redaction handles deeply nested objects without errors. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry backoff computes delay using base and multiplier. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry backoff applies jitter within expected bounds. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry backoff caps delay at maxDelayMs. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Snapshot truncation enforces max size and adds truncation marker. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Node path builder produces stable paths for nested steps. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Workflow definition validation detects duplicate Step.id values. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Schema registry resolves known refs and errors on unknown refs. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Zod-to-JSON schema conversion produces required fields list. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish validation error formatting includes stepPath and message. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Idempotency key normalization is stable for identical inputs. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "State.set handler writes meta.state consistently. Mocks: non-target dependencies.",
     "reference": "unit (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish a valid workflow definition returns ok with publishedVersion. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish fails when workflow JSON is structurally invalid. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish rejects unknown node types with explicit error code. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish rejects unknown action id/version references. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish rejects invalid node config against node config schema. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish rejects invalid expressions with syntax errors. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish rejects duplicate step ids across nested pipes. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish rejects invalid step type values. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish validates callWorkflow inputMapping expressions. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish validates callWorkflow outputMapping expressions. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish fails when payloadSchemaRef is missing from registry. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish stores payload_schema_json for valid payload schema refs. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish records who published and published_at audit fields. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish creates immutable version; later edits do not mutate published JSON. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish returns warnings without blocking when severity=warning. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish returns stepPath for nested validation errors. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish validates action.call args expressions compile. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish fails when required workflow fields (id/name/steps) are missing. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish rejects non-serializable workflow JSON (functions/undefined). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish accepts workflow trigger metadata and stores it on the version. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Node registry server action returns node definitions with JSON config schemas (API delegates to server action). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Node registry server action includes UI metadata (label/category/description/icon). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Node registry server action includes email node types needed for email workflow. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Action registry server action returns action definitions with I/O JSON schemas (API delegates to server action). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Action registry server action includes email workflow actions. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Action registry server action returns sideEffectful and retryHint metadata. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Schema server action returns JSON schema by schemaRef (API delegates to server action). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Schema server action returns 404 for unknown schemaRef. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Registry server actions return examples/snippets when available. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Registry server actions are deterministic across process lifetime (no runtime mutation). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Start run creates workflow_run with status RUNNING and initial nodePath. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Start run with explicit version uses that published version. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Start run without version uses latest published version. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Start run validates payload against payload schema and rejects invalid payloads. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Run execution inserts workflow_run_steps STARTED before step handler executes. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Successful step updates workflow_run_steps to SUCCEEDED with duration and attempt count. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Run completes with SUCCEEDED after last step executes. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Unhandled error fails run with status FAILED. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Interpreter resumes from persisted nodePath after simulated crash. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Interpreter determinism: same inputs yield same outputs when time helpers are mocked. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.return terminates the run immediately and skips remaining steps. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "state.set updates env.meta.state and persists to run snapshot. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "transform.assign writes to payload paths as defined by assign map. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "action.call validates input schema before handler invocation. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "action.call validates output schema before storing in payload. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "action.call saveAs stores output at specified payload path. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "onError=continue records error and continues to next step. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "onError=fail stops execution or enters enclosing tryCatch. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Cancel run server action sets status CANCELED and releases waits (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Resume run server action restarts WAITING runs with audit record (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Get run server action returns status, nodePath, and timestamps (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "List run steps server action returns ordered step history with attempts (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "List run steps server action includes links to snapshots where available. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Lease prevents concurrent execution by two workers for the same run. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Scheduler reclaims stale leases and re-queues runs. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.if executes THEN pipe when condition is true. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.if executes ELSE pipe when condition is false. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.if treats condition expression failure as ExpressionError. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach iterates over array items and executes body for each item. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach sets vars[itemVar] for each iteration. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach restores prior vars[itemVar] after completion. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach honors concurrency=1 in MVP execution order. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach with empty list skips body without error. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach supports per-item onError=continue behavior. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach per-item onError=fail stops loop and fails or catches. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach handles non-array items expression as ValidationError. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.tryCatch executes TRY pipe and skips CATCH on success. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.tryCatch executes CATCH pipe when TRY throws ActionError. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.tryCatch executes CATCH pipe when TRY throws ExpressionError. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.tryCatch propagates error when CATCH pipe also fails. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.tryCatch captureErrorAs stores error into vars. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Nested control.tryCatch handles inner errors without leaking to outer catch. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.return inside control.if stops the run immediately. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.return inside control.forEach stops the entire run, not just the loop. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.return inside control.tryCatch stops the run even if in catch. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.if can reference vars written earlier in the same run. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach supports itemVar shadowing of existing vars and restores after. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.tryCatch captures TransientError and routes to catch pipe. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.tryCatch catch pipe can set meta.state for error states. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "CallWorkflowBlock executes child workflow and maps input payload via inputMapping. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "CallWorkflowBlock maps child output back to parent via outputMapping. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "CallWorkflowBlock propagates child failure to parent unless caught. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "CallWorkflowBlock respects parent retry policy on call failure. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.if with missing condition expression fails publish-time validation. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "control.forEach with missing itemVar fails publish-time validation. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait creates workflow_run_wait with wait_type='event' and WAITING status. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait computes wait_key using correlationKey expression. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait records timeout_at when timeoutMs is provided. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait assigns payload/vars using assign mapping on resume. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Submit workflow event server action inserts runtime event and resumes one matching wait atomically (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Submit workflow event server action with no matching wait still records event for audit. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Submit workflow event server action resumes only one run when multiple waits share the same key. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Submit workflow event server action returns resumed run id when a match occurs. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "WAITING run resumes from correct nodePath after event resume. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait timeout produces TimeoutError when deadline passes. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "TimeoutError is caught by enclosing tryCatch when present. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait inside tryCatch routes timeout to catch pipe. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait correlationKey expression error yields ExpressionError and fails or catches. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "human.task creates wait with form schema and context payload. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "human.task resume validates output against schema before continuing. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "human.task resume writes output into payload as configured. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Admin resume server action resumes WAITING runs without event payload. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "canceling a WAITING run deletes waits and prevents resume. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "multiple waits for a run are all cleared on cancel. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "waits are scoped by tenant when tenant_id is provided. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait assign can write into vars and payload paths together. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "event.wait assign rejects invalid paths at publish time. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Workflow runtime event list server action returns recent events (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "wait resume updates run status from WAITING back to RUNNING. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "timeout handler marks step attempt as FAILED with TimeoutError. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retryable TransientError schedules a retry wait instead of blocking worker. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
-    "description": "Retry wait uses wait_type='retry' and stores next_attempt_at. Mocks: non-target dependencies.",
+    "description": "Retry wait uses wait_type='retry' and stores timeout_at (next attempt timestamp). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry uses step retry policy when provided. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry uses default retry policy when step.retry is omitted. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry stops after maxAttempts and fails the run. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry backoff multiplies delay with each attempt. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry backoff applies jitter to avoid thundering herd. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry resumes at the same nodePath for the failed step. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Non-retryable ActionError does not schedule retry. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry wait is cleared after a successful retry. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Idempotency key uniqueness prevents duplicate side-effectful action calls. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Duplicate idempotency key returns previously stored output without calling handler. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Idempotency cache respects action_id and action_version. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Idempotency behavior is scoped by tenant when tenant_id exists. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "STARTED invocation with stale lease is treated as TransientError. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Stale lease TransientError triggers retry scheduling. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Lease expiration allows another worker to acquire and continue execution. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Lease owner and lease_expires_at fields update on each worker tick. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
-    "description": "Scheduler picks up retry waits whose next_attempt_at is due. Mocks: non-target dependencies.",
+    "description": "Scheduler picks up retry waits whose timeout_at is due. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Scheduler skips retry waits for canceled runs. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry attempts increment workflow_run_steps.attempts count. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Idempotency uses engineProvided key when configured. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Idempotency uses actionProvided key when configured. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Concurrent retries for same step do not execute in parallel. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Retry wait removal is atomic with resume to avoid double execution. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Email workflow start accepts event payload and initializes EmailWorkflowPayload fields. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Email workflow stores emailData, providerId, tenantId, and processedAt. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "email.parseBody node parses body and stores parsedEmail with confidence. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "email.parseBody sanitizes HTML and strips unsafe content. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "When reply token present, find_ticket_by_reply_token is invoked. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "When reply token missing or not matched, fallback to find_ticket_by_email_thread. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Existing ticket path creates comment with author_type=contact. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Existing ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Existing ticket path returns early without creating new ticket. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "New ticket path attempts exact contact match by sender email. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Matched contact stored as matchedClient in payload. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Resolve inbound ticket defaults by tenantId+providerId. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "If ticket defaults missing, state set to ERROR_NO_TICKET_DEFAULTS and workflow returns. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ticket defaults override logic matches legacy behavior. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "create_ticket_from_email is called with computed defaults. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "create_ticket_from_email stores ticket_id into payload.targetTicketId. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "New ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "email.renderCommentBlocks uses HTML->blocks conversion fallback when needed. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "New ticket path creates initial comment with author_type=internal. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "send_ticket_acknowledgement_email runs only when matchedClient exists. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "send_ticket_acknowledgement_email errors do not fail the workflow (onError=continue). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Workflow sets EMAIL_PROCESSED state on success. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Outer catch sets ERROR_PROCESSING_EMAIL and AWAITING_MANUAL_RESOLUTION. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Outer catch creates human task with failure context and payload snapshot. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Attachment processing uses idempotency keys derived from message id and attachment id. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Comment creation uses idempotency key derived from message id and ticket id. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ticket creation uses idempotency key derived from provider id and message id. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Workflow preserves parsedEmail metadata for downstream actions. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Existing ticket path does not overwrite ticketDefaults. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "New ticket path persists ticketDefaults and targetTicketId together. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Event trigger starts a run for workflows with matching trigger name. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Event trigger starts runs for all published workflows sharing the trigger. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Event trigger uses latest published version when no version specified. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Event trigger validates event payload against workflow payload schema. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Event trigger skips workflows that are draft-only or unpublished. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Event trigger records workflow_runtime_event with correlation metadata. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Envelope snapshots stored with redacted secretRef fields. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Action invocation logs store redacted input/output JSON. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Snapshot size truncation preserves JSON validity. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
-    "description": "Snapshot retention limit keeps most recent snapshots only. Mocks: non-target dependencies.",
+    "description": "Snapshot retention prunes snapshots older than the configured retention window (defaults to 30 days). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Run steps response includes snapshot references without exposing raw secrets. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: publish a workflow, start a run, and observe SUCCEEDED status with step history. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: event trigger starts workflow run and completes without manual wait. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: event.wait pauses run and submit workflow event (server action; API optional) resumes it to completion. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: timeout on event.wait routes to catch pipe and completes with handled error. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: retryable action failure schedules retry and eventually succeeds. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: idempotent action call returns cached output on duplicate request. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: canceling a running workflow stops execution and prevents further steps. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: resume a WAITING run via admin server action and complete remaining steps. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: email workflow processes new ticket path end-to-end (ticket + comment + attachments). Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: email workflow processes reply path end-to-end (comment + attachments). Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: email workflow failure creates human task and sets error states. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   }
 ]

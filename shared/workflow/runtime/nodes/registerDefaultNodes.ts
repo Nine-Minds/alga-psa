@@ -5,6 +5,7 @@ import { resolveExpressions } from '../utils/expressionResolver';
 import { applyAssignments } from '../utils/assignmentUtils';
 import type { Envelope } from '../types';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
+import { getFormValidationService } from '../../core/formValidationService';
 
 const stateSetSchema = z.object({
   state: z.string().min(1)
@@ -181,8 +182,10 @@ export function registerDefaultNodes(): void {
     id: 'email.parseBody',
     configSchema: emailParseBodySchema,
     handler: async (env, config, ctx) => {
-      const text = config.text ? await resolveExpressions(config.text, ctxToExpr(env)) : undefined;
-      const html = config.html ? await resolveExpressions(config.html, ctxToExpr(env)) : undefined;
+      const textValue = config.text ? await resolveExpressions(config.text, ctxToExpr(env)) : undefined;
+      const htmlValue = config.html ? await resolveExpressions(config.html, ctxToExpr(env)) : undefined;
+      const text = textValue === null || textValue === undefined ? undefined : String(textValue);
+      const html = htmlValue === null || htmlValue === undefined ? undefined : String(htmlValue);
       const parsed = await parseEmailBodyWithFallback(ctx.actions.call, { text, html });
       return applyAssignments(env, {
         [config.saveAs ?? 'payload.parsedEmail']: parsed
@@ -199,8 +202,10 @@ export function registerDefaultNodes(): void {
     id: 'email.renderCommentBlocks',
     configSchema: emailRenderCommentBlocksSchema,
     handler: async (env, config, ctx) => {
-      const text = config.text ? await resolveExpressions(config.text, ctxToExpr(env)) : undefined;
-      const html = config.html ? await resolveExpressions(config.html, ctxToExpr(env)) : undefined;
+      const textValue = config.text ? await resolveExpressions(config.text, ctxToExpr(env)) : undefined;
+      const htmlValue = config.html ? await resolveExpressions(config.html, ctxToExpr(env)) : undefined;
+      const text = textValue === null || textValue === undefined ? undefined : String(textValue);
+      const html = htmlValue === null || htmlValue === undefined ? undefined : String(htmlValue);
       const blocks = await renderCommentBlocksWithFallback(ctx.actions.call, { html, text });
       return applyAssignments(env, {
         [config.saveAs ?? 'payload.commentBlocks']: blocks
@@ -240,13 +245,45 @@ export function registerDefaultNodes(): void {
           context_data: contextData
         } as any);
 
+        const formSchema = await resolveTaskFormSchema(knex, ctx.tenantId ?? null, config.taskType);
         await ctx.publishWait({
           type: 'human',
           key: taskId,
           eventName: 'HUMAN_TASK_COMPLETED',
-          payload: { taskId }
+          payload: {
+            taskId,
+            contextData,
+            formSchema
+          }
         });
         return { type: 'wait' } as const;
+      }
+
+      if (ctx.resumeEvent) {
+        const responsePayload = ctx.resumeEvent.payload ?? {};
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+        const knex = ctx.knex ?? await getAdminConnection();
+        const formSchema = await resolveTaskFormSchema(knex, ctx.tenantId ?? null, config.taskType);
+        if (!formSchema?.schema) {
+          throw {
+            category: 'ValidationError',
+            message: `Missing form schema for task type ${config.taskType}`,
+            nodePath: ctx.stepPath,
+            at: new Date().toISOString()
+          };
+        }
+        const validation = getFormValidationService().validate(formSchema.schema as Record<string, any>, responsePayload as Record<string, any>);
+        if (!validation.valid) {
+          throw {
+            category: 'ValidationError',
+            message: `Human task response validation failed: ${JSON.stringify(validation.errors ?? [])}`,
+            nodePath: ctx.stepPath,
+            at: new Date().toISOString()
+          };
+        }
+
+        env.vars.event = responsePayload;
+        env.vars.eventName = ctx.resumeEvent.name;
       }
 
       if (config.assign && ctx.resumeEvent) {
@@ -273,4 +310,51 @@ function ctxToExpr(env: Envelope) {
     meta: env.meta,
     error: env.error
   };
+}
+
+async function resolveTaskFormSchema(
+  knex: any,
+  tenantId: string | null,
+  taskType: string
+): Promise<{ formId: string; formType: string; schema: Record<string, unknown> | null } | null> {
+  if (!taskType) return null;
+  const systemTask = await knex('system_workflow_task_definitions')
+    .where({ task_type: taskType })
+    .first();
+  if (systemTask) {
+    const formId = systemTask.form_id as string;
+    const formType = systemTask.form_type ?? 'system';
+    if (formType === 'system') {
+      const form = await knex('system_workflow_form_definitions')
+        .where({ name: formId })
+        .first();
+      return {
+        formId,
+        formType,
+        schema: form?.json_schema ?? null
+      };
+    }
+  }
+
+  if (tenantId) {
+    const tenantTask = await knex('workflow_task_definitions')
+      .where({ tenant: tenantId, name: taskType })
+      .first();
+    if (tenantTask) {
+      const formId = tenantTask.form_id as string;
+      const formType = tenantTask.form_type ?? 'tenant';
+      if (formType === 'tenant') {
+        const formSchema = await knex('workflow_form_schemas')
+          .where({ tenant: tenantId, form_id: formId })
+          .first();
+        return {
+          formId,
+          formType,
+          schema: formSchema?.json_schema ?? null
+        };
+      }
+    }
+  }
+
+  return null;
 }

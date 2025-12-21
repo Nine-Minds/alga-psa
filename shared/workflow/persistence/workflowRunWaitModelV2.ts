@@ -9,7 +9,7 @@ export type WorkflowRunWaitRecord = {
   event_name?: string | null;
   timeout_at?: string | null;
   status: string;
-  payload?: Record<string, unknown> | null;
+  payload?: unknown | null;
   created_at: string;
   resolved_at?: string | null;
 };
@@ -35,16 +35,38 @@ const WorkflowRunWaitModelV2 = {
     return record;
   },
 
-  findEventWait: async (knex: Knex, eventName: string, key: string): Promise<WorkflowRunWaitRecord | null> => {
-    const record = await knex<WorkflowRunWaitRecord>('workflow_run_waits')
-      .where({
-        wait_type: 'event',
-        event_name: eventName,
-        key,
-        status: 'WAITING'
+  resolveIfWaiting: async (knex: Knex, waitId: string, data: Partial<WorkflowRunWaitRecord>): Promise<WorkflowRunWaitRecord | null> => {
+    const [record] = await knex<WorkflowRunWaitRecord>('workflow_run_waits')
+      .where({ wait_id: waitId, status: 'WAITING' })
+      .update({
+        ...data
       })
-      .orderBy('created_at', 'asc')
-      .first();
+      .returning('*');
+    return record || null;
+  },
+
+  findEventWait: async (
+    knex: Knex,
+    eventName: string,
+    key: string,
+    tenantId?: string | null,
+    waitTypes: string[] = ['event']
+  ): Promise<WorkflowRunWaitRecord | null> => {
+    let query = knex<WorkflowRunWaitRecord>('workflow_run_waits')
+      .whereIn('workflow_run_waits.wait_type', waitTypes)
+      .where('workflow_run_waits.event_name', eventName)
+      .where('workflow_run_waits.key', key)
+      .where('workflow_run_waits.status', 'WAITING')
+      .orderBy('workflow_run_waits.created_at', 'asc');
+
+    if (tenantId) {
+      query = query
+        .join('workflow_runs', 'workflow_run_waits.run_id', 'workflow_runs.run_id')
+        .where('workflow_runs.tenant_id', tenantId)
+        .select('workflow_run_waits.*');
+    }
+
+    const record = await query.first();
     return record || null;
   },
 
@@ -63,7 +85,7 @@ const WorkflowRunWaitModelV2 = {
         wait_type: 'event',
         status: 'WAITING'
       })
-      .andWhereNotNull('timeout_at')
+      .whereNotNull('timeout_at')
       .andWhere('timeout_at', '<=', knex.fn.now());
   }
 };

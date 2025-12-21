@@ -11,10 +11,11 @@ export const retryPolicySchema = z.object({
   backoffMs: z.number().int().nonnegative(),
   backoffMultiplier: z.number().positive().optional().default(2),
   jitter: z.boolean().optional().default(true),
+  maxDelayMs: z.number().int().positive().optional(),
   retryOn: z.array(z.string()).optional()
 }).strict();
 
-export type RetryPolicy = z.infer<typeof retryPolicySchema>;
+export type RetryPolicy = z.input<typeof retryPolicySchema>;
 
 export const onErrorPolicySchema = z.object({
   policy: z.enum(['fail', 'continue'])
@@ -22,7 +23,69 @@ export const onErrorPolicySchema = z.object({
 
 export type OnErrorPolicy = z.infer<typeof onErrorPolicySchema>;
 
-export const nodeStepSchema = z.object({
+export type ControlStepType =
+  | 'control.if'
+  | 'control.forEach'
+  | 'control.tryCatch'
+  | 'control.callWorkflow'
+  | 'control.return';
+
+export type NodeStepType = Exclude<string, ControlStepType>;
+
+export type NodeStep = {
+  id: string;
+  type: NodeStepType;
+  name?: string;
+  config?: unknown;
+  retry?: RetryPolicy;
+  onError?: OnErrorPolicy;
+};
+
+export type IfBlock = {
+  id: string;
+  type: 'control.if';
+  condition: Expr;
+  then: Step[];
+  else?: Step[];
+};
+
+export type ForEachBlock = {
+  id: string;
+  type: 'control.forEach';
+  items: Expr;
+  itemVar: string;
+  concurrency?: number;
+  body: Step[];
+  onItemError?: 'continue' | 'fail';
+};
+
+export type TryCatchBlock = {
+  id: string;
+  type: 'control.tryCatch';
+  try: Step[];
+  catch: Step[];
+  captureErrorAs?: string;
+};
+
+export type CallWorkflowBlock = {
+  id: string;
+  type: 'control.callWorkflow';
+  workflowId: string;
+  workflowVersion: number;
+  inputMapping?: Record<string, Expr>;
+  outputMapping?: Record<string, Expr>;
+  retry?: RetryPolicy;
+  onError?: OnErrorPolicy;
+};
+
+export type ReturnStep = {
+  id: string;
+  type: 'control.return';
+};
+
+export type Step = NodeStep | IfBlock | ForEachBlock | TryCatchBlock | CallWorkflowBlock | ReturnStep;
+
+export const nodeStepSchema: z.ZodType<NodeStep> = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
   name: z.string().optional(),
@@ -31,7 +94,7 @@ export const nodeStepSchema = z.object({
   onError: onErrorPolicySchema.optional()
 }).strict();
 
-export const ifBlockSchema = z.object({
+export const ifBlockSchema: z.ZodType<IfBlock> = z.object({
   id: z.string().min(1),
   type: z.literal('control.if'),
   condition: exprSchema,
@@ -39,7 +102,7 @@ export const ifBlockSchema = z.object({
   else: z.array(z.lazy(() => stepSchema)).optional()
 }).strict();
 
-export const forEachBlockSchema = z.object({
+export const forEachBlockSchema: z.ZodType<ForEachBlock> = z.object({
   id: z.string().min(1),
   type: z.literal('control.forEach'),
   items: exprSchema,
@@ -49,7 +112,7 @@ export const forEachBlockSchema = z.object({
   onItemError: z.enum(['continue', 'fail']).optional()
 }).strict();
 
-export const tryCatchBlockSchema = z.object({
+export const tryCatchBlockSchema: z.ZodType<TryCatchBlock> = z.object({
   id: z.string().min(1),
   type: z.literal('control.tryCatch'),
   try: z.array(z.lazy(() => stepSchema)),
@@ -57,21 +120,23 @@ export const tryCatchBlockSchema = z.object({
   captureErrorAs: z.string().min(1).optional()
 }).strict();
 
-export const callWorkflowBlockSchema = z.object({
+export const callWorkflowBlockSchema: z.ZodType<CallWorkflowBlock> = z.object({
   id: z.string().min(1),
   type: z.literal('control.callWorkflow'),
   workflowId: z.string().min(1),
   workflowVersion: z.number().int().positive(),
   inputMapping: z.record(exprSchema).optional(),
-  outputMapping: z.record(exprSchema).optional()
+  outputMapping: z.record(exprSchema).optional(),
+  retry: retryPolicySchema.optional(),
+  onError: onErrorPolicySchema.optional()
 }).strict();
 
-export const returnStepSchema = z.object({
+export const returnStepSchema: z.ZodType<ReturnStep> = z.object({
   id: z.string().min(1),
   type: z.literal('control.return')
 }).strict();
 
-export const stepSchema = z.lazy(() => z.union([
+export const stepSchema: z.ZodType<Step> = z.lazy(() => z.union([
   nodeStepSchema,
   ifBlockSchema,
   forEachBlockSchema,
@@ -79,14 +144,6 @@ export const stepSchema = z.lazy(() => z.union([
   callWorkflowBlockSchema,
   returnStepSchema
 ]));
-
-export type NodeStep = z.infer<typeof nodeStepSchema>;
-export type IfBlock = z.infer<typeof ifBlockSchema>;
-export type ForEachBlock = z.infer<typeof forEachBlockSchema>;
-export type TryCatchBlock = z.infer<typeof tryCatchBlockSchema>;
-export type CallWorkflowBlock = z.infer<typeof callWorkflowBlockSchema>;
-export type ReturnStep = z.infer<typeof returnStepSchema>;
-export type Step = z.infer<typeof stepSchema>;
 
 export const workflowDefinitionSchema = z.object({
   id: z.string().min(1),

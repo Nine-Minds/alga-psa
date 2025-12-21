@@ -157,7 +157,12 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Ticket from Email', category: 'Email' },
     handler: async (input, ctx) => {
-      return createTicketFromEmail(input, ctx.tenantId ?? '');
+      return createTicketFromEmail({
+        ...input,
+        client_id: input.client_id ?? undefined,
+        contact_id: input.contact_id ?? undefined,
+        location_id: input.location_id ?? undefined
+      }, ctx.tenantId ?? '');
     }
   });
 

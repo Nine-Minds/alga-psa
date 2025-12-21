@@ -2,37 +2,37 @@
   {
     "description": "Define workflow system goals, non-goals, and success criteria for MVP.",
     "reference": "\u00a71",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "State the unit of execution as Envelope<TIn> \u2192 Envelope<TOut> transforms.",
     "reference": "\u00a71",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Commit to data-defined workflows executed by an interpreter (no runtime code generation).",
     "reference": "\u00a71",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Use inbound email processing as the MVP reference workflow for capability parity.",
     "reference": "\u00a71",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include a node-in-pipe GUI designer in scope.",
     "reference": "\u00a71",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide and use consistent terminology: workflow definition, step, node type, action, publish, run, resume.",
     "reference": "\u00a72",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Explicitly constrain MVP to structured pipelines (no arbitrary DAG).",
     "reference": "\u00a72",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement Envelope with run metadata, payload, meta, vars, and optional error (v=1).",
@@ -172,7 +172,7 @@
   {
     "description": "Expose JSON Schemas to GUI for payload, node configs, action I/O, and human task forms.",
     "reference": "\u00a74",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ensure TypeScript types are derived via z.infer from the same Zod schemas.",
@@ -182,7 +182,7 @@
   {
     "description": "Document the startup\u2192publish\u2192runtime validation pipeline.",
     "reference": "\u00a74",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Use a safe, deterministic expression engine with JSON-serializable outputs only.",
@@ -232,7 +232,7 @@
   {
     "description": "Document expression best practices (coalesce, null handling, array ops).",
     "reference": "\u00a75",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement components: API, Worker, Event routing, Scheduler, Registries.",
@@ -387,7 +387,7 @@
   {
     "description": "Implement POST /workflow/events to insert workflow_events and resume one matching run atomically.",
     "reference": "\u00a76.5",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "On event resume, apply config.assign mappings to payload/vars as specified by node config.",
@@ -407,7 +407,7 @@
   {
     "description": "Persist sanitized envelope snapshot per checkpoint and cap size/retention.",
     "reference": "\u00a76.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include tenant_id (if available) in log context for every step.",
@@ -437,7 +437,7 @@
   {
     "description": "Expose run history: steps, attempts, errors, and snapshots for GUI run viewer.",
     "reference": "\u00a710.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support canceling runs and marking status CANCELED.",
@@ -447,7 +447,7 @@
   {
     "description": "Support admin resume endpoint for WAITING runs with audit logging.",
     "reference": "\u00a711.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ensure all persisted snapshots are JSON-serializable (no functions, Dates).",
@@ -577,7 +577,7 @@
   {
     "description": "Registries have unit tests covering lookups and schema conversions.",
     "reference": "\u00a77",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement NodeType state.set with config {state:string}.",
@@ -672,7 +672,7 @@
   {
     "description": "Document recommended idempotency keys for email workflow actions.",
     "reference": "\u00a78",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide Zod config schemas for node types per Appendix B.1.",
@@ -690,9 +690,9 @@
     "implemented": true
   },
   {
-    "description": "Implement workflow steps to wait for INBOUND_EMAIL_RECEIVED with 10s timeout.",
+    "description": "Workflow is triggered by INBOUND_EMAIL_RECEIVED event (no start wait step required).",
     "reference": "\u00a79",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Extract and store emailData/providerId/tenantId/processedAt from event payload.",
@@ -755,9 +755,9 @@
     "implemented": true
   },
   {
-    "description": "Create initial comment (author_type=internal) using HTML->blocks conversion fallback.",
+    "description": "Create initial comment (author_type=internal) using sanitized HTML/text fallback.",
     "reference": "\u00a79",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Set EMAIL_PROCESSED state on success.",
@@ -932,12 +932,12 @@
   {
     "description": "Register legacy action implementations with schemas in the new ActionRegistry.",
     "reference": "\u00a712",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Recreate email workflow as data and validate behavioral parity in a canary tenant.",
     "reference": "\u00a712",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Run both systems in parallel to compare outcomes and side effects.",
@@ -952,32 +952,32 @@
   {
     "description": "Create unit tests for expression engine sandboxing and helper allowlist.",
     "reference": "\u00a713",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create integration tests for waits/resume/timeouts and retry scheduling.",
     "reference": "\u00a713",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create integration tests for tryCatch/forEach semantics and idempotency caching.",
     "reference": "\u00a713",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create E2E tests for the email workflow (new ticket + reply path + attachments).",
     "reference": "\u00a713",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Define stable publish error codes (e.g., UNKNOWN_NODE_TYPE, UNKNOWN_ACTION, INVALID_CONFIG, INVALID_EXPR).",
     "reference": "Appendix A",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish validator must include stepPath and message for every error and warning.",
     "reference": "Appendix A",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement node type table (ID \u2192 config fields \u2192 behavior) as the contract for implementers.",
@@ -997,6 +997,6 @@
   {
     "description": "Implement recommended email idempotency key patterns for create_ticket, create_comment, and attachment processing.",
     "reference": "Appendix C.1",
-    "implemented": false
+    "implemented": true
   }
 ]

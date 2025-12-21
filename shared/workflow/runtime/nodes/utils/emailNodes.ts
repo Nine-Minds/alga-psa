@@ -35,23 +35,22 @@ export async function parseEmailBodyWithFallback(
     const parsed = parseResult.parsed;
     const sanitizedText = parsed.sanitizedText || params.text || '';
     const sanitizedHtml = parsed.sanitizedHtml || undefined;
-    const metadata: Record<string, unknown> = {
-      parser: {
-        confidence: parsed.confidence,
-        strategy: parsed.strategy,
-        heuristics: parsed.appliedHeuristics,
-        warnings: parsed.warnings,
-        tokens: parsed.tokens || null
-      }
+    const parserMeta: Record<string, unknown> = {
+      confidence: parsed.confidence,
+      strategy: parsed.strategy,
+      heuristics: parsed.appliedHeuristics,
+      warnings: parsed.warnings,
+      tokens: parsed.tokens || null
     };
 
     if (parsed.confidence === 'low') {
-      metadata.parser = {
-        ...metadata.parser,
-        rawText: truncate(params.text),
-        rawHtml: truncate(params.html)
-      };
+      parserMeta.rawText = truncate(params.text);
+      parserMeta.rawHtml = truncate(params.html);
     }
+
+    const metadata: Record<string, unknown> = {
+      parser: parserMeta
+    };
 
     return {
       sanitizedText,
