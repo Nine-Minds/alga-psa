@@ -7,6 +7,7 @@ import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core/index';
 import { registerExampleWorkflows } from '@alga-psa/shared/workflow/index';
 import { logger } from '@alga-psa/shared/core';
 import { registerWorkflowActions } from '@alga-psa/shared/workflow/index';
+import { initializeWorkflowRuntimeV2 } from '@alga-psa/shared/workflow/runtime';
 
 // Track initialization state
 let initialized = false;
@@ -32,6 +33,8 @@ export async function initializeServerWorkflows(): Promise<void> {
     
     // Register example workflows
     registerExampleWorkflows();
+
+    initializeWorkflowRuntimeV2();
     
     // Mark as initialized
     initialized = true;

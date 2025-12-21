@@ -17,6 +17,8 @@
     "./workflow": "./dist/workflow/index.js",
     "./workflow/core": "./dist/workflow/core/index.js",
     "./workflow/core/index.js": "./dist/workflow/core/index.js",
+    "./workflow/runtime": "./dist/workflow/runtime/index.js",
+    "./workflow/runtime/index.js": "./dist/workflow/runtime/index.js",
     "./workflow/persistence": "./dist/workflow/persistence/index.js",
     "./workflow/persistence/workflowEventProcessingModel.js": "./dist/workflow/persistence/workflowEventProcessingModel.js",
     "./workflow/streams": "./dist/workflow/streams/index.js",
@@ -47,6 +49,7 @@
     "dotenv": "^16.4.5",
     "google-auth-library": "^10.5.0",
     "googleapis": "^152.0.0",
+    "jsonata": "^2.0.6",
     "knex": "^3.1.0",
     "node-vault": "^0.10.2",
     "pg": "^8.16.0",
@@ -58,7 +61,8 @@
     "vitest": "^3.2.4",
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

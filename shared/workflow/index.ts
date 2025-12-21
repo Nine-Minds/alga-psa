@@ -18,3 +18,6 @@ export * from './utils/index';
 
 // Re-export types
 export * from './types/index';
+
+// Re-export workflow runtime v2
+export * from './runtime/index';

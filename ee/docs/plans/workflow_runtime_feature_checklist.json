@@ -1,0 +1,1002 @@
+[
+  {
+    "description": "Define workflow system goals, non-goals, and success criteria for MVP.",
+    "reference": "\u00a71",
+    "implemented": false
+  },
+  {
+    "description": "State the unit of execution as Envelope<TIn> \u2192 Envelope<TOut> transforms.",
+    "reference": "\u00a71",
+    "implemented": false
+  },
+  {
+    "description": "Commit to data-defined workflows executed by an interpreter (no runtime code generation).",
+    "reference": "\u00a71",
+    "implemented": false
+  },
+  {
+    "description": "Use inbound email processing as the MVP reference workflow for capability parity.",
+    "reference": "\u00a71",
+    "implemented": false
+  },
+  {
+    "description": "Include a node-in-pipe GUI designer in scope.",
+    "reference": "\u00a71",
+    "implemented": false
+  },
+  {
+    "description": "Provide and use consistent terminology: workflow definition, step, node type, action, publish, run, resume.",
+    "reference": "\u00a72",
+    "implemented": false
+  },
+  {
+    "description": "Explicitly constrain MVP to structured pipelines (no arbitrary DAG).",
+    "reference": "\u00a72",
+    "implemented": false
+  },
+  {
+    "description": "Implement Envelope with run metadata, payload, meta, vars, and optional error (v=1).",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Persist env.meta.state to mirror legacy setState behavior.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Represent workflow definitions as structured pipeline AST per \u00a73.2.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Support step types: NodeStep, IfBlock, ForEachBlock, TryCatchBlock, CallWorkflowBlock, ReturnStep.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Require unique Step.id across the entire workflow definition tree.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Enforce structured constraints: top-to-bottom execution within a pipe.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Disallow cycles except implicit iteration inside control.forEach.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Define and parse RetryPolicy shape on steps.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Define and parse OnErrorPolicy shape on steps.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Define Expr shape as {$expr: string} and validate it at publish time.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Define nodePath format for step addressing (string paths into nested tree).",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Store workflow trigger metadata optionally on the definition.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Support CallWorkflowBlock inputMapping and outputMapping expressions.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Ensure all workflow JSON is serializable and stable for storage.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Version workflow definitions as immutable published versions.",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Use Zod as canonical schema system for payloads, node configs, action I/O, and forms.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Provide SchemaRegistry to register Zod schemas by stable refs.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "At publish time, load payloadSchemaRef and convert Zod\u2192JSON Schema via zod-to-json-schema.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Store payload_schema_json alongside the published plan for GUI reflection and runtime tooling.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Validate workflow JSON structure against a WorkflowDefinition Zod schema during publish.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Validate every NodeStep.type exists in NodeTypeRegistry during publish.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Validate every action.call references an ActionRegistry entry (id + version) during publish.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Validate NodeStep.config using NodeType.configSchema during publish.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Compile/validate all expressions during publish.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "At runtime, validate Action input with ActionDef.inputSchema before handler invocation.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "At runtime, validate Action output with ActionDef.outputSchema before writing into payload.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Apply redaction rules before persisting envelope snapshots and invocation logs.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Expose JSON Schemas to GUI for payload, node configs, action I/O, and human task forms.",
+    "reference": "\u00a74",
+    "implemented": false
+  },
+  {
+    "description": "Ensure TypeScript types are derived via z.infer from the same Zod schemas.",
+    "reference": "\u00a74",
+    "implemented": true
+  },
+  {
+    "description": "Document the startup\u2192publish\u2192runtime validation pipeline.",
+    "reference": "\u00a74",
+    "implemented": false
+  },
+  {
+    "description": "Use a safe, deterministic expression engine with JSON-serializable outputs only.",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Adopt JSONata as the MVP expression engine.",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Restrict expression functions to an allowlist (helpers only).",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Provide evaluation context: payload, vars, meta, error, helpers.",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Enforce evaluation timeout (25ms) and max output size (256KB).",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Disallow user-defined functions and any Node.js/global access.",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Compile expressions at publish time and reject invalid syntax.",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Surface expression syntax errors in GUI during editing.",
+    "reference": "\u00a75",
+    "implemented": false
+  },
+  {
+    "description": "Support expressions inside node configs, including nested objects (recursive resolution).",
+    "reference": "\u00a75",
+    "implemented": true
+  },
+  {
+    "description": "Document expression best practices (coalesce, null handling, array ops).",
+    "reference": "\u00a75",
+    "implemented": false
+  },
+  {
+    "description": "Implement components: API, Worker, Event routing, Scheduler, Registries.",
+    "reference": "\u00a76.1",
+    "implemented": true
+  },
+  {
+    "description": "Interpreter executes steps deterministically (same inputs \u21d2 same results, ignoring time-based helpers).",
+    "reference": "\u00a76.2",
+    "implemented": true
+  },
+  {
+    "description": "Persist nodePath pointer after each completed step for crash-safe resume.",
+    "reference": "\u00a76.2.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement run statuses: RUNNING, WAITING, SUCCEEDED, FAILED, CANCELED.",
+    "reference": "\u00a76.2.3",
+    "implemented": true
+  },
+  {
+    "description": "Insert workflow_run_steps STARTED record before step execution.",
+    "reference": "\u00a76.2.3",
+    "implemented": true
+  },
+  {
+    "description": "Update workflow_run_steps to SUCCEEDED with duration_ms and attempt count on success.",
+    "reference": "\u00a76.2.3",
+    "implemented": true
+  },
+  {
+    "description": "On retryable failure, schedule a retry wait instead of sleeping inside worker.",
+    "reference": "\u00a76.4.2",
+    "implemented": true
+  },
+  {
+    "description": "On non-retryable failure, bubble to nearest enclosing tryCatch; fail run if none.",
+    "reference": "\u00a76.2.3",
+    "implemented": true
+  },
+  {
+    "description": "Implement control.if: evaluate condition (Expr) and execute then/else pipe.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Treat control.if evaluation failures as ExpressionError.",
+    "reference": "\u00a76.4.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement control.forEach iteration over items Expr; set vars[itemVar] per iteration.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Restore previous vars[itemVar] after forEach finishes.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Support forEach concurrency default=1; ignore or cap >1 in MVP if needed.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement per-item error behavior (continue vs fail) for forEach.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement control.tryCatch to catch errors from nested steps and execute catch pipe.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Support captureErrorAs to copy env.error into env.vars[captureErrorAs].",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement control.return to terminate a run immediately.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement a run lease mechanism to prevent double execution across workers.",
+    "reference": "\u00a76.3",
+    "implemented": true
+  },
+  {
+    "description": "Store lease_owner and lease_expires_at on workflow_runs.",
+    "reference": "\u00a76.3",
+    "implemented": true
+  },
+  {
+    "description": "Scheduler reclaims stale leases and re-queues runs safely.",
+    "reference": "\u00a76.1",
+    "implemented": true
+  },
+  {
+    "description": "Define error category codes: ValidationError, ExpressionError, TransientError, ActionError, TimeoutError.",
+    "reference": "\u00a76.4.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement RetryPolicy backoff with multiplier and jitter.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement retry scheduling via workflow_run_waits (wait_type='retry').",
+    "reference": "\u00a76.4.2",
+    "implemented": true
+  },
+  {
+    "description": "Enforce idempotency requirement for side-effect actions.",
+    "reference": "\u00a76.4.3",
+    "implemented": true
+  },
+  {
+    "description": "Create unique constraint for (action_id, action_version, idempotency_key).",
+    "reference": "\u00a76.4.3",
+    "implemented": true
+  },
+  {
+    "description": "On duplicate idempotency key, return stored output without calling handler.",
+    "reference": "\u00a76.4.3",
+    "implemented": true
+  },
+  {
+    "description": "Treat STARTED invocation with stale lease as retryable TransientError.",
+    "reference": "\u00a76.4.3",
+    "implemented": true
+  },
+  {
+    "description": "Implement event.wait node that registers wait_type='event' and parks run.",
+    "reference": "\u00a76.5",
+    "implemented": true
+  },
+  {
+    "description": "event.wait uses correlationKey Expr to compute wait key.",
+    "reference": "\u00a76.5",
+    "implemented": true
+  },
+  {
+    "description": "event.wait supports timeoutMs mapped to wait.timeout_at.",
+    "reference": "\u00a76.5",
+    "implemented": true
+  },
+  {
+    "description": "Implement POST /workflow/events to insert workflow_events and resume one matching run atomically.",
+    "reference": "\u00a76.5",
+    "implemented": false
+  },
+  {
+    "description": "On event resume, apply config.assign mappings to payload/vars as specified by node config.",
+    "reference": "Appendix B",
+    "implemented": true
+  },
+  {
+    "description": "Implement human.task wait pattern for manual interventions (record + wait + validate output).",
+    "reference": "\u00a76.5",
+    "implemented": true
+  },
+  {
+    "description": "Mark timeout resumes as TimeoutError and route through tryCatch if present.",
+    "reference": "\u00a76.4.1",
+    "implemented": true
+  },
+  {
+    "description": "Persist sanitized envelope snapshot per checkpoint and cap size/retention.",
+    "reference": "\u00a76.6",
+    "implemented": false
+  },
+  {
+    "description": "Include tenant_id (if available) in log context for every step.",
+    "reference": "\u00a76.6",
+    "implemented": false
+  },
+  {
+    "description": "Persist action invocation logs (sanitized input/output) for run viewer debugging.",
+    "reference": "\u00a76.3",
+    "implemented": true
+  },
+  {
+    "description": "Support onError=continue to record an error and continue to next step.",
+    "reference": "Appendix B",
+    "implemented": true
+  },
+  {
+    "description": "Support onError=fail to stop execution (or enter enclosing catch).",
+    "reference": "Appendix B",
+    "implemented": true
+  },
+  {
+    "description": "Implement redaction rules as JSON pointers; always mask secretRef fields.",
+    "reference": "\u00a76.6",
+    "implemented": true
+  },
+  {
+    "description": "Expose run history: steps, attempts, errors, and snapshots for GUI run viewer.",
+    "reference": "\u00a710.3",
+    "implemented": false
+  },
+  {
+    "description": "Support canceling runs and marking status CANCELED.",
+    "reference": "\u00a711.2",
+    "implemented": true
+  },
+  {
+    "description": "Support admin resume endpoint for WAITING runs with audit logging.",
+    "reference": "\u00a711.2",
+    "implemented": false
+  },
+  {
+    "description": "Ensure all persisted snapshots are JSON-serializable (no functions, Dates).",
+    "reference": "\u00a73.1",
+    "implemented": true
+  },
+  {
+    "description": "Ensure helper nowIso() is the only time-based helper enabled by default.",
+    "reference": "\u00a75.3",
+    "implemented": true
+  },
+  {
+    "description": "Implement max snapshot size enforcement with truncation markers.",
+    "reference": "\u00a76.6",
+    "implemented": true
+  },
+  {
+    "description": "Implement payload redaction before writing workflow_action_invocations.input_json/output_json.",
+    "reference": "\u00a74.2",
+    "implemented": true
+  },
+  {
+    "description": "Validate action.call args after expression resolution against action input schema.",
+    "reference": "Appendix B",
+    "implemented": true
+  },
+  {
+    "description": "Support action.call saveAs to store validated action outputs at a payload path.",
+    "reference": "Appendix B",
+    "implemented": true
+  },
+  {
+    "description": "Ensure transform.assign updates are atomic for a step (all-or-nothing).",
+    "reference": "Appendix B",
+    "implemented": true
+  },
+  {
+    "description": "Ensure transform.assign rejects writes to unknown or disallowed payload paths at publish time (best-effort).",
+    "reference": "\u00a74.2",
+    "implemented": true
+  },
+  {
+    "description": "Persist publish-time payload_schema_json for GUI field picking.",
+    "reference": "\u00a74.2",
+    "implemented": true
+  },
+  {
+    "description": "Persist who published a workflow version and when (audit fields).",
+    "reference": "\u00a73",
+    "implemented": true
+  },
+  {
+    "description": "Provide default retry policies per node/action if step.retry omitted.",
+    "reference": "\u00a73.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement SchemaRegistry register/get/toJsonSchema methods.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "SchemaRegistry keys are stable refs (e.g., payload.EmailWorkflowPayload.v1).",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "Implement ActionRegistry keyed by (id, version).",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "ActionRegistry returns action metadata for GUI discovery (label/category/description/icon).",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "ActionRegistry stores sideEffectful flag and retryHint.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "ActionRegistry stores idempotency strategy (engineProvided/actionProvided).",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "Implement NodeTypeRegistry keyed by nodeType id.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "NodeTypeRegistry stores configSchema (Zod) and handler function.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "NodeTypeRegistry stores UI metadata for palette and config panel forms.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "Registries are initialized at service startup and immutable during process lifetime in MVP.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "Registry discovery endpoint returns JSON Schemas (converted) for UI form generation.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "Registry discovery endpoint returns examples/snippets where available.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "NodeTypeRegistry includes structural nodes and domain nodes for email workflow.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "SchemaRegistry is used during publish to validate payloadSchemaRef existence.",
+    "reference": "\u00a77",
+    "implemented": true
+  },
+  {
+    "description": "Registries have unit tests covering lookups and schema conversions.",
+    "reference": "\u00a77",
+    "implemented": false
+  },
+  {
+    "description": "Implement NodeType state.set with config {state:string}.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Implement NodeType event.wait with config (eventName, correlationKey Expr, timeoutMs, assign).",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Implement NodeType transform.assign with config assign map[path]=Expr.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Implement NodeType action.call with config (actionId, version, args, saveAs, onError, idempotencyKey).",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Implement NodeType email.parseBody with legacy-parity fallback behavior.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Implement NodeType email.renderCommentBlocks with HTML->blocks conversion fallback.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Implement control.if, control.forEach, control.tryCatch, control.return as interpreter-managed blocks.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action parse_email_reply with Zod input/output schemas.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action find_ticket_by_reply_token with Zod input/output schemas.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action find_ticket_by_email_thread with Zod input/output schemas.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action convert_html_to_blocks with Zod input/output schemas.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action create_comment_from_email with Zod I/O + idempotency.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action process_email_attachment with Zod I/O + idempotency.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action find_contact_by_email with Zod input/output schemas.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action resolve_inbound_ticket_defaults with Zod input/output schemas.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action create_ticket_from_email with Zod I/O + idempotency.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action create_human_task_for_email_processing_failure with Zod input/output schemas.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Register Action send_ticket_acknowledgement_email (stub) and set onError=continue at call sites.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Document recommended idempotency keys for email workflow actions.",
+    "reference": "\u00a78",
+    "implemented": false
+  },
+  {
+    "description": "Provide Zod config schemas for node types per Appendix B.1.",
+    "reference": "\u00a78",
+    "implemented": true
+  },
+  {
+    "description": "Define EmailWorkflowPayload Zod schema and register as payload.EmailWorkflowPayload.v1.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Include fields: emailData, providerId, tenantId, processedAt, parsedEmail, existingTicket, matchedClient, ticketDefaults, targetTicketId.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Implement workflow steps to wait for INBOUND_EMAIL_RECEIVED with 10s timeout.",
+    "reference": "\u00a79",
+    "implemented": false
+  },
+  {
+    "description": "Extract and store emailData/providerId/tenantId/processedAt from event payload.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Parse and sanitize email body via email.parseBody node; store confidence and metadata.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Resolve existing ticket via reply token when present.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Fallback to threading header lookup when reply token not matched.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "If existing ticket: create comment (author_type=contact) with parsed content.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "If existing ticket: process attachments with per-item error continue behavior.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Return early after handling reply path.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "If new email: attempt exact contact match by sender email and store matchedClient if found.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Resolve inbound ticket defaults by tenantId+providerId; if missing, set ERROR_NO_TICKET_DEFAULTS and return.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Compute final client/contact/location rules with the same override behavior as legacy code.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Create ticket and store ticket_id into payload.targetTicketId.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Process new-ticket attachments with per-item error continue behavior.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Create initial comment (author_type=internal) using HTML->blocks conversion fallback.",
+    "reference": "\u00a79",
+    "implemented": false
+  },
+  {
+    "description": "Set EMAIL_PROCESSED state on success.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Optionally invoke ack action when matchedClient exists; do not fail workflow if it errors.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Outer catch sets ERROR_PROCESSING_EMAIL and AWAITING_MANUAL_RESOLUTION.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Outer catch creates human task for manual intervention with sufficient context.",
+    "reference": "\u00a79",
+    "implemented": true
+  },
+  {
+    "description": "Render workflows as a vertical node-in-pipe canvas with step cards (top-to-bottom).",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Render control.if blocks with THEN and ELSE nested pipes.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Render control.tryCatch blocks with TRY and CATCH nested pipes.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Render control.forEach blocks with BODY nested pipe and itemVar/concurrency display.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Provide node palette with search powered by NodeType registry discovery.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Support drag/drop reorder within a pipe and move between nested pipes.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Open a right-side config panel when a step is selected.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Generate config forms from node config JSON Schema and validate required fields.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Provide expression editor for Expr fields with field picker insertion.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Field picker browses payload schema and vars/error/meta trees.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Validate expressions locally (syntax) and display errors inline.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Publish button triggers server-side validation and blocks publish on severity=error.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Highlight publish validation errors by stepPath and show breadcrumb to nested location.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Provide run list view with status filters and timestamps.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Provide run details view with step timeline, attempts, and errors.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Show sanitized envelope snapshots and action invocation logs per step.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Provide admin resume/cancel UI actions where permitted.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Ensure all displayed sensitive fields are redacted/masked per rules.",
+    "reference": "\u00a710",
+    "implemented": false
+  },
+  {
+    "description": "Implement workflow definition CRUD endpoints (list/get/create/update).",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement publish endpoint returning {ok,publishedVersion,errors} per Appendix A.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement start run endpoint that creates workflow_runs record and initial nodePath.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement get run endpoint returning status + nodePath + timestamps.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement list run steps endpoint returning workflow_run_steps entries and links to snapshots.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement cancel run endpoint to mark CANCELED and release any waits/leases.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement resume run endpoint for admins to resume WAITING runs (audited).",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement node registry endpoint returning node defs + config schemas + UI metadata.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement action registry endpoint returning action defs + I/O schemas + UI metadata.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement schema endpoint returning JSON Schema for payload/form schemas.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement event submit endpoint to route events to waits atomically.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Implement admin event list endpoint for debugging.",
+    "reference": "\u00a711",
+    "implemented": true
+  },
+  {
+    "description": "Register legacy action implementations with schemas in the new ActionRegistry.",
+    "reference": "\u00a712",
+    "implemented": false
+  },
+  {
+    "description": "Recreate email workflow as data and validate behavioral parity in a canary tenant.",
+    "reference": "\u00a712",
+    "implemented": false
+  },
+  {
+    "description": "Run both systems in parallel to compare outcomes and side effects.",
+    "reference": "\u00a712",
+    "implemented": false
+  },
+  {
+    "description": "Switch routing to the new runtime only after parity and idempotency checks.",
+    "reference": "\u00a712",
+    "implemented": false
+  },
+  {
+    "description": "Create unit tests for expression engine sandboxing and helper allowlist.",
+    "reference": "\u00a713",
+    "implemented": false
+  },
+  {
+    "description": "Create integration tests for waits/resume/timeouts and retry scheduling.",
+    "reference": "\u00a713",
+    "implemented": false
+  },
+  {
+    "description": "Create integration tests for tryCatch/forEach semantics and idempotency caching.",
+    "reference": "\u00a713",
+    "implemented": false
+  },
+  {
+    "description": "Create E2E tests for the email workflow (new ticket + reply path + attachments).",
+    "reference": "\u00a713",
+    "implemented": false
+  },
+  {
+    "description": "Define stable publish error codes (e.g., UNKNOWN_NODE_TYPE, UNKNOWN_ACTION, INVALID_CONFIG, INVALID_EXPR).",
+    "reference": "Appendix A",
+    "implemented": false
+  },
+  {
+    "description": "Publish validator must include stepPath and message for every error and warning.",
+    "reference": "Appendix A",
+    "implemented": false
+  },
+  {
+    "description": "Implement node type table (ID \u2192 config fields \u2192 behavior) as the contract for implementers.",
+    "reference": "Appendix B",
+    "implemented": true
+  },
+  {
+    "description": "Implement Zod pseudo-config schemas in Appendix B.1 as real Zod schemas in code.",
+    "reference": "Appendix B.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement ActionDef template fields and enforce required fields at registry registration time.",
+    "reference": "Appendix C",
+    "implemented": true
+  },
+  {
+    "description": "Implement recommended email idempotency key patterns for create_ticket, create_comment, and attachment processing.",
+    "reference": "Appendix C.1",
+    "implemented": false
+  }
+]

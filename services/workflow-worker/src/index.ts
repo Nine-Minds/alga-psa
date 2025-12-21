@@ -11,6 +11,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { getWorkflowRuntime, getActionRegistry } from '@shared/workflow/core/index.js';
+import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { WorkflowRuntimeV2Worker } from './v2/WorkflowRuntimeV2Worker.js';
 import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
 import logger from '@shared/core/logger.js';
@@ -24,6 +26,7 @@ async function startServices() {
     
     // Initialize the workflow system
     await initializeServerWorkflows();
+    initializeWorkflowRuntimeV2();
     registerAccountingExportWorkflowActions();
     
     // Update system workflows from compiled assets
@@ -46,6 +49,7 @@ async function startServices() {
     
     logger.info('[WorkflowWorker] Starting with config:', workerConfig);
     const worker = new WorkflowWorker(workflowRuntime, workerConfig);
+    const runtimeV2Worker = new WorkflowRuntimeV2Worker(`runtime-v2-${Date.now()}`);
     
     // Create HTTP server instance
     const server = new WorkerServer(worker);
@@ -53,7 +57,8 @@ async function startServices() {
     // Start both services
     await Promise.all([
       worker.start(),
-      server.start()
+      server.start(),
+      runtimeV2Worker.start()
     ]);
     
     logger.info('[WorkflowWorker] All services started successfully');
@@ -66,7 +71,8 @@ async function startServices() {
       logger.info('[WorkflowWorker] Shutting down services...');
       await Promise.all([
         worker.stop(),
-        server.stop()
+        server.stop(),
+        runtimeV2Worker.stop()
       ]);
       process.exit(0);
     }
