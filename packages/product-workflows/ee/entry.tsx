@@ -2,7 +2,7 @@
 // This will import the actual implementation from the ee/ directory
 
 // Direct component exports
-export { default as DnDFlow } from '../../../ee/server/src/components/flow/DnDFlow';
+export { default as DnDFlow } from '../../../ee/server/src/components/workflow-designer/WorkflowDesigner';
 export const WorkflowNodes = {
   ActionNode: () => import('../../../ee/server/src/components/flow/nodes/ActionNode.js'),
   DecisionNode: () => import('../../../ee/server/src/components/flow/nodes/DecisionNode.js'),
@@ -17,7 +17,7 @@ export const WorkflowToggle = () => import('../../../ee/server/src/components/fl
 
 // Default export
 const workflows = {
-  DnDFlow: () => import('../../../ee/server/src/components/flow/DnDFlow').then(mod => mod.default),
+  DnDFlow: () => import('../../../ee/server/src/components/workflow-designer/WorkflowDesigner').then(mod => mod.default),
   WorkflowNodes: {
     ActionNode: () => import('../../../ee/server/src/components/flow/nodes/ActionNode.js'),
     DecisionNode: () => import('../../../ee/server/src/components/flow/nodes/DecisionNode.js'),

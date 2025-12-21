@@ -145,7 +145,7 @@
 
 ### Runtime/Actions updates driven by tests
 - `shared/workflow/runtime/runtime/workflowRuntimeV2.ts`: respect `RetryPolicy.maxAttempts` when deciding to schedule retries.
-- `server/src/lib/actions/workflow-runtime-v2-actions.ts`: admin resume now resolves one WAITING wait, sets resume_event_name to the wait event, clears resume payload, and executes the run (enables “resume to completion” E2E).
+- `server/src/lib/actions/workflow-runtime-v2-actions.ts`: admin resume now resolves one WAITING wait, sets resume_event_name to the wait event, clears resume payload, and executes the run (enables "resume to completion" E2E).
 
 ### Redaction + retention checks
 - Added integration coverage for redacted snapshots + action invocations, snapshot truncation, and retention pruning via event wait resume.
@@ -155,7 +155,7 @@
 
 ### Feature checklist adjustments
 - Updated `ee/docs/plans/workflow_runtime_feature_checklist.json` for backend/runtime items (goals, validation pipeline, events, tests, idempotency patterns).
-- Remaining false items are GUI designer + UI workflow run viewer + rollout tasks (parallel-run + cutover) and “tenant_id log context”.
+- Remaining false items are GUI designer + UI workflow run viewer + rollout tasks (parallel-run + cutover) and "tenant_id log context".
 
 ### Dev environment setup (Alga Dev Env + Test Env skill)
 - Ports chosen via detect_ports (env #8): app 3007, postgres 5439, redis 6386, hocuspocus 1241, pgbouncer 6439.
@@ -216,3 +216,29 @@
 
 ### Checklist status
 - `workflow_runtime_feature_checklist.json` still has 22 items marked `implemented: false` (appears to be GUI/editor-focused items such as inline syntax validation). Backend checklist items appear complete.
+
+
+## 2025-12-21 — Workflow Designer (Section 10) Progress
+
+### Implemented UI (EE)
+- Added `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` with node-in-pipe canvas, nested blocks, and right-side config panel.
+- Integrated designer as the workflow entry point by exporting it from `packages/product-workflows/ee/entry.tsx` and `packages/product-workflows/ee/entry.ts`.
+- Node palette loads from `/api/workflow/registry/nodes` with search; steps insert into selected pipe.
+- Drag/drop reorder within pipes and move between nested pipes via `@hello-pangea/dnd`.
+- Config panel generates forms from node config JSON Schema with required-field warnings and JSON fallback editors.
+- Expression editor supports field picker insertion (payload/vars/meta/error) and local JSONata syntax validation.
+- Publish workflow triggers server validation and surfaces publish errors with step breadcrumb context.
+
+### Remaining
+- Run list + run detail viewer (status filters, timelines, snapshots, logs).
+- Admin resume/cancel UI actions.
+- Redacted snapshot rendering in UI.
+
+
+## 2025-12-21 — Operational/Observability Expansion
+
+### PRD updates
+- Added Section 14 (Operational Support, Observability, and Governance) to the PRD with run list, run detail, logging, audit, RBAC, retention/export, metrics/alerts, ops controls, event observability, and performance targets.
+
+### Checklist updates
+- Appended detailed operational/observability features (run history, logs, audit, RBAC, retention, metrics, alerting, ops controls, event observability, performance) to `workflow_runtime_feature_checklist.json`.
