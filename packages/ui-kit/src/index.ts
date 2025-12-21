@@ -7,9 +7,11 @@ export { Text } from './components/Text';
 export { Stack } from './components/Stack';
 export { Badge } from './components/Badge';
 export { DataTable } from './components/DataTable';
+export { Dialog, ConfirmDialog } from './components/Dialog';
 
 export type { SelectOption, CustomSelectProps } from './components/CustomSelect';
 export type { Column, DataTableProps } from './components/DataTable';
+export type { DialogProps, ConfirmDialogProps } from './components/Dialog';
 export { useTheme, applyThemeVars } from './hooks/useTheme';
 
 export const tokens = {
