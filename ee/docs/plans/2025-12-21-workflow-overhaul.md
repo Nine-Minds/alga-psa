@@ -257,7 +257,8 @@ Use the [JSONata](https://jsonata.org/) NPM library as the expression engine. Th
 
 ### 6.1 Components
 
-- **Workflow API service** — CRUD, publish, runs, registry discovery
+- **Workflow server actions (first-class)** — CRUD, publish, runs, registry discovery, event submission (used by UI and internal services)
+- **Workflow API routes (thin external layer)** — REST entrypoints that delegate to server actions for external automation
 - **Worker service** — Executes runs
 - **Event ingestion + routing component** — Wakes waiting runs
 - **Scheduler** — Timeouts, delayed retries, stale lease recovery
@@ -464,9 +465,31 @@ if jitter:
 
 ---
 
-## 11. API Surface (Minimum)
+## 11. Server Actions + API Surface (Minimum)
 
-### 11.1 Workflow Definitions
+**Principle:** server actions are the first-class implementation. API routes are a thin external automation layer and must delegate to the server actions without re-implementing business logic.
+
+### 11.0 Server Actions (First-Class)
+
+| Capability | Server Action |
+|------------|---------------|
+| Definitions list | List workflow definitions |
+| Definitions get | Get workflow definition version |
+| Definitions create | Create workflow definition draft |
+| Definitions update | Update workflow definition draft |
+| Publish | Publish workflow definition |
+| Runs start | Start workflow run |
+| Runs status | Get workflow run |
+| Runs steps | List workflow run steps + snapshots |
+| Runs cancel | Cancel workflow run |
+| Runs resume | Resume workflow run (admin) |
+| Registry nodes | List node registry entries |
+| Registry actions | List action registry entries |
+| Registry schema | Get schema by ref |
+| Events submit | Submit workflow event + resume waits + trigger runs |
+| Events list | List workflow runtime events (admin) |
+
+### 11.1 Workflow Definitions (API)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -476,7 +499,7 @@ if jitter:
 | `PUT` | `/workflow-definitions/{id}/{version}` | Update definition |
 | `POST` | `/workflow-definitions/{id}/{version}/publish` | Publish version |
 
-### 11.2 Runs
+### 11.2 Runs (API)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -486,7 +509,7 @@ if jitter:
 | `POST` | `/workflow-runs/{runId}/cancel` | Cancel run |
 | `POST` | `/workflow-runs/{runId}/resume` | Resume run (admin) |
 
-### 11.3 Registry Discovery
+### 11.3 Registry Discovery (API)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -494,7 +517,7 @@ if jitter:
 | `GET` | `/workflow/registry/actions` | List actions |
 | `GET` | `/workflow/registry/schemas/{schemaRef}` | Get schema |
 
-### 11.4 Events
+### 11.4 Events (API)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -538,7 +561,7 @@ type PublishError = {
 };
 ```
 
-**Publish endpoint response:**
+**Publish server action / endpoint response:**
 
 ```typescript
 {
