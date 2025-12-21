@@ -1,3 +1,5 @@
+const EMAIL_SYSTEM_WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
+
 exports.up = async function (knex) {
   await knex.schema.alterTable('workflow_definitions', (table) => {
     table.boolean('is_system').notNullable().defaultTo(false);
@@ -9,6 +11,10 @@ exports.up = async function (knex) {
     table.integer('failure_rate_min_runs').defaultTo(10);
     table.jsonb('retention_policy_override');
   });
+
+  await knex('workflow_definitions')
+    .where({ workflow_id: EMAIL_SYSTEM_WORKFLOW_ID })
+    .update({ is_system: true });
 };
 
 exports.down = async function (knex) {

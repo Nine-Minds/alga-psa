@@ -42,22 +42,29 @@
           "config": { "state": "CHECKING_EMAIL_THREADING" }
         },
         {
-          "id": "lookup-reply-token",
-          "type": "action.call",
-          "config": {
-            "actionId": "find_ticket_by_reply_token",
-            "version": 1,
-            "args": {
-              "token": { "$expr": "payload.parsedEmail.metadata.parser.tokens.conversationToken" }
-            },
-            "saveAs": "vars.replyTokenResult",
-            "onError": { "policy": "continue" }
-          }
+          "id": "check-reply-token",
+          "type": "control.if",
+          "condition": { "$expr": "coalesce(payload.parsedEmail.metadata.parser.tokens.conversationToken, '') != ''" },
+          "then": [
+            {
+              "id": "lookup-reply-token",
+              "type": "action.call",
+              "config": {
+                "actionId": "find_ticket_by_reply_token",
+                "version": 1,
+                "args": {
+                  "token": { "$expr": "payload.parsedEmail.metadata.parser.tokens.conversationToken" }
+                },
+                "saveAs": "vars.replyTokenResult",
+                "onError": { "policy": "continue" }
+              }
+            }
+          ]
         },
         {
           "id": "resolve-threading",
           "type": "control.if",
-          "condition": { "$expr": "vars.replyTokenResult.success and vars.replyTokenResult.match and vars.replyTokenResult.match.ticketId" },
+          "condition": { "$expr": "coalesce(vars.replyTokenResult.success, false) and coalesce(vars.replyTokenResult.match.ticketId, null) != null" },
           "then": [
             {
               "id": "assign-existing-ticket-token",
@@ -89,7 +96,7 @@
             {
               "id": "assign-existing-ticket-thread",
               "type": "control.if",
-              "condition": { "$expr": "vars.threadResult.success and vars.threadResult.ticket" },
+              "condition": { "$expr": "coalesce(vars.threadResult.success, false) and coalesce(vars.threadResult.ticket, null) != null" },
               "then": [
                 {
                   "id": "assign-existing-ticket-thread-value",
@@ -178,7 +185,7 @@
             {
               "id": "assign-matched-client",
               "type": "control.if",
-              "condition": { "$expr": "vars.matchedContact.success and vars.matchedContact.contact" },
+              "condition": { "$expr": "coalesce(vars.matchedContact.success, false) and coalesce(vars.matchedContact.contact, null) != null" },
               "then": [
                 {
                   "id": "assign-matched-client-value",

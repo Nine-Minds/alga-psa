@@ -6,25 +6,30 @@ const WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
 exports.up = async function (knex) {
   const filePath = path.resolve(__dirname, '..', '..', 'shared', 'workflow', 'runtime', 'workflows', 'email-processing-workflow.v1.json');
   const definition = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  const hasIsSystemColumn = await knex.schema.hasColumn('workflow_definitions', 'is_system');
 
   const existing = await knex('workflow_definitions').where({ workflow_id: WORKFLOW_ID }).first();
   if (existing) {
+    const updateData = {
+      draft_definition: definition,
+      draft_version: definition.version,
+      name: definition.name,
+      description: definition.description,
+      payload_schema_ref: definition.payloadSchemaRef,
+      trigger: definition.trigger,
+      updated_at: new Date().toISOString()
+    };
+    if (hasIsSystemColumn) {
+      updateData.is_system = true;
+    }
+
     await knex('workflow_definitions')
       .where({ workflow_id: WORKFLOW_ID })
-      .update({
-        draft_definition: definition,
-        draft_version: definition.version,
-        name: definition.name,
-        description: definition.description,
-        payload_schema_ref: definition.payloadSchemaRef,
-        trigger: definition.trigger,
-        is_system: true,
-        updated_at: new Date().toISOString()
-      });
+      .update(updateData);
     return;
   }
 
-  await knex('workflow_definitions').insert({
+  const insertData = {
     workflow_id: WORKFLOW_ID,
     name: definition.name,
     description: definition.description,
@@ -33,10 +38,14 @@ exports.up = async function (knex) {
     draft_definition: definition,
     draft_version: definition.version,
     status: 'draft',
-    is_system: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
-  });
+  };
+  if (hasIsSystemColumn) {
+    insertData.is_system = true;
+  }
+
+  await knex('workflow_definitions').insert(insertData);
 
   await knex('workflow_definition_versions').insert({
     workflow_id: WORKFLOW_ID,

@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 import { z } from 'zod';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createWorkflowDefinitionAction,
@@ -22,14 +22,20 @@ import {
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
 vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn()
+  createTenantKnex: vi.fn(),
+  getCurrentTenantId: vi.fn()
 }));
 
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn()
 }));
 
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true)
+}));
+
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
+const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 
 let db: Knex;
@@ -64,6 +70,7 @@ beforeEach(async () => {
   tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
+  mockedGetCurrentTenantId.mockReturnValue(tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
 });
 

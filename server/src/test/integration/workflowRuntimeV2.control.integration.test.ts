@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createWorkflowDefinitionAction,
@@ -40,14 +40,20 @@ import {
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
 vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn()
+  createTenantKnex: vi.fn(),
+  getCurrentTenantId: vi.fn()
 }));
 
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn()
 }));
 
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true)
+}));
+
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
+const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 
 let db: Knex;
@@ -95,6 +101,7 @@ beforeEach(async () => {
   tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockImplementation(async () => ({ knex: db, tenant: tenantId }));
+  mockedGetCurrentTenantId.mockReturnValue(tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
   resetTestActionState();
 });
@@ -549,16 +556,16 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const result = await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
     expect(result.status).toBe('resumed');
-    const events = await listWorkflowEventsAction();
-    expect(events.some((event) => event.event_name === 'PING')).toBe(true);
+    const eventsResult = await listWorkflowEventsAction();
+    expect(eventsResult.events.some((event) => event.event_name === 'PING')).toBe(true);
     const record = await WorkflowRunModelV2.getById(db, run.runId);
     expect(record?.status).toBe('SUCCEEDED');
   });
 
   it('Submit workflow event server action with no matching wait still records event for audit. Mocks: non-target dependencies.', async () => {
     await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'missing', payload: {} });
-    const events = await listWorkflowEventsAction();
-    expect(events.some((event) => event.event_name === 'PING')).toBe(true);
+    const eventsResult = await listWorkflowEventsAction();
+    expect(eventsResult.events.some((event) => event.event_name === 'PING')).toBe(true);
   });
 
   it('Submit workflow event server action resumes only one run when multiple waits share the same key. Mocks: non-target dependencies.', async () => {
@@ -698,22 +705,22 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     expect((snapshots[snapshots.length - 1].envelope_json as any).payload.message).toBe('ok');
   });
 
-  it('Admin resume server action resumes WAITING runs without event payload. Mocks: non-target dependencies.', async () => {
+  it('Admin resume server action resumes WAITING runs with admin override metadata. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    await resumeWorkflowRunAction({ runId: run.runId });
+    await resumeWorkflowRunAction({ runId: run.runId, reason: 'test resume' });
     const record = await WorkflowRunModelV2.getById(db, run.runId);
-    expect(record?.resume_event_payload).toBeNull();
+    expect(record?.resume_event_payload).toMatchObject({ __admin_override: true, reason: 'test resume' });
   });
 
   it('canceling a WAITING run deletes waits and prevents resume. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } })] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    await cancelWorkflowRunAction({ runId: run.runId });
+    await cancelWorkflowRunAction({ runId: run.runId, reason: 'test cancel' });
     const waits = await db('workflow_run_waits').where({ run_id: run.runId });
     expect(waits.every((wait: any) => wait.status === 'CANCELED')).toBe(true);
     await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
@@ -726,7 +733,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     await db('workflow_run_waits').insert({ run_id: run.runId, step_path: 'root.steps[0]', wait_type: 'event', key: 'key2', event_name: 'PING', status: 'WAITING' });
-    await cancelWorkflowRunAction({ runId: run.runId });
+    await cancelWorkflowRunAction({ runId: run.runId, reason: 'test cancel' });
     const waits = await db('workflow_run_waits').where({ run_id: run.runId });
     expect(waits.every((wait: any) => wait.status === 'CANCELED')).toBe(true);
   });
@@ -786,8 +793,8 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('Workflow runtime event list server action returns recent events (API delegates). Mocks: non-target dependencies.', async () => {
     await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
-    const events = await listWorkflowEventsAction();
-    expect(events.length).toBeGreaterThan(0);
+    const eventsResult = await listWorkflowEventsAction();
+    expect(eventsResult.events.length).toBeGreaterThan(0);
   });
 
   it('wait resume updates run status from WAITING back to RUNNING. Mocks: non-target dependencies.', async () => {
