@@ -670,7 +670,7 @@
     "implemented": true
   },
   {
-    "description": "Admin resume server action resumes WAITING runs without event payload. Mocks: non-target dependencies.",
+    "description": "Admin resume server action resumes WAITING runs with admin override metadata (no external event payload required). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": true
   },

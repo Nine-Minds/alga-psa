@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createWorkflowDefinitionAction,
@@ -34,14 +34,20 @@ import {
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
 vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn()
+  createTenantKnex: vi.fn(),
+  getCurrentTenantId: vi.fn()
 }));
 
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn()
 }));
 
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn().mockResolvedValue(true)
+}));
+
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
+const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 
 let db: Knex;
@@ -132,9 +138,10 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetWorkflowRuntimeTables(db);
-  tenantId = `tenant-${uuidv4()}`;
+  tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
+  mockedGetCurrentTenantId.mockReturnValue(tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
   resetTestActionState();
 });
@@ -239,7 +246,7 @@ describe('workflow runtime v2 E2E tests', () => {
     await publishWorkflow(workflowId, 1);
 
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    await cancelWorkflowRunAction({ runId: run.runId });
+    await cancelWorkflowRunAction({ runId: run.runId, reason: 'test cancel' });
     await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
 
     const record = await WorkflowRunModelV2.getById(db, run.runId);
@@ -255,7 +262,7 @@ describe('workflow runtime v2 E2E tests', () => {
     await publishWorkflow(workflowId, 1);
 
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    await resumeWorkflowRunAction({ runId: run.runId });
+    await resumeWorkflowRunAction({ runId: run.runId, reason: 'test resume' });
 
     const record = await WorkflowRunModelV2.getById(db, run.runId);
     expect(record?.status).toBe('SUCCEEDED');
@@ -317,7 +324,12 @@ describe('workflow runtime v2 E2E tests', () => {
     const workflowId = await seedEmailWorkflow();
 
     const humanSpy = vi.fn().mockResolvedValue({ task_id: 'task-1' });
-    stubAction('parse_email_reply', 1, vi.fn().mockRejectedValue(new Error('fail')));
+    stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
+    stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: false, match: null }));
+    stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
+    stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: false, contact: null }));
+    stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue({ client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' }));
+    stubAction('create_ticket_from_email', 1, vi.fn().mockRejectedValue(new Error('boom')));
     stubAction('create_human_task_for_email_processing_failure', 1, humanSpy);
 
     const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: baseEmailPayload() });

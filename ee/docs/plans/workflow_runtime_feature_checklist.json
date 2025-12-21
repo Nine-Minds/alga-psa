@@ -407,7 +407,7 @@
   {
     "description": "Persist sanitized envelope snapshot per checkpoint and cap size/retention.",
     "reference": "\u00a76.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include tenant_id (if available) in log context for every step.",

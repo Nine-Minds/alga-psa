@@ -261,25 +261,31 @@ export function registerDefaultNodes(): void {
 
       if (ctx.resumeEvent) {
         const responsePayload = ctx.resumeEvent.payload ?? {};
-        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
-        const knex = ctx.knex ?? await getAdminConnection();
-        const formSchema = await resolveTaskFormSchema(knex, ctx.tenantId ?? null, config.taskType);
-        if (!formSchema?.schema) {
-          throw {
-            category: 'ValidationError',
-            message: `Missing form schema for task type ${config.taskType}`,
-            nodePath: ctx.stepPath,
-            at: new Date().toISOString()
-          };
-        }
-        const validation = getFormValidationService().validate(formSchema.schema as Record<string, any>, responsePayload as Record<string, any>);
-        if (!validation.valid) {
-          throw {
-            category: 'ValidationError',
-            message: `Human task response validation failed: ${JSON.stringify(validation.errors ?? [])}`,
-            nodePath: ctx.stepPath,
-            at: new Date().toISOString()
-          };
+        const isAdminOverride = ctx.resumeEvent.name === 'ADMIN_RESUME'
+          || (typeof responsePayload === 'object'
+            && responsePayload !== null
+            && '__admin_override' in responsePayload);
+        if (!isAdminOverride) {
+          const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
+          const knex = ctx.knex ?? await getAdminConnection();
+          const formSchema = await resolveTaskFormSchema(knex, ctx.tenantId ?? null, config.taskType);
+          if (!formSchema?.schema) {
+            throw {
+              category: 'ValidationError',
+              message: `Missing form schema for task type ${config.taskType}`,
+              nodePath: ctx.stepPath,
+              at: new Date().toISOString()
+            };
+          }
+          const validation = getFormValidationService().validate(formSchema.schema as Record<string, any>, responsePayload as Record<string, any>);
+          if (!validation.valid) {
+            throw {
+              category: 'ValidationError',
+              message: `Human task response validation failed: ${JSON.stringify(validation.errors ?? [])}`,
+              nodePath: ctx.stepPath,
+              at: new Date().toISOString()
+            };
+          }
         }
 
         env.vars.event = responsePayload;

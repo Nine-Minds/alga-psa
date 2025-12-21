@@ -32,6 +32,11 @@ import WorkflowRunSnapshotModelV2 from '../../persistence/workflowRunSnapshotMod
 import WorkflowRunLogModelV2 from '../../persistence/workflowRunLogModelV2';
 
 const SNAPSHOT_MAX_BYTES = 256 * 1024;
+const DEFAULT_SNAPSHOT_RETENTION_DAYS = 30;
+const SNAPSHOT_RETENTION_DAYS = Number(process.env.WORKFLOW_RUN_SNAPSHOT_RETENTION_DAYS ?? DEFAULT_SNAPSHOT_RETENTION_DAYS);
+const SNAPSHOT_RETENTION_WINDOW_DAYS = Number.isFinite(SNAPSHOT_RETENTION_DAYS)
+  ? SNAPSHOT_RETENTION_DAYS
+  : DEFAULT_SNAPSHOT_RETENTION_DAYS;
 const LOG_CONTEXT_MAX_BYTES = 64 * 1024;
 const INVOCATION_LOG_PREVIEW_BYTES = 32 * 1024;
 const LEASE_MS = 30_000;
@@ -118,10 +123,11 @@ export class WorkflowRuntimeV2 {
   }
 
   async acquireRunnableRun(knex: Knex, workerId: string): Promise<string | null> {
+    const nowIso = new Date().toISOString();
     const updated = await knex('workflow_runs')
       .where({ status: 'RUNNING' })
       .andWhere((builder) => {
-        builder.whereNull('lease_expires_at').orWhere('lease_expires_at', '<=', knex.fn.now());
+        builder.whereNull('lease_expires_at').orWhere('lease_expires_at', '<=', nowIso);
       })
       .orderBy('updated_at', 'asc')
       .first();
@@ -385,7 +391,7 @@ export class WorkflowRuntimeV2 {
         }
 
         const retryPolicy = resolveRetryPolicy(step);
-        if (retryPolicy && isRetryable(runtimeError, retryPolicy)) {
+        if (retryPolicy && isRetryable(runtimeError, retryPolicy, attempt)) {
           const timeoutAt = scheduleRetry(retryPolicy, attempt);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'RETRY_SCHEDULED',
@@ -514,7 +520,7 @@ export class WorkflowRuntimeV2 {
         id: run.run_id,
         workflowId: run.workflow_id,
         workflowVersion: run.workflow_version,
-        startedAt: run.started_at
+        startedAt: typeof run.started_at === 'string' ? run.started_at : run.started_at?.toISOString()
       },
       payload: run.input_json ?? {},
       meta: {},
@@ -566,7 +572,7 @@ export class WorkflowRuntimeV2 {
       const ctx = this.expressionContext(env);
       const items = await resolveExpressions(forEachStep.items, ctx);
       if (!Array.isArray(items)) {
-        throw createRuntimeError('ExpressionError', 'control.forEach items did not evaluate to array', path);
+        throw createRuntimeError('ValidationError', 'control.forEach items did not evaluate to array', path);
       }
       const loopKey = forEachStep.id;
       const previous = env.vars[forEachStep.itemVar];
@@ -606,6 +612,12 @@ export class WorkflowRuntimeV2 {
         tenantId: run.tenant_id
       });
       await this.executeRun(knex, childRunId, `inline-${run.run_id}`);
+      const childRun = await WorkflowRunModelV2.getById(knex, childRunId);
+      if (!childRun || childRun.status !== 'SUCCEEDED') {
+        const childMessage = (childRun?.error_json as { message?: string } | null | undefined)?.message;
+        const detail = childMessage ? `: ${childMessage}` : '';
+        throw createRuntimeError('ActionError', `Child workflow failed${detail}`, path);
+      }
       if (callStep.outputMapping) {
         const snapshots = await WorkflowRunSnapshotModelV2.listByRun(knex, childRunId);
         const lastSnapshot = snapshots[snapshots.length - 1];
@@ -717,7 +729,7 @@ export class WorkflowRuntimeV2 {
     const inputSizeBytes = jsonSize(sanitizedInput);
     const inputPreview = truncatePreview(sanitizedInput, INVOCATION_LOG_PREVIEW_BYTES);
 
-    const idempotencyKey = providedIdempotencyKey
+    const baseIdempotencyKey = providedIdempotencyKey
       ? String(providedIdempotencyKey)
       : action.idempotency.mode === 'actionProvided'
         ? action.idempotency.key(input, {
@@ -731,6 +743,9 @@ export class WorkflowRuntimeV2 {
             knex
           })
         : generateIdempotencyKey(run.run_id, stepPath, actionId, version, input);
+    const idempotencyKey = tenantId && !String(baseIdempotencyKey).startsWith(`${tenantId}:`)
+      ? `${tenantId}:${baseIdempotencyKey}`
+      : baseIdempotencyKey;
 
     const existing = await WorkflowActionInvocationModelV2.findByIdempotency(knex, actionId, version, idempotencyKey);
     if (existing) {
@@ -843,6 +858,13 @@ export class WorkflowRuntimeV2 {
       envelope_json: sized as Record<string, unknown>,
       size_bytes: JSON.stringify(sized).length
     });
+    if (SNAPSHOT_RETENTION_WINDOW_DAYS > 0) {
+      const cutoff = new Date(Date.now() - SNAPSHOT_RETENTION_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      await knex('workflow_run_snapshots')
+        .where({ run_id: runId })
+        .andWhere('created_at', '<', cutoff)
+        .delete();
+    }
     return snapshotRecord.snapshot_id;
   }
 
@@ -914,6 +936,7 @@ function resolveStepAtPath(definition: WorkflowDefinition, path: string): { step
       if (!currentStep) {
         break;
       }
+      containerPath = `${containerPath}.steps[${segment.index}]`;
     } else {
       if (!currentStep) {
         return { step: null, stack };
@@ -992,8 +1015,11 @@ function resolveRetryPolicy(step: Step): RetryPolicy | null {
   return null;
 }
 
-function isRetryable(error: RuntimeError, policy: RetryPolicy): boolean {
+function isRetryable(error: RuntimeError, policy: RetryPolicy, attempt: number): boolean {
   if (!policy) return false;
+  if (policy.maxAttempts && attempt >= policy.maxAttempts) {
+    return false;
+  }
   if (policy.retryOn && !policy.retryOn.includes(error.category)) {
     return false;
   }

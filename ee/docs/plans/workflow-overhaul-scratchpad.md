@@ -312,3 +312,37 @@
 ### Performance + indexing
 - Added index on workflow_runs (workflow_id, status, updated_at) and workflow_run_steps (run_id, step_id).
 - Enforced per-tenant run start rate limits and max payload size checks in server action.
+
+## 2025-12-21 — Runtime V2 fixes + test stabilization
+
+### Runtime/action changes
+- `shared/workflow/runtime/runtime/workflowRuntimeV2.ts`
+  - Retry scheduling now stops when `attempt >= maxAttempts`.
+  - `control.forEach` now treats non-array items as `ValidationError`.
+  - `control.callWorkflow` now checks child run status and throws `ActionError` on failure (enables parent failure + retry policy).
+  - Idempotency keys are tenant-scoped (prefix with `tenantId:` unless already prefixed).
+  - `acquireRunnableRun` uses JS time (`new Date().toISOString()`) for stale-lease comparison for better test consistency.
+  - Snapshot retention pruning added (default 30 days, env override `WORKFLOW_RUN_SNAPSHOT_RETENTION_DAYS`).
+- `server/src/lib/actions/workflow-runtime-v2-actions.ts`
+  - `startWorkflowRunAction` now uses latest published version when version omitted and validates payload against schema registry.
+  - `submitWorkflowEventAction` now resumes both `event` and `human` waits.
+  - `listWorkflowEventsAction` accepts `undefined` input (defaults to `{}`) and still returns `{ events, nextCursor }`.
+  - `resumeWorkflowRunAction` now records admin resume events and re-stores `resume_event_payload` after execution (admin override metadata persists).
+- `services/workflow-worker/src/v2/WorkflowRuntimeV2Worker.ts`
+  - Scheduler skips retries/timeouts for CANCELED runs; marks waits CANCELED instead of resuming.
+- `shared/workflow/runtime/nodes/registerDefaultNodes.ts`
+  - Admin resume bypasses human-task validation when resume event name is `ADMIN_RESUME` or payload includes `__admin_override`.
+
+### Test plan + test updates
+- Updated admin-resume test plan wording to reference admin override metadata.
+- `workflowRuntimeV2.control.integration.test.ts` now expects `listWorkflowEventsAction()` to return `{ events }`.
+- Increased `beforeAll` timeout for `workflowRuntimeV2.email.integration.test.ts` to 180s to avoid hook timeouts on heavy DB resets.
+- Marked checklist item “Persist sanitized envelope snapshot per checkpoint and cap size/retention” as implemented.
+
+### Test runs
+- Control + publish integration suites now pass when run together.
+- Full workflow runtime suite (`unit + integration + e2e`) still fails in this environment due to Knex connection pool timeouts during repeated `createTestDbConnection()` calls:
+  - Errors: `Knex: Timeout acquiring a connection` during DB recreation.
+  - Cascading failures in multiple workflow runtime test files and e2e runtime suite.
+  - Suggest running workflow runtime test files in smaller batches or increasing DB connection capacity/timeout when running the full suite.
+
