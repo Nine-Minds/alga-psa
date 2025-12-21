@@ -12,8 +12,24 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { CustomSelect, SelectOption } from '@/components/ui/CustomSelect';
+import CustomTabs from '@/components/ui/CustomTabs';
 import { Switch } from '@/components/ui/Switch';
 import { Label } from '@/components/ui/Label';
+import WorkflowRunList from './WorkflowRunList';
+import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
+import WorkflowEventList from './WorkflowEventList';
+import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
+import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import {
+  createWorkflowDefinitionAction,
+  getWorkflowSchemaAction,
+  listWorkflowDefinitionsAction,
+  listWorkflowRegistryActionsAction,
+  listWorkflowRegistryNodesAction,
+  publishWorkflowDefinitionAction,
+  updateWorkflowDefinitionDraftAction,
+  updateWorkflowDefinitionMetadataAction
+} from 'server/src/lib/actions/workflow-runtime-v2-actions';
 
 import type {
   WorkflowDefinition,
@@ -38,6 +54,14 @@ type WorkflowDefinitionRecord = {
   draft_definition: WorkflowDefinition;
   draft_version: number;
   status: string;
+  is_system?: boolean;
+  is_visible?: boolean;
+  is_paused?: boolean;
+  concurrency_limit?: number | null;
+  auto_pause_on_failure?: boolean;
+  failure_rate_threshold?: number | string | null;
+  failure_rate_min_runs?: number | null;
+  retention_policy_override?: Record<string, unknown> | null;
 };
 
 type NodeRegistryItem = {
@@ -456,6 +480,7 @@ const createStepFromPalette = (
 };
 
 const WorkflowDesigner: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('Designer');
   const [definitions, setDefinitions] = useState<WorkflowDefinitionRecord[]>([]);
   const [activeDefinition, setActiveDefinition] = useState<WorkflowDefinition | null>(null);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
@@ -470,6 +495,16 @@ const WorkflowDesigner: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [metadataDraft, setMetadataDraft] = useState<{
+    isVisible: boolean;
+    isPaused: boolean;
+    concurrencyLimit: string;
+    autoPauseOnFailure: boolean;
+    failureRateThreshold: string;
+    failureRateMinRuns: string;
+  } | null>(null);
+  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
 
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
 
@@ -525,14 +560,32 @@ const WorkflowDesigner: React.FC = () => {
     return map;
   }, [publishErrors, stepPathMap]);
 
+  const activeWorkflowRecord = useMemo(
+    () => definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null,
+    [definitions, activeWorkflowId]
+  );
+
+  const canManage = useMemo(
+    () => userPermissions.includes('workflow:manage'),
+    [userPermissions]
+  );
+  const canPublish = useMemo(
+    () => userPermissions.includes('workflow:publish') || canManage,
+    [userPermissions, canManage]
+  );
+  const canAdmin = useMemo(
+    () => userPermissions.includes('workflow:admin') || canManage,
+    [userPermissions, canManage]
+  );
+  const canEditMetadata = useMemo(
+    () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
+    [canManage, canAdmin, activeWorkflowRecord]
+  );
+
   const loadDefinitions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/workflow-definitions');
-      if (!response.ok) {
-        throw new Error('Failed to load workflow definitions');
-      }
-      const data = await response.json();
+      const data = await listWorkflowDefinitionsAction();
       setDefinitions(data ?? []);
       if (!activeDefinition && data?.length) {
         const record = data[0] as WorkflowDefinitionRecord;
@@ -548,16 +601,12 @@ const WorkflowDesigner: React.FC = () => {
 
   const loadRegistries = useCallback(async () => {
     try {
-      const [nodesResponse, actionsResponse] = await Promise.all([
-        fetch('/api/workflow/registry/nodes'),
-        fetch('/api/workflow/registry/actions')
+      const [nodes, actions] = await Promise.all([
+        listWorkflowRegistryNodesAction(),
+        listWorkflowRegistryActionsAction()
       ]);
-      if (nodesResponse.ok) {
-        setNodeRegistry(await nodesResponse.json());
-      }
-      if (actionsResponse.ok) {
-        setActionRegistry(await actionsResponse.json());
-      }
+      setNodeRegistry(nodes ?? []);
+      setActionRegistry(actions ?? []);
     } catch (error) {
       toast.error('Failed to load workflow registries');
     }
@@ -569,12 +618,8 @@ const WorkflowDesigner: React.FC = () => {
       return;
     }
     try {
-      const response = await fetch(`/api/workflow/registry/schemas/${schemaRef}`);
-      if (!response.ok) {
-        throw new Error('Failed to load schema');
-      }
-      const data = await response.json();
-      setPayloadSchema(data);
+      const result = await getWorkflowSchemaAction({ schemaRef });
+      setPayloadSchema(result.schema ?? null);
     } catch (error) {
       setPayloadSchema(null);
     }
@@ -584,6 +629,27 @@ const WorkflowDesigner: React.FC = () => {
     loadDefinitions();
     loadRegistries();
   }, [loadDefinitions, loadRegistries]);
+
+  useEffect(() => {
+    getCurrentUserPermissions()
+      .then((perms) => setUserPermissions(perms ?? []))
+      .catch(() => setUserPermissions([]));
+  }, []);
+
+  useEffect(() => {
+    if (!activeWorkflowRecord) {
+      setMetadataDraft(null);
+      return;
+    }
+    setMetadataDraft({
+      isVisible: activeWorkflowRecord.is_visible ?? true,
+      isPaused: activeWorkflowRecord.is_paused ?? false,
+      concurrencyLimit: activeWorkflowRecord.concurrency_limit ? String(activeWorkflowRecord.concurrency_limit) : '',
+      autoPauseOnFailure: activeWorkflowRecord.auto_pause_on_failure ?? false,
+      failureRateThreshold: activeWorkflowRecord.failure_rate_threshold != null ? String(activeWorkflowRecord.failure_rate_threshold) : '',
+      failureRateMinRuns: activeWorkflowRecord.failure_rate_min_runs ? String(activeWorkflowRecord.failure_rate_min_runs) : ''
+    });
+  }, [activeWorkflowRecord]);
 
   useEffect(() => {
     if (activeDefinition?.payloadSchemaRef) {
@@ -620,27 +686,15 @@ const WorkflowDesigner: React.FC = () => {
     setIsSaving(true);
     try {
       if (!activeWorkflowId) {
-        const response = await fetch('/api/workflow-definitions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ definition: activeDefinition })
-        });
-        if (!response.ok) {
-          throw new Error('Failed to create workflow');
-        }
-        const data = await response.json();
+        const data = await createWorkflowDefinitionAction({ definition: activeDefinition });
         setActiveWorkflowId(data.workflowId);
         setActiveDefinition({ ...activeDefinition, id: data.workflowId });
         toast.success('Workflow created');
       } else {
-        const response = await fetch(`/api/workflow-definitions/${activeWorkflowId}/${activeDefinition.version}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ definition: activeDefinition })
+        await updateWorkflowDefinitionDraftAction({
+          workflowId: activeWorkflowId,
+          definition: activeDefinition
         });
-        if (!response.ok) {
-          throw new Error('Failed to update workflow');
-        }
         toast.success('Workflow saved');
       }
       await loadDefinitions();
@@ -651,6 +705,28 @@ const WorkflowDesigner: React.FC = () => {
     }
   };
 
+  const handleSaveMetadata = async () => {
+    if (!activeWorkflowId || !metadataDraft) return;
+    setIsSavingMetadata(true);
+    try {
+      await updateWorkflowDefinitionMetadataAction({
+        workflowId: activeWorkflowId,
+        isVisible: metadataDraft.isVisible,
+        isPaused: metadataDraft.isPaused,
+        concurrencyLimit: metadataDraft.concurrencyLimit ? Number(metadataDraft.concurrencyLimit) : null,
+        autoPauseOnFailure: metadataDraft.autoPauseOnFailure,
+        failureRateThreshold: metadataDraft.failureRateThreshold ? Number(metadataDraft.failureRateThreshold) : null,
+        failureRateMinRuns: metadataDraft.failureRateMinRuns ? Number(metadataDraft.failureRateMinRuns) : null
+      });
+      toast.success('Workflow settings updated');
+      await loadDefinitions();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update workflow settings');
+    } finally {
+      setIsSavingMetadata(false);
+    }
+  };
+
   const handlePublish = async () => {
     if (!activeDefinition || !activeWorkflowId) {
       toast.error('Save the workflow before publishing');
@@ -658,15 +734,14 @@ const WorkflowDesigner: React.FC = () => {
     }
     setIsPublishing(true);
     try {
-      const response = await fetch(`/api/workflow-definitions/${activeWorkflowId}/${activeDefinition.version}/publish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ definition: activeDefinition })
+      const data = await publishWorkflowDefinitionAction({
+        workflowId: activeWorkflowId,
+        version: activeDefinition.version,
+        definition: activeDefinition
       });
-      const data = await response.json();
       setPublishErrors(data.errors ?? []);
       setPublishWarnings(data.warnings ?? []);
-      if (!response.ok || data.ok === false) {
+      if (data.ok === false) {
         toast.error('Publish failed - fix validation errors');
         return;
       }
@@ -792,36 +867,8 @@ const WorkflowDesigner: React.FC = () => {
     return findStep(activeDefinition.steps);
   }, [activeDefinition, selectedStepId]);
 
-  return (
-    <div className="h-full flex flex-col">
-      <div className="border-b bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Workflow Designer</h1>
-            <p className="text-sm text-gray-500">Build structured pipelines with published validation.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button id="workflow-designer-create" variant="outline" onClick={handleCreateDefinition}>
-              New Workflow
-            </Button>
-            <Button
-              id="workflow-designer-save"
-              onClick={handleSaveDefinition}
-              disabled={isSaving || !activeDefinition}
-            >
-              {isSaving ? 'Saving...' : 'Save Draft'}
-            </Button>
-            <Button
-              id="workflow-designer-publish"
-              onClick={handlePublish}
-              disabled={isPublishing || !activeDefinition}
-            >
-              {isPublishing ? 'Publishing...' : 'Publish'}
-            </Button>
-          </div>
-        </div>
-      </div>
-
+  const designerContent = (
+    <div className="flex flex-col h-full">
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-72 border-r bg-white flex flex-col">
           <div className="p-4 border-b">
@@ -948,18 +995,91 @@ const WorkflowDesigner: React.FC = () => {
               </div>
             </div>
 
-            <aside className="w-96 border-l bg-white overflow-y-auto p-4">
+            <aside className="w-96 border-l bg-white overflow-y-auto p-4 space-y-4">
+              {activeWorkflowRecord && metadataDraft && canEditMetadata && (
+                <Card className="p-3 space-y-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-800">Workflow Settings</div>
+                    <div className="text-xs text-gray-500">Visibility, pausing, and safety controls.</div>
+                  </div>
+                  <Switch
+                    id="workflow-settings-visible"
+                    checked={metadataDraft.isVisible}
+                    onCheckedChange={(value) =>
+                      setMetadataDraft((prev) => (prev ? { ...prev, isVisible: Boolean(value) } : prev))
+                    }
+                    label="Visible to users"
+                  />
+                  <Switch
+                    id="workflow-settings-paused"
+                    checked={metadataDraft.isPaused}
+                    onCheckedChange={(value) =>
+                      setMetadataDraft((prev) => (prev ? { ...prev, isPaused: Boolean(value) } : prev))
+                    }
+                    label="Paused (stop new runs)"
+                  />
+                  <Input
+                    id="workflow-settings-concurrency"
+                    label="Concurrency limit"
+                    type="number"
+                    value={metadataDraft.concurrencyLimit}
+                    onChange={(event) =>
+                      setMetadataDraft((prev) => (prev ? { ...prev, concurrencyLimit: event.target.value } : prev))
+                    }
+                    placeholder="Unlimited"
+                  />
+                  <Switch
+                    id="workflow-settings-auto-pause"
+                    checked={metadataDraft.autoPauseOnFailure}
+                    onCheckedChange={(value) =>
+                      setMetadataDraft((prev) => (prev ? { ...prev, autoPauseOnFailure: Boolean(value) } : prev))
+                    }
+                    label="Auto-pause on failure rate"
+                  />
+                  <Input
+                    id="workflow-settings-failure-threshold"
+                    label="Failure rate threshold"
+                    type="number"
+                    value={metadataDraft.failureRateThreshold}
+                    onChange={(event) =>
+                      setMetadataDraft((prev) => (prev ? { ...prev, failureRateThreshold: event.target.value } : prev))
+                    }
+                    placeholder="0.5"
+                  />
+                  <Input
+                    id="workflow-settings-failure-min"
+                    label="Min runs before auto-pause"
+                    type="number"
+                    value={metadataDraft.failureRateMinRuns}
+                    onChange={(event) =>
+                      setMetadataDraft((prev) => (prev ? { ...prev, failureRateMinRuns: event.target.value } : prev))
+                    }
+                    placeholder="10"
+                  />
+                  <Button
+                    id="workflow-settings-save"
+                    onClick={handleSaveMetadata}
+                    disabled={isSavingMetadata || !activeWorkflowId}
+                  >
+                    {isSavingMetadata ? 'Saving...' : 'Save Settings'}
+                  </Button>
+                </Card>
+              )}
               {selectedStep && activeDefinition ? (
-                <StepConfigPanel
-                  step={selectedStep}
-                  stepPath={stepPathMap[selectedStep.id]}
-                  errors={errorsByStepId.get(selectedStep.id) ?? []}
-                  nodeRegistry={nodeRegistryMap}
-                  actionRegistry={actionRegistry}
-                  fieldOptions={fieldOptions}
-                  payloadSchema={payloadSchema}
-                  onChange={(updatedStep) => handleStepUpdate(selectedStep.id, () => updatedStep)}
-                />
+                canManage ? (
+                  <StepConfigPanel
+                    step={selectedStep}
+                    stepPath={stepPathMap[selectedStep.id]}
+                    errors={errorsByStepId.get(selectedStep.id) ?? []}
+                    nodeRegistry={nodeRegistryMap}
+                    actionRegistry={actionRegistry}
+                    fieldOptions={fieldOptions}
+                    payloadSchema={payloadSchema}
+                    onChange={(updatedStep) => handleStepUpdate(selectedStep.id, () => updatedStep)}
+                  />
+                ) : (
+                  <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
+                )
               ) : (
                 <div className="text-sm text-gray-500">Select a step to edit its configuration.</div>
               )}
@@ -1003,6 +1123,102 @@ const WorkflowDesigner: React.FC = () => {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+
+  const runListContent = (
+    <WorkflowRunList
+      definitions={definitions.map((definition) => ({
+        workflow_id: definition.workflow_id,
+        name: definition.name,
+        trigger: definition.trigger ?? null
+      }))}
+      isActive={activeTab === 'Runs'}
+      canAdmin={canAdmin}
+    />
+  );
+
+  const eventListContent = (
+    <WorkflowEventList
+      isActive={activeTab === 'Events'}
+      canAdmin={canAdmin}
+    />
+  );
+
+  const deadLetterContent = (
+    <WorkflowDeadLetterQueue
+      isActive={activeTab === 'Dead Letter'}
+      canAdmin={canAdmin}
+    />
+  );
+
+  const activeWorkflowRecord = definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null;
+
+  const auditContent = (
+    <WorkflowDefinitionAudit
+      workflowId={activeWorkflowId}
+      workflowName={activeWorkflowRecord?.name}
+      isActive={activeTab === 'Audit'}
+    />
+  );
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="border-b bg-white px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">Workflow Designer</h1>
+            <p className="text-sm text-gray-500">Build structured pipelines with published validation.</p>
+          </div>
+          {activeTab === 'Designer' && (
+            <div className="flex items-center gap-2">
+              {canManage && (
+                <Button id="workflow-designer-create" variant="outline" onClick={handleCreateDefinition}>
+                  New Workflow
+                </Button>
+              )}
+              {canManage && (
+                <Button
+                  id="workflow-designer-save"
+                  onClick={handleSaveDefinition}
+                  disabled={isSaving || !activeDefinition}
+                >
+                  {isSaving ? 'Saving...' : 'Save Draft'}
+                </Button>
+              )}
+              {canPublish && (
+                <Button
+                  id="workflow-designer-publish"
+                  onClick={handlePublish}
+                  disabled={isPublishing || !activeDefinition}
+                >
+                  {isPublishing ? 'Publishing...' : 'Publish'}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden">
+        <CustomTabs
+          idPrefix="workflow-designer-tabs"
+          value={activeTab}
+          onTabChange={setActiveTab}
+          tabs={[
+            { label: 'Designer', content: designerContent },
+            { label: 'Runs', content: runListContent },
+            { label: 'Events', content: eventListContent },
+            ...(canAdmin ? [{ label: 'Dead Letter', content: deadLetterContent }] : []),
+            ...(canAdmin ? [{ label: 'Audit', content: auditContent }] : [])
+          ]}
+          tabStyles={{
+            root: 'h-full flex flex-col',
+            content: 'flex-1 overflow-hidden',
+            list: 'px-6 bg-white border-b border-gray-200 mb-0'
+          }}
+        />
       </div>
     </div>
   );

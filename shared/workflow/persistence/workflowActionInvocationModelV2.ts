@@ -54,6 +54,12 @@ const WorkflowActionInvocationModelV2 = {
       })
       .first();
     return record || null;
+  },
+
+  listByRun: async (knex: Knex, runId: string): Promise<WorkflowActionInvocationRecord[]> => {
+    return knex<WorkflowActionInvocationRecord>('workflow_action_invocations')
+      .where({ run_id: runId })
+      .orderBy('created_at', 'asc');
   }
 };
 

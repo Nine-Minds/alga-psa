@@ -87,6 +87,12 @@ const WorkflowRunWaitModelV2 = {
       })
       .whereNotNull('timeout_at')
       .andWhere('timeout_at', '<=', knex.fn.now());
+  },
+
+  listByRun: async (knex: Knex, runId: string): Promise<WorkflowRunWaitRecord[]> => {
+    return knex<WorkflowRunWaitRecord>('workflow_run_waits')
+      .where({ run_id: runId })
+      .orderBy('created_at', 'asc');
   }
 };
 

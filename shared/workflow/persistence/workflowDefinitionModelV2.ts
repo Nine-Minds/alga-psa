@@ -9,6 +9,14 @@ export type WorkflowDefinitionRecord = {
   draft_definition: Record<string, unknown>;
   draft_version: number;
   status: string;
+  is_system?: boolean;
+  is_visible?: boolean;
+  is_paused?: boolean;
+  concurrency_limit?: number | null;
+  auto_pause_on_failure?: boolean;
+  failure_rate_threshold?: number | string | null;
+  failure_rate_min_runs?: number | null;
+  retention_policy_override?: Record<string, unknown> | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at: string;
