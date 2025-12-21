@@ -85,7 +85,7 @@ export type ReturnStep = {
 
 export type Step = NodeStep | IfBlock | ForEachBlock | TryCatchBlock | CallWorkflowBlock | ReturnStep;
 
-export const nodeStepSchema: z.ZodType<NodeStep> = z.object({
+export const nodeStepSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
   name: z.string().optional(),
@@ -94,33 +94,33 @@ export const nodeStepSchema: z.ZodType<NodeStep> = z.object({
   onError: onErrorPolicySchema.optional()
 }).strict();
 
-export const ifBlockSchema: z.ZodType<IfBlock> = z.object({
+export const ifBlockSchema = z.object({
   id: z.string().min(1),
   type: z.literal('control.if'),
   condition: exprSchema,
-  then: z.array(z.lazy(() => stepSchema)),
-  else: z.array(z.lazy(() => stepSchema)).optional()
+  then: z.array(z.lazy(() => stepSchema)) as z.ZodType<Step[]>,
+  else: (z.array(z.lazy(() => stepSchema)) as z.ZodType<Step[]>).optional()
 }).strict();
 
-export const forEachBlockSchema: z.ZodType<ForEachBlock> = z.object({
+export const forEachBlockSchema = z.object({
   id: z.string().min(1),
   type: z.literal('control.forEach'),
   items: exprSchema,
   itemVar: z.string().min(1),
   concurrency: z.number().int().positive().optional(),
-  body: z.array(z.lazy(() => stepSchema)),
+  body: z.array(z.lazy(() => stepSchema)) as z.ZodType<Step[]>,
   onItemError: z.enum(['continue', 'fail']).optional()
 }).strict();
 
-export const tryCatchBlockSchema: z.ZodType<TryCatchBlock> = z.object({
+export const tryCatchBlockSchema = z.object({
   id: z.string().min(1),
   type: z.literal('control.tryCatch'),
-  try: z.array(z.lazy(() => stepSchema)),
-  catch: z.array(z.lazy(() => stepSchema)),
+  try: z.array(z.lazy(() => stepSchema)) as z.ZodType<Step[]>,
+  catch: z.array(z.lazy(() => stepSchema)) as z.ZodType<Step[]>,
   captureErrorAs: z.string().min(1).optional()
 }).strict();
 
-export const callWorkflowBlockSchema: z.ZodType<CallWorkflowBlock> = z.object({
+export const callWorkflowBlockSchema = z.object({
   id: z.string().min(1),
   type: z.literal('control.callWorkflow'),
   workflowId: z.string().min(1),
@@ -131,7 +131,7 @@ export const callWorkflowBlockSchema: z.ZodType<CallWorkflowBlock> = z.object({
   onError: onErrorPolicySchema.optional()
 }).strict();
 
-export const returnStepSchema: z.ZodType<ReturnStep> = z.object({
+export const returnStepSchema = z.object({
   id: z.string().min(1),
   type: z.literal('control.return')
 }).strict();
@@ -143,7 +143,7 @@ export const stepSchema: z.ZodType<Step> = z.lazy(() => z.union([
   tryCatchBlockSchema,
   callWorkflowBlockSchema,
   returnStepSchema
-]));
+])) as z.ZodType<Step>;
 
 export const workflowDefinitionSchema = z.object({
   id: z.string().min(1),

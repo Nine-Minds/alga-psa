@@ -158,10 +158,19 @@ export function registerEmailWorkflowActionsV2(): void {
     ui: { label: 'Create Ticket from Email', category: 'Email' },
     handler: async (input, ctx) => {
       return createTicketFromEmail({
-        ...input,
+        title: input.title,
+        description: input.description,
         client_id: input.client_id ?? undefined,
         contact_id: input.contact_id ?? undefined,
-        location_id: input.location_id ?? undefined
+        location_id: input.location_id ?? undefined,
+        source: input.source,
+        board_id: input.board_id,
+        status_id: input.status_id,
+        priority_id: input.priority_id,
+        category_id: input.category_id,
+        subcategory_id: input.subcategory_id,
+        entered_by: input.entered_by,
+        email_metadata: input.email_metadata
       }, ctx.tenantId ?? '');
     }
   });
@@ -185,7 +194,15 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Comment from Email', category: 'Email' },
     handler: async (input, ctx) => {
-      const commentId = await createCommentFromEmail(input, ctx.tenantId ?? '');
+      const commentId = await createCommentFromEmail({
+        ticket_id: input.ticket_id,
+        content: input.content,
+        format: input.format,
+        source: input.source,
+        author_type: input.author_type,
+        author_id: input.author_id,
+        metadata: input.metadata
+      }, ctx.tenantId ?? '');
       return { comment_id: commentId };
     }
   });
@@ -224,7 +241,13 @@ export function registerEmailWorkflowActionsV2(): void {
         ticketId: input.ticketId,
         tenant: input.tenant,
         providerId: input.providerId,
-        attachmentData: input.attachmentData
+        attachmentData: {
+          id: input.attachmentData.id,
+          name: input.attachmentData.name,
+          contentType: input.attachmentData.contentType,
+          size: input.attachmentData.size,
+          contentId: input.attachmentData.contentId
+        }
       }, ctx.tenantId ?? '');
     }
   });

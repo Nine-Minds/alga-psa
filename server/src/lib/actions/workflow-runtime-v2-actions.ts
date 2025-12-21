@@ -124,7 +124,7 @@ const requireUser = async () => {
   if (!user) {
     throwHttpError(401, 'Unauthorized');
   }
-  return user;
+  return user!;
 };
 
 const requireWorkflowPermission = async (
@@ -133,16 +133,16 @@ const requireWorkflowPermission = async (
   knex?: Awaited<ReturnType<typeof createTenantKnex>>['knex']
 ) => {
   if (!user) {
-    throwHttpError(401, 'Unauthorized');
+    return throwHttpError(401, 'Unauthorized');
   }
-  const allowed = await hasPermission(user, 'workflow', action, knex);
+  const allowed = await hasPermission(user!, 'workflow', action, knex);
   if (allowed) return;
   if (action === 'read') {
-    const viewAllowed = await hasPermission(user, 'workflow', 'view', knex);
+    const viewAllowed = await hasPermission(user!, 'workflow', 'view', knex);
     if (viewAllowed) return;
   }
   if (action !== 'manage') {
-    const fallback = await hasPermission(user, 'workflow', 'manage', knex);
+    const fallback = await hasPermission(user!, 'workflow', 'manage', knex);
     if (fallback) return;
   }
   throwHttpError(403, 'Forbidden');
@@ -242,7 +242,7 @@ export async function getWorkflowDefinitionVersionAction(input: unknown) {
     parsed.version
   );
   if (!record) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
   return record;
 }
@@ -271,7 +271,7 @@ export async function updateWorkflowDefinitionDraftAction(input: unknown) {
   });
 
   if (!updated) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
 
   await auditWorkflowEvent(knex, user, {
@@ -300,7 +300,7 @@ export async function updateWorkflowDefinitionMetadataAction(input: unknown) {
 
   const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (!current) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
   if (current.is_system) {
     await requireWorkflowPermission(user, 'admin', knex);
@@ -347,7 +347,7 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
   await requireWorkflowPermission(user, 'publish', knex);
   const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (!workflow) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
   if (workflow.is_system) {
     await requireWorkflowPermission(user, 'admin', knex);
@@ -355,7 +355,7 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
 
   const definition = { ...(parsed.definition as any ?? workflow.draft_definition), id: parsed.workflowId };
   if (!definition) {
-    throwHttpError(400, 'No definition to publish');
+    return throwHttpError(400, 'No definition to publish');
   }
 
   const schemaRegistry = getSchemaRegistry();
@@ -428,19 +428,19 @@ export async function startWorkflowRunAction(input: unknown) {
 
   const payloadSize = measurePayloadBytes(parsed.payload);
   if (payloadSize === null) {
-    throwHttpError(400, 'Payload must be JSON serializable');
+    return throwHttpError(400, 'Payload must be JSON serializable');
   }
   if (payloadSize > WORKFLOW_RUN_PAYLOAD_LIMIT) {
-    throwHttpError(413, 'Payload exceeds maximum size');
+    return throwHttpError(413, 'Payload exceeds maximum size');
   }
   const runtime = new WorkflowRuntimeV2();
 
   const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (!workflow) {
-    throwHttpError(404, 'Workflow not found');
+    return throwHttpError(404, 'Workflow not found');
   }
   if (workflow.is_paused) {
-    throwHttpError(409, 'Workflow is paused');
+    return throwHttpError(409, 'Workflow is paused');
   }
   if (workflow.concurrency_limit) {
     const activeCount = await knex('workflow_runs')
@@ -450,13 +450,13 @@ export async function startWorkflowRunAction(input: unknown) {
       .first();
     const current = Number((activeCount as any)?.count ?? 0);
     if (current >= workflow.concurrency_limit) {
-      throwHttpError(429, 'Workflow concurrency limit reached');
+      return throwHttpError(429, 'Workflow concurrency limit reached');
     }
   }
 
   const runId = await runtime.startRun(knex, {
     workflowId: parsed.workflowId,
-    version: parsed.workflowVersion,
+    version: parsed.workflowVersion ?? workflow.draft_version,
     payload: parsed.payload,
     tenantId: tenant
   });
@@ -474,7 +474,7 @@ export async function getWorkflowRunAction(input: unknown) {
   await requireWorkflowPermission(user, 'read', knex);
   const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
   if (!run) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
   return run;
 }
@@ -810,18 +810,18 @@ export async function exportWorkflowRunDetailAction(input: unknown) {
 
   const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
   if (!run) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
   if (tenant && run.tenant_id && run.tenant_id !== tenant) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
 
   const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId);
   const snapshots = await WorkflowRunSnapshotModelV2.listByRun(knex, parsed.runId);
   const invocations = await WorkflowActionInvocationModelV2.listByRun(knex, parsed.runId);
   const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
-  const canManage = await hasPermission(user, 'workflow', 'manage', knex);
-  const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
+  const canManage = await hasPermission(user!, 'workflow', 'manage', knex);
+  const canAdmin = await hasPermission(user!, 'workflow', 'admin', knex);
   const canViewSensitive = canManage || canAdmin;
 
   const sanitizedInvocations = canViewSensitive
@@ -939,10 +939,10 @@ export async function retryWorkflowRunAction(input: unknown) {
 
   const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
   if (!run) {
-    throwHttpError(404, 'Run not found');
+    return throwHttpError(404, 'Run not found');
   }
   if (run.status !== 'FAILED') {
-    throwHttpError(409, 'Run is not failed');
+    return throwHttpError(409, 'Run is not failed');
   }
 
   const failedStep = await knex('workflow_run_steps')
@@ -952,7 +952,7 @@ export async function retryWorkflowRunAction(input: unknown) {
   const nodePath =
     failedStep?.step_path ?? (run.error_json as { nodePath?: string } | null)?.nodePath ?? null;
   if (!nodePath) {
-    throwHttpError(409, 'Failed step not found');
+    return throwHttpError(409, 'Failed step not found');
   }
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
@@ -998,7 +998,7 @@ export async function replayWorkflowRunAction(input: unknown) {
 
   const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
   if (!run) {
-    throwHttpError(404, 'Run not found');
+    return throwHttpError(404, 'Run not found');
   }
 
   const runtime = new WorkflowRuntimeV2();
@@ -1050,7 +1050,7 @@ export async function requeueWorkflowRunEventWaitAction(input: unknown) {
 
   const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
   if (!run) {
-    throwHttpError(404, 'Run not found');
+    return throwHttpError(404, 'Run not found');
   }
 
   const wait = await knex('workflow_run_waits')
@@ -1058,7 +1058,7 @@ export async function requeueWorkflowRunEventWaitAction(input: unknown) {
     .orderBy('created_at', 'desc')
     .first();
   if (!wait) {
-    throwHttpError(409, 'No event wait found for run');
+    return throwHttpError(409, 'No event wait found for run');
   }
 
   await WorkflowRunWaitModelV2.update(knex, wait.wait_id, {
@@ -1139,7 +1139,7 @@ export async function getWorkflowSchemaAction(input: unknown) {
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   if (!registry.has(parsed.schemaRef)) {
-    throwHttpError(404, 'Not found');
+    return throwHttpError(404, 'Not found');
   }
   return { ref: parsed.schemaRef, schema: registry.toJsonSchema(parsed.schemaRef) };
 }
@@ -1218,7 +1218,7 @@ export async function submitWorkflowEventAction(input: unknown) {
   });
 
   if (ingestionError) {
-    throwHttpError(500, 'Failed to process workflow event', { error: ingestionError });
+    return throwHttpError(500, 'Failed to process workflow event', { error: ingestionError });
   }
 
   const runtime = new WorkflowRuntimeV2();
@@ -1365,7 +1365,7 @@ export async function listWorkflowEventSummaryAction(input: unknown) {
     query.where('created_at', '<=', parsed.to);
   }
 
-  const row = await query.first();
+  const row = await query.first() as unknown as { total: string | number; matched: string | number; unmatched: string | number; error: string | number } | undefined;
   return {
     total: Number(row?.total ?? 0),
     matched: Number(row?.matched ?? 0),
@@ -1382,10 +1382,10 @@ export async function getWorkflowEventAction(input: unknown) {
 
   const event = await WorkflowRuntimeEventModelV2.getById(knex, parsed.eventId);
   if (!event) {
-    throwHttpError(404, 'Event not found');
+    return throwHttpError(404, 'Event not found');
   }
   if (tenant && event.tenant_id && event.tenant_id !== tenant) {
-    throwHttpError(404, 'Event not found');
+    return throwHttpError(404, 'Event not found');
   }
 
   const wait = event.matched_wait_id

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { CustomSelect, SelectOption } from '@/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { TextArea } from '@/components/ui/TextArea';
