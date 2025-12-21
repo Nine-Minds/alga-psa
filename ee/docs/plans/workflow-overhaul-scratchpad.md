@@ -124,3 +124,8 @@
   - `server/src/app/api/workflow/registry/actions/route.ts`
   - `server/src/app/api/workflow/registry/schemas/[schemaRef]/route.ts`
   - `server/src/app/api/workflow/events/route.ts`
+
+## 2025-12-21 - PRD aligned with server-action-first pattern
+- Updated PRD section 6.1 to state server actions are first-class and API routes are thin delegates.
+- Expanded section 11 with a Server Actions table and labeled API surfaces as delegating layers.
+- Clarified publish response applies to server actions and endpoints.
