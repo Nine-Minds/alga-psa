@@ -1,4 +1,4 @@
-import { validateEmail } from '../api/schemas/common';
+import { isValidEmail } from './validation';
 
 // Enhanced validation utilities for client forms
 export interface ValidationResult {
@@ -164,7 +164,7 @@ export function validateEmailAddress(email: string): string | null {
   }
   
   // Basic format validation
-  if (!validateEmail(trimmedEmail)) {
+  if (!isValidEmail(trimmedEmail)) {
     return 'Please enter a valid email address';
   }
   
