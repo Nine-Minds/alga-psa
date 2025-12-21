@@ -8,7 +8,12 @@ export function applyAssignments(env: Envelope, assignments: Record<string, unkn
     meta: cloneJson(env.meta)
   } as Envelope;
 
-  for (const [path, value] of Object.entries(assignments)) {
+  const entries = Object.entries(assignments);
+  for (const [path] of entries) {
+    validateAssignmentPath(path);
+  }
+
+  for (const [path, value] of entries) {
     if (path.startsWith('payload.')) {
       setByPath(next.payload as Record<string, unknown>, path.replace(/^payload\./, ''), value);
       continue;
@@ -33,8 +38,7 @@ export function applyAssignments(env: Envelope, assignments: Record<string, unkn
       continue;
     }
 
-    // Default to payload
-    setByPath(next.payload as Record<string, unknown>, path, value);
+    throw new Error(`Invalid assignment path: ${path}`);
   }
 
   return next;
@@ -57,6 +61,29 @@ function setByPath(target: Record<string, unknown>, path: string, value: unknown
       cursor[key] = {};
     }
     cursor = cursor[key] as Record<string, unknown>;
+  }
+}
+
+function validateAssignmentPath(path: string): void {
+  if (!path || typeof path !== 'string') {
+    throw new Error('Assignment path must be a non-empty string');
+  }
+  const allowed = path.startsWith('payload.')
+    || path.startsWith('vars.')
+    || path.startsWith('meta.')
+    || path.startsWith('error.')
+    || path.startsWith('/');
+
+  if (!allowed) {
+    throw new Error(`Assignment path must be scoped (payload/vars/meta/error or JSON pointer): ${path}`);
+  }
+
+  const segments = path.replace(/^\/?/, '').split(/[./]/);
+  const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
+  for (const segment of segments) {
+    if (forbidden.has(segment)) {
+      throw new Error(`Assignment path contains forbidden segment: ${segment}`);
+    }
   }
 }
 

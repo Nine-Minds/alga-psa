@@ -17,6 +17,8 @@ import { resolveExpressions } from '../utils/expressionResolver';
 import { applyRedactions, enforceSnapshotSize, safeSerialize } from '../utils/redactionUtils';
 import { applyAssignments } from '../utils/assignmentUtils';
 import { parseNodePath } from '../utils/nodePathUtils';
+import { scheduleRetryAt } from '../utils/retryUtils';
+import { generateIdempotencyKey } from '../utils/idempotencyUtils';
 import WorkflowDefinitionVersionModelV2 from '../../persistence/workflowDefinitionVersionModelV2';
 import WorkflowRunModelV2 from '../../persistence/workflowRunModelV2';
 import WorkflowRunStepModelV2 from '../../persistence/workflowRunStepModelV2';
@@ -25,6 +27,7 @@ import WorkflowActionInvocationModelV2 from '../../persistence/workflowActionInv
 import WorkflowRunSnapshotModelV2 from '../../persistence/workflowRunSnapshotModelV2';
 
 const SNAPSHOT_MAX_BYTES = 256 * 1024;
+const SNAPSHOT_RETENTION_DAYS = Number(process.env.WORKFLOW_SNAPSHOT_RETENTION_DAYS ?? '30');
 const LEASE_MS = 30_000;
 
 export type StartRunParams = {
@@ -106,26 +109,27 @@ export class WorkflowRuntimeV2 {
     }
 
     while (currentPath) {
-      const { step, stack } = resolveStepAtPath(definition, currentPath);
+      const stepPath = currentPath;
+      const { step, stack } = resolveStepAtPath(definition, stepPath);
       if (!step) {
         await this.markRunCompleted(knex, runId, 'SUCCEEDED');
         return;
       }
 
       const stepStart = Date.now();
-      const attempt = await this.nextAttempt(knex, runId, currentPath);
+      const attempt = await this.nextAttempt(knex, runId, stepPath);
       const stepRecord = await WorkflowRunStepModelV2.create(knex, {
         run_id: runId,
-        step_path: currentPath,
+        step_path: stepPath,
         definition_step_id: step.id,
         status: 'STARTED',
         attempt
       });
 
       try {
-        env = await this.prepareEnvForStep(env, definition, currentPath);
+        env = await this.prepareEnvForStep(env, definition, stepPath);
 
-        const result = await this.executeStep(knex, run, definition, step, currentPath, env);
+        const result = await this.executeStep(knex, run, definition, step, stepPath, env);
 
         if (result.type === 'wait') {
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
@@ -135,14 +139,16 @@ export class WorkflowRuntimeV2 {
             status: 'WAITING',
             resume_event_name: null,
             resume_event_payload: null,
-            resume_error: null
+            resume_error: null,
+            lease_owner: null,
+            lease_expires_at: null
           });
           return;
         }
 
         if (result.type === 'return') {
           env = result.env;
-          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
+          const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -163,7 +169,7 @@ export class WorkflowRuntimeV2 {
 
         env = result.env;
 
-        const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
+        const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
         await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
           status: 'SUCCEEDED',
           duration_ms: Date.now() - stepStart,
@@ -186,12 +192,12 @@ export class WorkflowRuntimeV2 {
           return;
         }
       } catch (error) {
-        const runtimeError = toRuntimeError(error, currentPath);
+        const runtimeError = toRuntimeError(error, stepPath);
         const onErrorPolicy = getOnErrorPolicy(step);
 
         if (onErrorPolicy === 'continue') {
-          env = applyErrorToEnv(env, runtimeError, currentPath);
-          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
+          env = applyErrorToEnv(env, runtimeError, stepPath);
+          const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -200,7 +206,7 @@ export class WorkflowRuntimeV2 {
             snapshot_id: snapshotId
           });
 
-          currentPath = findNextPath(definition, currentPath, env, stack);
+          currentPath = findNextPath(definition, stepPath, env, stack);
           await WorkflowRunModelV2.update(knex, runId, {
             node_path: currentPath,
             status: currentPath ? 'RUNNING' : 'SUCCEEDED',
@@ -214,10 +220,10 @@ export class WorkflowRuntimeV2 {
           continue;
         }
 
-        const forEachPolicy = resolveForEachOnItemError(definition, currentPath);
+        const forEachPolicy = resolveForEachOnItemError(definition, stepPath);
         if (forEachPolicy === 'continue') {
-          env = applyErrorToEnv(env, runtimeError, currentPath);
-          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
+          env = applyErrorToEnv(env, runtimeError, stepPath);
+          const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -226,7 +232,7 @@ export class WorkflowRuntimeV2 {
             snapshot_id: snapshotId
           });
 
-          currentPath = findNextPath(definition, currentPath, env, stack);
+          currentPath = findNextPath(definition, stepPath, env, stack);
           await WorkflowRunModelV2.update(knex, runId, {
             node_path: currentPath,
             status: currentPath ? 'RUNNING' : 'SUCCEEDED',
@@ -241,8 +247,8 @@ export class WorkflowRuntimeV2 {
         }
 
         const retryPolicy = resolveRetryPolicy(step);
-        if (retryPolicy && isRetryable(runtimeError, retryPolicy)) {
-          const timeoutAt = scheduleRetry(retryPolicy, attempt);
+        if (retryPolicy && isRetryable(runtimeError, retryPolicy, attempt)) {
+          const timeoutAt = scheduleRetryAt(retryPolicy, attempt);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'RETRY_SCHEDULED',
             duration_ms: Date.now() - stepStart,
@@ -252,7 +258,7 @@ export class WorkflowRuntimeV2 {
 
           await WorkflowRunWaitModelV2.create(knex, {
             run_id: runId,
-            step_path: currentPath,
+            step_path: stepPath,
             wait_type: 'retry',
             timeout_at: timeoutAt,
             status: 'WAITING'
@@ -260,15 +266,17 @@ export class WorkflowRuntimeV2 {
 
           await WorkflowRunModelV2.update(knex, runId, {
             status: 'WAITING',
-            node_path: currentPath,
-            error_json: runtimeError
+            node_path: stepPath,
+            error_json: runtimeError,
+            lease_owner: null,
+            lease_expires_at: null
           });
           return;
         }
 
-        const catchPath = findCatchPath(definition, currentPath, stack, runtimeError, env);
+        const catchPath = findCatchPath(definition, stepPath, stack, runtimeError, env);
         if (catchPath) {
-          env = applyErrorToEnv(env, runtimeError, currentPath);
+          env = applyErrorToEnv(env, runtimeError, stepPath);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'FAILED',
             duration_ms: Date.now() - stepStart,
@@ -341,7 +349,9 @@ export class WorkflowRuntimeV2 {
         id: run.run_id,
         workflowId: run.workflow_id,
         workflowVersion: run.workflow_version,
-        startedAt: run.started_at
+        startedAt: typeof run.started_at === 'string'
+          ? run.started_at
+          : new Date(run.started_at ?? Date.now()).toISOString()
       },
       payload: run.input_json ?? {},
       meta: {},
@@ -376,64 +386,73 @@ export class WorkflowRuntimeV2 {
     }
 
     if (step.type === 'control.if') {
+      const ifStep = step as Step & { type: 'control.if'; condition: any; then: Step[]; else?: Step[] };
       const ctx = this.expressionContext(env);
-      const condition = await resolveExpressions(step.condition, ctx);
+      const condition = await resolveExpressions(ifStep.condition, ctx);
       if (typeof condition !== 'boolean') {
         throw createRuntimeError('ExpressionError', 'control.if condition did not evaluate to boolean', path);
       }
-      const branch = condition ? step.then : (step.else ?? []);
+      const branch = condition ? ifStep.then : (ifStep.else ?? []);
       const nextPath = branch.length > 0 ? `${path}.${condition ? 'then' : 'else'}.steps[0]` : findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack);
       return { type: 'continue', env, nextPath };
     }
 
     if (step.type === 'control.forEach') {
+      const forEachStep = step as Step & { type: 'control.forEach'; items: any; itemVar: string; body: Step[]; onItemError?: 'continue' | 'fail' };
       const ctx = this.expressionContext(env);
-      const items = await resolveExpressions(step.items, ctx);
+      const items = await resolveExpressions(forEachStep.items, ctx);
       if (!Array.isArray(items)) {
-        throw createRuntimeError('ExpressionError', 'control.forEach items did not evaluate to array', path);
+        throw createRuntimeError('ValidationError', 'control.forEach items did not evaluate to array', path);
       }
-      const loopKey = step.id;
-      const previous = env.vars[step.itemVar];
+      const loopKey = forEachStep.id;
+      const previous = env.vars[forEachStep.itemVar];
       env.vars.__forEach = {
         ...(env.vars.__forEach as Record<string, unknown> || {}),
         [loopKey]: {
           items,
           index: 0,
-          itemVar: step.itemVar,
+          itemVar: forEachStep.itemVar,
           previous
         }
       };
 
-      if (items.length === 0 || step.body.length === 0) {
-        env.vars[step.itemVar] = previous;
+      if (items.length === 0 || forEachStep.body.length === 0) {
+        env.vars[forEachStep.itemVar] = previous;
         return { type: 'continue', env, nextPath: findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack) };
       }
 
-      env.vars[step.itemVar] = items[0];
+      env.vars[forEachStep.itemVar] = items[0];
       return { type: 'continue', env, nextPath: `${path}.body.steps[0]` };
     }
 
     if (step.type === 'control.tryCatch') {
-      const nextPath = step.try.length > 0 ? `${path}.try.steps[0]` : findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack);
+      const tryStep = step as Step & { type: 'control.tryCatch'; try: Step[]; catch: Step[]; captureErrorAs?: string };
+      const nextPath = tryStep.try.length > 0 ? `${path}.try.steps[0]` : findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack);
       return { type: 'continue', env, nextPath };
     }
 
     if (step.type === 'control.callWorkflow') {
+      const callStep = step as Step & { type: 'control.callWorkflow'; workflowId: string; workflowVersion: number; inputMapping?: Record<string, { $expr: string }>; outputMapping?: Record<string, { $expr: string }> };
       // MVP: inline execution using same runtime (no waits allowed)
-      const input = await resolveMapping(env, step.inputMapping);
+      const input = await resolveMapping(env, callStep.inputMapping);
       const childRunId = await this.startRun(knex, {
-        workflowId: step.workflowId,
-        version: step.workflowVersion,
+        workflowId: callStep.workflowId,
+        version: callStep.workflowVersion,
         payload: input ?? {},
         tenantId: run.tenant_id
       });
       await this.executeRun(knex, childRunId, `inline-${run.run_id}`);
-      if (step.outputMapping) {
+      const childRun = await WorkflowRunModelV2.getById(knex, childRunId);
+      if (!childRun || childRun.status !== 'SUCCEEDED') {
+        const message = childRun?.error_json?.message || `Child workflow ${callStep.workflowId}@${callStep.workflowVersion} failed`;
+        throw createRuntimeError('ActionError', message, path);
+      }
+      if (callStep.outputMapping) {
         const snapshots = await WorkflowRunSnapshotModelV2.listByRun(knex, childRunId);
         const lastSnapshot = snapshots[snapshots.length - 1];
         const childEnv = lastSnapshot?.envelope_json ?? {};
         env.vars.childRun = childEnv;
-        const mapped = await resolveMapping(env, step.outputMapping);
+        const mapped = await resolveMapping(env, callStep.outputMapping);
         if (mapped) {
           env = applyAssignments(env, mapped);
         }
@@ -449,7 +468,8 @@ export class WorkflowRuntimeV2 {
     if (!nodeType) {
       throw createRuntimeError('ValidationError', `Unknown node type ${step.type}`, path);
     }
-    const config = step.config ?? {};
+    const nodeStep = step as Step & { config?: unknown };
+    const config = nodeStep.config ?? {};
     const parsedConfig = nodeType.configSchema.parse(config);
     const nodeCtx = {
       runId: run.run_id,
@@ -518,7 +538,7 @@ export class WorkflowRuntimeV2 {
 
     const input = action.inputSchema.parse(args);
 
-    const idempotencyKey = providedIdempotencyKey
+    let idempotencyKey = providedIdempotencyKey
       ? String(providedIdempotencyKey)
       : action.idempotency.mode === 'actionProvided'
         ? action.idempotency.key(input, {
@@ -532,30 +552,50 @@ export class WorkflowRuntimeV2 {
             knex
           })
         : generateIdempotencyKey(runId, stepPath, actionId, version, input);
+    if (tenantId) {
+      idempotencyKey = `${tenantId}:${idempotencyKey}`;
+    }
 
     const existing = await WorkflowActionInvocationModelV2.findByIdempotency(knex, actionId, version, idempotencyKey);
+    let invocation = null as Awaited<ReturnType<typeof WorkflowActionInvocationModelV2.create>> | null;
     if (existing) {
       if (existing.status === 'SUCCEEDED') {
         return action.outputSchema.parse(existing.output_json ?? {});
       }
-      if (existing.status === 'STARTED' && existing.lease_expires_at && new Date(existing.lease_expires_at).getTime() < Date.now()) {
-        throw createRuntimeError('TransientError', 'Stale action lease detected', stepPath);
+      if (existing.status === 'STARTED') {
+        if (existing.lease_expires_at && new Date(existing.lease_expires_at).getTime() < Date.now()) {
+          throw createRuntimeError('TransientError', 'Stale action lease detected', stepPath);
+        }
+        throw createRuntimeError('TransientError', 'Action invocation already in progress', stepPath);
+      }
+      if (existing.status === 'FAILED') {
+        invocation = await WorkflowActionInvocationModelV2.update(knex, existing.invocation_id, {
+          status: 'STARTED',
+          attempt: (existing.attempt ?? 1) + 1,
+          lease_owner: `run:${runId}`,
+          lease_expires_at: new Date(Date.now() + LEASE_MS).toISOString(),
+          input_json: applyRedactions(safeSerialize(input), redactions) as Record<string, unknown>,
+          started_at: new Date().toISOString(),
+          error_message: null
+        });
       }
     }
 
-    const invocation = await WorkflowActionInvocationModelV2.create(knex, {
-      run_id: runId,
-      step_path: stepPath,
-      action_id: actionId,
-      action_version: version,
-      idempotency_key: idempotencyKey,
-      status: 'STARTED',
-      attempt: 1,
-      lease_owner: `run:${runId}`,
-      lease_expires_at: new Date(Date.now() + LEASE_MS).toISOString(),
-      input_json: applyRedactions(safeSerialize(input), redactions) as Record<string, unknown>,
-      started_at: new Date().toISOString()
-    });
+    if (!invocation) {
+      invocation = await WorkflowActionInvocationModelV2.create(knex, {
+        run_id: runId,
+        step_path: stepPath,
+        action_id: actionId,
+        action_version: version,
+        idempotency_key: idempotencyKey,
+        status: 'STARTED',
+        attempt: 1,
+        lease_owner: `run:${runId}`,
+        lease_expires_at: new Date(Date.now() + LEASE_MS).toISOString(),
+        input_json: applyRedactions(safeSerialize(input), redactions) as Record<string, unknown>,
+        started_at: new Date().toISOString()
+      });
+    }
 
     try {
       const output = await action.handler(input, {
@@ -596,6 +636,13 @@ export class WorkflowRuntimeV2 {
       envelope_json: sized as Record<string, unknown>,
       size_bytes: JSON.stringify(sized).length
     });
+    if (Number.isFinite(SNAPSHOT_RETENTION_DAYS) && SNAPSHOT_RETENTION_DAYS > 0) {
+      const cutoff = new Date(Date.now() - SNAPSHOT_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      await knex('workflow_run_snapshots')
+        .where({ run_id: runId })
+        .andWhere('created_at', '<', cutoff)
+        .del();
+    }
     return snapshotRecord.snapshot_id;
   }
 
@@ -620,10 +667,12 @@ function resolveStepAtPath(definition: WorkflowDefinition, path: string): { step
   let currentStep: Step | null = null;
   const stack: PathStack = [];
   let containerPath = 'root';
+  let currentStepPath = 'root';
 
   for (const segment of segments) {
     if (segment.type === 'steps') {
       currentStep = currentSteps[segment.index] ?? null;
+      currentStepPath = `${containerPath}.steps[${segment.index}]`;
       stack.push({
         containerPath,
         steps: currentSteps,
@@ -641,7 +690,7 @@ function resolveStepAtPath(definition: WorkflowDefinition, path: string): { step
       if (!block) {
         return { step: null, stack };
       }
-      containerPath = `${containerPath}.${segment.type}`;
+      containerPath = `${currentStepPath}.${segment.type}`;
       currentSteps = block;
     }
   }
@@ -711,23 +760,17 @@ function resolveRetryPolicy(step: Step): RetryPolicy | null {
   return null;
 }
 
-function isRetryable(error: RuntimeError, policy: RetryPolicy): boolean {
+function isRetryable(error: RuntimeError, policy: RetryPolicy, attempt: number): boolean {
   if (!policy) return false;
   if (policy.retryOn && !policy.retryOn.includes(error.category)) {
+    return false;
+  }
+  if (policy.maxAttempts && attempt >= policy.maxAttempts) {
     return false;
   }
   return true;
 }
 
-function scheduleRetry(policy: RetryPolicy, attempt: number): string {
-  const multiplier = policy.backoffMultiplier ?? 2;
-  let backoff = policy.backoffMs * Math.pow(multiplier, Math.max(0, attempt - 1));
-  if (policy.jitter ?? true) {
-    const factor = 0.8 + Math.random() * 0.4;
-    backoff = backoff * factor;
-  }
-  return new Date(Date.now() + backoff).toISOString();
-}
 
 function getOnErrorPolicy(step: Step): 'continue' | 'fail' {
   if ('onError' in step && step.onError?.policy) {
@@ -750,10 +793,11 @@ function findCatchPath(definition: WorkflowDefinition, currentPath: string, stac
       const base = segments.slice(0, i).join('.');
       const tryStep = resolveStepAtPath(definition, base).step;
       if (tryStep && tryStep.type === 'control.tryCatch') {
-        if (tryStep.captureErrorAs) {
-          env.vars[tryStep.captureErrorAs] = error;
+        const tryCatchStep = tryStep as Step & { type: 'control.tryCatch'; catch: Step[]; captureErrorAs?: string };
+        if (tryCatchStep.captureErrorAs) {
+          env.vars[tryCatchStep.captureErrorAs] = error;
         }
-        if (tryStep.catch.length > 0) {
+        if (tryCatchStep.catch.length > 0) {
           return `${base}.catch.steps[0]`;
         }
         return findNextPath(definition, base, env, resolveStepAtPath(definition, base).stack);
@@ -814,19 +858,6 @@ async function resolveMapping(env: Envelope, mapping?: Record<string, { $expr: s
   return result;
 }
 
-function generateIdempotencyKey(runId: string, stepPath: string, actionId: string, version: number, input: unknown): string {
-  const base = JSON.stringify({ runId, stepPath, actionId, version, input });
-  return `${runId}:${stepPath}:${actionId}:${version}:${hashString(base)}`;
-}
-
-function hashString(value: string): string {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-}
 
 function findEnclosingForEach(definition: WorkflowDefinition, path: string, env: Envelope): { itemVar: string; item: unknown } | null {
   const segments = path.split('.');
@@ -855,7 +886,8 @@ function resolveForEachOnItemError(definition: WorkflowDefinition, path: string)
       const base = segments.slice(0, i).join('.');
       const step = resolveStepAtPath(definition, base).step;
       if (step && step.type === 'control.forEach') {
-        return step.onItemError ?? 'fail';
+        const forEachStep = step as Step & { type: 'control.forEach'; onItemError?: 'continue' | 'fail' };
+        return forEachStep.onItemError ?? 'fail';
       }
     }
   }

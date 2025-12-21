@@ -52,6 +52,14 @@ export function validateWorkflowDefinition(definition: WorkflowDefinition, paylo
   const nodeRegistry = getNodeTypeRegistry();
   const actionRegistry = getActionRegistryV2();
 
+  if (!Array.isArray(definition.steps)) {
+    return {
+      ok: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
   const visitSteps = (steps: Step[], prefix: string) => {
     steps.forEach((step, index) => {
       const stepPath = `${prefix}.steps[${index}]`;
@@ -69,32 +77,36 @@ export function validateWorkflowDefinition(definition: WorkflowDefinition, paylo
       }
 
       if (step.type === 'control.if') {
-        validateExpr(step.condition, stepPath, step.id, errors);
-        visitSteps(step.then, `${stepPath}.then`);
-        if (step.else) {
-          visitSteps(step.else, `${stepPath}.else`);
+        const ifStep = step as Step & { type: 'control.if'; condition: { $expr: string }; then: Step[]; else?: Step[] };
+        validateExpr(ifStep.condition, stepPath, step.id, errors);
+        visitSteps(ifStep.then, `${stepPath}.then`);
+        if (ifStep.else) {
+          visitSteps(ifStep.else, `${stepPath}.else`);
         }
         return;
       }
 
       if (step.type === 'control.forEach') {
-        validateExpr(step.items, stepPath, step.id, errors);
-        visitSteps(step.body, `${stepPath}.body`);
+        const forEachStep = step as Step & { type: 'control.forEach'; items: { $expr: string }; body: Step[] };
+        validateExpr(forEachStep.items, stepPath, step.id, errors);
+        visitSteps(forEachStep.body, `${stepPath}.body`);
         return;
       }
 
       if (step.type === 'control.tryCatch') {
-        visitSteps(step.try, `${stepPath}.try`);
-        visitSteps(step.catch, `${stepPath}.catch`);
+        const tryCatchStep = step as Step & { type: 'control.tryCatch'; try: Step[]; catch: Step[] };
+        visitSteps(tryCatchStep.try, `${stepPath}.try`);
+        visitSteps(tryCatchStep.catch, `${stepPath}.catch`);
         return;
       }
 
       if (step.type === 'control.callWorkflow') {
-        if (step.inputMapping) {
-          Object.values(step.inputMapping).forEach((expr) => validateExpr(expr, stepPath, step.id, errors));
+        const callStep = step as Step & { type: 'control.callWorkflow'; inputMapping?: Record<string, { $expr: string }>; outputMapping?: Record<string, { $expr: string }> };
+        if (callStep.inputMapping) {
+          Object.values(callStep.inputMapping).forEach((expr) => validateExpr(expr, stepPath, step.id, errors));
         }
-        if (step.outputMapping) {
-          Object.values(step.outputMapping).forEach((expr) => validateExpr(expr, stepPath, step.id, errors));
+        if (callStep.outputMapping) {
+          Object.values(callStep.outputMapping).forEach((expr) => validateExpr(expr, stepPath, step.id, errors));
         }
         return;
       }
@@ -188,6 +200,11 @@ function validateNodeStep(
 
     if (step.type === 'transform.assign') {
       const config = step.config as { assign?: Record<string, { $expr: string }> };
+      if (config?.assign) {
+        for (const path of Object.keys(config.assign)) {
+          validateAssignmentPath(path, stepPath, step.id, errors);
+        }
+      }
       if (config?.assign && payloadSchemaJson) {
         for (const path of Object.keys(config.assign)) {
           if (!isAllowedAssignPath(path, payloadSchemaJson)) {
@@ -199,6 +216,15 @@ function validateNodeStep(
               message: `Assign path may be invalid: ${path}`
             });
           }
+        }
+      }
+    }
+
+    if (step.type === 'event.wait') {
+      const config = step.config as { assign?: Record<string, { $expr: string }> };
+      if (config?.assign) {
+        for (const path of Object.keys(config.assign)) {
+          validateAssignmentPath(path, stepPath, step.id, errors);
         }
       }
     }
@@ -237,6 +263,49 @@ function isAllowedAssignPath(path: string, payloadSchemaJson: Record<string, unk
     return pathExistsInSchema(path.replace(/^\//, ''), payloadSchemaJson);
   }
   return true;
+}
+
+function validateAssignmentPath(path: string, stepPath: string, stepId: string, errors: PublishError[]): void {
+  if (!path || typeof path !== 'string') {
+    errors.push({
+      severity: 'error',
+      stepPath,
+      stepId,
+      code: 'INVALID_ASSIGN_PATH',
+      message: 'Assignment path must be a non-empty string'
+    });
+    return;
+  }
+  const allowed = path.startsWith('payload.')
+    || path.startsWith('vars.')
+    || path.startsWith('meta.')
+    || path.startsWith('error.')
+    || path.startsWith('/');
+  if (!allowed) {
+    errors.push({
+      severity: 'error',
+      stepPath,
+      stepId,
+      code: 'INVALID_ASSIGN_PATH',
+      message: `Assignment path must be scoped (payload/vars/meta/error or JSON pointer): ${path}`
+    });
+    return;
+  }
+
+  const segments = path.replace(/^\/?/, '').split(/[./]/).filter(Boolean);
+  const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
+  for (const segment of segments) {
+    if (forbidden.has(segment)) {
+      errors.push({
+        severity: 'error',
+        stepPath,
+        stepId,
+        code: 'INVALID_ASSIGN_PATH',
+        message: `Assignment path contains forbidden segment: ${segment}`
+      });
+      return;
+    }
+  }
 }
 
 function pathExistsInSchema(path: string, payloadSchemaJson: Record<string, unknown>): boolean {

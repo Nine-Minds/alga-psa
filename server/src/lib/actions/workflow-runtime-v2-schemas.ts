@@ -28,7 +28,7 @@ export const PublishWorkflowDefinitionInput = z.object({
 
 export const StartWorkflowRunInput = z.object({
   workflowId: z.string().min(1),
-  workflowVersion: versionNumber,
+  workflowVersion: versionNumber.optional(),
   payload: z.record(z.any()).default({})
 });
 

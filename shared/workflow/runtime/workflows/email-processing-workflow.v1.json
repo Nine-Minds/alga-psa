@@ -1,5 +1,5 @@
 {
-  "id": "email-processing-workflow",
+  "id": "00000000-0000-0000-0000-00000000e001",
   "version": 1,
   "name": "Inbound Email Processing",
   "description": "Process inbound emails into tickets or comments.",
@@ -107,7 +107,7 @@
         {
           "id": "branch-existing-ticket",
           "type": "control.if",
-          "condition": { "$expr": "payload.existingTicket" },
+          "condition": { "$expr": "payload.existingTicket != null" },
           "then": [
             {
               "id": "comment-existing-ticket",
@@ -123,6 +123,7 @@
                   "author_type": "contact",
                   "metadata": { "$expr": "payload.parsedEmail.metadata" }
                 },
+                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & payload.existingTicket.ticketId" },
                 "saveAs": "vars.commentResult"
               }
             },
@@ -147,6 +148,7 @@
                       "providerId": { "$expr": "payload.providerId" },
                       "attachmentData": { "$expr": "vars.attachment" }
                     },
+                    "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.attachment.id" },
                     "onError": { "policy": "continue" }
                   }
                 }
@@ -210,7 +212,7 @@
             {
               "id": "check-ticket-defaults",
               "type": "control.if",
-              "condition": { "$expr": "payload.ticketDefaults" },
+              "condition": { "$expr": "payload.ticketDefaults != null" },
               "then": [],
               "else": [
                 {
@@ -258,6 +260,7 @@
                   "entered_by": { "$expr": "payload.ticketDefaults.entered_by" },
                   "email_metadata": { "$expr": "payload.emailData" }
                 },
+                "idempotencyKey": { "$expr": "payload.providerId & ':' & payload.emailData.id" },
                 "saveAs": "payload.createdTicket"
               }
             },
@@ -296,6 +299,7 @@
                       "providerId": { "$expr": "payload.providerId" },
                       "attachmentData": { "$expr": "vars.attachment" }
                     },
+                    "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.attachment.id" },
                     "onError": { "policy": "continue" }
                   }
                 }
@@ -314,7 +318,8 @@
                   "source": "email",
                   "author_type": "internal",
                   "metadata": { "$expr": "payload.parsedEmail.metadata" }
-                }
+                },
+                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & payload.targetTicketId" }
               }
             },
             {
@@ -325,7 +330,7 @@
             {
               "id": "send-ack-email",
               "type": "control.if",
-              "condition": { "$expr": "payload.matchedClient" },
+              "condition": { "$expr": "payload.matchedClient != null" },
               "then": [
                 {
                   "id": "ack-email-action",

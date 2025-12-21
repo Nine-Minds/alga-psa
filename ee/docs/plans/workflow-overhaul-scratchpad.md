@@ -129,3 +129,90 @@
 - Updated PRD section 6.1 to state server actions are first-class and API routes are thin delegates.
 - Expanded section 11 with a Server Actions table and labeled API surfaces as delegating layers.
 - Clarified publish response applies to server actions and endpoints.
+
+## 2025-12-21 — Tests + Event Triggers + Redaction + Admin Resume
+
+### Test plan implementation
+- All 220 backend test plan items now have matching Vitest tests; `ee/docs/plans/workflow_runtime_backend_test_plan.json` updated to `implemented=true` for all items.
+- Added new integration suites:
+  - `server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts` (event-triggered runs, payload validation, audit events).
+  - `server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts` (snapshot redaction, action invocation redaction, snapshot truncation, retention).
+- Added new E2E suite: `server/src/test/e2e/workflowRuntimeV2.e2e.test.ts` covering publish/run, event triggers, waits/resume/timeouts, retries, idempotency, cancel/resume, and email workflow paths.
+- Updated existing tests:
+  - `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts` (retry/catch behavior + exact test names).
+  - `server/src/test/integration/workflowRuntimeV2.email.integration.test.ts` (use beforeEach to avoid DB resets wiping shared runs).
+  - `server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts` (resume action now completes event waits).
+
+### Runtime/Actions updates driven by tests
+- `shared/workflow/runtime/runtime/workflowRuntimeV2.ts`: respect `RetryPolicy.maxAttempts` when deciding to schedule retries.
+- `server/src/lib/actions/workflow-runtime-v2-actions.ts`: admin resume now resolves one WAITING wait, sets resume_event_name to the wait event, clears resume payload, and executes the run (enables “resume to completion” E2E).
+
+### Redaction + retention checks
+- Added integration coverage for redacted snapshots + action invocations, snapshot truncation, and retention pruning via event wait resume.
+
+### PRD updates
+- Added terminology section + expression best-practices subsection in `ee/docs/plans/2025-12-21-workflow-overhaul.md`.
+
+### Feature checklist adjustments
+- Updated `ee/docs/plans/workflow_runtime_feature_checklist.json` for backend/runtime items (goals, validation pipeline, events, tests, idempotency patterns).
+- Remaining false items are GUI designer + UI workflow run viewer + rollout tasks (parallel-run + cutover) and “tenant_id log context”.
+
+### Dev environment setup (Alga Dev Env + Test Env skill)
+- Ports chosen via detect_ports (env #8): app 3007, postgres 5439, redis 6386, hocuspocus 1241, pgbouncer 6439.
+- Secrets regenerated into `./secrets` via `generate_secrets.py`.
+- Updated `server/.env` with PROJECT_NAME=workflow_overhaul_env8 and new ports.
+- Docker dev build started with `docker compose -f docker-compose.yaml -f docker-compose.base.yaml -f docker-compose.ee.yaml --env-file server/.env build server redis workflow-worker setup`.
+  - Build emits warnings about unset env vars (ITERATION, HOST, etc.) but proceeds.
+
+### Notable findings
+- Event waits do not create snapshots while waiting; retention pruning requires a later snapshot (handled via resume).
+- Admin resume previously re-waited; now resolves waits and resumes using wait event name to allow completion.
+
+
+## 2025-12-21 — Dev env fixes + stack up
+- `docker compose up -d` initially failed due to missing secrets `secrets/ninjaone_client_id` + `secrets/ninjaone_client_secret`; created empty files to satisfy bind mounts.
+- `docker compose up -d` then hit host port conflict on pgbouncer (6432). Updated `server/.env` to use internal ports for container-to-container connections and EXPOSE_* for host mappings:
+  - Internal: DB 5432, Redis 6379, Hocuspocus 1234, PgBouncer 6432.
+  - Exposed: DB 5439, Redis 6386, Hocuspocus 1241, PgBouncer 6439, Server 3007.
+- Brought stack down/up with new env; setup now connects via pgbouncer 6432, migrations + seeds completed, and all containers started successfully.
+
+## 2025-12-21 — Runtime test fixes (control integration)
+
+### Runtime fixes
+- Fixed expression normalization to handle nested allowlisted functions (non-consuming lookahead). This resolved `coalesce` / `append` ExpressionError in forEach body assignments.
+- Corrected path stack containerPath handling for nested blocks in `resolveStepAtPath` so forEach loops resume correctly across body steps.
+- Cleared `lease_owner` + `lease_expires_at` whenever runs enter WAITING (event waits + retry scheduling) to allow resume by other workers.
+- `control.callWorkflow` now checks child run status after inline execution and throws `ActionError` if child failed (enables propagation + retry scheduling).
+- Idempotency keys are now tenant-scoped by prefixing with `tenantId` when present.
+
+### Test helper updates
+- `actionCallStep` helper now accepts `retry` and sets it on the step.
+- Stale-lease test setup uses tenant-scoped idempotency keys (`${tenantId}:fixed|stale`).
+
+### Test expectation fixes
+- `control.return inside control.if` now asserts the downstream action never runs (instead of expecting only 1 step record).
+- WAITING resume test now checks `definition_step_id === 'state-1'` (step_path is index-based).
+
+### Tests run
+- `npx vitest --run server/src/test/integration/workflowRuntimeV2.control.integration.test.ts -t "control.return inside control.if|WAITING run resumes"` (both tests pass after updates).
+
+### Open items
+- None in control integration suite after fixes; full suite expected to pass (only earlier failures were expectation mismatches).
+
+## 2025-12-21 — Full workflow runtime v2 test run (unit + integration + e2e)
+
+### Fixes applied before full run
+- Email workflow integration expectations updated:
+  - Attachment idempotency key assertion now checks both attachment ids irrespective of call order (non-deterministic iteration).
+  - `resolve_inbound_ticket_defaults` expectation updated to assert input object `{ tenant, providerId }` rather than positional args.
+
+### Tests run
+- `DB_HOST=localhost DB_PORT=5437 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user DB_PASSWORD_ADMIN=$(cat secrets/postgres_password) DB_PASSWORD_SERVER=$(cat secrets/db_password_server) npx vitest --run server/src/test/unit/workflowRuntimeV2.unit.test.ts server/src/test/integration/workflowRuntimeV2.*.test.ts server/src/test/e2e/workflowRuntimeV2.e2e.test.ts`
+
+### Results
+- All tests passed: 221/221 across unit, integration, and e2e suites.
+- Known DB log warnings during failure-path tests (invalid uuid like `provider-1` / `tenant-...`) are expected in negative-path coverage and did not fail.
+- `workflow_runtime_backend_test_plan.json` already shows all 220 tests marked `implemented: true` (no update needed).
+
+### Checklist status
+- `workflow_runtime_feature_checklist.json` still has 22 items marked `implemented: false` (appears to be GUI/editor-focused items such as inline syntax validation). Backend checklist items appear complete.

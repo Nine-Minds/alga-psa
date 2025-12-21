@@ -180,9 +180,38 @@ export async function startWorkflowRunAction(input: unknown) {
   const { knex, tenant } = await createTenantKnex();
   const runtime = new WorkflowRuntimeV2();
 
+  let workflowVersion = parsed.workflowVersion;
+  if (!workflowVersion) {
+    const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, parsed.workflowId);
+    workflowVersion = versions[0]?.version;
+    if (!workflowVersion) {
+      throwHttpError(404, 'No published workflow versions found');
+    }
+  }
+
+  const definitionRecord = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(
+    knex,
+    parsed.workflowId,
+    workflowVersion
+  );
+  if (!definitionRecord) {
+    throwHttpError(404, 'Workflow definition version not found');
+  }
+
+  const payloadSchemaRef = (definitionRecord.definition_json as any)?.payloadSchemaRef as string | undefined;
+  const schemaRegistry = getSchemaRegistry();
+  if (!payloadSchemaRef || !schemaRegistry.has(payloadSchemaRef)) {
+    throwHttpError(400, `Unknown payload schema ref ${payloadSchemaRef ?? ''}`);
+  }
+  try {
+    schemaRegistry.get(payloadSchemaRef).parse(parsed.payload);
+  } catch (error) {
+    throwHttpError(400, 'Payload validation failed', error);
+  }
+
   const runId = await runtime.startRun(knex, {
     workflowId: parsed.workflowId,
-    version: parsed.workflowVersion,
+    version: workflowVersion,
     payload: parsed.payload,
     tenantId: tenant
   });
@@ -239,9 +268,32 @@ export async function resumeWorkflowRunAction(input: unknown) {
   const user = await requireUser();
   initializeWorkflowRuntimeV2();
   const parsed = RunIdInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
 
-  await WorkflowRunModelV2.update(knex, parsed.runId, { status: 'RUNNING' });
+  const wait = await knex('workflow_run_waits')
+    .where({ run_id: parsed.runId, status: 'WAITING' })
+    .orderBy('created_at', 'asc')
+    .first();
+
+  if (wait) {
+    await WorkflowRunWaitModelV2.update(knex, wait.wait_id, {
+      status: 'RESOLVED',
+      resolved_at: new Date().toISOString()
+    });
+  }
+
+  await WorkflowRunModelV2.update(knex, parsed.runId, {
+    status: 'RUNNING',
+    resume_event_name: wait?.event_name ?? null,
+    resume_event_payload: null,
+    resume_error: null
+  });
+  await WorkflowRuntimeEventModelV2.create(knex, {
+    tenant_id: tenant,
+    event_name: 'ADMIN_RESUME',
+    correlation_key: parsed.runId,
+    payload: { runId: parsed.runId, userId: user.user_id }
+  });
 
   const runtime = new WorkflowRuntimeV2();
   await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
@@ -306,7 +358,7 @@ export async function submitWorkflowEventAction(input: unknown) {
       payload: parsed.payload
     });
 
-    const wait = await WorkflowRunWaitModelV2.findEventWait(trx, parsed.eventName, parsed.correlationKey);
+    const wait = await WorkflowRunWaitModelV2.findEventWait(trx, parsed.eventName, parsed.correlationKey, tenant, ['event', 'human']);
     if (!wait) {
       return;
     }
@@ -335,11 +387,21 @@ export async function submitWorkflowEventAction(input: unknown) {
     (workflow) => workflow.trigger?.eventName === parsed.eventName && workflow.status === 'published'
   );
 
+  const schemaRegistry = getSchemaRegistry();
   const startedRuns: string[] = [];
   for (const workflow of matching) {
     const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
     const latest = versions[0];
     if (!latest) continue;
+    const payloadSchemaRef = (latest.definition_json as any)?.payloadSchemaRef as string | undefined;
+    if (!payloadSchemaRef || !schemaRegistry.has(payloadSchemaRef)) {
+      continue;
+    }
+    try {
+      schemaRegistry.get(payloadSchemaRef).parse(parsed.payload);
+    } catch {
+      continue;
+    }
     const newRunId = await runtime.startRun(knex, {
       workflowId: workflow.workflow_id,
       version: latest.version,

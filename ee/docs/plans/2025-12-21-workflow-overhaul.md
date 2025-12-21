@@ -44,7 +44,14 @@ The system-managed inbound email workflow (threading + ticket creation + comment
 
 ## 2. Key Concepts and Terminology
 
-*(Section reserved for terminology definitions)*
+- **Workflow definition** — The JSON document that declares a workflow pipeline, triggers, and node configs. Stored as draft + immutable published versions.
+- **Step** — A single executable unit in the pipeline. Can be a NodeStep (action/node) or a control block (if/forEach/tryCatch/callWorkflow/return).
+- **Node type** — A registered handler in `NodeTypeRegistry` with a Zod config schema and optional UI metadata.
+- **Action** — A side-effectful or pure operation registered in `ActionRegistry`, invoked via `action.call`.
+- **Publish** — Server-side validation + immutable version creation. Invalid workflows are rejected (errors) or accepted with warnings.
+- **Run** — A specific execution instance of a published workflow version with its own envelope, steps, waits, and snapshots.
+- **Resume** — Continuing a WAITING run after an event, human task completion, timeout, retry, or admin override.
+- **Trigger** — A definition-level event binding (`eventName`) that starts runs without an explicit start step.
 
 ---
 
@@ -197,8 +204,9 @@ type Expr = {
 1. **At service startup:** Register Zod schemas in SchemaRegistry; register Node Types and Actions in their registries.
 2. **At publish time:** Load `payloadSchemaRef` Zod schema; convert it to JSON Schema (`zod-to-json-schema`) and store alongside the published plan.
 3. **At publish time:** Validate workflow JSON (shape, step uniqueness, registry references, config schemas, expression compilation).
-4. **At runtime:** Validate node configs (once, using published compiled config), validate action inputs/outputs on every `action.call`.
-5. **Before persisting snapshots:** Apply redaction rules to payload and action invocation logs.
+4. **At run start / event trigger:** Validate initial payload against the registered payload schema; reject invalid payloads before creating a run.
+5. **At runtime:** Validate node configs (once, using published compiled config), validate action inputs/outputs on every `action.call`.
+6. **Before persisting snapshots:** Apply redaction rules to payload and action invocation logs.
 
 ### 4.3 Type Safety Rules (MVP)
 
@@ -250,6 +258,13 @@ Use the [JSONata](https://jsonata.org/) NPM library as the expression engine. Th
 | Evaluation timeout | 25ms |
 | Max output size | 256KB (after JSON stringify) |
 | User-defined functions | Disallowed |
+
+### 5.4 Best Practices (MVP)
+
+- Use `coalesce(...)` to guard optional fields (`coalesce(payload.foo, 'default')`).
+- Prefer explicit boolean checks (`payload.value = true`) to avoid truthy ambiguity.
+- Normalize arrays with `coalesce(payload.items, [])` before iteration or concatenation.
+- Keep expressions small; move complex logic into a dedicated action or node.
 
 ---
 
@@ -478,7 +493,7 @@ if jitter:
 | Definitions create | Create workflow definition draft |
 | Definitions update | Update workflow definition draft |
 | Publish | Publish workflow definition |
-| Runs start | Start workflow run |
+| Runs start | Start workflow run (workflowVersion optional; defaults to latest published) |
 | Runs status | Get workflow run |
 | Runs steps | List workflow run steps + snapshots |
 | Runs cancel | Cancel workflow run |
@@ -503,7 +518,7 @@ if jitter:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/workflow-runs` | Start new run |
+| `POST` | `/workflow-runs` | Start new run (if version omitted, use latest published) |
 | `GET` | `/workflow-runs/{runId}` | Get run status |
 | `GET` | `/workflow-runs/{runId}/steps` | Get run steps |
 | `POST` | `/workflow-runs/{runId}/cancel` | Cancel run |
