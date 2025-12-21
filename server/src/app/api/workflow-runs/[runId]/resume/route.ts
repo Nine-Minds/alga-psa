@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { initializeWorkflowRuntimeV2, WorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
+import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Api';
+import { resumeWorkflowRunAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 
 export async function POST(_req: NextRequest, { params }: { params: { runId: string } }) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const result = await resumeWorkflowRunAction({ runId: params.runId });
+    return NextResponse.json(result);
+  } catch (error) {
+    return handleWorkflowV2ApiError(error);
   }
-
-  initializeWorkflowRuntimeV2();
-  const { knex } = await createTenantKnex();
-  await WorkflowRunModelV2.update(knex, params.runId, { status: 'RUNNING' });
-
-  const runtime = new WorkflowRuntimeV2();
-  await runtime.executeRun(knex, params.runId, `admin-${user.user_id}`);
-
-  return NextResponse.json({ ok: true });
 }
