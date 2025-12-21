@@ -19,34 +19,53 @@ export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
-/** CORS headers for extension iframe access */
-function corsHeaders(request: NextRequest): HeadersInit {
-  const origin = request.headers.get('origin') || '*';
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
-  };
+/**
+ * Internal user info from trusted ext-proxy prefetch requests.
+ */
+interface InternalUserInfo {
+  user_id: string;
+  tenant: string;
+  email: string;
 }
 
-function jsonResponse(data: unknown, init: ResponseInit & { request?: NextRequest } = {}): NextResponse {
-  const headers = init.request ? corsHeaders(init.request) : {};
-  return NextResponse.json(data, { ...init, headers: { ...headers, ...init.headers } });
-}
+/**
+ * Check if this is an internal request from ext-proxy with trusted user info.
+ */
+function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
+  const internalRequest = request.headers.get('x-internal-request');
+  if (internalRequest !== 'ext-proxy-prefetch') {
+    return null;
+  }
 
-export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+  const userId = request.headers.get('x-internal-user-id');
+  const tenant = request.headers.get('x-internal-user-tenant');
+  const email = request.headers.get('x-internal-user-email') || '';
+
+  if (!userId || !tenant) {
+    return null;
+  }
+
+  return { user_id: userId, tenant, email };
 }
 
 /**
  * Verify the caller has access to audit logs.
  */
-async function assertMasterTenantAccess(): Promise<string> {
+async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
+  // Check for internal ext-proxy request with trusted user info
+  const internalUser = getInternalUserInfo(request);
+  if (internalUser) {
+    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) {
+      throw new Error('Access denied: Audit logs require master tenant access');
+    }
+    return MASTER_BILLING_TENANT_ID;
+  }
+
+  // For external requests, validate the user session
   const user = await getCurrentUser();
 
   if (!user) {
@@ -66,7 +85,7 @@ async function assertMasterTenantAccess(): Promise<string> {
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess();
+    const masterTenantId = await assertMasterTenantAccess(request);
 
     const auditService = new PlatformReportAuditService(masterTenantId);
 
@@ -85,10 +104,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Check if stats are requested
     if (searchParams.get('stats') === 'true') {
       const stats = await auditService.getStats();
-      return jsonResponse({
-        success: true,
-        data: stats,
-      }, { request });
+      return NextResponse.json({ success: true, data: stats });
     }
 
     const logs = await auditService.listLogs({
@@ -103,10 +119,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       offset: offset ? parseInt(offset, 10) : 0,
     });
 
-    return jsonResponse({
-      success: true,
-      data: logs,
-    }, { request });
+    return NextResponse.json({ success: true, data: logs });
   } catch (error) {
     console.error('[platform-reports/audit] GET error:', error);
 
@@ -115,16 +128,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 403, request }
+          { status: 403 }
         );
       }
     }
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }

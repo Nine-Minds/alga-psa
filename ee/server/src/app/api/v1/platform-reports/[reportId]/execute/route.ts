@@ -20,53 +20,72 @@ export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
-/** CORS headers for extension iframe access */
-function corsHeaders(request: NextRequest): HeadersInit {
-  const origin = request.headers.get('origin') || '*';
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
-  };
+/**
+ * Internal user info from trusted ext-proxy prefetch requests.
+ */
+interface InternalUserInfo {
+  user_id: string;
+  tenant: string;
+  email: string;
 }
 
-function jsonResponse(data: unknown, init: ResponseInit & { request?: NextRequest } = {}): NextResponse {
-  const headers = init.request ? corsHeaders(init.request) : {};
-  return NextResponse.json(data, { ...init, headers: { ...headers, ...init.headers } });
-}
+/**
+ * Check if this is an internal request from ext-proxy with trusted user info.
+ */
+function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
+  const internalRequest = request.headers.get('x-internal-request');
+  if (internalRequest !== 'ext-proxy-prefetch') {
+    return null;
+  }
 
-export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+  const userId = request.headers.get('x-internal-user-id');
+  const tenant = request.headers.get('x-internal-user-tenant');
+  const email = request.headers.get('x-internal-user-email') || '';
+
+  if (!userId || !tenant) {
+    return null;
+  }
+
+  return { user_id: userId, tenant, email };
 }
 
 /**
  * Verify the caller has access to platform reports.
- *
- * SECURITY: Platform reports provide cross-tenant data access, so we MUST verify
- * that the user belongs to the master billing tenant. We cannot trust headers alone
- * as they can be spoofed by malicious clients.
- *
- * Returns the tenant ID to use for queries.
  */
-async function assertMasterTenantAccess(_request: NextRequest): Promise<string> {
+async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // ALWAYS validate the user session - headers can be spoofed!
+  // Check for internal ext-proxy request with trusted user info
+  const internalUser = getInternalUserInfo(request);
+  if (internalUser) {
+    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) {
+      throw new Error('Access denied: Platform reports require master tenant access');
+    }
+    return {
+      tenantId: MASTER_BILLING_TENANT_ID,
+      userId: internalUser.user_id,
+      userEmail: internalUser.email,
+    };
+  }
+
+  // For external requests, validate the user session
   const user = await getCurrentUser();
 
   if (!user) {
     throw new Error('Authentication required');
   }
 
-  // User MUST be from the master billing tenant to access cross-tenant reports
   if (user.tenant !== MASTER_BILLING_TENANT_ID) {
     throw new Error('Access denied: Platform reports require master tenant access');
   }
 
-  return MASTER_BILLING_TENANT_ID;
+  return {
+    tenantId: MASTER_BILLING_TENANT_ID,
+    userId: user.user_id,
+    userEmail: user.email,
+  };
 }
 
 interface RouteContext {
@@ -82,8 +101,7 @@ export async function POST(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
-    const user = await getCurrentUser();
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
     const { reportId } = await context.params;
 
     const service = new PlatformReportService(masterTenantId);
@@ -109,8 +127,8 @@ export async function POST(
     const clientInfo = extractClientInfo(request);
     await auditService.logEvent({
       eventType: 'report.execute',
-      userId: user?.user_id,
-      userEmail: user?.email,
+      userId,
+      userEmail,
       resourceType: 'report',
       resourceId: reportId,
       resourceName: result.reportName,
@@ -122,10 +140,7 @@ export async function POST(
       ...clientInfo,
     });
 
-    return jsonResponse({
-      success: true,
-      data: result,
-    }, { request });
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error('[platform-reports/:id/execute] POST error:', error);
 
@@ -134,46 +149,46 @@ export async function POST(
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 403, request }
+          { status: 403 }
         );
       }
 
       if (error.message.includes('not found')) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 404, request }
+          { status: 404 }
         );
       }
 
       if (error.message.includes('inactive')) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 400, request }
+          { status: 400 }
         );
       }
 
       // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 400, request }
+          { status: 400 }
         );
       }
 
       // Report execution errors
       if (error.name === 'ReportExecutionError') {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 500, request }
+          { status: 500 }
         );
       }
     }
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }

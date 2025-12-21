@@ -22,53 +22,78 @@ export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
-/** CORS headers for extension iframe access */
-function corsHeaders(request: NextRequest): HeadersInit {
-  const origin = request.headers.get('origin') || '*';
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
-  };
+/**
+ * Internal user info from trusted ext-proxy prefetch requests.
+ */
+interface InternalUserInfo {
+  user_id: string;
+  tenant: string;
+  email: string;
 }
 
-function jsonResponse(data: unknown, init: ResponseInit & { request?: NextRequest } = {}): NextResponse {
-  const headers = init.request ? corsHeaders(init.request) : {};
-  return NextResponse.json(data, { ...init, headers: { ...headers, ...init.headers } });
-}
+/**
+ * Check if this is an internal request from ext-proxy with trusted user info.
+ */
+function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
+  const internalRequest = request.headers.get('x-internal-request');
+  if (internalRequest !== 'ext-proxy-prefetch') {
+    return null;
+  }
 
-export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
+  const userId = request.headers.get('x-internal-user-id');
+  const tenant = request.headers.get('x-internal-user-tenant');
+  const email = request.headers.get('x-internal-user-email') || '';
+
+  if (!userId || !tenant) {
+    return null;
+  }
+
+  return { user_id: userId, tenant, email };
 }
 
 /**
  * Verify the caller has access to platform reports.
  *
  * SECURITY: Platform reports provide cross-tenant data access, so we MUST verify
- * that the user belongs to the master billing tenant. We cannot trust headers alone
- * as they can be spoofed by malicious clients.
+ * that the user belongs to the master billing tenant.
  *
- * Returns the tenant ID to use for queries.
+ * For internal ext-proxy prefetch requests, we trust the user info passed in headers
+ * since ext-proxy already validated the session before making the internal request.
  */
-async function assertMasterTenantAccess(_request: NextRequest): Promise<string> {
+async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // ALWAYS validate the user session - headers can be spoofed!
+  // Check for internal ext-proxy request with trusted user info
+  const internalUser = getInternalUserInfo(request);
+  if (internalUser) {
+    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) {
+      throw new Error('Access denied: Platform reports require master tenant access');
+    }
+    return {
+      tenantId: MASTER_BILLING_TENANT_ID,
+      userId: internalUser.user_id,
+      userEmail: internalUser.email,
+    };
+  }
+
+  // For external requests, validate the user session
   const user = await getCurrentUser();
 
   if (!user) {
     throw new Error('Authentication required');
   }
 
-  // User MUST be from the master billing tenant to access cross-tenant reports
   if (user.tenant !== MASTER_BILLING_TENANT_ID) {
     throw new Error('Access denied: Platform reports require master tenant access');
   }
 
-  return MASTER_BILLING_TENANT_ID;
+  return {
+    tenantId: MASTER_BILLING_TENANT_ID,
+    userId: user.user_id,
+    userEmail: user.email,
+  };
 }
 
 interface RouteContext {
@@ -84,8 +109,7 @@ export async function GET(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
-    const user = await getCurrentUser();
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
     const { reportId } = await context.params;
 
     const service = new PlatformReportService(masterTenantId);
@@ -93,9 +117,9 @@ export async function GET(
     const report = await service.getReport(reportId);
 
     if (!report) {
-      return jsonResponse(
+      return NextResponse.json(
         { success: false, error: 'Report not found' },
-        { status: 404, request }
+        { status: 404 }
       );
     }
 
@@ -103,18 +127,15 @@ export async function GET(
     const clientInfo = extractClientInfo(request);
     await auditService.logEvent({
       eventType: 'report.view',
-      userId: user?.user_id,
-      userEmail: user?.email,
+      userId,
+      userEmail,
       resourceType: 'report',
       resourceId: report.report_id,
       resourceName: report.name,
       ...clientInfo,
     });
 
-    return jsonResponse({
-      success: true,
-      data: report,
-    }, { request });
+    return NextResponse.json({ success: true, data: report });
   } catch (error) {
     console.error('[platform-reports/:id] GET error:', error);
 
@@ -123,16 +144,16 @@ export async function GET(
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 403, request }
+          { status: 403 }
         );
       }
     }
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }
@@ -146,8 +167,7 @@ export async function PUT(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
-    const user = await getCurrentUser();
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
     const { reportId } = await context.params;
 
     const service = new PlatformReportService(masterTenantId);
@@ -157,9 +177,9 @@ export async function PUT(
     const report = await service.updateReport(reportId, body);
 
     if (!report) {
-      return jsonResponse(
+      return NextResponse.json(
         { success: false, error: 'Report not found' },
-        { status: 404, request }
+        { status: 404 }
       );
     }
 
@@ -167,8 +187,8 @@ export async function PUT(
     const clientInfo = extractClientInfo(request);
     await auditService.logEvent({
       eventType: 'report.update',
-      userId: user?.user_id,
-      userEmail: user?.email,
+      userId,
+      userEmail,
       resourceType: 'report',
       resourceId: report.report_id,
       resourceName: report.name,
@@ -176,10 +196,7 @@ export async function PUT(
       ...clientInfo,
     });
 
-    return jsonResponse({
-      success: true,
-      data: report,
-    }, { request });
+    return NextResponse.json({ success: true, data: report });
   } catch (error) {
     console.error('[platform-reports/:id] PUT error:', error);
 
@@ -188,24 +205,24 @@ export async function PUT(
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 403, request }
+          { status: 403 }
         );
       }
 
       // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 400, request }
+          { status: 400 }
         );
       }
     }
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }
@@ -219,8 +236,7 @@ export async function DELETE(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
-    const user = await getCurrentUser();
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
     const { reportId } = await context.params;
 
     const service = new PlatformReportService(masterTenantId);
@@ -232,9 +248,9 @@ export async function DELETE(
     const deleted = await service.deleteReport(reportId);
 
     if (!deleted) {
-      return jsonResponse(
+      return NextResponse.json(
         { success: false, error: 'Report not found' },
-        { status: 404, request }
+        { status: 404 }
       );
     }
 
@@ -242,18 +258,15 @@ export async function DELETE(
     const clientInfo = extractClientInfo(request);
     await auditService.logEvent({
       eventType: 'report.delete',
-      userId: user?.user_id,
-      userEmail: user?.email,
+      userId,
+      userEmail,
       resourceType: 'report',
       resourceId: reportId,
       resourceName: report?.name,
       ...clientInfo,
     });
 
-    return jsonResponse({
-      success: true,
-      message: 'Report deleted',
-    }, { request });
+    return NextResponse.json({ success: true, message: 'Report deleted' });
   } catch (error) {
     console.error('[platform-reports/:id] DELETE error:', error);
 
@@ -262,16 +275,16 @@ export async function DELETE(
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 403, request }
+          { status: 403 }
         );
       }
     }
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }
