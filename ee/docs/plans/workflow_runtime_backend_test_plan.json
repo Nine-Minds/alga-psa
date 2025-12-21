@@ -265,52 +265,52 @@
     "implemented": false
   },
   {
-    "description": "Node registry endpoint returns node definitions with JSON config schemas. Mocks: non-target dependencies.",
+    "description": "Node registry server action returns node definitions with JSON config schemas (API delegates to server action). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Node registry endpoint includes UI metadata (label/category/description/icon). Mocks: non-target dependencies.",
+    "description": "Node registry server action includes UI metadata (label/category/description/icon). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Node registry endpoint includes email node types needed for email workflow. Mocks: non-target dependencies.",
+    "description": "Node registry server action includes email node types needed for email workflow. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Action registry endpoint returns action definitions with I/O JSON schemas. Mocks: non-target dependencies.",
+    "description": "Action registry server action returns action definitions with I/O JSON schemas (API delegates to server action). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Action registry endpoint includes email workflow actions. Mocks: non-target dependencies.",
+    "description": "Action registry server action includes email workflow actions. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Action registry endpoint returns sideEffectful and retryHint metadata. Mocks: non-target dependencies.",
+    "description": "Action registry server action returns sideEffectful and retryHint metadata. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Schema endpoint returns JSON schema by schemaRef. Mocks: non-target dependencies.",
+    "description": "Schema server action returns JSON schema by schemaRef (API delegates to server action). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Schema endpoint returns 404 for unknown schemaRef. Mocks: non-target dependencies.",
+    "description": "Schema server action returns 404 for unknown schemaRef. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Registry endpoints return examples/snippets when available. Mocks: non-target dependencies.",
+    "description": "Registry server actions return examples/snippets when available. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Registry endpoints are deterministic across process lifetime (no runtime mutation). Mocks: non-target dependencies.",
+    "description": "Registry server actions are deterministic across process lifetime (no runtime mutation). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
@@ -405,27 +405,27 @@
     "implemented": false
   },
   {
-    "description": "Cancel run endpoint sets status CANCELED and releases waits. Mocks: non-target dependencies.",
+    "description": "Cancel run server action sets status CANCELED and releases waits (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Resume run endpoint restarts WAITING runs with audit record. Mocks: non-target dependencies.",
+    "description": "Resume run server action restarts WAITING runs with audit record (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "Get run endpoint returns status, nodePath, and timestamps. Mocks: non-target dependencies.",
+    "description": "Get run server action returns status, nodePath, and timestamps (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "List run steps endpoint returns ordered step history with attempts. Mocks: non-target dependencies.",
+    "description": "List run steps server action returns ordered step history with attempts (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "List run steps endpoint includes links to snapshots where available. Mocks: non-target dependencies.",
+    "description": "List run steps server action includes links to snapshots where available. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
@@ -610,22 +610,22 @@
     "implemented": false
   },
   {
-    "description": "POST /workflow/events inserts runtime event and resumes one matching wait atomically. Mocks: non-target dependencies.",
+    "description": "Submit workflow event server action inserts runtime event and resumes one matching wait atomically (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "POST /workflow/events with no matching wait still records event for audit. Mocks: non-target dependencies.",
+    "description": "Submit workflow event server action with no matching wait still records event for audit. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "POST /workflow/events resumes only one run when multiple waits share the same key. Mocks: non-target dependencies.",
+    "description": "Submit workflow event server action resumes only one run when multiple waits share the same key. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
   {
-    "description": "POST /workflow/events returns resumed run id when a match occurs. Mocks: non-target dependencies.",
+    "description": "Submit workflow event server action returns resumed run id when a match occurs. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
@@ -670,7 +670,7 @@
     "implemented": false
   },
   {
-    "description": "admin resume endpoint resumes WAITING runs without event payload. Mocks: non-target dependencies.",
+    "description": "Admin resume server action resumes WAITING runs without event payload. Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
@@ -700,7 +700,7 @@
     "implemented": false
   },
   {
-    "description": "workflow runtime event list endpoint returns recent events. Mocks: non-target dependencies.",
+    "description": "Workflow runtime event list server action returns recent events (API delegates). Mocks: non-target dependencies.",
     "reference": "integration (mocks for non-target dependencies)",
     "implemented": false
   },
@@ -1055,7 +1055,7 @@
     "implemented": false
   },
   {
-    "description": "E2E: event.wait pauses run and POST /workflow/events resumes it to completion. Mocks: non-target dependencies.",
+    "description": "E2E: event.wait pauses run and submit workflow event (server action; API optional) resumes it to completion. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
     "implemented": false
   },
@@ -1080,7 +1080,7 @@
     "implemented": false
   },
   {
-    "description": "E2E: resume a WAITING run via admin endpoint and complete remaining steps. Mocks: non-target dependencies.",
+    "description": "E2E: resume a WAITING run via admin server action and complete remaining steps. Mocks: non-target dependencies.",
     "reference": "e2e (mocks for non-target dependencies)",
     "implemented": false
   },
