@@ -107,3 +107,20 @@
 - Event wait start step removed per instruction; checklist item for 10s wait remains false.
 - HTML->blocks fallback in initial comment not wired into workflow definition.
 
+
+## 2025-12-21 - Server actions first-class for workflow runtime V2
+- Added `server/src/lib/actions/workflow-runtime-v2-actions.ts` with server actions for all V2 definition, publish, run, registry, schema, and event operations (server actions are now the primary entry point).
+- Added shared schemas in `server/src/lib/actions/workflow-runtime-v2-schemas.ts` and API error helper `server/src/lib/api/workflowRuntimeV2Api.ts`.
+- Updated workflow V2 API routes to delegate to server actions and use the API error helper:
+  - `server/src/app/api/workflow-definitions/route.ts`
+  - `server/src/app/api/workflow-definitions/[workflowId]/[version]/route.ts`
+  - `server/src/app/api/workflow-definitions/[workflowId]/[version]/publish/route.ts`
+  - `server/src/app/api/workflow-runs/route.ts`
+  - `server/src/app/api/workflow-runs/[runId]/route.ts`
+  - `server/src/app/api/workflow-runs/[runId]/steps/route.ts`
+  - `server/src/app/api/workflow-runs/[runId]/cancel/route.ts`
+  - `server/src/app/api/workflow-runs/[runId]/resume/route.ts`
+  - `server/src/app/api/workflow/registry/nodes/route.ts`
+  - `server/src/app/api/workflow/registry/actions/route.ts`
+  - `server/src/app/api/workflow/registry/schemas/[schemaRef]/route.ts`
+  - `server/src/app/api/workflow/events/route.ts`

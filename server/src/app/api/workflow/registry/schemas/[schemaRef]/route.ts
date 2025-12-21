@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { initializeWorkflowRuntimeV2, getSchemaRegistry } from '@shared/workflow/runtime';
+import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Api';
+import { getWorkflowSchemaAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 
 export async function GET(_req: NextRequest, { params }: { params: { schemaRef: string } }) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const ref = decodeURIComponent(params.schemaRef);
+    const result = await getWorkflowSchemaAction({ schemaRef: ref });
+    return NextResponse.json(result);
+  } catch (error) {
+    return handleWorkflowV2ApiError(error);
   }
-
-  initializeWorkflowRuntimeV2();
-  const registry = getSchemaRegistry();
-  const ref = decodeURIComponent(params.schemaRef);
-  if (!registry.has(ref)) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-  return NextResponse.json({ ref, schema: registry.toJsonSchema(ref) });
 }
