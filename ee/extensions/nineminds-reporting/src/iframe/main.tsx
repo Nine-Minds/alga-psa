@@ -9,6 +9,7 @@ import {
   DataTable,
   Text,
   Alert,
+  ConfirmDialog,
   type Column,
   type SelectOption,
 } from '@alga-psa/ui-kit';
@@ -460,7 +461,7 @@ async function fetchSchema(): Promise<TableSchema[]> {
       const data = result?.data || result;
       if (data?.tables) {
         schemaCache = data.tables;
-        return schemaCache;
+        return data.tables as TableSchema[];
       }
 
       if (result?.success === false) {
@@ -476,7 +477,7 @@ async function fetchSchema(): Promise<TableSchema[]> {
     }
   })();
 
-  return schemaPromise;
+  return schemaPromise!;
 }
 
 /**
@@ -1067,6 +1068,7 @@ function ReportDetail({
   const [results, setResults] = useState<ReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // If editing, render the EditReport component
   if (isEditing) {
@@ -1097,11 +1099,7 @@ function ReportDetail({
     setExecuting(false);
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this report?')) {
-      return;
-    }
-
+  const handleDeleteConfirmed = async () => {
     const result = await callExtensionApi(`/${report.report_id}`, {
       method: 'DELETE',
     });
@@ -1112,6 +1110,7 @@ function ReportDetail({
     } else {
       setError(result.error || 'Failed to delete report');
     }
+    setShowDeleteConfirm(false);
   };
 
   return (
@@ -1168,10 +1167,22 @@ function ReportDetail({
           <Button variant="secondary" onClick={() => setIsEditing(true)}>
             Edit Report
           </Button>
-          <Button variant="danger" onClick={handleDelete}>
+          <Button variant="danger" onClick={() => setShowDeleteConfirm(true)}>
             Delete Report
           </Button>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          title="Delete Report"
+          message="Are you sure you want to delete this report? This action cannot be undone."
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       </Card>
 
       {error && <Alert tone="danger" style={{ marginTop: '16px' }}>{error}</Alert>}
@@ -1408,10 +1419,6 @@ function CreateReport() {
       setError(result.error || 'Failed to create report');
     }
     setCreating(false);
-  };
-
-  const getFieldOptions = (tableName: string): SelectOption[] => {
-    return getTableColumns(tableName).map(col => ({ value: col, label: col }));
   };
 
   // Get all field options from base table + all joined tables (for filters)
@@ -2256,6 +2263,7 @@ const AUDIT_EVENT_TYPE_OPTIONS: SelectOption[] = [
 interface Tenant {
   tenant: string;
   client_name: string;
+  email: string | null;
   portal_domain: string | null;
   subscription_status: string | null;
   created_at: string;
@@ -2318,6 +2326,12 @@ async function callTenantManagementApi<T>(
 // Tenant Management View
 // ============================================================================
 
+// Confirmation dialog state type
+interface ConfirmAction {
+  message: string;
+  onConfirm: () => void;
+}
+
 function TenantManagementView() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -2325,6 +2339,9 @@ function TenantManagementView() {
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [createForm, setCreateForm] = useState({
     companyName: '',
     firstName: '',
@@ -2371,84 +2388,88 @@ function TenantManagementView() {
   }, [fetchTenants, fetchAuditLogs]);
 
   // Handle resend welcome email
-  const handleResendWelcomeEmail = async (tenantId: string, tenantName: string) => {
-    if (!confirm(`Send new welcome email with reset password to admin of "${tenantName}"?`)) {
-      return;
-    }
+  const handleResendWelcomeEmail = (tenantId: string, tenantName: string) => {
+    setConfirmAction({
+      message: `Send new welcome email with reset password to admin of "${tenantName}"?`,
+      onConfirm: async () => {
+        setConfirmAction(null);
+        setActionInProgress(tenantId);
+        try {
+          const result = await callTenantManagementApi<void>('/resend-welcome-email', {
+            method: 'POST',
+            body: JSON.stringify({ tenantId }),
+          });
 
-    setActionInProgress(tenantId);
-    try {
-      const result = await callTenantManagementApi<void>('/resend-welcome-email', {
-        method: 'POST',
-        body: JSON.stringify({ tenantId }),
-      });
-
-      if (result.success) {
-        alert(result.message || `Welcome email sent to ${result.email}`);
-        fetchAuditLogs();
-      } else {
-        alert(`Failed: ${result.error}`);
-      }
-    } catch (err) {
-      alert(`Error: ${err}`);
-    } finally {
-      setActionInProgress(null);
-    }
+          if (result.success) {
+            setStatusMessage({ type: 'success', text: result.message || `Welcome email sent` });
+            fetchAuditLogs();
+          } else {
+            setStatusMessage({ type: 'error', text: `Failed: ${result.error}` });
+          }
+        } catch (err) {
+          setStatusMessage({ type: 'error', text: `Error: ${err}` });
+        } finally {
+          setActionInProgress(null);
+        }
+      },
+    });
   };
 
   // Handle create tenant
-  const handleCreateTenant = async () => {
+  const handleCreateTenant = () => {
     const { companyName, firstName, lastName, email, licenseCount } = createForm;
 
     if (!companyName.trim() || !firstName.trim() || !lastName.trim() || !email.trim()) {
-      alert('Please fill in all required fields');
+      setStatusMessage({ type: 'error', text: 'Please fill in all required fields' });
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      alert('Please enter a valid email address');
+      setStatusMessage({ type: 'error', text: 'Please enter a valid email address' });
       return;
     }
 
-    if (!confirm(`Create tenant "${companyName}" with admin user ${email}?`)) {
-      return;
-    }
+    setConfirmAction({
+      message: `Create tenant "${companyName}" with admin user ${email}?`,
+      onConfirm: async () => {
+        setConfirmAction(null);
+        setActionInProgress('create');
+        try {
+          const result = await callTenantManagementApi<void>('/create-tenant', {
+            method: 'POST',
+            body: JSON.stringify({
+              companyName: companyName.trim(),
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              email: email.trim(),
+              licenseCount,
+            }),
+          });
 
-    setActionInProgress('create');
-    try {
-      const result = await callTenantManagementApi<void>('/create-tenant', {
-        method: 'POST',
-        body: JSON.stringify({
-          companyName: companyName.trim(),
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim(),
-          licenseCount,
-        }),
-      });
-
-      if (result.success) {
-        alert(result.message || `Tenant "${companyName}" created successfully`);
-        setShowCreateForm(false);
-        setCreateForm({
-          companyName: '',
-          firstName: '',
-          lastName: '',
-          email: '',
-          licenseCount: 5,
-        });
-        fetchTenants();
-        fetchAuditLogs();
-      } else {
-        alert(`Failed: ${result.error}`);
-      }
-    } catch (err) {
-      alert(`Error: ${err}`);
-    } finally {
-      setActionInProgress(null);
-    }
+          if (result.success) {
+            setStatusMessage({ type: 'success', text: result.message || `Tenant "${companyName}" created successfully` });
+            setShowCreateForm(false);
+            setCreateForm({
+              companyName: '',
+              firstName: '',
+              lastName: '',
+              email: '',
+              licenseCount: 5,
+            });
+            fetchTenants();
+            fetchAuditLogs();
+          } else {
+            setStatusMessage({ type: 'error', text: `Failed: ${result.error}` });
+          }
+        } catch (err) {
+          setStatusMessage({ type: 'error', text: `Error: ${err}` });
+        } finally {
+          setActionInProgress(null);
+        }
+      },
+    });
   };
 
   const getStatusBadgeTone = (status: string | null): 'success' | 'warning' | 'info' | 'danger' => {
@@ -2478,6 +2499,15 @@ function TenantManagementView() {
             {row.tenant.slice(0, 8)}...
           </div>
         </div>
+      ),
+    },
+    {
+      key: 'email',
+      header: 'Admin Email',
+      render: (row) => (
+        <Text style={{ fontSize: '0.875rem' }}>
+          {row.email || '—'}
+        </Text>
       ),
     },
     {
@@ -2591,6 +2621,28 @@ function TenantManagementView() {
 
       {error && <Alert tone="danger" style={{ marginBottom: '16px' }}>{error}</Alert>}
 
+      {/* Status Message */}
+      {statusMessage && (
+        <Alert
+          tone={statusMessage.type === 'success' ? 'success' : 'danger'}
+          style={{ marginBottom: '16px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{statusMessage.text}</span>
+            <Button variant="ghost" size="sm" onClick={() => setStatusMessage(null)}>✕</Button>
+          </div>
+        </Alert>
+      )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!confirmAction}
+        title="Confirm Action"
+        message={confirmAction?.message || ''}
+        onConfirm={() => confirmAction?.onConfirm()}
+        onCancel={() => setConfirmAction(null)}
+      />
+
       {/* Create Tenant Form */}
       {showCreateForm && (
         <Card style={{ marginBottom: '20px' }}>
@@ -2671,19 +2723,46 @@ function TenantManagementView() {
 
       {/* Tenants List */}
       <Card style={{ marginBottom: '20px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Tenants</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ margin: 0 }}>Tenants</h3>
+          <div style={{ width: '300px' }}>
+            <Input
+              type="text"
+              placeholder="Search tenants..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
         {loading ? (
           <Text tone="muted">Loading tenants...</Text>
         ) : tenants.length === 0 ? (
           <Text tone="muted">No tenants found.</Text>
         ) : (
-          <DataTable
-            columns={tenantColumns}
-            data={tenants}
-            paginate
-            defaultPageSize={10}
-            initialSortKey="client_name"
-          />
+          <>
+            {(() => {
+              const filteredTenants = searchQuery.trim()
+                ? tenants.filter(t => {
+                    const query = searchQuery.toLowerCase();
+                    return t.client_name.toLowerCase().includes(query) ||
+                      t.tenant.toLowerCase().includes(query) ||
+                      (t.email && t.email.toLowerCase().includes(query));
+                  })
+                : tenants;
+
+              return filteredTenants.length === 0 ? (
+                <Text tone="muted">No tenants match "{searchQuery}"</Text>
+              ) : (
+                <DataTable
+                  columns={tenantColumns}
+                  data={filteredTenants}
+                  paginate
+                  defaultPageSize={10}
+                  initialSortKey="client_name"
+                />
+              );
+            })()}
+          </>
         )}
       </Card>
 
@@ -3120,10 +3199,6 @@ function EditReport({
       setError(result.error || 'Failed to update report');
     }
     setSaving(false);
-  };
-
-  const getFieldOptions = (tableName: string): SelectOption[] => {
-    return getTableColumns(tableName).map(col => ({ value: col, label: col }));
   };
 
   // Get all field options from base table + all joined tables (for filters)
