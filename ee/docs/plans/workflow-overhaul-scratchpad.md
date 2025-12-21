@@ -242,3 +242,73 @@
 
 ### Checklist updates
 - Appended detailed operational/observability features (run history, logs, audit, RBAC, retention, metrics, alerting, ops controls, event observability, performance) to `workflow_runtime_feature_checklist.json`.
+
+### Run list implementation start
+- Added workflow run list API (GET `/api/workflow-runs`) via `listWorkflowRunsAction` with filters, pagination, and workflow name join.
+- Added run list UI tab with filters and table in `ee/server/src/components/workflow-designer/WorkflowRunList.tsx` and wired into `WorkflowDesigner` tabs.
+- Marked checklist item for run list view as implemented.
+
+### Run details implementation
+- Added run details panel with step timeline, snapshot viewer, action invocation logs, and wait summary.
+- Added admin resume/cancel UI actions with confirmation dialogs.
+- Added UI-side masking for sensitive keys (secret/token/password/etc.) before rendering JSON.
+- Updated run steps API payload to include invocations + waits.
+- Marked checklist items for run details, snapshots/logs, admin actions, and redaction as implemented.
+
+### Operational iteration (Section 14)
+- Added run summary endpoint (`GET /api/workflow-runs/summary`) with counts by status and filters.
+- Added quick time-range chips (last 24h/7d) and status count badges to the run list UI.
+- Expanded run detail wait history to show event name, correlation key, timeouts, and resolution timestamps.
+- Marked §14 items for timeline display, wait history, correlation fields, and quick filters as implemented.
+
+## 2025-12-21 — Operational Section Progress (continued)
+
+### Run list enhancements
+- Added tenant context column (shown when multiple tenants appear) and correlation key search (via wait key join).
+- Implemented bulk select with resume/cancel actions and confirmation dialogs.
+
+### Run detail enhancements
+- Added workflow metadata (workflow id/version/trigger/run id) and richer error display.
+- Step details now include status/attempt/timestamps, error category/at, and next retry.
+- Added payload/vars/meta/error/raw tabs with redaction notice; action invocation redaction notice.
+- Added timeline filters (status + node type), collapse nested blocks toggle, and step deep-linking via `?step=`.
+
+### API shim alignment (server actions first)
+- Workflow designer UI now uses server actions directly for definitions, registries, runs, logs, audits, events, exports, and admin operations.
+- Export logic moved into server actions (runs/events/audits/logs); API routes are thin shims over actions.
+- Added workflow run log export action and API shim for external access.
+
+### Run log observability
+- Added `workflow_run_logs` persistence + model, runtime log hooks (steps, waits, action invocations, retries, resume/timeouts).
+- Implemented log APIs (`/api/workflow-runs/{runId}/logs`) with pagination + CSV export.
+- Added run log viewer with level filters, search, and export in run details.
+- Action invocation cards now show input/output size and truncation markers in UI.
+
+### Audit trail
+- Added audit logging for workflow definition create/update/publish and run cancel/resume (with reasons).
+- Added audit APIs for workflows and runs plus CSV export routes.
+- Added Audit tab for workflow definitions and audit trail section in run details.
+
+### RBAC + workflow metadata
+- Added workflow permissions (view/publish/admin) migration and wired RBAC checks across workflow actions.
+- Added workflow definition metadata (system/visible/paused/concurrency/auto-pause thresholds) + UI settings + metadata endpoint.
+- Enforced system workflow edit protection and visibility filtering; hid admin controls based on permissions.
+
+## 2025-12-21 — Operational Section Progress (ops controls + events)
+
+### Run controls + dead-letter
+- Added retry/replay/requeue admin actions with required reasons, audit log entries, and run log markers.
+- New API routes: `/api/workflow-runs/{runId}/retry`, `/replay`, `/requeue`, plus `/api/workflow-runs/dead-letter`.
+- Dead-letter queue UI (retries threshold + run detail panel) added as a new tab.
+- Added run list CSV export and run detail JSON export with redactions.
+
+### Event observability
+- Added event tracking fields (matched_run_id, matched_wait_id, error_message, created_at index) and lookup index migration.
+- Event ingestion now records match metadata, error messages, and processed timestamps.
+- Event list UI with filters, status badges, payload preview (redacted), and event detail panel linking to matched run.
+- Event summary endpoint + UI badges for matched/unmatched/error counts.
+- Event export endpoints (CSV/JSON) wired to the event list filters.
+
+### Performance + indexing
+- Added index on workflow_runs (workflow_id, status, updated_at) and workflow_run_steps (run_id, step_id).
+- Enforced per-tenant run start rate limits and max payload size checks in server action.

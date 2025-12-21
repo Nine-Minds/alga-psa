@@ -17,17 +17,17 @@ import { resolveExpressions } from '../utils/expressionResolver';
 import { applyRedactions, enforceSnapshotSize, safeSerialize } from '../utils/redactionUtils';
 import { applyAssignments } from '../utils/assignmentUtils';
 import { parseNodePath } from '../utils/nodePathUtils';
-import { scheduleRetryAt } from '../utils/retryUtils';
-import { generateIdempotencyKey } from '../utils/idempotencyUtils';
 import WorkflowDefinitionVersionModelV2 from '../../persistence/workflowDefinitionVersionModelV2';
-import WorkflowRunModelV2 from '../../persistence/workflowRunModelV2';
+import WorkflowRunModelV2, { type WorkflowRunRecord } from '../../persistence/workflowRunModelV2';
 import WorkflowRunStepModelV2 from '../../persistence/workflowRunStepModelV2';
 import WorkflowRunWaitModelV2 from '../../persistence/workflowRunWaitModelV2';
 import WorkflowActionInvocationModelV2 from '../../persistence/workflowActionInvocationModelV2';
 import WorkflowRunSnapshotModelV2 from '../../persistence/workflowRunSnapshotModelV2';
+import WorkflowRunLogModelV2 from '../../persistence/workflowRunLogModelV2';
 
 const SNAPSHOT_MAX_BYTES = 256 * 1024;
-const SNAPSHOT_RETENTION_DAYS = Number(process.env.WORKFLOW_SNAPSHOT_RETENTION_DAYS ?? '30');
+const LOG_CONTEXT_MAX_BYTES = 64 * 1024;
+const INVOCATION_LOG_PREVIEW_BYTES = 32 * 1024;
 const LEASE_MS = 30_000;
 
 export type StartRunParams = {
@@ -45,6 +45,44 @@ export type EventResumePayload = {
 };
 
 export class WorkflowRuntimeV2 {
+  private async logRunEvent(
+    knex: Knex,
+    run: WorkflowRunRecord,
+    entry: {
+      level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+      message: string;
+      stepId?: string | null;
+      stepPath?: string | null;
+      context?: Record<string, unknown> | null;
+      correlationKey?: string | null;
+      eventName?: string | null;
+      source?: string | null;
+      redactions?: string[];
+    }
+  ): Promise<void> {
+    try {
+      const redactions = entry.redactions ?? [];
+      const sanitized = entry.context ? applyRedactions(safeSerialize(entry.context), redactions) : null;
+      const sized = sanitized ? enforceSnapshotSize(sanitized, LOG_CONTEXT_MAX_BYTES) : null;
+
+      await WorkflowRunLogModelV2.create(knex, {
+        run_id: run.run_id,
+        tenant_id: run.tenant_id ?? null,
+        step_id: entry.stepId ?? null,
+        step_path: entry.stepPath ?? null,
+        level: entry.level,
+        message: entry.message,
+        context_json: sized ? (sized as Record<string, unknown>) : null,
+        correlation_key: entry.correlationKey ?? null,
+        event_name: entry.eventName ?? null,
+        source: entry.source ?? null
+      });
+    } catch (error) {
+      // Avoid breaking workflow execution on log failures.
+      console.warn('[WorkflowRuntimeV2] Failed to write run log', error);
+    }
+  }
+
   async startRun(knex: Knex, params: StartRunParams): Promise<string> {
     const nodePath = params.payload ? 'root.steps[0]' : 'root.steps[0]';
     const run = await WorkflowRunModelV2.create(knex, {
@@ -56,6 +94,18 @@ export class WorkflowRuntimeV2 {
       input_json: params.payload,
       resume_event_name: params.triggerEvent?.name ?? null,
       resume_event_payload: params.triggerEvent?.payload ?? null
+    });
+
+    await this.logRunEvent(knex, run, {
+      level: 'INFO',
+      message: 'Run started',
+      context: {
+        workflowId: params.workflowId,
+        workflowVersion: params.version,
+        payloadSizeBytes: jsonSize(params.payload),
+        triggerEventName: params.triggerEvent?.name ?? null
+      },
+      source: 'runtime'
     });
 
     return run.run_id;
@@ -103,33 +153,71 @@ export class WorkflowRuntimeV2 {
     let env = await this.loadEnvelope(knex, run, definition);
     let currentPath = run.node_path ?? null;
 
+    if (run.resume_event_name) {
+      await this.logRunEvent(knex, run, {
+        level: 'INFO',
+        message: 'Run resumed from event',
+        eventName: run.resume_event_name,
+        context: {
+          resumePayloadSizeBytes: jsonSize(run.resume_event_payload)
+        },
+        source: 'event'
+      });
+    }
+
+    if (run.resume_error) {
+      await this.logRunEvent(knex, run, {
+        level: 'WARN',
+        message: 'Run resumed with error',
+        context: run.resume_error as Record<string, unknown>,
+        source: 'runtime'
+      });
+    }
+
     if (!currentPath) {
+      await this.logRunEvent(knex, run, {
+        level: 'INFO',
+        message: 'Run completed',
+        context: { status: run.status },
+        source: 'runtime'
+      });
       await this.markRunCompleted(knex, runId, 'SUCCEEDED');
       return;
     }
 
     while (currentPath) {
-      const stepPath = currentPath;
-      const { step, stack } = resolveStepAtPath(definition, stepPath);
+      const { step, stack } = resolveStepAtPath(definition, currentPath);
       if (!step) {
         await this.markRunCompleted(knex, runId, 'SUCCEEDED');
         return;
       }
 
       const stepStart = Date.now();
-      const attempt = await this.nextAttempt(knex, runId, stepPath);
+      const attempt = await this.nextAttempt(knex, runId, currentPath);
       const stepRecord = await WorkflowRunStepModelV2.create(knex, {
         run_id: runId,
-        step_path: stepPath,
+        step_path: currentPath,
         definition_step_id: step.id,
         status: 'STARTED',
         attempt
       });
 
-      try {
-        env = await this.prepareEnvForStep(env, definition, stepPath);
+      await this.logRunEvent(knex, run, {
+        level: 'INFO',
+        message: 'Step started',
+        stepId: stepRecord.step_id,
+        stepPath: currentPath,
+        context: {
+          definitionStepId: step.id,
+          attempt
+        },
+        source: 'runtime'
+      });
 
-        const result = await this.executeStep(knex, run, definition, step, stepPath, env);
+      try {
+        env = await this.prepareEnvForStep(env, definition, currentPath);
+
+        const result = await this.executeStep(knex, run, definition, step, currentPath, env);
 
         if (result.type === 'wait') {
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
@@ -139,16 +227,24 @@ export class WorkflowRuntimeV2 {
             status: 'WAITING',
             resume_event_name: null,
             resume_event_payload: null,
-            resume_error: null,
-            lease_owner: null,
-            lease_expires_at: null
+            resume_error: null
+          });
+          await this.logRunEvent(knex, run, {
+            level: 'INFO',
+            message: 'Step waiting',
+            stepId: stepRecord.step_id,
+            stepPath: currentPath,
+            context: {
+              definitionStepId: step.id
+            },
+            source: 'runtime'
           });
           return;
         }
 
         if (result.type === 'return') {
           env = result.env;
-          const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
+          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -164,17 +260,39 @@ export class WorkflowRuntimeV2 {
             resume_event_payload: null,
             resume_error: null
           });
+          await this.logRunEvent(knex, run, {
+            level: 'INFO',
+            message: 'Step succeeded',
+            stepId: stepRecord.step_id,
+            stepPath: currentPath,
+            context: { durationMs: Date.now() - stepStart },
+            source: 'runtime'
+          });
+          await this.logRunEvent(knex, run, {
+            level: 'INFO',
+            message: 'Run completed',
+            context: { status: 'SUCCEEDED' },
+            source: 'runtime'
+          });
           return;
         }
 
         env = result.env;
 
-        const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
+        const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
         await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
           status: 'SUCCEEDED',
           duration_ms: Date.now() - stepStart,
           completed_at: new Date().toISOString(),
           snapshot_id: snapshotId
+        });
+        await this.logRunEvent(knex, run, {
+          level: 'INFO',
+          message: 'Step succeeded',
+          stepId: stepRecord.step_id,
+          stepPath: currentPath,
+          context: { durationMs: Date.now() - stepStart },
+          source: 'runtime'
         });
 
         currentPath = result.nextPath;
@@ -189,15 +307,21 @@ export class WorkflowRuntimeV2 {
         });
 
         if (!currentPath) {
+          await this.logRunEvent(knex, run, {
+            level: 'INFO',
+            message: 'Run completed',
+            context: { status: 'SUCCEEDED' },
+            source: 'runtime'
+          });
           return;
         }
       } catch (error) {
-        const runtimeError = toRuntimeError(error, stepPath);
+        const runtimeError = toRuntimeError(error, currentPath);
         const onErrorPolicy = getOnErrorPolicy(step);
 
         if (onErrorPolicy === 'continue') {
-          env = applyErrorToEnv(env, runtimeError, stepPath);
-          const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
+          env = applyErrorToEnv(env, runtimeError, currentPath);
+          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -205,8 +329,16 @@ export class WorkflowRuntimeV2 {
             error_json: runtimeError,
             snapshot_id: snapshotId
           });
+          await this.logRunEvent(knex, run, {
+            level: 'WARN',
+            message: 'Step error (continued)',
+            stepId: stepRecord.step_id,
+            stepPath: currentPath,
+            context: runtimeError as unknown as Record<string, unknown>,
+            source: 'runtime'
+          });
 
-          currentPath = findNextPath(definition, stepPath, env, stack);
+          currentPath = findNextPath(definition, currentPath, env, stack);
           await WorkflowRunModelV2.update(knex, runId, {
             node_path: currentPath,
             status: currentPath ? 'RUNNING' : 'SUCCEEDED',
@@ -220,10 +352,10 @@ export class WorkflowRuntimeV2 {
           continue;
         }
 
-        const forEachPolicy = resolveForEachOnItemError(definition, stepPath);
+        const forEachPolicy = resolveForEachOnItemError(definition, currentPath);
         if (forEachPolicy === 'continue') {
-          env = applyErrorToEnv(env, runtimeError, stepPath);
-          const snapshotId = await this.persistSnapshot(knex, runId, stepPath, env);
+          env = applyErrorToEnv(env, runtimeError, currentPath);
+          const snapshotId = await this.persistSnapshot(knex, runId, currentPath, env);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'SUCCEEDED',
             duration_ms: Date.now() - stepStart,
@@ -232,7 +364,7 @@ export class WorkflowRuntimeV2 {
             snapshot_id: snapshotId
           });
 
-          currentPath = findNextPath(definition, stepPath, env, stack);
+          currentPath = findNextPath(definition, currentPath, env, stack);
           await WorkflowRunModelV2.update(knex, runId, {
             node_path: currentPath,
             status: currentPath ? 'RUNNING' : 'SUCCEEDED',
@@ -247,8 +379,8 @@ export class WorkflowRuntimeV2 {
         }
 
         const retryPolicy = resolveRetryPolicy(step);
-        if (retryPolicy && isRetryable(runtimeError, retryPolicy, attempt)) {
-          const timeoutAt = scheduleRetryAt(retryPolicy, attempt);
+        if (retryPolicy && isRetryable(runtimeError, retryPolicy)) {
+          const timeoutAt = scheduleRetry(retryPolicy, attempt);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'RETRY_SCHEDULED',
             duration_ms: Date.now() - stepStart,
@@ -258,7 +390,7 @@ export class WorkflowRuntimeV2 {
 
           await WorkflowRunWaitModelV2.create(knex, {
             run_id: runId,
-            step_path: stepPath,
+            step_path: currentPath,
             wait_type: 'retry',
             timeout_at: timeoutAt,
             status: 'WAITING'
@@ -266,22 +398,40 @@ export class WorkflowRuntimeV2 {
 
           await WorkflowRunModelV2.update(knex, runId, {
             status: 'WAITING',
-            node_path: stepPath,
-            error_json: runtimeError,
-            lease_owner: null,
-            lease_expires_at: null
+            node_path: currentPath,
+            error_json: runtimeError
+          });
+          await this.logRunEvent(knex, run, {
+            level: 'WARN',
+            message: 'Retry scheduled',
+            stepId: stepRecord.step_id,
+            stepPath: currentPath,
+            context: {
+              error: runtimeError,
+              timeoutAt,
+              attempt
+            },
+            source: 'runtime'
           });
           return;
         }
 
-        const catchPath = findCatchPath(definition, stepPath, stack, runtimeError, env);
+        const catchPath = findCatchPath(definition, currentPath, stack, runtimeError, env);
         if (catchPath) {
-          env = applyErrorToEnv(env, runtimeError, stepPath);
+          env = applyErrorToEnv(env, runtimeError, currentPath);
           await WorkflowRunStepModelV2.update(knex, stepRecord.step_id, {
             status: 'FAILED',
             duration_ms: Date.now() - stepStart,
             completed_at: new Date().toISOString(),
             error_json: runtimeError
+          });
+          await this.logRunEvent(knex, run, {
+            level: 'ERROR',
+            message: 'Step failed (caught)',
+            stepId: stepRecord.step_id,
+            stepPath: currentPath,
+            context: runtimeError as unknown as Record<string, unknown>,
+            source: 'runtime'
           });
 
           currentPath = catchPath;
@@ -305,6 +455,15 @@ export class WorkflowRuntimeV2 {
           error_json: runtimeError,
           completed_at: new Date().toISOString()
         });
+        await this.logRunEvent(knex, run, {
+          level: 'ERROR',
+          message: 'Run failed',
+          stepId: stepRecord.step_id,
+          stepPath: currentPath,
+          context: runtimeError as unknown as Record<string, unknown>,
+          source: 'runtime'
+        });
+        await this.maybeAutoPauseWorkflow(knex, run);
         return;
       }
     }
@@ -349,9 +508,7 @@ export class WorkflowRuntimeV2 {
         id: run.run_id,
         workflowId: run.workflow_id,
         workflowVersion: run.workflow_version,
-        startedAt: typeof run.started_at === 'string'
-          ? run.started_at
-          : new Date(run.started_at ?? Date.now()).toISOString()
+        startedAt: run.started_at
       },
       payload: run.input_json ?? {},
       meta: {},
@@ -386,73 +543,64 @@ export class WorkflowRuntimeV2 {
     }
 
     if (step.type === 'control.if') {
-      const ifStep = step as Step & { type: 'control.if'; condition: any; then: Step[]; else?: Step[] };
       const ctx = this.expressionContext(env);
-      const condition = await resolveExpressions(ifStep.condition, ctx);
+      const condition = await resolveExpressions(step.condition, ctx);
       if (typeof condition !== 'boolean') {
         throw createRuntimeError('ExpressionError', 'control.if condition did not evaluate to boolean', path);
       }
-      const branch = condition ? ifStep.then : (ifStep.else ?? []);
+      const branch = condition ? step.then : (step.else ?? []);
       const nextPath = branch.length > 0 ? `${path}.${condition ? 'then' : 'else'}.steps[0]` : findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack);
       return { type: 'continue', env, nextPath };
     }
 
     if (step.type === 'control.forEach') {
-      const forEachStep = step as Step & { type: 'control.forEach'; items: any; itemVar: string; body: Step[]; onItemError?: 'continue' | 'fail' };
       const ctx = this.expressionContext(env);
-      const items = await resolveExpressions(forEachStep.items, ctx);
+      const items = await resolveExpressions(step.items, ctx);
       if (!Array.isArray(items)) {
-        throw createRuntimeError('ValidationError', 'control.forEach items did not evaluate to array', path);
+        throw createRuntimeError('ExpressionError', 'control.forEach items did not evaluate to array', path);
       }
-      const loopKey = forEachStep.id;
-      const previous = env.vars[forEachStep.itemVar];
+      const loopKey = step.id;
+      const previous = env.vars[step.itemVar];
       env.vars.__forEach = {
         ...(env.vars.__forEach as Record<string, unknown> || {}),
         [loopKey]: {
           items,
           index: 0,
-          itemVar: forEachStep.itemVar,
+          itemVar: step.itemVar,
           previous
         }
       };
 
-      if (items.length === 0 || forEachStep.body.length === 0) {
-        env.vars[forEachStep.itemVar] = previous;
+      if (items.length === 0 || step.body.length === 0) {
+        env.vars[step.itemVar] = previous;
         return { type: 'continue', env, nextPath: findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack) };
       }
 
-      env.vars[forEachStep.itemVar] = items[0];
+      env.vars[step.itemVar] = items[0];
       return { type: 'continue', env, nextPath: `${path}.body.steps[0]` };
     }
 
     if (step.type === 'control.tryCatch') {
-      const tryStep = step as Step & { type: 'control.tryCatch'; try: Step[]; catch: Step[]; captureErrorAs?: string };
-      const nextPath = tryStep.try.length > 0 ? `${path}.try.steps[0]` : findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack);
+      const nextPath = step.try.length > 0 ? `${path}.try.steps[0]` : findNextPath(definition, path, env, resolveStepAtPath(definition, path).stack);
       return { type: 'continue', env, nextPath };
     }
 
     if (step.type === 'control.callWorkflow') {
-      const callStep = step as Step & { type: 'control.callWorkflow'; workflowId: string; workflowVersion: number; inputMapping?: Record<string, { $expr: string }>; outputMapping?: Record<string, { $expr: string }> };
       // MVP: inline execution using same runtime (no waits allowed)
-      const input = await resolveMapping(env, callStep.inputMapping);
+      const input = await resolveMapping(env, step.inputMapping);
       const childRunId = await this.startRun(knex, {
-        workflowId: callStep.workflowId,
-        version: callStep.workflowVersion,
+        workflowId: step.workflowId,
+        version: step.workflowVersion,
         payload: input ?? {},
         tenantId: run.tenant_id
       });
       await this.executeRun(knex, childRunId, `inline-${run.run_id}`);
-      const childRun = await WorkflowRunModelV2.getById(knex, childRunId);
-      if (!childRun || childRun.status !== 'SUCCEEDED') {
-        const message = childRun?.error_json?.message || `Child workflow ${callStep.workflowId}@${callStep.workflowVersion} failed`;
-        throw createRuntimeError('ActionError', message, path);
-      }
-      if (callStep.outputMapping) {
+      if (step.outputMapping) {
         const snapshots = await WorkflowRunSnapshotModelV2.listByRun(knex, childRunId);
         const lastSnapshot = snapshots[snapshots.length - 1];
         const childEnv = lastSnapshot?.envelope_json ?? {};
         env.vars.childRun = childEnv;
-        const mapped = await resolveMapping(env, callStep.outputMapping);
+        const mapped = await resolveMapping(env, step.outputMapping);
         if (mapped) {
           env = applyAssignments(env, mapped);
         }
@@ -468,8 +616,7 @@ export class WorkflowRuntimeV2 {
     if (!nodeType) {
       throw createRuntimeError('ValidationError', `Unknown node type ${step.type}`, path);
     }
-    const nodeStep = step as Step & { config?: unknown };
-    const config = nodeStep.config ?? {};
+    const config = step.config ?? {};
     const parsedConfig = nodeType.configSchema.parse(config);
     const nodeCtx = {
       runId: run.run_id,
@@ -479,11 +626,11 @@ export class WorkflowRuntimeV2 {
       actions: {
         call: async (actionId: string, version: number, args: any, options?: { idempotencyKey?: string }) => {
           const redactions = env.meta.redactions ?? [];
-          return this.executeAction(knex, run.run_id, path, actionId, version, args, options?.idempotencyKey, run.tenant_id, redactions);
+          return this.executeAction(knex, run, path, actionId, version, args, options?.idempotencyKey, run.tenant_id, redactions, stepRecord.step_id);
         }
       },
       publishWait: async (wait: { type: 'event' | 'human'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => {
-        await WorkflowRunWaitModelV2.create(knex, {
+        const waitRecord = await WorkflowRunWaitModelV2.create(knex, {
           run_id: run.run_id,
           step_path: path,
           wait_type: wait.type,
@@ -492,6 +639,22 @@ export class WorkflowRuntimeV2 {
           timeout_at: wait.timeoutAt ?? null,
           status: 'WAITING',
           payload: wait.payload ?? null
+        });
+        await this.logRunEvent(knex, run, {
+          level: 'INFO',
+          message: wait.type === 'human' ? 'Human task created' : 'Event wait created',
+          stepId: stepRecord.step_id,
+          stepPath: path,
+          correlationKey: wait.key ?? null,
+          eventName: wait.eventName ?? null,
+          context: {
+            waitId: waitRecord.wait_id,
+            waitType: wait.type,
+            timeoutAt: wait.timeoutAt ?? null,
+            payloadPreview: wait.payload ? truncatePreview(wait.payload, INVOCATION_LOG_PREVIEW_BYTES) : null
+          },
+          source: 'runtime',
+          redactions: env.meta.redactions ?? []
         });
       },
       resumeEvent: run.resume_event_name ? { name: run.resume_event_name, payload: run.resume_event_payload } : null,
@@ -521,14 +684,15 @@ export class WorkflowRuntimeV2 {
 
   private async executeAction(
     knex: Knex,
-    runId: string,
+    run: WorkflowRunRecord,
     stepPath: string,
     actionId: string,
     version: number,
     args: unknown,
     providedIdempotencyKey?: string,
     tenantId?: string | null,
-    redactions: string[] = []
+    redactions: string[] = [],
+    stepId?: string | null
   ): Promise<unknown> {
     const actionRegistry = getActionRegistryV2();
     const action = actionRegistry.get(actionId, version);
@@ -537,12 +701,15 @@ export class WorkflowRuntimeV2 {
     }
 
     const input = action.inputSchema.parse(args);
+    const sanitizedInput = applyRedactions(safeSerialize(input), redactions) as Record<string, unknown>;
+    const inputSizeBytes = jsonSize(sanitizedInput);
+    const inputPreview = truncatePreview(sanitizedInput, INVOCATION_LOG_PREVIEW_BYTES);
 
-    let idempotencyKey = providedIdempotencyKey
+    const idempotencyKey = providedIdempotencyKey
       ? String(providedIdempotencyKey)
       : action.idempotency.mode === 'actionProvided'
         ? action.idempotency.key(input, {
-            runId,
+            runId: run.run_id,
             stepPath,
             tenantId,
             idempotencyKey: '',
@@ -551,55 +718,51 @@ export class WorkflowRuntimeV2 {
             env: {},
             knex
           })
-        : generateIdempotencyKey(runId, stepPath, actionId, version, input);
-    if (tenantId) {
-      idempotencyKey = `${tenantId}:${idempotencyKey}`;
-    }
+        : generateIdempotencyKey(run.run_id, stepPath, actionId, version, input);
 
     const existing = await WorkflowActionInvocationModelV2.findByIdempotency(knex, actionId, version, idempotencyKey);
-    let invocation = null as Awaited<ReturnType<typeof WorkflowActionInvocationModelV2.create>> | null;
     if (existing) {
       if (existing.status === 'SUCCEEDED') {
         return action.outputSchema.parse(existing.output_json ?? {});
       }
-      if (existing.status === 'STARTED') {
-        if (existing.lease_expires_at && new Date(existing.lease_expires_at).getTime() < Date.now()) {
-          throw createRuntimeError('TransientError', 'Stale action lease detected', stepPath);
-        }
-        throw createRuntimeError('TransientError', 'Action invocation already in progress', stepPath);
-      }
-      if (existing.status === 'FAILED') {
-        invocation = await WorkflowActionInvocationModelV2.update(knex, existing.invocation_id, {
-          status: 'STARTED',
-          attempt: (existing.attempt ?? 1) + 1,
-          lease_owner: `run:${runId}`,
-          lease_expires_at: new Date(Date.now() + LEASE_MS).toISOString(),
-          input_json: applyRedactions(safeSerialize(input), redactions) as Record<string, unknown>,
-          started_at: new Date().toISOString(),
-          error_message: null
-        });
+      if (existing.status === 'STARTED' && existing.lease_expires_at && new Date(existing.lease_expires_at).getTime() < Date.now()) {
+        throw createRuntimeError('TransientError', 'Stale action lease detected', stepPath);
       }
     }
 
-    if (!invocation) {
-      invocation = await WorkflowActionInvocationModelV2.create(knex, {
-        run_id: runId,
-        step_path: stepPath,
-        action_id: actionId,
-        action_version: version,
-        idempotency_key: idempotencyKey,
-        status: 'STARTED',
-        attempt: 1,
-        lease_owner: `run:${runId}`,
-        lease_expires_at: new Date(Date.now() + LEASE_MS).toISOString(),
-        input_json: applyRedactions(safeSerialize(input), redactions) as Record<string, unknown>,
-        started_at: new Date().toISOString()
-      });
-    }
+    const invocation = await WorkflowActionInvocationModelV2.create(knex, {
+      run_id: run.run_id,
+      step_path: stepPath,
+      action_id: actionId,
+      action_version: version,
+      idempotency_key: idempotencyKey,
+      status: 'STARTED',
+      attempt: 1,
+      lease_owner: `run:${run.run_id}`,
+      lease_expires_at: new Date(Date.now() + LEASE_MS).toISOString(),
+      input_json: sanitizedInput,
+      started_at: new Date().toISOString()
+    });
+
+    await this.logRunEvent(knex, run, {
+      level: 'INFO',
+      message: 'Action invocation started',
+      stepId,
+      stepPath: stepPath,
+      context: {
+        actionId,
+        actionVersion: version,
+        attempt: invocation.attempt,
+        inputSizeBytes,
+        inputPreview
+      },
+      source: 'runtime',
+      redactions
+    });
 
     try {
       const output = await action.handler(input, {
-        runId,
+        runId: run.run_id,
         stepPath,
         tenantId,
         idempotencyKey,
@@ -609,10 +772,28 @@ export class WorkflowRuntimeV2 {
         knex
       });
       const validatedOutput = action.outputSchema.parse(output);
+      const sanitizedOutput = applyRedactions(safeSerialize(validatedOutput), redactions) as Record<string, unknown>;
+      const outputSizeBytes = jsonSize(sanitizedOutput);
+      const outputPreview = truncatePreview(sanitizedOutput, INVOCATION_LOG_PREVIEW_BYTES);
       await WorkflowActionInvocationModelV2.update(knex, invocation.invocation_id, {
         status: 'SUCCEEDED',
-        output_json: applyRedactions(safeSerialize(validatedOutput), redactions) as Record<string, unknown>,
+        output_json: sanitizedOutput,
         completed_at: new Date().toISOString()
+      });
+    await this.logRunEvent(knex, run, {
+      level: 'INFO',
+      message: 'Action invocation succeeded',
+      stepId,
+      stepPath: stepPath,
+      context: {
+        actionId,
+        actionVersion: version,
+        attempt: invocation.attempt,
+          outputSizeBytes,
+          outputPreview
+        },
+        source: 'runtime',
+        redactions
       });
       return validatedOutput;
     } catch (error) {
@@ -620,6 +801,20 @@ export class WorkflowRuntimeV2 {
         status: 'FAILED',
         error_message: error instanceof Error ? error.message : String(error),
         completed_at: new Date().toISOString()
+      });
+    await this.logRunEvent(knex, run, {
+      level: 'ERROR',
+      message: 'Action invocation failed',
+      stepId,
+      stepPath: stepPath,
+      context: {
+        actionId,
+        actionVersion: version,
+        attempt: invocation.attempt,
+          error: error instanceof Error ? error.message : String(error)
+        },
+        source: 'runtime',
+        redactions
       });
       throw createRuntimeError('ActionError', error instanceof Error ? error.message : String(error), stepPath);
     }
@@ -636,13 +831,6 @@ export class WorkflowRuntimeV2 {
       envelope_json: sized as Record<string, unknown>,
       size_bytes: JSON.stringify(sized).length
     });
-    if (Number.isFinite(SNAPSHOT_RETENTION_DAYS) && SNAPSHOT_RETENTION_DAYS > 0) {
-      const cutoff = new Date(Date.now() - SNAPSHOT_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-      await knex('workflow_run_snapshots')
-        .where({ run_id: runId })
-        .andWhere('created_at', '<', cutoff)
-        .del();
-    }
     return snapshotRecord.snapshot_id;
   }
 
@@ -659,6 +847,40 @@ export class WorkflowRuntimeV2 {
       completed_at: new Date().toISOString()
     });
   }
+
+  private async maybeAutoPauseWorkflow(knex: Knex, run: WorkflowRunRecord): Promise<void> {
+    const definition = await WorkflowDefinitionModelV2.getById(knex, run.workflow_id);
+    if (!definition?.auto_pause_on_failure) return;
+    const minRuns = Number(definition.failure_rate_min_runs ?? 10);
+    const threshold = Number(definition.failure_rate_threshold ?? 0.5);
+    if (!minRuns || Number.isNaN(threshold)) return;
+
+    const recentRuns = await knex('workflow_runs')
+      .where({ workflow_id: run.workflow_id })
+      .orderBy('started_at', 'desc')
+      .limit(minRuns);
+
+    if (recentRuns.length < minRuns) return;
+
+    const failedCount = recentRuns.filter((entry: any) => entry.status === 'FAILED').length;
+    const failureRate = failedCount / recentRuns.length;
+
+    if (failureRate >= threshold && !definition.is_paused) {
+      await WorkflowDefinitionModelV2.update(knex, run.workflow_id, {
+        is_paused: true
+      });
+      await this.logRunEvent(knex, run, {
+        level: 'WARN',
+        message: 'Workflow auto-paused due to failure rate threshold',
+        context: {
+          failureRate,
+          threshold,
+          windowSize: minRuns
+        },
+        source: 'runtime'
+      });
+    }
+  }
 }
 
 function resolveStepAtPath(definition: WorkflowDefinition, path: string): { step: Step | null; stack: PathStack } {
@@ -667,12 +889,10 @@ function resolveStepAtPath(definition: WorkflowDefinition, path: string): { step
   let currentStep: Step | null = null;
   const stack: PathStack = [];
   let containerPath = 'root';
-  let currentStepPath = 'root';
 
   for (const segment of segments) {
     if (segment.type === 'steps') {
       currentStep = currentSteps[segment.index] ?? null;
-      currentStepPath = `${containerPath}.steps[${segment.index}]`;
       stack.push({
         containerPath,
         steps: currentSteps,
@@ -690,7 +910,7 @@ function resolveStepAtPath(definition: WorkflowDefinition, path: string): { step
       if (!block) {
         return { step: null, stack };
       }
-      containerPath = `${currentStepPath}.${segment.type}`;
+      containerPath = `${containerPath}.${segment.type}`;
       currentSteps = block;
     }
   }
@@ -760,17 +980,23 @@ function resolveRetryPolicy(step: Step): RetryPolicy | null {
   return null;
 }
 
-function isRetryable(error: RuntimeError, policy: RetryPolicy, attempt: number): boolean {
+function isRetryable(error: RuntimeError, policy: RetryPolicy): boolean {
   if (!policy) return false;
   if (policy.retryOn && !policy.retryOn.includes(error.category)) {
-    return false;
-  }
-  if (policy.maxAttempts && attempt >= policy.maxAttempts) {
     return false;
   }
   return true;
 }
 
+function scheduleRetry(policy: RetryPolicy, attempt: number): string {
+  const multiplier = policy.backoffMultiplier ?? 2;
+  let backoff = policy.backoffMs * Math.pow(multiplier, Math.max(0, attempt - 1));
+  if (policy.jitter ?? true) {
+    const factor = 0.8 + Math.random() * 0.4;
+    backoff = backoff * factor;
+  }
+  return new Date(Date.now() + backoff).toISOString();
+}
 
 function getOnErrorPolicy(step: Step): 'continue' | 'fail' {
   if ('onError' in step && step.onError?.policy) {
@@ -793,11 +1019,10 @@ function findCatchPath(definition: WorkflowDefinition, currentPath: string, stac
       const base = segments.slice(0, i).join('.');
       const tryStep = resolveStepAtPath(definition, base).step;
       if (tryStep && tryStep.type === 'control.tryCatch') {
-        const tryCatchStep = tryStep as Step & { type: 'control.tryCatch'; catch: Step[]; captureErrorAs?: string };
-        if (tryCatchStep.captureErrorAs) {
-          env.vars[tryCatchStep.captureErrorAs] = error;
+        if (tryStep.captureErrorAs) {
+          env.vars[tryStep.captureErrorAs] = error;
         }
-        if (tryCatchStep.catch.length > 0) {
+        if (tryStep.catch.length > 0) {
           return `${base}.catch.steps[0]`;
         }
         return findNextPath(definition, base, env, resolveStepAtPath(definition, base).stack);
@@ -858,6 +1083,45 @@ async function resolveMapping(env: Envelope, mapping?: Record<string, { $expr: s
   return result;
 }
 
+function generateIdempotencyKey(runId: string, stepPath: string, actionId: string, version: number, input: unknown): string {
+  const base = JSON.stringify({ runId, stepPath, actionId, version, input });
+  return `${runId}:${stepPath}:${actionId}:${version}:${hashString(base)}`;
+}
+
+function hashString(value: string): string {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function jsonSize(value: unknown): number {
+  try {
+    return JSON.stringify(value ?? null).length;
+  } catch {
+    return 0;
+  }
+}
+
+function truncatePreview(value: unknown, maxBytes: number): Record<string, unknown> {
+  const serialized = safeSerialize(value);
+  const size = jsonSize(serialized);
+  if (size <= maxBytes) {
+    return {
+      truncated: false,
+      sizeBytes: size,
+      preview: serialized
+    };
+  }
+  return {
+    truncated: true,
+    sizeBytes: size,
+    maxBytes,
+    preview: '[TRUNCATED]'
+  };
+}
 
 function findEnclosingForEach(definition: WorkflowDefinition, path: string, env: Envelope): { itemVar: string; item: unknown } | null {
   const segments = path.split('.');
@@ -886,8 +1150,7 @@ function resolveForEachOnItemError(definition: WorkflowDefinition, path: string)
       const base = segments.slice(0, i).join('.');
       const step = resolveStepAtPath(definition, base).step;
       if (step && step.type === 'control.forEach') {
-        const forEachStep = step as Step & { type: 'control.forEach'; onItemError?: 'continue' | 'fail' };
-        return forEachStep.onItemError ?? 'fail';
+        return step.onItemError ?? 'fail';
       }
     }
   }

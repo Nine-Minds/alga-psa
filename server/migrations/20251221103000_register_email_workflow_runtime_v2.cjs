@@ -18,6 +18,7 @@ exports.up = async function (knex) {
         description: definition.description,
         payload_schema_ref: definition.payloadSchemaRef,
         trigger: definition.trigger,
+        is_system: true,
         updated_at: new Date().toISOString()
       });
     return;
@@ -32,6 +33,7 @@ exports.up = async function (knex) {
     draft_definition: definition,
     draft_version: definition.version,
     status: 'draft',
+    is_system: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   });

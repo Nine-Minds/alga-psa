@@ -3,6 +3,7 @@ import logger from '@shared/core/logger';
 import { WorkflowRuntimeV2 } from '@shared/workflow/runtime';
 import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
 import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
+import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
 
 export class WorkflowRuntimeV2Worker {
   private intervalId: NodeJS.Timeout | null = null;
@@ -37,22 +38,19 @@ export class WorkflowRuntimeV2Worker {
     // Process due retries
     const retryWaits = await WorkflowRunWaitModelV2.listDueRetries(knex);
     for (const wait of retryWaits) {
+      await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'RESOLVED', resolved_at: new Date().toISOString() });
+      await WorkflowRunModelV2.update(knex, wait.run_id, { status: 'RUNNING' });
       const run = await WorkflowRunModelV2.getById(knex, wait.run_id);
-      if (!run || run.status === 'CANCELED') {
-        await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
-        continue;
-      }
-      const resolved = await knex.transaction(async (trx) => {
-        const updatedWait = await WorkflowRunWaitModelV2.resolveIfWaiting(trx, wait.wait_id, {
-          status: 'RESOLVED',
-          resolved_at: new Date().toISOString()
+      if (run) {
+        await WorkflowRunLogModelV2.create(knex, {
+          run_id: run.run_id,
+          tenant_id: run.tenant_id ?? null,
+          step_path: wait.step_path,
+          level: 'INFO',
+          message: 'Retry wait resolved',
+          context_json: { waitId: wait.wait_id },
+          source: 'worker'
         });
-        if (!updatedWait) return null;
-        await WorkflowRunModelV2.update(trx, wait.run_id, { status: 'RUNNING' });
-        return updatedWait;
-      });
-      if (!resolved) {
-        continue;
       }
       await this.runtime.executeRun(knex, wait.run_id, this.workerId);
     }
@@ -60,25 +58,21 @@ export class WorkflowRuntimeV2Worker {
     // Process due timeouts
     const timeoutWaits = await WorkflowRunWaitModelV2.listDueTimeouts(knex);
     for (const wait of timeoutWaits) {
+      await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'RESOLVED', resolved_at: new Date().toISOString() });
+      await WorkflowRunModelV2.update(knex, wait.run_id, { status: 'RUNNING', resume_error: { category: 'TimeoutError', message: 'Event wait timeout' } });
       const run = await WorkflowRunModelV2.getById(knex, wait.run_id);
-      if (!run || run.status === 'CANCELED') {
-        await WorkflowRunWaitModelV2.update(knex, wait.wait_id, { status: 'CANCELED', resolved_at: new Date().toISOString() });
-        continue;
-      }
-      const resolved = await knex.transaction(async (trx) => {
-        const updatedWait = await WorkflowRunWaitModelV2.resolveIfWaiting(trx, wait.wait_id, {
-          status: 'RESOLVED',
-          resolved_at: new Date().toISOString()
+      if (run) {
+        await WorkflowRunLogModelV2.create(knex, {
+          run_id: run.run_id,
+          tenant_id: run.tenant_id ?? null,
+          step_path: wait.step_path,
+          level: 'WARN',
+          message: 'Event wait timed out',
+          event_name: wait.event_name ?? null,
+          correlation_key: wait.key ?? null,
+          context_json: { waitId: wait.wait_id, timeoutAt: wait.timeout_at ?? null },
+          source: 'worker'
         });
-        if (!updatedWait) return null;
-        await WorkflowRunModelV2.update(trx, wait.run_id, {
-          status: 'RUNNING',
-          resume_error: { category: 'TimeoutError', message: 'Event wait timeout' }
-        });
-        return updatedWait;
-      });
-      if (!resolved) {
-        continue;
       }
       await this.runtime.executeRun(knex, wait.run_id, this.workerId);
     }

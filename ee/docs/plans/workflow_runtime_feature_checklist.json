@@ -2,37 +2,37 @@
   {
     "description": "Define workflow system goals, non-goals, and success criteria for MVP.",
     "reference": "\u00a71",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "State the unit of execution as Envelope<TIn> \u2192 Envelope<TOut> transforms.",
     "reference": "\u00a71",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Commit to data-defined workflows executed by an interpreter (no runtime code generation).",
     "reference": "\u00a71",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Use inbound email processing as the MVP reference workflow for capability parity.",
     "reference": "\u00a71",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Include a node-in-pipe GUI designer in scope.",
     "reference": "\u00a71",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Provide and use consistent terminology: workflow definition, step, node type, action, publish, run, resume.",
     "reference": "\u00a72",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Explicitly constrain MVP to structured pipelines (no arbitrary DAG).",
     "reference": "\u00a72",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Implement Envelope with run metadata, payload, meta, vars, and optional error (v=1).",
@@ -172,7 +172,7 @@
   {
     "description": "Expose JSON Schemas to GUI for payload, node configs, action I/O, and human task forms.",
     "reference": "\u00a74",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Ensure TypeScript types are derived via z.infer from the same Zod schemas.",
@@ -182,7 +182,7 @@
   {
     "description": "Document the startup\u2192publish\u2192runtime validation pipeline.",
     "reference": "\u00a74",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Use a safe, deterministic expression engine with JSON-serializable outputs only.",
@@ -232,7 +232,7 @@
   {
     "description": "Document expression best practices (coalesce, null handling, array ops).",
     "reference": "\u00a75",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Implement components: API, Worker, Event routing, Scheduler, Registries.",
@@ -407,12 +407,12 @@
   {
     "description": "Persist sanitized envelope snapshot per checkpoint and cap size/retention.",
     "reference": "\u00a76.6",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Include tenant_id (if available) in log context for every step.",
     "reference": "\u00a76.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Persist action invocation logs (sanitized input/output) for run viewer debugging.",
@@ -577,7 +577,7 @@
   {
     "description": "Registries have unit tests covering lookups and schema conversions.",
     "reference": "\u00a77",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Implement NodeType state.set with config {state:string}.",
@@ -672,7 +672,7 @@
   {
     "description": "Document recommended idempotency keys for email workflow actions.",
     "reference": "\u00a78",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Provide Zod config schemas for node types per Appendix B.1.",
@@ -690,9 +690,9 @@
     "implemented": true
   },
   {
-    "description": "Workflow is triggered by INBOUND_EMAIL_RECEIVED event (no start wait step required).",
+    "description": "Implement workflow steps to wait for INBOUND_EMAIL_RECEIVED with 10s timeout.",
     "reference": "\u00a79",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Extract and store emailData/providerId/tenantId/processedAt from event payload.",
@@ -755,9 +755,9 @@
     "implemented": true
   },
   {
-    "description": "Create initial comment (author_type=internal) using sanitized HTML/text fallback.",
+    "description": "Create initial comment (author_type=internal) using HTML->blocks conversion fallback.",
     "reference": "\u00a79",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Set EMAIL_PROCESSED state on success.",
@@ -782,92 +782,92 @@
   {
     "description": "Render workflows as a vertical node-in-pipe canvas with step cards (top-to-bottom).",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Render control.if blocks with THEN and ELSE nested pipes.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Render control.tryCatch blocks with TRY and CATCH nested pipes.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Render control.forEach blocks with BODY nested pipe and itemVar/concurrency display.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide node palette with search powered by NodeType registry discovery.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support drag/drop reorder within a pipe and move between nested pipes.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Open a right-side config panel when a step is selected.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Generate config forms from node config JSON Schema and validate required fields.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide expression editor for Expr fields with field picker insertion.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Field picker browses payload schema and vars/error/meta trees.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate expressions locally (syntax) and display errors inline.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish button triggers server-side validation and blocks publish on severity=error.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Highlight publish validation errors by stepPath and show breadcrumb to nested location.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide run list view with status filters and timestamps.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide run details view with step timeline, attempts, and errors.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show sanitized envelope snapshots and action invocation logs per step.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide admin resume/cancel UI actions where permitted.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ensure all displayed sensitive fields are redacted/masked per rules.",
     "reference": "\u00a710",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement workflow definition CRUD endpoints (list/get/create/update).",
@@ -932,12 +932,12 @@
   {
     "description": "Register legacy action implementations with schemas in the new ActionRegistry.",
     "reference": "\u00a712",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Recreate email workflow as data and validate behavioral parity in a canary tenant.",
     "reference": "\u00a712",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Run both systems in parallel to compare outcomes and side effects.",
@@ -952,32 +952,32 @@
   {
     "description": "Create unit tests for expression engine sandboxing and helper allowlist.",
     "reference": "\u00a713",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Create integration tests for waits/resume/timeouts and retry scheduling.",
     "reference": "\u00a713",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Create integration tests for tryCatch/forEach semantics and idempotency caching.",
     "reference": "\u00a713",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Create E2E tests for the email workflow (new ticket + reply path + attachments).",
     "reference": "\u00a713",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Define stable publish error codes (e.g., UNKNOWN_NODE_TYPE, UNKNOWN_ACTION, INVALID_CONFIG, INVALID_EXPR).",
     "reference": "Appendix A",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Publish validator must include stepPath and message for every error and warning.",
     "reference": "Appendix A",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Implement node type table (ID \u2192 config fields \u2192 behavior) as the contract for implementers.",
@@ -997,626 +997,626 @@
   {
     "description": "Implement recommended email idempotency key patterns for create_ticket, create_comment, and attachment processing.",
     "reference": "Appendix C.1",
-    "implemented": true
+    "implemented": false
   },
   {
     "description": "Implement GET /workflow-runs list endpoint with filterable query params.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Support workflow run status filters (RUNNING/WAITING/SUCCEEDED/FAILED/CANCELED).",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Support workflowId filter in run list queries.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Support workflowVersion filter in run list queries.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Support date range filters (from/to) in run list queries.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Support cursor pagination for run list queries.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Support sorting by startedAt and updatedAt in run list queries.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Run list includes columns: runId, workflow name, version, status, startedAt, updatedAt, duration.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Run list shows tenant context where relevant (admin scope).",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Run list includes quick filter chips for common windows (last 24h/7d).",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Run list supports search by runId.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Run list supports search by correlation key where indexed.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Run list includes empty state and loading state visuals.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Run list supports bulk select actions (cancel/resume) with confirmation.",
-    "reference": "§14.1",
-    "implemented": false
+    "reference": "\u00a714.1",
+    "implemented": true
   },
   {
     "description": "Provide a run detail route/page with timeline layout.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Timeline displays steps in execution order with status badges.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Timeline shows attempt count per step.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Timeline shows duration per step attempt.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Timeline shows retry schedule and next retry time when applicable.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Run detail shows current nodePath and run status header.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Run detail shows run metadata (workflowId/version/trigger/runId).",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Step detail panel shows redacted envelope snapshot.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Step detail panel shows action invocation inputs and outputs (sanitized).",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Step detail panel shows error category, message, and at timestamp.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Step detail panel shows start/end timestamps for the attempt.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Step detail panel provides payload/vars/meta tabs.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Step detail panel highlights redaction markers.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Run detail shows wait history (event/human/retry/timeout).",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Run detail shows correlation key and event name for waits.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Run detail supports deep-linking to a specific step.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Timeline supports collapsing nested blocks for readability.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Timeline supports filtering by node type or status.",
-    "reference": "§14.2",
-    "implemented": false
+    "reference": "\u00a714.2",
+    "implemented": true
   },
   {
     "description": "Persist structured run log entries (level, message, timestamp).",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log entries include tenant_id, run_id, and step_id context.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log entries include correlation identifiers where available.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Provide UI log viewer with level filters.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Provide UI log viewer with full-text search.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log viewer supports export for a run.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Action invocation logs show input/output sizes and truncation markers.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log viewer enforces redaction rules on all payload fields.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log viewer shows human task creation and completion events.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log viewer shows event.wait resume events with correlation keys.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log entries are append-only and immutable.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Log API supports pagination for large runs.",
-    "reference": "§14.3",
-    "implemented": false
+    "reference": "\u00a714.3",
+    "implemented": true
   },
   {
     "description": "Create audit log records for workflow definition create/update/publish.",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Create audit log records for run resume/cancel/retry/replay.",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Audit records include actor id, role, and source (UI/API/worker).",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Audit records include timestamps and target identifiers.",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Audit records capture publish diff summary (draft hash or version).",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Audit records include reason/comment for manual actions.",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Expose audit log viewer for workflow definitions.",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Expose audit log viewer for workflow runs.",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Audit logs have longer retention than run snapshots.",
-    "reference": "§14.4",
+    "reference": "\u00a714.4",
     "implemented": false
   },
   {
     "description": "Audit logs are exportable with redactions applied.",
-    "reference": "§14.4",
-    "implemented": false
+    "reference": "\u00a714.4",
+    "implemented": true
   },
   {
     "description": "Define permissions: workflow.view, workflow.manage, workflow.publish, workflow.admin.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Enforce RBAC in workflow run list endpoint.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Enforce RBAC in workflow run detail endpoints.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Enforce RBAC in publish endpoint and designer UI.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Hide admin controls in UI when permission is missing.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Apply field-level redaction based on role.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Enforce tenant scoping for all run queries.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Support read-only role for run history and snapshots.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Prevent editing system workflows without admin permission.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Support per-workflow visibility toggles.",
-    "reference": "§14.5",
-    "implemented": false
+    "reference": "\u00a714.5",
+    "implemented": true
   },
   {
     "description": "Add tenant-level retention policy for workflow runs.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Add tenant-level retention policy for snapshots.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Add tenant-level retention policy for invocation logs.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Support per-workflow retention overrides.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Implement scheduled purge job honoring retention policies.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Purge job writes audit log entries for deletions.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Export run list to CSV with redactions applied.",
-    "reference": "§14.6",
-    "implemented": false
+    "reference": "\u00a714.6",
+    "implemented": true
   },
   {
     "description": "Export run detail to JSON with redactions applied.",
-    "reference": "§14.6",
-    "implemented": false
+    "reference": "\u00a714.6",
+    "implemented": true
   },
   {
     "description": "Expose export job status endpoint.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "UI shows export progress and completion status.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Support legal hold to pause retention purge for selected runs.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Retention policies are tenant-configurable and audited.",
-    "reference": "§14.6",
+    "reference": "\u00a714.6",
     "implemented": false
   },
   {
     "description": "Emit metric for workflow run started count.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for workflow run succeeded count.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for workflow run failed count.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for step duration histogram.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for retry count per workflow.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for wait queue length by type.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for lease contention or stale lease recoveries.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for action call latency by action id.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Emit metric for error category counts.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Provide dashboard view for workflow health by definition.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Provide alert policy configuration per tenant.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Alert on failure rate threshold by workflow.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Alert on backlog growth threshold.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Alert on repeated retries for the same run.",
-    "reference": "§14.7",
+    "reference": "\u00a714.7",
     "implemented": false
   },
   {
     "description": "Provide UI action to cancel a run with confirmation.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Provide UI action to resume a waiting run with confirmation.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Provide UI action to retry from the last failed step.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Provide UI action to replay a run with new payload.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Provide UI action to requeue event waits.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Implement POST /workflow-runs/{runId}/retry endpoint.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Implement POST /workflow-runs/{runId}/replay endpoint.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Implement GET /workflow-runs/dead-letter endpoint.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Provide dead-letter queue UI for repeatedly failing runs.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Allow bulk cancel/resume actions from run list.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Support pausing a workflow definition to stop new runs.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Support per-workflow concurrency limits.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Auto-pause workflow after sustained failure rate.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Require reason fields for admin interventions.",
-    "reference": "§14.8",
-    "implemented": false
+    "reference": "\u00a714.8",
+    "implemented": true
   },
   {
     "description": "Provide event list view with filters (eventName, date range).",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Event list shows correlation key and matched run id.",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Event list shows unmatched events awaiting waits.",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Event list shows redacted payload previews.",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Event detail view links to matched run timeline.",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Event detail shows wait timeout vs resume outcome.",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Event retention policy configured per tenant.",
-    "reference": "§14.9",
+    "reference": "\u00a714.9",
     "implemented": false
   },
   {
     "description": "Event export to CSV/JSON with redactions.",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Log event ingestion failures with operator visibility.",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Expose event stats (matched vs unmatched counts).",
-    "reference": "§14.9",
-    "implemented": false
+    "reference": "\u00a714.9",
+    "implemented": true
   },
   {
     "description": "Paginate all run-related APIs (timeline, snapshots, invocations).",
-    "reference": "§14.10",
+    "reference": "\u00a714.10",
     "implemented": false
   },
   {
     "description": "Index workflow_runs by workflow_id, status, updated_at.",
-    "reference": "§14.10",
-    "implemented": false
+    "reference": "\u00a714.10",
+    "implemented": true
   },
   {
     "description": "Index workflow_run_steps by run_id and step_id.",
-    "reference": "§14.10",
-    "implemented": false
+    "reference": "\u00a714.10",
+    "implemented": true
   },
   {
     "description": "Index workflow_run_waits by wait_type and status.",
-    "reference": "§14.10",
-    "implemented": false
+    "reference": "\u00a714.10",
+    "implemented": true
   },
   {
     "description": "Cap UI fetch sizes for snapshots and logs.",
-    "reference": "§14.10",
+    "reference": "\u00a714.10",
     "implemented": false
   },
   {
     "description": "Cache registry metadata for UI performance.",
-    "reference": "§14.10",
+    "reference": "\u00a714.10",
     "implemented": false
   },
   {
     "description": "Implement rate limits for workflow run creation per tenant.",
-    "reference": "§14.10",
-    "implemented": false
+    "reference": "\u00a714.10",
+    "implemented": true
   },
   {
     "description": "Enforce maximum payload size at run start.",
-    "reference": "§14.10",
-    "implemented": false
+    "reference": "\u00a714.10",
+    "implemented": true
   },
   {
     "description": "Expose queue depth and worker health in admin UI.",
-    "reference": "§14.10",
+    "reference": "\u00a714.10",
     "implemented": false
   },
   {
     "description": "Create load test plan for throughput and retention operations.",
-    "reference": "§14.10",
+    "reference": "\u00a714.10",
     "implemented": false
   }
 ]
