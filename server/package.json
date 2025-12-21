@@ -187,6 +187,7 @@
     "rrule": "^2.8.1",
     "sharp": "^0.33.5",
     "simple-swizzle": "^0.2.4",
+    "zod-to-json-schema": "^3.24.6",
     "socket.io-client": "^4.8.1",
     "speakeasy": "^2.0.0",
     "stripe": "^19.1.0",
