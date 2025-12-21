@@ -17,38 +17,36 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/**
- * CORS headers for extension iframe access
- */
-function corsHeaders(request: NextRequest): HeadersInit {
-  const origin = request.headers.get('origin') || '*';
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
-  };
-}
-
-function jsonResponse(data: unknown, init: ResponseInit & { request?: NextRequest } = {}): NextResponse {
-  const headers = init.request ? corsHeaders(init.request) : {};
-  return NextResponse.json(data, {
-    ...init,
-    headers: { ...headers, ...init.headers },
-  });
-}
-
-/**
- * OPTIONS - CORS preflight
- */
-export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders(request),
-  });
-}
-
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
+
+/**
+ * Internal user info from trusted ext-proxy prefetch requests.
+ */
+interface InternalUserInfo {
+  user_id: string;
+  tenant: string;
+  email: string;
+}
+
+/**
+ * Check if this is an internal request from ext-proxy with trusted user info.
+ */
+function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
+  const internalRequest = request.headers.get('x-internal-request');
+  if (internalRequest !== 'ext-proxy-prefetch') {
+    return null;
+  }
+
+  const userId = request.headers.get('x-internal-user-id');
+  const tenant = request.headers.get('x-internal-user-tenant');
+  const email = request.headers.get('x-internal-user-email') || '';
+
+  if (!userId || !tenant) {
+    return null;
+  }
+
+  return { user_id: userId, tenant, email };
+}
 
 /**
  * POST /api/v1/platform-reports/access
@@ -57,26 +55,42 @@ const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     if (!MASTER_BILLING_TENANT_ID) {
-      return jsonResponse(
+      return NextResponse.json(
         { success: false, error: 'MASTER_BILLING_TENANT_ID not configured' },
-        { status: 500, request }
+        { status: 500 }
       );
     }
 
-    const user = await getCurrentUser();
+    // Check for internal ext-proxy request with trusted user info
+    const internalUser = getInternalUserInfo(request);
+    let userId: string;
+    let userEmail: string;
+    let userTenant: string;
 
-    if (!user) {
-      return jsonResponse(
-        { success: false, error: 'Authentication required' },
-        { status: 401, request }
-      );
+    if (internalUser) {
+      userId = internalUser.user_id;
+      userEmail = internalUser.email;
+      userTenant = internalUser.tenant;
+    } else {
+      const user = await getCurrentUser();
+
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+
+      userId = user.user_id;
+      userEmail = user.email;
+      userTenant = user.tenant;
     }
 
     // Only allow users from master tenant
-    if (user.tenant !== MASTER_BILLING_TENANT_ID) {
-      return jsonResponse(
+    if (userTenant !== MASTER_BILLING_TENANT_ID) {
+      return NextResponse.json(
         { success: false, error: 'Access denied' },
-        { status: 403, request }
+        { status: 403 }
       );
     }
 
@@ -94,8 +108,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     await auditService.logEvent({
       eventType: 'extension.access',
-      userId: user.user_id,
-      userEmail: user.email,
+      userId,
+      userEmail,
       details: {
         ...details,
         accessedAt: new Date().toISOString(),
@@ -103,16 +117,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ...clientInfo,
     });
 
-    return jsonResponse({
-      success: true,
-      message: 'Access logged',
-    }, { request });
+    return NextResponse.json({ success: true, message: 'Access logged' });
   } catch (error) {
     console.error('[platform-reports/access] POST error:', error);
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }

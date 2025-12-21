@@ -83,6 +83,187 @@ if (typeof window !== 'undefined') {
 }
 
 // ============================================================================
+// Extension Proxy Bridge - Calls WASM handler via ext-proxy
+// ============================================================================
+
+const ENVELOPE_VERSION = '1';
+
+/**
+ * IframeBridge for calling the extension's WASM handler via postMessage.
+ * The host's iframeBridge handles 'apiproxy' messages and forwards them to ext-proxy.
+ */
+class IframeBridge {
+  private listeners: Map<string, (data: any) => void> = new Map();
+  private parentOrigin: string;
+
+  constructor() {
+    this.parentOrigin = getParentOrigin();
+
+    // Listen for responses from host
+    window.addEventListener('message', (ev: MessageEvent) => {
+      const data = ev.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.alga !== true || data.version !== ENVELOPE_VERSION) return;
+
+      // Handle apiproxy responses
+      if (data.type === 'apiproxy_response' && data.request_id) {
+        const listener = this.listeners.get(data.request_id);
+        if (listener) {
+          this.listeners.delete(data.request_id);
+          listener(data);
+        }
+      }
+    });
+  }
+
+  /**
+   * Call the extension's WASM handler via the proxy.
+   * The route is relative to the extension's handler (e.g., '/reports', '/schema').
+   */
+  async callProxy<T>(route: string, payload?: Uint8Array | null): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const requestId = crypto.randomUUID();
+
+      // Set up listener for response
+      const timeoutId = setTimeout(() => {
+        this.listeners.delete(requestId);
+        reject(new Error('Proxy request timed out'));
+      }, 30000);
+
+      this.listeners.set(requestId, (data) => {
+        clearTimeout(timeoutId);
+        if (data.payload?.error) {
+          reject(new Error(data.payload.error));
+        } else if (data.payload?.body) {
+          // Decode base64 response body
+          try {
+            const binaryString = atob(data.payload.body);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const text = new TextDecoder().decode(bytes);
+            resolve(JSON.parse(text));
+          } catch (e) {
+            reject(new Error('Failed to decode proxy response'));
+          }
+        } else {
+          resolve(data.payload as T);
+        }
+      });
+
+      // Encode payload to base64 if present
+      let bodyBase64: string | undefined;
+      if (payload) {
+        let binaryString = '';
+        for (let i = 0; i < payload.length; i++) {
+          binaryString += String.fromCharCode(payload[i]);
+        }
+        bodyBase64 = btoa(binaryString);
+      }
+
+      // Send apiproxy message to host
+      window.parent.postMessage(
+        {
+          alga: true,
+          version: ENVELOPE_VERSION,
+          type: 'apiproxy',
+          request_id: requestId,
+          payload: { route, body: bodyBase64 },
+        },
+        this.parentOrigin
+      );
+    });
+  }
+}
+
+// Initialize bridge
+const bridge = new IframeBridge();
+
+/**
+ * Map internal API paths to WASM handler routes.
+ * e.g., '/api/v1/platform-reports' -> '/reports'
+ *       '/api/v1/platform-reports/schema' -> '/schema'
+ */
+function mapApiPathToHandlerRoute(path: string): string {
+  // Remove the /api/v1/platform-reports prefix if present
+  const prefix = '/api/v1/platform-reports';
+  if (path.startsWith(prefix)) {
+    const suffix = path.slice(prefix.length);
+    if (suffix === '' || suffix === '/') {
+      return '/reports';
+    }
+    if (suffix === '/schema') {
+      return '/schema';
+    }
+    if (suffix === '/access') {
+      return '/access';
+    }
+    if (suffix === '/audit' || suffix.startsWith('/audit?')) {
+      return suffix; // Keep audit path as-is
+    }
+    // For report-specific routes like /report-id, /report-id/execute
+    return `/reports${suffix}`;
+  }
+  // Return as-is if it doesn't match the expected prefix
+  return path;
+}
+
+/**
+ * Call the WASM handler via the extension proxy.
+ * This is the proper pattern: UI -> postMessage -> iframeBridge -> ext-proxy -> Runner -> WASM handler
+ *
+ * Since the iframeBridge always uses POST, we encode the intended action in the body.
+ * The handler uses the __action field to determine the operation for paths that support
+ * multiple operations (like /reports/:id which can be GET, PUT, or DELETE).
+ */
+async function proxyApiCall<T>(
+  route: string,
+  options?: { method?: string; body?: unknown }
+): Promise<T> {
+  // Map the internal API path to the WASM handler route
+  const handlerRoute = mapApiPathToHandlerRoute(route);
+  const method = options?.method?.toUpperCase() || 'GET';
+
+  // Build the body with __action field for non-GET methods
+  let bodyData: Record<string, unknown> | undefined;
+
+  if (options?.body && typeof options.body === 'object') {
+    bodyData = { ...(options.body as Record<string, unknown>) };
+  }
+
+  // Add __action field for methods that need disambiguation
+  if (method === 'DELETE') {
+    bodyData = bodyData || {};
+    bodyData.__action = 'delete';
+  } else if (method === 'PUT') {
+    bodyData = bodyData || {};
+    bodyData.__action = 'update';
+  } else if (method === 'POST' && handlerRoute === '/reports') {
+    bodyData = bodyData || {};
+    bodyData.__action = 'create';
+  }
+
+  // Encode body if present
+  let payload: Uint8Array | undefined;
+  if (bodyData) {
+    const bodyJson = JSON.stringify(bodyData);
+    payload = new TextEncoder().encode(bodyJson);
+  }
+
+  console.log('[Extension] Calling proxy:', { route, handlerRoute, method, hasBody: !!payload });
+
+  try {
+    const result = await bridge.callProxy<T>(handlerRoute, payload);
+    console.log('[Extension] Proxy response:', result);
+    return result;
+  } catch (error) {
+    console.error('[Extension] Proxy call failed:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -201,35 +382,39 @@ function getHostOrigin(): string {
   return window.location.origin;
 }
 
-// Simple API client that calls the platform API directly
-// This bypasses the WASM handler to avoid wasmtime http.fetch issues
+// API client that calls the platform API through the internal proxy
+// Uses postMessage to avoid CORS issues with cross-origin iframes
 async function callExtensionApi<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-  const hostOrigin = getHostOrigin();
-  // Call platform-reports API directly instead of going through extension handler
-  const baseUrl = `${hostOrigin}/api/v1/platform-reports`;
+  const route = `/api/v1/platform-reports${path}`;
 
   try {
-    const response = await fetch(`${baseUrl}${path}`, {
-      ...options,
-      credentials: 'include', // Include cookies for auth
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+    // Parse body from options if present
+    let body: any = undefined;
+    if (options.body && typeof options.body === 'string') {
+      try {
+        body = JSON.parse(options.body);
+      } catch {
+        body = options.body;
+      }
+    }
+
+    const result = await proxyApiCall<any>(route, {
+      method: options.method as string || 'GET',
+      body,
     });
 
-    const data = await response.json();
-
     // Normalize response format
-    if (response.ok) {
-      // If response has 'data' field, extract it; otherwise wrap the response
-      if ('success' in data) {
-        return data;
+    if (result && typeof result === 'object') {
+      if ('success' in result) {
+        return result as ApiResponse<T>;
       }
-      return { success: true, data: data as T };
-    } else {
-      return { success: false, error: data.error || data.message || 'Request failed' };
+      // If response has 'data' field, it's already the expected format
+      if ('data' in result) {
+        return { success: true, data: result.data as T };
+      }
+      return { success: true, data: result as T };
     }
+    return { success: true, data: result as T };
   } catch (error) {
     console.error('API call failed:', error);
     return { success: false, error: String(error) };
@@ -256,6 +441,7 @@ let schemaPromise: Promise<TableSchema[]> | null = null;
 /**
  * Fetch available tables and columns from the server.
  * The server filters the schema using a blocklist for security.
+ * Uses the internal proxy to avoid CORS issues.
  */
 async function fetchSchema(): Promise<TableSchema[]> {
   if (schemaCache) {
@@ -268,22 +454,21 @@ async function fetchSchema(): Promise<TableSchema[]> {
 
   schemaPromise = (async () => {
     try {
-      const hostOrigin = getHostOrigin();
-      const response = await fetch(`${hostOrigin}/api/v1/platform-reports/schema`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const result = await proxyApiCall<any>('/api/v1/platform-reports/schema');
 
-      const result: ApiResponse<SchemaResponse> = await response.json();
-
-      if (result.success && result.data?.tables) {
-        schemaCache = result.data.tables;
+      // Handle the response format from proxy
+      const data = result?.data || result;
+      if (data?.tables) {
+        schemaCache = data.tables;
         return schemaCache;
       }
 
-      console.error('[Schema] Failed to fetch:', result.error);
+      if (result?.success === false) {
+        console.error('[Schema] Failed to fetch:', result.error);
+        return [];
+      }
+
+      console.error('[Schema] Unexpected response format:', result);
       return [];
     } catch (error) {
       console.error('[Schema] Fetch error:', error);
@@ -378,6 +563,9 @@ function CategorySelect({
     if (selected === '__new__') {
       setIsAddingNew(true);
       setNewCategory('');
+    } else if (selected === '__none__') {
+      setIsAddingNew(false);
+      onChange('');  // Convert __none__ back to empty string
     } else {
       setIsAddingNew(false);
       onChange(selected);
@@ -431,7 +619,7 @@ function CategorySelect({
 
   // Build options: existing categories + "Add new..."
   const options: SelectOption[] = [
-    { value: '', label: 'No category' },
+    { value: '__none__', label: 'No category' },
     ...categories.map(c => ({ value: c, label: c })),
     // If current value is custom (not in list), add it as an option
     ...(isCustomValue ? [{ value: value, label: `${value} (custom)` }] : []),
@@ -441,7 +629,7 @@ function CategorySelect({
   return (
     <CustomSelect
       options={options}
-      value={value}
+      value={value || '__none__'}
       onValueChange={handleSelectChange}
       placeholder="Select or add category..."
     />
@@ -2086,33 +2274,40 @@ interface TenantManagementResponse<T> {
 }
 
 // API client for tenant management endpoints
+// Uses the internal proxy to avoid CORS issues
 async function callTenantManagementApi<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<TenantManagementResponse<T>> {
-  const hostOrigin = getHostOrigin();
-  const baseUrl = `${hostOrigin}/api/v1/tenant-management`;
+  const route = `/api/v1/tenant-management${path}`;
 
   try {
-    const response = await fetch(`${baseUrl}${path}`, {
-      ...options,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+    // Parse body from options if present
+    let body: any = undefined;
+    if (options.body && typeof options.body === 'string') {
+      try {
+        body = JSON.parse(options.body);
+      } catch {
+        body = options.body;
+      }
+    }
+
+    const result = await proxyApiCall<any>(route, {
+      method: options.method as string || 'GET',
+      body,
     });
 
-    const data = await response.json();
-
-    if (response.ok) {
-      if ('success' in data) {
-        return data;
+    // Normalize response format
+    if (result && typeof result === 'object') {
+      if ('success' in result) {
+        return result as TenantManagementResponse<T>;
       }
-      return { success: true, data: data as T };
-    } else {
-      return { success: false, error: data.error || data.message || 'Request failed' };
+      if ('data' in result) {
+        return { success: true, data: result.data as T };
+      }
+      return { success: true, data: result as T };
     }
+    return { success: true, data: result as T };
   } catch (error) {
     console.error('Tenant Management API call failed:', error);
     return { success: false, error: String(error) };
@@ -2152,16 +2347,17 @@ function TenantManagementView() {
     setLoading(false);
   }, []);
 
-  // Fetch tenant management audit logs
+  // Fetch tenant management audit logs (via proxy)
   const fetchAuditLogs = useCallback(async () => {
-    const hostOrigin = getHostOrigin();
     try {
-      const response = await fetch(
-        `${hostOrigin}/api/v1/tenant-management/audit?eventTypePrefix=tenant.&limit=50`,
-        { credentials: 'include', headers: { 'Content-Type': 'application/json' } }
+      const result = await proxyApiCall<any>(
+        '/api/v1/tenant-management/audit?eventTypePrefix=tenant.&limit=50'
       );
-      const result = await response.json();
-      if (result.success && result.data) {
+      // Handle proxy response format
+      const data = result?.data || result;
+      if (data && Array.isArray(data)) {
+        setAuditLogs(data);
+      } else if (result?.success && result?.data) {
         setAuditLogs(result.data);
       }
     } catch (err) {
@@ -3547,21 +3743,18 @@ type View = 'reports' | 'create' | 'execute' | 'tenants' | 'audit';
 function App() {
   const [currentView, setCurrentView] = useState<View>('reports');
 
-  // Log extension access on mount
+  // Log extension access on mount (via proxy)
   useEffect(() => {
     const logAccess = async () => {
       try {
-        const hostOrigin = getHostOrigin();
-        await fetch(`${hostOrigin}/api/v1/platform-reports/access`, {
+        await proxyApiCall('/api/v1/platform-reports/access', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
+          body: {
             details: {
               source: 'iframe',
               userAgent: navigator.userAgent,
             },
-          }),
+          },
         });
       } catch (error) {
         // Silently fail - access logging shouldn't break the app

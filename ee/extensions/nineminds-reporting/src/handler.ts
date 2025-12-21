@@ -4,6 +4,27 @@ import type { ExecuteRequest, ExecuteResponse, HostBindings } from '@alga-psa/ex
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+/**
+ * Extended request type that includes prefetched data from ext-proxy.
+ * When ext-proxy prefetches platform API data server-side (with session auth),
+ * it includes the result in prefetched_data so we don't need to make our own API calls.
+ */
+interface ExtendedExecuteRequest extends ExecuteRequest {
+  prefetched_data?: {
+    status: number;
+    data: unknown;
+  } | null;
+}
+
+/**
+ * Get prefetched data from the request if available.
+ * This data was fetched by ext-proxy server-side with proper session authentication.
+ */
+function getPrefetchedData(request: ExecuteRequest): { status: number; data: unknown } | null {
+  const extended = request as ExtendedExecuteRequest;
+  return extended.prefetched_data ?? null;
+}
+
 function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): ExecuteResponse {
   const encoded = body instanceof Uint8Array ? body : encoder.encode(JSON.stringify(body));
   return {
@@ -16,54 +37,93 @@ function jsonResponse(body: unknown, init: Partial<ExecuteResponse> = {}): Execu
 const BUILD_STAMP = new Date().toISOString();
 
 // Router for different endpoints
+// NOTE: The iframeBridge always uses POST when proxying requests, so we route based on path only.
+// For paths that could be different operations (like /reports for list vs create), we use the
+// presence of a request body to distinguish. The UI should specify the intended action in the body.
 interface Route {
   pattern: RegExp;
-  method: string;
   handler: (request: ExecuteRequest, host: HostBindings, params: Record<string, string>) => Promise<ExecuteResponse>;
 }
 
 const routes: Route[] = [
+  // List or Create reports - determined by body
   {
     pattern: /^\/reports$/,
-    method: 'GET',
-    handler: handleListReports,
+    handler: handleReports,
   },
-  {
-    pattern: /^\/reports$/,
-    method: 'POST',
-    handler: handleCreateReport,
-  },
+  // Get, Update, or Delete a specific report - determined by body.__action
   {
     pattern: /^\/reports\/([0-9a-f-]+)$/,
-    method: 'GET',
-    handler: handleGetReportById,
+    handler: handleReportById,
   },
-  {
-    pattern: /^\/reports\/([0-9a-f-]+)$/,
-    method: 'PUT',
-    handler: handleUpdateReport,
-  },
-  {
-    pattern: /^\/reports\/([0-9a-f-]+)$/,
-    method: 'DELETE',
-    handler: handleDeleteReport,
-  },
+  // Execute a report
   {
     pattern: /^\/reports\/([0-9a-f-]+)\/execute$/,
-    method: 'POST',
     handler: handleExecuteReport,
   },
+  // Get schema
   {
-    pattern: /^\/audit$/,
-    method: 'GET',
+    pattern: /^\/schema$/,
+    handler: handleGetSchema,
+  },
+  // Check access
+  {
+    pattern: /^\/access$/,
+    handler: handleCheckAccess,
+  },
+  // List audit logs (platform-reports)
+  {
+    pattern: /^\/audit/,
     handler: handleListAuditLogs,
   },
+  // Health check
   {
     pattern: /^\/health$/,
-    method: 'GET',
     handler: handleHealth,
   },
+  // Tenant Management API - pass through to host
+  {
+    pattern: /^\/api\/v1\/tenant-management\//,
+    handler: handleTenantManagementProxy,
+  },
 ];
+
+// Dispatcher for /reports endpoint
+async function handleReports(request: ExecuteRequest, host: HostBindings, _params: Record<string, string>): Promise<ExecuteResponse> {
+  // Check if there's a body with create data
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      const body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      // If body has __action field, use that to determine operation
+      if (body.__action === 'create' || body.name || body.report_definition) {
+        return handleCreateReport(request, host, _params);
+      }
+    } catch {
+      // If body parse fails, treat as list request
+    }
+  }
+  return handleListReports(request, host, _params);
+}
+
+// Dispatcher for /reports/:id endpoint
+async function handleReportById(request: ExecuteRequest, host: HostBindings, params: Record<string, string>): Promise<ExecuteResponse> {
+  // Check body for action indicator
+  if (request.http.body && request.http.body.length > 0) {
+    try {
+      const body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
+      const action = body.__action;
+      if (action === 'delete') {
+        return handleDeleteReport(request, host, params);
+      }
+      if (action === 'update' || body.name || body.report_definition || body.description !== undefined) {
+        return handleUpdateReport(request, host, params);
+      }
+    } catch {
+      // If body parse fails, treat as get request
+    }
+  }
+  return handleGetReportById(request, host, params);
+}
 
 export async function handler(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   try {
@@ -84,7 +144,7 @@ export async function handler(request: ExecuteRequest, host: HostBindings): Prom
 }
 
 async function processRequest(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
-  const method = request.http.method || 'GET';
+  const method = request.http.method || 'POST'; // iframeBridge always uses POST
   const url = request.http.url || '/';
   const requestId = request.context.requestId ?? 'n/a';
   const tenantId = request.context.tenantId;
@@ -96,10 +156,10 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
     `[nineminds-reporting] request received tenant=${tenantId} extensionId=${extensionId} requestId=${requestId} method=${method} url=${url} build=${BUILD_STAMP}`
   );
 
-  // Route the request
+  // Route the request based on URL pattern only (method is always POST from iframeBridge)
   for (const route of routes) {
     const match = url.match(route.pattern);
-    if (match && method.toUpperCase() === route.method) {
+    if (match) {
       const params: Record<string, string> = {};
       match.slice(1).forEach((value, index) => {
         params[`param${index}`] = value;
@@ -132,150 +192,51 @@ async function processRequest(request: ExecuteRequest, host: HostBindings): Prom
   });
 }
 
-/**
- * Get the host base URL from install config or context
- */
-function getHostBaseUrl(request: ExecuteRequest): string {
-  // Priority: install config > context hostUrl > default
-  const configUrl = request.context.config?.hostBaseUrl;
-  if (configUrl && typeof configUrl === 'string') {
-    return configUrl;
-  }
-
-  // Try to get from context
-  const contextUrl = (request.context as unknown as Record<string, unknown>).hostUrl;
-  if (contextUrl && typeof contextUrl === 'string') {
-    return contextUrl;
-  }
-
-  // Fallback to host.docker.internal for Docker environments
-  // This allows the extension running in Docker to reach the host machine
-  return 'http://host.docker.internal:3000';
-}
-
-/**
- * Build auth headers to forward to the platform API
- */
-function getAuthHeaders(request: ExecuteRequest): Array<{ name: string; value: string }> {
-  const headers: Array<{ name: string; value: string }> = [
-    { name: 'content-type', value: 'application/json' },
-  ];
-
-  // Forward tenant ID as header
-  if (request.context.tenantId) {
-    headers.push({ name: 'x-alga-tenant', value: request.context.tenantId });
-  }
-
-  // Forward extension ID as header - this allows the platform API to recognize
-  // internal extension calls and bypass user session requirements
-  if (request.context.extensionId) {
-    headers.push({ name: 'x-alga-extension', value: request.context.extensionId });
-  }
-
-  // Forward any existing auth headers from the request
-  const incomingHeaders = request.http.headers || [];
-  for (const h of incomingHeaders) {
-    const name = h.name.toLowerCase();
-    if (name === 'authorization' || name === 'cookie') {
-      headers.push(h);
-    }
-  }
-
-  return headers;
-}
-
-/**
- * Call the platform reports API
- */
-async function callPlatformReportsAPI(
-  host: HostBindings,
-  request: ExecuteRequest,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-  path: string,
-  body?: unknown
-): Promise<{ status: number; data: unknown }> {
-  const baseUrl = getHostBaseUrl(request);
-  const url = `${baseUrl}/api/v1/platform-reports${path}`;
-
-  await safeLog(host, 'info', `[nineminds-reporting] calling platform API: ${method} ${url}`);
-  await safeLog(host, 'info', `[nineminds-reporting] request body: ${body ? JSON.stringify(body).slice(0, 500) : 'none'}`);
-
-  const fetchRequest: Parameters<typeof host.http.fetch>[0] = {
-    method,
-    url,
-    headers: getAuthHeaders(request),
-  };
-
-  if (body) {
-    fetchRequest.body = encoder.encode(JSON.stringify(body));
-  }
-
-  try {
-    const response = await host.http.fetch(fetchRequest);
-
-    await safeLog(host, 'info', `[nineminds-reporting] platform API response: status=${response.status}`);
-
-    let data: unknown;
-    try {
-      const text = decoder.decode(new Uint8Array(response.body ?? []));
-      await safeLog(host, 'info', `[nineminds-reporting] response body: ${text.slice(0, 500)}`);
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = null;
-    }
-
-    return { status: response.status, data };
-  } catch (fetchErr) {
-    const reason = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-    await safeLog(host, 'error', `[nineminds-reporting] http.fetch failed: ${reason}`);
-    throw fetchErr;
-  }
-}
-
 // Handler: List all platform reports
 async function handleListReports(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   await safeLog(host, 'info', '[nineminds-reporting] listing platform reports');
 
-  try {
-    const result = await callPlatformReportsAPI(host, request, 'GET', '');
-    return jsonResponse(result.data, { status: result.status });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] failed to list reports: ${reason}`);
-    return jsonResponse(
-      { success: false, error: 'Failed to fetch reports', detail: reason },
-      { status: 500 }
-    );
+  // Use prefetched data if available (fetched by ext-proxy with session auth)
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for list reports');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
   }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  // The runner's http.fetch has a bug that causes panics ("resource has children").
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for list reports');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 // Handler: Create a new platform report
 async function handleCreateReport(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   await safeLog(host, 'info', '[nineminds-reporting] creating platform report');
 
-  try {
-    let body: unknown = {};
-    if (request.http.body) {
-      try {
-        body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
-      } catch {
-        return jsonResponse(
-          { success: false, error: 'Invalid JSON body' },
-          { status: 400 }
-        );
-      }
-    }
-
-    const result = await callPlatformReportsAPI(host, request, 'POST', '', body);
-    return jsonResponse(result.data, { status: result.status });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] failed to create report: ${reason}`);
-    return jsonResponse(
-      { success: false, error: 'Failed to create report', detail: reason },
-      { status: 500 }
-    );
+  // Use prefetched data if available (ext-proxy already made the POST request)
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for create report');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
   }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for create report');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 // Handler: Get report by ID
@@ -287,17 +248,23 @@ async function handleGetReportById(
   const reportId = params.param0;
   await safeLog(host, 'info', `[nineminds-reporting] fetching report id=${reportId}`);
 
-  try {
-    const result = await callPlatformReportsAPI(host, request, 'GET', `/${reportId}`);
-    return jsonResponse(result.data, { status: result.status });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] failed to get report: ${reason}`);
-    return jsonResponse(
-      { success: false, error: 'Failed to fetch report', detail: reason },
-      { status: 500 }
-    );
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for get report');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
   }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for get report');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 // Handler: Update a report
@@ -309,29 +276,23 @@ async function handleUpdateReport(
   const reportId = params.param0;
   await safeLog(host, 'info', `[nineminds-reporting] updating report id=${reportId}`);
 
-  try {
-    let body: unknown = {};
-    if (request.http.body) {
-      try {
-        body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
-      } catch {
-        return jsonResponse(
-          { success: false, error: 'Invalid JSON body' },
-          { status: 400 }
-        );
-      }
-    }
-
-    const result = await callPlatformReportsAPI(host, request, 'PUT', `/${reportId}`, body);
-    return jsonResponse(result.data, { status: result.status });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] failed to update report: ${reason}`);
-    return jsonResponse(
-      { success: false, error: 'Failed to update report', detail: reason },
-      { status: 500 }
-    );
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for update report');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
   }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for update report');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 // Handler: Delete a report
@@ -343,17 +304,23 @@ async function handleDeleteReport(
   const reportId = params.param0;
   await safeLog(host, 'info', `[nineminds-reporting] deleting report id=${reportId}`);
 
-  try {
-    const result = await callPlatformReportsAPI(host, request, 'DELETE', `/${reportId}`);
-    return jsonResponse(result.data, { status: result.status });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] failed to delete report: ${reason}`);
-    return jsonResponse(
-      { success: false, error: 'Failed to delete report', detail: reason },
-      { status: 500 }
-    );
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for delete report');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
   }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for delete report');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 // Handler: Execute a report
@@ -365,48 +332,46 @@ async function handleExecuteReport(
   const reportId = params.param0;
   await safeLog(host, 'info', `[nineminds-reporting] executing report id=${reportId}`);
 
-  try {
-    let body: unknown = {};
-    if (request.http.body) {
-      try {
-        body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
-      } catch {
-        // Empty body is fine for execute
-      }
-    }
-
-    const result = await callPlatformReportsAPI(host, request, 'POST', `/${reportId}/execute`, body);
-    return jsonResponse(result.data, { status: result.status });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] failed to execute report: ${reason}`);
-    return jsonResponse(
-      { success: false, error: 'Failed to execute report', detail: reason },
-      { status: 500 }
-    );
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for execute report');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
   }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for execute report');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 // Handler: List audit logs
 async function handleListAuditLogs(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
   await safeLog(host, 'info', '[nineminds-reporting] listing audit logs');
 
-  try {
-    // Pass through query parameters from the URL
-    const url = request.http.url || '/audit';
-    const queryString = url.includes('?') ? url.split('?')[1] : '';
-    const path = queryString ? `/audit?${queryString}` : '/audit';
-
-    const result = await callPlatformReportsAPI(host, request, 'GET', path);
-    return jsonResponse(result.data, { status: result.status });
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    await safeLog(host, 'error', `[nineminds-reporting] failed to list audit logs: ${reason}`);
-    return jsonResponse(
-      { success: false, error: 'Failed to fetch audit logs', detail: reason },
-      { status: 500 }
-    );
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for audit logs');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
   }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for audit logs');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 // Handler: Health check
@@ -417,6 +382,83 @@ async function handleHealth(_request: ExecuteRequest, _host: HostBindings): Prom
     build: BUILD_STAMP,
     timestamp: new Date().toISOString(),
   });
+}
+
+// Handler: Proxy tenant-management API calls to the host
+async function handleTenantManagementProxy(
+  request: ExecuteRequest,
+  host: HostBindings,
+  _params: Record<string, string>
+): Promise<ExecuteResponse> {
+  const url = request.http.url || '';
+  await safeLog(host, 'info', `[nineminds-reporting] proxying tenant-management request: ${url}`);
+
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for tenant-management');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
+  }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls for tenant-management routes.
+  // The runner's http.fetch has a bug that causes panics ("resource has children").
+  // Instead, return an error asking the user to retry (prefetch should work on retry).
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for tenant-management - cannot use fallback HTTP');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+      hint: 'This usually resolves on retry. If the problem persists, check server logs.',
+    },
+    { status: 503 }
+  );
+}
+
+// Handler: Get schema
+async function handleGetSchema(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-reporting] fetching schema');
+
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for schema');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
+  }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for schema');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
+}
+
+// Handler: Check access permissions
+async function handleCheckAccess(request: ExecuteRequest, host: HostBindings): Promise<ExecuteResponse> {
+  await safeLog(host, 'info', '[nineminds-reporting] checking access');
+
+  // Use prefetched data if available
+  const prefetched = getPrefetchedData(request);
+  if (prefetched) {
+    await safeLog(host, 'info', '[nineminds-reporting] using prefetched data for access check');
+    return jsonResponse(prefetched.data, { status: prefetched.status });
+  }
+
+  // IMPORTANT: Do NOT fall back to direct HTTP calls.
+  await safeLog(host, 'warn', '[nineminds-reporting] no prefetched data available for access check');
+  return jsonResponse(
+    {
+      success: false,
+      error: 'Data not available',
+      detail: 'The server-side prefetch timed out. Please refresh the page to retry.',
+    },
+    { status: 503 }
+  );
 }
 
 async function safeLog(host: HostBindings, level: 'info' | 'warn' | 'error', message: string) {

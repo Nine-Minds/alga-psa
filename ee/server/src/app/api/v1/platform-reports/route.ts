@@ -19,38 +19,37 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/**
- * CORS headers for extension iframe access
- */
-function corsHeaders(request: NextRequest): HeadersInit {
-  const origin = request.headers.get('origin') || '*';
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
-  };
-}
-
-function jsonResponse(data: unknown, init: ResponseInit & { request?: NextRequest } = {}): NextResponse {
-  const headers = init.request ? corsHeaders(init.request) : {};
-  return NextResponse.json(data, {
-    ...init,
-    headers: { ...headers, ...init.headers },
-  });
-}
-
-/**
- * OPTIONS - CORS preflight
- */
-export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders(request),
-  });
-}
-
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
+
+/**
+ * Internal user info from trusted ext-proxy prefetch requests.
+ */
+interface InternalUserInfo {
+  user_id: string;
+  tenant: string;
+  email: string;
+}
+
+/**
+ * Check if this is an internal request from ext-proxy with trusted user info.
+ * Internal requests include x-internal-request header and user info headers.
+ */
+function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
+  const internalRequest = request.headers.get('x-internal-request');
+  if (internalRequest !== 'ext-proxy-prefetch') {
+    return null;
+  }
+
+  const userId = request.headers.get('x-internal-user-id');
+  const tenant = request.headers.get('x-internal-user-tenant');
+  const email = request.headers.get('x-internal-user-email') || '';
+
+  if (!userId || !tenant) {
+    return null;
+  }
+
+  return { user_id: userId, tenant, email };
+}
 
 /**
  * Verify the caller has access to platform reports.
@@ -59,14 +58,37 @@ const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
  * that the user belongs to the master billing tenant. We cannot trust headers alone
  * as they can be spoofed by malicious clients.
  *
- * Returns the tenant ID to use for queries.
+ * For internal ext-proxy prefetch requests, we trust the user info passed in headers
+ * since ext-proxy already validated the session before making the internal request.
+ *
+ * Returns the tenant ID to use for queries and user info.
  */
-async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
+async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // ALWAYS validate the user session - headers can be spoofed!
+  // Check for internal ext-proxy request with trusted user info
+  const internalUser = getInternalUserInfo(request);
+  if (internalUser) {
+    console.log('[platform-reports] Internal ext-proxy request:', {
+      userId: internalUser.user_id,
+      tenant: internalUser.tenant,
+    });
+
+    // Verify the internal user is from master tenant
+    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) {
+      throw new Error('Access denied: Platform reports require master tenant access');
+    }
+
+    return {
+      tenantId: MASTER_BILLING_TENANT_ID,
+      userId: internalUser.user_id,
+      userEmail: internalUser.email,
+    };
+  }
+
+  // For external requests, validate the user session
   const user = await getCurrentUser();
 
   if (!user) {
@@ -87,7 +109,11 @@ async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
     });
   }
 
-  return MASTER_BILLING_TENANT_ID;
+  return {
+    tenantId: MASTER_BILLING_TENANT_ID,
+    userId: user.user_id,
+    userEmail: user.email,
+  };
 }
 
 /**
@@ -96,8 +122,7 @@ async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
-    const user = await getCurrentUser();
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
 
     const service = new PlatformReportService(masterTenantId);
     const auditService = new PlatformReportAuditService(masterTenantId);
@@ -113,16 +138,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const clientInfo = extractClientInfo(request);
     await auditService.logEvent({
       eventType: 'report.list',
-      userId: user?.user_id,
-      userEmail: user?.email,
+      userId,
+      userEmail,
       details: { category, activeOnly, count: reports.length },
       ...clientInfo,
     });
 
-    return jsonResponse({
-      success: true,
-      data: reports,
-    }, { request });
+    return NextResponse.json({ success: true, data: reports });
   } catch (error) {
     console.error('[platform-reports] GET error:', error);
 
@@ -131,16 +153,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 403, request }
+          { status: 403 }
         );
       }
     }
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }
@@ -151,8 +173,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
-    const user = await getCurrentUser();
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
 
     const service = new PlatformReportService(masterTenantId);
     const auditService = new PlatformReportAuditService(masterTenantId);
@@ -161,27 +182,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Validate required fields
     if (!body.name || typeof body.name !== 'string') {
-      return jsonResponse(
+      return NextResponse.json(
         { success: false, error: 'name is required' },
-        { status: 400, request }
+        { status: 400 }
       );
     }
 
     if (!body.report_definition || typeof body.report_definition !== 'object') {
-      return jsonResponse(
+      return NextResponse.json(
         { success: false, error: 'report_definition is required' },
-        { status: 400, request }
+        { status: 400 }
       );
     }
 
-    const report = await service.createReport(body, user?.user_id);
+    const report = await service.createReport(body, userId);
 
     // Log the create action
     const clientInfo = extractClientInfo(request);
     await auditService.logEvent({
       eventType: 'report.create',
-      userId: user?.user_id,
-      userEmail: user?.email,
+      userId,
+      userEmail,
       resourceType: 'report',
       resourceId: report.report_id,
       resourceName: report.name,
@@ -189,10 +210,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ...clientInfo,
     });
 
-    return jsonResponse({
-      success: true,
-      data: report,
-    }, { status: 201, request });
+    return NextResponse.json({ success: true, data: report }, { status: 201 });
   } catch (error) {
     console.error('[platform-reports] POST error:', error);
 
@@ -201,24 +219,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         error.message.includes('Access denied') ||
         error.message.includes('Authentication')
       ) {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 403, request }
+          { status: 403 }
         );
       }
 
       // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
-        return jsonResponse(
+        return NextResponse.json(
           { success: false, error: error.message },
-          { status: 400, request }
+          { status: 400 }
         );
       }
     }
 
-    return jsonResponse(
+    return NextResponse.json(
       { success: false, error: 'Internal server error' },
-      { status: 500, request }
+      { status: 500 }
     );
   }
 }
