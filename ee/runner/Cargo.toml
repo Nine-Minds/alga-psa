@@ -27,6 +27,7 @@ async-trait = "0.1"
 rand = "0.8"
 humantime = "2"
 redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+urlencoding = "2"
 
 # New dependencies for static asset host
 tower-http = { version = "0.5", features = ["fs", "set-header", "trace"] }

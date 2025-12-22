@@ -76,14 +76,48 @@ impl RedisPublisher {
 
 static PUBLISHER: OnceCell<Option<Arc<RedisPublisher>>> = OnceCell::new();
 
+/// Build a Redis connection URL, injecting the password if provided separately.
+fn build_redis_url(base_url: &str, password: Option<&str>) -> String {
+    let password = match password {
+        Some(p) if !p.is_empty() => p,
+        _ => return base_url.to_string(),
+    };
+
+    // Parse the URL and inject password: redis://host:port -> redis://:password@host:port
+    if let Some(rest) = base_url.strip_prefix("redis://") {
+        // Check if URL already has credentials (contains @ before first /)
+        let host_part = rest.split('/').next().unwrap_or(rest);
+        if host_part.contains('@') {
+            // Already has credentials, don't override
+            return base_url.to_string();
+        }
+        // URL-encode the password to handle special characters
+        let encoded_password = urlencoding::encode(password);
+        format!("redis://:{}@{}", encoded_password, rest)
+    } else if let Some(rest) = base_url.strip_prefix("rediss://") {
+        let host_part = rest.split('/').next().unwrap_or(rest);
+        if host_part.contains('@') {
+            return base_url.to_string();
+        }
+        let encoded_password = urlencoding::encode(password);
+        format!("rediss://:{}@{}", encoded_password, rest)
+    } else {
+        // Unknown scheme, return as-is
+        base_url.to_string()
+    }
+}
+
 pub async fn init_from_env() {
-    let url = match std::env::var("RUNNER_DEBUG_REDIS_URL") {
+    let base_url = match std::env::var("RUNNER_DEBUG_REDIS_URL") {
         Ok(v) if !v.is_empty() => v,
         _ => {
             let _ = PUBLISHER.set(None);
             return;
         }
     };
+
+    let password = std::env::var("RUNNER_DEBUG_REDIS_PASSWORD").ok();
+    let url = build_redis_url(&base_url, password.as_deref());
 
     let stream_prefix = std::env::var("RUNNER_DEBUG_REDIS_STREAM_PREFIX")
         .unwrap_or_else(|_| "ext-debug:".to_string());
