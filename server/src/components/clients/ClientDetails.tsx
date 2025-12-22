@@ -20,7 +20,7 @@ import ClientContactsList from 'server/src/components/contacts/ClientContactsLis
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts, deactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts, deactivateClientContacts, markClientInactiveWithContacts, markClientActiveWithContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -275,33 +275,35 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } catch (error: any) {
       console.error('Failed to delete client:', error);
       const errorMessage = error.message || 'Failed to delete client. Please try again.';
+      // Only set the error in state - dialog already displays it, avoid duplicate toast
       setDeleteError(errorMessage);
-      toast.error(errorMessage);
     }
   };
 
   const handleMarkClientInactive = async () => {
     try {
-      // Mark client as inactive
-      await updateClient(editedClient.client_id, { is_inactive: true });
+      // Use atomic server action to mark client and contacts as inactive in a single transaction
+      const result = await markClientInactiveWithContacts(editedClient.client_id, true);
 
-      // Also deactivate all contacts
-      await deactivateClientContacts(editedClient.client_id);
+      if (!result.success) {
+        setDeleteError(result.message || 'Failed to mark client as inactive');
+        return;
+      }
 
       setIsDeleteDialogOpen(false);
 
       // Update local state immediately to reflect the change
       setEditedClient(prev => ({ ...prev, is_inactive: true }));
 
-      toast.success("Client and all associated contacts have been marked as inactive successfully.");
+      if (result.contactsDeactivated > 0) {
+        toast.success(`Client and ${result.contactsDeactivated} contact(s) have been marked as inactive successfully.`);
+      } else {
+        toast.success("Client has been marked as inactive successfully.");
+      }
       router.refresh();
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        setDeleteError('An error occurred while marking the client as inactive. Please try again.');
-      }
+      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
@@ -316,8 +318,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         setActiveContactsToDeactivate(activeContacts);
         setIsDeactivateDialogOpen(true);
       } else {
-        // No contacts to warn about, just deactivate the client
-        await updateClient(editedClient.client_id, { is_inactive: true });
+        // No contacts to warn about, use atomic action to deactivate the client
+        const result = await markClientInactiveWithContacts(editedClient.client_id, false);
+
+        if (!result.success) {
+          toast.error(result.message || 'Failed to mark client as inactive');
+          return;
+        }
 
         // Update local state immediately
         setEditedClient(prev => ({ ...prev, is_inactive: true }));
@@ -326,11 +333,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        toast.error('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        toast.error('An error occurred while marking the client as inactive. Please try again.');
-      }
+      toast.error('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
@@ -345,52 +348,43 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         setInactiveContactsToReactivate(inactiveContacts);
         setIsReactivateDialogOpen(true);
       } else {
-        // No contacts to ask about, just reactivate the client
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
+        // No contacts to ask about, use atomic action to reactivate the client
+        const result = await markClientActiveWithContacts(editedClient.client_id, false);
+
+        if (!result.success) {
+          toast.error(result.message || 'Failed to reactivate client');
+          return;
+        }
 
         // Update local state immediately
-        setEditedClient(updatedClient);
+        setEditedClient(prev => ({ ...prev, is_inactive: false }));
         toast.success("Client has been reactivated successfully.");
         router.refresh();
       }
     } catch (error: any) {
       console.error('Error reactivating client:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        toast.error('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        toast.error('An error occurred while reactivating the client. Please try again.');
-      }
+      toast.error('An error occurred while reactivating the client. Please try again.');
     }
   };
 
   const handleReactivateClient = async (reactivateContacts: boolean) => {
     try {
-      if (reactivateContacts) {
-        // Reactivate all contacts and their associated users
-        const result = await reactivateClientContacts(editedClient.client_id);
+      // Use atomic server action to reactivate client and optionally contacts in a single transaction
+      const result = await markClientActiveWithContacts(editedClient.client_id, reactivateContacts);
 
-        if (!result.success) {
-          toast.error(result.message || 'Failed to reactivate contacts');
-          setIsReactivateDialogOpen(false);
-          return;
-        }
+      if (!result.success) {
+        toast.error(result.message || 'Failed to reactivate client');
+        setIsReactivateDialogOpen(false);
+        return;
+      }
 
-        // Update the client to be active
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
+      // Update local state immediately
+      setEditedClient(prev => ({ ...prev, is_inactive: false }));
+      setHasUnsavedChanges(false);
 
-        // Update local state immediately
-        setEditedClient(updatedClient);
-        setHasUnsavedChanges(false);
-
+      if (reactivateContacts && result.contactsReactivated > 0) {
         toast.success(`Client and ${result.contactsReactivated} contact(s) have been reactivated successfully.`);
       } else {
-        // Only reactivate the client (skip contacts)
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
-
-        // Update local state immediately
-        setEditedClient(updatedClient);
-        setHasUnsavedChanges(false);
-
         toast.success('Client has been reactivated successfully.');
       }
 
@@ -398,11 +392,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       router.refresh();
     } catch (error: any) {
       console.error('Error reactivating client:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        toast.error('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        toast.error('An error occurred while reactivating the client. Please try again.');
-      }
+      toast.error('An error occurred while reactivating the client. Please try again.');
     }
   };
 
@@ -413,32 +403,22 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleDeactivateClient = async (deactivateContacts: boolean) => {
     try {
-      if (deactivateContacts) {
-        // Deactivate all contacts and their associated users
-        const result = await deactivateClientContacts(editedClient.client_id);
+      // Use atomic server action to deactivate client and optionally contacts in a single transaction
+      const result = await markClientInactiveWithContacts(editedClient.client_id, deactivateContacts);
 
-        if (!result.success) {
-          toast.error(result.message || 'Failed to deactivate contacts');
-          setIsDeactivateDialogOpen(false);
-          return;
-        }
+      if (!result.success) {
+        toast.error(result.message || 'Failed to deactivate client');
+        setIsDeactivateDialogOpen(false);
+        return;
+      }
 
-        // Update the client to be inactive
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: true });
+      // Update local state immediately
+      setEditedClient(prev => ({ ...prev, is_inactive: true }));
+      setHasUnsavedChanges(false);
 
-        // Update local state immediately
-        setEditedClient(updatedClient);
-        setHasUnsavedChanges(false);
-
+      if (deactivateContacts && result.contactsDeactivated > 0) {
         toast.success(`Client and ${result.contactsDeactivated} contact(s) have been deactivated successfully.`);
       } else {
-        // Only deactivate the client (skip contacts)
-        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: true });
-
-        // Update local state immediately
-        setEditedClient(updatedClient);
-        setHasUnsavedChanges(false);
-
         toast.success('Client has been marked as inactive successfully.');
       }
 
@@ -446,11 +426,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       router.refresh();
     } catch (error: any) {
       console.error('Error deactivating client:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        toast.error('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        toast.error('An error occurred while deactivating the client. Please try again.');
-      }
+      toast.error('An error occurred while deactivating the client. Please try again.');
     }
   };
 

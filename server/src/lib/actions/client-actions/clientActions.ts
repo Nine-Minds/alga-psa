@@ -602,7 +602,7 @@ export async function deleteClient(clientId: string): Promise<{
           this.on('tickets.status_id', '=', 'statuses.status_id')
               .andOn('tickets.tenant', '=', 'statuses.tenant');
         })
-        .where({ 'tickets.company_id': clientId, 'tickets.tenant': tenant })
+        .where({ 'tickets.client_id': clientId, 'tickets.tenant': tenant })
         .andWhere(function() {
           this.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');
         })
@@ -1369,6 +1369,156 @@ export async function deactivateClientContacts(
     console.error('Error deactivating client contacts:', error);
     const message = error instanceof Error ? error.message : 'Failed to deactivate client contacts';
     return { success: false, contactsDeactivated: 0, message };
+  }
+}
+
+/**
+ * Mark a client as inactive and optionally deactivate all contacts atomically
+ * This ensures both operations succeed or fail together
+ */
+export async function markClientInactiveWithContacts(
+  clientId: string,
+  deactivateContacts: boolean = true
+): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
+  }
+
+  // Check permission for client updating
+  if (!await hasPermission(currentUser, 'client', 'update')) {
+    return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
+  }
+
+  // If deactivating contacts, also check contact permission
+  if (deactivateContacts && !await hasPermission(currentUser, 'contact', 'update')) {
+    return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      let contactsDeactivated = 0;
+
+      if (deactivateContacts) {
+        // Get all active contact IDs for this client
+        const activeContacts = await trx('contacts')
+          .select('contact_name_id')
+          .where({ client_id: clientId, tenant, is_inactive: false });
+
+        const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+        if (contactIds.length > 0) {
+          // Deactivate all contacts
+          await trx('contacts')
+            .where({ client_id: clientId, tenant, is_inactive: false })
+            .update({ is_inactive: true });
+
+          // Deactivate all users associated with these contacts
+          await trx('users')
+            .whereIn('contact_id', contactIds)
+            .andWhere({ tenant, user_type: 'client' })
+            .update({ is_inactive: true });
+
+          contactsDeactivated = contactIds.length;
+        }
+      }
+
+      // Mark the client as inactive
+      await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .update({ is_inactive: true, updated_at: new Date().toISOString() });
+
+      return { contactsDeactivated };
+    });
+
+    revalidatePath(`/msp/clients/${clientId}`);
+    revalidatePath(`/msp/contacts`);
+
+    return { success: true, contactsDeactivated: result.contactsDeactivated };
+  } catch (error) {
+    console.error('Error marking client and contacts as inactive:', error);
+    const message = error instanceof Error ? error.message : 'Failed to mark client as inactive';
+    return { success: false, contactsDeactivated: 0, message };
+  }
+}
+
+/**
+ * Mark a client as active and optionally reactivate all contacts atomically
+ * This ensures both operations succeed or fail together
+ */
+export async function markClientActiveWithContacts(
+  clientId: string,
+  reactivateContacts: boolean = false
+): Promise<{ success: boolean; contactsReactivated: number; message?: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, contactsReactivated: 0, message: 'Tenant not found' };
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, contactsReactivated: 0, message: 'User not authenticated' };
+  }
+
+  // Check permission for client updating
+  if (!await hasPermission(currentUser, 'client', 'update')) {
+    return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.' };
+  }
+
+  // If reactivating contacts, also check contact permission
+  if (reactivateContacts && !await hasPermission(currentUser, 'contact', 'update')) {
+    return { success: false, contactsReactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      let contactsReactivated = 0;
+
+      // Mark the client as active first
+      await trx('clients')
+        .where({ client_id: clientId, tenant })
+        .update({ is_inactive: false, updated_at: new Date().toISOString() });
+
+      if (reactivateContacts) {
+        // Get all inactive contact IDs for this client
+        const inactiveContacts = await trx('contacts')
+          .select('contact_name_id')
+          .where({ client_id: clientId, tenant, is_inactive: true });
+
+        const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+        if (contactIds.length > 0) {
+          // Reactivate all contacts
+          await trx('contacts')
+            .where({ client_id: clientId, tenant, is_inactive: true })
+            .update({ is_inactive: false });
+
+          // Reactivate all users associated with these contacts
+          await trx('users')
+            .whereIn('contact_id', contactIds)
+            .andWhere({ tenant, user_type: 'client' })
+            .update({ is_inactive: false });
+
+          contactsReactivated = contactIds.length;
+        }
+      }
+
+      return { contactsReactivated };
+    });
+
+    revalidatePath(`/msp/clients/${clientId}`);
+    revalidatePath(`/msp/contacts`);
+
+    return { success: true, contactsReactivated: result.contactsReactivated };
+  } catch (error) {
+    console.error('Error marking client and contacts as active:', error);
+    const message = error instanceof Error ? error.message : 'Failed to mark client as active';
+    return { success: false, contactsReactivated: 0, message };
   }
 }
 
