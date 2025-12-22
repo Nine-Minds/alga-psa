@@ -20,52 +20,14 @@ export const dynamic = 'force-dynamic';
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
 /**
- * Internal user info from trusted ext-proxy prefetch requests.
- */
-interface InternalUserInfo {
-  user_id: string;
-  tenant: string;
-  email: string;
-}
-
-/**
- * Check if this is an internal request from ext-proxy with trusted user info.
- */
-function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
-  const internalRequest = request.headers.get('x-internal-request');
-  if (internalRequest !== 'ext-proxy-prefetch') {
-    return null;
-  }
-
-  const userId = request.headers.get('x-internal-user-id');
-  const tenant = request.headers.get('x-internal-user-tenant');
-  const email = request.headers.get('x-internal-user-email') || '';
-
-  if (!userId || !tenant) {
-    return null;
-  }
-
-  return { user_id: userId, tenant, email };
-}
-
-/**
  * Verify the caller has access to audit logs.
  */
-async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
+async function assertMasterTenantAccess(): Promise<string> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // Check for internal ext-proxy request with trusted user info
-  const internalUser = getInternalUserInfo(request);
-  if (internalUser) {
-    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) {
-      throw new Error('Access denied: Audit logs require master tenant access');
-    }
-    return MASTER_BILLING_TENANT_ID;
-  }
-
-  // For external requests, validate the user session
+  // Validate the user session
   const user = await getCurrentUser();
 
   if (!user) {
@@ -85,7 +47,7 @@ async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const masterTenantId = await assertMasterTenantAccess(request);
+    const masterTenantId = await assertMasterTenantAccess();
 
     const auditService = new PlatformReportAuditService(masterTenantId);
 

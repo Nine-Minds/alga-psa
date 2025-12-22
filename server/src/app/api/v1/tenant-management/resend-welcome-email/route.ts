@@ -1,162 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/getSession';
-import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { TenantWorkflowClient } from '@ee/temporal-workflows/client';
-import { observabilityLogger } from '@/lib/observability/logging';
-
-const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
-
 /**
- * Check if this is an internal request from ext-proxy with trusted user info.
+ * Tenant Management API - Resend Welcome Email - CE Stub
+ *
+ * This stub lazy-loads the EE implementation or returns 501 for CE builds.
  */
-function getInternalUserInfo(request: NextRequest): { user_id: string; tenant: string; email?: string } | null {
-  const internalRequest = request.headers.get('x-internal-request');
-  if (internalRequest !== 'ext-proxy-prefetch') {
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const isEnterpriseEdition =
+  (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+  (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+
+type EeRouteModule = {
+  POST: (req: Request) => Promise<Response>;
+};
+
+let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
+
+async function loadEeRoute(): Promise<EeRouteModule | null> {
+  if (!isEnterpriseEdition) {
     return null;
   }
 
-  const userId = request.headers.get('x-internal-user-id');
-  const tenant = request.headers.get('x-internal-user-tenant');
-  const email = request.headers.get('x-internal-user-email') || undefined;
-
-  if (!userId || !tenant) {
-    return null;
+  if (!eeRouteModulePromise) {
+    eeRouteModulePromise = import('@ee/app/api/v1/tenant-management/resend-welcome-email/route')
+      .then((module) => module as EeRouteModule)
+      .catch((error) => {
+        console.error('[v1/tenant-management/resend-welcome-email] Failed to load EE route', error);
+        return null;
+      });
   }
 
-  return { user_id: userId, tenant, email };
+  return eeRouteModulePromise;
 }
 
-export async function POST(req: NextRequest) {
-  const startTime = Date.now();
-
-  try {
-    // Check for internal ext-proxy request first
-    const internalUser = getInternalUserInfo(req);
-    let userTenant: string;
-    let userId: string;
-    let userEmail: string | undefined;
-
-    if (internalUser) {
-      userTenant = internalUser.tenant;
-      userId = internalUser.user_id;
-      userEmail = internalUser.email;
-    } else {
-      const session = await getSession();
-
-      if (!session?.user) {
-        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const user = session.user as any;
-      userTenant = user.tenant;
-      userId = user.user_id;
-      userEmail = user.email;
-    }
-
-    // Verify user is from master tenant
-    if (userTenant !== MASTER_BILLING_TENANT_ID) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const { tenantId, userId: targetUserId } = body;
-
-    if (!tenantId) {
-      return NextResponse.json({ success: false, error: 'tenantId is required' }, { status: 400 });
-    }
-
-    // LOG: Action initiated
-    observabilityLogger.info('Resend welcome email initiated', {
-      event_type: 'tenant_management_action',
-      action: 'resend_welcome_email',
-      tenant_id: tenantId,
-      target_user_id: targetUserId,
-      triggered_by: userId,
-      triggered_by_email: userEmail,
-    });
-
-    // Log to unified extension audit table (pending status)
-    const knex = await getAdminConnection();
-    const [auditRecord] = await knex('extension_audit_logs')
-      .insert({
-        tenant: MASTER_BILLING_TENANT_ID,
-        event_type: 'tenant.resend_email',
-        user_id: userId,
-        user_email: userEmail,
-        resource_type: 'user',
-        resource_id: targetUserId || 'admin',
-        resource_name: tenantId,  // Store target tenant ID
-        status: 'pending',
-        details: JSON.stringify({ source: 'ninemindsreporting_extension', targetTenantId: tenantId }),
-      })
-      .returning('log_id');
-
-    // Trigger Temporal workflow
-    const client = await TenantWorkflowClient.create();
-    const { workflowId, result } = await client.startResendWelcomeEmail({
-      tenantId,
-      userId: targetUserId,
-      triggeredBy: userId,
-      triggeredByEmail: userEmail || '',
-    });
-
-    // Wait for result (short workflow, should complete quickly)
-    const workflowResult = await result;
-
-    // Update audit record with result
-    await knex('extension_audit_logs')
-      .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
-      .update({
-        workflow_id: workflowId,
-        status: workflowResult.success ? 'completed' : 'failed',
-        error_message: workflowResult.error,
-        details: JSON.stringify({
-          source: 'ninemindsreporting_extension',
-          targetTenantId: tenantId,
-          result: workflowResult,
-          duration_ms: Date.now() - startTime,
-        }),
-      });
-
-    // LOG: Action completed
-    observabilityLogger.info('Resend welcome email completed', {
-      event_type: 'tenant_management_action_completed',
-      action: 'resend_welcome_email',
-      tenant_id: tenantId,
-      workflow_id: workflowId,
-      success: workflowResult.success,
-      duration_ms: Date.now() - startTime,
-    });
-
-    // Close the client connection
-    await client.close();
-
-    if (workflowResult.success) {
-      return NextResponse.json({
-        success: true,
-        workflowId,
-        email: workflowResult.email,
-        tenantName: workflowResult.tenantName,
-        message: `Welcome email sent to ${workflowResult.email}`,
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        workflowId,
-        error: workflowResult.error,
-      }, { status: 500 });
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-    observabilityLogger.error('Resend welcome email failed', error, {
-      event_type: 'tenant_management_action_failed',
-      action: 'resend_welcome_email',
-    });
-
-    return NextResponse.json({
+function eeUnavailable(): Response {
+  return new Response(
+    JSON.stringify({
       success: false,
-      error: errorMessage,
-    }, { status: 500 });
+      error: 'Tenant management is only available in Enterprise Edition.',
+    }),
+    {
+      status: 501,
+      headers: { 'content-type': 'application/json' },
+    }
+  );
+}
+
+export async function POST(request: Request): Promise<Response> {
+  const eeRoute = await loadEeRoute();
+  if (!eeRoute?.POST) {
+    return eeUnavailable();
   }
+  return eeRoute.POST(request);
 }

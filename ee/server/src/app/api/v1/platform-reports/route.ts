@@ -22,44 +22,10 @@ export const dynamic = 'force-dynamic';
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
 /**
- * Internal user info from trusted ext-proxy prefetch requests.
- */
-interface InternalUserInfo {
-  user_id: string;
-  tenant: string;
-  email: string;
-}
-
-/**
- * Check if this is an internal request from ext-proxy with trusted user info.
- * Internal requests include x-internal-request header and user info headers.
- */
-function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
-  const internalRequest = request.headers.get('x-internal-request');
-  if (internalRequest !== 'ext-proxy-prefetch') {
-    return null;
-  }
-
-  const userId = request.headers.get('x-internal-user-id');
-  const tenant = request.headers.get('x-internal-user-tenant');
-  const email = request.headers.get('x-internal-user-email') || '';
-
-  if (!userId || !tenant) {
-    return null;
-  }
-
-  return { user_id: userId, tenant, email };
-}
-
-/**
  * Verify the caller has access to platform reports.
  *
  * SECURITY: Platform reports provide cross-tenant data access, so we MUST verify
- * that the user belongs to the master billing tenant. We cannot trust headers alone
- * as they can be spoofed by malicious clients.
- *
- * For internal ext-proxy prefetch requests, we trust the user info passed in headers
- * since ext-proxy already validated the session before making the internal request.
+ * that the user belongs to the master billing tenant via session authentication.
  *
  * Returns the tenant ID to use for queries and user info.
  */
@@ -68,27 +34,7 @@ async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantI
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // Check for internal ext-proxy request with trusted user info
-  const internalUser = getInternalUserInfo(request);
-  if (internalUser) {
-    console.log('[platform-reports] Internal ext-proxy request:', {
-      userId: internalUser.user_id,
-      tenant: internalUser.tenant,
-    });
-
-    // Verify the internal user is from master tenant
-    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) {
-      throw new Error('Access denied: Platform reports require master tenant access');
-    }
-
-    return {
-      tenantId: MASTER_BILLING_TENANT_ID,
-      userId: internalUser.user_id,
-      userEmail: internalUser.email,
-    };
-  }
-
-  // For external requests, validate the user session
+  // Validate the user session
   const user = await getCurrentUser();
 
   if (!user) {

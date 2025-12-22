@@ -21,56 +21,14 @@ export const dynamic = 'force-dynamic';
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
 /**
- * Internal user info from trusted ext-proxy prefetch requests.
- */
-interface InternalUserInfo {
-  user_id: string;
-  tenant: string;
-  email: string;
-}
-
-/**
- * Check if this is an internal request from ext-proxy with trusted user info.
- */
-function getInternalUserInfo(request: NextRequest): InternalUserInfo | null {
-  const internalRequest = request.headers.get('x-internal-request');
-  if (internalRequest !== 'ext-proxy-prefetch') {
-    return null;
-  }
-
-  const userId = request.headers.get('x-internal-user-id');
-  const tenant = request.headers.get('x-internal-user-tenant');
-  const email = request.headers.get('x-internal-user-email') || '';
-
-  if (!userId || !tenant) {
-    return null;
-  }
-
-  return { user_id: userId, tenant, email };
-}
-
-/**
  * Verify the caller has access to platform reports.
  */
-async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
+async function assertMasterTenantAccess(): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // Check for internal ext-proxy request with trusted user info
-  const internalUser = getInternalUserInfo(request);
-  if (internalUser) {
-    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) {
-      throw new Error('Access denied: Platform reports require master tenant access');
-    }
-    return {
-      tenantId: MASTER_BILLING_TENANT_ID,
-      userId: internalUser.user_id,
-      userEmail: internalUser.email,
-    };
-  }
-
-  // For external requests, validate the user session
+  // Validate the user session
   const user = await getCurrentUser();
 
   if (!user) {
@@ -101,7 +59,7 @@ export async function POST(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess();
     const { reportId } = await context.params;
 
     const service = new PlatformReportService(masterTenantId);

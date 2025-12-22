@@ -1,71 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { PlatformReportAuditService } from '@ee/lib/platformReports';
-
-const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
-
 /**
- * Check if this is an internal request from ext-proxy with trusted user info.
+ * Tenant Management API - Audit Logs - CE Stub
+ *
+ * This stub lazy-loads the EE implementation or returns 501 for CE builds.
  */
-function getInternalUserInfo(request: NextRequest): { user_id: string; tenant: string } | null {
-  const internalRequest = request.headers.get('x-internal-request');
-  if (internalRequest !== 'ext-proxy-prefetch') {
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const isEnterpriseEdition =
+  (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+  (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+
+type EeRouteModule = {
+  GET: (req: Request) => Promise<Response>;
+};
+
+let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
+
+async function loadEeRoute(): Promise<EeRouteModule | null> {
+  if (!isEnterpriseEdition) {
     return null;
   }
 
-  const userId = request.headers.get('x-internal-user-id');
-  const tenant = request.headers.get('x-internal-user-tenant');
-
-  if (!userId || !tenant) {
-    return null;
+  if (!eeRouteModulePromise) {
+    eeRouteModulePromise = import('@ee/app/api/v1/tenant-management/audit/route')
+      .then((module) => module as EeRouteModule)
+      .catch((error) => {
+        console.error('[v1/tenant-management/audit] Failed to load EE route', error);
+        return null;
+      });
   }
 
-  return { user_id: userId, tenant };
+  return eeRouteModulePromise;
 }
 
-export async function GET(req: NextRequest) {
-  try {
-    // Check for internal ext-proxy request first
-    const internalUser = getInternalUserInfo(req);
-    let userTenant: string;
-
-    if (internalUser) {
-      // Trust the user info from ext-proxy (it already validated the session)
-      userTenant = internalUser.tenant;
-    } else {
-      // Normal request - get user from session
-      const user = await getCurrentUser();
-
-      if (!user) {
-        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-      }
-
-      userTenant = user.tenant;
-    }
-
-    if (userTenant !== MASTER_BILLING_TENANT_ID) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const eventType = searchParams.get('eventType') as any || undefined;
-    const eventTypePrefix = searchParams.get('eventTypePrefix') || undefined;  // e.g., 'tenant.' for all tenant events
-    const resourceType = searchParams.get('resourceType') as any || undefined;
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
-
-    const auditService = new PlatformReportAuditService(MASTER_BILLING_TENANT_ID!);
-    const logs = await auditService.listLogs({
-      eventType,
-      eventTypePrefix,
-      resourceType,
-      limit,
-    });
-
-    return NextResponse.json({ success: true, data: logs });
-  } catch (error) {
-    return NextResponse.json({
+function eeUnavailable(): Response {
+  return new Response(
+    JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+      error: 'Tenant management is only available in Enterprise Edition.',
+    }),
+    {
+      status: 501,
+      headers: { 'content-type': 'application/json' },
+    }
+  );
+}
+
+export async function GET(request: Request): Promise<Response> {
+  const eeRoute = await loadEeRoute();
+  if (!eeRoute?.GET) {
+    return eeUnavailable();
   }
+  return eeRoute.GET(request);
 }

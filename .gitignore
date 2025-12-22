@@ -30,6 +30,9 @@ scripts/minio-test.sh
 scripts/start-playwright-minio.sh
 scripts/stop-playwright-minio.sh
 
+# Local development scripts (not committed)
+scripts/dev-install-extension.mjs
+
 # Next.js
 *.next/
 /out/
