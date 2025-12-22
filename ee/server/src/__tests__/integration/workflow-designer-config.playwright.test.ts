@@ -43,6 +43,9 @@ async function setupDesigner(page: Page): Promise<{
     permissions: ADMIN_PERMISSIONS,
   });
 
+  await page.goto(`${TEST_CONFIG.baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.waitForLoadState('networkidle', { timeout: 30_000 });
+
   const workflowPage = new WorkflowDesignerPage(page);
   await workflowPage.goto(TEST_CONFIG.baseUrl);
   return { db, tenantData, workflowPage };
@@ -128,6 +131,69 @@ test.describe('Workflow Designer UI - config fields', () => {
 
       const expectedFormatted = '{\n  "foo": "bar",\n  "count": 2\n}';
       await expect(page.locator(`#config-${stepId}-args-json`)).toHaveValue(expectedFormatted);
+    } finally {
+      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+
+  test('action.call config shows available actions count', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('action.call').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await workflowPage.stepSelectButton(stepId).click();
+
+      const availableActions = page.getByText(/Available actions:\s*\d+/);
+      await expect(availableActions).toBeVisible();
+      const text = await availableActions.textContent();
+      const match = text?.match(/Available actions:\s*(\d+)/);
+      expect(match).not.toBeNull();
+      expect(Number(match?.[1] ?? 0)).toBeGreaterThan(0);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+
+  test('action.call config args/saveAs/idempotencyKey persist after save', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    const workflowName = `UI Action Call Persist ${uuidv4().slice(0, 6)}`;
+
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.nameInput.fill(workflowName);
+      await workflowPage.addButtonFor('action.call').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await workflowPage.stepSelectButton(stepId).click();
+
+      await page.locator(`#config-${stepId}-actionId`).fill('test.action');
+      await page.locator(`#config-${stepId}-version`).fill('2');
+      await page.locator(`#config-${stepId}-saveAs`).fill('payload.actionResult');
+      await page.locator(`#config-${stepId}-idempotencyKey-expr`).fill('payload.messageId');
+      await page.locator(`#config-${stepId}-args-json`).fill('{"foo":"bar"}');
+
+      await workflowPage.saveDraft();
+      await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await workflowPage.waitForLoaded();
+      await workflowPage.selectWorkflowByName(workflowName);
+      await workflowPage.stepSelectButton(stepId).click();
+
+      await expect(page.locator(`#config-${stepId}-actionId`)).toHaveValue('test.action');
+      await expect(page.locator(`#config-${stepId}-version`)).toHaveValue('2');
+      await expect(page.locator(`#config-${stepId}-saveAs`)).toHaveValue('payload.actionResult');
+      await expect(page.locator(`#config-${stepId}-idempotencyKey-expr`)).toHaveValue('payload.messageId');
+      await expect(page.locator(`#config-${stepId}-args-json`)).toHaveValue(/"foo": "bar"/);
     } finally {
       await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);

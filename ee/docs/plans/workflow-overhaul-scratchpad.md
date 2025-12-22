@@ -482,3 +482,33 @@
 ## 2025-12-22 — Env alignment
 - Confirmed the correct dev stack for this work is `workflow-overhaul` / `workflow_overhaul_env8`.
 - Updated `server/.env` to align ports + names with env8 (app 3007, pg 5439, redis 6386, hocuspocus 1241, pgbouncer 6439).
+
+## 2025-12-22 — Playwright UI tests (batch 13: action.call + publish)
+- Confirmed active stack is `workflow-overhaul/workflow_overhaul_env8`.
+- UI change: moved “Available actions: X” display into `StepConfigPanel` for `action.call` steps so it’s always visible regardless of schema title logic.
+- Added `workflow-designer-publish.playwright.test.ts` and new action.call config tests in `workflow-designer-config.playwright.test.ts`.
+- Tests added:
+  - action.call shows available actions count
+  - action.call config args/saveAs/idempotencyKey persist after save
+  - publish without saving shows toast
+  - publish failure shows error cards + breadcrumbs + error badge
+  - publish warnings show warning badge count
+- Ran with env8 DB overrides:
+  - Command: `ADMIN_PASS="$(cat ../../secrets/db_password_server)" PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_ADMIN_PASSWORD=$ADMIN_PASS PLAYWRIGHT_DB_APP_PASSWORD=$ADMIN_PASS DB_PASSWORD_ADMIN=$ADMIN_PASS DB_PASSWORD=$ADMIN_PASS DB_PASSWORD_SERVER=$ADMIN_PASS DB_PASSWORD_SUPERUSER=$ADMIN_PASS npx playwright test src/__tests__/integration/workflow-designer-config.playwright.test.ts src/__tests__/integration/workflow-designer-publish.playwright.test.ts`
+  - Result: **8/8 passed** (2.1m).
+- Noisy server logs persisted (non-failing): Redis `WRONGPASS/NOAUTH` notifications and occasional 401 `Unauthorized` from registry/schema actions.
+
+## 2025-12-22 — Playwright UI tests (batch 14: publish + latest published version)
+- Added publish flow tests in `ee/server/src/__tests__/integration/workflow-designer-publish.playwright.test.ts`:
+  - publish success clears errors + warnings (by removing invalid steps and re-publishing)
+  - publish errors reset when switching workflows
+  - publish button disabled while publish in progress (uses publish delay override)
+  - publish failure toast preserves draft (uses failPublish override)
+  - publish success updates latest published version indicator
+- Added Playwright overrides in `WorkflowDesigner` for publish delay/failure, and surfaced latest published version in UI (`#workflow-designer-published-version`).
+- Updated `listWorkflowDefinitionsAction` to include `published_version` (max version per workflow) and added type support in shared model.
+- Marked publish-related UI checklist items as implemented, including step error badge count.
+- Test run (env8 DB) passed:
+  - Command (from `ee/server`): `ADMIN_PASS="$(cat ../../secrets/db_password_server)" PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_ADMIN_PASSWORD=$ADMIN_PASS PLAYWRIGHT_DB_APP_PASSWORD=$ADMIN_PASS PLAYWRIGHT_DB_NAME=alga_contract_wizard_test npx playwright test src/__tests__/integration/workflow-designer-publish.playwright.test.ts`
+  - Result: **8/8 passed** (2.3m).
+- Non-failing noisy logs: intermittent 401 Unauthorized from workflow actions, Redis WRONGPASS reconnect errors, and various migration/seed warnings during bootstrap.
