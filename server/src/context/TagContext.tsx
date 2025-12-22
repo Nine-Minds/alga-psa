@@ -201,7 +201,7 @@ export const useTags = () => {
   if (context === undefined) {
     throw new Error('useTags must be used within a TagProvider');
   }
-
+  
   // Lazy load tags on first access
   useEffect(() => {
     // Only fetch if not already loaded and not currently loading
@@ -209,20 +209,6 @@ export const useTags = () => {
       context.refetchTags();
     }
   }, [context]);
-
+  
   return context;
-};
-
-// Safe version that returns null if not within TagProvider (for optional usage)
-export const useTagsSafe = (): ReturnType<typeof useTags> | null => {
-  const context = useContext(TagContext);
-
-  // Lazy load tags on first access if context is available
-  useEffect(() => {
-    if (context && !context.tagsLoaded && !context.isLoading) {
-      context.refetchTags();
-    }
-  }, [context]);
-
-  return context ?? null;
 };

@@ -5,7 +5,7 @@ import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, archiveContact, reactivateContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { Button } from 'server/src/components/ui/Button';
 import { SearchInput } from 'server/src/components/ui/SearchInput';
@@ -450,22 +450,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     if (!contactToDelete) return;
 
     try {
-      const result = await archiveContact(contactToDelete.contact_name_id);
-
-      if (!result.success) {
-        toast.error(result.message || 'Failed to mark contact as inactive');
-        setIsDeleteDialogOpen(false);
-        setContactToDelete(null);
-        setShowDeactivateOption(false);
-        setDeleteDependencies(null);
-        return;
-      }
+      const updatedContact = await updateContact({
+        ...contactToDelete,
+        is_inactive: true
+      });
 
       // Update contact in the list to reflect inactive status
       setContacts(prevContacts =>
         prevContacts.map(c =>
           c.contact_name_id === contactToDelete.contact_name_id
-            ? { ...c, is_inactive: true }
+            ? updatedContact
             : c
         )
       );
@@ -475,9 +469,13 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       setShowDeactivateOption(false);
       setDeleteDependencies(null);
       toast.success(`${contactToDelete.full_name} has been marked as inactive successfully.`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
-      setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
+      }
     }
   };
 

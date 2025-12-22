@@ -33,6 +33,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const { openDrawer } = useDrawer();
   const router = useRouter();
 
@@ -51,7 +52,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       setLoading(true);
       setError(null);
       try {
-        const fetchedContacts = await getContactsByClient(clientId, 'all'); // Show both active and inactive
+        const fetchedContacts = await getContactsByClient(clientId, statusFilter);
         setContacts(fetchedContacts);
       } catch (err) {
         console.error('Error fetching client contacts:', err);
@@ -60,7 +61,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         setLoading(false);
       }
     };
-    
+
     const fetchUser = async () => {
       try {
         const user = await getCurrentUser();
@@ -74,7 +75,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
     fetchContacts();
     fetchUser();
-  }, [clientId]);
+  }, [clientId, statusFilter]);
 
   const handleContactClick = (contact: IContact) => {
     // Open quick view drawer (same behavior as dropdown quick view)
@@ -91,7 +92,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     const handleDrawerClose = () => {
       if (changesSavedInDrawer) {
         // Refresh contacts list
-        getContactsByClient(clientId, 'all').then(setContacts);
+        getContactsByClient(clientId, statusFilter).then(setContacts);
         setChangesSavedInDrawer(false);
       }
     };
@@ -270,7 +271,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           onClick={() => {
             setLoading(true);
             setError(null);
-            getContactsByClient(clientId, 'all')
+            getContactsByClient(clientId, statusFilter)
               .then(setContacts)
               .catch(err => {
                 console.error('Error retrying contact fetch:', err);
@@ -288,8 +289,21 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button 
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Show:</span>
+          <select
+            id="contact-status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'active' | 'inactive' | 'all')}
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <Button
           id="add-new-contact-btn"
           onClick={() => setIsQuickAddContactOpen(true)}
         >
@@ -310,7 +324,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         isOpen={isQuickAddContactOpen}
         onClose={() => setIsQuickAddContactOpen(false)}
         onContactAdded={() => {
-          getContactsByClient(clientId, 'all').then(setContacts);
+          getContactsByClient(clientId, statusFilter).then(setContacts);
         }}
         clients={clients}
         selectedClientId={clientId}

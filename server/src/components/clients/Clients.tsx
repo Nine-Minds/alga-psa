@@ -15,8 +15,8 @@ import {
   importClientsFromCSV,
   exportClientsToCSV,
   getAllClientIds,
-  archiveClient,
-  reactivateClient,
+  deactivateClientContacts,
+  reactivateClientContacts,
   type PaginatedClientsResponse
 } from 'server/src/lib/actions/client-actions/clientActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
@@ -368,6 +368,11 @@ const Clients: React.FC = () => {
     tickets?: number;
     projects?: number;
     invoices?: number;
+    documents?: number;
+    interactions?: number;
+    assets?: number;
+    service_usage?: number;
+    bucket_usage?: number;
   } | null>(null);
 
   // Quick View state
@@ -565,20 +570,22 @@ const Clients: React.FC = () => {
     if (!clientToDelete) return;
 
     try {
-      const result = await archiveClient(clientToDelete.client_id);
+      // Mark client as inactive
+      await updateClient(clientToDelete.client_id, { is_inactive: true });
 
-      if (!result.success) {
-        toast.error(result.message || 'Failed to mark client as inactive');
-        resetDeleteState();
-        return;
-      }
+      // Also deactivate all contacts
+      await deactivateClientContacts(clientToDelete.client_id);
 
       await refreshClients();
       resetDeleteState();
       toast.success(`${clientToDelete.client_name} and all associated contacts have been marked as inactive successfully.`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      }
     }
   };
 
@@ -589,12 +596,19 @@ const Clients: React.FC = () => {
     try {
       const results = await Promise.all(
         selectedClients.map(async (clientId: string) => {
-          const result = await archiveClient(clientId);
-          return { clientId, result };
+          try {
+            // Mark client as inactive
+            await updateClient(clientId, { is_inactive: true });
+            // Also deactivate all contacts
+            await deactivateClientContacts(clientId);
+            return { clientId, success: true };
+          } catch (error) {
+            return { clientId, success: false };
+          }
         })
       );
 
-      const successCount = results.filter(r => r.result.success).length;
+      const successCount = results.filter(r => r.success).length;
       const failCount = results.length - successCount;
 
       if (failCount > 0) {
@@ -620,12 +634,19 @@ const Clients: React.FC = () => {
     try {
       const results = await Promise.all(
         selectedClients.map(async (clientId: string) => {
-          const result = await reactivateClient(clientId);
-          return { clientId, result };
+          try {
+            // Reactivate all contacts first
+            await reactivateClientContacts(clientId);
+            // Then reactivate the client
+            await updateClient(clientId, { is_inactive: false });
+            return { clientId, success: true };
+          } catch (error) {
+            return { clientId, success: false };
+          }
         })
       );
 
-      const successCount = results.filter(r => r.result.success).length;
+      const successCount = results.filter(r => r.success).length;
       const failCount = results.length - successCount;
 
       if (failCount > 0) {
@@ -788,6 +809,11 @@ const Clients: React.FC = () => {
       tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
       projects: counts['project'] > 0 ? counts['project'] : undefined,
       invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
+      documents: counts['document'] > 0 ? counts['document'] : undefined,
+      interactions: counts['interaction'] > 0 ? counts['interaction'] : undefined,
+      assets: counts['asset'] > 0 ? counts['asset'] : undefined,
+      service_usage: counts['service_usage'] > 0 ? counts['service_usage'] : undefined,
+      bucket_usage: counts['bucket_usage'] > 0 ? counts['bucket_usage'] : undefined,
     });
     // Don't set error message - we'll use the structured display instead
   };
@@ -1103,13 +1129,28 @@ const Clients: React.FC = () => {
                       <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
                       <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
                     )}
                   </ul>
                 </div>
@@ -1125,13 +1166,28 @@ const Clients: React.FC = () => {
                       <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
                       <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
                     )}
                   </ul>
                 </div>

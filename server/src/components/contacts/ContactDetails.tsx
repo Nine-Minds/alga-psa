@@ -23,7 +23,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { updateContact, getContactByContactNameId, deleteContact, archiveContact, reactivateContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { updateContact, getContactByContactNameId, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from 'server/src/lib/utils/clientFormValidation';
 import Documents from 'server/src/components/documents/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
@@ -410,95 +410,96 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const handleMarkContactInactive = async () => {
     try {
-      const result = await archiveContact(editedContact.contact_name_id);
-
-      if (!result.success) {
-        toast({
-          title: "Error",
-          description: result.message || 'Failed to mark contact as inactive',
-          variant: "destructive"
-        });
-        setIsDeleteDialogOpen(false);
-        return;
-      }
+      const updatedContact = await updateContact({
+        ...editedContact,
+        is_inactive: true
+      });
 
       setIsDeleteDialogOpen(false);
 
       // Update local state immediately
-      setEditedContact(prev => ({ ...prev, is_inactive: true }));
+      setEditedContact(updatedContact);
 
       toast({
         title: "Contact Deactivated",
-        description: "Contact and associated user have been marked as inactive successfully.",
+        description: "Contact has been marked as inactive successfully.",
       });
       router.refresh();
     } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
-      setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
+      }
     }
   };
 
   // Handler for the direct "Mark as Inactive" button (not from delete dialog)
   const handleDirectMarkInactive = async () => {
     try {
-      const result = await archiveContact(editedContact.contact_name_id);
-
-      if (!result.success) {
-        toast({
-          title: "Error",
-          description: result.message || 'Failed to mark contact as inactive',
-          variant: "destructive"
-        });
-        return;
-      }
+      const updatedContact = await updateContact({
+        ...editedContact,
+        is_inactive: true
+      });
 
       // Update local state immediately
-      setEditedContact(prev => ({ ...prev, is_inactive: true }));
+      setEditedContact(updatedContact);
 
       toast({
         title: "Contact Deactivated",
-        description: "Contact and associated user have been marked as inactive successfully.",
+        description: "Contact has been marked as inactive successfully.",
       });
       router.refresh();
     } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
-      toast({
-        title: "Error",
-        description: 'An error occurred while marking the contact as inactive. Please try again.',
-        variant: "destructive"
-      });
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        toast({
+          title: "Error",
+          description: 'Permission denied. Please contact your administrator if you need additional access.',
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: 'An error occurred while marking the contact as inactive. Please try again.',
+          variant: "destructive"
+        });
+      }
     }
   };
 
   // Handler for the direct "Reactivate" button
   const handleDirectReactivate = async () => {
     try {
-      const result = await reactivateContact(editedContact.contact_name_id);
-
-      if (!result.success) {
-        toast({
-          title: "Error",
-          description: result.message || 'Failed to reactivate contact',
-          variant: "destructive"
-        });
-        return;
-      }
+      const updatedContact = await updateContact({
+        ...editedContact,
+        is_inactive: false
+      });
 
       // Update local state immediately
-      setEditedContact(prev => ({ ...prev, is_inactive: false }));
+      setEditedContact(updatedContact);
 
       toast({
         title: "Contact Reactivated",
-        description: "Contact and associated user have been reactivated successfully.",
+        description: "Contact has been reactivated successfully.",
       });
       router.refresh();
     } catch (error: any) {
       console.error('Error reactivating contact:', error);
-      toast({
-        title: "Error",
-        description: 'An error occurred while reactivating the contact. Please try again.',
-        variant: "destructive"
-      });
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        toast({
+          title: "Error",
+          description: 'Permission denied. Please contact your administrator if you need additional access.',
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: 'An error occurred while reactivating the contact. Please try again.',
+          variant: "destructive"
+        });
+      }
     }
   };
 

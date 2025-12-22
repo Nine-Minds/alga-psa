@@ -20,7 +20,7 @@ import ClientContactsList from 'server/src/components/contacts/ClientContactsLis
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts, archiveClient, reactivateClient } from 'server/src/lib/actions/client-actions/clientActions';
+import { updateClient, uploadClientLogo, deleteClientLogo, getClientById, deleteClient, reactivateClientContacts, deactivateClientContacts } from 'server/src/lib/actions/client-actions/clientActions';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -210,6 +210,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     tickets?: number;
     projects?: number;
     invoices?: number;
+    documents?: number;
+    interactions?: number;
+    assets?: number;
+    service_usage?: number;
+    bucket_usage?: number;
   } | null>(null);
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
@@ -277,13 +282,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const handleMarkClientInactive = async () => {
     try {
-      const result = await archiveClient(editedClient.client_id);
+      // Mark client as inactive
+      await updateClient(editedClient.client_id, { is_inactive: true });
 
-      if (!result.success) {
-        toast.error(result.message || 'Failed to mark client as inactive');
-        setIsDeleteDialogOpen(false);
-        return;
-      }
+      // Also deactivate all contacts
+      await deactivateClientContacts(editedClient.client_id);
 
       setIsDeleteDialogOpen(false);
 
@@ -294,7 +297,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       router.refresh();
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      }
     }
   };
 
@@ -309,13 +316,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         setActiveContactsToDeactivate(activeContacts);
         setIsDeactivateDialogOpen(true);
       } else {
-        // No contacts to warn about, just deactivate
-        const result = await archiveClient(editedClient.client_id);
-
-        if (!result.success) {
-          toast.error(result.message || 'Failed to mark client as inactive');
-          return;
-        }
+        // No contacts to warn about, just deactivate the client
+        await updateClient(editedClient.client_id, { is_inactive: true });
 
         // Update local state immediately
         setEditedClient(prev => ({ ...prev, is_inactive: true }));
@@ -324,7 +326,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      toast.error('An error occurred while marking the client as inactive. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        toast.error('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        toast.error('An error occurred while marking the client as inactive. Please try again.');
+      }
     }
   };
 
@@ -339,42 +345,44 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         setInactiveContactsToReactivate(inactiveContacts);
         setIsReactivateDialogOpen(true);
       } else {
-        // No contacts to ask about, just reactivate
-        const result = await reactivateClient(editedClient.client_id);
-
-        if (!result.success) {
-          toast.error(result.message || 'Failed to reactivate client');
-          return;
-        }
+        // No contacts to ask about, just reactivate the client
+        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
 
         // Update local state immediately
-        setEditedClient(prev => ({ ...prev, is_inactive: false }));
+        setEditedClient(updatedClient);
         toast.success("Client has been reactivated successfully.");
         router.refresh();
       }
     } catch (error: any) {
       console.error('Error reactivating client:', error);
-      toast.error('An error occurred while reactivating the client. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        toast.error('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        toast.error('An error occurred while reactivating the client. Please try again.');
+      }
     }
   };
 
   const handleReactivateClient = async (reactivateContacts: boolean) => {
     try {
       if (reactivateContacts) {
-        // Use the cascade reactivateClient action which reactivates client + all contacts + users
-        const result = await reactivateClient(editedClient.client_id);
+        // Reactivate all contacts and their associated users
+        const result = await reactivateClientContacts(editedClient.client_id);
 
         if (!result.success) {
-          toast.error(result.message || 'Failed to reactivate client and contacts');
+          toast.error(result.message || 'Failed to reactivate contacts');
           setIsReactivateDialogOpen(false);
           return;
         }
 
+        // Update the client to be active
+        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
+
         // Update local state immediately
-        setEditedClient(prev => ({ ...prev, is_inactive: false }));
+        setEditedClient(updatedClient);
         setHasUnsavedChanges(false);
 
-        toast.success(`Client and ${inactiveContactsToReactivate.length} contact(s) have been reactivated successfully.`);
+        toast.success(`Client and ${result.contactsReactivated} contact(s) have been reactivated successfully.`);
       } else {
         // Only reactivate the client (skip contacts)
         const updatedClient = await updateClient(editedClient.client_id, { is_inactive: false });
@@ -390,7 +398,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       router.refresh();
     } catch (error: any) {
       console.error('Error reactivating client:', error);
-      toast.error('An error occurred while reactivating the client. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        toast.error('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        toast.error('An error occurred while reactivating the client. Please try again.');
+      }
     }
   };
 
@@ -399,27 +411,46 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     // Keep the client inactive - no changes
   };
 
-  const handleDeactivateClient = async () => {
+  const handleDeactivateClient = async (deactivateContacts: boolean) => {
     try {
-      // Use the cascade archiveClient action which deactivates client + all contacts + users
-      const result = await archiveClient(editedClient.client_id);
+      if (deactivateContacts) {
+        // Deactivate all contacts and their associated users
+        const result = await deactivateClientContacts(editedClient.client_id);
 
-      if (!result.success) {
-        toast.error(result.message || 'Failed to deactivate client');
-        setIsDeactivateDialogOpen(false);
-        return;
+        if (!result.success) {
+          toast.error(result.message || 'Failed to deactivate contacts');
+          setIsDeactivateDialogOpen(false);
+          return;
+        }
+
+        // Update the client to be inactive
+        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: true });
+
+        // Update local state immediately
+        setEditedClient(updatedClient);
+        setHasUnsavedChanges(false);
+
+        toast.success(`Client and ${result.contactsDeactivated} contact(s) have been deactivated successfully.`);
+      } else {
+        // Only deactivate the client (skip contacts)
+        const updatedClient = await updateClient(editedClient.client_id, { is_inactive: true });
+
+        // Update local state immediately
+        setEditedClient(updatedClient);
+        setHasUnsavedChanges(false);
+
+        toast.success('Client has been marked as inactive successfully.');
       }
 
-      // Update local state immediately
-      setEditedClient(prev => ({ ...prev, is_inactive: true }));
-      setHasUnsavedChanges(false);
-
-      toast.success(`Client and ${activeContactsToDeactivate.length} contact(s) have been deactivated successfully.`);
       setIsDeactivateDialogOpen(false);
       router.refresh();
     } catch (error: any) {
       console.error('Error deactivating client:', error);
-      toast.error('An error occurred while deactivating the client. Please try again.');
+      if (error.message?.toLowerCase().includes('permission denied')) {
+        toast.error('Permission denied. Please contact your administrator if you need additional access.');
+      } else {
+        toast.error('An error occurred while deactivating the client. Please try again.');
+      }
     }
   };
 
@@ -445,6 +476,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
       projects: counts['project'] > 0 ? counts['project'] : undefined,
       invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
+      documents: counts['document'] > 0 ? counts['document'] : undefined,
+      interactions: counts['interaction'] > 0 ? counts['interaction'] : undefined,
+      assets: counts['asset'] > 0 ? counts['asset'] : undefined,
+      service_usage: counts['service_usage'] > 0 ? counts['service_usage'] : undefined,
+      bucket_usage: counts['bucket_usage'] > 0 ? counts['bucket_usage'] : undefined,
     });
   };
 
@@ -1340,13 +1376,28 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                     <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
                   )}
                   {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                    <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                    <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
                   )}
                   {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                    <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                    <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
                   )}
                   {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
                     <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                    <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                    <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                    <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                    <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                  )}
+                  {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                    <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
                   )}
                 </ul>
                 <p className="text-gray-700">Please remove or reassign these items before deleting the client.</p>
@@ -1361,13 +1412,28 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                       <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
+                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
+                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
                     )}
                     {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
                       <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
+                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
+                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
+                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
+                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
+                    )}
+                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
+                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
                     )}
                   </ul>
                 </div>
@@ -1389,24 +1455,21 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           isConfirming={false}
         />
 
-        {/* Deactivate Warning Dialog */}
+        {/* Deactivate Confirmation Dialog */}
         <ConfirmationDialog
           id="deactivate-client-dialog"
           isOpen={isDeactivateDialogOpen}
           onClose={handleCancelDeactivation}
-          onConfirm={handleDeactivateClient}
+          onConfirm={() => handleDeactivateClient(true)}
           title="Deactivate Client"
           message={
             <div className="space-y-3">
-              <p className="font-semibold text-orange-600">
-                ⚠️ Warning: This will deactivate the client and all associated contacts and users.
-              </p>
               <p>
-                This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Deactivating the client will also deactivate {activeContactsToDeactivate.length === 1 ? 'this contact and their user account' : 'all these contacts and their user accounts'}.
+                This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Would you like to deactivate {activeContactsToDeactivate.length === 1 ? 'this contact' : 'all these contacts'} as well?
               </p>
               {activeContactsToDeactivate.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Active contacts that will be deactivated:</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Active contacts:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 max-h-40 overflow-y-auto">
                     {activeContactsToDeactivate.map((contact) => (
                       <li key={contact.contact_name_id}>
@@ -1424,6 +1487,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           }
           confirmLabel="Deactivate All"
           cancelLabel="Cancel"
+          onCancel={() => handleDeactivateClient(false)}
+          thirdButtonLabel="Client Only"
           isConfirming={false}
         />
 

@@ -73,11 +73,15 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
     throw new Error('No authenticated user found');
   }
 
+  // Check permission for client updating
+  if (!await hasPermission(currentUser, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot update clients. Please contact your administrator if you need additional access.');
+  }
+
   const {knex: db, tenant} = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
-
 
   try {
     console.log('Updating client in database:', clientId, updateData);
@@ -156,29 +160,6 @@ export async function updateClient(clientId: string, updateData: Partial<Omit<IC
       await trx('clients')
         .where({ client_id: clientId, tenant })
         .update(updateObject);
-
-      // If the client is being set to inactive, update all associated contacts and users
-      if (updateData.is_inactive === true) {
-        // Get all contact IDs for this client
-        const contacts = await trx('contacts')
-          .select('contact_name_id')
-          .where({ client_id: clientId, tenant });
-
-        const contactIds = contacts.map((c: { contact_name_id: string }) => c.contact_name_id);
-
-        // Deactivate all contacts
-        await trx('contacts')
-          .where({ client_id: clientId, tenant })
-          .update({ is_inactive: true });
-
-        // Deactivate all users associated with these contacts
-        if (contactIds.length > 0) {
-          await trx('users')
-            .whereIn('contact_id', contactIds)
-            .andWhere({ tenant, user_type: 'client' })
-            .update({ is_inactive: true });
-        }
-      }
     });
 
     // Email suffix functionality removed for security
@@ -599,13 +580,13 @@ export async function deleteClient(clientId: string): Promise<{
 
     console.log('Checking dependencies for client:', clientId, 'tenant:', tenant);
 
-    // Check for dependencies - run outside transaction so each check is independent
+    // Check for dependencies within a single transaction
     const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
-    // Check for contacts
-    try {
-      const contactCount = await db('contacts')
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Check for contacts
+      const contactCount = await trx('contacts')
         .where({ client_id: clientId, tenant })
         .count('contact_name_id as count')
         .first();
@@ -614,28 +595,27 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('contact');
         counts['contact'] = Number(contactCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping contacts check:', err instanceof Error ? err.message : err);
-    }
 
-    // Check for active tickets
-    try {
-      const ticketCount = await db('tickets')
-        .where({ client_id: clientId, tenant, is_closed: false })
-        .count('ticket_id as count')
+      // Check for open tickets - join with statuses to check is_closed flag
+      const ticketCount = await trx('tickets')
+        .leftJoin('statuses', function() {
+          this.on('tickets.status_id', '=', 'statuses.status_id')
+              .andOn('tickets.tenant', '=', 'statuses.tenant');
+        })
+        .where({ 'tickets.company_id': clientId, 'tickets.tenant': tenant })
+        .andWhere(function() {
+          this.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');
+        })
+        .count('tickets.ticket_id as count')
         .first();
       console.log('Ticket count result:', ticketCount);
       if (ticketCount && Number(ticketCount.count) > 0) {
         dependencies.push('ticket');
         counts['ticket'] = Number(ticketCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping tickets check:', err instanceof Error ? err.message : err);
-    }
 
-    // Check for projects
-    try {
-      const projectCount = await db('projects')
+      // Check for projects
+      const projectCount = await trx('projects')
         .where({ client_id: clientId, tenant })
         .count('project_id as count')
         .first();
@@ -644,13 +624,9 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('project');
         counts['project'] = Number(projectCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping projects check:', err instanceof Error ? err.message : err);
-    }
 
-    // Check for documents using document_associations table
-    try {
-      const documentCount = await db('document_associations')
+      // Check for documents using document_associations table
+      const documentCount = await trx('document_associations')
         .where({
           entity_id: clientId,
           entity_type: 'client',
@@ -663,13 +639,9 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('document');
         counts['document'] = Number(documentCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping documents check:', err instanceof Error ? err.message : err);
-    }
 
-    // Check for invoices
-    try {
-      const invoiceCount = await db('invoices')
+      // Check for invoices
+      const invoiceCount = await trx('invoices')
         .where({ client_id: clientId, tenant })
         .count('invoice_id as count')
         .first();
@@ -678,13 +650,9 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('invoice');
         counts['invoice'] = Number(invoiceCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping invoices check:', err instanceof Error ? err.message : err);
-    }
 
-    // Check for interactions
-    try {
-      const interactionCount = await db('interactions')
+      // Check for interactions
+      const interactionCount = await trx('interactions')
         .where({ client_id: clientId, tenant })
         .count('interaction_id as count')
         .first();
@@ -693,13 +661,9 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('interaction');
         counts['interaction'] = Number(interactionCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping interactions check:', err instanceof Error ? err.message : err);
-    }
 
-    // Check for assets/devices (PSA best practice)
-    try {
-      const assetCount = await db('assets')
+      // Check for assets/devices
+      const assetCount = await trx('assets')
         .where({ client_id: clientId, tenant })
         .count('asset_id as count')
         .first();
@@ -708,16 +672,9 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('asset');
         counts['asset'] = Number(assetCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping assets check:', err instanceof Error ? err.message : err);
-    }
 
-    // Note: Locations/addresses are no longer considered blocking dependencies
-    // as per PSA best practices - they will be deleted automatically with the client
-
-    // Check for service usage (table may not exist in all installations)
-    try {
-      const usageCount = await db('usage_tracking')
+      // Check for service usage
+      const usageCount = await trx('usage_tracking')
         .where({ client_id: clientId, tenant })
         .count('usage_id as count')
         .first();
@@ -726,28 +683,9 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('service_usage');
         counts['service_usage'] = Number(usageCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping usage tracking check:', err instanceof Error ? err.message : err);
-    }
 
-    // Check for contract lines (table may not exist in all installations)
-    try {
-      const contractLineCount = await db('client_contract_lines')
-        .where({ client_id: clientId, tenant })
-        .count('client_contract_line_id as count')
-        .first();
-      console.log('Contract Line count result:', contractLineCount);
-      if (contractLineCount && Number(contractLineCount.count) > 0) {
-        dependencies.push('contract_line');
-        counts['contract_line'] = Number(contractLineCount.count);
-      }
-    } catch (err: unknown) {
-      console.log('Skipping contract line check:', err instanceof Error ? err.message : err);
-    }
-
-    // Check for bucket usage (table may not exist in all installations)
-    try {
-      const bucketUsageCount = await db('bucket_usage')
+      // Check for bucket usage
+      const bucketUsageCount = await trx('bucket_usage')
         .where({ client_id: clientId, tenant })
         .count('usage_id as count')
         .first();
@@ -756,31 +694,28 @@ export async function deleteClient(clientId: string): Promise<{
         dependencies.push('bucket_usage');
         counts['bucket_usage'] = Number(bucketUsageCount.count);
       }
-    } catch (err: unknown) {
-      console.log('Skipping bucket usage check:', err instanceof Error ? err.message : err);
-    }
+    });
 
-    // Note: tax settings check removed - we'll delete them automatically during deletion
+    // Note: Locations/addresses and tax settings will be deleted automatically with the client
 
     // If there are dependencies, return error with details
     if (dependencies.length > 0) {
       const readableTypes: Record<string, string> = {
         'contact': 'contacts',
-        'ticket': 'tickets (including closed)',
+        'ticket': 'tickets',
         'project': 'projects',
         'document': 'documents',
-        'invoice': 'invoices or billing history',
+        'invoice': 'invoices',
         'interaction': 'interactions',
-        'asset': 'assets or devices',
+        'asset': 'assets',
         'service_usage': 'service usage records',
-        'bucket_usage': 'bucket usage records',
-        'contract_line': 'contracts or subscriptions'
+        'bucket_usage': 'bucket usage records'
       };
 
       return {
         success: false,
         code: 'COMPANY_HAS_DEPENDENCIES',
-        message: 'Cannot delete client with active business records. Consider archiving instead to preserve data integrity.',
+        message: 'Cannot delete client with active business records. Consider marking as inactive instead to preserve data integrity.',
         dependencies: dependencies.map((dep: string): string => readableTypes[dep] || dep),
         counts
       };
@@ -830,186 +765,6 @@ export async function deleteClient(clientId: string): Promise<{
     };
   }
 }
-
-export async function archiveClient(clientId: string): Promise<{
-  success: boolean;
-  message?: string;
-}> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  try {
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-
-    // Check permission for client updating (archiving is an update operation)
-    if (!await hasPermission(currentUser, 'client', 'update')) {
-      throw new Error('Permission denied: Cannot archive clients');
-    }
-
-
-    // First verify the client exists and belongs to this tenant
-    const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
-        .first();
-    });
-
-    if (!client) {
-      return {
-        success: false,
-        message: 'Client not found'
-      };
-    }
-
-    // Check if this is the tenant's default client
-    const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantClient = await trx('tenant_companies')
-        .where({
-          client_id: clientId,
-          tenant,
-          is_default: true
-        })
-        .first();
-      return !!tenantClient;
-    });
-
-    if (isDefaultClient) {
-      return {
-        success: false,
-        message: 'Cannot archive the default client. Please set another client as default in General Settings first.'
-      };
-    }
-
-    // Archive the client and associated contacts/users
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Archive the client
-      await trx('clients')
-        .where({ client_id: clientId, tenant })
-        .update({
-          is_inactive: true,
-          updated_at: new Date().toISOString()
-        });
-
-      // Archive all associated contacts
-      await trx('contacts')
-        .where({ client_id: clientId, tenant })
-        .update({
-          is_inactive: true,
-          updated_at: new Date().toISOString()
-        });
-
-      // Archive all users associated with the client's contacts
-      const contacts = await trx('contacts')
-        .select('contact_name_id')
-        .where({ client_id: clientId, tenant });
-
-      const contactIds = contacts.map((c: { contact_name_id: string }) => c.contact_name_id);
-
-      if (contactIds.length > 0) {
-        await trx('users')
-          .whereIn('contact_id', contactIds)
-          .andWhere({ tenant, user_type: 'client' })
-          .update({
-            is_inactive: true,
-            updated_at: new Date().toISOString()
-          });
-      }
-    });
-
-    return { success: true, message: 'Client has been archived successfully. All related contacts and users have also been archived.' };
-  } catch (error) {
-    console.error('Error archiving client:', error);
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to archive client'
-    };
-  }
-}
-
-export async function reactivateClient(clientId: string): Promise<{
-  success: boolean;
-  message?: string;
-}> {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    throw new Error('No authenticated user found');
-  }
-
-  try {
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-
-    // Check permission for client updating (reactivating is an update operation)
-    if (!await hasPermission(currentUser, 'client', 'update')) {
-      throw new Error('Permission denied: Cannot reactivate clients');
-    }
-
-
-    const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
-        .first();
-    });
-
-    if (!client) {
-      return {
-        success: false,
-        message: 'Client not found'
-      };
-    }
-
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Reactivate the client
-      await trx('clients')
-        .where({ client_id: clientId, tenant })
-        .update({
-          is_inactive: false,
-          updated_at: new Date().toISOString()
-        });
-
-      // Reactivate all associated contacts that were deactivated when client was archived
-      await trx('contacts')
-        .where({ client_id: clientId, tenant })
-        .update({
-          is_inactive: false,
-          updated_at: new Date().toISOString()
-        });
-
-      // Reactivate all users associated with this client's contacts
-      const contacts = await trx('contacts')
-        .select('contact_name_id')
-        .where({ client_id: clientId, tenant });
-
-      const contactIds = contacts.map((c: { contact_name_id: string }) => c.contact_name_id);
-
-      if (contactIds.length > 0) {
-        await trx('users')
-          .whereIn('contact_id', contactIds)
-          .andWhere({ tenant, user_type: 'client' })
-          .update({
-            is_inactive: false,
-            updated_at: new Date().toISOString()
-          });
-      }
-    });
-
-    return { success: true, message: 'Client has been reactivated successfully. All related contacts and users have also been reactivated.' };
-  } catch (error) {
-    console.error('Error reactivating client:', error);
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to reactivate client'
-    };
-  }
-}
-
 
 export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
   const currentUser = await getCurrentUser();
@@ -1555,6 +1310,65 @@ export async function deleteClientLogo(
     console.error('Error deleting client logo:', error);
     const message = error instanceof Error ? error.message : 'Failed to delete client logo';
     return { success: false, message };
+  }
+}
+
+/**
+ * Deactivate all active contacts for a client
+ */
+export async function deactivateClientContacts(
+  clientId: string
+): Promise<{ success: boolean; contactsDeactivated: number; message?: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    return { success: false, contactsDeactivated: 0, message: 'Tenant not found' };
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return { success: false, contactsDeactivated: 0, message: 'User not authenticated' };
+  }
+
+  // Check permission for contact updating
+  if (!await hasPermission(currentUser, 'contact', 'update')) {
+    return { success: false, contactsDeactivated: 0, message: 'Permission denied: Cannot update contacts. Please contact your administrator if you need additional access.' };
+  }
+
+  try {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get all active contact IDs for this client
+      const activeContacts = await trx('contacts')
+        .select('contact_name_id')
+        .where({ client_id: clientId, tenant, is_inactive: false });
+
+      const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
+
+      if (contactIds.length === 0) {
+        return { contactsDeactivated: 0 };
+      }
+
+      // Deactivate all contacts
+      await trx('contacts')
+        .where({ client_id: clientId, tenant, is_inactive: false })
+        .update({ is_inactive: true });
+
+      // Deactivate all users associated with these contacts
+      await trx('users')
+        .whereIn('contact_id', contactIds)
+        .andWhere({ tenant, user_type: 'client' })
+        .update({ is_inactive: true });
+
+      return { contactsDeactivated: contactIds.length };
+    });
+
+    revalidatePath(`/msp/clients/${clientId}`);
+    revalidatePath(`/msp/contacts`);
+
+    return { success: true, contactsDeactivated: result.contactsDeactivated };
+  } catch (error) {
+    console.error('Error deactivating client contacts:', error);
+    const message = error instanceof Error ? error.message : 'Failed to deactivate client contacts';
+    return { success: false, contactsDeactivated: 0, message };
   }
 }
 

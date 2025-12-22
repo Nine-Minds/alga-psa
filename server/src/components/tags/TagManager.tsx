@@ -6,7 +6,7 @@ import { TagInput } from './TagInput';
 import { TagInputInline } from './TagInputInline';
 // import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
-import { useTagsSafe } from 'server/src/context/TagContext';
+import { useTags } from 'server/src/context/TagContext';
 import { handleError } from 'server/src/lib/utils/errorHandling';
 
 interface TagManagerProps {
@@ -41,8 +41,8 @@ export const TagManager: React.FC<TagManagerProps> = ({
   useInlineInput = false,
   permissions: passedPermissions
 }) => {
-  // Try to get tag context, but handle gracefully if not available
-  const tagContext = useTagsSafe();
+  // Always call useTags to avoid conditional hooks
+  const tagContext = useTags();
   const [tags, setTags] = useState<ITag[]>(initialTags);
   const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
   const [permissions, setPermissions] = useState(
