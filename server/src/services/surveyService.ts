@@ -239,7 +239,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
 
       // TODO: Queue invitation delivery through Temporal survey workflow once available.
       const sendResult = await emailService.sendEmail({
-        to: contact.email,
+        to: contact.email!,
         tenantId: params.tenantId,
         templateProcessor: processor,
         templateData,
