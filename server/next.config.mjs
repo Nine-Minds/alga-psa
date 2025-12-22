@@ -165,6 +165,8 @@ const nextConfig = {
       // Optional ffmpeg dependencies
       'ffmpeg-static': emptyShim,
       'ffprobe-static': emptyShim,
+      'ffprobe-static/package.json': './src/empty/shims/ffprobe-package.json',
+      'ffmpeg-static/package.json': './src/empty/shims/ffprobe-package.json',
       // Knex dialect modules we don't use; alias directly to avoid cascading requires
       'knex/lib/dialects/sqlite3': emptyShim,
       'knex/lib/dialects/sqlite3/index.js': emptyShim,
@@ -202,7 +204,7 @@ const nextConfig = {
         : '@product/client-portal-domain/oss/entry',
       '@product/workflows/entry': isEE
         ? '@product/workflows/ee/entry'
-        : '@product/workflows/oss/entry',
+        : './src/empty/components/flow/DnDFlow.tsx',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
