@@ -4,6 +4,42 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
+
+// =============================================================================
+// CORS Configuration - Allow all origins
+// =============================================================================
+
+/**
+ * Apply CORS headers to a response, allowing all origins.
+ */
+function applyCorsHeaders(response: NextResponse, origin: string | null): NextResponse {
+  response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  if (origin) {
+    response.headers.set('Vary', 'Origin');
+  }
+  return response;
+}
+
+/**
+ * Create a CORS preflight response for OPTIONS requests.
+ */
+function corsPreflightResponse(origin: string | null): NextResponse {
+  const response = new NextResponse(null, { status: 204 });
+  response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-API-Key,X-Tenant-ID,X-Request-ID,X-Idempotency-Key');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  if (origin) {
+    response.headers.set('Vary', 'Origin, Access-Control-Request-Headers');
+  }
+  return response;
+}
+
+// =============================================================================
+// Middleware
+// =============================================================================
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
 
@@ -16,6 +52,12 @@ const _middleware = auth((request) => {
   const pathname = request.nextUrl.pathname;
   const requestHost = request.headers.get('host') || '';
   const requestHostname = requestHost.split(':')[0];
+  const origin = request.headers.get('origin');
+
+  // Handle CORS preflight requests early
+  if (request.method === 'OPTIONS') {
+    return corsPreflightResponse(origin);
+  }
 
   // Clone request headers so we can pass additional metadata downstream
   const requestHeaders = new Headers(request.headers);
@@ -52,24 +94,40 @@ const _middleware = auth((request) => {
       '/api/email/webhooks/',
       '/api/email/oauth/',
       '/api/client-portal/domain-session',
+      '/api/integrations/ninjaone/callback',
       // Internal MSP UI endpoints (session-authenticated)
       '/api/accounting/csv/',
       '/api/accounting/exports/',
       '/api/webhooks/stripe',
-      '/api/ext-proxy/'
+      '/api/webhooks/ninjaone',
+      '/api/ext/',  // Extension API routes handle their own auth
+      '/api/ext-proxy/',
+      '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
     ];
 
+    // Log for debugging CORS issues
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[CORS Middleware]', {
+        pathname,
+        origin,
+        hasApiKey: !!apiKey,
+        skipped: skipPaths.some((path) => pathname.startsWith(path)),
+        method: request.method
+      });
+    }
+
     if (skipPaths.some((path) => pathname.startsWith(path))) {
-      return response;
+      return applyCorsHeaders(response, origin);
     }
 
     // For API routes that need authentication, check for API key presence only;
     // full validation happens in API route handlers (Node runtime)
     if (!apiKey) {
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { error: 'Unauthorized: API key missing' },
         { status: 401 }
       );
+      return applyCorsHeaders(errorResponse, origin);
     }
   }
 
@@ -115,7 +173,7 @@ const _middleware = auth((request) => {
         },
       });
     }
-    return response;
+    return applyCorsHeaders(response, origin);
   }
 
   // Protect MSP app routes: validate user type
@@ -185,8 +243,8 @@ const _middleware = auth((request) => {
     }
   }
 
-  // Return the response with any i18n modifications
-  return response;
+  // Return the response with CORS headers and any i18n modifications
+  return applyCorsHeaders(response, origin);
 });
 
 export default _middleware;
@@ -194,8 +252,9 @@ export { _middleware as middleware };
 
 export const config = {
   matcher: [
+    '/api/:path*',
     '/msp/:path*',
     '/client-portal/:path*',
-    '/((?!api|_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ]
 };

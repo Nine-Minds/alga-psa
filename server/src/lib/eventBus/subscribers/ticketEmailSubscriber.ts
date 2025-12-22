@@ -21,6 +21,7 @@ import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '../../services/TenantEmailService';
 import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
+import { isValidEmail } from '../../utils/validation';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -687,7 +688,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const emailSubject = `New Ticket • ${ticket.title} (${priorityName})`;
 
     // Send to primary recipient (contact or client) - external user, no userId
-    if (primaryEmail) {
+    if (isValidEmail(primaryEmail)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: primaryEmail,
@@ -700,7 +701,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     }
 
     // Send to assigned user if different from primary recipient
-    if (assignedEmail && assignedEmail !== primaryEmail) {
+    if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
       await sendNotificationIfEnabled({
         tenantId,
         to: assignedEmail,
@@ -1000,7 +1001,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       });
 
       // Accumulate for primary recipient (contact or client) - external user
-      if (primaryEmail) {
+      if (isValidEmail(primaryEmail)) {
         await accumulator.accumulate({
           tenantId,
           ticketId: payload.ticketId,
@@ -1013,7 +1014,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
 
       // Accumulate for assigned user if different from primary recipient
-      if (assignedEmail && assignedEmail !== primaryEmail) {
+      if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
         await accumulator.accumulate({
           tenantId,
           ticketId: payload.ticketId,
@@ -1038,7 +1039,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         });
 
       for (const resource of additionalResources) {
-        if (resource.email) {
+        if (isValidEmail(resource.email)) {
           await accumulator.accumulate({
             tenantId,
             ticketId: payload.ticketId,
@@ -1059,7 +1060,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       });
 
       // Send to primary recipient (contact or client) - external user, no userId
-      if (primaryEmail) {
+      if (isValidEmail(primaryEmail)) {
         await sendNotificationIfEnabled({
           tenantId,
           to: primaryEmail,
@@ -1075,7 +1076,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
 
       // Send to assigned user if different from primary recipient
-      if (assignedEmail && assignedEmail !== primaryEmail) {
+      if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
         await sendNotificationIfEnabled({
           tenantId,
           to: assignedEmail,
@@ -1104,7 +1105,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Send to all additional resources
       for (const resource of additionalResources) {
-        if (resource.email) {
+        if (isValidEmail(resource.email)) {
           await sendNotificationIfEnabled({
             tenantId,
             to: resource.email,
@@ -1677,7 +1678,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       recipientUserId?: string | null
     ) => {
       const email = params.to?.trim();
-      if (!email) {
+      if (!isValidEmail(email)) {
         return;
       }
       const key = normalizeEmail(email);
@@ -1694,7 +1695,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     };
 
     // Send to assigned user
-    if (ticket.assigned_to_email) {
+    if (isValidEmail(ticket.assigned_to_email)) {
       await sendIfUnique({
         tenantId,
         to: ticket.assigned_to_email,
@@ -1708,7 +1709,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
 
-    if (primaryEmail) {
+    if (isValidEmail(primaryEmail)) {
       await sendIfUnique({
         tenantId,
         to: primaryEmail,
@@ -1733,7 +1734,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     // Send to all additional resources
     for (const resource of additionalResources) {
-      if (resource.email) {
+      if (isValidEmail(resource.email)) {
         await sendIfUnique({
           tenantId,
           to: resource.email,
@@ -2076,7 +2077,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Send to all additional resources
     for (const resource of additionalResources) {
-      if (resource.email) {
+      if (isValidEmail(resource.email)) {
         await sendNotificationIfEnabled({
           tenantId,
           to: resource.email,
@@ -2404,7 +2405,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     // Send to all additional resources
     for (const resource of additionalResources) {
-      if (resource.email) {
+      if (isValidEmail(resource.email)) {
         await sendNotificationIfEnabled({
           tenantId,
           to: resource.email,
