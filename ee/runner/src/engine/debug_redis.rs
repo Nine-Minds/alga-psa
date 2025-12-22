@@ -41,6 +41,9 @@ impl RedisPublisher {
         let mut conn = self.conn.lock().await;
         let mut cmd = redis::cmd("XADD");
         cmd.arg(&stream)
+            .arg("MAXLEN")
+            .arg("~")
+            .arg(self.max_len)
             .arg("*")
             .arg("ts")
             .arg(&event.ts)
@@ -69,7 +72,6 @@ impl RedisPublisher {
         cmd.arg("message").arg(&event.message);
         cmd.arg("truncated")
             .arg(if event.truncated { "1" } else { "0" });
-        cmd.arg("MAXLEN").arg("~").arg(self.max_len);
         cmd.query_async(&mut *conn).await
     }
 }
