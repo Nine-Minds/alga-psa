@@ -11,6 +11,7 @@ RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl 
     && chmod +x /usr/local/bin/kubectl
 
 WORKDIR /app
+ENV NODE_PATH=/app/shared/node_modules
 
 COPY shared/ /app/shared
 COPY packages/ /app/packages/
