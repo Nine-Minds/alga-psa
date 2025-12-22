@@ -597,107 +597,107 @@
   {
     "description": "UI: Runs tab lists workflow runs with status badges. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs tab shows summary counts by status. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs filter by status updates list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs filter by workflow id updates list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs filter by workflow version updates list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
-    "description": "UI: Runs search filters by run id or payload fields. Mocks: non-target dependencies.",
+    "description": "UI: Runs search filters by run id or correlation key. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs date range filters update list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs sort order changes list ordering. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs reset filters restores defaults and reloads list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs quick range buttons set date inputs for last 24h and 7d. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs refresh reloads list without changing filters. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs export triggers CSV download and shows success toast. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs load more appends additional results. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs empty state displays when no runs available. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs row click opens run details panel. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Admin sees run selection checkboxes and bulk action controls. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Select all toggles selection for visible runs. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Bulk resume prompts for reason and submits admin resume. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Bulk cancel prompts for reason and submits admin cancel. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Bulk action clears selection after completion. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run details panel shows run metadata and status badge. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run details shows run error card when run failed. Mocks: non-target dependencies.",
@@ -832,82 +832,82 @@
   {
     "description": "UI: Events tab lists workflow events with status badges. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events tab shows summary counts for matched/unmatched/error. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events filter by name updates list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events filter by correlation key updates list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events filter by status updates list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events date range filters update list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events reset filters restores defaults. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events export CSV triggers download and toast. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events export JSON triggers download and toast. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events load more appends additional results. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events empty state displays when no events. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Selecting event shows detail panel with payload and linked run. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Event detail shows wait metadata when available. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Event detail shows run metadata when matched. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Event detail handles missing wait/run gracefully. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Event detail view run button opens run details panel. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Dead Letter tab lists runs exceeding retry threshold. Mocks: non-target dependencies.",

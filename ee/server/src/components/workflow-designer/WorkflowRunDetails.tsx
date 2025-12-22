@@ -718,7 +718,9 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-sm text-gray-500">Run ID</div>
-            <div className="text-lg font-semibold text-gray-900">{runId}</div>
+            <div id="workflow-run-detail-id" className="text-lg font-semibold text-gray-900">
+              {runId}
+            </div>
             <div className="text-sm text-gray-600">
               {workflowName ?? run?.workflow_id} · v{run?.workflow_version ?? '—'}
             </div>
@@ -774,7 +776,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div>
             <div className="text-xs text-gray-500">Status</div>
-            <Badge className={STATUS_STYLES[run?.status ?? ''] ?? 'bg-gray-100 text-gray-600'}>
+            <Badge id="workflow-run-detail-status" className={STATUS_STYLES[run?.status ?? ''] ?? 'bg-gray-100 text-gray-600'}>
               {run?.status ?? '—'}
             </Badge>
           </div>

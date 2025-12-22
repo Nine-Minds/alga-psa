@@ -369,7 +369,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
 
       {selectedEventId && (
         <div className="w-[480px] shrink-0 overflow-auto space-y-4">
-          <Card className="p-4 space-y-3">
+          <Card id="workflow-event-detail-panel" className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold">Event Detail</div>
               <Button id="workflow-event-detail-close" variant="ghost" onClick={() => setSelectedEventId(null)}>
@@ -380,15 +380,22 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
             {!detailLoading && eventDetail && (
               <>
                 <div className="text-xs text-gray-500">Event ID</div>
-                <div className="text-xs font-mono">{eventDetail.event.event_id}</div>
+                <div id="workflow-event-detail-event-id" className="text-xs font-mono">
+                  {eventDetail.event.event_id}
+                </div>
                 <div className="text-xs text-gray-500">Status</div>
-                <Badge className={EVENT_STATUS_STYLES[eventDetail.event.status] ?? 'bg-gray-100 text-gray-600'}>
+                <Badge
+                  id="workflow-event-detail-status"
+                  className={EVENT_STATUS_STYLES[eventDetail.event.status] ?? 'bg-gray-100 text-gray-600'}
+                >
                   {eventDetail.event.status}
                 </Badge>
                 <div className="text-xs text-gray-500">Event name</div>
                 <div className="text-sm">{eventDetail.event.event_name}</div>
                 <div className="text-xs text-gray-500">Correlation key</div>
-                <div className="text-sm font-mono">{eventDetail.event.correlation_key ?? '—'}</div>
+                <div id="workflow-event-detail-correlation" className="text-sm font-mono">
+                  {eventDetail.event.correlation_key ?? '—'}
+                </div>
                 <div className="text-xs text-gray-500">Created</div>
                 <div className="text-sm">{formatDateTime(eventDetail.event.created_at)}</div>
                 <div className="text-xs text-gray-500">Processed</div>
@@ -399,8 +406,12 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 {eventDetail.wait && (
                   <div className="space-y-1">
                     <div className="text-xs text-gray-500">Wait</div>
-                    <div className="text-xs font-mono">Wait ID: {eventDetail.wait.wait_id}</div>
-                    <div className="text-xs">Status: {eventDetail.wait.status}</div>
+                    <div id="workflow-event-detail-wait-id" className="text-xs font-mono">
+                      Wait ID: {eventDetail.wait.wait_id}
+                    </div>
+                    <div id="workflow-event-detail-wait-status" className="text-xs">
+                      Status: {eventDetail.wait.status}
+                    </div>
                     <div className="text-xs">Timeout: {formatDateTime(eventDetail.wait.timeout_at ?? null)}</div>
                     <div className="text-xs">Resolved: {formatDateTime(eventDetail.wait.resolved_at ?? null)}</div>
                     <div className="text-xs">Step: {eventDetail.wait.step_path ?? '—'}</div>
@@ -409,8 +420,12 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 {eventDetail.run && (
                   <div className="space-y-2">
                     <div className="text-xs text-gray-500">Matched run</div>
-                    <div className="text-xs font-mono">{eventDetail.run.run_id}</div>
-                    <div className="text-xs">Status: {eventDetail.run.status}</div>
+                    <div id="workflow-event-detail-run-id" className="text-xs font-mono">
+                      {eventDetail.run.run_id}
+                    </div>
+                    <div id="workflow-event-detail-run-status" className="text-xs">
+                      Status: {eventDetail.run.status}
+                    </div>
                     <Button
                       id="workflow-event-view-run"
                       variant="outline"
