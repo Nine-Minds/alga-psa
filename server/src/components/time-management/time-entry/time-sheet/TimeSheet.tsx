@@ -654,7 +654,6 @@ export function TimeSheet({
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
                     onCellClick={setSelectedCell}
                     onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
-                    onQuickAddTimeEntry={handleQuickAddTimeEntry}
                     onWorkItemClick={handleWorkItemClick}
                     onDeleteWorkItem={handleDeleteWorkItem}
                 />

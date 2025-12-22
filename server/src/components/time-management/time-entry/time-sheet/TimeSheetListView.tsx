@@ -10,6 +10,7 @@ import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { formatISO, parseISO, format } from 'date-fns';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType, formatTimeRange } from './utils';
+import { BillableLegend } from './BillableLegend';
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -30,12 +31,6 @@ interface TimeSheetListViewProps {
     }) => void;
     onAddWorkItem: () => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
-    onQuickAddTimeEntry?: (params: {
-        workItem: IExtendedWorkItem;
-        date: string;
-        durationInMinutes: number;
-        existingEntry?: ITimeEntryWithWorkItemString;
-    }) => Promise<void>;
 }
 
 interface FlattenedEntry {
@@ -64,8 +59,7 @@ export function TimeSheetListView({
     onCellClick,
     onAddWorkItem,
     onWorkItemClick,
-    onDeleteWorkItem,
-    onQuickAddTimeEntry
+    onDeleteWorkItem
 }: TimeSheetListViewProps): React.JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
@@ -203,23 +197,6 @@ export function TimeSheetListView({
         });
     };
 
-    const handleCopyToDay = async (flatEntry: FlattenedEntry, targetDateKey: string) => {
-        if (!onQuickAddTimeEntry) return;
-
-        const { entry, workItem, duration } = flatEntry;
-
-        try {
-            await onQuickAddTimeEntry({
-                workItem,
-                date: targetDateKey,
-                durationInMinutes: Math.round(duration),
-                existingEntry: entry
-            });
-        } catch (error) {
-            console.error('Failed to copy entry:', error);
-        }
-    };
-
     // Register the list view container
     const { automationIdProps: listProps } = useAutomationIdAndRegister<ContainerComponent>({
         type: 'container',
@@ -303,6 +280,40 @@ export function TimeSheetListView({
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-200">
+                                {/* Column headers - shown once at top */}
+                                <div className="bg-gray-50 border-b border-gray-200">
+                                    <table className="w-full table-fixed">
+                                        <colgroup>
+                                            <col style={{ width: '3%' }} />
+                                            <col style={{ width: '40%' }} />
+                                            <col style={{ width: '15%' }} />
+                                            <col style={{ width: '15%' }} />
+                                            <col style={{ width: '15%' }} />
+                                            <col style={{ width: '12%' }} />
+                                        </colgroup>
+                                        <thead>
+                                            <tr>
+                                                <th className="pl-3" />
+                                                <th className="py-2 pr-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+                                                    Work Item
+                                                </th>
+                                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+                                                    Time Entry
+                                                </th>
+                                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+                                                    Duration
+                                                </th>
+                                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+                                                    Billable Duration
+                                                </th>
+                                                <th className="py-2 px-3 text-right text-xs font-medium text-gray-500 tracking-wider">
+                                                    Actions
+                                                </th>
+                                                <th className="py-2 px-3" />
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                </div>
                                 {dayGroups.map((group) => {
                                     const isExpanded = expandedDays.has(group.dateKey);
                                     const hasEntries = group.entries.length > 0;
@@ -373,9 +384,6 @@ export function TimeSheetListView({
                                                             ) as BillabilityPercentage;
 
                                                             const colors = billabilityColorScheme[billabilityTier];
-
-                                                            // Get other days for "copy to" dropdown
-                                                            const otherDays = dayGroups.filter(g => g.dateKey !== group.dateKey);
 
                                                             return (
                                                                 <tr
@@ -451,25 +459,32 @@ export function TimeSheetListView({
                                                                     {/* Actions */}
                                                                     <td className="py-2 px-3 text-right">
                                                                         {isEditable && (
-                                                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                {/* Copy to another day */}
-                                                                                {onQuickAddTimeEntry && otherDays.length > 0 && (
-                                                                                    <Button
-                                                                                        id={`copy-entry-${entry.entry_id}`}
-                                                                                        variant="ghost"
-                                                                                        size="sm"
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            const emptyDay = otherDays.find(d => d.entries.length === 0);
-                                                                                            if (emptyDay) {
-                                                                                                handleCopyToDay(flatEntry, emptyDay.dateKey);
-                                                                                            }
-                                                                                        }}
-                                                                                        title="Copy to another day"
-                                                                                    >
-                                                                                        <Copy className="h-4 w-4" />
-                                                                                    </Button>
-                                                                                )}
+                                                                            <div className="flex items-center justify-end gap-1">
+                                                                                {/* Copy entry - opens dialog with prefilled data */}
+                                                                                <Button
+                                                                                    id={`copy-entry-${entry.entry_id}`}
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        // Open dialog with prefilled data but empty entries (to create new)
+                                                                                        const nextDayIndex = dayGroups.findIndex(g => g.dateKey === group.dateKey) + 1;
+                                                                                        const targetDay = nextDayIndex < dayGroups.length
+                                                                                            ? dayGroups[nextDayIndex]
+                                                                                            : dayGroups[0];
+
+                                                                                        onCellClick({
+                                                                                            workItem,
+                                                                                            date: targetDay.dateKey,
+                                                                                            entries: [], // Empty = create new entry
+                                                                                            defaultStartTime: entry.start_time,
+                                                                                            defaultEndTime: entry.end_time
+                                                                                        });
+                                                                                    }}
+                                                                                    title="Copy to another day"
+                                                                                >
+                                                                                    <Copy className="h-4 w-4" />
+                                                                                </Button>
                                                                                 <Button
                                                                                     id={`edit-entry-${entry.entry_id}`}
                                                                                     variant="ghost"
@@ -497,6 +512,11 @@ export function TimeSheetListView({
                             </div>
                         )}
                     </div>
+
+                    {/* Billable Legend */}
+                    {flattenedEntries.length > 0 && (
+                        <BillableLegend className="mt-6" />
+                    )}
                 </React.Fragment>
             </ReflectionContainer>
         </div>
