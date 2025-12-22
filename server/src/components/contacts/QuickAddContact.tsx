@@ -21,6 +21,8 @@ import {
   validatePhoneNumber,
   validateNotes
 } from 'server/src/lib/utils/clientFormValidation';
+import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 
 interface QuickAddContactProps {
   isOpen: boolean;
@@ -66,9 +68,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [countryCode, setCountryCode] = useState(() => {
     // Enterprise locale detection
     try {
@@ -127,8 +131,10 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setRole('');
       setNotes('');
       setHasAttemptedSubmit(false);
+      setIsSubmitting(false);
       setValidationErrors([]);
       setFieldErrors({});
+      setPendingTags([]);
     }
   }, [isOpen, selectedClientId]);
 
@@ -252,6 +258,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       return;
     }
 
+    setIsSubmitting(true);
+
     // Validate all fields using client validators
     const fieldValidationErrors: Record<string, string> = {};
     const validationMessages: string[] = [];
@@ -292,6 +300,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (validationMessages.length > 0) {
       setFieldErrors(fieldValidationErrors);
       setValidationErrors(validationMessages);
+      setIsSubmitting(false);
       return;
     }
 
@@ -312,6 +321,23 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 
       const newContact = await addContact(contactData);
 
+      // Create tags for the new contact
+      let createdTags: typeof newContact.tags = [];
+      if (pendingTags.length > 0) {
+        try {
+          createdTags = await createTagsForEntity(newContact.contact_name_id, 'contact', pendingTags);
+          if (createdTags.length < pendingTags.length) {
+            toast({
+              title: 'Warning',
+              description: `${pendingTags.length - createdTags.length} tag(s) could not be created`,
+              variant: 'destructive'
+            });
+          }
+        } catch (tagError) {
+          console.error("Error creating contact tags:", tagError);
+        }
+      }
+
       // Show success toast
       toast({
         title: 'Contact created',
@@ -319,9 +345,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         variant: 'default'
       });
 
-      onContactAdded(newContact);
+      // Pass contact with tags to callback
+      onContactAdded({ ...newContact, tags: createdTags });
+      setIsSubmitting(false);
       onClose();
     } catch (err) {
+      setIsSubmitting(false);
       console.error('Error adding contact:', err);
       if (err instanceof Error) {
         let errorTitle = 'Error creating contact';
@@ -554,6 +583,13 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 <p className="text-sm text-red-600 mt-1">{fieldErrors.notes}</p>
               )}
             </div>
+            <QuickAddTagPicker
+              id="quick-add-contact-tags"
+              entityType="contact"
+              pendingTags={pendingTags}
+              onPendingTagsChange={setPendingTags}
+              disabled={isSubmitting}
+            />
             <div className="flex items-center py-2">
               <Label htmlFor="quick-add-contact-status" className="mr-2">Status</Label>
               <span className="text-sm text-gray-500 mr-2">
@@ -568,10 +604,10 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              id="quick-add-contact-cancel" 
-              type="button" 
-              variant="outline" 
+            <Button
+              id="quick-add-contact-cancel"
+              type="button"
+              variant="outline"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

@@ -47,6 +47,12 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
+
+  // Sync state when initialProjects changes (e.g., from router.refresh())
+  useEffect(() => {
+    setProjects(initialProjects);
+  }, [initialProjects]);
+
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -57,6 +63,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const projectTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
   
   // New filter states
   const [filterClientId, setFilterClientId] = useState<string | null>(null);
@@ -115,6 +122,8 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
         });
 
         projectTagsRef.current = newProjectTags;
+        // Force re-render to show fetched tags
+        setTagsVersion(v => v + 1);
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -415,6 +424,21 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
 
   const handleProjectAdded = async (newProject: IProject) => {
     try {
+      // Store tags for the new project if provided
+      if (newProject.project_id && newProject.tags && newProject.tags.length > 0) {
+        projectTagsRef.current[newProject.project_id] = newProject.tags;
+
+        // Update unique tags list with any new tags
+        setAllUniqueTags(prevTags => {
+          const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
+          const newUniqueTags = newProject.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
+          if (newUniqueTags.length > 0) {
+            return [...prevTags, ...newUniqueTags];
+          }
+          return prevTags;
+        });
+      }
+
       // Create a new object with additional properties
       const projectWithDetails: IProject = {
         ...newProject,
