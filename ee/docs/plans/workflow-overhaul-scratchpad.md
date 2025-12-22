@@ -512,3 +512,20 @@
   - Command (from `ee/server`): `ADMIN_PASS="$(cat ../../secrets/db_password_server)" PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_ADMIN_PASSWORD=$ADMIN_PASS PLAYWRIGHT_DB_APP_PASSWORD=$ADMIN_PASS PLAYWRIGHT_DB_NAME=alga_contract_wizard_test npx playwright test src/__tests__/integration/workflow-designer-publish.playwright.test.ts`
   - Result: **8/8 passed** (2.3m).
 - Non-failing noisy logs: intermittent 401 Unauthorized from workflow actions, Redis WRONGPASS reconnect errors, and various migration/seed warnings during bootstrap.
+
+## 2025-12-22 — Playwright UI tests (batch 15: runs details + admin bulk actions)
+- Added run detail status selector: `workflow-run-detail-status` in `ee/server/src/components/workflow-designer/WorkflowRunDetails.tsx`.
+- Updated runs test helpers to also insert `workflow_definition_versions` so runtime resume/cancel can execute.
+- Added run details + admin/bulk action tests in `ee/server/src/__tests__/integration/workflow-designer-runs.playwright.test.ts`:
+  - run row click opens details panel
+  - run details shows workflow name/version + status badge
+  - admin selection checkboxes + bulk action controls
+  - select all toggles selection
+  - bulk resume/cancel flows
+  - bulk action clears selection
+- Updated checklist items to implemented in `ee/docs/plans/workflow_ui_test_plan.json` for the above.
+- Test run (env8 DB):
+  - Command (from `ee/server`):
+    `PLAYWRIGHT_APP_PORT=3314 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_NAME=alga_contract_wizard_test REDIS_HOST=localhost REDIS_PORT=6386 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env npx playwright test src/__tests__/integration/workflow-designer-runs.playwright.test.ts -g "run details panel|run metadata|admin sees run selection|select all toggles|bulk resume|bulk cancel|bulk action clears"`
+  - Result: **7/7 passed** (1.6m).
+- Noisy but non-failing logs continue: `NOAUTH` notification accumulator, occasional `ECONNRESET`, intermittent Unauthorized from workflow actions during background load.

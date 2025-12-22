@@ -576,7 +576,7 @@ export async function listWorkflowRunsAction(input: unknown) {
     const searchValue = `%${parsed.search}%`;
     query.where((builder) => {
       builder
-        .where('workflow_runs.run_id', 'ilike', searchValue)
+        .whereRaw('workflow_runs.run_id::text ilike ?', [searchValue])
         .orWhereExists(
           knex('workflow_run_waits')
             .select(1)

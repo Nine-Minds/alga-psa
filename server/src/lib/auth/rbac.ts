@@ -1,6 +1,6 @@
 import { IUser, IRole, IPermission, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
 import User from 'server/src/lib/models/user';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 export class Role implements IRole {
@@ -71,15 +71,20 @@ function canonicalizeResource(resource: string): string {
 
 export async function hasPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean> {
   const normalizedResource = canonicalizeResource(resource);
+  const userTenant = (user as IUser & { tenant?: string }).tenant;
   let rolesWithPermissions: IRoleWithPermissions[];
   
   if (knexConnection) {
     // Use provided connection (transaction or regular knex instance)
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
+    rolesWithPermissions = userTenant
+      ? await runWithTenant(userTenant, () => User.getUserRolesWithPermissions(knexConnection, user.user_id))
+      : await User.getUserRolesWithPermissions(knexConnection, user.user_id);
   } else {
     // Create new connection if none provided
     const { knex } = await createTenantKnex();
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
+    rolesWithPermissions = userTenant
+      ? await runWithTenant(userTenant, () => User.getUserRolesWithPermissions(knex, user.user_id))
+      : await User.getUserRolesWithPermissions(knex, user.user_id);
   }
   
   // Determine portal type based on user type
@@ -122,15 +127,20 @@ export async function checkMultiplePermissions(
   permissionChecks: PermissionCheck[],
   knexConnection?: Knex | Knex.Transaction
 ): Promise<PermissionResult[]> {
+  const userTenant = (user as IUser & { tenant?: string }).tenant;
   let rolesWithPermissions: IRoleWithPermissions[];
   
   if (knexConnection) {
     // Use provided connection (transaction or regular knex instance)
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knexConnection, user.user_id);
+    rolesWithPermissions = userTenant
+      ? await runWithTenant(userTenant, () => User.getUserRolesWithPermissions(knexConnection, user.user_id))
+      : await User.getUserRolesWithPermissions(knexConnection, user.user_id);
   } else {
     // Create new connection if none provided
     const { knex } = await createTenantKnex();
-    rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
+    rolesWithPermissions = userTenant
+      ? await runWithTenant(userTenant, () => User.getUserRolesWithPermissions(knex, user.user_id))
+      : await User.getUserRolesWithPermissions(knex, user.user_id);
   }
   
   // Determine portal type based on user type
