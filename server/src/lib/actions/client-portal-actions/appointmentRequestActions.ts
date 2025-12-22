@@ -31,6 +31,7 @@ import {
   getClientCompanyName
 } from '../appointmentHelpers';
 import { createNotificationFromTemplateInternal } from '../internal-notification-actions/internalNotificationActions';
+import { isValidEmail } from '../../utils/validation';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -345,7 +346,7 @@ export async function createAppointmentRequest(
       // Send confirmation email to client using template
       await emailService.sendAppointmentRequestReceived({
         requesterName: contact.full_name || 'Customer',
-        requesterEmail: contact.email || (currentUser as any).email || 'unknown@example.com',
+        requesterEmail: contact.email || (currentUser as any).email || '',
         serviceName: service.service_name,
         requestedDate: await formatDate(validatedData.requested_date, 'en'),
         requestedTime: await formatTime(validatedData.requested_time, 'en'),
@@ -402,9 +403,10 @@ export async function createAppointmentRequest(
       });
 
       for (const staffUser of staffUsers) {
+        if (!isValidEmail(staffUser.email)) continue;
         await emailService.sendNewAppointmentRequest(staffUser.email, {
           requesterName: contact.full_name || 'Unknown',
-          requesterEmail: contact.email || (currentUser as any).email || 'unknown@example.com',
+          requesterEmail: contact.email || (currentUser as any).email || '',
           clientName: clientCompanyName,
           serviceName: service.service_name,
           requestedDate: await formatDate(validatedData.requested_date, 'en'),
@@ -986,9 +988,11 @@ export async function cancelAppointmentRequest(
         const clientUserId = await getClientUserIdFromContact(contact.contact_name_id, tenant);
 
         // Email to client confirming cancellation
-        await emailService.sendEmail({
-          to: contact.email || (currentUser as any).email || 'unknown@example.com',
-          subject: 'Appointment Request Cancelled',
+        const cancellationRecipient = contact.email || (currentUser as any).email;
+        if (isValidEmail(cancellationRecipient)) {
+          await emailService.sendEmail({
+            to: cancellationRecipient,
+            subject: 'Appointment Request Cancelled',
           html: `
             <h2>Appointment Request Cancelled</h2>
             <p>Dear ${contact.full_name || 'Customer'},</p>
@@ -1002,8 +1006,9 @@ export async function cancelAppointmentRequest(
             <p>Reference Number: ${request.appointment_request_id}</p>
             <p>If you would like to reschedule, please submit a new appointment request.</p>
           `,
-          tenantId: tenant
-        });
+            tenantId: tenant
+          });
+        }
 
         // Send internal notification to CLIENT
         if (clientUserId) {

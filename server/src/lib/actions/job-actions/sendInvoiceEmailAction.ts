@@ -15,6 +15,7 @@ import { dateValueToDate } from 'server/src/lib/utils/dateTimeUtils';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
 import logger from '@shared/core/logger';
+import { isValidEmail } from '../../utils/validation';
 
 export interface SendInvoiceEmailResult {
   success: boolean;
@@ -164,12 +165,12 @@ export async function sendInvoiceEmailAction(invoiceIds: string[], customMessage
         recipientEmail = client.billing_email;
       }
 
-      if (!recipientEmail) {
+      if (!isValidEmail(recipientEmail)) {
         results.push({
           success: false,
           invoiceNumber: invoice.invoice_number,
-          recipientEmail: '',
-          error: `No email address found for ${client.client_name}`
+          recipientEmail: recipientEmail || '',
+          error: `No valid email address found for ${client.client_name}`
         });
         continue;
       }

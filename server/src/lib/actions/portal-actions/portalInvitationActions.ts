@@ -10,7 +10,7 @@ import { TenantEmailService } from '../../services/TenantEmailService';
 import { UserService } from '../../api/services/UserService';
 import { runAsSystem, createSystemContext } from '../../api/services/SystemContext';
 import { hasPermission } from '../../auth/rbac';
-import { validateEmail } from '../../api/schemas/common';
+import { isValidEmail } from '../../utils/validation';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -318,7 +318,7 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
     }
 
     // Validate email format using shared validator
-    if (!validateEmail(contact.email.trim())) {
+    if (!isValidEmail(contact.email.trim())) {
       return { success: false, error: 'Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.' };
     }
 

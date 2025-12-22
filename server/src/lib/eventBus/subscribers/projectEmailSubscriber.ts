@@ -14,6 +14,7 @@ import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
 import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
+import { isValidEmail } from '../../utils/validation';
 
 /**
  * Wrapper function that checks notification preferences before sending email
@@ -371,12 +372,12 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
     const recipients: string[] = [];
 
     // Add contact or client email
-    if (project.contact_email) {
+    if (isValidEmail(project.contact_email)) {
       recipients.push(project.contact_email);
       logger.info('[ProjectEmailSubscriber] Adding contact email as recipient', {
         contactEmail: project.contact_email
       });
-    } else if (project.client_email) {
+    } else if (isValidEmail(project.client_email)) {
       recipients.push(project.client_email);
       logger.info('[ProjectEmailSubscriber] Adding client email as recipient', {
         clientEmail: project.client_email
@@ -384,7 +385,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
     }
 
     // Always add assigned user email if available
-    if (project.assigned_user_email) {
+    if (isValidEmail(project.assigned_user_email)) {
       recipients.push(project.assigned_user_email);
       logger.info('[ProjectEmailSubscriber] Adding assigned user email as recipient', {
         assignedUserEmail: project.assigned_user_email
@@ -424,7 +425,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
     };
 
     // Send to contact or client (external users - no userId check)
-    if (project.contact_email) {
+    if (isValidEmail(project.contact_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.contact_email,
@@ -433,7 +434,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
         context: emailContext,
         replyContext
       }, 'Project Created');
-    } else if (project.client_email) {
+    } else if (isValidEmail(project.client_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.client_email,
@@ -445,7 +446,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
     }
 
     // Send to assigned user (internal user - check preferences)
-    if (project.assigned_user_email) {
+    if (isValidEmail(project.assigned_user_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.assigned_user_email,
@@ -585,12 +586,12 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     const recipients: string[] = [];
 
     // Add contact or client email
-    if (project.contact_email) {
+    if (isValidEmail(project.contact_email)) {
       recipients.push(project.contact_email);
       logger.info('[ProjectEmailSubscriber] Adding contact email as recipient', {
         contactEmail: project.contact_email
       });
-    } else if (project.client_email) {
+    } else if (isValidEmail(project.client_email)) {
       recipients.push(project.client_email);
       logger.info('[ProjectEmailSubscriber] Adding client email as recipient', {
         clientEmail: project.client_email
@@ -598,7 +599,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     }
 
     // Always add assigned user email if available
-    if (project.assigned_user_email) {
+    if (isValidEmail(project.assigned_user_email)) {
       recipients.push(project.assigned_user_email);
       logger.info('[ProjectEmailSubscriber] Adding assigned user email as recipient', {
         assignedUserEmail: project.assigned_user_email
@@ -667,7 +668,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     };
 
     // Send to contact or client (external users - no userId check)
-    if (project.contact_email) {
+    if (isValidEmail(project.contact_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.contact_email,
@@ -676,7 +677,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
         context: emailContext,
         replyContext
       }, 'Project Updated');
-    } else if (project.client_email) {
+    } else if (isValidEmail(project.client_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.client_email,
@@ -688,7 +689,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     }
 
     // Send to assigned user (internal user - check preferences)
-    if (project.assigned_user_email) {
+    if (isValidEmail(project.assigned_user_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.assigned_user_email,
@@ -805,12 +806,12 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     const recipients: string[] = [];
 
     // Add contact or client email
-    if (project.contact_email) {
+    if (isValidEmail(project.contact_email)) {
       recipients.push(project.contact_email);
       logger.info('[ProjectEmailSubscriber] Adding contact email as recipient', {
         contactEmail: project.contact_email
       });
-    } else if (project.client_email) {
+    } else if (isValidEmail(project.client_email)) {
       recipients.push(project.client_email);
       logger.info('[ProjectEmailSubscriber] Adding client email as recipient', {
         clientEmail: project.client_email
@@ -818,7 +819,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     }
 
     // Always add assigned user email if available
-    if (project.assigned_user_email) {
+    if (isValidEmail(project.assigned_user_email)) {
       recipients.push(project.assigned_user_email);
       logger.info('[ProjectEmailSubscriber] Adding assigned user email as recipient', {
         assignedUserEmail: project.assigned_user_email
@@ -864,7 +865,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     };
 
     // Send to contact or client (external users - no userId check)
-    if (project.contact_email) {
+    if (isValidEmail(project.contact_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.contact_email,
@@ -873,7 +874,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         context: emailContext,
         replyContext
       }, 'Project Closed');
-    } else if (project.client_email) {
+    } else if (isValidEmail(project.client_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.client_email,
@@ -885,7 +886,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     }
 
     // Send to assigned user (internal user - check preferences)
-    if (project.assigned_user_email) {
+    if (isValidEmail(project.assigned_user_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: project.assigned_user_email,
@@ -976,11 +977,12 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       return;
     }
 
-    if (!project.user_email) {
-      logger.warn('Could not send project assigned email - user email not found:', {
+    if (!isValidEmail(project.user_email)) {
+      logger.warn('Could not send project assigned email - user email not found or invalid:', {
         eventId: event.id,
         projectId: payload.projectId,
         userId: assignedTo,
+        userEmail: project.user_email,
         project
       });
       return;
@@ -1098,7 +1100,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
       .whereNotNull('tr.additional_user_id');
 
     // Send email to primary assignee
-    if (task.user_email) {
+    if (isValidEmail(task.user_email)) {
       await sendNotificationIfEnabled({
         tenantId,
         to: task.user_email,
@@ -1123,7 +1125,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
     // Send emails to additional users (deduplicate by user_id/email)
     const uniqueAdditionalUsers = additionalUserEmails.reduce<Map<string, typeof additionalUserEmails[number]>>(
       (acc, user) => {
-        if (!user.email) {
+        if (!isValidEmail(user.email)) {
           return acc;
         }
         const key = user.user_id || user.email;
