@@ -39,6 +39,8 @@ type WorkflowPlaywrightOverrides = {
   failRegistries?: boolean;
   failSaveDraft?: boolean;
   saveDraftDelayMs?: number;
+  registryNodes?: Array<Record<string, any>>;
+  registryActions?: Array<Record<string, any>>;
 };
 
 async function applyWorkflowOverrides(page: Page, overrides: WorkflowPlaywrightOverrides): Promise<void> {
@@ -106,6 +108,51 @@ async function seedWorkflowDefinitions(db: Knex, count: number): Promise<{ ids: 
   }
 
   return { ids, names };
+}
+
+function buildSchemaTestNode() {
+  return {
+    id: 'test.schema',
+    ui: {
+      label: 'Schema Test',
+      category: 'Test',
+      description: 'Schema coverage node',
+    },
+    configSchema: {
+      title: 'test.schema',
+      type: 'object',
+      properties: {
+        flag: { type: 'boolean', default: true },
+        mode: { type: 'string', enum: ['alpha', 'beta'], default: 'beta' },
+        requiredName: { type: 'string' },
+        nested: {
+          type: 'object',
+          properties: {
+            label: { type: 'string', default: 'nested-default' },
+          },
+          required: ['label'],
+        },
+        items: { type: 'array', default: [] },
+        mapping: {
+          type: 'object',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              $expr: { type: 'string' },
+            },
+            required: ['$expr'],
+          },
+        },
+        exprField: {
+          type: 'object',
+          properties: {
+            $expr: { type: 'string' },
+          },
+        },
+      },
+      required: ['requiredName'],
+    },
+  };
 }
 
 async function snapshotWorkflowDefinitions(db: Knex): Promise<WorkflowDefinitionSnapshot> {
@@ -721,6 +768,76 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(page.locator(`#call-workflow-version-${stepId}`)).toHaveValue('2');
     } finally {
       await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('node config renders schema field types and defaults', async ({ page }) => {
+    test.setTimeout(120000);
+    await applyWorkflowOverrides(page, {
+      registryNodes: [buildSchemaTestNode()],
+      registryActions: [],
+    });
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('test.schema').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await workflowPage.stepSelectButton(stepId).click();
+
+      const flagSwitch = page.locator(`#config-${stepId}-flag`);
+      await expect(flagSwitch).toBeVisible();
+      await expect(flagSwitch).toHaveAttribute('aria-checked', 'true');
+
+      const enumSelect = page.locator(`#config-${stepId}-mode`);
+      await expect(enumSelect).toBeVisible();
+      await expect(enumSelect).toContainText('beta');
+
+      const nestedLabel = page.locator(`#config-${stepId}-nested-label`);
+      await expect(nestedLabel).toBeVisible();
+      await expect(nestedLabel).toHaveValue('nested-default');
+
+      const arrayJson = page.locator(`#config-${stepId}-items-json`);
+      await expect(arrayJson).toBeVisible();
+      await expect(arrayJson).toHaveValue('[]');
+
+      const mappingAdd = page.locator(`#config-${stepId}-mapping-add`);
+      await expect(mappingAdd).toBeVisible();
+      await mappingAdd.click();
+      await expect(page.locator(`#config-${stepId}-mapping-key-0`)).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('node config expression validation and required fields update', async ({ page }) => {
+    test.setTimeout(120000);
+    await applyWorkflowOverrides(page, {
+      registryNodes: [buildSchemaTestNode()],
+      registryActions: [],
+    });
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('test.schema').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await workflowPage.stepSelectButton(stepId).click();
+
+      await expect(page.getByText('Missing required: requiredName')).toBeVisible();
+      await page.locator(`#config-${stepId}-requiredName`).fill('Required value');
+      await expect(page.locator('text=Missing required: requiredName')).toHaveCount(0);
+
+      const exprField = page.locator(`#config-${stepId}-exprField-expr`);
+      await exprField.fill('(');
+      await expect(exprField).toHaveClass(/border-red-500/);
+      await expect(page.getByText('Invalid expression')).toBeVisible();
+    } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }

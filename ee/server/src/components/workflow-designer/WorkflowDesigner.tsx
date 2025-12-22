@@ -62,6 +62,7 @@ type WorkflowDefinitionRecord = {
   failure_rate_threshold?: number | string | null;
   failure_rate_min_runs?: number | null;
   retention_policy_override?: Record<string, unknown> | null;
+  published_version?: number | null;
 };
 
 type NodeRegistryItem = {
@@ -111,8 +112,12 @@ type WorkflowPlaywrightOverrides = {
   failRegistries?: boolean;
   failSaveDraft?: boolean;
   failSaveSettings?: boolean;
+  failPublish?: boolean;
   saveDraftDelayMs?: number;
   saveSettingsDelayMs?: number;
+  publishDelayMs?: number;
+  registryNodes?: NodeRegistryItem[];
+  registryActions?: ActionRegistryItem[];
 };
 
 const getWorkflowPlaywrightOverrides = (): WorkflowPlaywrightOverrides | null => {
@@ -651,6 +656,12 @@ const WorkflowDesigner: React.FC = () => {
       if (overrides?.failRegistries) {
         throw new Error('Failed to load workflow registries');
       }
+      if (overrides?.registryNodes || overrides?.registryActions) {
+        setNodeRegistry((overrides.registryNodes ?? []) as NodeRegistryItem[]);
+        setActionRegistry((overrides.registryActions ?? []) as ActionRegistryItem[]);
+        setRegistryError(false);
+        return;
+      }
       const [nodes, actions] = await Promise.all([
         listWorkflowRegistryNodesAction(),
         listWorkflowRegistryActionsAction()
@@ -807,6 +818,11 @@ const WorkflowDesigner: React.FC = () => {
     }
     setIsPublishing(true);
     try {
+      const overrides = getWorkflowPlaywrightOverrides();
+      await delayIfNeeded(overrides?.publishDelayMs);
+      if (overrides?.failPublish) {
+        throw new Error('Failed to publish workflow');
+      }
       const data = await publishWorkflowDefinitionAction({
         workflowId: activeWorkflowId,
         version: activeDefinition.version,
@@ -819,6 +835,7 @@ const WorkflowDesigner: React.FC = () => {
         return;
       }
       toast.success('Workflow published');
+      await loadDefinitions();
     } catch (error) {
       toast.error('Failed to publish workflow');
     } finally {
@@ -1073,6 +1090,12 @@ const WorkflowDesigner: React.FC = () => {
                       value={activeDefinition?.version ?? 1}
                       onChange={(event) => handleDefinitionChange({ version: Number(event.target.value) })}
                     />
+                    <div
+                      id="workflow-designer-published-version"
+                      className="col-span-2 text-xs text-gray-500"
+                    >
+                      Latest published version: {activeWorkflowRecord?.published_version ?? '—'}
+                    </div>
                   </div>
                   <TextArea
                     id="workflow-designer-description"
@@ -1791,6 +1814,10 @@ const StepConfigPanel: React.FC<{
         />
       )}
 
+      {step.type === 'action.call' && (
+        <div className="text-xs text-gray-500">Available actions: {actionRegistry.length}</div>
+      )}
+
       {payloadSchema && (
         <div className="text-xs text-gray-400">Payload schema: {payloadSchema.title ?? 'payload'}</div>
       )}
@@ -1972,9 +1999,6 @@ const SchemaForm: React.FC<{
         );
       })}
 
-      {schema.title === 'action.call' && (
-        <div className="text-xs text-gray-500">Available actions: {actionRegistry.length}</div>
-      )}
     </div>
   );
 };

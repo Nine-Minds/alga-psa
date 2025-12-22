@@ -302,7 +302,7 @@
   {
     "description": "UI: Step card shows error count badge when publish errors map to step. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step card indicates control block with Block badge. Mocks: non-target dependencies.",
@@ -492,107 +492,107 @@
   {
     "description": "UI: Node config renders toggles for boolean schema properties. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Node config renders select inputs for enum schema properties. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Node config renders nested object schema sections. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Node config renders JSON editor for array schema properties. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Node config renders mapping editor for additionalProperties expression objects. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Node config shows missing required field list when values missing. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Node config uses default values from schema when present. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Node config expression fields validate and display errors. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: action.call config shows available actions count. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
-    "description": "UI: action.call config input/output mapping edits persist. Mocks: non-target dependencies.",
+    "description": "UI: action.call config args/saveAs mapping edits persist. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: action.call config updates are saved with draft. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish without saving draft shows toast instructing to save first. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish success clears publish errors and warnings. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish failure displays error cards with codes and messages. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish warnings display warning badge count. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish error cards show breadcrumb path to failing step. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step card error badges reflect publish errors. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish errors update when active workflow changes. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish button disabled while publish in progress. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish action failure shows toast and preserves draft. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Publish with no errors sets latest published version in UI. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Runs tab lists workflow runs with status badges. Mocks: non-target dependencies.",

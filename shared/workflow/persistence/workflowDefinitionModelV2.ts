@@ -9,6 +9,7 @@ export type WorkflowDefinitionRecord = {
   draft_definition: Record<string, unknown>;
   draft_version: number;
   status: string;
+  published_version?: number | null;
   is_system?: boolean;
   is_visible?: boolean;
   is_paused?: boolean;

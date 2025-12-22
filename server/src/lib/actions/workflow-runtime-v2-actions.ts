@@ -190,11 +190,29 @@ export async function listWorkflowDefinitionsAction() {
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const records = await WorkflowDefinitionModelV2.list(knex);
+  const workflowIds = records.map((record) => record.workflow_id);
+  const publishedVersionMap = new Map<string, number | null>();
+  if (workflowIds.length) {
+    const rows = await knex('workflow_definition_versions')
+      .select('workflow_id')
+      .max<{ workflow_id: string; published_version: number | string | null }>('version as published_version')
+      .whereIn('workflow_id', workflowIds)
+      .groupBy('workflow_id');
+    rows.forEach((row) => {
+      const value = row.published_version == null ? null : Number(row.published_version);
+      publishedVersionMap.set(row.workflow_id, Number.isNaN(value as number) ? null : value);
+    });
+  }
+
+  const enrichedRecords = records.map((record) => ({
+    ...record,
+    published_version: publishedVersionMap.get(record.workflow_id) ?? null
+  }));
   const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
   if (canAdmin) {
-    return records;
+    return enrichedRecords;
   }
-  return records.filter((record) => record.is_visible !== false);
+  return enrichedRecords.filter((record) => record.is_visible !== false);
 }
 
 export async function createWorkflowDefinitionAction(input: unknown) {
