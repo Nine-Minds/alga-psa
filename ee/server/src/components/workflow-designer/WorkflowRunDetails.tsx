@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Play, StopCircle, RotateCcw, Repeat, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -321,6 +321,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const [auditCursor, setAuditCursor] = useState<number | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const auditLimit = 25;
+  const selectedStepPathRef = useRef<string | null>(null);
 
   const fetchDetails = useCallback(async () => {
     setIsLoading(true);
@@ -351,10 +352,13 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setDefinition(definitionJson);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load run details');
+      if (onClose) {
+        onClose();
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [runId]);
+  }, [runId, onClose]);
 
   const fetchLogs = useCallback(
     async (cursor = 0, append = false, overrideFilters?: { level: string; search: string }) => {
@@ -440,23 +444,31 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   }, [confirmAction, run]);
 
   useEffect(() => {
+    selectedStepPathRef.current = selectedStepPath;
+  }, [selectedStepPath]);
+
+  useEffect(() => {
     if (steps.length === 0) return;
     const url = new URL(window.location.href);
     const stepParam = url.searchParams.get('step');
+    const currentSelection = selectedStepPathRef.current;
+    let nextSelection: string | null = null;
     if (stepParam && steps.some((step) => step.step_path === stepParam)) {
-      if (selectedStepPath !== stepParam) {
-        setSelectedStepPath(stepParam);
-      }
-      return;
+      nextSelection = stepParam;
+    } else if (currentSelection && steps.some((step) => step.step_path === currentSelection)) {
+      nextSelection = currentSelection;
+    } else {
+      nextSelection = steps[0].step_path;
     }
-    if (!selectedStepPath) {
-      setSelectedStepPath(steps[0].step_path);
+    if (nextSelection && nextSelection !== currentSelection) {
+      setSelectedStepPath(nextSelection);
     }
-  }, [steps, selectedStepPath]);
+  }, [steps]);
 
   useEffect(() => {
     if (!selectedStepPath) return;
     const url = new URL(window.location.href);
+    if (url.searchParams.get('step') === selectedStepPath) return;
     url.searchParams.set('step', selectedStepPath);
     window.history.replaceState(null, '', url.toString());
   }, [selectedStepPath]);

@@ -637,18 +637,19 @@ const WorkflowDesigner: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await listWorkflowDefinitionsAction();
-      setDefinitions(data ?? []);
-      if (!activeDefinition && data?.length) {
-        const record = data[0] as WorkflowDefinitionRecord;
-        setActiveDefinition(record.draft_definition);
-        setActiveWorkflowId(record.workflow_id);
+      const nextDefinitions = data ?? [];
+      setDefinitions(nextDefinitions);
+      if (nextDefinitions.length > 0) {
+        const record = nextDefinitions[0] as WorkflowDefinitionRecord;
+        setActiveDefinition((current) => current ?? record.draft_definition);
+        setActiveWorkflowId((current) => current ?? record.workflow_id);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
     } finally {
       setIsLoading(false);
     }
-  }, [activeDefinition]);
+  }, []);
 
   const loadRegistries = useCallback(async () => {
     try {

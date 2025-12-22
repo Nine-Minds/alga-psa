@@ -10,6 +10,7 @@ import {
   resolvePlaywrightBaseUrl,
 } from './helpers/playwrightAuthSessionHelper';
 import { WorkflowDesignerPage } from '../page-objects/WorkflowDesignerPage';
+import { ensureSystemEmailWorkflow } from './helpers/workflowSeedHelper';
 
 applyPlaywrightAuthEnvDefaults();
 
@@ -63,6 +64,8 @@ async function setupDesigner(page: Page): Promise<{
     completeOnboarding: { completedAt: new Date() },
     permissions: ADMIN_PERMISSIONS,
   });
+
+  await ensureSystemEmailWorkflow(db);
 
   await page.goto(`${TEST_CONFIG.baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForLoadState('networkidle', { timeout: 30_000 });
@@ -792,7 +795,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(flagSwitch).toBeVisible();
       await expect(flagSwitch).toHaveAttribute('aria-checked', 'true');
 
-      const enumSelect = page.locator(`#config-${stepId}-mode`);
+      const enumSelect = page.locator(`[data-automation-id="config-${stepId}-mode"]`);
       await expect(enumSelect).toBeVisible();
       await expect(enumSelect).toContainText('beta');
 

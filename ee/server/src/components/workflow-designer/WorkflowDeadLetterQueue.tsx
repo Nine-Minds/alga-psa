@@ -56,6 +56,7 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [minRetries, setMinRetries] = useState('3');
   const limit = 25;
+  const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
 
   const fetchDeadLetter = useCallback(
     async (cursor = 0, append = false) => {
@@ -176,7 +177,7 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
             runId={selectedRun.run_id}
             workflowName={selectedRun.workflow_name ?? undefined}
             canAdmin={canAdmin}
-            onClose={() => setSelectedRunId(null)}
+            onClose={handleRunDetailsClose}
           />
         </div>
       )}

@@ -69,7 +69,12 @@ const getStepIdsIn = async (scope: Locator): Promise<string[]> => {
 const dragHandleFor = (page: Page, stepId: string): Locator =>
   page.locator(`#workflow-step-drag-${stepId}`);
 
-const dragBetween = async (page: Page, source: Locator, target: Locator): Promise<void> => {
+const dragBetween = async (
+  page: Page,
+  source: Locator,
+  target: Locator,
+  options: { targetX?: number; targetY?: number } = {}
+): Promise<void> => {
   await source.scrollIntoViewIfNeeded();
   await target.scrollIntoViewIfNeeded();
 
@@ -80,10 +85,12 @@ const dragBetween = async (page: Page, source: Locator, target: Locator): Promis
     throw new Error('Unable to determine drag/drop bounds.');
   }
 
+  const targetX = options.targetX ?? 0.5;
+  const targetY = options.targetY ?? 0.5;
   const startX = sourceBox.x + sourceBox.width / 2;
   const startY = sourceBox.y + sourceBox.height / 2;
-  const endX = targetBox.x + targetBox.width / 2;
-  const endY = targetBox.y + targetBox.height / 2;
+  const endX = targetBox.x + targetBox.width * targetX;
+  const endY = targetBox.y + targetBox.height * targetY;
 
   await page.mouse.move(startX, startY);
   await page.mouse.down();
@@ -324,7 +331,7 @@ test.describe('Workflow Designer UI - control blocks', () => {
       await expect(handle).toBeVisible();
       const dropHint = thenPipe.getByText('Drop steps here');
       await expect(dropHint).toBeVisible();
-      await dragBetween(page, handle, dropHint);
+      await dragBetween(page, handle, thenPipe, { targetY: 0.75 });
 
       await expect.poll(async () => getStepIdsIn(thenPipe)).toEqual([stateStepId]);
       await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual([rootStepIds[0]]);

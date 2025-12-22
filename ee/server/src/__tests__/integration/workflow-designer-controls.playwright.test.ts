@@ -9,6 +9,7 @@ import {
   type TenantPermissionTuple
 } from './helpers/playwrightAuthSessionHelper';
 import { WorkflowDesignerPage } from '../page-objects/WorkflowDesignerPage';
+import { ensureSystemEmailWorkflow } from './helpers/workflowSeedHelper';
 
 applyPlaywrightAuthEnvDefaults();
 
@@ -72,6 +73,7 @@ async function createWorkflowTenant(
       }
     ]
   });
+  await ensureSystemEmailWorkflow(db);
 
   // Warm the session on the base URL to ensure cookies apply correctly
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
@@ -81,9 +83,10 @@ async function createWorkflowTenant(
 
 async function createSavedWorkflow(workflowPage: WorkflowDesignerPage): Promise<string> {
   await workflowPage.clickNewWorkflow();
-  const workflowName = await workflowPage.nameInput.inputValue();
+  const workflowName = `Workflow ${uuidv4().slice(0, 8)}`;
+  await workflowPage.setName(workflowName);
   await workflowPage.clickSaveDraft();
-  await workflowPage.page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
+  await workflowPage.page.getByRole('button', { name: workflowName, exact: true }).first().waitFor({ state: 'visible' });
   return workflowName;
 }
 

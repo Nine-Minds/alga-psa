@@ -119,6 +119,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const [eventDetail, setEventDetail] = useState<WorkflowEventDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
   const limit = 25;
 
   const fetchEvents = useCallback(
@@ -172,6 +173,8 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
       setSelectedRunId(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load event detail');
+      setEventDetail(null);
+      setSelectedRunId(null);
     } finally {
       setDetailLoading(false);
     }
@@ -451,7 +454,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
             <WorkflowRunDetails
               runId={selectedRunId}
               canAdmin={canAdmin}
-              onClose={() => setSelectedRunId(null)}
+              onClose={handleRunDetailsClose}
             />
           )}
         </div>

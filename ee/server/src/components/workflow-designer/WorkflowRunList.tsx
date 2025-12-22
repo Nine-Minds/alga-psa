@@ -135,6 +135,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<'resume' | 'cancel' | null>(null);
   const [bulkReason, setBulkReason] = useState('');
+  const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
   const [summary, setSummary] = useState<WorkflowRunSummaryResponse | null>(null);
   const limit = 25;
 
@@ -582,7 +583,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
                 runs.find((run) => run.run_id === selectedRunId)?.workflow_id ?? ''
               )}
               canAdmin={canAdmin}
-              onClose={() => setSelectedRunId(null)}
+              onClose={handleRunDetailsClose}
             />
           </Card>
         )}

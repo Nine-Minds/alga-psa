@@ -792,4 +792,80 @@ test.describe('Workflow Designer UI - events tab', () => {
       await db.destroy();
     }
   });
+
+  test('events list fetch error shows toast and keeps filters', async ({ page }) => {
+    test.setTimeout(180000);
+    const db = createTestDbConnection();
+    const tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: { companyName: `Workflow Events ${uuidv4().slice(0, 6)}` },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: ADMIN_PERMISSIONS,
+    });
+    const tenantId = tenantData.tenant.tenantId;
+    const marker = `force-event-error-${uuidv4().slice(0, 6)}`;
+
+    try {
+      const adminRole = await db('roles')
+        .where({ tenant: tenantId, role_name: 'Admin' })
+        .first();
+      if (adminRole) {
+        const workflowPermissions = await db('permissions')
+          .where({ tenant: tenantId, resource: 'workflow' })
+          .select('permission_id');
+        const workflowPermissionIds = workflowPermissions.map((permission) => permission.permission_id);
+        if (workflowPermissionIds.length > 0) {
+          await db('role_permissions')
+            .where({ tenant: tenantId, role_id: adminRole.role_id })
+            .whereIn('permission_id', workflowPermissionIds)
+            .del();
+        }
+      }
+
+      await openEventsTab(page, tenantId);
+      await page.locator('#workflow-events-name').fill(marker);
+      await page.locator('#workflow-events-apply').click();
+      const errorToast = page.locator('[role="status"]').filter({
+        hasText: /Failed to load workflow events|Forbidden/i
+      });
+      await expect.poll(() => errorToast.count()).toBeGreaterThan(0);
+      await expect(page.locator('#workflow-events-name')).toHaveValue(marker);
+    } finally {
+      await rollbackTenant(db, tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+
+  test('event detail fetch error shows toast and clears detail panel', async ({ page }) => {
+    test.setTimeout(180000);
+    const db = createTestDbConnection();
+    const tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: { companyName: `Workflow Events ${uuidv4().slice(0, 6)}` },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: ADMIN_PERMISSIONS,
+    });
+    const tenantId = tenantData.tenant.tenantId;
+    const eventId = uuidv4();
+    const eventName = `workflow.error.${uuidv4().slice(0, 6)}`;
+
+    try {
+      await createWorkflowEvent(db, {
+        eventId,
+        tenantId,
+        eventName,
+        correlationKey: `corr-${uuidv4().slice(0, 6)}`,
+        createdAt: new Date('2025-02-02T10:00:00Z').toISOString(),
+        processedAt: new Date('2025-02-02T10:00:05Z').toISOString()
+      });
+
+      await openEventsTab(page, tenantId);
+      await waitForEventsLoaded(page);
+      await db('workflow_runtime_events').where({ event_id: eventId }).del();
+      await page.getByText(eventName).first().click();
+      await expect(page.getByText(/Failed to load event detail|Event not found/i)).toBeVisible();
+      await expect(page.locator('#workflow-event-detail-event-id')).toHaveCount(0);
+    } finally {
+      await rollbackTenant(db, tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
 });

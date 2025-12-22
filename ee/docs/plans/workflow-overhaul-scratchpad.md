@@ -199,6 +199,23 @@
 ### Open items
 - None in control integration suite after fixes; full suite expected to pass (only earlier failures were expectation mismatches).
 
+## 2025-12-22 — Workflow UI tests (Runs detail) + env note
+
+### Environment
+- Confirmed correct stack: `workflow_overhaul_env8` (workflow-overhaul/workflow_overhaul_env8).
+
+### Playwright runs-detail suite fixes
+- `ee/server/src/__tests__/integration/workflow-designer-runs.playwright.test.ts`: `createWorkflowAuditLog` now normalizes empty userId → null and uses a transaction to set `app.current_tenant` + insert on the same connection (avoids `invalid input syntax for type uuid: ""` from audit log insert + trigger).
+
+### Tests executed (all passing after fix)
+- `run logs tab filters by search and level`
+- `run logs load more appends additional entries`
+- `run audit logs tab loads entries and supports export`
+- `run audit logs load more appends additional entries`
+
+### Notes
+- Audit log failures were due to `set_config` being connection-scoped; pooling meant the insert ran without `app.current_tenant` set.
+
 ## 2025-12-21 — Workflow Designer Playwright UI tests (batch 2)
 
 ### UI test coverage added
@@ -529,3 +546,86 @@
     `PLAYWRIGHT_APP_PORT=3314 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_NAME=alga_contract_wizard_test REDIS_HOST=localhost REDIS_PORT=6386 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env npx playwright test src/__tests__/integration/workflow-designer-runs.playwright.test.ts -g "run details panel|run metadata|admin sees run selection|select all toggles|bulk resume|bulk cancel|bulk action clears"`
   - Result: **7/7 passed** (1.6m).
 - Noisy but non-failing logs continue: `NOAUTH` notification accumulator, occasional `ECONNRESET`, intermittent Unauthorized from workflow actions during background load.
+
+## 2025-12-22 — Playwright UI tests (batch 16: run detail admin actions + export/error)
+- Environment note: using `workflow-overhaul/workflow_overhaul_env8` stack.
+- Added run detail helpers in `ee/server/src/__tests__/integration/workflow-designer-runs.playwright.test.ts`:
+  - `openRunDetails`, `createWorkflowRunStep`, optional run error/node fields, wait type override.
+- Added run-detail tests:
+  - error card renders on failed run
+  - run export downloads JSON bundle
+  - admin resume/cancel/retry/replay/requeue actions (with reasons/payload)
+- Marked corresponding checklist items implemented in `ee/docs/plans/workflow_ui_test_plan.json`.
+- Test run (env8 DB):
+  - Command (from `ee/server`):
+    `PLAYWRIGHT_APP_PORT=3314 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_NAME=alga_contract_wizard_test REDIS_HOST=localhost REDIS_PORT=6386 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env npx playwright test src/__tests__/integration/workflow-designer-runs.playwright.test.ts -g "run details shows run error card|run details export|admin resume action|admin cancel action|admin retry action|admin replay action|admin requeue action"`
+  - Result: **7/7 passed** (1.8m).
+- Noisy but non-failing logs: `NOAUTH` notification accumulator, intermittent `ECONNRESET` during test navigation, and post-teardown `Unauthorized` from `listWorkflowRunStepsAction`.
+
+## 2025-12-22 UI Playwright progress (batch)
+- Env confirmed: workflow_overhaul_env8 stack.
+- Dead Letter tests: fixed row status locator and changed error-handling test to remove workflow admin permission and assert toast via [role="status"].
+  - File: ee/server/src/__tests__/integration/workflow-designer-dead-letter.playwright.test.ts
+  - Result: `npx playwright test ...dead-letter...` => 7 passed.
+- Audit tests: error-handling test now revokes workflow admin permission and asserts toast via [role="status"] with polling.
+  - File: ee/server/src/__tests__/integration/workflow-designer-audit.playwright.test.ts
+  - Result: `npx playwright test ...audit...` => 6 passed.
+- E2E flows: `npx playwright test ...workflow-designer-e2e...` => 5 passed.
+- workflow_ui_test_plan.json now shows 0 remaining unimplemented items.
+
+## 2025-12-22 — Runs error handling tests stabilized
+- Updated runs error-handling tests to avoid flaky server-action interception:
+  - `run list fetch error` now uses invalid workflow version (`0`) to trigger validation error and toast.
+  - `run details fetch error` now deletes the run record before clicking view to force a 404 + toast + close.
+- Removed unused server-action manifest lookup helpers from `ee/server/src/__tests__/integration/workflow-designer-runs.playwright.test.ts`.
+- Test run:
+  - Command (from `ee/server`):
+    `PLAYWRIGHT_APP_PORT=3310 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/db_password_server) PW_REUSE=true npx playwright test src/__tests__/integration/workflow-designer-runs.playwright.test.ts -g "run list fetch error|run details fetch error"`
+  - Result: **2/2 passed**.
+- Note: noisy but non-failing server logs still show intermittent Unauthorized errors during background fetches.
+
+## 2025-12-22 — Playwright UI tests (batch 17: audit + dead-letter + events + e2e combined)
+- Env: workflow_overhaul_env8 stack.
+- Ran combined suite to validate cross-page flows after recent fixes.
+- Command (from `ee/server`):
+  `PLAYWRIGHT_APP_PORT=3312 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/db_password_server) REDIS_HOST=localhost REDIS_PORT=6386 npx playwright test src/__tests__/integration/workflow-designer-events.playwright.test.ts src/__tests__/integration/workflow-designer-dead-letter.playwright.test.ts src/__tests__/integration/workflow-designer-audit.playwright.test.ts src/__tests__/integration/workflow-designer-e2e.playwright.test.ts`
+- Result: **36/36 passed** (5.4m).
+- Noise: expected Unauthorized/Forbidden logs during error-handling tests and background fetches; no test failures.
+
+## 2025-12-22 — Playwright UI tests (batch 18: basic suite)
+- Env: workflow_overhaul_env8 stack (app port 3312).
+- Command (from `ee/server`):
+  `PLAYWRIGHT_APP_PORT=3312 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/db_password_server) REDIS_HOST=localhost REDIS_PORT=6386 npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+- Result: **27/27 passed** (4.1m).
+- Noise: recurring `ECONNRESET` + Unauthorized/Forbidden logs from server actions during negative paths; no test failures.
+
+## 2025-12-22 — Playwright UI tests (batch 19: runs detail sub-suite)
+- Env: workflow_overhaul_env8 stack (app port 3312).
+- Command (from `ee/server`):
+  `PLAYWRIGHT_APP_PORT=3312 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/db_password_server) REDIS_HOST=localhost REDIS_PORT=6386 npx playwright test src/__tests__/integration/workflow-designer-runs.playwright.test.ts --grep "(runs row click|run details panel|admin sees run selection|select all toggles|bulk resume|bulk cancel|bulk action clears|run details shows|run details export|admin resume action|admin cancel action|admin retry action|admin replay action|admin requeue action|step timeline filter|collapse nested blocks|step timeline view|step details show|step error card|step wait history|envelope tabs|envelope view shows redaction|envelope view shows empty-state|action invocations list|action invocations empty state|run logs tab|run logs export|run logs load more|run logs empty|run audit logs tab|run audit logs load more|run audit logs empty)"`
+- Result: **33/33 passed** (4.9m).
+- Noise: intermittent `ECONNRESET` and a transient `Unauthorized` in server logs for `listWorkflowRunStepsAction` during admin replay flow; no test failures.
+
+## 2025-12-22 — Playwright UI tests (batch 20: runs tab + publish + config)
+- Env: workflow_overhaul_env8 stack (app port 3312).
+- Command (from `ee/server`):
+  `PLAYWRIGHT_APP_PORT=3312 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/db_password_server) REDIS_HOST=localhost REDIS_PORT=6386 npx playwright test src/__tests__/integration/workflow-designer-runs.playwright.test.ts src/__tests__/integration/workflow-designer-publish.playwright.test.ts src/__tests__/integration/workflow-designer-config.playwright.test.ts --grep "(runs (tab lists|tab shows summary counts by status|filter by status|filter by workflow id and version updates list|search filters by run id or correlation key|date range filters update list|sort order changes list ordering|reset filters restores defaults and reloads list|quick range buttons set date inputs|refresh reloads list without changing filters|export triggers CSV download and success toast|load more appends additional results|empty state displays when no runs available)|run list fetch error shows toast and preserves filters|run details fetch error shows toast and closes details panel|publish|node config renders|json field|action\\.call config)"`
+- Result: **28/28 passed** (4.1m).
+- Noise: recurring `ECONNRESET` and `Unauthorized` errors in server logs during background fetches; expected Zod validation errors for invalid version in error-handling tests; no test failures.
+
+## 2025-12-22 — Playwright UI tests (batch 21: flake fixes for runs/expression selectors)
+- Env: workflow_overhaul_env8 stack (app port 3312).
+- Fixes:
+  - Expression picker tests now select exact listbox option to avoid matching `payload.*` entries.
+  - `openRunsTab` now clicks the Runs tab by role/name and waits for `data-state="active"` before proceeding (also updated in E2E helper).
+- Command (from `ee/server`):
+  `PLAYWRIGHT_APP_PORT=3312 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/db_password_server) REDIS_HOST=localhost REDIS_PORT=6386 npx playwright test src/__tests__/integration/workflow-designer-expressions.playwright.test.ts src/__tests__/integration/workflow-designer-runs.playwright.test.ts -g "expression field inserts|expression field combines|bulk cancel prompts|step timeline filter by node type|action invocations list renders|run audit logs empty state"`
+- Result: **6/6 passed** (1.4m).
+- Note: Server startup logs are noisy; no new Unauthorized/Forbidden issues observed in these runs.
+
+## 2025-12-22 — Playwright UI tests (batch 22: controls + blocks + expressions)
+- Env: workflow_overhaul_env8 stack (app port 3312).
+- Command (from `ee/server`):
+  `PLAYWRIGHT_APP_PORT=3312 PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=5439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=$(cat ../../secrets/db_password_server) REDIS_HOST=localhost REDIS_PORT=6386 npx playwright test src/__tests__/integration/workflow-designer-controls.playwright.test.ts src/__tests__/integration/workflow-designer-blocks.playwright.test.ts src/__tests__/integration/workflow-designer-expressions.playwright.test.ts`
+- Result: **29/29 passed** (2.8m).
+- Noise: intermittent Unauthorized/Forbidden logs during background fetches and occasional `ECONNRESET`/`Error: aborted` messages; no test failures.
