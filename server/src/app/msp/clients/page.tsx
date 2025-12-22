@@ -1,7 +1,10 @@
 import Clients from 'server/src/components/clients/Clients';
 
-const ClientsPage = () => {
-  return <Clients />;
-};
+export default async function ClientsPage() {
+  // Generate a timestamp that changes on each server render (e.g., from router.refresh())
+  const refreshTimestamp = Date.now();
 
-export default ClientsPage;
+  return <Clients key={refreshTimestamp} />;
+}
+
+export const dynamic = "force-dynamic";

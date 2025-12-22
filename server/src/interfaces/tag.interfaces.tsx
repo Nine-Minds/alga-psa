@@ -18,3 +18,15 @@ export interface ITag extends TenantEntity {
 export interface ITaggable {
   tags?: ITag[];
 }
+
+/**
+ * Represents a tag that is pending creation (selected in quick add form but not yet persisted).
+ * Used by quick add forms where the entity doesn't exist yet.
+ */
+export interface PendingTag {
+  tag_text: string;
+  tag_id?: string;           // Only present for existing tags
+  background_color?: string | null;
+  text_color?: string | null;
+  isNew: boolean;            // True if user typed a new tag that doesn't exist yet
+}

@@ -429,6 +429,24 @@ const Clients: React.FC = () => {
 
 
   const handleClientAdded = (newClient: IClient) => {
+    // Store tags for the new client if provided (for immediate display)
+    if (newClient.client_id && newClient.tags && newClient.tags.length > 0) {
+      setClientTags(current => ({
+        ...current,
+        [newClient.client_id]: newClient.tags!
+      }));
+
+      // Update unique tags list with any new tags
+      setAllUniqueTags(prevTags => {
+        const currentTagTexts = new Set(prevTags.map(t => t.tag_text));
+        const newUniqueTags = newClient.tags!.filter(tag => !currentTagTexts.has(tag.tag_text));
+        if (newUniqueTags.length > 0) {
+          return [...prevTags, ...newUniqueTags];
+        }
+        return prevTags;
+      });
+    }
+
     // Refresh the list after a client is added
     setRefreshKey(prev => prev + 1);
     toast.success(`${newClient.client_name} has been created successfully.`);

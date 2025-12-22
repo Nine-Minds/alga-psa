@@ -2,7 +2,7 @@
 
 import TagDefinition, { ITagDefinition } from 'server/src/lib/models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from 'server/src/lib/models/tagMapping';
-import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
+import { ITag, TaggedEntityType, PendingTag } from 'server/src/interfaces/tag.interfaces';
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -416,6 +416,42 @@ export async function findAllTagsByType(entityType: TaggedEntityType): Promise<I
     console.error(`Error finding all tags for type ${entityType}:`, error);
     throw new Error(`Failed to find all tags for type: ${entityType}`);
   }
+}
+
+/**
+ * Creates multiple tags for a newly created entity.
+ * Used by quick add forms to apply pending tags after entity creation.
+ * Continues even if individual tags fail (logs error but doesn't throw).
+ *
+ * @param entityId - The ID of the newly created entity
+ * @param entityType - The type of entity (client, contact, ticket, project, project_task)
+ * @param pendingTags - Array of pending tags to create
+ * @returns Array of successfully created tags
+ */
+export async function createTagsForEntity(
+  entityId: string,
+  entityType: TaggedEntityType,
+  pendingTags: PendingTag[]
+): Promise<ITag[]> {
+  const createdTags: ITag[] = [];
+
+  for (const tag of pendingTags) {
+    try {
+      const newTag = await createTag({
+        tag_text: tag.tag_text,
+        tagged_id: entityId,
+        tagged_type: entityType,
+        background_color: tag.background_color,
+        text_color: tag.text_color,
+      });
+      createdTags.push(newTag);
+    } catch (error) {
+      console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, error);
+      // Continue with other tags - don't fail the entire operation
+    }
+  }
+
+  return createdTags;
 }
 
 export async function updateTagColor(tagId: string, backgroundColor: string | null, textColor: string | null): Promise<{ tag_text: string; background_color: string | null; text_color: string | null; }> {
