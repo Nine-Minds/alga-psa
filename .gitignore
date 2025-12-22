@@ -3,6 +3,7 @@ node_modules/
 .pnp
 .pnp.js
 .npm-cache/
+.tmp*
 
 # testing
 /coverage

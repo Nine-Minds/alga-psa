@@ -1,0 +1,137 @@
+import { expect, test, type Page } from '@playwright/test';
+import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
+import { createTestDbConnection } from '../../lib/testing/db-test-utils';
+import { rollbackTenant } from '../../lib/testing/tenant-creation';
+import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
+import {
+  applyPlaywrightAuthEnvDefaults,
+  createTenantAndLogin,
+  resolvePlaywrightBaseUrl,
+} from './helpers/playwrightAuthSessionHelper';
+import { WorkflowDesignerPage } from '../page-objects/WorkflowDesignerPage';
+
+applyPlaywrightAuthEnvDefaults();
+
+const TEST_CONFIG = {
+  baseUrl: resolvePlaywrightBaseUrl(),
+};
+
+const ADMIN_PERMISSIONS = [
+  {
+    roleName: 'Admin',
+    permissions: [
+      { resource: 'user', action: 'read' },
+      { resource: 'workflow', action: 'manage' },
+      { resource: 'workflow', action: 'publish' },
+      { resource: 'workflow', action: 'admin' },
+    ],
+  },
+];
+
+async function setupDesigner(page: Page): Promise<{
+  db: Knex;
+  tenantData: TenantTestData;
+  workflowPage: WorkflowDesignerPage;
+}> {
+  const db = createTestDbConnection();
+  const tenantData = await createTenantAndLogin(db, page, {
+    tenantOptions: {
+      companyName: `Workflow UI ${uuidv4().slice(0, 6)}`,
+    },
+    completeOnboarding: { completedAt: new Date() },
+    permissions: ADMIN_PERMISSIONS,
+  });
+
+  const workflowPage = new WorkflowDesignerPage(page);
+  await workflowPage.goto(TEST_CONFIG.baseUrl);
+  return { db, tenantData, workflowPage };
+}
+
+async function addActionCallStep(page: Page, workflowPage: WorkflowDesignerPage): Promise<string> {
+  await workflowPage.clickNewWorkflow();
+  await workflowPage.addButtonFor('action.call').click();
+  const stepId = await workflowPage.getFirstStepId();
+  await workflowPage.stepSelectButton(stepId).click();
+  return stepId;
+}
+
+test.describe('Workflow Designer UI - config fields', () => {
+  test('node config renders string and number inputs for action.call schema', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      const stepId = await addActionCallStep(page, workflowPage);
+
+      const actionIdInput = page.locator(`#config-${stepId}-actionId`);
+      const versionInput = page.locator(`#config-${stepId}-version`);
+
+      await expect(actionIdInput).toBeVisible();
+      await expect(versionInput).toBeVisible();
+      const actionType = await actionIdInput.getAttribute('type');
+      expect(actionType === null || actionType === 'text').toBeTruthy();
+      await expect(versionInput).toHaveAttribute('type', 'number');
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+
+  test('json field invalid JSON shows validation error', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      const stepId = await addActionCallStep(page, workflowPage);
+
+      const argsField = page.locator(`#config-${stepId}-args-json`);
+      await argsField.fill('{');
+
+      await expect(page.getByText('Invalid JSON')).toBeVisible();
+      await expect(argsField).toHaveClass(/border-red-500/);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+
+  test('json field accepts valid JSON, clears error, and persists formatted value', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    const workflowName = `UI Action Call ${uuidv4().slice(0, 6)}`;
+
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.nameInput.fill(workflowName);
+      await workflowPage.addButtonFor('action.call').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await workflowPage.stepSelectButton(stepId).click();
+
+      const argsField = page.locator(`#config-${stepId}-args-json`);
+      await argsField.fill('{');
+      await expect(page.getByText('Invalid JSON')).toBeVisible();
+
+      const payload = '{"foo":"bar","count":2}';
+      await argsField.fill(payload);
+      await expect(page.getByText('Invalid JSON')).toHaveCount(0);
+
+      await workflowPage.saveDraft();
+      await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await workflowPage.waitForLoaded();
+      await workflowPage.selectWorkflowByName(workflowName);
+      await workflowPage.stepSelectButton(stepId).click();
+
+      const expectedFormatted = '{\n  "foo": "bar",\n  "count": 2\n}';
+      await expect(page.locator(`#config-${stepId}-args-json`)).toHaveValue(expectedFormatted);
+    } finally {
+      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+});

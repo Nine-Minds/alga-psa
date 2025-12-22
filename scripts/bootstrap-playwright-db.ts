@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import * as fsSync from 'node:fs';
 import path from 'node:path';
 import knex, { Knex } from 'knex';
 
@@ -157,9 +158,6 @@ async function migrateAndSeed(cfg: DbCfg): Promise<void> {
 
     const serverMigrationsDir = path.resolve(process.cwd(), 'server/migrations');
     const eeMigrationsDir = path.resolve(process.cwd(), 'ee/server/migrations');
-    const seedsDir = path.resolve(process.cwd(), 'server/seeds/dev');
-
-    // 1) Apply core (CE) migrations.
     await db.migrate.latest({
       migrationSource: new DirectoryMigrationSource(serverMigrationsDir) as any,
     });
@@ -184,9 +182,15 @@ async function migrateAndSeed(cfg: DbCfg): Promise<void> {
       tableName: 'knex_migrations_ee',
     });
 
-    await db.seed
-      .run({ directory: seedsDir, loadExtensions: ['.cjs', '.js'] })
-      .catch(() => undefined);
+    const seedsDirs = [path.resolve(process.cwd(), 'server/seeds/dev')];
+    const eeSeedsDir = path.resolve(process.cwd(), 'ee/server/seeds/dev');
+    if (fsSync.existsSync(eeSeedsDir)) {
+      seedsDirs.push(eeSeedsDir);
+    }
+
+    for (const dir of seedsDirs) {
+      await db.seed.run({ directory: dir, loadExtensions: ['.cjs', '.js'] }).catch(() => undefined);
+    }
   } finally {
     await db.destroy().catch(() => undefined);
   }

@@ -199,6 +199,25 @@
 ### Open items
 - None in control integration suite after fixes; full suite expected to pass (only earlier failures were expectation mismatches).
 
+## 2025-12-21 — Workflow Designer Playwright UI tests (batch 2)
+
+### UI test coverage added
+- `ee/server/src/__tests__/page-objects/WorkflowDesignerPage.ts`: added workflow step locators + helpers (`selectWorkflowByName`, `selectStepById`) and settings panel locators.
+- `ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`: added 8 tests:
+  - Read-only users see the read-only message when selecting steps.
+  - Workflow selection loads payload schema ref and trigger event name from stored definition.
+  - Editing workflow name, version, description updates the draft inputs.
+  - Trigger input accepts a non-empty event name and clears to empty.
+- Read-only test permissions now include `workflow:read` to allow workflow list load.
+- `ee/docs/plans/workflow_ui_test_plan.json`: marked 8 additional items as implemented.
+
+### Test run
+- Ran `npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts --project=chromium` with Playwright DB port 5437; **13 tests passed**.
+
+### Observations
+- Read-only users trigger registry server actions that return 403 (expected with current UI); UI shows toast but tests still pass.
+- Occasional `ECONNRESET` / `Error: aborted` logs during navigation and repeated `NotificationAccumulator` Redis auth warnings (existing noise; did not fail tests).
+
 ## 2025-12-21 — Full workflow runtime v2 test run (unit + integration + e2e)
 
 ### Fixes applied before full run
@@ -346,3 +365,120 @@
   - Cascading failures in multiple workflow runtime test files and e2e runtime suite.
   - Suggest running workflow runtime test files in smaller batches or increasing DB connection capacity/timeout when running the full suite.
 
+
+## 2025-12-21 Playwright UI test plan
+- Created `ee/docs/plans/workflow_ui_test_plan.json` with 207 Playwright-focused UI tests covering Workflow Designer, Runs, Events, Dead Letter, and Audit tabs.
+- Tests are framed as user-facing behavior with mockable non-target dependencies, and include 8 E2E scenarios for end-to-end UI flows.
+- Plan aligns with the workflow overhaul UI (node-in-pipe designer, run viewer, event list) surfaced at `/msp/workflows` (EE uses WorkflowDesigner via `@product/workflows/entry`).
+
+## 2025-12-21 — Playwright UI tests (batch 3)
+- Fixed workflow list count assertion regex (removed escaped backslashes) so it matches digits.
+- Added `workflow:read` to `MANAGE_PERMISSIONS` in `workflow-designer-basic.playwright.test.ts` so Runs tab data can load (listWorkflowRunsAction requires read).
+- Ran Playwright workflow designer suite after fixes: `ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts` now passes (17/17).
+- Marked UI test plan items implemented: workflow list count, admin Dead Letter/Audit tabs + empty states, settings panel visibility, Runs/Events/Dead Letter/Audit empty states.
+- Observed recurring logs during tests: registry 401/403 on aborted requests, Redis NOAUTH notifications, ECONNRESET “aborted” logs; tests still pass.
+
+## 2025-12-22 — Playwright UI tests (batch 4)
+- Added new workflow designer control block coverage in `ee/server/src/__tests__/integration/workflow-designer-blocks.playwright.test.ts`:
+  - Pipe selector root + nested pipe updates (If THEN/ELSE).
+  - control.forEach BODY pipe + config fields + Block badge.
+  - control.tryCatch TRY/CATCH + capture error field.
+  - control.return helper text.
+  - control.callWorkflow input/output mapping add/edit/remove flows + empty state.
+- Fixed selector failures by targeting stable IDs instead of labels (Input labels don’t use `htmlFor`).
+- Final run: `workflow-designer-blocks.playwright.test.ts` passes (7/7). Observed recurring server logs: Redis NOAUTH and occasional `ECONNRESET` + one `Unauthorized` log from `listWorkflowRegistryActionsAction` during setup; tests still green.
+- Marked 19 UI test plan items implemented (control blocks, mapping editor behaviors, pipe selector updates, return helper text, Block badge).
+
+## 2025-12-22 — Playwright UI tests (batch 5)
+- Updated workflow permission model to match PRD/test plan: manage no longer implies publish/admin.
+  - `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`: `canPublish` now requires `workflow:publish` (or admin), `canAdmin` requires `workflow:admin`, `canManage` allows manage/admin.
+  - `server/src/lib/actions/workflow-runtime-v2-actions.ts`: `requireWorkflowPermission` fallback now allows admin for manage/publish; removed manage→publish fallback. `listWorkflowRegistryNodesAction`/`listWorkflowRegistryActionsAction` now require `read` (not manage).
+- Expanded `WorkflowDesignerPage` helpers (setName, selectWorkflowByName, selectStepById, clickSaveDraft) to support new tests.
+- Fixed control test expectations to check active workflow selection after tab switches (switch to Runs then back to Designer).
+- Ran `workflow-designer-controls.playwright.test.ts` with env to avoid DB auth mismatch when Playwright forces admin credentials:
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3300 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-controls.playwright.test.ts`
+  - Result: 4/4 passing (manage-only save vs publish, publish-only, active selection persists across tabs, switching workflows clears config panel).
+  - Noted recurring server logs: Redis NOAUTH and occasional ECONNRESET aborted requests (no test failures).
+
+## 2025-12-22 — Playwright UI tests (batch 6)
+- Added workflow designer settings coverage in `ee/server/src/__tests__/integration/workflow-designer-controls.playwright.test.ts`:
+  - System workflow settings hidden for non-admin.
+  - System workflow settings visible for admin.
+- Added workflow list/metadata coverage in `ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`:
+  - Workflow list shows total count and buttons.
+  - Selecting a workflow loads draft metadata (Inbound Email Processing fields).
+  - Version field accepts numeric input.
+  - Clearing trigger event name removes trigger from draft.
+  - Added cleanup for created workflows (delete from `workflow_definitions`).
+- Fixed list count assertion to poll until label count matches button count to avoid timing flakiness.
+- Ran Playwright subset (basic + controls) with DB env overrides to keep admin creds aligned:
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3300 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts src/__tests__/integration/workflow-designer-controls.playwright.test.ts`
+  - Result: 21/21 passing.
+- Noted recurring logs during run (no test failures): Redis NOAUTH notification accumulator, `ECONNRESET` aborted requests, occasional `Unauthorized` errors from registry actions when non-admin sessions hit registry endpoints.
+
+## 2025-12-22 — Playwright UI tests (batch 7)
+- Added workflow settings tests in `ee/server/src/__tests__/integration/workflow-designer-controls.playwright.test.ts`:
+  - Settings toggles update draft values (Visible, Paused), concurrency accepts numeric/empty, auto-pause toggles enable failure inputs.
+  - Save Settings persists metadata overrides; verified UI state after reload and DB values.
+- Added helper `createSavedWorkflow` in `workflow-designer-controls.playwright.test.ts` for reuse.
+- Updated settings UI so failure threshold/min inputs are disabled when auto-pause is off:
+  - `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` now passes `disabled={!metadataDraft.autoPauseOnFailure}` to both inputs.
+- Ran controls suite with DB env overrides:
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3300 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-controls.playwright.test.ts`
+  - Result: 12/12 passing.
+- Recurring logs during run (no test failures): Redis NOAUTH notification accumulator, ECONNRESET aborted requests, registry Unauthorized logs during non-admin sessions.
+
+## 2025-12-22 — Playwright UI tests (batch 8)
+- Added workflow persistence + palette search coverage in `ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`:
+  - Save draft persists metadata + steps after reload (verifies step label and id).
+  - Palette search filters nodes by id.
+- Marked UI test plan items implemented for save draft persistence and palette search (plus related helper-text/step label items already covered).
+- Ran basic suite with DB env overrides:
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3300 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+  - Result: 13/13 passing.
+- Noted recurring server logs during run (no test failures): Redis NOAUTH notification accumulator, ECONNRESET aborted requests, and intermittent workflow runtime action errors (401/403/404) during registry/schema fetches.
+
+## 2025-12-22 — Playwright UI tests (batch 9)
+- Added empty-list state coverage in `ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`:
+  - New snapshot/restore helpers for workflow_definitions + workflow_definition_versions.
+  - Test asserts 0 workflows, no workflow buttons, Save Draft/Publish disabled, empty metadata fields, and workflow settings not shown.
+- Marked UI plan items implemented: empty workflow list, save draft disabled (no active definition), publish disabled (no active definition), save settings disabled when workflow id missing.
+- Ran basic suite with DB env overrides:
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3300 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+  - Result: 14/14 passing.
+- Recurring logs during run (no test failures): Redis NOAUTH notification accumulator, ECONNRESET aborted requests, intermittent workflow runtime action 401/404 noise.
+
+## 2025-12-22 — Playwright UI tests (batch 10)
+- Fixed `WorkflowDesignerPage.saveDraft()` to wait for the Save Draft button to be enabled (avoids timeout when button text stays “Saving...” longer than default wait).
+- Adjusted forEach on-item-error selection/assertion to target the combobox role selector to avoid strict-mode failures from duplicate IDs.
+- Reran `workflow-designer-basic.playwright.test.ts` with DB env overrides:
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3300 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+  - Result: 18/18 passing.
+- Recurring logs during run (no test failures): Redis NOAUTH notification accumulator, ECONNRESET aborted requests, intermittent workflow action 401/403/404 noise.
+
+## UI tests batch 5 (expressions)
+- Added Playwright tests for expression field + picker in `ee/server/src/__tests__/integration/workflow-designer-expressions.playwright.test.ts`.
+- Covered: field picker roots, insert field into expression, append to existing expression, invalid syntax styling + clears when valid, multi-line, and empty input handling.
+- Locator stability: Radix Select options were flaky with role selectors; switched assertions to `listbox.toContainText(...)` with longer timeout.
+- Latest run: `workflow-designer-expressions.playwright.test.ts` passes (6/6). Still seeing benign `ECONNRESET` + `NOAUTH` log noise during runs.
+
+## 2025-12-22 — Playwright UI tests (batch 11: basic + blocks re-run)
+- Re-ran `workflow-designer-basic` + `workflow-designer-blocks` after adding unauth redirect + pipe insertion tests.
+- Had to move Playwright dev server to port 3301 because 3300 was in use.
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3301 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts src/__tests__/integration/workflow-designer-blocks.playwright.test.ts`
+- Result: **27/27 passed**.
+- Noisy server logs persisted (expected / non-failing): Redis `NOAUTH` notification accumulator, occasional `ECONNRESET` aborted requests, and intermittent 401/403/404 errors from workflow registry/schema actions during setup.
+
+## 2025-12-22 — Playwright UI tests (batch 12: control blocks drag/drop)
+- Added nested-pipe drag fallback + selectors:
+  - `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`: track hovered pipe via `data-pipe-path` + global mousemove when dragging; add `data-step-id` to top-level draggable wrappers for reliable step queries.
+  - `ee/server/src/__tests__/integration/workflow-designer-blocks.playwright.test.ts`: `getStepIdsIn` now reads direct `[data-step-id]` children (avoids nested pipe leakage).
+  - `ee/server/src/__tests__/page-objects/WorkflowDesignerPage.ts`: wait for New Workflow button visibility before clicking.
+- Reran `workflow-designer-blocks` full suite with DB env overrides:
+  - Command: `PW_REUSE=false PLAYWRIGHT_APP_PORT=3301 PLAYWRIGHT_DB_PORT=5437 SECRET_READ_CHAIN=env SECRET_WRITE_PROVIDER=env DB_PASSWORD_ADMIN=$(cat ../../secrets/postgres_password) PLAYWRIGHT_DB_ADMIN_PASSWORD=$(cat ../../secrets/postgres_password) DB_PASSWORD_SERVER=$(cat ../../secrets/postgres_password) npx playwright test src/__tests__/integration/workflow-designer-blocks.playwright.test.ts`
+  - Result: **10/10 passed** (1.3m).
+- Still seeing noisy logs during runs (non-failing): Redis `NOAUTH` notification accumulator, occasional `ECONNRESET` aborted requests, and intermittent 401/403/404 errors from workflow registry/schema actions.
+
+## 2025-12-22 — Env alignment
+- Confirmed the correct dev stack for this work is `workflow-overhaul` / `workflow_overhaul_env8`.
+- Updated `server/.env` to align ports + names with env8 (app 3007, pg 5439, redis 6386, hocuspocus 1241, pgbouncer 6439).
