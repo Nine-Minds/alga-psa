@@ -32,23 +32,33 @@ const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
 // Path to ngrok URL file (written by ngrok-sync container)
 const NGROK_URL_FILE = '/app/ngrok/url';
 
-// Check if running in development mode
-const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
-
-// App base URL for redirects - uses ngrok in development, otherwise NEXTAUTH_URL
-const getAppBaseUrl = () => {
-  // In development mode, check for ngrok URL file first
-  if (isDevelopment) {
-    try {
-      if (fs.existsSync(NGROK_URL_FILE)) {
-        const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
-        if (ngrokUrl) {
-          return ngrokUrl;
-        }
+const readNgrokUrl = () => {
+  try {
+    if (fs.existsSync(NGROK_URL_FILE)) {
+      const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
+      if (ngrokUrl) {
+        return ngrokUrl;
       }
-    } catch (error) {
-      // Ignore file read errors, fall back to env vars
     }
+  } catch (error) {
+    // Ignore file read errors, fall back to env vars
+  }
+  return null;
+};
+
+// App base URL for redirects - priority: NINJAONE_REDIRECT_URI, ngrok file, NEXTAUTH_URL
+const getAppBaseUrl = () => {
+  if (process.env.NINJAONE_REDIRECT_URI) {
+    try {
+      return new URL(process.env.NINJAONE_REDIRECT_URI).origin;
+    } catch (error) {
+      // Ignore invalid URL and continue to fallbacks
+    }
+  }
+
+  const ngrokUrl = readNgrokUrl();
+  if (ngrokUrl) {
+    return ngrokUrl;
   }
 
   // Fall back to environment variables
@@ -61,6 +71,10 @@ const APP_BASE_URL = getAppBaseUrl();
 const getRedirectUri = () => {
   if (process.env.NINJAONE_REDIRECT_URI) {
     return process.env.NINJAONE_REDIRECT_URI;
+  }
+  const ngrokUrl = readNgrokUrl();
+  if (ngrokUrl) {
+    return `${ngrokUrl}/api/integrations/ninjaone/callback`;
   }
   return `${APP_BASE_URL}/api/integrations/ninjaone/callback`;
 };

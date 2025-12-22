@@ -7,6 +7,7 @@ import { sendPasswordResetEmail } from '../../email/sendPasswordResetEmail';
 import { getSystemEmailService } from '../../email';
 import { TenantEmailService } from '../../services/TenantEmailService';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
+import { isValidEmail } from '../../utils/validation';
 
 export interface RequestResetResult {
   success: boolean;
@@ -54,8 +55,7 @@ export async function requestPasswordReset(
     console.log('[PasswordReset] Normalized email:', normalizedEmail);
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
+    if (!isValidEmail(normalizedEmail)) {
       return { success: false, message: 'Invalid email format', error: 'Invalid email format' };
     }
 

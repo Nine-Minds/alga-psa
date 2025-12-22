@@ -42,30 +42,31 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
     throw new Error('TENANT environment variable not set');
   }
 
-  const tenantFilter = { tenant };
-
-  // Get counts for each job status scoped to the active tenant
-  const [total, completed, failed, pending, active, queued, pgboss, temporal] = await Promise.all([
-    knex('jobs').where(tenantFilter).count('*').first(),
-    knex('jobs').where(tenantFilter).where({ status: JobStatus.Completed }).count('*').first(),
-    knex('jobs').where(tenantFilter).where({ status: JobStatus.Failed }).count('*').first(),
-    knex('jobs').where(tenantFilter).where({ status: JobStatus.Pending }).count('*').first(),
-    knex('jobs').where(tenantFilter).where({ status: JobStatus.Active }).count('*').first(),
-    knex('jobs').where(tenantFilter).where({ status: JobStatus.Queued }).count('*').first(),
-    knex('jobs').where(tenantFilter).where({ runner_type: 'pgboss' }).count('*').first(),
-    knex('jobs').where(tenantFilter).where({ runner_type: 'temporal' }).count('*').first(),
-  ]);
+  // Get all counts in a single query using conditional aggregation
+  const result = await knex('jobs')
+    .where({ tenant })
+    .select(
+      knex.raw('COUNT(*) as total'),
+      knex.raw(`COUNT(*) FILTER (WHERE status = ?) as completed`, [JobStatus.Completed]),
+      knex.raw(`COUNT(*) FILTER (WHERE status = ?) as failed`, [JobStatus.Failed]),
+      knex.raw(`COUNT(*) FILTER (WHERE status = ?) as pending`, [JobStatus.Pending]),
+      knex.raw(`COUNT(*) FILTER (WHERE status = ?) as active`, [JobStatus.Active]),
+      knex.raw(`COUNT(*) FILTER (WHERE status = ?) as queued`, [JobStatus.Queued]),
+      knex.raw(`COUNT(*) FILTER (WHERE runner_type = 'pgboss') as pgboss`),
+      knex.raw(`COUNT(*) FILTER (WHERE runner_type = 'temporal') as temporal`)
+    )
+    .first();
 
   return {
-    total: parseInt(String(total?.count || '0'), 10),
-    completed: parseInt(String(completed?.count || '0'), 10),
-    failed: parseInt(String(failed?.count || '0'), 10),
-    pending: parseInt(String(pending?.count || '0'), 10),
-    active: parseInt(String(active?.count || '0'), 10),
-    queued: parseInt(String(queued?.count || '0'), 10),
+    total: parseInt(String(result?.total || '0'), 10),
+    completed: parseInt(String(result?.completed || '0'), 10),
+    failed: parseInt(String(result?.failed || '0'), 10),
+    pending: parseInt(String(result?.pending || '0'), 10),
+    active: parseInt(String(result?.active || '0'), 10),
+    queued: parseInt(String(result?.queued || '0'), 10),
     byRunner: {
-      pgboss: parseInt(String(pgboss?.count || '0'), 10),
-      temporal: parseInt(String(temporal?.count || '0'), 10),
+      pgboss: parseInt(String(result?.pgboss || '0'), 10),
+      temporal: parseInt(String(result?.temporal || '0'), 10),
     },
   };
 }

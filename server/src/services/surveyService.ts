@@ -8,6 +8,7 @@ import logger from '@alga-psa/shared/core/logger';
 import { createTenantKnex, runWithTenant } from '../lib/db';
 import { issueSurveyToken } from '../lib/actions/surveyTokenService';
 import { TenantEmailService } from '../lib/email';
+import { isValidEmail } from '../lib/utils/validation';
 import { DatabaseTemplateProcessor } from '../lib/email/tenant/templateProcessors';
 import { publishEvent } from '../lib/eventBus/publishers';
 
@@ -156,7 +157,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         email: contactRow?.email,
       });
 
-      if (!contactRow || !contactRow.email) {
+      if (!contactRow || !isValidEmail(contactRow.email)) {
         appendDebug('contact-missing-email', {
           contactId: contactRow?.contact_name_id,
         });
@@ -228,7 +229,15 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     };
 
     if (!contact.email) {
-      throw new Error('Contact email is required to send survey invitation');
+      throw new Error(
+        `sendSurveyInvitation: contact ${contact.contact_name_id} has no email address`
+      );
+    }
+
+    if (!isValidEmail(contact.email)) {
+      throw new Error(
+        `sendSurveyInvitation: contact ${contact.contact_name_id} has invalid email address`
+      );
     }
 
     try {

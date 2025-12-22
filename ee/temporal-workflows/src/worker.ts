@@ -48,7 +48,7 @@ function getWorkerConfig(): WorkerConfig {
   const queuesEnv =
     process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
 
-  const taskQueues = queuesEnv
+  const parsedQueues = queuesEnv
     ? Array.from(
         new Set(
           queuesEnv
@@ -58,6 +58,11 @@ function getWorkerConfig(): WorkerConfig {
         ),
       )
     : defaultQueues;
+
+  // Always ensure the shared job queue is present, even when env overrides are used.
+  const taskQueues = parsedQueues.includes("alga-jobs")
+    ? parsedQueues
+    : [...parsedQueues, "alga-jobs"];
 
   return {
     temporalAddress:
