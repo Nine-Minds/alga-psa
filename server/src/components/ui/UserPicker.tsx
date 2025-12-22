@@ -25,6 +25,7 @@ interface UserPickerProps {
   buttonWidth?: 'fit' | 'full';
   placeholder?: string;
   userTypeFilter?: string | string[] | null; // null means no filtering, string/array for specific types
+  modal?: boolean;
 }
 
 // Component for individual option buttons that registers with UI reflection
@@ -70,6 +71,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
   userTypeFilter = 'internal',
+  modal = true,
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-picker'
 }) => {
@@ -369,7 +371,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
           </OptionButton>
 
           {/* User options */}
-          {filteredUsers.map((user): JSX.Element => {
+          {filteredUsers.map((user): React.JSX.Element => {
             const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
             return (
               <OptionButton

@@ -163,7 +163,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
 
   const defaultActiveTriggerClass = orientation === 'vertical'
     ? ''
-    : 'data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600';
+    : 'data-[state=active]:text-primary-600 data-[state=active]:border-b-2 data-[state=active]:border-primary-600';
 
   // Render grouped tabs if groups are provided and orientation is vertical
   const renderGroupedTabs = groups && groups.length > 0 && orientation === 'vertical';
@@ -211,7 +211,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
                     </p>
                   </button>
                 )}
-                {isExpanded && group.tabs.map((tab, tabIndex): JSX.Element => {
+                {isExpanded && group.tabs.map((tab, tabIndex): React.JSX.Element => {
                   const IconComponent = tab.icon;
                   const hasIcon = !!IconComponent;
                   const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
@@ -232,7 +232,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
             );
           })
         ) : (
-          allTabs.map((tab, index): JSX.Element => {
+          allTabs.map((tab, index): React.JSX.Element => {
             const IconComponent = tab.icon;
             const hasIcon = !!IconComponent;
             const iconClassName = hasIcon 
@@ -253,7 +253,7 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
         )}
         {extraContent}
       </Tabs.List>
-      {allTabs.map((tab, index): JSX.Element => (
+      {allTabs.map((tab, index): React.JSX.Element => (
         <Tabs.Content 
           key={tab.label}
           id={`${prefix}-content-${index}`}

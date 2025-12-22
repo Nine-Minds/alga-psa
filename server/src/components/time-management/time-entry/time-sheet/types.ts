@@ -39,7 +39,7 @@ export interface TimeEntryFormProps {
   onDelete: (index: number) => Promise<void>;
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
-  lastNoteInputRef?: React.RefObject<HTMLInputElement>;
+  lastNoteInputRef?: React.RefObject<HTMLInputElement | null>;
   timePeriod?: ITimePeriodView;
   date?: Date;
   isNewEntry?: boolean;
@@ -53,4 +53,16 @@ export interface TimeEntryReadOnlyProps {
   services: Service[];
   onEdit: (index: number) => void;
   onDelete: (index: number) => Promise<void>;
+}
+
+export interface TimeSheetDateNavigatorState {
+  dateRangeDisplay: string;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  hasMultiplePages: boolean;
+  currentPage: number;
+  totalPages: number;
+  isAnimating: boolean;
+  goToPreviousPage: () => void;
+  goToNextPage: () => void;
 }

@@ -330,7 +330,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
               </button>
               <h4 className="font-semibold mb-2">Errors occurred while finalizing invoices:</h4>
               <ul className="list-disc pl-5">
-                {Object.entries(errors).map(([client, errorMessage]): JSX.Element => (
+                {Object.entries(errors).map(([client, errorMessage]): React.JSX.Element => (
                   <li key={client}>
                     <span className="font-medium">{client}:</span> {errorMessage}
                   </li>

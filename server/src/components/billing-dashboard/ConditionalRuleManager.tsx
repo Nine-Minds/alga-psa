@@ -44,7 +44,7 @@ const ConditionalRuleManager: React.FC<ConditionalRuleManagerProps> = ({ templat
     <div>
       <h3>Conditional Display Rules</h3>
       <ul>
-        {rules.map((rule):JSX.Element => (
+        {rules.map((rule): React.JSX.Element => (
           <li key={rule.rule_id}>
             {rule.condition} - {rule.action} - {rule.target}
           </li>

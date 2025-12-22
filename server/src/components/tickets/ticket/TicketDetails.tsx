@@ -152,6 +152,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+    const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
+    const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
@@ -245,6 +247,25 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         loadDisplaySettings();
     }, []);
+
+    // Calculate relative time strings only on client side to avoid hydration mismatch
+    useEffect(() => {
+        const tz = getUserTimeZone();
+        
+        if (ticket.entered_at) {
+            const localDate = utcToLocal(ticket.entered_at, tz);
+            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
+            const distance = formatDistanceToNow(new Date(ticket.entered_at));
+            setCreatedRelativeTime(`${formattedDate} (${distance} ago)`);
+        }
+        
+        if (ticket.updated_at) {
+            const localDate = utcToLocal(ticket.updated_at, tz);
+            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
+            const distance = formatDistanceToNow(new Date(ticket.updated_at));
+            setUpdatedRelativeTime(`${formattedDate} (${distance} ago)`);
+        }
+    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -1206,23 +1227,19 @@ const handleClose = () => {
                 <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
                     {ticket.entered_at && (
                         <p>
-                            Created {(() => {
+                            Created {createdRelativeTime || (() => {
                                 const tz = getUserTimeZone();
                                 const localDate = utcToLocal(ticket.entered_at, tz);
-                                const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-                                const distance = formatDistanceToNow(new Date(ticket.entered_at));
-                                return `${formattedDate} (${distance} ago)`;
+                                return formatDateTime(localDate, tz, dateTimeFormat);
                             })()}
                         </p>
                     )}
                     {ticket.updated_at && (
                         <p>
-                            Updated {(() => {
+                            Updated {updatedRelativeTime || (() => {
                                 const tz = getUserTimeZone();
                                 const localDate = utcToLocal(ticket.updated_at, tz);
-                                const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-                                const distance = formatDistanceToNow(new Date(ticket.updated_at));
-                                return `${formattedDate} (${distance} ago)`;
+                                return formatDateTime(localDate, tz, dateTimeFormat);
                             })()}
                         </p>
                     )}
@@ -1330,6 +1347,10 @@ const handleClose = () => {
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}
                                 ticketId={ticket.ticket_id || ''}
+                                initialDocuments={documents}
+                                onDocumentCreated={async () => {
+                                    router.refresh();
+                                }}
                             />
                         </Suspense>
                     </div>

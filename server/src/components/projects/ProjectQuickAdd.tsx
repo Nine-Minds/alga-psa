@@ -20,6 +20,8 @@ import { IContact } from 'server/src/interfaces';
 import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
+import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
+import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -31,7 +33,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [contacts, setContacts] = useState<IContact[]>([]); 
+  const [contacts, setContacts] = useState<IContact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [users, setUsers] = useState<IUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -47,6 +49,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [budgetedHours, setBudgetedHours] = useState<string>('');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,9 +73,9 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const contactsData = selectedClientId 
+        const contactsData = selectedClientId
           ? await getContactsByClient(selectedClientId, 'all')
-          : await getAllContacts('all'); 
+          : await getAllContacts('all');
         setContacts(contactsData);
       } catch (error) {
         console.error('Error fetching contacts:', error);
@@ -85,7 +88,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
-    
+
     const errors: string[] = [];
     if (projectName.trim() === '') {
       errors.push('Project name is required');
@@ -104,7 +107,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       setValidationErrors(errors);
       return;
     }
-    
+
     setValidationErrors([]);
 
     setIsSubmitting(true);
@@ -114,7 +117,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       if (!selectedClientId || !selectedStatusId) {
         return;
       }
-      
+
       const projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code' | 'project_number'> = {
         project_name: projectName,
         description: description || null,
@@ -135,11 +138,24 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
 
       const newProject = await createProject(projectData, statusIds);
 
+      // Create tags for the new project
+      let createdTags: typeof newProject.tags = [];
+      if (pendingTags.length > 0) {
+        try {
+          createdTags = await createTagsForEntity(newProject.project_id, 'project', pendingTags);
+          if (createdTags.length < pendingTags.length) {
+            toast.error(`${pendingTags.length - createdTags.length} tag(s) could not be created`);
+          }
+        } catch (tagError) {
+          console.error("Error creating project tags:", tagError);
+        }
+      }
 
-      onProjectAdded(newProject);
-      
+      // Pass project with tags to callback
+      onProjectAdded({ ...newProject, tags: createdTags });
+
       onClose();
-      
+
       // Show success toast *after* potential state updates in parent
       toast.success('Project created successfully');
     } catch (error) {
@@ -152,8 +168,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   };
 
   return (
-    <Dialog 
-      isOpen={true} 
+    <Dialog
+      isOpen={true}
       onClose={() => {
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
@@ -161,6 +177,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       }}
       title="Add New Project"
       className="max-w-[600px]"
+      disableFocusTrap
     >
       <DialogContent>
           {hasAttemptedSubmit && validationErrors.length > 0 && (
@@ -226,7 +243,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   contacts={contacts}
                   value={selectedContactId || ''}
                   onValueChange={setSelectedContactId}
-                  clientId={selectedClientId || undefined} 
+                  clientId={selectedClientId || undefined}
                   placeholder="Select Contact"
                   buttonWidth="full"
                 />
@@ -297,6 +314,13 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   setTaskStatuses(prev => [...prev, newStatus]);
                 }}
                 error={hasAttemptedSubmit && selectedTaskStatuses.length === 0 ? 'At least one task status must be selected' : undefined}
+              />
+              <QuickAddTagPicker
+                id="quick-add-project-tags"
+                entityType="project"
+                pendingTags={pendingTags}
+                onPendingTagsChange={setPendingTags}
+                disabled={isSubmitting}
               />
               <div className="flex justify-between mt-6">
                 <Button id='cancel-button' variant="ghost" onClick={() => {

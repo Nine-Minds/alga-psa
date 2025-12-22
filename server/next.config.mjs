@@ -15,15 +15,6 @@ try {
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-// DEBUG LOGGING - Remove after troubleshooting
-console.log('=== BUILD DEBUG ===');
-console.log('process.env.EDITION:', process.env.EDITION);
-console.log('process.env.NEXT_PUBLIC_EDITION:', process.env.NEXT_PUBLIC_EDITION);
-console.log('isEE result:', isEE);
-console.log('Current working directory:', process.cwd());
-console.log('__dirname:', __dirname);
-console.log('=== END DEBUG ===');
-
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
@@ -156,6 +147,10 @@ const nextConfig = {
       // Base app alias
       '@': './src',
       'server/src': './src', // Add explicit alias for server/src imports
+      '@/empty': isEE ? '../ee/server/src' : './src/empty',
+      '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
+      './src/empty': isEE ? '../ee/server/src' : './src/empty',
+      './src/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       '@ee': isEE ? '../ee/server/src' : './src/empty',
       '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
       'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
@@ -167,6 +162,11 @@ const nextConfig = {
       'mysql2': emptyShim,
       'oracledb': emptyShim,
       'tedious': emptyShim,
+      // Optional ffmpeg dependencies
+      'ffmpeg-static': emptyShim,
+      'ffprobe-static': emptyShim,
+      'ffprobe-static/package.json': './src/empty/shims/ffprobe-package.json',
+      'ffmpeg-static/package.json': './src/empty/shims/ffprobe-package.json',
       // Knex dialect modules we don't use; alias directly to avoid cascading requires
       'knex/lib/dialects/sqlite3': emptyShim,
       'knex/lib/dialects/sqlite3/index.js': emptyShim,
@@ -204,7 +204,7 @@ const nextConfig = {
         : '@product/client-portal-domain/oss/entry',
       '@product/workflows/entry': isEE
         ? '@product/workflows/ee/entry'
-        : '@product/workflows/oss/entry',
+        : './src/empty/components/flow/DnDFlow.tsx',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',
@@ -247,6 +247,7 @@ const nextConfig = {
     '@product/email-settings',
     '@product/client-portal-domain',
     '@product/billing',
+    '@product/workflows',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
@@ -334,7 +335,7 @@ const nextConfig = {
           : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
         '@product/workflows/entry': isEE
           ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
-          : path.join(__dirname, 'src/components/flow/DnDFlow.tsx'),
+          : path.join(__dirname, '../packages/product-workflows/oss/entry.tsx'),
         '@product/billing/entry': isEE
           ? path.join(__dirname, '../packages/product-billing/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
@@ -583,7 +584,8 @@ const nextConfig = {
         config.plugins = config.plugins || [];
         config.plugins.push(
           new webpack.NormalModuleReplacementPlugin(
-            /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+            // Removed (.*) prefix - was causing catastrophic backtracking on large strings
+            /(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
             path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
           )
         );
@@ -670,7 +672,7 @@ const nextConfig = {
       bodySizeLimit: serverActionsBodyLimit,
     }
   },
-  // Skip static optimization for error pages
+  // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
     return 'build-' + Date.now();
   }

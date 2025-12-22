@@ -30,6 +30,7 @@ import { EnvSecretProvider } from '@alga-psa/shared/core/EnvSecretProvider';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
+import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
 
 let isFunctionExecuted = false;
 
@@ -100,6 +101,19 @@ export async function initializeApp() {
       throw error; // Critical failure - cannot continue without event bus
     }
 
+    // Initialize notification accumulator for batching ticket update emails
+    // This is non-critical - if it fails, the system falls back to immediate sending
+    try {
+      await initializeNotificationAccumulator({
+        accumulationWindowMs: parseInt(process.env.NOTIFICATION_ACCUMULATION_WINDOW_MS || '10000', 10),
+        flushIntervalMs: parseInt(process.env.NOTIFICATION_FLUSH_INTERVAL_MS || '5000', 10)
+      });
+      logger.info('Notification accumulator initialized');
+    } catch (error) {
+      logger.error('Failed to initialize notification accumulator:', error);
+      // Continue startup - accumulator failure is not critical (falls back to immediate sending)
+    }
+
     // Initialize storage service
     const storageService = new StorageService();
 
@@ -150,12 +164,14 @@ export async function initializeApp() {
     // Register cleanup handlers
     try {
       process.on('SIGTERM', async () => {
+        await shutdownNotificationAccumulator();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
       });
 
       process.on('SIGINT', async () => {
+        await shutdownNotificationAccumulator();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
@@ -374,7 +390,7 @@ async function initializeJobScheduler(storageService: StorageService) {
           return;
         }
 
-        const result = await createNextTimePeriod(tenantKnex, settings);
+        const result = await createNextTimePeriod(settings);
         const details =
           result
             ? `Created new time period ${result.start_date} to ${result.end_date}`

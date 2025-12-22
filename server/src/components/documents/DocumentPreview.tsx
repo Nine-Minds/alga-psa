@@ -10,7 +10,7 @@ interface DocumentPreviewProps {
     className?: string;
 }
 
-const DocumentPreview = ({ document, className }: DocumentPreviewProps): JSX.Element | null => {
+const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.JSX.Element | null => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [preview, setPreview] = useState<{

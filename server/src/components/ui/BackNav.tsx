@@ -22,7 +22,7 @@ export default function BackNav({ children, href }: BackNavProps) {
           // Check if there are returnFilters in the current URL
           // NOTE: This filter persistence works even when tickets are opened in new tabs,
           // as the returnFilters query param is preserved in the URL
-          const returnFilters = searchParams.get('returnFilters');
+          const returnFilters = searchParams?.get('returnFilters') ?? null;
 
           if (returnFilters && href === '/msp/tickets') {
             // Decode the filters and append them to the tickets URL

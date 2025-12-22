@@ -43,7 +43,7 @@ export default function SurveyModuleFrame({ children }: SurveyModuleFrameProps) 
         <nav className="flex flex-wrap items-center gap-2">
           {menuItems.map((item) => {
             const isActive =
-              pathname === item.href || (item.href !== '/msp/surveys/dashboard' && pathname.startsWith(item.href));
+              pathname === item.href || (item.href !== '/msp/surveys/dashboard' && pathname?.startsWith(item.href));
             return (
               <Link
                 key={item.href}

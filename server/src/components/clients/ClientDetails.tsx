@@ -1065,7 +1065,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               entityId={client.client_id}
               entityType="client"
               onDocumentCreated={async () => {
-                return Promise.resolve();
+                router.refresh();
               }}
             />
           ) : (

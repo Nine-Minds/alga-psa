@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Asset, AssetAssociation, AssetListResponse } from '../../interfaces/asset.interfaces';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../../lib/actions/asset-actions/assetActions';
+import { loadAssetDetailDrawerData } from 'server/src/lib/actions/asset-actions/assetDrawerActions';
 import { Button } from '../../components/ui/Button';
 import { Dialog } from '../../components/ui/Dialog';
 import CustomSelect, { SelectOption } from '../../components/ui/CustomSelect';
@@ -61,7 +62,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const [drawerData, setDrawerData] = useState<AssetDrawerServerData>({ asset: null });
     const [drawerError, setDrawerError] = useState<string | null>(null);
     const [drawerLoading, setDrawerLoading] = useState(false);
-    const drawerFetchRef = useRef<AbortController | null>(null);
+    const lastRequestIdRef = useRef<number>(0);
 
     useEffect(() => {
         loadAssociatedAssets();
@@ -101,41 +102,30 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
     // Drawer data loading
     const loadDrawerData = useCallback(async (assetId: string, tab: AssetDrawerTab) => {
-        drawerFetchRef.current?.abort();
-        const controller = new AbortController();
-        drawerFetchRef.current = controller;
+        const requestId = lastRequestIdRef.current + 1;
+        lastRequestIdRef.current = requestId;
 
         setDrawerLoading(true);
         setDrawerError(null);
 
         try {
-            const response = await fetch(`/api/assets/${assetId}/detail?panel=${tabToPanelParam(tab)}`, {
-                signal: controller.signal,
-            });
+            const result = await loadAssetDetailDrawerData({ assetId, panel: tabToPanelParam(tab) });
 
-            if (!response.ok) {
-                throw new Error('Failed to load');
-            }
-
-            type DrawerResponse = {
-                data?: AssetDrawerServerData;
-                error?: string | null;
-            };
-            const payload = (await response.json()) as DrawerResponse;
-            if (controller.signal.aborted) {
+            if (lastRequestIdRef.current !== requestId) {
                 return;
             }
-            setDrawerData(payload.data ?? { asset: null });
-            setDrawerError(payload.error ?? null);
+
+            setDrawerData(result.data ?? { asset: null });
+            setDrawerError(result.error ?? null);
         } catch (error) {
-            if (controller.signal.aborted) {
+            if (lastRequestIdRef.current !== requestId) {
                 return;
             }
             console.error('Failed to load asset drawer data', error);
             setDrawerData({ asset: null });
             setDrawerError('Unable to load asset details right now. Please try again.');
         } finally {
-            if (!controller.signal.aborted) {
+            if (lastRequestIdRef.current === requestId) {
                 setDrawerLoading(false);
             }
         }
@@ -144,7 +134,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     // Cleanup drawer fetch on unmount
     useEffect(() => {
         return () => {
-            drawerFetchRef.current?.abort();
+            // No cleanup needed
         };
     }, []);
 
@@ -168,7 +158,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
         setActiveDrawerTab(ASSET_DRAWER_TABS.OVERVIEW);
         setDrawerData({ asset: null });
         setDrawerError(null);
-        drawerFetchRef.current?.abort();
     }, []);
 
     const handleDrawerTabChange = useCallback((tab: AssetDrawerTab) => {
@@ -392,7 +381,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                     <div className="text-gray-500">No assets associated</div>
                 ) : (
                     <div className="space-y-2">
-                        {visibleAssets.map((association): JSX.Element => (
+                        {visibleAssets.map((association): React.JSX.Element => (
                             <div
                                 key={`${association.asset_id}-${association.entity_id}`}
                                 className="flex justify-between items-center p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

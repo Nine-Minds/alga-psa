@@ -13,6 +13,7 @@
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import {
   Monitor,
   MonitorOff,
@@ -173,8 +174,10 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
           <CardTitle className="text-base">Fleet Compliance</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Loading compliance data...</span>
+          <LoadingIndicator
+            spinnerProps={{ size: 'sm' }}
+            text="Loading compliance data..."
+          />
         </CardContent>
       </Card>
     );

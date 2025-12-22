@@ -5,9 +5,10 @@ export const KNOWN_PROVIDER_CAPABILITIES = [
   'cap:storage.kv',
   'cap:log.emit',
   'cap:ui.proxy',
+  'cap:user.read',
 ] as const;
 
-export const DEFAULT_PROVIDER_CAPABILITIES = ['cap:context.read', 'cap:log.emit'] as const;
+export const DEFAULT_PROVIDER_CAPABILITIES = ['cap:context.read', 'cap:log.emit', 'cap:user.read'] as const;
 
 export type ProviderCapability = (typeof KNOWN_PROVIDER_CAPABILITIES)[number];
 

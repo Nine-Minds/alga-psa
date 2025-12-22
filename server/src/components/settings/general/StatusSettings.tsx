@@ -28,7 +28,7 @@ interface StatusSettingsProps {
   initialStatusType?: string | null;
 }
 
-const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element => {
+const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.Element => {
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   // Note: This component now only manages ticket statuses
   // 'project' type moved to Settings > Projects > Project Statuses

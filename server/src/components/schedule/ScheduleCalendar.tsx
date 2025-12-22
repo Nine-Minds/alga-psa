@@ -120,7 +120,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const Legend = () => (
     <div className="flex justify-between items-center mb-4 p-2 rounded-lg bg-opacity-50">
       <div className="flex justify-center space-x-4 flex-1">
-        {Object.entries(workItemColors).map(([type, color]): JSX.Element => (
+        {Object.entries(workItemColors).map(([type, color]): React.JSX.Element => (
           <div key={type} className="flex items-center">
             <div
               className="w-4 h-4 mr-2 rounded"

@@ -425,14 +425,18 @@ const User = {
   updateLastLogin: async (userId: string, tenant: string, loginMethod: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await db<IUser>('users')
+      const updated = await db<IUser>('users')
         .where('user_id', userId)
         .andWhere('tenant', tenant)
         .update({
           last_login_at: db.fn.now(),
           last_login_method: loginMethod
         });
-      logger.debug(`Updated last login for user ${userId}`);
+      if (Number(updated) > 0) {
+        logger.debug(`Updated last login for user ${userId}`);
+      } else {
+        logger.warn('Last login update skipped: user not found', { userId, tenant, loginMethod });
+      }
     } catch (error) {
       logger.error(`Error updating last login for user ${userId}:`, error);
       // Don't throw - login should succeed even if tracking fails

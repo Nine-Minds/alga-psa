@@ -27,7 +27,7 @@ type InvoiceType = 'automatic' | 'manual' | 'prepayment';
 
 interface SelectOption {
   value: string;
-  label: JSX.Element;
+  label: React.JSX.Element;
 }
 
 interface Service {

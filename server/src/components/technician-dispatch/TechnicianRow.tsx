@@ -56,7 +56,7 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
       data-tech-id={tech.user_id}
     >
       <div className="grid grid-cols-96 h-full" style={{ width: '2880px' }}>
-        {timeSlots.map((timeSlot, index): JSX.Element => {
+        {timeSlots.map((timeSlot, index): React.JSX.Element => {
           const isHourBoundary = index % 4 === 0;
           const isHighlighted = Array.from(highlightedSlots || []).some(
             (slot) => slot.timeSlot === timeSlot && slot.techId === tech.user_id
@@ -85,7 +85,7 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
             event.assigned_user_ids.includes(tech.user_id) &&
             new Date(event.scheduled_start).toDateString() === selectedDate.toDateString()
         )
-        .map((event): JSX.Element => {
+        .map((event): React.JSX.Element => {
           const isDraggingThis = isDragging && dragState?.sourceId === event.entry_id;
           const effectiveEvent = isDraggingThis
             ? {

@@ -5,6 +5,21 @@ import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
 
+// Derived tax import state used for UI + workflow gating (separate from invoice status).
+export type TaxImportState = 'not_required' | 'pending' | 'complete';
+
+export function getTaxImportState(taxSource?: TaxSource | null): TaxImportState {
+  switch (taxSource) {
+    case 'pending_external':
+      return 'pending';
+    case 'external':
+      return 'complete';
+    case 'internal':
+    default:
+      return 'not_required';
+  }
+}
+
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
   client_id: string;

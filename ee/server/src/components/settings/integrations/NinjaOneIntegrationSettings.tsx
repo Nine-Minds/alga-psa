@@ -21,16 +21,24 @@ import {
   Building2,
   AlertTriangle,
   Monitor,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Save,
+  Info,
 } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 import NinjaOneComplianceDashboard from './NinjaOneComplianceDashboard';
 import OrganizationMappingManager from './ninjaone/OrganizationMappingManager';
 import {
   getNinjaOneConnectionStatus,
   disconnectNinjaOneIntegration,
-  testNinjaOneConnection,
   syncNinjaOneOrganizations,
   triggerNinjaOneFullSync,
   getNinjaOneConnectUrl,
+  saveNinjaOneCredentials,
+  getNinjaOneCredentialsStatus,
 } from '../../../lib/actions/integrations/ninjaoneActions';
 import { RmmConnectionStatus } from '../../../interfaces/rmm.interfaces';
 import { NinjaOneRegion, NINJAONE_REGIONS } from '../../../interfaces/ninjaone.interfaces';
@@ -45,10 +53,21 @@ const NinjaOneIntegrationSettings: React.FC = () => {
   const [isDisconnecting, startDisconnectTransition] = useTransition();
   const [isSyncing, startSyncTransition] = useTransition();
   const [isSyncingDevices, startDeviceSyncTransition] = useTransition();
-  const [isTesting, startTestTransition] = useTransition();
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [orgMappingsRefreshKey, setOrgMappingsRefreshKey] = useState(0);
   const [fleetComplianceRefreshKey, setFleetComplianceRefreshKey] = useState(0);
+
+  // Credential management state
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [showSecret, setShowSecret] = useState(false);
+  const [credentialsStatus, setCredentialsStatus] = useState<{
+    hasCredentials: boolean;
+    clientId?: string;
+    clientSecretMasked?: string;
+  }>({ hasCredentials: false });
+  const [isSavingCredentials, startSaveCredentials] = useTransition();
+  const [isLoadingCredentials, setIsLoadingCredentials] = useState(true);
 
   const refreshStatus = useCallback(() => {
     startRefresh(async () => {
@@ -66,6 +85,44 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       }
     });
   }, []);
+
+  // Load credentials status
+  const loadCredentialsStatus = useCallback(async () => {
+    setIsLoadingCredentials(true);
+    try {
+      const result = await getNinjaOneCredentialsStatus();
+      setCredentialsStatus(result);
+      // If credentials exist, populate the Client ID field for display
+      if (result.hasCredentials && result.clientId) {
+        setClientId(result.clientId);
+      }
+    } catch (err) {
+      console.error('Failed to load NinjaOne credentials status:', err);
+    } finally {
+      setIsLoadingCredentials(false);
+    }
+  }, []);
+
+  // Handle saving credentials
+  const handleSaveCredentials = () => {
+    startSaveCredentials(async () => {
+      setError(null);
+      setSuccessMessage(null);
+      try {
+        const result = await saveNinjaOneCredentials(clientId.trim(), clientSecret.trim());
+        if (result.success) {
+          setSuccessMessage('NinjaOne API credentials saved successfully.');
+          setClientSecret(''); // Clear the secret from the form after saving
+          await loadCredentialsStatus(); // Refresh to show masked status
+        } else {
+          setError(result.error ?? 'Failed to save credentials.');
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save credentials.';
+        setError(message);
+      }
+    });
+  };
 
   // Check for OAuth callback status in URL params
   useEffect(() => {
@@ -101,6 +158,11 @@ const NinjaOneIntegrationSettings: React.FC = () => {
     refreshStatus();
   }, [refreshStatus]);
 
+  // Load credentials status on mount
+  useEffect(() => {
+    loadCredentialsStatus();
+  }, [loadCredentialsStatus]);
+
   const handleConnect = async () => {
     setSuccessMessage(null);
     setError(null);
@@ -132,24 +194,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         setError(message);
       } finally {
         refreshStatus();
-      }
-    });
-  };
-
-  const handleTestConnection = () => {
-    startTestTransition(async () => {
-      setError(null);
-      setSuccessMessage(null);
-      try {
-        const result = await testNinjaOneConnection();
-        if (result.success) {
-          setSuccessMessage('NinjaOne connection test successful.');
-        } else {
-          setError(result.error ?? 'Connection test failed.');
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Connection test failed.';
-        setError(message);
+        loadCredentialsStatus(); // Reload credential status since disconnect clears them
       }
     });
   };
@@ -283,6 +328,16 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
   return (
     <>
+      {(isLoading || isLoadingCredentials) && (
+        <SettingsTabSkeleton
+          title="NinjaOne RMM Integration"
+          description="Loading NinjaOne integration..."
+          showForm
+          showDropdowns
+          showTable={false}
+        />
+      )}
+      {!(isLoading || isLoadingCredentials) && (
       <Card id="ninjaone-integration-settings-card">
         <CardHeader>
           <CardTitle>NinjaOne RMM Integration</CardTitle>
@@ -308,26 +363,143 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           </div>
 
           {!isConnected && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Select your NinjaOne region, then click &lsquo;Connect to NinjaOne&rsquo; to authorize access.
-              </p>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium" htmlFor="ninjaone-region-select">
-                  Region:
-                </label>
-                <select
-                  id="ninjaone-region-select"
-                  className="rounded-md border px-3 py-1.5 text-sm"
-                  value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value as NinjaOneRegion)}
-                >
-                  {Object.entries(NINJAONE_REGIONS).map(([region, url]) => (
-                    <option key={region} value={region}>
-                      {region} ({url.replace('https://', '')})
-                    </option>
-                  ))}
-                </select>
+            <div className="space-y-4">
+              {/* Setup Instructions */}
+              <div className="rounded-lg border-l-4 border-l-primary-500 border-y-0 border-r-0 bg-primary-50 p-4">
+                <div className="flex items-start gap-2">
+                  <Info className="mt-0.5 h-5 w-5 text-primary-600 flex-shrink-0" />
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-primary-800">Setup Instructions</p>
+                    <ol className="list-decimal list-inside space-y-1 text-sm text-primary-800">
+                      <li>Log into your NinjaOne dashboard</li>
+                      <li>Navigate to Administration → Apps → API</li>
+                      <li>Click &quot;Add&quot; to create a new API application</li>
+                      <li>Set Application Platform to &quot;Web (Authorization Code Grant)&quot;</li>
+                      <li>
+                        Add the redirect URI:{' '}
+                        <code className="bg-primary-100 px-1 py-0.5 rounded text-xs break-all">
+                          {typeof window !== 'undefined'
+                            ? `${window.location.origin}/api/integrations/ninjaone/callback`
+                            : '/api/integrations/ninjaone/callback'}
+                        </code>
+                      </li>
+                      <li>Under &quot;Allowed grant types&quot;, ensure &quot;Refresh token&quot; is checked</li>
+                      <li>Copy the Client ID and Client Secret below</li>
+                    </ol>
+                    <Button
+                      id="ninjaone-open-api-settings"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-primary-700"
+                      onClick={() => window.open('https://app.ninjarmm.com/#/administration/apps/api/client', '_blank')}
+                    >
+                      <ExternalLink className="mr-1 h-3 w-3" />
+                      Open NinjaOne API Settings
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Credentials Input */}
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">API Credentials</p>
+                {credentialsStatus.hasCredentials && (
+                  <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Credentials saved</span>
+                    </div>
+                    <p className="mt-1 text-xs text-green-700">
+                      Client ID: {credentialsStatus.clientId}
+                      {credentialsStatus.clientSecretMasked && (
+                        <> • Secret: ****{credentialsStatus.clientSecretMasked}</>
+                      )}
+                    </p>
+                  </div>
+                )}
+                <div className="grid gap-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground" htmlFor="ninjaone-client-id">
+                      Client ID
+                    </label>
+                    <Input
+                      id="ninjaone-client-id"
+                      type="text"
+                      placeholder="Enter your NinjaOne Client ID"
+                      value={clientId}
+                      onChange={(e) => setClientId(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground" htmlFor="ninjaone-client-secret">
+                      Client Secret
+                    </label>
+                    <div className="relative mt-1">
+                      <Input
+                        id="ninjaone-client-secret"
+                        type={showSecret ? 'text' : 'password'}
+                        placeholder={credentialsStatus.hasCredentials ? 'Enter new secret to update' : 'Enter your NinjaOne Client Secret'}
+                        value={clientSecret}
+                        onChange={(e) => setClientSecret(e.target.value)}
+                        className="pr-10"
+                      />
+                      <Button
+                        id="ninjaone-toggle-secret-visibility"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                        onClick={() => setShowSecret(!showSecret)}
+                      >
+                        {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button
+                    id="ninjaone-save-credentials"
+                    variant="secondary"
+                    onClick={handleSaveCredentials}
+                    disabled={isSavingCredentials || !clientId.trim() || !clientSecret.trim()}
+                    className="w-fit"
+                  >
+                    {isSavingCredentials ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Credentials
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Region Selection */}
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Select your NinjaOne region, then click &lsquo;Connect to NinjaOne&rsquo; to authorize access.
+                </p>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium" htmlFor="ninjaone-region-select">
+                    Region:
+                  </label>
+                  <select
+                    id="ninjaone-region-select"
+                    className="rounded-md border px-3 py-1.5 text-sm"
+                    value={selectedRegion}
+                    onChange={(e) => setSelectedRegion(e.target.value as NinjaOneRegion)}
+                  >
+                    {Object.entries(NINJAONE_REGIONS).map(([region, url]) => (
+                      <option key={region} value={region}>
+                        {region} ({url.replace('https://', '')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           )}
@@ -343,14 +515,6 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   disabled={isRefreshing}
                 >
                   {isRefreshing ? 'Refreshing...' : 'Refresh Status'}
-                </Button>
-                <Button
-                  id="ninjaone-test-connection"
-                  variant="outline"
-                  onClick={handleTestConnection}
-                  disabled={isTesting}
-                >
-                  {isTesting ? 'Testing...' : 'Test Connection'}
                 </Button>
                 <Button
                   id="ninjaone-sync-orgs"
@@ -407,7 +571,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
               <Button
                 id="ninjaone-connect-button"
                 onClick={handleConnect}
-                disabled={isLoading || isRefreshing}
+                disabled={!credentialsStatus.hasCredentials || isLoadingCredentials}
               >
                 <Link className="mr-2 h-4 w-4" />
                 Connect to NinjaOne
@@ -416,6 +580,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           </div>
         </CardFooter>
       </Card>
+      )}
 
       {/* Disconnect Confirmation Modal */}
       {showDisconnectConfirm && (
@@ -423,8 +588,8 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl border border-border">
             <h3 className="text-lg font-semibold text-foreground">Disconnect NinjaOne</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications.
-              Organization mappings will be preserved.
+              Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications,
+              and remove your stored API credentials. Organization mappings will be preserved.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <Button id="ninjaone-disconnect-cancel-btn" variant="outline" onClick={() => setShowDisconnectConfirm(false)}>

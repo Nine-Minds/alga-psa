@@ -3,7 +3,29 @@ export interface CSVParseResult<T> {
   errors: string[];
 }
 
-export function parseCSV(text: string): string[][] {
+export interface CSVParseOptions {
+  header?: boolean;
+}
+
+export function parseCSV(text: string, options?: CSVParseOptions): string[][] | Record<string, string>[] {
+  const rawRows = parseCSVRaw(text);
+
+  if (options?.header && rawRows.length > 0) {
+    const headers = rawRows[0];
+    const dataRows = rawRows.slice(1);
+    return dataRows.map(row => {
+      const obj: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        obj[header] = row[index] ?? '';
+      });
+      return obj;
+    });
+  }
+
+  return rawRows;
+}
+
+function parseCSVRaw(text: string): string[][] {
   const rows: string[][] = [];
   let currentRow: string[] = [];
   let currentValue = '';

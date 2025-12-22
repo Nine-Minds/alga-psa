@@ -240,10 +240,11 @@ EOF
         NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose || {
             local exit_code=$?
             if [ $exit_code -eq 124 ]; then
-                log "WARNING: Seeds timed out after 300 seconds, but continuing since database may already be seeded"
+                log "ERROR: Seeds timed out after 300 seconds"
             else
-                log "WARNING: Seeds failed with exit code $exit_code, but continuing since database may already be seeded"
+                log "ERROR: Seeds failed with exit code $exit_code"
             fi
+            exit $exit_code
         }
         log "Seeds completed!"
     else

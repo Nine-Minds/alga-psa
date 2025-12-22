@@ -161,7 +161,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
           {
             id: 'mapping-1',
             integration_type: 'xero',
-            alga_entity_type: 'company',
+            alga_entity_type: 'client',
             alga_entity_id: CLIENT_ID,
             external_entity_id: 'external-contact-1',
             metadata: { source: 'mapping_table' }
@@ -271,7 +271,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
           {
             id: 'mapping-1',
             integration_type: 'xero',
-            alga_entity_type: 'company',
+            alga_entity_type: 'client',
             alga_entity_id: CLIENT_ID,
             external_entity_id: 'external-contact-20',
             metadata: { source: 'mapping_table' }
@@ -347,7 +347,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
           {
             id: 'mapping-1',
             integration_type: 'xero',
-            alga_entity_type: 'company',
+            alga_entity_type: 'client',
             alga_entity_id: CLIENT_ID,
             external_entity_id: 'external-contact-123',
             metadata: { source: 'mapping_table' }

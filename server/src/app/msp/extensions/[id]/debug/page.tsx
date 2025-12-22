@@ -96,9 +96,9 @@ export default function ExtensionDebugPage({
 
   // tenantId is intentionally NOT user-editable in this multi-tenant view.
   // The backend derives the effective tenant from the authenticated session.
-  const [installId, setInstallId] = useState<string>(searchParams.get('installId') || '');
-  const [requestId, setRequestId] = useState<string>(searchParams.get('requestId') || '');
-  const [tenantId, setTenantId] = useState<string>(searchParams.get('tenantId') || '');
+  const [installId, setInstallId] = useState<string>(searchParams?.get('installId') ?? '');
+  const [requestId, setRequestId] = useState<string>(searchParams?.get('requestId') ?? '');
+  const [tenantId, setTenantId] = useState<string>(searchParams?.get('tenantId') ?? '');
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);

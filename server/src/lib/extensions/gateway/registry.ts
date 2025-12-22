@@ -1,6 +1,7 @@
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 export interface TenantInstallInfo {
+  install_id: string;
   version_id: string;
 }
 
@@ -9,19 +10,19 @@ export async function getTenantInstall(tenantId: string, extensionId: string): P
   try {
     const knex = await getAdminConnection();
     const row = await knex
-      .select({ version_id: 'ti.version_id' })
+      .select({ install_id: 'ti.id', version_id: 'ti.version_id' })
       .from({ ti: 'tenant_extension_install' })
       .where({ 'ti.tenant_id': tenantId, 'ti.registry_id': extensionId })
       .andWhere({ 'ti.is_enabled': true })
       .first();
     if (!row) return null;
-    return { version_id: row.version_id };
+    return { install_id: row.install_id, version_id: row.version_id };
   } catch (_e) {
     return null;
   }
 }
 
-export async function resolveVersion(install: TenantInstallInfo): Promise<{ content_hash: string; version_id: string }> {
+export async function resolveVersion(install: TenantInstallInfo): Promise<{ content_hash: string; version_id: string; install_id: string }> {
   // Given a version_id, resolve the active content_hash from extension_bundle.
   try {
     const knex = await getAdminConnection();
@@ -32,10 +33,10 @@ export async function resolveVersion(install: TenantInstallInfo): Promise<{ cont
       .orderBy('eb.created_at', 'desc')
       .first();
     if (!row) {
-      return { version_id: install.version_id, content_hash: '' };
+      return { install_id: install.install_id, version_id: install.version_id, content_hash: '' };
     }
-    return { version_id: install.version_id, content_hash: row.content_hash };
+    return { install_id: install.install_id, version_id: install.version_id, content_hash: row.content_hash };
   } catch (_e) {
-    return { version_id: install.version_id, content_hash: '' };
+    return { install_id: install.install_id, version_id: install.version_id, content_hash: '' };
   }
 }

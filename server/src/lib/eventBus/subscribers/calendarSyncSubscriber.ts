@@ -19,6 +19,7 @@ import { TenantEmailService } from 'server/src/lib/services/TenantEmailService';
 import { StaticTemplateProcessor } from 'server/src/lib/email/tenant/templateProcessors';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
 import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { isValidEmail } from '../../utils/validation';
 
 let syncService: CalendarSyncService;
 let providerService: CalendarProviderService;
@@ -453,7 +454,7 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
         new Set(
           users
             .map((user) => user.email)
-            .filter((email): email is string => !!email)
+            .filter((email): email is string => isValidEmail(email))
         )
       );
 

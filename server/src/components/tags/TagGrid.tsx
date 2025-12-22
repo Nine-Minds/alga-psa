@@ -18,7 +18,7 @@ export const TagGrid: React.FC<TagGridProps> = ({
 }) => {
   return (
     <div className={`grid grid-cols-3 gap-2 p-2 max-h-60 overflow-y-auto ${className}`}>
-      {tags.map((tag, index):JSX.Element => {
+      {tags.map((tag, index): React.JSX.Element => {
         const tagText = typeof tag === 'string' ? tag : tag.tag_text;
         const isSelected = selectedTags.includes(tagText);
         

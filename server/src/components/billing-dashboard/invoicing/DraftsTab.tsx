@@ -54,8 +54,8 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const selectedInvoiceId = searchParams?.get('invoiceId');
-  const selectedTemplateId = searchParams?.get('templateId');
+  const selectedInvoiceId = searchParams?.get('invoiceId') ?? null;
+  const selectedTemplateId = searchParams?.get('templateId') ?? null;
 
   // Handle page size change - reset to page 1
   const handlePageSizeChange = (newPageSize: number) => {

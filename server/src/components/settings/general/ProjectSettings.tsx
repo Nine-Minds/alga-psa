@@ -8,7 +8,7 @@ import { TenantProjectTaskStatusSettings } from 'server/src/components/settings/
 import { ProjectStatusSettings } from 'server/src/components/settings/projects/ProjectStatusSettings';
 import TaskPrioritySettings from 'server/src/components/settings/projects/TaskPrioritySettings';
 
-const ProjectSettings = (): JSX.Element => {
+const ProjectSettings = (): React.JSX.Element => {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 

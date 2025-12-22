@@ -37,12 +37,26 @@ export class TimePeriodSuggester {
       : currentDate;
 
     const applicableSettings = settings.filter(setting => {
-      if (!setting.start_day) return true;
+      // If no start_day is configured, the setting is always applicable
+      if (setting.start_day === null || setting.start_day === undefined) return true;
 
       const startDay = setting.start_day;
 
-      // If setting has an end_day, check if the next period's start date falls within this setting's range
-      if (setting.end_day) {
+      // For weekly settings, use dayOfWeek (1=Monday, 7=Sunday in ISO)
+      // For monthly/yearly settings, use day of month
+      if (setting.frequency_unit === 'week') {
+        const dayOfWeek = nextPeriodStartDate.dayOfWeek;
+        // end_day = 0 means "end of week" (Sunday = 7)
+        if (typeof setting.end_day === 'number') {
+          const endDay = setting.end_day === 0 ? 7 : setting.end_day;
+          return dayOfWeek >= startDay && dayOfWeek <= endDay;
+        }
+        return dayOfWeek >= startDay;
+      }
+
+      // For monthly/yearly settings, check day of month
+      // end_day = 0 means "end of month"
+      if (typeof setting.end_day === 'number') {
         const endDay = setting.end_day === 0 ? nextPeriodStartDate.daysInMonth : setting.end_day;
         return nextPeriodStartDate.day >= startDay && nextPeriodStartDate.day <= endDay;
       }
@@ -139,9 +153,10 @@ export class TimePeriodSuggester {
         break;
       case 'month':
         endDate = startDate.add({ months: settings.frequency }).subtract({ days: 1 });
-        if (settings.end_day) {
+        if (typeof settings.end_day === 'number' && settings.end_day !== 0) {
           endDate = endDate.with({ day: settings.end_day });
         }
+        // end_day = 0 means "end of month", which is already handled by the subtract({ days: 1 }) above
         break;
       case 'year':
         endDate = startDate.add({ years: settings.frequency }).subtract({ days: 1 });

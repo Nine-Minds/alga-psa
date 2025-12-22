@@ -30,6 +30,9 @@ async function getStripeConfig() {
   }
 
   let webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret');
+  if (!webhookSecret && process.env.STRIPE_WEBHOOK_SECRET) {
+    webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  }
 
   let publishableKey = await secretProvider.getAppSecret('stripe_publishable_key');
   if (!publishableKey && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {

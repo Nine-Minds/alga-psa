@@ -137,39 +137,38 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
   }, [refetchTagsStable]);
 
   // Use useRef to create a stable function that doesn't change on re-renders
-  const getPermissionsRef = useRef<(entityType: TaggedEntityType) => Promise<TagPermissions>>();
-  
-  if (!getPermissionsRef.current) {
-    getPermissionsRef.current = async (entityType: TaggedEntityType): Promise<TagPermissions> => {
-      // Return cached permissions if available using ref to avoid stale closures
-      const currentPerms = permissionsRef.current[entityType];
-      if (currentPerms) {
-        return currentPerms;
-      }
-      
-      // Check if there's already a pending request for this entityType
-      if (pendingPermissions.current[entityType]) {
-        return pendingPermissions.current[entityType]!;
-      }
-      
-      // Create a new promise and cache it
-      const permissionPromise = checkTagPermissions(entityType)
-        .then(perms => {
-          setPermissions(current => ({ ...current, [entityType]: perms }));
-          return perms;
-        })
-        .finally(() => {
-          // Clear the pending promise
-          pendingPermissions.current[entityType] = null;
-        });
-      
-      // Store the promise so other concurrent calls can use it
-      pendingPermissions.current[entityType] = permissionPromise;
-      
-      return permissionPromise;
-    };
-  }
-  
+  // Define the function implementation
+  const getPermissionsImpl = async (entityType: TaggedEntityType): Promise<TagPermissions> => {
+    // Return cached permissions if available using ref to avoid stale closures
+    const currentPerms = permissionsRef.current[entityType];
+    if (currentPerms) {
+      return currentPerms;
+    }
+
+    // Check if there's already a pending request for this entityType
+    if (pendingPermissions.current[entityType]) {
+      return pendingPermissions.current[entityType]!;
+    }
+
+    // Create a new promise and cache it
+    const permissionPromise = checkTagPermissions(entityType)
+      .then(perms => {
+        setPermissions(current => ({ ...current, [entityType]: perms }));
+        return perms;
+      })
+      .finally(() => {
+        // Clear the pending promise
+        pendingPermissions.current[entityType] = null;
+      });
+
+    // Store the promise so other concurrent calls can use it
+    pendingPermissions.current[entityType] = permissionPromise;
+
+    return permissionPromise;
+  };
+
+  // Initialize ref with the implementation - ref ensures stable identity across renders
+  const getPermissionsRef = useRef(getPermissionsImpl);
   const getPermissions = getPermissionsRef.current;
 
   // Create stable function references to prevent context value from changing unnecessarily
@@ -191,9 +190,9 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
   }), [tags, tagsLoaded, isLoading, handleUpdateTagColor, handleUpdateTagText, handleDeleteAllTagsByText, addTag, removeTag, refetchTagsStable, permissions, getPermissions]);
 
   return (
-    <TagContext.Provider value={contextValue}>
+    <TagContext value={contextValue}>
       {children}
-    </TagContext.Provider>
+    </TagContext>
   );
 };
 

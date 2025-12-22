@@ -121,6 +121,9 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
+      - type: bind
+        source: ./secrets/tenants
+        target: /run/secrets/tenants
       # ngrok volume for webhook URL syncing (only mounted with docker-compose.ngrok.yaml)
       - ngrok-data:/app/ngrok:ro
     secrets:

@@ -4,7 +4,7 @@
   "type": "module",
   "exports": {
     "./ee/entry": "./ee/entry.ts",
-    "./oss/entry": "./oss/entry.ts"
+    "./oss/entry": "./oss/entry.tsx"
   },
   "dependencies": {},
   "devDependencies": {}

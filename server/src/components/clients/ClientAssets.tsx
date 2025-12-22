@@ -53,7 +53,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     setCurrentPage(1);
   };
 
-  const getAssetTypeIcon = (type: string): JSX.Element => {
+  const getAssetTypeIcon = (type: string): React.JSX.Element => {
     const iconProps = { className: "h-4 w-4 text-gray-600" };
     switch (type.toLowerCase()) {
       case 'workstation':
@@ -371,7 +371,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {Object.entries(summary.maintenance_by_type).map(([type, count]): JSX.Element => (
+              {Object.entries(summary.maintenance_by_type).map(([type, count]): React.JSX.Element => (
                 <div key={type} className="bg-white rounded-lg p-4 border border-gray-100 hover:border-gray-200 transition-colors">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{type}</p>
                   <p className="text-2xl font-bold text-gray-900">{count}</p>

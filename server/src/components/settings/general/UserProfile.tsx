@@ -430,7 +430,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           <CardContent>
             {notificationView === 'email' ? (
               <div className="space-y-6">
-                {categories.map((category: NotificationCategory): JSX.Element => (
+                {categories.map((category: NotificationCategory): React.JSX.Element => (
                   <div key={category.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label>{category.name}</Label>
@@ -440,7 +440,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                       />
                     </div>
                     <div className="ml-6 space-y-2">
-                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
+                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): React.JSX.Element => (
                         <div key={subtype.id} className="flex items-center justify-between">
                           <Label className="text-sm">{subtype.name}</Label>
                           <Switch

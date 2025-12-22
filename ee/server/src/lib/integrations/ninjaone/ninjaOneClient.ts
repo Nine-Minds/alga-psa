@@ -35,6 +35,40 @@ const NINJAONE_CLIENT_ID_SECRET = 'ninjaone_client_id';
 const NINJAONE_CLIENT_SECRET_SECRET = 'ninjaone_client_secret';
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
 
+type NinjaOneClientCredentials = {
+  clientId?: string;
+  clientSecret?: string;
+};
+
+const resolveNinjaOneClientCredentials = async (
+  tenantId?: string
+): Promise<NinjaOneClientCredentials> => {
+  const secretProvider = await getSecretProviderInstance();
+  let clientId: string | undefined;
+  let clientSecret: string | undefined;
+
+  if (tenantId) {
+    clientId = await secretProvider.getTenantSecret(tenantId, NINJAONE_CLIENT_ID_SECRET);
+    clientSecret = await secretProvider.getTenantSecret(tenantId, NINJAONE_CLIENT_SECRET_SECRET);
+  }
+
+  if (!clientId) {
+    clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
+  }
+  if (!clientSecret) {
+    clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
+  }
+
+  if (!clientId) {
+    clientId = process.env.NINJAONE_CLIENT_ID;
+  }
+  if (!clientSecret) {
+    clientSecret = process.env.NINJAONE_CLIENT_SECRET;
+  }
+
+  return { clientId, clientSecret };
+};
+
 // Default configuration
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
@@ -217,17 +251,7 @@ export class NinjaOneClient {
           throw new Error('No refresh token available');
         }
 
-        const secretProvider = await getSecretProviderInstance();
-        let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-        let clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
-        
-        // Fallback to environment variables if not found in secrets
-        if (!clientId) {
-          clientId = process.env.NINJAONE_CLIENT_ID;
-        }
-        if (!clientSecret) {
-          clientSecret = process.env.NINJAONE_CLIENT_SECRET;
-        }
+        const { clientId, clientSecret } = await resolveNinjaOneClientCredentials(this.tenantId);
 
         if (!clientId || !clientSecret) {
           throw new Error('NinjaOne client credentials not configured. Please set NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET environment variables or configure the secrets.');
@@ -598,13 +622,7 @@ export async function getNinjaOneAuthUrl(
   region: NinjaOneRegion = 'US',
   redirectUri: string
 ): Promise<string> {
-  const secretProvider = await getSecretProviderInstance();
-  let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-  
-  // Fallback to environment variable if not found in secrets
-  if (!clientId) {
-    clientId = process.env.NINJAONE_CLIENT_ID;
-  }
+  const { clientId } = await resolveNinjaOneClientCredentials(tenantId);
 
   if (!clientId) {
     throw new Error('NinjaOne client ID not configured. Please set NINJAONE_CLIENT_ID environment variable or configure the secret.');
@@ -633,17 +651,7 @@ export async function exchangeNinjaOneCode(
   region: NinjaOneRegion,
   redirectUri: string
 ): Promise<NinjaOneOAuthCredentials> {
-  const secretProvider = await getSecretProviderInstance();
-  let clientId = await secretProvider.getAppSecret(NINJAONE_CLIENT_ID_SECRET);
-  let clientSecret = await secretProvider.getAppSecret(NINJAONE_CLIENT_SECRET_SECRET);
-  
-  // Fallback to environment variables if not found in secrets
-  if (!clientId) {
-    clientId = process.env.NINJAONE_CLIENT_ID;
-  }
-  if (!clientSecret) {
-    clientSecret = process.env.NINJAONE_CLIENT_SECRET;
-  }
+  const { clientId, clientSecret } = await resolveNinjaOneClientCredentials(tenantId);
 
   if (!clientId || !clientSecret) {
     throw new Error('NinjaOne client credentials not configured. Please set NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET environment variables or configure the secrets.');
@@ -681,6 +689,7 @@ export async function exchangeNinjaOneCode(
   };
 
   // Save credentials to secret storage
+  const secretProvider = await getSecretProviderInstance();
   await secretProvider.setTenantSecret(
     tenantId,
     NINJAONE_CREDENTIALS_SECRET,

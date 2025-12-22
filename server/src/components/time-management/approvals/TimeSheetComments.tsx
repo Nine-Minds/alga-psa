@@ -19,7 +19,7 @@ export function TimeSheetComments({
     timeSheetStatus,
     timeSheetId,
     onCommentsUpdate
-}: TimeSheetCommentsProps): JSX.Element {
+}: TimeSheetCommentsProps): React.JSX.Element {
     const [newComment, setNewComment] = useState<string>('');
     const [isAddingComment, setIsAddingComment] = useState<boolean>(false);
 
@@ -58,7 +58,7 @@ export function TimeSheetComments({
 
     return (
         <div className="space-y-4">
-            {comments.map((comment): JSX.Element => {
+            {comments.map((comment): React.JSX.Element => {
                 const commentType = getCommentTypeDisplay(comment.is_approver);
                 return (
                     <div 

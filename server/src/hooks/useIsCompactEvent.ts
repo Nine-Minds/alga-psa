@@ -11,7 +11,7 @@ import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
  */
 export function useIsCompactEvent(
   event: IScheduleEntry,
-  eventRef: RefObject<HTMLDivElement>
+  eventRef: RefObject<HTMLDivElement | null>
 ) {
   const [isShort, setIsShort] = useState(false);
   const isShortRef = useRef(false);
