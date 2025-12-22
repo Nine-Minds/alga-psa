@@ -54,7 +54,26 @@ export function applyPlaywrightAuthEnvDefaults(): void {
 }
 
 export function resolvePlaywrightBaseUrl(): string {
-  return process.env.EE_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const candidate =
+    process.env.EE_BASE_URL ||
+    process.env.NEXTAUTH_URL ||
+    process.env.PLAYWRIGHT_BASE_URL;
+
+  if (candidate && candidate !== 'undefined' && candidate !== 'null') {
+    return candidate;
+  }
+
+  const host = process.env.PLAYWRIGHT_APP_HOST || 'localhost';
+  const port =
+    process.env.PLAYWRIGHT_APP_PORT ||
+    process.env.APP_PORT ||
+    process.env.PORT;
+
+  if (port && port !== 'undefined' && port !== 'null') {
+    return `http://${host}:${port}`;
+  }
+
+  return 'http://localhost:3000';
 }
 
 /**
@@ -269,9 +288,15 @@ export async function ensureRoleHasPermission(
         tenant: tenantId,
         resource,
         action,
+        msp: true,
+        client: false,
         created_at: new Date(),
       };
       await db('permissions').insert(permission);
+    } else if (!permission.msp) {
+      await db('permissions')
+        .where({ permission_id: permission.permission_id })
+        .update({ msp: true });
     }
 
     const existingLink = await db('role_permissions')

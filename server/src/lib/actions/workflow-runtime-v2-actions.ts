@@ -141,10 +141,18 @@ const requireWorkflowPermission = async (
   if (action === 'read') {
     const viewAllowed = await hasPermission(user!, 'workflow', 'view', knex);
     if (viewAllowed) return;
+    const manageAllowed = await hasPermission(user!, 'workflow', 'manage', knex);
+    if (manageAllowed) return;
+    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    if (adminAllowed) return;
   }
-  if (action !== 'manage') {
-    const fallback = await hasPermission(user!, 'workflow', 'manage', knex);
-    if (fallback) return;
+  if (action === 'manage') {
+    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    if (adminAllowed) return;
+  }
+  if (action === 'publish') {
+    const adminAllowed = await hasPermission(user!, 'workflow', 'admin', knex);
+    if (adminAllowed) return;
   }
   throwHttpError(403, 'Forbidden');
 };
@@ -1176,7 +1184,7 @@ export async function listWorkflowRegistryNodesAction() {
   const user = await requireUser();
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'manage', knex);
+  await requireWorkflowPermission(user, 'read', knex);
   const registry = getNodeTypeRegistry();
   return registry.list().map((node) => ({
     id: node.id,
@@ -1191,7 +1199,7 @@ export async function listWorkflowRegistryActionsAction() {
   const user = await requireUser();
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'manage', knex);
+  await requireWorkflowPermission(user, 'read', knex);
   const registry = getActionRegistryV2();
   return registry.list().map((action) => ({
     id: action.id,

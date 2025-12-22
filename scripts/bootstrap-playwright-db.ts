@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import fs from 'node:fs';
 import path from 'node:path';
 import knex, { Knex } from 'knex';
 
@@ -111,15 +112,40 @@ async function migrateAndSeed(cfg: DbCfg): Promise<void> {
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO "${safeRole}"`
     );
 
-    const migrationsDir = path.resolve(process.cwd(), 'server/migrations');
-    const seedsDir = path.resolve(process.cwd(), 'server/seeds/dev');
+    const serverMigrationsDir = path.resolve(process.cwd(), 'server/migrations');
+    const eeMigrationsDir = path.resolve(process.cwd(), 'ee/server/migrations');
+    let migrationsDir = serverMigrationsDir;
+
+    if (fs.existsSync(eeMigrationsDir)) {
+      const combinedDir = path.resolve(process.cwd(), 'server/.tmp-playwright-migrations');
+      fs.rmSync(combinedDir, { recursive: true, force: true });
+      fs.cpSync(serverMigrationsDir, combinedDir, { recursive: true });
+
+      for (const entry of fs.readdirSync(eeMigrationsDir)) {
+        const src = path.join(eeMigrationsDir, entry);
+        if (!fs.statSync(src).isFile()) continue;
+        const dest = path.join(combinedDir, entry);
+        if (!fs.existsSync(dest)) {
+          fs.copyFileSync(src, dest);
+        }
+      }
+      migrationsDir = combinedDir;
+    }
+
     await db.migrate.latest({
       directory: migrationsDir,
       loadExtensions: ['.cjs', '.js'],
     });
-    await db.seed
-      .run({ directory: seedsDir, loadExtensions: ['.cjs', '.js'] })
-      .catch(() => undefined);
+
+    const seedsDirs = [path.resolve(process.cwd(), 'server/seeds/dev')];
+    const eeSeedsDir = path.resolve(process.cwd(), 'ee/server/seeds/dev');
+    if (fs.existsSync(eeSeedsDir)) {
+      seedsDirs.push(eeSeedsDir);
+    }
+
+    for (const dir of seedsDirs) {
+      await db.seed.run({ directory: dir, loadExtensions: ['.cjs', '.js'] }).catch(() => undefined);
+    }
   } finally {
     await db.destroy().catch(() => undefined);
   }

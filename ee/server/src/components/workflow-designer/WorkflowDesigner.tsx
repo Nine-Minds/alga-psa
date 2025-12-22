@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
@@ -104,6 +104,27 @@ type JsonSchema = {
   default?: unknown;
   $ref?: string;
   definitions?: Record<string, JsonSchema>;
+};
+
+type WorkflowPlaywrightOverrides = {
+  failPermissions?: boolean;
+  failRegistries?: boolean;
+  failSaveDraft?: boolean;
+  failSaveSettings?: boolean;
+  saveDraftDelayMs?: number;
+  saveSettingsDelayMs?: number;
+};
+
+const getWorkflowPlaywrightOverrides = (): WorkflowPlaywrightOverrides | null => {
+  if (typeof window === 'undefined') return null;
+  return (window as typeof window & { __ALGA_PLAYWRIGHT_WORKFLOW__?: WorkflowPlaywrightOverrides })
+    .__ALGA_PLAYWRIGHT_WORKFLOW__ ?? null;
+};
+
+const delayIfNeeded = async (delayMs?: number) => {
+  if (delayMs && delayMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
 };
 
 type PipeSegment = {
@@ -517,6 +538,7 @@ const WorkflowDesigner: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [registryError, setRegistryError] = useState(false);
   const [metadataDraft, setMetadataDraft] = useState<{
     isVisible: boolean;
     isPaused: boolean;
@@ -589,17 +611,17 @@ const WorkflowDesigner: React.FC = () => {
     [definitions, activeWorkflowId]
   );
 
-  const canManage = useMemo(
-    () => userPermissions.includes('workflow:manage'),
+  const canAdmin = useMemo(
+    () => userPermissions.includes('workflow:admin'),
     [userPermissions]
   );
-  const canPublish = useMemo(
-    () => userPermissions.includes('workflow:publish') || canManage,
-    [userPermissions, canManage]
+  const canManage = useMemo(
+    () => userPermissions.includes('workflow:manage') || canAdmin,
+    [userPermissions, canAdmin]
   );
-  const canAdmin = useMemo(
-    () => userPermissions.includes('workflow:admin') || canManage,
-    [userPermissions, canManage]
+  const canPublish = useMemo(
+    () => userPermissions.includes('workflow:publish') || canAdmin,
+    [userPermissions, canAdmin]
   );
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
@@ -625,13 +647,21 @@ const WorkflowDesigner: React.FC = () => {
 
   const loadRegistries = useCallback(async () => {
     try {
+      const overrides = getWorkflowPlaywrightOverrides();
+      if (overrides?.failRegistries) {
+        throw new Error('Failed to load workflow registries');
+      }
       const [nodes, actions] = await Promise.all([
         listWorkflowRegistryNodesAction(),
         listWorkflowRegistryActionsAction()
       ]);
       setNodeRegistry((nodes ?? []) as unknown as NodeRegistryItem[]);
       setActionRegistry((actions ?? []) as unknown as ActionRegistryItem[]);
+      setRegistryError(false);
     } catch (error) {
+      setNodeRegistry([]);
+      setActionRegistry([]);
+      setRegistryError(true);
       toast.error('Failed to load workflow registries');
     }
   }, []);
@@ -655,9 +685,18 @@ const WorkflowDesigner: React.FC = () => {
   }, [loadDefinitions, loadRegistries]);
 
   useEffect(() => {
+    const overrides = getWorkflowPlaywrightOverrides();
+    if (overrides?.failPermissions) {
+      setUserPermissions([]);
+      toast.error('Failed to load permissions');
+      return;
+    }
     getCurrentUserPermissions()
       .then((perms) => setUserPermissions(perms ?? []))
-      .catch(() => setUserPermissions([]));
+      .catch(() => {
+        setUserPermissions([]);
+        toast.error('Failed to load permissions');
+      });
   }, []);
 
   useEffect(() => {
@@ -709,6 +748,11 @@ const WorkflowDesigner: React.FC = () => {
     if (!activeDefinition) return;
     setIsSaving(true);
     try {
+      const overrides = getWorkflowPlaywrightOverrides();
+      await delayIfNeeded(overrides?.saveDraftDelayMs);
+      if (overrides?.failSaveDraft) {
+        throw new Error('Failed to save workflow');
+      }
       if (!activeWorkflowId) {
         const data = await createWorkflowDefinitionAction({ definition: activeDefinition });
         setActiveWorkflowId(data.workflowId);
@@ -733,6 +777,11 @@ const WorkflowDesigner: React.FC = () => {
     if (!activeWorkflowId || !metadataDraft) return;
     setIsSavingMetadata(true);
     try {
+      const overrides = getWorkflowPlaywrightOverrides();
+      await delayIfNeeded(overrides?.saveSettingsDelayMs);
+      if (overrides?.failSaveSettings) {
+        throw new Error('Failed to update workflow settings');
+      }
       await updateWorkflowDefinitionMetadataAction({
         workflowId: activeWorkflowId,
         isVisible: metadataDraft.isVisible,
@@ -804,15 +853,67 @@ const WorkflowDesigner: React.FC = () => {
     });
   };
 
+  const hoveredPipePathRef = useRef<string | null>(null);
+  const isDraggingRef = useRef(false);
+
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+    hoveredPipePathRef.current = null;
+  };
+
+  const handlePipeHover = useCallback((pipePath: string) => {
+    if (!isDraggingRef.current) return;
+    hoveredPipePathRef.current = pipePath;
+  }, []);
+
+  useEffect(() => {
+    const findPipePathFromElement = (element: Element | null): string | null => {
+      let current = element as HTMLElement | null;
+      while (current) {
+        const pipePath = current.getAttribute('data-pipe-path');
+        if (pipePath) return pipePath;
+        current = current.parentElement;
+      }
+      return null;
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      const pipePath = findPipePathFromElement(element);
+      if (pipePath) {
+        hoveredPipePathRef.current = pipePath;
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   const handleDragEnd = (result: DropResult) => {
-    if (!activeDefinition || !result.destination) return;
+    if (!activeDefinition) return;
+
+    isDraggingRef.current = false;
+    const hoverTarget = hoveredPipePathRef.current;
+    hoveredPipePathRef.current = null;
 
     const sourcePipe = result.source.droppableId.replace('pipe:', '');
-    const destPipe = result.destination.droppableId.replace('pipe:', '');
-    const sourceSegments = parsePipePath(sourcePipe);
-    const destSegments = parsePipePath(destPipe);
+    const destinationPipe = result.destination?.droppableId.replace('pipe:', '') ?? null;
 
-    if (sourcePipe === destPipe) {
+    let resolvedDestPipe = destinationPipe;
+    if (!resolvedDestPipe || resolvedDestPipe === sourcePipe) {
+      if (hoverTarget && hoverTarget !== sourcePipe) {
+        resolvedDestPipe = hoverTarget;
+      }
+    }
+
+    if (!resolvedDestPipe) return;
+
+    const sourceSegments = parsePipePath(sourcePipe);
+    const destSegments = parsePipePath(resolvedDestPipe);
+
+    if (sourcePipe === resolvedDestPipe) {
+      if (!result.destination) return;
       const steps = getStepsAtPath(activeDefinition.steps as Step[], sourceSegments);
       const nextSteps = [...steps];
       const [moved] = nextSteps.splice(result.source.index, 1);
@@ -828,7 +929,11 @@ const WorkflowDesigner: React.FC = () => {
     const [moved] = sourceSteps.splice(result.source.index, 1);
     let updated = updateStepsAtPath(activeDefinition.steps as Step[], sourceSegments, sourceSteps);
     const destSteps = [...getStepsAtPath(updated, destSegments)];
-    destSteps.splice(result.destination.index, 0, moved);
+    const insertIndex =
+      destinationPipe && destinationPipe === resolvedDestPipe && result.destination
+        ? result.destination.index
+        : destSteps.length;
+    destSteps.splice(insertIndex, 0, moved);
     updated = updateStepsAtPath(updated, destSegments, destSteps);
     setActiveDefinition({ ...activeDefinition, steps: updated });
   };
@@ -903,6 +1008,7 @@ const WorkflowDesigner: React.FC = () => {
               id="workflow-designer-search"
               placeholder="Search nodes"
               value={search}
+              disabled={registryError}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
@@ -912,6 +1018,7 @@ const WorkflowDesigner: React.FC = () => {
               id="workflow-designer-pipe-select"
               options={pipeOptions.map((pipe) => ({ value: pipe.pipePath, label: pipe.label }))}
               value={selectedPipePath}
+              disabled={registryError}
               onValueChange={setSelectedPipePath}
               placeholder="Select pipe"
             />
@@ -934,6 +1041,7 @@ const WorkflowDesigner: React.FC = () => {
                         id={`workflow-designer-add-${item.id}`}
                         variant="outline"
                         size="sm"
+                        disabled={registryError}
                         onClick={() => handleAddStep(item.type as Step['type'])}
                       >
                         <Plus className="h-4 w-4" />
@@ -1005,7 +1113,7 @@ const WorkflowDesigner: React.FC = () => {
                       <Badge className="bg-yellow-100 text-yellow-800">{publishWarnings.length} warnings</Badge>
                     )}
                   </div>
-                  <DragDropContext onDragEnd={handleDragEnd}>
+                  <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <Pipe
                       steps={activeDefinition?.steps ?? []}
                       pipePath="root"
@@ -1014,6 +1122,7 @@ const WorkflowDesigner: React.FC = () => {
                       onSelectStep={setSelectedStepId}
                       onDeleteStep={handleDeleteStep}
                       onSelectPipe={handlePipeSelect}
+                      onPipeHover={handlePipeHover}
                       nodeRegistry={nodeRegistryMap}
                       errorMap={errorsByStepId}
                     />
@@ -1068,6 +1177,7 @@ const WorkflowDesigner: React.FC = () => {
                     label="Failure rate threshold"
                     type="number"
                     value={metadataDraft.failureRateThreshold}
+                    disabled={!metadataDraft.autoPauseOnFailure}
                     onChange={(event) =>
                       setMetadataDraft((prev) => (prev ? { ...prev, failureRateThreshold: event.target.value } : prev))
                     }
@@ -1078,6 +1188,7 @@ const WorkflowDesigner: React.FC = () => {
                     label="Min runs before auto-pause"
                     type="number"
                     value={metadataDraft.failureRateMinRuns}
+                    disabled={!metadataDraft.autoPauseOnFailure}
                     onChange={(event) =>
                       setMetadataDraft((prev) => (prev ? { ...prev, failureRateMinRuns: event.target.value } : prev))
                     }
@@ -1137,7 +1248,7 @@ const WorkflowDesigner: React.FC = () => {
       <div className="border-t bg-white px-6 py-3">
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-500">{isLoading ? 'Loading workflows...' : `${definitions.length} workflows`}</div>
-          <div className="flex items-center gap-2 overflow-x-auto">
+          <div id="workflow-designer-list" className="flex items-center gap-2 overflow-x-auto">
             {definitions.map((definition) => (
               <Button
                 key={definition.workflow_id}
@@ -1257,6 +1368,7 @@ const Pipe: React.FC<{
   onSelectStep: (id: string) => void;
   onDeleteStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
+  onPipeHover: (pipePath: string) => void;
   nodeRegistry: Record<string, NodeRegistryItem>;
   errorMap: Map<string, PublishError[]>;
 }> = ({
@@ -1267,6 +1379,7 @@ const Pipe: React.FC<{
   onSelectStep,
   onDeleteStep,
   onSelectPipe,
+  onPipeHover,
   nodeRegistry,
   errorMap
 }) => {
@@ -1277,12 +1390,15 @@ const Pipe: React.FC<{
       {(provided) => (
         <div
           id={pipeId}
+          data-pipe-path={pipePath}
           ref={provided.innerRef}
           {...provided.droppableProps}
           onClick={(event) => {
             event.stopPropagation();
             onSelectPipe(pipePath);
           }}
+          onMouseEnter={() => onPipeHover(pipePath)}
+          onMouseMove={() => onPipeHover(pipePath)}
           className="space-y-3 rounded-lg border border-dashed border-gray-300 bg-white p-4"
         >
           {steps.map((step, index) => (
@@ -1291,6 +1407,7 @@ const Pipe: React.FC<{
                 <div
                   ref={dragProvided.innerRef}
                   {...dragProvided.draggableProps}
+                  data-step-id={step.id}
                 >
                   <StepCard
                     step={step}
@@ -1300,6 +1417,7 @@ const Pipe: React.FC<{
                     onSelectStep={onSelectStep}
                     onDeleteStep={onDeleteStep}
                     onSelectPipe={onSelectPipe}
+                    onPipeHover={onPipeHover}
                     dragHandleProps={dragProvided.dragHandleProps}
                     nodeRegistry={nodeRegistry}
                     errorCount={errorMap.get(step.id)?.length ?? 0}
@@ -1327,6 +1445,7 @@ const StepCard: React.FC<{
   onSelectStep: (id: string) => void;
   onDeleteStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
+  onPipeHover: (pipePath: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   nodeRegistry: Record<string, NodeRegistryItem>;
   errorCount: number;
@@ -1339,6 +1458,7 @@ const StepCard: React.FC<{
   onSelectStep,
   onDeleteStep,
   onSelectPipe,
+  onPipeHover,
   dragHandleProps,
   nodeRegistry,
   errorCount,
@@ -1369,6 +1489,7 @@ const StepCard: React.FC<{
         </button>
         <div className="flex items-center gap-2">
           <div
+            id={`workflow-step-drag-${step.id}`}
             {...dragHandleProps}
             className="cursor-grab text-gray-400 hover:text-gray-600"
           >
@@ -1398,6 +1519,7 @@ const StepCard: React.FC<{
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
+                onPipeHover={onPipeHover}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
               />
@@ -1411,6 +1533,7 @@ const StepCard: React.FC<{
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
+                onPipeHover={onPipeHover}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
               />
@@ -1432,6 +1555,7 @@ const StepCard: React.FC<{
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
+                onPipeHover={onPipeHover}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
               />
@@ -1445,6 +1569,7 @@ const StepCard: React.FC<{
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
+                onPipeHover={onPipeHover}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
               />
@@ -1467,6 +1592,7 @@ const StepCard: React.FC<{
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
+                onPipeHover={onPipeHover}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
               />
