@@ -702,132 +702,132 @@
   {
     "description": "UI: Run details shows run error card when run failed. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run details export downloads run detail bundle. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Admin resume action prompts for reason and submits resume. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Admin cancel action prompts for reason and submits cancel. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Admin retry action prompts for reason and submits retry. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Admin replay action prompts for reason and accepts payload override. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Admin requeue action prompts for reason and submits requeue. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step timeline filter by status narrows visible steps. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step timeline filter by node type narrows visible steps. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Collapse nested blocks hides nested step rows. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step timeline view button selects step and shows details. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step details show attempt, duration, and definition step id. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step error card shown when selected step has error. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Step wait history renders event and timeout details. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Envelope tabs switch between payload, vars, meta, error, raw. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Envelope view shows redaction notice when values masked. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Envelope view shows empty-state when no snapshot available. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Action invocations list renders inputs/outputs with redaction markers. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Action invocations empty state shown when none recorded. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run logs tab filters by search and level. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run logs export downloads log CSV. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run logs load more appends additional entries. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run logs empty state shown when no logs available. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run audit logs tab loads entries and supports export. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run audit logs load more appends additional entries. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run audit logs empty state shown when no entries available. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events tab lists workflow events with status badges. Mocks: non-target dependencies.",
@@ -912,126 +912,126 @@
   {
     "description": "UI: Dead Letter tab lists runs exceeding retry threshold. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Dead Letter min retries filter updates list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Dead Letter refresh reloads list. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Dead Letter load more appends additional results. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Dead Letter empty state displays when none present. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Selecting dead-letter run opens run details panel. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Audit tab prompts to select workflow when none active. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Audit tab lists workflow definition audit entries. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Audit tab export CSV triggers download. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Audit tab load more appends additional entries. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Audit tab empty state displays when no entries present. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run list fetch error shows toast and preserves filters. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Run details fetch error shows toast and closes details panel. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Events list fetch error shows toast and keeps filters. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Event detail fetch error shows toast and clears detail panel. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Dead letter fetch error shows toast. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "UI: Audit log fetch error shows toast. Mocks: non-target dependencies.",
     "reference": "playwright integration (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Create new workflow with metadata and steps, save draft, and see it in list. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Publish workflow from designer and see publish success state. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Trigger workflow run (via mocked event submission) and see run in Runs tab. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Open run details and verify step timeline, snapshot, and logs render. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Admin resumes waiting run from run details and status updates in list. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Admin cancels run from run details and status updates in list. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Event list links to matched run and opens run details. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "E2E: Dead-letter run appears after retry threshold and opens details. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
-    "implemented": false
+    "implemented": true
   }
 ]

@@ -63,6 +63,12 @@ async function openExpressionPicker(page: Page, idPrefix: string): Promise<void>
   await trigger.first().click();
 }
 
+async function selectExpressionOption(page: Page, optionText: string): Promise<void> {
+  const listbox = page.locator('[role="listbox"]');
+  await expect(listbox).toBeVisible({ timeout: 15000 });
+  await listbox.getByRole('option', { name: optionText, exact: true }).click();
+}
+
 test.describe('Workflow Designer UI - expressions', () => {
   test('field picker includes payload, vars, meta, and error roots', async ({ page }) => {
     test.setTimeout(120000);
@@ -99,7 +105,7 @@ test.describe('Workflow Designer UI - expressions', () => {
       const exprField = page.locator(`#${idPrefix}-expr`);
 
       await openExpressionPicker(page, idPrefix);
-      await page.getByRole('option', { name: 'payload' }).click();
+      await selectExpressionOption(page, 'payload');
 
       await expect(exprField).toHaveValue('payload');
     } finally {
@@ -119,7 +125,7 @@ test.describe('Workflow Designer UI - expressions', () => {
 
       await exprField.fill('payload.subject ==');
       await openExpressionPicker(page, idPrefix);
-      await page.getByRole('option', { name: 'payload' }).click();
+      await selectExpressionOption(page, 'payload');
 
       await expect(exprField).toHaveValue(/payload\.subject == payload/);
     } finally {
