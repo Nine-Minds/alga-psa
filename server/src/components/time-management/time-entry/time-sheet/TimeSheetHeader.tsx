@@ -3,10 +3,9 @@
 import React from 'react';
 import { TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
 import { Button } from 'server/src/components/ui/Button';
-import { ArrowLeftIcon } from '@radix-ui/react-icons';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
-import { Calendar, ChevronLeft, ChevronRight, Clock, LayoutGrid, List } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock, LayoutGrid, List } from 'lucide-react';
 import { TimeSheetDateNavigatorState } from './types';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 
@@ -67,7 +66,7 @@ export function TimeSheetHeader({
                         variant="soft"
                         className="shrink-0"
                     >
-                        <ArrowLeftIcon className="mr-1" /> Back
+                        <ArrowLeft className="h-4 w-4 mr-1" /> Back
                     </Button>
                     <h2 className="text-2xl font-bold truncate">Time Sheet</h2>
                 </div>

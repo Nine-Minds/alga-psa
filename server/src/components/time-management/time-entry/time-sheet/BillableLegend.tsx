@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react';
+import { Card } from 'server/src/components/ui/Card';
 import { BillabilityPercentage, billabilityColorScheme } from './utils';
 
 interface BillableLegendProps {
@@ -9,7 +10,7 @@ interface BillableLegendProps {
 
 export function BillableLegend({ className = '' }: BillableLegendProps): React.JSX.Element {
     return (
-        <div className={`p-4 bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <Card className={`p-4 ${className}`} id="billable-legend">
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-sm font-semibold text-gray-900">Billable Legend</h3>
@@ -33,6 +34,6 @@ export function BillableLegend({ className = '' }: BillableLegendProps): React.J
                     })}
                 </div>
             </div>
-        </div>
+        </Card>
     );
 }

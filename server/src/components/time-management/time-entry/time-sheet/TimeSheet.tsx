@@ -568,7 +568,10 @@ export function TimeSheet({
     }, [timeSheet.time_period, dates]);
 
     // Use the appropriate date navigator based on view mode
-    const effectiveDateNavigator = viewMode === 'list' ? listViewDateNavigator : dateNavigator;
+    // Fall back to dateNavigator if listViewDateNavigator is null (e.g., no time period)
+    const effectiveDateNavigator = viewMode === 'list'
+        ? (listViewDateNavigator ?? dateNavigator)
+        : dateNavigator;
 
     const isEditable = timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED';
 
