@@ -891,11 +891,15 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 None => (trimmed_route, None),
             };
 
+            // Build URL by joining base URL with the route directly
+            // The route should be an absolute platform API path like /api/v1/platform-reports
+            // We call the platform API directly, NOT through ext-proxy
             let mut url = base_url.clone();
             {
                 let mut segments = url.path_segments_mut().map_err(|_| ProxyError::Internal)?;
-                segments.pop_if_empty();
-                segments.push(&extension);
+                // Clear existing path segments to start fresh
+                segments.clear();
+                // Add each segment from the route path
                 for segment in path_part.trim_start_matches('/').split('/') {
                     if segment.is_empty() {
                         continue;

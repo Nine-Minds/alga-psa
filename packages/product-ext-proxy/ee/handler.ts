@@ -6,130 +6,6 @@ import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared
 import { loadInstallConfigCached } from './install-config-cache';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
 import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
-import { getSession } from 'server/src/lib/auth/getSession';
-
-/**
- * Route mapping for platform API prefetching.
- * Maps extension routes to platform API endpoints.
- */
-interface PrefetchRoute {
-  pattern: RegExp;
-  buildApiPath: (match: RegExpMatchArray, query: URLSearchParams) => string;
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-}
-
-const PREFETCH_ROUTES: PrefetchRoute[] = [
-  // /reports -> GET/POST /api/v1/platform-reports (method determined by body content)
-  { pattern: /^\/reports$/, buildApiPath: () => '/api/v1/platform-reports' },
-  // /reports/:id -> GET/PUT/DELETE /api/v1/platform-reports/:id (method determined by body __action)
-  { pattern: /^\/reports\/([0-9a-f-]+)$/, buildApiPath: (m) => `/api/v1/platform-reports/${m[1]}` },
-  // /reports/:id/execute -> POST /api/v1/platform-reports/:id/execute
-  { pattern: /^\/reports\/([0-9a-f-]+)\/execute$/, buildApiPath: (m) => `/api/v1/platform-reports/${m[1]}/execute`, method: 'POST' },
-  // /schema -> GET /api/v1/platform-reports/schema
-  { pattern: /^\/schema$/, buildApiPath: () => '/api/v1/platform-reports/schema', method: 'GET' },
-  // /access -> POST /api/v1/platform-reports/access
-  { pattern: /^\/access$/, buildApiPath: () => '/api/v1/platform-reports/access', method: 'POST' },
-  // /audit -> GET /api/v1/platform-reports/audit
-  { pattern: /^\/audit/, buildApiPath: (_m, q) => `/api/v1/platform-reports/audit${q.toString() ? '?' + q.toString() : ''}`, method: 'GET' },
-  // Tenant management routes - explicitly set GET to prevent iframe POST from overriding
-  { pattern: /^\/api\/v1\/tenant-management\/tenants$/, buildApiPath: () => '/api/v1/tenant-management/tenants', method: 'GET' },
-  { pattern: /^\/api\/v1\/tenant-management\/audit/, buildApiPath: (_m, q) => `/api/v1/tenant-management/audit${q.toString() ? '?' + q.toString() : ''}`, method: 'GET' },
-  { pattern: /^\/api\/v1\/tenant-management\/create-tenant$/, buildApiPath: () => '/api/v1/tenant-management/create-tenant', method: 'POST' },
-  { pattern: /^\/api\/v1\/tenant-management\/resend-welcome-email$/, buildApiPath: () => '/api/v1/tenant-management/resend-welcome-email', method: 'POST' },
-];
-
-/**
- * Find a prefetch route for the given pathname.
- */
-function findPrefetchRoute(pathname: string): { route: PrefetchRoute; match: RegExpMatchArray } | null {
-  for (const route of PREFETCH_ROUTES) {
-    const match = pathname.match(route.pattern);
-    if (match) {
-      return { route, match };
-    }
-  }
-  return null;
-}
-
-/**
- * Prefetch data from platform API server-side.
- * This runs on the Next.js server where we have access to the user session.
- *
- * We get the session directly and pass user info in trusted internal headers,
- * bypassing the need for cookie-based auth on the internal request.
- */
-async function prefetchPlatformApi(
-  req: NextRequest,
-  apiPath: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-  body?: Buffer,
-): Promise<{ status: number; data: unknown } | null> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for prefetch
-
-  try {
-    // Get the session directly - we're in the same Next.js server context
-    const session = await getSession();
-    const sessionUser = session?.user as any;
-
-    if (!sessionUser?.id || !sessionUser?.tenant) {
-      console.warn('[ext-proxy] No valid session for prefetch, skipping');
-      return null;
-    }
-
-    // Build the full URL for the platform API
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.HOST || 'http://localhost:3000';
-    const url = `${baseUrl}${apiPath}`;
-
-    console.log('[ext-proxy] Prefetching platform API:', { method, url, userId: sessionUser.id, tenant: sessionUser.tenant });
-
-    // Pass trusted user info in internal headers
-    const headers: Record<string, string> = {
-      'content-type': 'application/json',
-      // Add a dummy API key to pass middleware check
-      'x-api-key': 'internal-ext-proxy-prefetch',
-      // Mark this as an internal request with trusted user info
-      'x-internal-request': 'ext-proxy-prefetch',
-      'x-internal-user-id': sessionUser.id,
-      'x-internal-user-tenant': sessionUser.tenant,
-      'x-internal-user-email': sessionUser.email || '',
-    };
-
-    const fetchOptions: RequestInit = {
-      method,
-      headers,
-      signal: controller.signal,
-    };
-
-    if (body && method !== 'GET') {
-      fetchOptions.body = body.toString('utf-8');
-    }
-
-    const response = await fetch(url, fetchOptions);
-    clearTimeout(timeoutId);
-
-    const text = await response.text();
-
-    let data: unknown;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = text;
-    }
-
-    console.log('[ext-proxy] Prefetch response:', { status: response.status, hasData: !!data });
-
-    return { status: response.status, data };
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if ((error as any)?.name === 'AbortError') {
-      console.warn('[ext-proxy] Prefetch timed out after 15s, continuing without prefetched data');
-    } else {
-      console.error('[ext-proxy] Prefetch failed:', error);
-    }
-    return null;
-  }
-}
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 
@@ -286,66 +162,6 @@ async function handle(
     const timeoutMs = getTimeoutMs();
     const bodyBuf = method === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
 
-    // Check if this route needs platform API prefetching
-    const prefetchResult = findPrefetchRoute(pathname);
-    let prefetchedData: { status: number; data: unknown } | null = null;
-
-    if (prefetchResult) {
-      const { route, match } = prefetchResult;
-      const apiPath = route.buildApiPath(match, url.searchParams);
-
-      // Determine the HTTP method for the prefetch
-      // Priority: route.method > __action in body > request method
-      let apiMethod: 'GET' | 'POST' | 'PUT' | 'DELETE' = route.method || 'GET';
-
-      if (!route.method && bodyBuf) {
-        try {
-          const bodyJson = JSON.parse(bodyBuf.toString('utf-8'));
-          if (bodyJson.__action === 'delete') {
-            apiMethod = 'DELETE';
-          } else if (bodyJson.__action === 'update') {
-            apiMethod = 'PUT';
-          } else if (bodyJson.__action === 'create' || bodyJson.name || bodyJson.report_definition) {
-            apiMethod = 'POST';
-          }
-          // If no explicit action, keep default GET - the iframe always sends POST
-          // but that doesn't mean the underlying API should use POST
-        } catch {
-          // If body parse fails, keep default GET
-        }
-      }
-
-      console.log('[ext-proxy] Route requires prefetch:', { pathname, apiPath, apiMethod });
-
-      prefetchedData = await prefetchPlatformApi(req, apiPath, apiMethod, bodyBuf);
-
-      // SHORT-CIRCUIT: If we have prefetched data, return it directly instead of going through the runner.
-      // The WASM handler just passes through the prefetched data anyway, and the Rust runner
-      // doesn't currently forward the prefetched_data field to the WASM component.
-      // This is more efficient and avoids the runner timeout issue.
-      if (prefetchedData) {
-        console.log('[ext-proxy] Returning prefetched data directly (short-circuit)', {
-          requestId,
-          status: prefetchedData.status,
-          hasData: !!prefetchedData.data,
-        });
-
-        const responseBody = JSON.stringify(prefetchedData.data);
-        const proxyResponse = new NextResponse(responseBody, {
-          status: prefetchedData.status,
-          headers: {
-            'content-type': 'application/json',
-            'x-ext-request-id': requestId,
-          },
-        });
-        return applyCorsHeaders(proxyResponse, corsOrigin);
-      }
-
-      // If prefetch failed, log a warning but continue to runner
-      // (for routes that might have fallback behavior in the WASM handler)
-      console.warn('[ext-proxy] Prefetch returned null, continuing to runner', { pathname });
-    }
-
     console.log('[ext-proxy] Preparing execution request', {
       requestId,
       tenantId,
@@ -356,7 +172,6 @@ async function handle(
       contentHash: installConfig.contentHash,
       timeoutMs,
       hasBody: !!bodyBuf,
-      hasPrefetchedData: !!prefetchedData,
     });
 
     const execReq = {
@@ -369,10 +184,9 @@ async function handle(
         content_hash: installConfig.contentHash,
         config: installConfig.config,
       },
-      // Include prefetched data for the WASM handler to use
-      prefetched_data: prefetchedData,
       http: {
         method,
+        url: pathname,
         path: pathname,
         query: Object.fromEntries(url.searchParams.entries()),
         headers: filterRequestHeaders(req.headers, tenantId, extensionId, requestId, method),
