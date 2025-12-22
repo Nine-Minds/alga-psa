@@ -689,6 +689,7 @@ export async function exchangeNinjaOneCode(
   };
 
   // Save credentials to secret storage
+  const secretProvider = await getSecretProviderInstance();
   await secretProvider.setTenantSecret(
     tenantId,
     NINJAONE_CREDENTIALS_SECRET,
