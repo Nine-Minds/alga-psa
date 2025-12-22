@@ -13,7 +13,6 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import { ISO8601String } from 'server/src/types/types.d';
