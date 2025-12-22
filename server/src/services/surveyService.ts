@@ -228,8 +228,16 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
       ticket_closed_at: ticket.closed_at ? toIsoString(ticket.closed_at) : '',
     };
 
+    if (!contact.email) {
+      throw new Error(
+        `sendSurveyInvitation: contact ${contact.contact_name_id} has no email address`
+      );
+    }
+
     if (!isValidEmail(contact.email)) {
-      throw new Error('Contact email is required to send survey invitation');
+      throw new Error(
+        `sendSurveyInvitation: contact ${contact.contact_name_id} has invalid email address`
+      );
     }
 
     try {
@@ -239,7 +247,7 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
 
       // TODO: Queue invitation delivery through Temporal survey workflow once available.
       const sendResult = await emailService.sendEmail({
-        to: contact.email!,
+        to: contact.email,
         tenantId: params.tenantId,
         templateProcessor: processor,
         templateData,
