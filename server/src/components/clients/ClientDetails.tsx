@@ -221,6 +221,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     tags?: string[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -888,8 +889,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 </Button>
               </div>
               <div>
-                <ClientLocations 
-                  clientId={editedClient.client_id} 
+                <ClientLocations
+                  key={locationsRefreshKey}
+                  clientId={editedClient.client_id}
                   isEditing={false}
                 />
               </div>
@@ -1237,9 +1239,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           }}
         />
 
-        <Dialog 
-          isOpen={isLocationsDialogOpen} 
-          onClose={() => setIsLocationsDialogOpen(false)} 
+        <Dialog
+          isOpen={isLocationsDialogOpen}
+          onClose={() => {
+            setIsLocationsDialogOpen(false);
+            setLocationsRefreshKey(prev => prev + 1);
+          }}
           title={t('clients.locations.dialogTitle', 'Manage Locations', { client: editedClient.client_name })}
         >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

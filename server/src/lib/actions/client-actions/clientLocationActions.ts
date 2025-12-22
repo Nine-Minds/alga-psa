@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser } from '../user-actions/userActions';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
+import { revalidatePath } from 'next/cache';
 
 export async function getClientLocations(clientId: string): Promise<IClientLocation[]> {
   const { knex, tenant } = await createTenantKnex();
@@ -62,7 +63,7 @@ export async function createClientLocation(
 
   const locationId = uuidv4();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const newLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // If this is set as default, check if it's the first location
     if (locationData.is_default) {
       const existingLocations = await trx('client_locations')
@@ -94,7 +95,7 @@ export async function createClientLocation(
       }
     }
 
-    const [newLocation] = await trx('client_locations')
+    const [location] = await trx('client_locations')
       .insert({
         location_id: locationId,
         tenant: tenant,
@@ -106,8 +107,12 @@ export async function createClientLocation(
       })
       .returning('*');
 
-    return newLocation;
+    return location;
   });
+
+  revalidatePath(`/msp/clients/${clientId}`);
+
+  return newLocation;
 }
 
 export async function updateClientLocation(
@@ -121,8 +126,8 @@ export async function updateClientLocation(
     throw new Error('User not authenticated');
   }
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [updatedLocation] = await trx('client_locations')
+  const updatedLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const [location] = await trx('client_locations')
       .where({
         location_id: locationId,
         tenant: tenant
@@ -133,12 +138,16 @@ export async function updateClientLocation(
       })
       .returning('*');
 
-    if (!updatedLocation) {
+    if (!location) {
       throw new Error('Location not found');
     }
 
-    return updatedLocation;
+    return location;
   });
+
+  revalidatePath(`/msp/clients/${updatedLocation.client_id}`);
+
+  return updatedLocation;
 }
 
 export async function deleteClientLocation(locationId: string): Promise<void> {
@@ -149,7 +158,7 @@ export async function deleteClientLocation(locationId: string): Promise<void> {
     throw new Error('User not authenticated');
   }
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if this is the default location
     const location = await trx('client_locations')
       .where({
@@ -221,7 +230,11 @@ export async function deleteClientLocation(locationId: string): Promise<void> {
         tenant: tenant
       })
       .delete();
+
+    return location.client_id;
   });
+
+  revalidatePath(`/msp/clients/${clientId}`);
 }
 
 export async function setDefaultClientLocation(locationId: string): Promise<void> {
@@ -232,7 +245,7 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
     throw new Error('User not authenticated');
   }
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+  const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the location to find its client_id
     const location = await trx('client_locations')
       .where({
@@ -269,7 +282,11 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
         is_default: true,
         updated_at: trx.fn.now()
       });
+
+    return location.client_id;
   });
+
+  revalidatePath(`/msp/clients/${clientId}`);
 }
 
 export async function getDefaultClientLocation(clientId: string): Promise<IClientLocation | null> {
