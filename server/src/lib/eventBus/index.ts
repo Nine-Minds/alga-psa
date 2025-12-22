@@ -15,6 +15,10 @@ import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventS
 
 type EventHandler = (event: Event) => Promise<void>;
 
+// Connection state tracking
+let isConnected = false;
+let isReconnecting = false;
+
 // Redis client configuration
 const createRedisClient = async () => {
   const config = getRedisConfig();
@@ -22,29 +26,54 @@ const createRedisClient = async () => {
   if (!password) {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
-  
+
   const client = createClient({
     url: config.url,
     password,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
+          logger.error('[EventBus] Max reconnection attempts reached, giving up');
           return new Error('Max reconnection attempts reached');
         }
-        return Math.min(
-          config.eventBus.reconnectStrategy.initialDelay,
+        // Use exponential backoff with jitter
+        const delay = Math.min(
+          config.eventBus.reconnectStrategy.initialDelay * Math.pow(2, retries),
           config.eventBus.reconnectStrategy.maxDelay
         );
+        logger.info(`[EventBus] Reconnecting in ${delay}ms (attempt ${retries + 1}/${config.eventBus.reconnectStrategy.retries})`);
+        return delay;
       }
     }
   });
 
   client.on('error', (err) => {
-    logger.error('Redis Client Error:', err);
+    logger.error('[EventBus] Redis Client Error:', err);
+    isConnected = false;
   });
 
   client.on('connect', () => {
-    logger.info('Redis Client Connected');
+    logger.info('[EventBus] Redis Client Connected');
+    isConnected = true;
+    isReconnecting = false;
+  });
+
+  client.on('reconnecting', () => {
+    logger.info('[EventBus] Redis Client Reconnecting...');
+    isConnected = false;
+    isReconnecting = true;
+  });
+
+  client.on('end', () => {
+    logger.warn('[EventBus] Redis Client Connection Ended');
+    isConnected = false;
+    isReconnecting = false;
+  });
+
+  client.on('ready', () => {
+    logger.info('[EventBus] Redis Client Ready');
+    isConnected = true;
+    isReconnecting = false;
   });
 
   return client;
@@ -61,6 +90,7 @@ async function getClient() {
     throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
   }
 
+  // If client doesn't exist, create it
   if (!client) {
     // If another call is already creating the client, wait for it
     if (!clientPromise) {
@@ -69,12 +99,39 @@ async function getClient() {
         const newClient = await createRedisClient();
         await newClient.connect();
         client = newClient;
+        isConnected = true;
         return newClient;
       })();
     }
     return await clientPromise;
   }
+
+  // If client exists but is disconnected/reconnecting, wait for reconnection
+  if (!isConnected && isReconnecting) {
+    logger.debug('[EventBus] Waiting for Redis reconnection...');
+    // Wait up to 5 seconds for reconnection
+    const maxWait = 5000;
+    const checkInterval = 100;
+    let waited = 0;
+    while (!isConnected && waited < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      waited += checkInterval;
+    }
+    if (!isConnected) {
+      logger.warn('[EventBus] Reconnection timeout, attempting fresh connection');
+      // Reset and create new client
+      client = null;
+      clientPromise = null;
+      return getClient();
+    }
+  }
+
   return client;
+}
+
+// Helper to check connection status (for external monitoring)
+export function isEventBusConnected(): boolean {
+  return isConnected && !eventBusDisabled;
 }
 
 export class EventBus {
@@ -218,6 +275,10 @@ export class EventBus {
     if (this.processingEvents) return;
     this.processingEvents = true;
 
+    // Track last log time to avoid spamming logs
+    let lastSubscriptionLogTime = 0;
+    const subscriptionLogInterval = 60000; // Log subscriptions every 60 seconds
+
     const processEvents = async () => {
       if (!this.processingEvents) return;
 
@@ -225,6 +286,22 @@ export class EventBus {
         const client = await getClient();
         const config = getRedisConfig();
         const subscriptions = this.getActiveSubscriptions();
+
+        // Periodically log active subscriptions for debugging
+        const now = Date.now();
+        if (now - lastSubscriptionLogTime > subscriptionLogInterval) {
+          lastSubscriptionLogTime = now;
+          if (subscriptions.length > 0) {
+            logger.info('[EventBus] Active subscriptions:', {
+              count: subscriptions.length,
+              streams: subscriptions.map(s => s.stream),
+              isConnected,
+              consumerName: this.consumerName
+            });
+          } else {
+            logger.debug('[EventBus] No active subscriptions, waiting for handlers to be registered');
+          }
+        }
 
         if (subscriptions.length === 0) {
           setTimeout(processEvents, 1000);
@@ -336,8 +413,25 @@ export class EventBus {
         await this.claimPendingMessages();
         setImmediate(processEvents);
       } catch (error) {
-        logger.error('[EventBus] Error in event processing loop:', error);
-        setTimeout(processEvents, 1000);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isConnectionError = errorMessage.includes('ECONNREFUSED') ||
+                                  errorMessage.includes('ENOTCONN') ||
+                                  errorMessage.includes('Socket closed') ||
+                                  errorMessage.includes('Connection is closed') ||
+                                  !isConnected;
+
+        if (isConnectionError) {
+          logger.warn('[EventBus] Connection error in event processing loop, waiting for reconnection...', {
+            error: errorMessage,
+            isConnected,
+            isReconnecting
+          });
+          // Wait longer for connection errors to allow reconnection
+          setTimeout(processEvents, 2000);
+        } else {
+          logger.error('[EventBus] Error in event processing loop:', error);
+          setTimeout(processEvents, 1000);
+        }
       }
     };
 
