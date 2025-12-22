@@ -17,6 +17,8 @@ import {
   getAllClientIds,
   deactivateClientContacts,
   reactivateClientContacts,
+  markClientInactiveWithContacts,
+  markClientActiveWithContacts,
   type PaginatedClientsResponse
 } from 'server/src/lib/actions/client-actions/clientActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
@@ -548,7 +550,7 @@ const Clients: React.FC = () => {
       
       if (!result.success) {
         if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
-          handleDependencyError(result, setDeleteError);
+          handleDependencyError(result);
           setShowDeactivateOption(true);
           return;
         }
@@ -570,22 +572,25 @@ const Clients: React.FC = () => {
     if (!clientToDelete) return;
 
     try {
-      // Mark client as inactive
-      await updateClient(clientToDelete.client_id, { is_inactive: true });
+      // Use atomic server action to mark client and contacts as inactive in a single transaction
+      const result = await markClientInactiveWithContacts(clientToDelete.client_id, true);
 
-      // Also deactivate all contacts
-      await deactivateClientContacts(clientToDelete.client_id);
+      if (!result.success) {
+        setDeleteError(result.message || 'Failed to mark client as inactive');
+        return;
+      }
 
       await refreshClients();
       resetDeleteState();
-      toast.success(`${clientToDelete.client_name} and all associated contacts have been marked as inactive successfully.`);
+
+      if (result.contactsDeactivated > 0) {
+        toast.success(`${clientToDelete.client_name} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been marked as inactive successfully.`);
+      } else {
+        toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
+      }
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        setDeleteError('An error occurred while marking the client as inactive. Please try again.');
-      }
+      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
@@ -597,25 +602,28 @@ const Clients: React.FC = () => {
       const results = await Promise.all(
         selectedClients.map(async (clientId: string) => {
           try {
-            // Mark client as inactive
-            await updateClient(clientId, { is_inactive: true });
-            // Also deactivate all contacts
-            await deactivateClientContacts(clientId);
-            return { clientId, success: true };
+            // Use atomic server action for each client
+            const result = await markClientInactiveWithContacts(clientId, true);
+            return { clientId, success: result.success, contactsDeactivated: result.contactsDeactivated };
           } catch (error) {
-            return { clientId, success: false };
+            return { clientId, success: false, contactsDeactivated: 0 };
           }
         })
       );
 
       const successCount = results.filter(r => r.success).length;
       const failCount = results.length - successCount;
+      const totalContactsDeactivated = results.reduce((sum, r) => sum + (r.contactsDeactivated || 0), 0);
 
       if (failCount > 0) {
-        toast.error(`${failCount} client(s) could not be marked as inactive.`);
+        toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be marked as inactive.`);
       }
       if (successCount > 0) {
-        toast.success(`${successCount} client(s) and their associated contacts have been marked as inactive successfully.`);
+        if (totalContactsDeactivated > 0) {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsDeactivated} contact${totalContactsDeactivated !== 1 ? 's' : ''} have been marked as inactive successfully.`);
+        } else {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} ${successCount !== 1 ? 'have' : 'has'} been marked as inactive successfully.`);
+        }
       }
 
       setSelectedClients([]);
@@ -635,25 +643,28 @@ const Clients: React.FC = () => {
       const results = await Promise.all(
         selectedClients.map(async (clientId: string) => {
           try {
-            // Reactivate all contacts first
-            await reactivateClientContacts(clientId);
-            // Then reactivate the client
-            await updateClient(clientId, { is_inactive: false });
-            return { clientId, success: true };
+            // Use atomic server action for each client
+            const result = await markClientActiveWithContacts(clientId, true);
+            return { clientId, success: result.success, contactsReactivated: result.contactsReactivated };
           } catch (error) {
-            return { clientId, success: false };
+            return { clientId, success: false, contactsReactivated: 0 };
           }
         })
       );
 
       const successCount = results.filter(r => r.success).length;
       const failCount = results.length - successCount;
+      const totalContactsReactivated = results.reduce((sum, r) => sum + (r.contactsReactivated || 0), 0);
 
       if (failCount > 0) {
-        toast.error(`${failCount} client(s) could not be reactivated.`);
+        toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be reactivated.`);
       }
       if (successCount > 0) {
-        toast.success(`${successCount} client(s) and their associated contacts have been reactivated successfully.`);
+        if (totalContactsReactivated > 0) {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsReactivated} contact${totalContactsReactivated !== 1 ? 's' : ''} have been reactivated successfully.`);
+        } else {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} ${successCount !== 1 ? 'have' : 'has'} been reactivated successfully.`);
+        }
       }
 
       setSelectedClients([]);
@@ -797,10 +808,7 @@ const Clients: React.FC = () => {
     .join(', ');
   };
 
-  const handleDependencyError = (
-    result: DependencyResult,
-    setError: (error: string) => void
-  ) => {
+  const handleDependencyError = (result: DependencyResult) => {
     // Store the dependency counts for structured display
     // Only include counts that are > 0
     const counts = result.counts || {};
@@ -815,7 +823,6 @@ const Clients: React.FC = () => {
       service_usage: counts['service_usage'] > 0 ? counts['service_usage'] : undefined,
       bucket_usage: counts['bucket_usage'] > 0 ? counts['bucket_usage'] : undefined,
     });
-    // Don't set error message - we'll use the structured display instead
   };
 
 
