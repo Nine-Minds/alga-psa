@@ -8,22 +8,36 @@
 
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import {
   TenantSecretMetadata,
   CreateTenantSecretInput,
   UpdateTenantSecretInput,
-  createTenantSecretProvider
+  createTenantSecretProvider,
+  SECRET_PERMISSIONS
 } from '@alga-psa/shared/workflow/secrets';
 
 /**
  * List all secrets for the current tenant.
  * Returns metadata only - never includes actual secret values.
+ * Requires secrets.view permission.
  */
 export async function listTenantSecrets(): Promise<TenantSecretMetadata[]> {
   const { knex, tenant } = await createTenantKnex();
 
   if (!tenant) {
     throw new Error('Tenant not found');
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Check for secrets.view permission
+  const canView = await hasPermission(user, 'secrets', 'view', knex);
+  if (!canView) {
+    throw new Error('Permission denied: Cannot view secrets');
   }
 
   const provider = createTenantSecretProvider(knex, tenant);
@@ -61,6 +75,7 @@ export async function secretExists(name: string): Promise<boolean> {
 
 /**
  * Create a new tenant secret.
+ * Requires secrets.manage permission.
  *
  * @param input - Secret creation input (name, value, description)
  * @returns The created secret's metadata (never includes the value)
@@ -77,10 +92,11 @@ export async function createSecret(input: CreateTenantSecretInput): Promise<Tena
     throw new Error('User not authenticated');
   }
 
-  // TODO: Add permission check for secrets.manage
-  // if (!await hasPermission(user, 'secrets', 'manage')) {
-  //   throw new Error('Permission denied: Cannot create secrets');
-  // }
+  // Check for secrets.manage permission
+  const canManage = await hasPermission(user, 'secrets', 'manage', knex);
+  if (!canManage) {
+    throw new Error('Permission denied: Cannot create secrets');
+  }
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.create(input, user.user_id);
@@ -88,6 +104,7 @@ export async function createSecret(input: CreateTenantSecretInput): Promise<Tena
 
 /**
  * Update an existing tenant secret.
+ * Requires secrets.manage permission.
  *
  * @param name - Name of the secret to update
  * @param input - Update input (value and/or description)
@@ -108,10 +125,11 @@ export async function updateSecret(
     throw new Error('User not authenticated');
   }
 
-  // TODO: Add permission check for secrets.manage
-  // if (!await hasPermission(user, 'secrets', 'manage')) {
-  //   throw new Error('Permission denied: Cannot update secrets');
-  // }
+  // Check for secrets.manage permission
+  const canManage = await hasPermission(user, 'secrets', 'manage', knex);
+  if (!canManage) {
+    throw new Error('Permission denied: Cannot update secrets');
+  }
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.update(name, input, user.user_id);
@@ -119,6 +137,7 @@ export async function updateSecret(
 
 /**
  * Delete a tenant secret.
+ * Requires secrets.manage permission.
  *
  * @param name - Name of the secret to delete
  */
@@ -134,10 +153,11 @@ export async function deleteSecret(name: string): Promise<void> {
     throw new Error('User not authenticated');
   }
 
-  // TODO: Add permission check for secrets.manage
-  // if (!await hasPermission(user, 'secrets', 'manage')) {
-  //   throw new Error('Permission denied: Cannot delete secrets');
-  // }
+  // Check for secrets.manage permission
+  const canManage = await hasPermission(user, 'secrets', 'manage', knex);
+  if (!canManage) {
+    throw new Error('Permission denied: Cannot delete secrets');
+  }
 
   const provider = createTenantSecretProvider(knex, tenant);
   await provider.delete(name, user.user_id);
