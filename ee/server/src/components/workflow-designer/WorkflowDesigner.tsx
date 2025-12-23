@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
-import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle, FileJson, Code, Check, Eye, EyeOff } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -181,6 +181,236 @@ const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   return schema.type;
 };
 
+// Types for data context tracking (§16 Schema Exposure)
+type SchemaField = {
+  name: string;
+  type: string;
+  required: boolean;
+  nullable: boolean;
+  description?: string;
+  defaultValue?: unknown;
+  children?: SchemaField[];
+  // §16.4 - Additional constraints for tooltips
+  constraints?: {
+    enum?: unknown[];
+    minimum?: number;
+    maximum?: number;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+    format?: string;
+    examples?: unknown[];
+  };
+};
+
+type StepOutputContext = {
+  stepId: string;
+  stepName: string;
+  saveAs: string;
+  outputSchema: JsonSchema;
+  fields: SchemaField[];
+};
+
+type DataContext = {
+  payload: SchemaField[];
+  payloadSchema: JsonSchema | null;
+  steps: StepOutputContext[];
+  globals: {
+    env: SchemaField[];
+    secrets: SchemaField[];
+    meta: SchemaField[];
+    error: SchemaField[];
+  };
+};
+
+// Extract fields from a JSON Schema for display
+const extractSchemaFields = (schema: JsonSchema, root?: JsonSchema, isRequired = false): SchemaField[] => {
+  const resolved = schema ? resolveSchema(schema, root) : schema;
+  if (!resolved?.properties) return [];
+
+  const requiredFields = resolved.required ?? [];
+  return Object.entries(resolved.properties).map(([name, propSchema]) => {
+    const resolvedProp = resolveSchema(propSchema, root);
+    const type = normalizeSchemaType(resolvedProp);
+    const isNullable = Array.isArray(resolvedProp.type) && resolvedProp.type.includes('null');
+    const isFieldRequired = requiredFields.includes(name);
+
+    let children: SchemaField[] | undefined;
+    if (type === 'object' && resolvedProp.properties) {
+      children = extractSchemaFields(resolvedProp, root, isFieldRequired);
+    } else if (type === 'array' && resolvedProp.items) {
+      const itemSchema = resolveSchema(resolvedProp.items, root);
+      if (itemSchema.properties) {
+        children = extractSchemaFields(itemSchema, root);
+      }
+    }
+
+    // §16.4 - Extract constraints for tooltips
+    // Cast to access additional JSON Schema properties not in the base type
+    const prop = resolvedProp as JsonSchema & {
+      minimum?: number;
+      maximum?: number;
+      minLength?: number;
+      maxLength?: number;
+      pattern?: string;
+      format?: string;
+      examples?: unknown[];
+    };
+    const constraints: SchemaField['constraints'] = {};
+    if (prop.enum) constraints.enum = prop.enum;
+    if (prop.minimum !== undefined) constraints.minimum = prop.minimum;
+    if (prop.maximum !== undefined) constraints.maximum = prop.maximum;
+    if (prop.minLength !== undefined) constraints.minLength = prop.minLength;
+    if (prop.maxLength !== undefined) constraints.maxLength = prop.maxLength;
+    if (prop.pattern) constraints.pattern = prop.pattern;
+    if (prop.format) constraints.format = prop.format;
+    if (prop.examples) constraints.examples = prop.examples;
+
+    return {
+      name,
+      type: type ?? 'unknown',
+      required: isFieldRequired,
+      nullable: isNullable,
+      description: resolvedProp.description,
+      defaultValue: resolvedProp.default,
+      children,
+      constraints: Object.keys(constraints).length > 0 ? constraints : undefined
+    };
+  });
+};
+
+// Format a schema type for display
+const formatSchemaType = (schema: JsonSchema, root?: JsonSchema): string => {
+  const resolved = schema ? resolveSchema(schema, root) : schema;
+  if (!resolved) return 'unknown';
+
+  const baseType = normalizeSchemaType(resolved);
+  const isNullable = Array.isArray(resolved.type) && resolved.type.includes('null');
+
+  if (baseType === 'array' && resolved.items) {
+    const itemType = formatSchemaType(resolved.items, root);
+    return `${itemType}[]${isNullable ? ' | null' : ''}`;
+  }
+
+  if (resolved.enum) {
+    const enumStr = resolved.enum.slice(0, 3).map(v => JSON.stringify(v)).join(' | ');
+    return resolved.enum.length > 3 ? `${enumStr} | ...` : enumStr;
+  }
+
+  return `${baseType ?? 'unknown'}${isNullable ? ' | null' : ''}`;
+};
+
+// Build data context for a specific step position in the workflow
+const buildDataContext = (
+  definition: WorkflowDefinition,
+  currentStepId: string,
+  actionRegistry: ActionRegistryItem[],
+  payloadSchema: JsonSchema | null
+): DataContext => {
+  const context: DataContext = {
+    payload: payloadSchema ? extractSchemaFields(payloadSchema, payloadSchema) : [],
+    payloadSchema,
+    steps: [],
+    globals: {
+      env: [{ name: 'env', type: 'object', required: false, nullable: false, description: 'Environment variables' }],
+      secrets: [{ name: 'secrets', type: 'object', required: false, nullable: false, description: 'Workflow secrets' }],
+      meta: [
+        { name: 'state', type: 'string', required: false, nullable: true, description: 'Workflow state' },
+        { name: 'traceId', type: 'string', required: false, nullable: true, description: 'Trace ID' },
+        { name: 'tags', type: 'object', required: false, nullable: true, description: 'Workflow tags' }
+      ],
+      error: [
+        { name: 'name', type: 'string', required: false, nullable: true, description: 'Error name' },
+        { name: 'message', type: 'string', required: false, nullable: true, description: 'Error message' },
+        { name: 'stack', type: 'string', required: false, nullable: true, description: 'Stack trace' },
+        { name: 'nodePath', type: 'string', required: false, nullable: true, description: 'Error location' }
+      ]
+    }
+  };
+
+  // Walk through steps to build context up to currentStepId
+  const walkSteps = (steps: Step[], stopAtId: string): boolean => {
+    for (const step of steps) {
+      if (step.id === stopAtId) return true;
+
+      // Handle any node step (not control blocks) that has saveAs configured
+      if (!step.type.startsWith('control.')) {
+        const nodeStep = step as NodeStep;
+        const config = nodeStep.config as { actionId?: string; version?: number; saveAs?: string } | undefined;
+
+        if (config?.saveAs) {
+          // For action.call steps, look up the action's output schema
+          if (step.type === 'action.call' && config?.actionId) {
+            // Match by actionId, and optionally by version if specified
+            const action = actionRegistry.find(a =>
+              a.id === config.actionId &&
+              (config.version === undefined || a.version === config.version)
+            );
+            if (action?.outputSchema) {
+              context.steps.push({
+                stepId: step.id,
+                stepName: nodeStep.name || action.ui?.label || config.actionId,
+                saveAs: config.saveAs,
+                outputSchema: action.outputSchema,
+                fields: extractSchemaFields(action.outputSchema, action.outputSchema)
+              });
+            }
+          } else {
+            // For custom node types, look up the action by the step type (which matches action.id)
+            const action = actionRegistry.find(a => a.id === step.type);
+            if (action?.outputSchema) {
+              context.steps.push({
+                stepId: step.id,
+                stepName: nodeStep.name || action.ui?.label || step.type,
+                saveAs: config.saveAs,
+                outputSchema: action.outputSchema,
+                fields: extractSchemaFields(action.outputSchema, action.outputSchema)
+              });
+            } else {
+              // If no schema found, still show the step output as available (with empty fields)
+              context.steps.push({
+                stepId: step.id,
+                stepName: nodeStep.name || step.type,
+                saveAs: config.saveAs,
+                outputSchema: {},
+                fields: []
+              });
+            }
+          }
+        }
+      }
+
+      // Walk nested blocks
+      if (step.type === 'control.if') {
+        const ifBlock = step as IfBlock;
+        if (walkSteps(ifBlock.then, stopAtId)) return true;
+        if (ifBlock.else && walkSteps(ifBlock.else, stopAtId)) return true;
+      } else if (step.type === 'control.forEach') {
+        const forEachBlock = step as ForEachBlock;
+        if (walkSteps(forEachBlock.body, stopAtId)) return true;
+      } else if (step.type === 'control.tryCatch') {
+        const tryCatchBlock = step as TryCatchBlock;
+        if (walkSteps(tryCatchBlock.try, stopAtId)) return true;
+        if (walkSteps(tryCatchBlock.catch, stopAtId)) return true;
+      }
+    }
+    return false;
+  };
+
+  walkSteps(definition.steps, currentStepId);
+  return context;
+};
+
+// Get action by ID and version from registry
+const getActionFromRegistry = (
+  actionId: string | undefined,
+  version: number | undefined,
+  actionRegistry: ActionRegistryItem[]
+): ActionRegistryItem | undefined => {
+  if (!actionId) return undefined;
+  return actionRegistry.find(a => a.id === actionId && (version === undefined || a.version === version));
+};
+
 const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
   const resolved = resolveSchema(schema, root);
   if (resolved.default !== undefined) return resolved.default;
@@ -209,6 +439,105 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 
   return null;
+};
+
+// §16.5 - Expression path validation
+type ExpressionValidation = {
+  valid: boolean;
+  error?: string;
+  warning?: string;
+};
+
+// Extract variable paths from an expression string (e.g., "${payload.email}" -> ["payload.email"])
+const extractExpressionPaths = (expr: string): string[] => {
+  const paths: string[] = [];
+  const regex = /\$\{([^}]+)\}/g;
+  let match;
+  while ((match = regex.exec(expr)) !== null) {
+    // Extract the path portion (handles simple cases)
+    const inner = match[1].trim();
+    // Skip complex expressions like conditions or calculations
+    if (!/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(inner)) continue;
+    paths.push(inner);
+  }
+  return paths;
+};
+
+// Check if a path exists in the data context
+const validateExpressionPath = (path: string, context: DataContext): ExpressionValidation => {
+  const parts = path.split('.');
+  const root = parts[0];
+
+  // Check payload paths
+  if (root === 'payload') {
+    if (context.payload.length === 0) {
+      return { valid: true, warning: 'No payload schema defined' };
+    }
+    // Simple path existence check
+    return { valid: true };
+  }
+
+  // Check vars paths (step outputs)
+  if (root === 'vars') {
+    const varName = parts[1];
+    if (!varName) return { valid: false, error: 'Missing variable name after vars.' };
+    const stepOutput = context.steps.find(s => s.saveAs === varName);
+    if (!stepOutput) {
+      return { valid: false, error: `Unknown variable: ${varName}. Available: ${context.steps.map(s => s.saveAs).join(', ') || 'none'}` };
+    }
+    return { valid: true };
+  }
+
+  // Check global paths
+  if (root === 'meta' || root === 'env' || root === 'secrets' || root === 'error') {
+    return { valid: true };
+  }
+
+  return { valid: false, error: `Unknown root: ${root}. Use payload, vars, meta, env, or secrets.` };
+};
+
+// Validate all expressions in a step config
+const validateStepExpressions = (
+  config: Record<string, unknown>,
+  context: DataContext
+): { field: string; validation: ExpressionValidation }[] => {
+  const results: { field: string; validation: ExpressionValidation }[] = [];
+
+  const checkValue = (value: unknown, path: string) => {
+    if (typeof value === 'string' && value.includes('${')) {
+      const exprPaths = extractExpressionPaths(value);
+      for (const exprPath of exprPaths) {
+        const validation = validateExpressionPath(exprPath, context);
+        if (!validation.valid || validation.warning) {
+          results.push({ field: path, validation });
+        }
+      }
+    } else if (value && typeof value === 'object') {
+      if ('$expr' in (value as Record<string, unknown>)) {
+        const expr = (value as { $expr: string }).$expr;
+        if (expr) {
+          const exprPaths = extractExpressionPaths(expr);
+          for (const exprPath of exprPaths) {
+            const validation = validateExpressionPath(exprPath, context);
+            if (!validation.valid || validation.warning) {
+              results.push({ field: path, validation });
+            }
+          }
+        }
+      } else if (!Array.isArray(value)) {
+        // Recurse into object
+        Object.entries(value).forEach(([key, val]) => {
+          checkValue(val, `${path}.${key}`);
+        });
+      }
+    }
+  };
+
+  Object.entries(config).forEach(([key, val]) => {
+    checkValue(val, key);
+  });
+
+  return results;
 };
 
 const parsePipePath = (pipePath: string): PipeSegment[] => {
@@ -445,6 +774,51 @@ const buildFieldOptions = (payloadSchema?: JsonSchema | null): SelectOption[] =>
       if (!options.some((opt) => opt.value === path)) {
         options.push({ value: path, label: path });
       }
+    });
+  }
+
+  return options;
+};
+
+// §16.2 - Enhanced field options that include step outputs from data context
+const buildEnhancedFieldOptions = (
+  payloadSchema: JsonSchema | null,
+  dataContext: DataContext | null
+): SelectOption[] => {
+  const options: SelectOption[] = [
+    { value: 'payload', label: '📦 payload' },
+    { value: 'vars', label: '📝 vars' },
+    { value: 'meta', label: '🏷️ meta' },
+    { value: 'meta.state', label: 'meta.state' },
+    { value: 'meta.traceId', label: 'meta.traceId' },
+    { value: 'error', label: '⚠️ error' },
+    { value: 'error.message', label: 'error.message' }
+  ];
+
+  // Add payload fields
+  if (payloadSchema) {
+    collectSchemaPaths(payloadSchema, payloadSchema).forEach((path) => {
+      if (!options.some((opt) => opt.value === path)) {
+        options.push({ value: path, label: path });
+      }
+    });
+  }
+
+  // Add step outputs from data context
+  if (dataContext) {
+    dataContext.steps.forEach((stepOutput) => {
+      const basePath = `vars.${stepOutput.saveAs}`;
+      options.push({
+        value: basePath,
+        label: `🔗 ${basePath} (${stepOutput.stepName})`
+      });
+
+      // Add nested paths from output schema
+      collectSchemaPaths(stepOutput.outputSchema, stepOutput.outputSchema, basePath).forEach((path) => {
+        if (!options.some((opt) => opt.value === path)) {
+          options.push({ value: path, label: path });
+        }
+      });
     });
   }
 
@@ -844,9 +1218,18 @@ const WorkflowDesigner: React.FC = () => {
     }
   };
 
-  const handleAddStep = (type: Step['type']) => {
+  // §16.6 - Enhanced handleAddStep to accept initial config (for pre-configured action items)
+  const handleAddStep = (type: Step['type'], initialConfig?: Record<string, unknown>) => {
     if (!activeDefinition) return;
-    const newStep = createStepFromPalette(type, nodeRegistryMap);
+    let newStep = createStepFromPalette(type, nodeRegistryMap);
+    // Apply initial config if provided (e.g., for action items with pre-selected actionId)
+    if (initialConfig && 'config' in newStep) {
+      const existingConfig = (newStep as NodeStep).config as Record<string, unknown> | undefined;
+      newStep = {
+        ...newStep,
+        config: { ...existingConfig, ...initialConfig }
+      };
+    }
     const segments = parsePipePath(selectedPipePath);
     const steps = getStepsAtPath(activeDefinition.steps as Step[], segments);
     const nextSteps = [...steps, newStep];
@@ -958,26 +1341,76 @@ const WorkflowDesigner: React.FC = () => {
 
   const paletteItems = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
-    const registryItems = nodeRegistry.map((node) => ({
-      id: node.id,
-      label: node.ui?.label || node.id,
-      description: node.ui?.description || node.id,
-      category: node.ui?.category || 'Nodes',
-      type: node.id
-    }));
+
+    // §16.6 - Enhanced registry items with output schema preview
+    const registryItems = nodeRegistry.map((node) => {
+      // For action.call nodes, find the corresponding action in actionRegistry
+      const action = node.id === 'action.call'
+        ? actionRegistry[0] // Just show a placeholder for action.call
+        : actionRegistry.find(a => a.id === node.id);
+      const outputFields = action?.outputSchema
+        ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
+        : [];
+
+      return {
+        id: node.id,
+        label: node.ui?.label || node.id,
+        description: node.ui?.description || node.id,
+        category: node.ui?.category || 'Nodes',
+        type: node.id,
+        outputSummary: outputFields.length > 0
+          ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
+          : undefined,
+        searchableFields: outputFields.join(' ').toLowerCase()
+      };
+    });
+
+    // Also add action registry actions directly for better discoverability
+    const actionItems = actionRegistry.map((action) => {
+      const outputFields = action.outputSchema
+        ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
+        : [];
+      const inputFields = action.inputSchema
+        ? extractSchemaFields(action.inputSchema, action.inputSchema).map(f => f.name)
+        : [];
+
+      return {
+        id: `action:${action.id}`,
+        label: action.ui?.label || action.id,
+        description: action.ui?.description || `Action: ${action.id}`,
+        category: action.ui?.category || 'Actions',
+        type: 'action.call' as Step['type'],
+        actionId: action.id,
+        actionVersion: action.version,
+        outputSummary: outputFields.length > 0
+          ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
+          : undefined,
+        searchableFields: [...outputFields, ...inputFields].join(' ').toLowerCase()
+      };
+    });
 
     const controlItems = CONTROL_BLOCKS.map((block) => ({
       id: block.id,
       label: block.label,
       description: block.description,
       category: block.category,
-      type: block.id
+      type: block.id,
+      outputSummary: undefined as string | undefined,
+      searchableFields: ''
     }));
 
-    const items = [...controlItems, ...registryItems];
+    // Remove the generic 'action.call' node, use action items directly
+    const filteredRegistryItems = registryItems.filter(item => item.id !== 'action.call');
+    const items = [...controlItems, ...filteredRegistryItems, ...actionItems];
+
     if (!searchTerm) return items;
-    return items.filter((item) => item.label.toLowerCase().includes(searchTerm) || item.id.toLowerCase().includes(searchTerm));
-  }, [nodeRegistry, search]);
+    // §16.6 - Search also matches field names
+    return items.filter((item) =>
+      item.label.toLowerCase().includes(searchTerm) ||
+      item.id.toLowerCase().includes(searchTerm) ||
+      item.searchableFields.includes(searchTerm)
+    );
+  }, [nodeRegistry, actionRegistry, search]);
 
   const groupedPaletteItems = useMemo(() => {
     return paletteItems.reduce<Record<string, typeof paletteItems>>((acc, item) => {
@@ -1051,16 +1484,34 @@ const WorkflowDesigner: React.FC = () => {
                       key={item.id}
                       className="border border-gray-200 p-3 flex items-start justify-between"
                     >
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900">{item.label}</div>
                         <div className="text-xs text-gray-500">{item.description}</div>
+                        {/* §16.6 - Show output summary */}
+                        {item.outputSummary && (
+                          <div className="text-[10px] text-blue-600 mt-1 truncate" title={item.outputSummary}>
+                            {item.outputSummary}
+                          </div>
+                        )}
                       </div>
                       <Button
                         id={`workflow-designer-add-${item.id}`}
                         variant="outline"
                         size="sm"
+                        className="ml-2 flex-shrink-0"
                         disabled={registryError}
-                        onClick={() => handleAddStep(item.type as Step['type'])}
+                        onClick={() => {
+                          // §16.6 - Handle action items with pre-configured actionId
+                          const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+                          if (itemWithAction.actionId) {
+                            handleAddStep('action.call', {
+                              actionId: itemWithAction.actionId,
+                              version: itemWithAction.actionVersion
+                            });
+                          } else {
+                            handleAddStep(item.type as Step['type']);
+                          }
+                        }}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -1237,6 +1688,7 @@ const WorkflowDesigner: React.FC = () => {
                     actionRegistry={actionRegistry}
                     fieldOptions={fieldOptions}
                     payloadSchema={payloadSchema}
+                    definition={activeDefinition}
                     onChange={(updatedStep) => handleStepUpdate(selectedStep.id, () => updatedStep)}
                   />
                 ) : (
@@ -1654,6 +2106,7 @@ const StepConfigPanel: React.FC<{
   actionRegistry: ActionRegistryItem[];
   fieldOptions: SelectOption[];
   payloadSchema: JsonSchema | null;
+  definition: WorkflowDefinition;
   onChange: (step: Step) => void;
 }> = ({
   step,
@@ -1663,9 +2116,49 @@ const StepConfigPanel: React.FC<{
   actionRegistry,
   fieldOptions,
   payloadSchema,
+  definition,
   onChange
 }) => {
   const nodeSchema = step.type.startsWith('control.') ? null : nodeRegistry[step.type]?.configSchema;
+  const [showDataContext, setShowDataContext] = useState(false);
+
+  // Build data context for this step position
+  const dataContext = useMemo(() =>
+    buildDataContext(definition, step.id, actionRegistry, payloadSchema),
+    [definition, step.id, actionRegistry, payloadSchema]
+  );
+
+  // For action.call steps, get the selected action
+  const selectedAction = useMemo(() => {
+    if (step.type !== 'action.call') return undefined;
+    const config = (step as NodeStep).config as { actionId?: string; version?: number } | undefined;
+    return getActionFromRegistry(config?.actionId, config?.version, actionRegistry);
+  }, [step, actionRegistry]);
+
+  const saveAs = step.type === 'action.call'
+    ? ((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs
+    : undefined;
+
+  // §16.2 - Enhanced field options with step outputs
+  const enhancedFieldOptions = useMemo(() =>
+    buildEnhancedFieldOptions(payloadSchema, dataContext),
+    [payloadSchema, dataContext]
+  );
+
+  // §16.5 - Expression validation for this step
+  const expressionValidations = useMemo(() => {
+    if (!step.type.startsWith('control.') && 'config' in step) {
+      const config = (step as NodeStep).config as Record<string, unknown> | undefined;
+      if (config) {
+        return validateStepExpressions(config, dataContext);
+      }
+    }
+    return [];
+  }, [step, dataContext]);
+
+  const handleCopyPath = useCallback((path: string) => {
+    toast.success(`Copied: ${path}`, { duration: 1500 });
+  }, []);
 
   const handleNodeConfigChange = (config: Record<string, unknown>) => {
     onChange({ ...step, config });
@@ -1689,12 +2182,69 @@ const StepConfigPanel: React.FC<{
         </Card>
       )}
 
+      {/* §16.5 - Expression validation errors/warnings */}
+      {expressionValidations.length > 0 && (
+        <div className="space-y-2">
+          {expressionValidations.filter(v => v.validation.error).length > 0 && (
+            <Card className="border border-red-200 bg-red-50 p-3">
+              <div className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Expression errors
+              </div>
+              <ul className="text-xs text-red-700 space-y-1">
+                {expressionValidations
+                  .filter(v => v.validation.error)
+                  .map((v, i) => (
+                    <li key={i}><code className="bg-red-100 px-1 rounded">{v.field}</code>: {v.validation.error}</li>
+                  ))}
+              </ul>
+            </Card>
+          )}
+          {expressionValidations.filter(v => v.validation.warning && !v.validation.error).length > 0 && (
+            <Card className="border border-yellow-200 bg-yellow-50 p-3">
+              <div className="text-xs font-semibold text-yellow-700 mb-1 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Warnings
+              </div>
+              <ul className="text-xs text-yellow-700 space-y-1">
+                {expressionValidations
+                  .filter(v => v.validation.warning && !v.validation.error)
+                  .map((v, i) => (
+                    <li key={i}><code className="bg-yellow-100 px-1 rounded">{v.field}</code>: {v.validation.warning}</li>
+                  ))}
+              </ul>
+            </Card>
+          )}
+        </div>
+      )}
+
       {!step.type.startsWith('control.') && (
         <Input
           id={`workflow-step-name-${step.id}`}
           label="Step name"
           value={(step as NodeStep).name ?? ''}
           onChange={(event) => onChange({ ...(step as NodeStep), name: event.target.value })}
+        />
+      )}
+
+      {!step.type.startsWith('control.') && (
+        <Input
+          id={`workflow-step-saveAs-${step.id}`}
+          label="Save output as"
+          placeholder="e.g., ticketDefaults"
+          value={((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs ?? ''}
+          onChange={(event) => {
+            const nodeStep = step as NodeStep;
+            const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+            const value = event.target.value.trim();
+            onChange({
+              ...nodeStep,
+              config: {
+                ...existingConfig,
+                saveAs: value || undefined
+              }
+            });
+          }}
         />
       )}
 
@@ -1706,7 +2256,7 @@ const StepConfigPanel: React.FC<{
             label="Condition"
             value={ensureExpr(ifStep.condition)}
             onChange={(expr) => onChange({ ...ifStep, condition: expr })}
-            fieldOptions={fieldOptions}
+            fieldOptions={enhancedFieldOptions}
           />
         );
       })()}
@@ -1720,7 +2270,7 @@ const StepConfigPanel: React.FC<{
               label="Items expression"
               value={ensureExpr(feStep.items)}
               onChange={(expr) => onChange({ ...feStep, items: expr })}
-              fieldOptions={fieldOptions}
+              fieldOptions={enhancedFieldOptions}
             />
             <Input
               id={`foreach-itemvar-${step.id}`}
@@ -1786,14 +2336,14 @@ const StepConfigPanel: React.FC<{
               label="Input mapping"
               value={cwStep.inputMapping ?? {}}
               onChange={(mapping) => onChange({ ...cwStep, inputMapping: mapping })}
-              fieldOptions={fieldOptions}
+              fieldOptions={enhancedFieldOptions}
             />
             <MappingExprEditor
               idPrefix={`call-workflow-output-${step.id}`}
               label="Output mapping"
               value={cwStep.outputMapping ?? {}}
               onChange={(mapping) => onChange({ ...cwStep, outputMapping: mapping })}
-              fieldOptions={fieldOptions}
+              fieldOptions={enhancedFieldOptions}
             />
           </div>
         );
@@ -1809,19 +2359,40 @@ const StepConfigPanel: React.FC<{
           rootSchema={nodeSchema}
           value={(step as NodeStep).config as Record<string, unknown>}
           onChange={handleNodeConfigChange}
-          fieldOptions={fieldOptions}
+          fieldOptions={enhancedFieldOptions}
           actionRegistry={actionRegistry}
           stepId={step.id}
         />
       )}
 
+      {/* §16.1 - Action Schema Reference for action.call steps */}
       {step.type === 'action.call' && (
-        <div className="text-xs text-gray-500">Available actions: {actionRegistry.length}</div>
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <ActionSchemaReference
+            action={selectedAction}
+            saveAs={saveAs}
+            onCopyPath={handleCopyPath}
+          />
+        </div>
       )}
 
-      {payloadSchema && (
-        <div className="text-xs text-gray-400">Payload schema: {payloadSchema.title ?? 'payload'}</div>
-      )}
+      {/* §16.3 - Data Context Panel (collapsible) */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <button
+          onClick={() => setShowDataContext(!showDataContext)}
+          className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-800"
+        >
+          {showDataContext ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          <HelpCircle className="w-3.5 h-3.5" />
+          What data can I access here?
+        </button>
+
+        {showDataContext && (
+          <div className="mt-3">
+            <DataContextPanel context={dataContext} onCopyPath={handleCopyPath} />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -2170,6 +2741,415 @@ const JsonField: React.FC<{
         className={error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
       />
       {error && <div className="text-xs text-red-600">{error}</div>}
+    </div>
+  );
+};
+
+// §16.1 - Schema Field Row Component
+const SchemaFieldRow: React.FC<{
+  field: SchemaField;
+  pathPrefix: string;
+  depth?: number;
+  onCopyPath?: (path: string) => void;
+}> = ({ field, pathPrefix, depth = 0, onCopyPath }) => {
+  const [expanded, setExpanded] = useState(depth < 2);
+  const [copied, setCopied] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const hasChildren = field.children && field.children.length > 0;
+  const fullPath = pathPrefix ? `${pathPrefix}.${field.name}` : field.name;
+
+  const handleCopy = () => {
+    const exprPath = `\${${fullPath}}`;
+    navigator.clipboard.writeText(exprPath);
+    setCopied(true);
+    onCopyPath?.(exprPath);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const typeColor = {
+    string: 'text-green-600',
+    number: 'text-blue-600',
+    integer: 'text-blue-600',
+    boolean: 'text-purple-600',
+    object: 'text-orange-600',
+    array: 'text-cyan-600'
+  }[field.type] ?? 'text-gray-600';
+
+  // §16.4 - Build tooltip content for constraints
+  const hasConstraints = field.constraints && Object.keys(field.constraints).length > 0;
+  const constraintLines: string[] = [];
+  if (field.constraints) {
+    if (field.constraints.enum) {
+      constraintLines.push(`Values: ${field.constraints.enum.slice(0, 5).map(v => JSON.stringify(v)).join(', ')}${field.constraints.enum.length > 5 ? '...' : ''}`);
+    }
+    if (field.constraints.minimum !== undefined) constraintLines.push(`Min: ${field.constraints.minimum}`);
+    if (field.constraints.maximum !== undefined) constraintLines.push(`Max: ${field.constraints.maximum}`);
+    if (field.constraints.minLength !== undefined) constraintLines.push(`Min length: ${field.constraints.minLength}`);
+    if (field.constraints.maxLength !== undefined) constraintLines.push(`Max length: ${field.constraints.maxLength}`);
+    if (field.constraints.pattern) constraintLines.push(`Pattern: ${field.constraints.pattern}`);
+    if (field.constraints.format) constraintLines.push(`Format: ${field.constraints.format}`);
+    if (field.constraints.examples) constraintLines.push(`Examples: ${field.constraints.examples.slice(0, 3).map(v => JSON.stringify(v)).join(', ')}`);
+  }
+  if (field.defaultValue !== undefined) {
+    constraintLines.push(`Default: ${JSON.stringify(field.defaultValue)}`);
+  }
+
+  return (
+    <div className="text-xs">
+      <div
+        className={`flex items-center gap-1 py-1 px-1 rounded hover:bg-gray-50 group ${depth > 0 ? 'ml-3' : ''}`}
+        style={{ paddingLeft: depth > 0 ? `${depth * 12}px` : undefined }}
+      >
+        {hasChildren ? (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="p-0.5 hover:bg-gray-200 rounded"
+          >
+            {expanded ? (
+              <ChevronDown className="w-3 h-3 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-3 h-3 text-gray-500" />
+            )}
+          </button>
+        ) : (
+          <span className="w-4" />
+        )}
+
+        <span className="font-medium text-gray-800">{field.name}</span>
+        {field.required && <span className="text-red-500">*</span>}
+
+        {/* §16.4 - Type with tooltip for constraints */}
+        <span
+          className={`${typeColor} font-mono relative ${hasConstraints || field.defaultValue !== undefined ? 'cursor-help underline decoration-dotted' : ''}`}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          {field.type}
+          {showTooltip && constraintLines.length > 0 && (
+            <div className="absolute left-0 top-full mt-1 z-50 bg-gray-900 text-white text-[10px] px-2 py-1.5 rounded shadow-lg whitespace-nowrap">
+              {constraintLines.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+          )}
+        </span>
+        {field.nullable && <span className="text-gray-400">| null</span>}
+
+        <button
+          onClick={handleCopy}
+          className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 rounded transition-opacity"
+          title={`Copy ${fullPath}`}
+        >
+          {copied ? (
+            <Check className="w-3 h-3 text-green-600" />
+          ) : (
+            <Copy className="w-3 h-3 text-gray-500" />
+          )}
+        </button>
+      </div>
+
+      {field.description && (
+        <div className="text-gray-500 text-[10px] ml-6 pl-1" style={{ paddingLeft: depth > 0 ? `${depth * 12 + 12}px` : undefined }}>
+          {field.description}
+        </div>
+      )}
+
+      {hasChildren && expanded && (
+        <div className="border-l border-gray-200 ml-2">
+          {field.children!.map((child) => (
+            <SchemaFieldRow
+              key={child.name}
+              field={child}
+              pathPrefix={fullPath}
+              depth={depth + 1}
+              onCopyPath={onCopyPath}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// §16.1 - Schema Reference Section (collapsible)
+const SchemaReferenceSection: React.FC<{
+  title: string;
+  icon?: React.ReactNode;
+  fields: SchemaField[];
+  pathPrefix: string;
+  defaultExpanded?: boolean;
+  emptyMessage?: string;
+  onCopyPath?: (path: string) => void;
+  headerExtra?: React.ReactNode;
+}> = ({ title, icon, fields, pathPrefix, defaultExpanded = false, emptyMessage = 'No fields', onCopyPath, headerExtra }) => {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  // §16.7 - Collect all paths recursively
+  const getAllPaths = (fieldList: SchemaField[], prefix: string): string[] => {
+    const paths: string[] = [];
+    for (const field of fieldList) {
+      const fullPath = `\${${prefix}.${field.name}}`;
+      paths.push(fullPath);
+      if (field.children) {
+        paths.push(...getAllPaths(field.children, `${prefix}.${field.name}`));
+      }
+    }
+    return paths;
+  };
+
+  const handleCopyAllPaths = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const allPaths = getAllPaths(fields, pathPrefix);
+    navigator.clipboard.writeText(allPaths.join('\n'));
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+    onCopyPath?.(`${allPaths.length} paths copied`);
+  };
+
+  return (
+    <div className="border border-gray-200 rounded-md overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        {expanded ? (
+          <ChevronDown className="w-4 h-4 text-gray-500" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-500" />
+        )}
+        {icon}
+        <span className="text-xs font-semibold text-gray-700">{title}</span>
+        <Badge variant="default" className="ml-auto text-[10px] px-1.5 py-0">
+          {fields.length}
+        </Badge>
+        {headerExtra}
+      </button>
+
+      {expanded && (
+        <div className="px-2 py-2 bg-white max-h-64 overflow-y-auto">
+          {fields.length === 0 ? (
+            <div className="text-xs text-gray-400 text-center py-2">{emptyMessage}</div>
+          ) : (
+            <>
+              {/* §16.7 - Copy all paths button */}
+              <div className="flex justify-end mb-1">
+                <button
+                  onClick={handleCopyAllPaths}
+                  className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                  title="Copy all field paths"
+                >
+                  {copiedAll ? (
+                    <>
+                      <Check className="w-3 h-3 text-green-600" />
+                      <span className="text-green-600">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy all paths</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              {fields.map((field) => (
+                <SchemaFieldRow
+                  key={field.name}
+                  field={field}
+                  pathPrefix={pathPrefix}
+                  onCopyPath={onCopyPath}
+                />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// §16.1 - Action Schema Reference (shows input/output for action.call steps)
+const ActionSchemaReference: React.FC<{
+  action: ActionRegistryItem | undefined;
+  saveAs?: string;
+  onCopyPath?: (path: string) => void;
+}> = ({ action, saveAs, onCopyPath }) => {
+  const [showRawSchema, setShowRawSchema] = useState(false);
+
+  if (!action) {
+    return (
+      <div className="text-xs text-gray-400 p-3 border border-dashed border-gray-200 rounded-md text-center">
+        Select an action to see its input/output schema
+      </div>
+    );
+  }
+
+  const inputFields = extractSchemaFields(action.inputSchema, action.inputSchema);
+  const outputFields = extractSchemaFields(action.outputSchema, action.outputSchema);
+
+  return (
+    <div className="space-y-3">
+      {/* Action description */}
+      {action.ui?.description && (
+        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-md flex items-start gap-2">
+          <Info className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+          <span>{action.ui.description}</span>
+        </div>
+      )}
+
+      {/* Input Schema */}
+      <SchemaReferenceSection
+        title="Input Schema"
+        icon={<Code className="w-3.5 h-3.5 text-gray-500" />}
+        fields={inputFields}
+        pathPrefix="input"
+        defaultExpanded={true}
+        emptyMessage="No input parameters"
+        onCopyPath={onCopyPath}
+      />
+
+      {/* Output Schema */}
+      <SchemaReferenceSection
+        title="Output Schema"
+        icon={<FileJson className="w-3.5 h-3.5 text-gray-500" />}
+        fields={outputFields}
+        pathPrefix={saveAs ? `vars.${saveAs}` : 'output'}
+        defaultExpanded={true}
+        emptyMessage="No output fields"
+        onCopyPath={onCopyPath}
+        headerExtra={
+          saveAs && (
+            <span className="text-[10px] text-gray-500 font-normal">
+              → vars.{saveAs}
+            </span>
+          )
+        }
+      />
+
+      {/* SaveAs preview */}
+      {saveAs && (
+        <div className="text-xs bg-green-50 border border-green-200 rounded-md p-2 flex items-center gap-2">
+          <Check className="w-3.5 h-3.5 text-green-600" />
+          <span className="text-green-700">
+            Output available at <code className="bg-green-100 px-1 rounded">${`{vars.${saveAs}}`}</code>
+          </span>
+        </div>
+      )}
+
+      {/* Raw schema toggle and export */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setShowRawSchema(!showRawSchema)}
+          className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
+        >
+          {showRawSchema ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+          {showRawSchema ? 'Hide' : 'Show'} raw JSON Schema
+        </button>
+
+        {/* §16.7 - Export schema as JSON */}
+        <button
+          onClick={() => {
+            const schema = {
+              actionId: action.id,
+              version: action.version,
+              inputSchema: action.inputSchema,
+              outputSchema: action.outputSchema
+            };
+            const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${action.id}-schema.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap-1"
+          title="Download schema as JSON file"
+        >
+          <FileJson className="w-3 h-3" />
+          Export schema
+        </button>
+      </div>
+
+      {showRawSchema && (
+        <div className="text-[10px] font-mono bg-gray-900 text-gray-100 p-2 rounded-md overflow-x-auto">
+          <div className="text-gray-400 mb-1">// Input Schema</div>
+          <pre>{JSON.stringify(action.inputSchema, null, 2)}</pre>
+          <div className="text-gray-400 mt-2 mb-1">// Output Schema</div>
+          <pre>{JSON.stringify(action.outputSchema, null, 2)}</pre>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// §16.3 - Data Context Panel (shows available data at current step)
+const DataContextPanel: React.FC<{
+  context: DataContext;
+  onCopyPath?: (path: string) => void;
+}> = ({ context, onCopyPath }) => {
+  return (
+    <div className="space-y-3">
+      <div className="text-xs font-semibold text-gray-700 flex items-center gap-2">
+        <HelpCircle className="w-3.5 h-3.5" />
+        Available Data at This Step
+      </div>
+
+      {/* Payload */}
+      <SchemaReferenceSection
+        title="Payload"
+        fields={context.payload}
+        pathPrefix="payload"
+        defaultExpanded={true}
+        emptyMessage={context.payloadSchema ? "No payload fields" : "Set 'Payload schema ref' to define payload structure"}
+        onCopyPath={onCopyPath}
+      />
+
+      {/* Previous step outputs */}
+      <div className="space-y-2">
+        <div className="text-[10px] font-semibold text-gray-500 uppercase">Step Outputs (vars)</div>
+        {context.steps.length > 0 ? (
+          context.steps.map((stepOutput) => (
+            <SchemaReferenceSection
+              key={stepOutput.stepId}
+              title={stepOutput.stepName}
+              fields={stepOutput.fields}
+              pathPrefix={`vars.${stepOutput.saveAs}`}
+              defaultExpanded={false}
+              emptyMessage="Output schema not available"
+              onCopyPath={onCopyPath}
+              headerExtra={
+                <span className="text-[10px] text-gray-400 font-normal">
+                  vars.{stepOutput.saveAs}
+                </span>
+              }
+            />
+          ))
+        ) : (
+          <div className="text-xs text-gray-400 p-2 border border-dashed border-gray-200 rounded-md text-center">
+            No previous steps with "Save output as" configured
+          </div>
+        )}
+      </div>
+
+      {/* Globals */}
+      <div className="space-y-2">
+        <div className="text-[10px] font-semibold text-gray-500 uppercase">Globals</div>
+        <SchemaReferenceSection
+          title="meta"
+          fields={context.globals.meta}
+          pathPrefix="meta"
+          defaultExpanded={false}
+          onCopyPath={onCopyPath}
+        />
+        <SchemaReferenceSection
+          title="error"
+          fields={context.globals.error}
+          pathPrefix="error"
+          defaultExpanded={false}
+          onCopyPath={onCopyPath}
+        />
+      </div>
     </div>
   );
 };
