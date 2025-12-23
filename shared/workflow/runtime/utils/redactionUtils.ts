@@ -1,13 +1,28 @@
 const REDACTED = '[REDACTED]';
+const SECRET_REDACTED = '[SECRET:REDACTED]';
 
+/**
+ * Mask secret references in a value.
+ * Handles both old-style { secretRef: "..." } and new-style { $secret: "..." } references.
+ *
+ * @param value - The value to process
+ * @returns The value with secret references masked
+ */
 export function maskSecretRefs(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(maskSecretRefs);
   }
   if (value && typeof value === 'object') {
     const obj = value as Record<string, unknown>;
+
+    // Check for new-style $secret reference: { $secret: "SECRET_NAME" }
+    if ('$secret' in obj && typeof obj.$secret === 'string') {
+      return { $secret: SECRET_REDACTED };
+    }
+
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(obj)) {
+      // Handle old-style secretRef key
       if (key === 'secretRef') {
         result[key] = REDACTED;
       } else {
@@ -17,6 +32,26 @@ export function maskSecretRefs(value: unknown): unknown {
     return result;
   }
   return value;
+}
+
+/**
+ * Mask resolved secret values in the output.
+ * This is used after secrets have been resolved to their actual values.
+ *
+ * @param value - The value to process
+ * @param secretPaths - JSON Pointer paths to resolved secrets (e.g., "/apiKey", "/config/password")
+ * @returns The value with secret values masked at the specified paths
+ */
+export function maskResolvedSecrets(value: unknown, secretPaths: string[]): unknown {
+  if (!secretPaths || secretPaths.length === 0) {
+    return value;
+  }
+
+  let result = value;
+  for (const pointer of secretPaths) {
+    result = applyJsonPointerRedaction(result, pointer);
+  }
+  return result;
 }
 
 export function applyRedactions(value: unknown, redactions: string[] = []): unknown {

@@ -21,6 +21,7 @@ import {
   Handshake,
   HelpCircle,
   Home,
+  KeyRound,
   Layers,
   Layout,
   LayoutDashboard,
@@ -232,6 +233,7 @@ export const settingsNavigationSections: NavigationSection[] = [
   {
     title: 'Data & Integration',
     items: [
+      { name: 'Secrets', icon: KeyRound, href: '/msp/settings?tab=secrets' },
       { name: 'Import/Export', icon: Download, href: '/msp/settings?tab=import-export' },
       { name: 'Integrations', icon: Plug, href: '/msp/settings?tab=integrations' },
       { name: 'Extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },

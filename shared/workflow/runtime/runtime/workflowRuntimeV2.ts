@@ -19,7 +19,9 @@ import {
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { resolveExpressions } from '../utils/expressionResolver';
-import { applyRedactions, enforceSnapshotSize, safeSerialize } from '../utils/redactionUtils';
+import { applyRedactions, enforceSnapshotSize, safeSerialize, maskResolvedSecrets } from '../utils/redactionUtils';
+import { resolveInputMapping, type SecretResolver, type MappingResolverOptions } from '../utils/mappingResolver';
+import type { InputMapping } from '../types';
 import { applyAssignments } from '../utils/assignmentUtils';
 import { parseNodePath } from '../utils/nodePathUtils';
 import WorkflowDefinitionModelV2 from '../../persistence/workflowDefinitionModelV2';
@@ -47,6 +49,7 @@ export type StartRunParams = {
   payload: Record<string, unknown>;
   tenantId?: string | null;
   triggerEvent?: { name: string; payload: Record<string, unknown> };
+  secretResolver?: SecretResolver;
 };
 
 export type EventResumePayload = {
@@ -1107,19 +1110,43 @@ type RuntimeError = {
   at: string;
 };
 
-async function resolveMapping(env: Envelope, mapping?: Record<string, { $expr: string }>): Promise<Record<string, unknown> | null> {
+/**
+ * Resolve a mapping with support for expressions, secrets, and literal values.
+ *
+ * @param env - The workflow envelope
+ * @param mapping - The mapping to resolve (can contain $expr, $secret, or literals)
+ * @param secretResolver - Optional secret resolver for $secret values
+ * @param workflowRunId - Optional run ID for audit logging
+ * @param redactionPaths - Optional array to track paths that should be redacted
+ * @returns The resolved mapping, or null if no mapping provided
+ */
+async function resolveMappingWithSecrets(
+  env: Envelope,
+  mapping?: InputMapping | Record<string, { $expr: string }>,
+  secretResolver?: SecretResolver,
+  workflowRunId?: string,
+  redactionPaths?: string[]
+): Promise<Record<string, unknown> | null> {
   if (!mapping) return null;
-  const ctx = {
-    payload: env.payload,
-    vars: env.vars,
-    meta: env.meta,
-    error: env.error
+
+  const options: MappingResolverOptions = {
+    expressionContext: {
+      payload: env.payload,
+      vars: env.vars,
+      meta: env.meta,
+      error: env.error
+    },
+    secretResolver,
+    workflowRunId,
+    redactionPaths
   };
-  const result: Record<string, unknown> = {};
-  for (const [key, expr] of Object.entries(mapping)) {
-    result[key] = await resolveExpressions(expr, ctx);
-  }
-  return result;
+
+  return resolveInputMapping(mapping as InputMapping, options);
+}
+
+// Backward-compatible wrapper for legacy code
+async function resolveMapping(env: Envelope, mapping?: Record<string, { $expr: string }>): Promise<Record<string, unknown> | null> {
+  return resolveMappingWithSecrets(env, mapping);
 }
 
 function generateIdempotencyKey(runId: string, stepPath: string, actionId: string, version: number, input: unknown): string {

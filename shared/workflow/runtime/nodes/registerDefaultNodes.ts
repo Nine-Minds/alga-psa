@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
-import { exprSchema } from '../types';
+import { exprSchema, inputMappingSchema } from '../types';
 import { resolveExpressions } from '../utils/expressionResolver';
+import { resolveInputMapping, noOpSecretResolver } from '../utils/mappingResolver';
 import { applyAssignments } from '../utils/assignmentUtils';
-import type { Envelope } from '../types';
+import type { Envelope, InputMapping } from '../types';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
 import { getFormValidationService } from '../../core/formValidationService';
 
@@ -25,13 +26,19 @@ const transformAssignSchema = z.object({
 const actionCallSchema = z.object({
   actionId: z.string().min(1),
   version: z.number().int().positive(),
-  args: z.record(z.any()),
+  // Legacy: args uses expression resolution on all values
+  args: z.record(z.any()).optional(),
+  // New: inputMapping supports $expr, $secret, and literal values
+  inputMapping: inputMappingSchema.optional(),
   saveAs: z.string().optional(),
   onError: z.object({
     policy: z.enum(['fail', 'continue'])
   }).optional(),
   idempotencyKey: exprSchema.optional()
-}).strict();
+}).strict().refine(
+  (data) => data.args !== undefined || data.inputMapping !== undefined,
+  { message: 'Either "args" or "inputMapping" must be provided' }
+);
 
 const emailParseBodySchema = z.object({
   text: exprSchema.optional(),
@@ -149,20 +156,37 @@ export function registerDefaultNodes(): void {
     id: 'action.call',
     configSchema: actionCallSchema,
     handler: async (env, config, ctx) => {
-      const resolvedArgs = await resolveExpressions(config.args, {
-        payload: env.payload,
-        vars: env.vars,
-        meta: env.meta,
-        error: env.error
-      });
+      const exprContext = ctxToExpr(env);
+      let resolvedArgs: unknown;
+
+      // Prefer inputMapping if provided, fall back to legacy args
+      if (config.inputMapping) {
+        // Track secret paths for redaction
+        const redactionPaths: string[] = [];
+        resolvedArgs = await resolveInputMapping(config.inputMapping, {
+          expressionContext: exprContext,
+          secretResolver: ctx.secretResolver ?? noOpSecretResolver,
+          workflowRunId: ctx.runId,
+          redactionPaths
+        });
+
+        // Add resolved secret paths to envelope meta for redaction
+        if (redactionPaths.length > 0 && env.meta.redactions) {
+          env.meta.redactions.push(...redactionPaths.map(p => `args${p}`));
+        } else if (redactionPaths.length > 0) {
+          env.meta.redactions = redactionPaths.map(p => `args${p}`);
+        }
+      } else if (config.args) {
+        // Legacy: resolve expressions in args
+        resolvedArgs = await resolveExpressions(config.args, exprContext);
+      } else {
+        resolvedArgs = {};
+      }
+
       const idempotencyKey = config.idempotencyKey
-        ? String(await resolveExpressions(config.idempotencyKey, {
-            payload: env.payload,
-            vars: env.vars,
-            meta: env.meta,
-            error: env.error
-          }))
+        ? String(await resolveExpressions(config.idempotencyKey, exprContext))
         : undefined;
+
       const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, { idempotencyKey });
       if (config.saveAs) {
         return applyAssignments(env, {

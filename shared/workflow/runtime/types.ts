@@ -9,6 +9,80 @@ export const exprSchema = z.object({
 
 export type Expr = z.infer<typeof exprSchema>;
 
+/**
+ * Secret reference type for use in workflow inputMapping.
+ * References a tenant secret by name: { $secret: "SECRET_NAME" }
+ */
+export const secretRefSchema = z.object({
+  $secret: z.string().min(1)
+}).strict();
+
+export type SecretRef = z.infer<typeof secretRefSchema>;
+
+/**
+ * Check if a value is a SecretRef.
+ */
+export function isSecretRef(value: unknown): value is SecretRef {
+  return secretRefSchema.safeParse(value).success;
+}
+
+/**
+ * Literal value types supported in input mapping.
+ */
+export const literalValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+  z.array(z.unknown()),
+  z.record(z.unknown())
+]);
+
+export type LiteralValue = z.infer<typeof literalValueSchema>;
+
+/**
+ * Check if a value is a literal (not an expression or secret ref).
+ */
+export function isLiteralValue(value: unknown): value is LiteralValue {
+  // A literal is anything that's not an Expr or SecretRef
+  if (value === null) return true;
+  if (typeof value !== 'object') return true;
+  if (Array.isArray(value)) return true;
+  const obj = value as Record<string, unknown>;
+  return !('$expr' in obj) && !('$secret' in obj);
+}
+
+/**
+ * MappingValue is the union of all types that can be used in inputMapping.
+ * - Expr: Expression to evaluate at runtime (e.g., { $expr: "payload.name" })
+ * - SecretRef: Reference to a tenant secret (e.g., { $secret: "API_KEY" })
+ * - LiteralValue: Static value (e.g., "hello", 42, true, null)
+ */
+export const mappingValueSchema = z.union([
+  exprSchema,
+  secretRefSchema,
+  literalValueSchema
+]);
+
+export type MappingValue = z.infer<typeof mappingValueSchema>;
+
+/**
+ * InputMapping type for action.call config.
+ * Maps target field names to MappingValue (expression, secret, or literal).
+ */
+export const inputMappingSchema = z.record(mappingValueSchema);
+
+export type InputMapping = z.infer<typeof inputMappingSchema>;
+
+/**
+ * Check if a value is an Expr.
+ */
+export function isExpr(value: unknown): value is Expr {
+  if (value === null || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+  return '$expr' in obj && typeof obj.$expr === 'string';
+}
+
 export const retryPolicySchema = z.object({
   maxAttempts: z.number().int().positive(),
   backoffMs: z.number().int().nonnegative(),
