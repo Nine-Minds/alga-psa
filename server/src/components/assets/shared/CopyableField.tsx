@@ -1,6 +1,8 @@
-import React from 'react';
-import { Text, Group, ActionIcon, CopyButton, Tooltip } from '@mantine/core';
+import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { Button } from 'server/src/components/ui/Button';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { cn } from 'server/src/lib/utils';
 
 interface CopyableFieldProps {
   label: string;
@@ -15,34 +17,52 @@ export const CopyableField: React.FC<CopyableFieldProps> = ({
   showCopyButton = true,
   truncate = false,
 }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (value) {
+      navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   if (!value) {
     return (
-      <div>
-        <Text size="xs" c="dimmed">{label}</Text>
-        <Text size="sm" c="dimmed">N/A</Text>
+      <div className="flex flex-col">
+        <span className="text-xs text-gray-500">{label}</span>
+        <span className="text-sm text-gray-400">N/A</span>
       </div>
     );
   }
 
   return (
-    <div>
-      <Text size="xs" c="dimmed">{label}</Text>
-      <Group gap="xs">
-        <Text size="sm" truncate={truncate ? 'end' : undefined} style={{ maxWidth: truncate ? '150px' : undefined }}>
+    <div className="flex flex-col">
+      <span className="text-xs text-gray-500">{label}</span>
+      <div className="flex items-center gap-1.5 min-h-[20px]">
+        <span className={cn(
+          "text-sm text-gray-900",
+          truncate && "truncate max-w-[150px]"
+        )}>
           {value}
-        </Text>
+        </span>
         {showCopyButton && (
-          <CopyButton value={value} timeout={2000}>
-            {({ copied, copy }) => (
-              <Tooltip label={copied ? 'Copied' : 'Copy'} withArrow position="right">
-                <ActionIcon color={copied ? 'teal' : 'gray'} variant="subtle" onClick={copy} size="xs">
-                  {copied ? <Check size={12} /> : <Copy size={12} />}
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </CopyButton>
+          <Tooltip content={copied ? 'Copied' : 'Copy'}>
+            <Button
+              id={`copy-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-5 w-5 p-0",
+                copied ? "text-emerald-500" : "text-gray-400 hover:text-gray-600"
+              )}
+              onClick={handleCopy}
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+            </Button>
+          </Tooltip>
         )}
-      </Group>
+      </div>
     </div>
   );
 };
