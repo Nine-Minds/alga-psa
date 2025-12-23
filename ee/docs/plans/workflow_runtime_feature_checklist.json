@@ -2682,32 +2682,32 @@
   {
     "description": "Validate that referenced vars come from steps with saveAs configured.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Warn when referencing optional source field without null handling.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Check enum value compatibility between source and target.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate literal values in expressions match target type.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support validation of conditional expressions (ternary) type inference.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Cache type inference results for performance.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Track expression evaluation metrics (time, memory) for monitoring.",
@@ -2967,7 +2967,7 @@
   {
     "description": "Validate partial object mapping has all required nested fields covered.",
     "reference": "§17.5.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement mapping editor panel layout container component.",
@@ -3067,17 +3067,17 @@
   {
     "description": "Validate mapped value is a valid enum member at design time.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return INVALID_ENUM_VALUE error when mapped value not in allowed enum values.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support mapping expression that resolves to enum value with runtime validation.",
     "reference": "§17.6.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Define secret reference syntax { $secret: \"secretName\" } for secure credential mapping.",
@@ -3097,7 +3097,7 @@
   {
     "description": "Validate referenced secret exists at publish time.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Resolve $secret references securely at runtime without logging values.",
@@ -3162,7 +3162,7 @@
   {
     "description": "Warn if referencing item or $index outside of forEach body.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show loading state in mapping editor while fetching action schema.",
