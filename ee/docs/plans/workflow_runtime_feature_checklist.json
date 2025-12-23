@@ -3012,7 +3012,7 @@
   {
     "description": "Implement custom helper functions for common mapping patterns (coalesce, isEmpty, formatDate, etc.).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Document custom helper functions available in mapping expressions.",
@@ -3057,7 +3057,7 @@
   {
     "description": "Detect enum types in target field schema.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show dropdown of valid enum values instead of free text for enum target fields.",
