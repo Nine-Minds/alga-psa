@@ -6,24 +6,28 @@ interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPr
   value: number;
   max?: number;
   className?: string;
-  ref?: React.Ref<React.ElementRef<typeof ProgressPrimitive.Root>>;
+  indicatorClassName?: string;
 }
 
-function Progress({ value, max = 100, className, ref, ...props }: ProgressProps) {
-  const percentage = Math.min((value / max) * 100, 100);
+const Progress = React.forwardRef<React.ElementRef<typeof ProgressPrimitive.Root>, ProgressProps>(
+  ({ value, max = 100, className, indicatorClassName, ...props }, ref) => {
+    const percentage = Math.min((value / max) * 100, 100);
 
-  return (
-    <ProgressPrimitive.Root
-      ref={ref}
-      className={cn('relative h-2 w-full overflow-hidden rounded-full bg-secondary', className)}
-      {...props}
-    >
-      <ProgressPrimitive.Indicator
-        className="h-full w-full flex-1 bg-primary transition-all"
-        style={{ transform: `translateX(-${100 - percentage}%)` }}
-      />
-    </ProgressPrimitive.Root>
-  );
-}
+    return (
+      <ProgressPrimitive.Root
+        ref={ref}
+        className={cn('relative h-2 w-full overflow-hidden rounded-full bg-secondary-100 dark:bg-secondary-900', className)}
+        {...props}
+      >
+        <ProgressPrimitive.Indicator
+          className={cn('h-full w-full flex-1 bg-primary transition-all', indicatorClassName)}
+          style={{ transform: `translateX(-${100 - percentage}%)` }}
+        />
+      </ProgressPrimitive.Root>
+    );
+  }
+);
+
+Progress.displayName = 'Progress';
 
 export { Progress };

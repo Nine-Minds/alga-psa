@@ -83,6 +83,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   });
 
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
+  const [totalAssets, setTotalAssets] = useState(initialAssets.total);
+  const [systemTotalAssets] = useState(initialAssets.total);
+  const [pageSize, setPageSize] = useState(initialAssets.limit || 10);
+  const [currentPage, setCurrentPage] = useState(initialAssets.page || 1);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
   const [loading, setLoading] = useState(false);
 
@@ -224,7 +228,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     }, {} as Record<string, Asset[]>);
   }, [assets]);
 
-  const totalAssets = assets.length;
+
 
   useEffect(() => {
     async function loadMaintenanceSummaries() {
@@ -268,34 +272,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
   }, [assets]);
 
-  const filteredAssets = useMemo(() => {
-    return assets.filter(asset => {
-      const matchesSearch = !searchTerm
-        || asset.name.toLowerCase().includes(searchTerm.toLowerCase())
-        || asset.asset_tag?.toLowerCase().includes(searchTerm.toLowerCase())
-        || asset.client?.client_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesStatus = statusFilters.length === 0 || statusFilters.includes(asset.status);
-      const matchesType = typeFilters.length === 0 || typeFilters.includes(asset.asset_type);
-      const matchesClient = clientFilters.length === 0 || (asset.client_id && clientFilters.includes(asset.client_id));
 
-      // RMM Agent Status filter
-      const matchesAgentStatus = agentStatusFilters.length === 0 || (
-        asset.rmm_provider && asset.agent_status && agentStatusFilters.includes(asset.agent_status)
-      );
-
-      // RMM Managed filter
-      const matchesRmmManaged = rmmManagedFilter.length === 0 || (
-        rmmManagedFilter.includes('managed') && asset.rmm_provider && asset.rmm_device_id
-      ) || (
-        rmmManagedFilter.includes('unmanaged') && (!asset.rmm_provider || !asset.rmm_device_id)
-      );
-
-      return matchesSearch && matchesStatus && matchesType && matchesClient && matchesAgentStatus && matchesRmmManaged;
-    });
-  }, [assets, searchTerm, statusFilters, typeFilters, clientFilters, agentStatusFilters, rmmManagedFilter]);
-
-  const filteredCount = filteredAssets.length;
+  const filteredCount = totalAssets;
   const hasActiveFilters = Boolean(
     searchTerm ||
     statusFilters.length > 0 ||
@@ -305,7 +284,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     rmmManagedFilter.length > 0
   );
 
-  const isAllSelected = filteredCount > 0 && filteredAssets.every(asset => selectedAssetIds.includes(asset.asset_id));
+  const isAllSelected = filteredCount > 0 && assets.every(asset => selectedAssetIds.includes(asset.asset_id));
   const isIndeterminate = selectedAssetIds.length > 0 && !isAllSelected;
 
   const toggleSelectAll = useCallback(() => {
@@ -314,12 +293,44 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         return [];
       }
       const ids = new Set(prev);
-      filteredAssets.forEach(asset => ids.add(asset.asset_id));
+      assets.forEach(asset => ids.add(asset.asset_id));
       return Array.from(ids);
     });
-  }, [filteredAssets, isAllSelected]);
+  }, [assets, isAllSelected]);
 
-  const handleAssetAdded = async () => {
+  
+  const fetchAssets = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await listAssets({
+        page: currentPage,
+        limit: pageSize,
+        search: searchTerm || undefined,
+        status: statusFilters.length > 0 ? statusFilters[0] as any : undefined,
+        asset_type: typeFilters.length > 0 ? typeFilters[0] as any : undefined,
+        client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
+        agent_status: agentStatusFilters.length > 0 ? agentStatusFilters[0] as any : undefined,
+        rmm_managed: rmmManagedFilter.length > 0 ? rmmManagedFilter.includes('managed') : undefined,
+      });
+      setAssets(response.assets);
+      setTotalAssets(response.total);
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize, searchTerm, statusFilters, typeFilters, clientFilters, agentStatusFilters, rmmManagedFilter]);
+
+  useEffect(() => {
+    fetchAssets();
+  }, [fetchAssets]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilters, typeFilters, clientFilters, agentStatusFilters, rmmManagedFilter]);
+
+const handleAssetAdded = async () => {
     try {
       const response = await listAssets({});
       setAssets(response.assets);
@@ -635,7 +646,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total assets</p>
-              <p className="text-3xl font-semibold text-gray-900 mt-2">{totalAssets}</p>
+              <p className="text-3xl font-semibold text-gray-900 mt-2">{systemTotalAssets}</p>
               <p className="text-xs text-gray-500 mt-1">Across all clients</p>
             </Card>
             <Card className="p-4">
@@ -960,9 +971,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
             <DataTable
               id="asset-table"
-              data={filteredAssets}
+              data={assets}
               columns={columns}
               pagination
+              pageSize={pageSize}
+              currentPage={currentPage}
+              totalItems={totalAssets}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setPageSize}
               onRowClick={(asset) => openDrawerForAsset(asset)}
             />
           </Card>
@@ -970,7 +986,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       <AssetCommandPalette
         isOpen={isCommandPaletteOpen}
         assets={assets}
-        filteredAssets={filteredAssets}
+        filteredAssets={assets}
         hasActiveFilters={hasActiveFilters}
         onClose={() => setIsCommandPaletteOpen(false)}
         onSelectAsset={handleCommandSelectAsset}

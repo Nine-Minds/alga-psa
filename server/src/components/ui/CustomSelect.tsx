@@ -36,6 +36,8 @@ interface CustomSelectProps {
   allowClear?: boolean;
   /** Whether the select should be modal (prevents interaction with outside elements) */
   modal?: boolean;
+  /** Whether to show the placeholder as a disabled option in the dropdown (default: true) */
+  showPlaceholderInDropdown?: boolean;
 }
 
 const PLACEHOLDER_VALUE = '__SELECT_PLACEHOLDER__';
@@ -54,8 +56,9 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   "data-automation-type": dataAutomationType = 'select',
   "data-automation-id": dataAutomationId,
   required = false,
-  allowClear = false, // Added default value
+  allowClear = false,
   modal,
+  showPlaceholderInDropdown = true,
   ...props
 }): React.JSX.Element => {
   const { modal: parentModal } = useModality();
@@ -227,17 +230,19 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
             
             <RadixSelect.Viewport className="p-1 max-h-[300px] overflow-y-auto">
               {/* Add a placeholder option if needed */}
-              <RadixSelect.Item
-                value={PLACEHOLDER_VALUE}
-                className={`
-                  relative flex items-center px-3 py-2 text-sm rounded text-gray-500
-                  cursor-default bg-white select-none
-                  ${customStyles?.item || ''}
-                `}
-                disabled
-              >
-                <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
-              </RadixSelect.Item>
+              {showPlaceholderInDropdown && (
+                <RadixSelect.Item
+                  value={PLACEHOLDER_VALUE}
+                  className={`
+                    relative flex items-center px-3 py-2 text-sm rounded text-gray-500
+                    cursor-default bg-white select-none
+                    ${customStyles?.item || ''}
+                  `}
+                  disabled
+                >
+                  <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
+                </RadixSelect.Item>
+              )}
 
               {allowClear && value !== undefined && value !== null && value !== '' && (
                 <RadixSelect.Item

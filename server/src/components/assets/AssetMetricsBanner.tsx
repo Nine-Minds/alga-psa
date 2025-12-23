@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, Text, Group, Divider } from '@mantine/core';
+import { Card } from 'server/src/components/ui/Card';
 import { 
   Check, 
   AlertTriangle, 
@@ -12,6 +12,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { AssetSummaryMetrics } from '../../interfaces/asset.interfaces';
+import { cn } from 'server/src/lib/utils';
 
 interface AssetMetricsBannerProps {
   metrics: AssetSummaryMetrics | undefined;
@@ -27,16 +28,18 @@ const MetricItem = ({
   value: React.ReactNode; 
   onClick?: () => void;
 }) => (
-  <Group 
-    gap="xs" 
-    className={`px-4 py-2 ${onClick ? 'cursor-pointer hover:bg-gray-50 rounded transition-colors' : ''}`}
+  <div 
+    className={cn(
+      "flex items-center gap-2 px-4 py-2 flex-1 justify-center whitespace-nowrap",
+      onClick && "cursor-pointer hover:bg-gray-50 transition-colors"
+    )}
     onClick={onClick}
   >
-    <Text size="sm" fw={700} c="dimmed">
+    <span className="text-sm font-bold text-gray-400">
       {label}:
-    </Text>
+    </span>
     {value}
-  </Group>
+  </div>
 );
 
 const StatusText = ({ 
@@ -48,18 +51,21 @@ const StatusText = ({
   color: string; 
   icon?: any;
 }) => (
-  <Group gap={4}>
-    <Text 
-      size="sm" 
-      fw={600} 
-      className={`text-${color}-600 flex items-center gap-1`}
-    >
+  <div className="flex items-center gap-1">
+    <span className={cn(
+      "text-sm font-semibold flex items-center gap-1",
+      color === 'green' && 'text-emerald-600',
+      color === 'yellow' && 'text-amber-600',
+      color === 'red' && 'text-red-600',
+      color === 'gray' && 'text-gray-500',
+      color === 'blue' && 'text-primary-600'
+    )}>
       [
       {Icon && <Icon size={12} strokeWidth={3} />}
       {text}
       ]
-    </Text>
-  </Group>
+    </span>
+  </div>
 );
 
 export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({ 
@@ -68,7 +74,7 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
 }) => {
   if (isLoading || !metrics) {
     return (
-      <Paper p="md" withBorder className="h-14 animate-pulse bg-gray-50 mb-6" />
+      <div className="h-14 w-full animate-pulse bg-gray-50 border border-gray-200 rounded-lg mb-6" />
     );
   }
 
@@ -108,45 +114,35 @@ export const AssetMetricsBanner: React.FC<AssetMetricsBannerProps> = ({
   const warranty = getWarrantyConfig(metrics.warranty_status, metrics.warranty_days_remaining);
 
   return (
-    <Paper withBorder p="xs" className="mb-6 bg-white">
+    <Card className="mb-6 bg-white overflow-hidden p-0">
       <div className="flex flex-col lg:flex-row justify-between lg:items-center divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
-        <div className="flex-1 flex justify-center">
-          <MetricItem 
-            label="Health Status" 
-            value={<StatusText text={health.text} color={health.color} icon={health.icon} />} 
-          />
-        </div>
+        <MetricItem 
+          label="Health Status" 
+          value={<StatusText text={health.text} color={health.color} icon={health.icon} />} 
+        />
         
-        <div className="flex-1 flex justify-center">
-          <MetricItem 
-            label="Open Tickets" 
-            value={
-              <Text size="sm" fw={600} className="text-blue-600">
-                [{metrics.open_tickets_count} Active]
-              </Text>
-            }
-            onClick={() => { /* Navigate */ }}
-          />
-        </div>
+        <MetricItem 
+          label="Open Tickets" 
+          value={
+            <span className="text-sm font-semibold text-primary-600">
+              [{metrics.open_tickets_count} Active]
+            </span>
+          }
+          onClick={() => { /* Navigate */ }}
+        />
 
-        <div className="flex-1 flex justify-center">
-          <MetricItem 
-            label="Security Status" 
-            value={<StatusText text={security.text} color={security.color} icon={security.icon} />} 
-          />
-        </div>
+        <MetricItem 
+          label="Security Status" 
+          value={<StatusText text={security.text} color={security.color} icon={security.icon} />} 
+        />
 
-        <div className="flex-1 flex justify-center">
-          <MetricItem 
-            label="Warranty" 
-            value={
-              <Text size="sm" fw={600} className={warranty.color !== 'gray' ? `text-${warranty.color}-600` : ''}>
-                [{warranty.text}]
-              </Text>
-            } 
-          />
-        </div>
+        <MetricItem 
+          label="Warranty" 
+          value={
+            <StatusText text={warranty.text} color={warranty.color} />
+          } 
+        />
       </div>
-    </Paper>
+    </Card>
   );
 };

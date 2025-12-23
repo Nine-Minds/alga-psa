@@ -1,11 +1,10 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
-import { Button, Text, Group } from '@mantine/core';
+import { Button } from 'server/src/components/ui/Button';
 import { useAssetNotes } from '../../../hooks/useAssetNotes';
 import TextEditor from '../../editor/TextEditor';
 import { Save } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
 
 interface AssetNotesPanelProps {
   assetId: string;
@@ -49,12 +48,13 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
           <CardTitle>Notes & Quick Info</CardTitle>
           <Button 
             id="save-asset-note-btn"
-            variant="light" 
-            size="xs" 
-            leftSection={<Save size={14} />}
+            variant="ghost" 
+            size="sm" 
+            className="h-8 gap-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
             onClick={handleSave}
-            loading={isSaving}
+            disabled={isSaving}
           >
+            {isSaving ? <Spinner size="sm" className="h-3 w-3" /> : <Save size={14} />}
             Save
           </Button>
         </div>
@@ -69,11 +69,11 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
         </div>
         
         {lastUpdated && (
-          <Group justify="flex-end" mt="xs">
-            <Text size="xs" c="dimmed">
+          <div className="flex justify-end mt-2">
+            <span className="text-xs text-gray-500">
               Last updated: {new Date(lastUpdated).toLocaleString()}
-            </Text>
-          </Group>
+            </span>
+          </div>
         )}
       </CardContent>
     </Card>

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/Table';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
-import { Badge, Button } from '@mantine/core';
+import { Button } from '../../ui/Button';
+import { Badge } from '../../ui/Badge';
 import { Ticket } from 'lucide-react';
 import { getAssetLinkedTickets } from '../../../lib/actions/asset-actions/assetActions';
 import { formatDateTime } from '../../../lib/utils/dateTimeUtils';
 import { Asset } from '../../../interfaces/asset.interfaces';
 import { QuickAddTicket } from '../../tickets/QuickAddTicket';
+import { cn } from 'server/src/lib/utils';
 
 interface ServiceHistoryTabProps {
   asset: Asset;
@@ -37,10 +39,11 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
           <CardTitle className="text-base font-semibold">Service History</CardTitle>
           <Button 
             id="create-ticket-btn"
-            leftSection={<Ticket size={16} />} 
             size="xs"
             onClick={() => setIsTicketDialogOpen(true)}
+            className="flex items-center gap-2"
           >
+            <Ticket size={16} />
             Create Ticket
           </Button>
         </CardHeader>
@@ -63,21 +66,28 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
                       <TableCell className="font-medium text-primary-600">
                         #{ticket.ticket_id.substring(0, 8)}
                       </TableCell>
-                      <TableCell>{ticket.title}</TableCell>
+                      <TableCell className="text-gray-900">{ticket.title}</TableCell>
                       <TableCell>
-                        <Badge variant="light" color="gray">{ticket.status_name}</Badge>
+                        <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-gray-200">
+                          {ticket.status_name}
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        {ticket.priority_name && <Badge variant="dot" color="blue">{ticket.priority_name}</Badge>}
+                        {ticket.priority_name && (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-primary-500" />
+                            <span className="text-xs font-medium text-gray-700">{ticket.priority_name}</span>
+                          </div>
+                        )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-gray-500">
                         {formatDateTime(new Date(ticket.linked_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center text-gray-400">
                       No tickets linked to this asset.
                     </TableCell>
                   </TableRow>
