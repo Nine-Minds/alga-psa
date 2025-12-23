@@ -2,24 +2,17 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import GenericDialog from '../ui/GenericDialog';
 import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import QuickAddClient from './QuickAddClient';
 import {
-  createClient,
   getAllClients,
   getAllClientsPaginated,
   deleteClient,
-  updateClient,
   importClientsFromCSV,
   exportClientsToCSV,
-  getAllClientIds,
-  deactivateClientContacts,
-  reactivateClientContacts,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
-  type PaginatedClientsResponse
 } from 'server/src/lib/actions/client-actions/clientActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { TagFilter } from 'server/src/components/tags';
@@ -33,13 +26,11 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import ClientsImportDialog from './ClientsImportDialog';
-import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import toast from 'react-hot-toast';
 import { handleError } from 'server/src/lib/utils/errorHandling';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
@@ -88,6 +79,7 @@ interface ClientResultsProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onClientTagsLoaded?: (clientTags: Record<string, ITag[]>, allUniqueTags: ITag[]) => void;
+  onClientsLoaded?: (clients: IClient[]) => void;
   // Add props to receive parent's tag state
   clientTags?: Record<string, ITag[]>;
   allUniqueTagsFromParent?: ITag[];
@@ -113,6 +105,7 @@ const ClientResults = memo(({
   onPageChange,
   onPageSizeChange,
   onClientTagsLoaded,
+  onClientsLoaded,
   clientTags: parentClientTags,
   allUniqueTagsFromParent,
   sortBy,
@@ -155,6 +148,8 @@ const ClientResults = memo(({
 
         setClients(response.clients);
         setTotalCount(response.totalCount);
+        // Notify parent component when clients are loaded
+        onClientsLoaded?.(response.clients);
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading clients:', error);
@@ -359,12 +354,17 @@ const Clients: React.FC = () => {
 
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
+  const [loadedClients, setLoadedClients] = useState<IClient[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
+  const [multiDeleteResults, setMultiDeleteResults] = useState<{
+    successCount: number;
+    failedClients: Array<{ clientId: string; clientName: string; reason: string }>;
+  } | null>(null);
   const [showDeactivateOption, setShowDeactivateOption] = useState(false);
   const [deleteDependencies, setDeleteDependencies] = useState<{
     contacts?: number;
@@ -401,7 +401,6 @@ const Clients: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   // For multi-delete functionality, we need to track clients
-  const [clientsForDelete, setClientsForDelete] = useState<IClient[]>([]);
   
 
   // Debounce search input
@@ -480,25 +479,17 @@ const Clients: React.FC = () => {
     setIsSelectAllMode(false);
   };
 
-  const handleSelectAll = async () => {
+  const handleSelectAll = () => {
     if (selectedClients.length > 0 || isSelectAllMode) {
       // Clear all selections
       setSelectedClients([]);
       setIsSelectAllMode(false);
     } else {
-      // Select all clients with current filters
-      try {
-        const allIds = await getAllClientIds({
-          statusFilter: filterStatus,
-          searchTerm: searchTerm || undefined,
-          clientTypeFilter,
-          selectedTags
-        });
-        setSelectedClients(allIds);
+      // Select all clients on the current page (from loaded clients)
+      const clientIds = loadedClients.map(c => c.client_id);
+      if (clientIds.length > 0) {
+        setSelectedClients(clientIds);
         setIsSelectAllMode(true);
-      } catch (error) {
-        console.error('Error selecting all clients:', error);
-        toast.error("Failed to select all clients");
       }
     }
   };
@@ -522,6 +513,11 @@ const Clients: React.FC = () => {
     // Update the main component's tag state when ClientResults loads tags
     setClientTags(loadedClientTags);
     setAllUniqueTags(uniqueTags);
+  }, []);
+
+  const handleClientsLoaded = useCallback((clients: IClient[]) => {
+    // Store loaded clients for use in bulk operations (e.g., displaying names in delete results)
+    setLoadedClients(clients);
   }, []);
   
 
@@ -756,32 +752,28 @@ const Clients: React.FC = () => {
           return { clientId, result };
         })
       );
-  
-      const errors: string[] = [];
+
+      const failedClients: Array<{ clientId: string; clientName: string; reason: string }> = [];
       const successfulDeletes: string[] = [];
-  
+
       deleteResults.forEach(({ clientId, result }) => {
         if (!result.success) {
+          const client = loadedClients.find(c => c.client_id === clientId);
+          const clientName = client ? client.client_name : 'Unknown Client';
+
           if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
-            const client = clientsForDelete.find(c => c.client_id === clientId);
-            const clientName = client ? client.client_name : clientId;
-            const dependencyText = formatDependencyText(result);
-            errors.push(`${clientName}: ${dependencyText}`);
+            const reason = formatDependencyText(result);
+            failedClients.push({ clientId, clientName, reason });
+          } else {
+            failedClients.push({ clientId, clientName, reason: result.message || 'Unknown error' });
           }
         } else {
           successfulDeletes.push(clientId);
         }
       });
-  
+
       // Update selected clients to remove successfully deleted ones
       setSelectedClients(prev => prev.filter(id => !successfulDeletes.includes(id)));
-
-      if (errors.length > 0) {
-        setMultiDeleteError(
-          `Some clients could not be deleted:\n${errors.join('\n')}\n\n` +
-          `${successfulDeletes.length} clients were successfully deleted.`
-        );
-      }
 
       // If any clients were successfully deleted, refresh the list
       if (successfulDeletes.length > 0) {
@@ -789,18 +781,64 @@ const Clients: React.FC = () => {
       }
 
       // If all selected clients were successfully deleted, close the dialog
-      if (errors.length === 0) {
+      if (failedClients.length === 0) {
         setIsMultiDeleteDialogOpen(false);
         setMultiDeleteError(null);
-        toast.success(`${successfulDeletes.length} clients have been deleted successfully.`);
-      } else if (successfulDeletes.length > 0) {
-        // Show partial success toast
-        toast.success(`${successfulDeletes.length} clients deleted. ${errors.length} could not be deleted.`);
+        setMultiDeleteResults(null);
+        toast.success(`${successfulDeletes.length} client${successfulDeletes.length !== 1 ? 's have' : ' has'} been deleted successfully.`);
+      } else {
+        // Store structured results for better UI display
+        setMultiDeleteResults({
+          successCount: successfulDeletes.length,
+          failedClients
+        });
       }
-      
+
     } catch (error) {
       console.error('Error in multi-delete:', error);
       setMultiDeleteError('An error occurred while deleting clients. Please try again.');
+    }
+  };
+
+  // Handler for marking failed bulk-delete clients as inactive
+  const handleBulkMarkFailedAsInactive = async () => {
+    if (!multiDeleteResults || multiDeleteResults.failedClients.length === 0) return;
+
+    const clientIds = multiDeleteResults.failedClients.map(c => c.clientId);
+
+    try {
+      const results = await Promise.all(
+        clientIds.map(async (clientId) => {
+          try {
+            const result = await markClientInactiveWithContacts(clientId, true);
+            return { clientId, success: result.success, contactsDeactivated: result.contactsDeactivated || 0 };
+          } catch (error) {
+            return { clientId, success: false, contactsDeactivated: 0 };
+          }
+        })
+      );
+
+      const successCount = results.filter(r => r.success).length;
+      const totalContactsDeactivated = results.reduce((sum, r) => sum + r.contactsDeactivated, 0);
+
+      // Close dialog and reset state
+      setIsMultiDeleteDialogOpen(false);
+      setMultiDeleteError(null);
+      setMultiDeleteResults(null);
+      setSelectedClients([]);
+      setIsSelectAllMode(false);
+
+      await refreshClients();
+
+      if (successCount > 0) {
+        if (totalContactsDeactivated > 0) {
+          toast.success(`${successCount} client${successCount !== 1 ? 's' : ''} and ${totalContactsDeactivated} contact${totalContactsDeactivated !== 1 ? 's' : ''} have been marked as inactive.`);
+        } else {
+          toast.success(`${successCount} client${successCount !== 1 ? 's have' : ' has'} been marked as inactive.`);
+        }
+      }
+    } catch (error) {
+      handleError(error, 'An error occurred while marking clients as inactive.');
     }
   };
 
@@ -1084,15 +1122,17 @@ const Clients: React.FC = () => {
           <Checkbox
             id="select-all-clients"
             checked={selectedClients.length > 0}
-            onChange={() => void handleSelectAll()}
+            onChange={handleSelectAll}
           />
         </div>
-        {selectedClients.length > 0 &&
+        {selectedClients.length > 0 && (
           <span className="text-sm font-medium text-gray-500">
             {isSelectAllMode ? `All ${selectedClients.length} clients selected` : `${selectedClients.length} Selected`}
-          </span>}
+          </span>
+        )}
 
         <button
+          id="bulk-delete-clients-btn"
           className="flex gap-1 text-sm font-medium text-gray-500"
           disabled={selectedClients.length === 0}
           onClick={handleMultiDelete}
@@ -1129,6 +1169,7 @@ const Clients: React.FC = () => {
           setCurrentPage(1); // Reset to first page when changing page size
         }}
         onClientTagsLoaded={handleClientTagsLoaded}
+        onClientsLoaded={handleClientsLoaded}
         clientTags={clientTags}
         allUniqueTagsFromParent={allUniqueTags}
         sortBy={sortBy}
@@ -1137,20 +1178,114 @@ const Clients: React.FC = () => {
       />
 
       {/* Multi-delete confirmation dialog */}
-      <ConfirmationDialog
-        id="multi-delete-confirmation-dialog"
+      <Dialog
         isOpen={isMultiDeleteDialogOpen}
-        onClose={() => setIsMultiDeleteDialogOpen(false)}
-        onConfirm={() => void confirmMultiDelete()}
-        title="Delete Selected Clients"
-        message={
-          multiDeleteError
-            ? multiDeleteError
-            : `Are you sure you want to delete ${selectedClients.length} selected clients? This action cannot be undone.`
-        }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-      />
+        onClose={() => {
+          setIsMultiDeleteDialogOpen(false);
+          setMultiDeleteError(null);
+          setMultiDeleteResults(null);
+        }}
+        id="multi-delete-confirmation-dialog"
+        title={multiDeleteResults ? "Delete Results" : "Delete Selected Clients"}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            {multiDeleteError ? (
+              <div className="text-red-600">{multiDeleteError}</div>
+            ) : multiDeleteResults ? (
+              <>
+                {/* Success message if any were deleted */}
+                {multiDeleteResults.successCount > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                    <p className="text-green-800">
+                      <span className="font-semibold">{multiDeleteResults.successCount}</span> client{multiDeleteResults.successCount !== 1 ? 's were' : ' was'} successfully deleted.
+                    </p>
+                  </div>
+                )}
+
+                {/* Failed clients section */}
+                {multiDeleteResults.failedClients.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                      <p className="text-amber-800 font-semibold mb-2">
+                        {multiDeleteResults.failedClients.length} client{multiDeleteResults.failedClients.length !== 1 ? 's' : ''} could not be deleted
+                      </p>
+                      <p className="text-amber-700 text-sm">
+                        These clients have associated records that must be removed first.
+                      </p>
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto border rounded-md">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="text-left p-2 font-medium text-gray-700">Client</th>
+                            <th className="text-left p-2 font-medium text-gray-700">Associated Records</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {multiDeleteResults.failedClients.map((client) => (
+                            <tr key={client.clientId} className="hover:bg-gray-50">
+                              <td className="p-2 font-medium text-gray-900">{client.clientName}</td>
+                              <td className="p-2 text-gray-600">{client.reason}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <p className="text-blue-800 text-sm">
+                        <span className="font-semibold">Alternative:</span> Mark these clients as inactive. They will be hidden from most views but retain all their data.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-gray-600">
+                Are you sure you want to delete <span className="font-semibold">{selectedClients.length}</span> selected client{selectedClients.length !== 1 ? 's' : ''}? This action cannot be undone.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsMultiDeleteDialogOpen(false);
+                  setMultiDeleteError(null);
+                  setMultiDeleteResults(null);
+                }}
+                id="multi-delete-cancel"
+              >
+                {multiDeleteResults ? "Close" : "Cancel"}
+              </Button>
+
+              {multiDeleteResults && multiDeleteResults.failedClients.length > 0 && (
+                <Button
+                  variant="default"
+                  onClick={() => void handleBulkMarkFailedAsInactive()}
+                  id="multi-delete-mark-inactive"
+                >
+                  Mark {multiDeleteResults.failedClients.length} as Inactive
+                </Button>
+              )}
+
+              {!multiDeleteResults && !multiDeleteError && (
+                <Button
+                  variant="destructive"
+                  onClick={() => void confirmMultiDelete()}
+                  id="multi-delete-confirm"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Single client delete confirmation dialog */}
       <Dialog
