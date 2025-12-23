@@ -1862,7 +1862,7 @@
   {
     "description": "Make action browser filterable by category and searchable by field name (e.g., find actions that return ticket_id).",
     "reference": "§16.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show 'This action returns: field1, field2, ...' summary in action browser entries.",
