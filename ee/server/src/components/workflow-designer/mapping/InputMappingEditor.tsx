@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
@@ -568,6 +568,11 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     onChange(next);
   }, [value, onChange]);
 
+  // §17.3 - Bulk operation: Clear all mappings
+  const handleClearAll = useCallback(() => {
+    onChange({});
+  }, [onChange]);
+
   if (targetFields.length === 0) {
     return (
       <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded border border-gray-200">
@@ -593,6 +598,20 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
             >
               <Wand2 className="w-3.5 h-3.5 mr-1" />
               Auto-map ({suggestions.length})
+            </Button>
+          )}
+          {/* §17.3 - Clear all button */}
+          {Object.keys(value).length > 0 && (
+            <Button
+              id={`clear-all-mappings-${stepId}`}
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAll}
+              disabled={disabled}
+              className="text-xs text-gray-500 hover:text-red-600"
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+              Clear all
             </Button>
           )}
           <div className="text-xs text-gray-500">
