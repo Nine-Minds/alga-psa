@@ -41,6 +41,7 @@ import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import toast from 'react-hot-toast';
+import { handleError } from 'server/src/lib/utils/errorHandling';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
@@ -579,7 +580,7 @@ const Clients: React.FC = () => {
       const result = await markClientInactiveWithContacts(clientToDelete.client_id, true);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to mark client as inactive');
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
         return;
       }
 
@@ -591,8 +592,7 @@ const Clients: React.FC = () => {
         toast.success(`${clientName} has been marked as inactive successfully.`);
       }
     } catch (error: any) {
-      console.error('Error marking client as inactive:', error);
-      toast.error('An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
     } finally {
       resetDeleteState();
     }
@@ -608,15 +608,14 @@ const Clients: React.FC = () => {
       const result = await markClientInactiveWithContacts(clientToDelete.client_id, false);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to mark client as inactive');
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
         return;
       }
 
       await refreshClients();
       toast.success(`${clientName} has been marked as inactive successfully.`);
     } catch (error: any) {
-      console.error('Error marking client as inactive:', error);
-      toast.error('An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
     } finally {
       resetDeleteState();
     }
@@ -665,8 +664,7 @@ const Clients: React.FC = () => {
       setIsSelectAllMode(false);
       await refreshClients();
     } catch (error) {
-      console.error('Error marking clients as inactive:', error);
-      toast.error('An error occurred while marking clients as inactive. Please try again.');
+      handleError(error, 'An error occurred while marking clients as inactive. Please try again.');
     }
   };
 
@@ -713,8 +711,7 @@ const Clients: React.FC = () => {
       setIsSelectAllMode(false);
       await refreshClients();
     } catch (error) {
-      console.error('Error reactivating clients:', error);
-      toast.error('An error occurred while reactivating clients. Please try again.');
+      handleError(error, 'An error occurred while reactivating clients. Please try again.');
     }
   };
 

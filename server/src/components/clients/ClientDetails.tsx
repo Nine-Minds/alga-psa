@@ -51,6 +51,7 @@ import { createBlockDocument, updateBlockContent, getBlockContent } from 'server
 import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientContractLineDashboard from '../billing-dashboard/ClientContractLineDashboard';
 import { toast } from 'react-hot-toast';
+import { handleError } from 'server/src/lib/utils/errorHandling';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
@@ -288,7 +289,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       const result = await markClientInactiveWithContacts(editedClient.client_id, true);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to mark client as inactive');
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
         return;
       }
 
@@ -302,8 +303,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
       router.refresh();
     } catch (error: any) {
-      console.error('Error marking client as inactive:', error);
-      toast.error('An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
     } finally {
       resetDeleteState();
     }
@@ -316,7 +316,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       const result = await markClientInactiveWithContacts(editedClient.client_id, false);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to mark client as inactive');
+        handleError(new Error(result.message || 'Failed to mark client as inactive'));
         return;
       }
 
@@ -325,8 +325,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       toast.success("Client has been marked as inactive successfully.");
       router.refresh();
     } catch (error: any) {
-      console.error('Error marking client as inactive:', error);
-      toast.error('An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
     } finally {
       resetDeleteState();
     }
@@ -347,7 +346,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         const result = await markClientInactiveWithContacts(editedClient.client_id, false);
 
         if (!result.success) {
-          toast.error(result.message || 'Failed to mark client as inactive');
+          handleError(new Error(result.message || 'Failed to mark client as inactive'));
           return;
         }
 
@@ -357,8 +356,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         router.refresh();
       }
     } catch (error: any) {
-      console.error('Error marking client as inactive:', error);
-      toast.error('An error occurred while marking the client as inactive. Please try again.');
+      handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
@@ -377,7 +375,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         const result = await markClientActiveWithContacts(editedClient.client_id, false);
 
         if (!result.success) {
-          toast.error(result.message || 'Failed to reactivate client');
+          handleError(new Error(result.message || 'Failed to reactivate client'));
           return;
         }
 
@@ -387,8 +385,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         router.refresh();
       }
     } catch (error: any) {
-      console.error('Error reactivating client:', error);
-      toast.error('An error occurred while reactivating the client. Please try again.');
+      handleError(error, 'An error occurred while reactivating the client. Please try again.');
     }
   };
 
@@ -398,7 +395,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       const result = await markClientActiveWithContacts(editedClient.client_id, reactivateContacts);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to reactivate client');
+        handleError(new Error(result.message || 'Failed to reactivate client'));
         setIsReactivateDialogOpen(false);
         return;
       }
@@ -416,8 +413,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsReactivateDialogOpen(false);
       router.refresh();
     } catch (error: any) {
-      console.error('Error reactivating client:', error);
-      toast.error('An error occurred while reactivating the client. Please try again.');
+      handleError(error, 'An error occurred while reactivating the client. Please try again.');
     }
   };
 
@@ -432,7 +428,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       const result = await markClientInactiveWithContacts(editedClient.client_id, deactivateContacts);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to deactivate client');
+        handleError(new Error(result.message || 'Failed to deactivate client'));
         setIsDeactivateDialogOpen(false);
         return;
       }
@@ -450,8 +446,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsDeactivateDialogOpen(false);
       router.refresh();
     } catch (error: any) {
-      console.error('Error deactivating client:', error);
-      toast.error('An error occurred while deactivating the client. Please try again.');
+      handleError(error, 'An error occurred while deactivating the client. Please try again.');
     }
   };
 
