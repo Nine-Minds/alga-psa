@@ -222,7 +222,7 @@
   {
     "description": "Surface expression syntax errors in GUI during editing.",
     "reference": "§5",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support expressions inside node configs, including nested objects (recursive resolution).",
@@ -1677,7 +1677,7 @@
   {
     "description": "Provide 'Create New Workflow' button with workflow type selection.",
     "reference": "§15.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Enable row click to open workflow in designer.",
