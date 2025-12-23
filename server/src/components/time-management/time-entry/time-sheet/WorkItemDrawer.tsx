@@ -148,6 +148,7 @@ export function WorkItemDrawer({
                                 initialComments={ticketData.comments}
                                 initialBoard={ticketData.board}
                                 initialClient={ticketData.client}
+                                initialContacts={ticketData.contacts}
                                 initialContactInfo={ticketData.contactInfo}
                                 initialCreatedByUser={ticketData.createdByUser}
                                 initialAdditionalAgents={ticketData.additionalAgents}
