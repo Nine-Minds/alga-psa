@@ -377,9 +377,6 @@ const Clients: React.FC = () => {
     bucket_usage?: number;
   } | null>(null);
 
-  // Deactivate dialog state (for showing contact choices)
-  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
-  const [activeContactsToDeactivate, setActiveContactsToDeactivate] = useState<any[]>([]);
 
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
@@ -572,31 +569,25 @@ const Clients: React.FC = () => {
     }
   };
 
-  const handleMarkClientInactive = async () => {
+  // Handler for deactivating client from delete dialog (deactivates all contacts)
+  const handleMarkClientInactiveAll = async () => {
     if (!clientToDelete) return;
 
-    // Close the delete dialog first
-    resetDeleteState();
-
     try {
-      // Fetch active contacts for this client - same flow as direct "Mark as Inactive"
-      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
-      const activeContacts = await getContactsByClient(clientToDelete.client_id, 'active');
+      // Use atomic action to deactivate client AND all contacts
+      const result = await markClientInactiveWithContacts(clientToDelete.client_id, true);
 
-      if (activeContacts.length > 0) {
-        // Show deactivate dialog with choices
-        setActiveContactsToDeactivate(activeContacts);
-        setIsDeactivateDialogOpen(true);
+      if (!result.success) {
+        toast.error(result.message || 'Failed to mark client as inactive');
+        return;
+      }
+
+      resetDeleteState();
+      await refreshClients();
+
+      if (result.contactsDeactivated > 0) {
+        toast.success(`${clientToDelete.client_name} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
       } else {
-        // No contacts to warn about, use atomic action to deactivate the client only
-        const result = await markClientInactiveWithContacts(clientToDelete.client_id, false);
-
-        if (!result.success) {
-          toast.error(result.message || 'Failed to mark client as inactive');
-          return;
-        }
-
-        await refreshClients();
         toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
       }
     } catch (error: any) {
@@ -605,35 +596,25 @@ const Clients: React.FC = () => {
     }
   };
 
-  // Handler for deactivating client with choice about contacts
-  const handleDeactivateClient = async (deactivateContacts: boolean) => {
+  // Handler for deactivating client from delete dialog (client only)
+  const handleMarkClientInactiveOnly = async () => {
     if (!clientToDelete) return;
 
     try {
-      // Use atomic server action to deactivate client and optionally contacts
-      const result = await markClientInactiveWithContacts(clientToDelete.client_id, deactivateContacts);
+      // Use atomic action to deactivate client only
+      const result = await markClientInactiveWithContacts(clientToDelete.client_id, false);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to deactivate client');
-        setIsDeactivateDialogOpen(false);
+        toast.error(result.message || 'Failed to mark client as inactive');
         return;
       }
 
-      setIsDeactivateDialogOpen(false);
-      setActiveContactsToDeactivate([]);
+      resetDeleteState();
       await refreshClients();
-
-      if (deactivateContacts && result.contactsDeactivated > 0) {
-        toast.success(`${clientToDelete.client_name} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
-      } else {
-        toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
-      }
-
-      // Clear clientToDelete after successful operation
-      setClientToDelete(null);
+      toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
     } catch (error: any) {
-      console.error('Error deactivating client:', error);
-      toast.error('An error occurred while deactivating the client. Please try again.');
+      console.error('Error marking client as inactive:', error);
+      toast.error('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
@@ -1255,11 +1236,15 @@ const Clients: React.FC = () => {
                     )}
                   </ul>
                 </div>
-                <p className="text-gray-700">Please remove or reassign these items before deleting the client.</p>
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                   <p className="text-blue-800">
                     <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
                   </p>
+                  {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                    <p className="text-blue-800 mt-2">
+                      Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
+                    </p>
+                  )}
                 </div>
               </>
             ) : deleteError ? (
@@ -1292,13 +1277,24 @@ const Clients: React.FC = () => {
                   Close
                 </Button>
               ) : showDeactivateOption ? (
-                <Button
-                  variant="default"
-                  onClick={() => void handleMarkClientInactive()}
-                  id="single-delete-mark-inactive"
-                >
-                  Mark as Inactive
-                </Button>
+                <>
+                  {deleteDependencies?.contacts && deleteDependencies.contacts > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => void handleMarkClientInactiveOnly()}
+                      id="single-delete-client-only"
+                    >
+                      Client Only
+                    </Button>
+                  )}
+                  <Button
+                    variant="default"
+                    onClick={() => void handleMarkClientInactiveAll()}
+                    id="single-delete-mark-inactive"
+                  >
+                    {deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? "Client & Contacts" : "Mark as Inactive"}
+                  </Button>
+                </>
               ) : !deleteError && (
                 <Button
                   onClick={() => void confirmDelete()}
@@ -1312,39 +1308,6 @@ const Clients: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Deactivate Client Dialog - shows contact choices */}
-      <ConfirmationDialog
-        id="deactivate-client-dialog"
-        isOpen={isDeactivateDialogOpen}
-        onClose={() => {
-          setIsDeactivateDialogOpen(false);
-          setActiveContactsToDeactivate([]);
-          setClientToDelete(null);
-        }}
-        onConfirm={() => handleDeactivateClient(true)}
-        title="Deactivate Client"
-        message={
-          <div className="space-y-3">
-            <p>
-              This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Would you like to deactivate {activeContactsToDeactivate.length === 1 ? 'this contact' : 'all these contacts'} as well?
-            </p>
-            <div className="bg-gray-50 rounded-md p-3 max-h-32 overflow-y-auto">
-              <ul className="text-sm text-gray-600 space-y-1">
-                {activeContactsToDeactivate.map((contact: any) => (
-                  <li key={contact.contact_name_id}>• {contact.full_name}</li>
-                ))}
-              </ul>
-            </div>
-            <p className="text-sm text-gray-500">
-              Deactivating contacts will also deactivate their client portal access.
-            </p>
-          </div>
-        }
-        confirmLabel="Deactivate All"
-        cancelLabel="Client Only"
-        onCancel={() => handleDeactivateClient(false)}
-      />
 
       {/* CSV Import Dialog */}
       <ClientsImportDialog
