@@ -2037,7 +2037,7 @@
   {
     "description": "Show default value from schema when field is optional and unmapped.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement auto-mapping suggestions for fields with matching names.",
@@ -2097,7 +2097,7 @@
   {
     "description": "Validate nested object structure compatibility recursively.",
     "reference": "§17.3.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array element type display in nested structures.",
@@ -2167,7 +2167,7 @@
   {
     "description": "Show same validation status icons in step list sidebar.",
     "reference": "§17.4.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement filter by validation status in step list (all, valid, warnings, errors).",
@@ -2182,7 +2182,7 @@
   {
     "description": "Show summary count of steps with errors/warnings at top of step list.",
     "reference": "§17.4.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support jump to step from validation issue in batch view.",
@@ -2192,12 +2192,12 @@
   {
     "description": "Show breadcrumb trail for nested mapping errors (e.g., Create Ticket → inputMapping → ticketDefaults.priority).",
     "reference": "§17.4.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support click on breadcrumb to navigate directly to the field.",
     "reference": "§17.4.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Highlight the specific field with error when navigating from breadcrumb.",
@@ -2237,7 +2237,7 @@
   {
     "description": "Validate that mapping references exist in available data context.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return UNDEFINED_MAPPING_SOURCE error code for undefined path references.",
@@ -2262,32 +2262,32 @@
   {
     "description": "Return NULLABLE_TO_REQUIRED warning when nullable source maps to non-null target.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return TYPE_COERCION warning when string maps to number (parseable).",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return TYPE_MISMATCH error for incompatible types (e.g., object → string).",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return ARRAY_ELEMENT_MISMATCH warning for array element type mismatches.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return UNKNOWN_SOURCE_TYPE warning when source type cannot be determined.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement type inference from expression paths to determine source types.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support union types in compatibility checking.",
@@ -2297,12 +2297,12 @@
   {
     "description": "Validate all required properties present in source for object inputs.",
     "reference": "§17.5.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Allow extra properties in source object (passthrough or ignore per schema).",
     "reference": "§17.5.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Check nested object compatibility recursively.",
@@ -2317,32 +2317,32 @@
   {
     "description": "Support schema defaults when checking structural compatibility.",
     "reference": "§17.5.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement MappingValidationError type extending PublishError with mapping-specific fields.",
     "reference": "§17.5.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include targetField in mapping validation errors.",
     "reference": "§17.5.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include sourceExpr in mapping validation errors.",
     "reference": "§17.5.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include expectedType in mapping validation errors.",
     "reference": "§17.5.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include actualType in mapping validation errors.",
     "reference": "§17.5.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Load inputMapping from step config before action invocation.",
