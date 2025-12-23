@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { heartbeat } from '@temporalio/activity';
 
 import logger from '@alga-psa/shared/core/logger';
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
@@ -135,6 +136,7 @@ class NinjaOneSyncWorker {
       const batchSize = options.batchSize || 50;
       let totalDevices = 0;
       let processedDevices = 0;
+      let organizationsProcessed = 0;
 
       for (const mapping of mappings) {
         try {
@@ -143,6 +145,14 @@ class NinjaOneSyncWorker {
           });
 
           totalDevices += devices.length;
+
+          logger.info(`[NinjaOne Sync] Processing organization ${organizationsProcessed + 1}/${mappings.length}`, {
+            tenantId: this.tenantId,
+            organizationName: mapping.external_organization_name,
+            organizationId: mapping.external_organization_id,
+            deviceCount: devices.length,
+            totalDevicesSoFar: totalDevices,
+          });
 
           for (let j = 0; j < devices.length; j += batchSize) {
             const batch = devices.slice(j, j + batchSize);
@@ -167,9 +177,39 @@ class NinjaOneSyncWorker {
                   break;
               }
             }
+
+            // Heartbeat after each batch to keep the activity alive
+            heartbeat({
+              organization: mapping.external_organization_name,
+              organizationsProcessed: organizationsProcessed + 1,
+              totalOrganizations: mappings.length,
+              devicesProcessed: processedDevices,
+              totalDevices,
+              created: result.items_created,
+              updated: result.items_updated,
+              failed: result.items_failed,
+            });
+
+            logger.info(`[NinjaOne Sync] Batch progress`, {
+              tenantId: this.tenantId,
+              organization: mapping.external_organization_name,
+              batchEnd: Math.min(j + batchSize, devices.length),
+              orgDevices: devices.length,
+              totalProcessed: processedDevices,
+              created: result.items_created,
+              updated: result.items_updated,
+              failed: result.items_failed,
+            });
           }
 
+          organizationsProcessed++;
           await this.updateOrganizationMappingLastSynced(mapping.mapping_id);
+
+          logger.info(`[NinjaOne Sync] Completed organization ${organizationsProcessed}/${mappings.length}`, {
+            tenantId: this.tenantId,
+            organizationName: mapping.external_organization_name,
+            devicesProcessed: processedDevices,
+          });
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           logger.error('Failed to sync organization (Temporal worker)', {
@@ -255,6 +295,8 @@ class NinjaOneSyncWorker {
       });
 
       const batchSize = options.batchSize || 50;
+      let organizationsProcessed = 0;
+      let totalChangedDevices = 0;
 
       for (const mapping of mappings) {
         try {
@@ -265,6 +307,15 @@ class NinjaOneSyncWorker {
           const changedDevices = devices.filter((device) => {
             if (!device.lastContact) return true;
             return new Date(device.lastContact) > since;
+          });
+
+          totalChangedDevices += changedDevices.length;
+
+          logger.info(`[NinjaOne Sync] Processing organization ${organizationsProcessed + 1}/${mappings.length} (incremental)`, {
+            tenantId: this.tenantId,
+            organizationName: mapping.external_organization_name,
+            totalDevices: devices.length,
+            changedDevices: changedDevices.length,
           });
 
           for (let j = 0; j < changedDevices.length; j += batchSize) {
@@ -288,8 +339,29 @@ class NinjaOneSyncWorker {
                   break;
               }
             }
+
+            // Heartbeat after each batch
+            heartbeat({
+              organization: mapping.external_organization_name,
+              organizationsProcessed: organizationsProcessed + 1,
+              totalOrganizations: mappings.length,
+              devicesProcessed: result.items_processed,
+              totalChangedDevices,
+              created: result.items_created,
+              updated: result.items_updated,
+              failed: result.items_failed,
+            });
+
+            logger.info(`[NinjaOne Sync] Incremental batch progress`, {
+              tenantId: this.tenantId,
+              organization: mapping.external_organization_name,
+              batchEnd: Math.min(j + batchSize, changedDevices.length),
+              changedDevices: changedDevices.length,
+              totalProcessed: result.items_processed,
+            });
           }
 
+          organizationsProcessed++;
           await this.updateOrganizationMappingLastSynced(mapping.mapping_id);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
