@@ -172,49 +172,48 @@ impl RedisPublisher {
 
         let stream = self.stream_name(event);
 
-        // Build and execute command
+        // Build the command before acquiring lock
+        let mut cmd = redis::cmd("XADD");
+        cmd.arg(&stream)
+            .arg("MAXLEN")
+            .arg("~")
+            .arg(self.config.max_len)
+            .arg("*")
+            .arg("ts")
+            .arg(&event.ts)
+            .arg("level")
+            .arg(&event.level)
+            .arg("stream")
+            .arg(&event.stream);
+        if let Some(tenant) = &event.tenant_id {
+            cmd.arg("tenant").arg(tenant);
+        }
+        if let Some(ext) = &event.extension_id {
+            cmd.arg("extension").arg(ext);
+        }
+        if let Some(install) = &event.install_id {
+            cmd.arg("install").arg(install);
+        }
+        if let Some(request) = &event.request_id {
+            cmd.arg("request").arg(request);
+        }
+        if let Some(version) = &event.version_id {
+            cmd.arg("version").arg(version);
+        }
+        if let Some(hash) = &event.content_hash {
+            cmd.arg("content_hash").arg(hash);
+        }
+        cmd.arg("message").arg(&event.message);
+        cmd.arg("truncated")
+            .arg(if event.truncated { "1" } else { "0" });
+
+        // Execute command while holding the lock to ensure we use the current connection
+        // (not a stale clone from before reconnection)
         let result = {
-            let state = self.conn.read().await;
-            match &*state {
-                ConnectionState::Connected(conn) => {
-                    let mut conn = conn.clone();
-                    drop(state); // Release lock before async operation
-
-                    let mut cmd = redis::cmd("XADD");
-                    cmd.arg(&stream)
-                        .arg("MAXLEN")
-                        .arg("~")
-                        .arg(self.config.max_len)
-                        .arg("*")
-                        .arg("ts")
-                        .arg(&event.ts)
-                        .arg("level")
-                        .arg(&event.level)
-                        .arg("stream")
-                        .arg(&event.stream);
-                    if let Some(tenant) = &event.tenant_id {
-                        cmd.arg("tenant").arg(tenant);
-                    }
-                    if let Some(ext) = &event.extension_id {
-                        cmd.arg("extension").arg(ext);
-                    }
-                    if let Some(install) = &event.install_id {
-                        cmd.arg("install").arg(install);
-                    }
-                    if let Some(request) = &event.request_id {
-                        cmd.arg("request").arg(request);
-                    }
-                    if let Some(version) = &event.version_id {
-                        cmd.arg("version").arg(version);
-                    }
-                    if let Some(hash) = &event.content_hash {
-                        cmd.arg("content_hash").arg(hash);
-                    }
-                    cmd.arg("message").arg(&event.message);
-                    cmd.arg("truncated")
-                        .arg(if event.truncated { "1" } else { "0" });
-
-                    cmd.query_async(&mut conn).await
+            let mut state = self.conn.write().await;
+            match &mut *state {
+                ConnectionState::Connected(ref mut conn) => {
+                    cmd.query_async(conn).await
                 }
                 _ => Err(RedisError::from((
                     ErrorKind::IoError,
