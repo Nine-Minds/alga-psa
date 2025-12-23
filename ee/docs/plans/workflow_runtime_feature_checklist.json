@@ -2612,7 +2612,7 @@
   {
     "description": "Support bulk mapping operations (clear all, reset to defaults).",
     "reference": "§17.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement search/filter in available data tree for large schemas.",
