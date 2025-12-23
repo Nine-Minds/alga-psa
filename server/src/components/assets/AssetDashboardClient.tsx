@@ -938,7 +938,7 @@ const handleAssetAdded = async () => {
               <SummaryTile
                 id="metric-total-assets"
                 title="Total Assets"
-                helper="Across all tenants"
+                helper="Across all clients"
                 icon={<Boxes className="h-4 w-4 text-blue-500" />}
                 value={totalAssets}
                 isLoading={loading}
