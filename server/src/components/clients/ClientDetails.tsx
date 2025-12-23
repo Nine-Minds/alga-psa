@@ -290,6 +290,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (!result.success) {
         handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        resetDeleteState();
         return;
       }
 
@@ -307,6 +308,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       router.refresh();
     } catch (error: any) {
       handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      resetDeleteState();
     }
   };
 
@@ -318,6 +320,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       if (!result.success) {
         handleError(new Error(result.message || 'Failed to mark client as inactive'));
+        resetDeleteState();
         return;
       }
 
@@ -330,6 +333,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       router.refresh();
     } catch (error: any) {
       handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
+      resetDeleteState();
     }
   };
 
