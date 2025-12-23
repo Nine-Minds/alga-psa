@@ -250,11 +250,25 @@ const MappingFieldEditor: React.FC<{
                 onValueChange={handleSecretChange}
                 disabled={disabled}
               />
-              {secrets.length === 0 && (
-                <p className="text-xs text-gray-500">
-                  No secrets available. Create secrets in Settings → Secrets.
-                </p>
-              )}
+              <div className="flex items-center justify-between">
+                {secrets.length === 0 ? (
+                  <p className="text-xs text-gray-500">
+                    No secrets available. Create secrets in Settings → Secrets.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    Value: <span className="font-mono">••••••••</span>
+                  </p>
+                )}
+                <a
+                  href="/msp/settings?tab=Secrets"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                >
+                  Manage Secrets →
+                </a>
+              </div>
             </div>
           )}
 
