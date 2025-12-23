@@ -3083,42 +3083,42 @@
     "implemented": false
   },
   {
-    "description": "Define secret reference syntax { $secret: \"secretName\" } for secure credential mapping. [Needs further design]",
+    "description": "Define secret reference syntax { $secret: \"secretName\" } for secure credential mapping.",
     "reference": "\u00a717.2.1",
     "implemented": false
   },
   {
-    "description": "Support $secret references in inputMapping for sensitive fields. [Needs further design]",
+    "description": "Support $secret references in inputMapping for sensitive fields.",
     "reference": "\u00a717.2.1",
     "implemented": false
   },
   {
-    "description": "Never expose secret values in mapping UI - show placeholder only. [Needs further design]",
+    "description": "Never expose secret values in mapping UI - show placeholder only.",
     "reference": "\u00a717.3.2",
     "implemented": false
   },
   {
-    "description": "Validate referenced secret exists at publish time. [Needs further design]",
+    "description": "Validate referenced secret exists at publish time.",
     "reference": "\u00a717.5.1",
     "implemented": false
   },
   {
-    "description": "Resolve $secret references securely at runtime without logging values. [Needs further design]",
+    "description": "Resolve $secret references securely at runtime without logging values.",
     "reference": "\u00a717.6.1",
     "implemented": false
   },
   {
-    "description": "Redact secret values in all action invocation logs and snapshots. [Needs further design]",
+    "description": "Redact secret values in all action invocation logs and snapshots.",
     "reference": "\u00a717.6.3",
     "implemented": false
   },
   {
-    "description": "Show secret picker UI for selecting from available tenant secrets. [Needs further design]",
+    "description": "Show secret picker UI for selecting from available tenant secrets.",
     "reference": "\u00a717.3.2",
     "implemented": false
   },
   {
-    "description": "Mark input fields as sensitive in action inputSchema (requiresSecret hint). [Needs further design]",
+    "description": "Mark input fields as sensitive in action inputSchema (requiresSecret hint).",
     "reference": "\u00a717.2.2",
     "implemented": false
   },
@@ -3195,6 +3195,372 @@
   {
     "description": "Invalidate schema cache when action version changes.",
     "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+
+  {
+    "description": "Define TenantSecret entity with id, tenant_id, name, description, encrypted_value, encryption_key_id, timestamps, and audit fields.",
+    "reference": "\u00a718.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Create tenant_secrets database table with UUID primary key and tenant_id foreign key.",
+    "reference": "\u00a718.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Add unique constraint on (tenant_id, name) for tenant secrets.",
+    "reference": "\u00a718.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Create index on tenant_secrets.tenant_id for efficient lookups.",
+    "reference": "\u00a718.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Define secret reference syntax { $secret: \"secretName\" } for workflow inputMapping.",
+    "reference": "\u00a718.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement SecretProvider interface with create, update, get, exists, delete, list methods.",
+    "reference": "\u00a718.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement envelope encryption for secret values using AES-256-GCM.",
+    "reference": "\u00a718.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Store data encryption keys (DEK) encrypted with master key.",
+    "reference": "\u00a718.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Load master key from environment variable or key management service.",
+    "reference": "\u00a718.3.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement SecretProvider.create() to encrypt and store new secrets.",
+    "reference": "\u00a718.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement SecretProvider.update() to re-encrypt and update secret values.",
+    "reference": "\u00a718.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement SecretProvider.get() to retrieve and decrypt secret values for runtime use.",
+    "reference": "\u00a718.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement SecretProvider.exists() to check secret existence without decryption.",
+    "reference": "\u00a718.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement SecretProvider.delete() to remove secrets.",
+    "reference": "\u00a718.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement SecretProvider.list() to return secret metadata without values.",
+    "reference": "\u00a718.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Build secrets list view in Settings area showing name, description, last updated, last accessed, and actions.",
+    "reference": "\u00a718.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement search/filter by secret name in secrets list.",
+    "reference": "\u00a718.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement sort by name, updated, accessed in secrets list.",
+    "reference": "\u00a718.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement pagination for large secret lists.",
+    "reference": "\u00a718.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Build create secret dialog with name, value (password input), and description fields.",
+    "reference": "\u00a718.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate secret name is unique within tenant on create.",
+    "reference": "\u00a718.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate secret name matches pattern ^[A-Z][A-Z0-9_]{0,254}$.",
+    "reference": "\u00a718.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate secret value is not empty on create.",
+    "reference": "\u00a718.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Build edit secret dialog with description and optional new value fields.",
+    "reference": "\u00a718.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Show 'Value last updated: X days ago' in edit secret dialog.",
+    "reference": "\u00a718.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Never show current secret value in edit dialog - only allow replacement.",
+    "reference": "\u00a718.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Build delete secret confirmation dialog.",
+    "reference": "\u00a718.4.4",
+    "implemented": false
+  },
+  {
+    "description": "Show warning in delete dialog if secret is referenced by workflows.",
+    "reference": "\u00a718.4.4",
+    "implemented": false
+  },
+  {
+    "description": "List workflows that reference the secret in delete confirmation.",
+    "reference": "\u00a718.4.4",
+    "implemented": false
+  },
+  {
+    "description": "Require typing secret name to confirm deletion.",
+    "reference": "\u00a718.4.4",
+    "implemented": false
+  },
+  {
+    "description": "Support SecretRef type { $secret: string } in MappingValue union type.",
+    "reference": "\u00a718.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Show 'Use Secret' option in mapping UI alongside Expression/Literal for sensitive fields.",
+    "reference": "\u00a718.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Display dropdown of available tenant secrets in secret picker.",
+    "reference": "\u00a718.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Show 'Manage Secrets' link from secret picker to settings.",
+    "reference": "\u00a718.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Show placeholder text for mapped secrets in UI.",
+    "reference": "\u00a718.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Verify all referenced secrets exist at publish time.",
+    "reference": "\u00a718.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Return SECRET_NOT_FOUND error when referenced secret doesn't exist.",
+    "reference": "\u00a718.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Show warning at publish if secret hasn't been accessed recently (may be stale).",
+    "reference": "\u00a718.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement resolveSecretRef() function to retrieve decrypted secret values at runtime.",
+    "reference": "\u00a718.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Update last_accessed_at timestamp when secret is accessed by workflow.",
+    "reference": "\u00a718.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Define secrets.view permission to list secret names and metadata.",
+    "reference": "\u00a718.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Define secrets.manage permission to create, update, delete secrets.",
+    "reference": "\u00a718.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Define secrets.use permission to reference secrets in workflows.",
+    "reference": "\u00a718.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Assign all secret permissions to Admin role by default.",
+    "reference": "\u00a718.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Assign secrets.view and secrets.use to Editor role by default.",
+    "reference": "\u00a718.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Assign no secret permissions to Viewer role by default.",
+    "reference": "\u00a718.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Log secret.created audit event with who, when, and secret name (not value).",
+    "reference": "\u00a718.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Log secret.updated audit event with who, when, and secret name.",
+    "reference": "\u00a718.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Log secret.deleted audit event with who, when, and secret name.",
+    "reference": "\u00a718.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Log secret.accessed audit event with workflow run ID, secret name, and timestamp.",
+    "reference": "\u00a718.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Never expose secret values in API responses - return metadata only.",
+    "reference": "\u00a718.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Show placeholder instead of secret values in UI.",
+    "reference": "\u00a718.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Redact secret values before logging.",
+    "reference": "\u00a718.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Replace secret values with [REDACTED] in workflow snapshots.",
+    "reference": "\u00a718.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Show secret name (not value) in error messages.",
+    "reference": "\u00a718.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Reject secrets with values exceeding 64KB.",
+    "reference": "\u00a718.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Sanitize secret names to prevent injection attacks.",
+    "reference": "\u00a718.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Rate limit secret access to prevent enumeration.",
+    "reference": "\u00a718.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Implement listTenantSecrets server action to return secret metadata (no values).",
+    "reference": "\u00a718.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement getSecretMetadata server action to get single secret metadata by name.",
+    "reference": "\u00a718.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement createSecret server action to encrypt and store new secrets.",
+    "reference": "\u00a718.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement updateSecret server action to update secret value/description.",
+    "reference": "\u00a718.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement deleteSecret server action to remove secrets.",
+    "reference": "\u00a718.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement secretExists server action to check if secret exists.",
+    "reference": "\u00a718.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement resolveSecretForRuntime server action (internal only, returns decrypted value).",
+    "reference": "\u00a718.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Create GET /api/tenants/{tenantId}/secrets API route shim delegating to listTenantSecrets action.",
+    "reference": "\u00a718.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Create POST /api/tenants/{tenantId}/secrets API route shim delegating to createSecret action.",
+    "reference": "\u00a718.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Create PATCH /api/tenants/{tenantId}/secrets/{name} API route shim delegating to updateSecret action.",
+    "reference": "\u00a718.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Create DELETE /api/tenants/{tenantId}/secrets/{name} API route shim delegating to deleteSecret action.",
+    "reference": "\u00a718.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Create HEAD /api/tenants/{tenantId}/secrets/{name} API route shim delegating to secretExists action.",
+    "reference": "\u00a718.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Ensure no API route exposes decrypted secret values (runtime resolution is internal only).",
+    "reference": "\u00a718.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Support key rotation to re-encrypt secrets with new encryption keys.",
+    "reference": "\u00a718.8",
+    "implemented": false
+  },
+  {
+    "description": "Track which workflows use each secret for usage analysis.",
+    "reference": "\u00a718.8",
     "implemented": false
   }
 ]
