@@ -3352,22 +3352,22 @@
   {
     "description": "Show 'Use Secret' option in mapping UI alongside Expression/Literal for sensitive fields.",
     "reference": "§18.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Display dropdown of available tenant secrets in secret picker.",
     "reference": "§18.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show 'Manage Secrets' link from secret picker to settings.",
     "reference": "§18.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show placeholder text for mapped secrets in UI.",
     "reference": "§18.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Verify all referenced secrets exist at publish time.",
@@ -3457,12 +3457,12 @@
   {
     "description": "Redact secret values before logging.",
     "reference": "§18.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Replace secret values with [REDACTED] in workflow snapshots.",
     "reference": "§18.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show secret name (not value) in error messages.",
@@ -3522,32 +3522,32 @@
   {
     "description": "Create GET /api/tenants/{tenantId}/secrets API route shim delegating to listTenantSecrets action.",
     "reference": "§18.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create POST /api/tenants/{tenantId}/secrets API route shim delegating to createSecret action.",
     "reference": "§18.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create PATCH /api/tenants/{tenantId}/secrets/{name} API route shim delegating to updateSecret action.",
     "reference": "§18.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create DELETE /api/tenants/{tenantId}/secrets/{name} API route shim delegating to deleteSecret action.",
     "reference": "§18.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create HEAD /api/tenants/{tenantId}/secrets/{name} API route shim delegating to secretExists action.",
     "reference": "§18.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ensure no API route exposes decrypted secret values (runtime resolution is internal only).",
     "reference": "§18.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support key rotation to re-encrypt secrets with new encryption keys.",
