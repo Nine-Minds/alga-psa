@@ -764,6 +764,20 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
                     .orWhereILike('assets.serial_number', searchTerm);
             });
         }
+        if (validatedParams.agent_status) {
+            baseQuery.where('assets.agent_status', validatedParams.agent_status);
+        }
+        if (validatedParams.rmm_managed !== undefined) {
+            if (validatedParams.rmm_managed) {
+                baseQuery.whereNotNull('assets.rmm_provider')
+                         .whereNotNull('assets.rmm_device_id');
+            } else {
+                baseQuery.where(function() {
+                    this.whereNull('assets.rmm_provider')
+                        .orWhereNull('assets.rmm_device_id');
+                });
+            }
+        }
 
         // Get total count
         const [{ count }] = await baseQuery.clone().count('* as count');

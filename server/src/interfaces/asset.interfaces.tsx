@@ -411,6 +411,8 @@ export interface AssetQueryParams {
   asset_type?: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
   status?: string;
   search?: string;
+  agent_status?: RmmAgentStatus;
+  rmm_managed?: boolean;
   maintenance_status?: MaintenanceStatus;
   maintenance_type?: MaintenanceType;
   page?: number;
