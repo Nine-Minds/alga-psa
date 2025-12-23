@@ -1732,22 +1732,22 @@
   {
     "description": "Show collapsible Input Schema Reference section in StepConfigPanel listing all input fields, types, required/optional, descriptions, and defaults.",
     "reference": "§16.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show collapsible Output Schema Reference section in StepConfigPanel listing all output fields, types, nullable indicators, and nested structure.",
     "reference": "§16.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide 'Copy path' button for each output field to copy expression syntax (e.g., ${vars.stepName.field}).",
     "reference": "§16.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show output availability preview when saveAs is configured (e.g., 'Output will be available at ${vars.myStep.*}').",
     "reference": "§16.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate that saveAs does not conflict with existing variable names and show warning if it does.",
@@ -1812,12 +1812,12 @@
   {
     "description": "Provide Data Flow sidebar/panel showing available data context at any selected step (payload, vars by step, env, secrets).",
     "reference": "§16.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show action documentation panel when selecting an action type with description, examples, and common use cases.",
     "reference": "§16.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement schema tooltips on hover for any field in config forms showing type, constraints, description, and examples.",
@@ -1827,7 +1827,7 @@
   {
     "description": "Provide 'What can I access here?' helper button in expression fields that opens contextual field picker with explanation.",
     "reference": "§16.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Enhance pre-publish validation to check all expressions reference valid paths in available schemas.",
@@ -1877,12 +1877,12 @@
   {
     "description": "Provide JSON Schema view toggle for power users to see raw schema definition.",
     "reference": "§16.7",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support copying schema as JSON for external use or documentation.",
     "reference": "§16.7",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide test step feature to enter sample input data and preview output schema/structure.",
