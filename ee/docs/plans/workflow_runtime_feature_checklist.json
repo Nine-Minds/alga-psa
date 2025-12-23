@@ -1787,7 +1787,7 @@
   {
     "description": "Implement real-time expression validation checking that referenced paths exist in available schemas.",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show warning when expression references a step that executes after the current step (order dependency violation).",
@@ -1857,7 +1857,7 @@
   {
     "description": "Enhance action browser/palette to show input/output schema preview when browsing available actions.",
     "reference": "§16.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Make action browser filterable by category and searchable by field name (e.g., find actions that return ticket_id).",
@@ -1867,7 +1867,7 @@
   {
     "description": "Show 'This action returns: field1, field2, ...' summary in action browser entries.",
     "reference": "§16.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Document node type schemas for non-action nodes (conditions, loops) including special behaviors (e.g., forEach exposes item/index).",
@@ -2257,7 +2257,7 @@
   {
     "description": "Pass validation when source and target types match exactly.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return NULLABLE_TO_REQUIRED warning when nullable source maps to non-null target.",
@@ -2292,7 +2292,7 @@
   {
     "description": "Support union types in compatibility checking.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate all required properties present in source for object inputs.",
@@ -2307,12 +2307,12 @@
   {
     "description": "Check nested object compatibility recursively.",
     "reference": "§17.5.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate array element types for array inputs.",
     "reference": "§17.5.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support schema defaults when checking structural compatibility.",
@@ -2392,57 +2392,57 @@
   {
     "description": "Capture which field failed when mapping resolution fails.",
     "reference": "§17.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include source expression in runtime mapping errors.",
     "reference": "§17.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include evaluated value in runtime mapping errors.",
     "reference": "§17.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include expected vs actual type in runtime mapping errors.",
     "reference": "§17.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Classify mapping resolution failures as ValidationError (non-retryable).",
     "reference": "§17.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Log detailed mapping resolution errors for debugging.",
     "reference": "§17.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Coerce null/undefined to schema default when available.",
     "reference": "§17.6.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Coerce string containing number to number when target expects number.",
     "reference": "§17.6.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Coerce ISO date string to Date when target expects Date.",
     "reference": "§17.6.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Fail validation for type mismatches that cannot be coerced.",
     "reference": "§17.6.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Log coercion actions for audit/debugging purposes.",
     "reference": "§17.6.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support legacy args field in existing workflows.",
@@ -2757,12 +2757,12 @@
   {
     "description": "Enforce expression output size limits in mapping resolution.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Handle circular references in expression evaluation gracefully.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support literal values in inputMapping (not just expressions).",
@@ -2812,7 +2812,7 @@
   {
     "description": "Validate literal values against target field schema.",
     "reference": "§17.5.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show appropriate input control for literal mode based on target type (text input, number input, checkbox, etc.).",
@@ -2832,7 +2832,7 @@
   {
     "description": "Support regex extraction in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support string case transformation (upper, lower, capitalize) in mapping expressions.",
@@ -2852,7 +2852,7 @@
   {
     "description": "Support date parsing from string in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support date formatting to string in mapping expressions.",
@@ -2862,12 +2862,12 @@
   {
     "description": "Support date arithmetic (add days, diff) in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support object construction from multiple sources in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support object property access with optional chaining in mapping expressions.",
@@ -3002,7 +3002,7 @@
   {
     "description": "Define allowlist of permitted JSONata functions for mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Document permitted JSONata functions with examples.",
@@ -3022,7 +3022,7 @@
   {
     "description": "Enforce expression complexity limits (max depth, max operations).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show warning when expression approaches complexity limits.",
