@@ -157,8 +157,7 @@
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/types/**/*.d.ts",
-    ".next/types/**/*.ts"
+    "src/types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
