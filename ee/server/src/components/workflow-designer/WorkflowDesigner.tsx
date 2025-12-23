@@ -19,6 +19,7 @@ import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
+import { InputMappingEditor, type ActionInputField } from './mapping';
 import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createWorkflowDefinitionAction,
@@ -41,7 +42,8 @@ import type {
   CallWorkflowBlock,
   ReturnStep,
   Expr,
-  PublishError
+  PublishError,
+  InputMapping
 } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
 
@@ -298,6 +300,40 @@ const formatSchemaType = (schema: JsonSchema, root?: JsonSchema): string => {
   }
 
   return `${baseType ?? 'unknown'}${isNullable ? ' | null' : ''}`;
+};
+
+// §17 - Extract action input fields from a JSON Schema for InputMappingEditor
+const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSchema): ActionInputField[] => {
+  if (!schema) return [];
+  const resolved = resolveSchema(schema, root);
+  if (!resolved?.properties) return [];
+
+  const requiredFields = resolved.required ?? [];
+  return Object.entries(resolved.properties).map(([name, propSchema]) => {
+    const resolvedProp = resolveSchema(propSchema, root);
+    const type = normalizeSchemaType(resolvedProp) ?? 'string';
+    const isFieldRequired = requiredFields.includes(name);
+
+    let children: ActionInputField[] | undefined;
+    if (type === 'object' && resolvedProp.properties) {
+      children = extractActionInputFields(resolvedProp, root);
+    } else if (type === 'array' && resolvedProp.items) {
+      const itemSchema = resolveSchema(resolvedProp.items, root);
+      if (itemSchema.properties) {
+        children = extractActionInputFields(itemSchema, root);
+      }
+    }
+
+    return {
+      name,
+      type,
+      description: resolvedProp.description,
+      required: isFieldRequired,
+      enum: resolvedProp.enum,
+      default: resolvedProp.default,
+      children
+    };
+  });
 };
 
 // Build data context for a specific step position in the workflow
@@ -2139,6 +2175,32 @@ const StepConfigPanel: React.FC<{
     ? ((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs
     : undefined;
 
+  // §17 - Extract action input fields for InputMappingEditor
+  const actionInputFields = useMemo(() => {
+    if (!selectedAction?.inputSchema) return [];
+    return extractActionInputFields(selectedAction.inputSchema, selectedAction.inputSchema);
+  }, [selectedAction]);
+
+  // §17 - Get current input mapping from config
+  const inputMapping = useMemo(() => {
+    if (step.type !== 'action.call') return {};
+    const config = (step as NodeStep).config as { inputMapping?: InputMapping } | undefined;
+    return config?.inputMapping ?? {};
+  }, [step]);
+
+  // §17 - Handle input mapping changes
+  const handleInputMappingChange = useCallback((mapping: InputMapping) => {
+    const nodeStep = step as NodeStep;
+    const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+    onChange({
+      ...nodeStep,
+      config: {
+        ...existingConfig,
+        inputMapping: Object.keys(mapping).length > 0 ? mapping : undefined
+      }
+    });
+  }, [step, onChange]);
+
   // §16.2 - Enhanced field options with step outputs
   const enhancedFieldOptions = useMemo(() =>
     buildEnhancedFieldOptions(payloadSchema, dataContext),
@@ -2363,6 +2425,19 @@ const StepConfigPanel: React.FC<{
           actionRegistry={actionRegistry}
           stepId={step.id}
         />
+      )}
+
+      {/* §17 - Input Mapping Editor for action.call steps */}
+      {step.type === 'action.call' && selectedAction && actionInputFields.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <InputMappingEditor
+            value={inputMapping}
+            onChange={handleInputMappingChange}
+            targetFields={actionInputFields}
+            fieldOptions={enhancedFieldOptions}
+            stepId={step.id}
+          />
+        </div>
       )}
 
       {/* §16.1 - Action Schema Reference for action.call steps */}

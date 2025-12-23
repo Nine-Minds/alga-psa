@@ -15,7 +15,7 @@ import {
   validateWorkflowDefinition
 } from '@shared/workflow/runtime';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
+import WorkflowDefinitionVersionModelV2, { type WorkflowDefinitionVersionRecord } from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
 import WorkflowRunStepModelV2 from '@shared/workflow/persistence/workflowRunStepModelV2';
 import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
@@ -196,9 +196,9 @@ export async function listWorkflowDefinitionsAction() {
   if (workflowIds.length) {
     const rows = await knex('workflow_definition_versions')
       .select('workflow_id')
-      .max<{ workflow_id: string; published_version: number | string | null }>('version as published_version')
+      .max('version as published_version')
       .whereIn('workflow_id', workflowIds)
-      .groupBy('workflow_id');
+      .groupBy('workflow_id') as Array<{ workflow_id: string; published_version: number | string | null }>;
     rows.forEach((row) => {
       const value = row.published_version == null ? null : Number(row.published_version);
       publishedVersionMap.set(row.workflow_id, Number.isNaN(value as number) ? null : value);
@@ -551,7 +551,7 @@ export async function startWorkflowRunAction(input: unknown) {
     }
   }
 
-  let versionRecord = null;
+  let versionRecord: WorkflowDefinitionVersionRecord | null = null;
   if (parsed.workflowVersion) {
     versionRecord = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(
       knex,

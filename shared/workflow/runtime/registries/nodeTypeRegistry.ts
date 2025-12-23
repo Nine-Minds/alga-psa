@@ -1,5 +1,6 @@
 import { ZodSchema } from 'zod';
 import type { Envelope } from '../types';
+import type { SecretResolver } from '../utils/mappingResolver';
 
 export type NodeTypeUI = {
   label: string;
@@ -21,6 +22,11 @@ export type NodeHandlerContext = {
   resumeEvent?: { name: string; payload: unknown } | null;
   resumeError?: { category?: string; message?: string } | null;
   knex?: any;
+  /**
+   * Secret resolver for resolving $secret references in inputMapping.
+   * Should be provided by the runtime when executing action.call steps.
+   */
+  secretResolver?: SecretResolver;
 };
 
 export type NodeTypeDef = {

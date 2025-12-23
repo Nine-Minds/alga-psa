@@ -1,19 +1,30 @@
 import { z } from 'zod';
-import type { WorkflowDefinition, PublishError, Step, NodeStep } from '../types';
-import { workflowDefinitionSchema } from '../types';
+import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } from '../types';
+import { workflowDefinitionSchema, isSecretRef } from '../types';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource } from '../expressionEngine';
+import { validateInputMapping, collectSecretRefsFromConfig } from './mappingValidator';
 
 export type PublishValidationResult = {
   ok: boolean;
   errors: PublishError[];
   warnings: PublishError[];
+  /**
+   * Set of secret names referenced in the workflow.
+   * Can be used to verify all secrets exist before publishing.
+   */
+  secretRefs: Set<string>;
 };
 
-export function validateWorkflowDefinition(definition: WorkflowDefinition, payloadSchemaJson?: Record<string, unknown>): PublishValidationResult {
+export function validateWorkflowDefinition(
+  definition: WorkflowDefinition,
+  payloadSchemaJson?: Record<string, unknown>,
+  knownSecrets?: Set<string>
+): PublishValidationResult {
   const errors: PublishError[] = [];
   const warnings: PublishError[] = [];
+  const secretRefs = new Set<string>();
 
   try {
     workflowDefinitionSchema.parse(definition);
@@ -56,7 +67,8 @@ export function validateWorkflowDefinition(definition: WorkflowDefinition, paylo
     return {
       ok: errors.length === 0,
       errors,
-      warnings
+      warnings,
+      secretRefs
     };
   }
 
@@ -115,7 +127,7 @@ export function validateWorkflowDefinition(definition: WorkflowDefinition, paylo
         return;
       }
 
-      validateNodeStep(step, stepPath, errors, warnings, payloadSchemaJson, nodeRegistry, actionRegistry);
+      validateNodeStep(step, stepPath, errors, warnings, secretRefs, knownSecrets, payloadSchemaJson, nodeRegistry, actionRegistry);
     });
   };
 
@@ -124,7 +136,8 @@ export function validateWorkflowDefinition(definition: WorkflowDefinition, paylo
   return {
     ok: errors.length === 0,
     errors,
-    warnings
+    warnings,
+    secretRefs
   };
 }
 
@@ -147,6 +160,8 @@ function validateNodeStep(
   stepPath: string,
   errors: PublishError[],
   warnings: PublishError[],
+  secretRefs: Set<string>,
+  knownSecrets: Set<string> | undefined,
   payloadSchemaJson: Record<string, unknown> | undefined,
   nodeRegistry: ReturnType<typeof getNodeTypeRegistry>,
   actionRegistry: ReturnType<typeof getActionRegistryV2>
@@ -178,7 +193,7 @@ function validateNodeStep(
     collectExprs(step.config).forEach((expr) => validateExpr(expr, stepPath, step.id, errors));
 
     if (step.type === 'action.call') {
-      const config = step.config as { actionId?: string; version?: number };
+      const config = step.config as { actionId?: string; version?: number; inputMapping?: InputMapping };
       if (!config || !config.actionId || !config.version) {
         errors.push({
           severity: 'error',
@@ -187,15 +202,35 @@ function validateNodeStep(
           code: 'INVALID_ACTION_CONFIG',
           message: 'action.call requires actionId and version'
         });
-      } else if (!actionRegistry.get(config.actionId, config.version)) {
-        errors.push({
-          severity: 'error',
-          stepPath,
-          stepId: step.id,
-          code: 'UNKNOWN_ACTION',
-          message: `Unknown action ${config.actionId}@${config.version}`
-        });
+      } else {
+        const action = actionRegistry.get(config.actionId, config.version);
+        if (!action) {
+          errors.push({
+            severity: 'error',
+            stepPath,
+            stepId: step.id,
+            code: 'UNKNOWN_ACTION',
+            message: `Unknown action ${config.actionId}@${config.version}`
+          });
+        } else {
+          // Validate inputMapping if present
+          if (config.inputMapping) {
+            const mappingResult = validateInputMapping(config.inputMapping, {
+              stepPath,
+              stepId: step.id,
+              fieldName: 'inputMapping',
+              knownSecrets
+            });
+            errors.push(...mappingResult.errors);
+            warnings.push(...mappingResult.warnings);
+            mappingResult.secretRefs.forEach((ref) => secretRefs.add(ref));
+          }
+        }
       }
+
+      // Collect secret refs from the entire config (in case there are secrets in other fields)
+      const configSecrets = collectSecretRefsFromConfig(config);
+      configSecrets.forEach((ref) => secretRefs.add(ref));
     }
 
     if (step.type === 'transform.assign') {

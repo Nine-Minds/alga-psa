@@ -3,7 +3,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound } from 'lucide-react';
 import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
@@ -40,6 +40,7 @@ import Link from 'next/link';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import SurveySettings from 'server/src/components/surveys/SurveySettings';
 import ProjectSettings from './ProjectSettings';
+import SecretsManagement from 'server/src/components/settings/secrets/SecretsManagement';
 
 // Wrapper component with UnsavedChangesProvider
 const SettingsPage = (): JSX.Element => {
@@ -107,6 +108,7 @@ const SettingsPageContent = (): JSX.Element =>  {
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
     billing: 'Billing',
+    secrets: 'Secrets',
     'import-export': 'Import/Export',
     email: 'Email',
     integrations: 'Integrations',
@@ -233,6 +235,23 @@ const SettingsPageContent = (): JSX.Element =>  {
           </CardHeader>
           <CardContent>
             <BillingSettings />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      label: "Secrets",
+      icon: KeyRound,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Secrets Management</CardTitle>
+            <CardDescription>
+              Manage encrypted secrets for use in workflows. Secrets can be referenced in workflow actions using the $secret syntax.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SecretsManagement />
           </CardContent>
         </Card>
       ),
