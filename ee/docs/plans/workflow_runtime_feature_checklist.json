@@ -1942,27 +1942,27 @@
   {
     "description": "Build available data context including payload fields from payloadSchemaRef.",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Build available data context including vars from previous steps with saveAs.",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Build available data context including meta fields (state, tags, traceId).",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Build available data context including error fields when in catch block.",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Build available data context including item/index when inside forEach.",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Track output schemas for each step based on action outputSchema and saveAs config.",
@@ -1972,17 +1972,17 @@
   {
     "description": "Implement Input Mapping Editor panel in step configuration.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show available data tree in left column of mapping editor (payload, vars, meta).",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show required inputs from action inputSchema in right column of mapping editor.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Display visual connection lines between source and target in mapping editor.",
@@ -2012,27 +2012,27 @@
   {
     "description": "Show expression editor for complex mappings that can't use simple field selection.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Display type badge showing expected type next to each target field.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show required indicator (asterisk or badge) for mandatory input fields.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show optional indicator for non-required input fields.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Display field description from inputSchema as tooltip or helper text.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show default value from schema when field is optional and unmapped.",
@@ -2052,7 +2052,7 @@
   {
     "description": "Highlight unmapped required fields prominently in mapping editor.",
     "reference": "§17.3.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide 'Auto-map matching fields' button to apply all suggestions at once.",
@@ -2082,7 +2082,7 @@
   {
     "description": "Display visual tree representation matching input schema structure.",
     "reference": "§17.3.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support drag-and-drop from source tree to target field.",
@@ -2092,7 +2092,7 @@
   {
     "description": "Show nested field paths in human-readable format (e.g., ticketDefaults.priority).",
     "reference": "§17.3.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate nested object structure compatibility recursively.",
@@ -2102,27 +2102,27 @@
   {
     "description": "Support array element type display in nested structures.",
     "reference": "§17.3.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show green checkmark on step card when all required inputs are mapped with compatible types.",
     "reference": "§17.4.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show yellow warning icon on step card when all required inputs mapped but type warnings exist.",
     "reference": "§17.4.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show red error icon on step card when missing required mappings or type errors.",
     "reference": "§17.4.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show gray incomplete icon on step card when action selected but mapping not configured.",
     "reference": "§17.4.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Update validation status icon in real-time as mappings change.",
@@ -2132,37 +2132,37 @@
   {
     "description": "Show validation status on control blocks based on nested step statuses.",
     "reference": "§17.4.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Display count of mapped vs required fields on hover over validation badge.",
     "reference": "§17.4.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "List missing required fields in validation badge tooltip.",
     "reference": "§17.4.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "List type compatibility warnings in validation badge tooltip.",
     "reference": "§17.4.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide quick link to open mapping editor from validation badge.",
     "reference": "§17.4.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show detailed error messages in validation badge popup.",
     "reference": "§17.4.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support clicking validation badge to expand full error details.",
     "reference": "§17.4.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show same validation status icons in step list sidebar.",
@@ -2617,22 +2617,22 @@
   {
     "description": "Implement search/filter in available data tree for large schemas.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show type icons in available data tree (string, number, boolean, object, array).",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support pinning frequently used fields in available data tree.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Group available data by source (payload vs vars vs meta) in tree view.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show sample values from test data in available data tree (if available).",
@@ -2807,7 +2807,7 @@
   {
     "description": "Provide UI toggle between Expression mode and Literal mode per field.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate literal values against target field schema.",
@@ -2817,7 +2817,7 @@
   {
     "description": "Show appropriate input control for literal mode based on target type (text input, number input, checkbox, etc.).",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support string concatenation in mapping expressions (combining multiple sources).",
@@ -2972,17 +2972,17 @@
   {
     "description": "Implement mapping editor panel layout container component.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement source data tree browser component.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement target fields list component with schema-driven rendering.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement visual connection line renderer between source and target.",
@@ -3062,7 +3062,7 @@
   {
     "description": "Show dropdown of valid enum values instead of free text for enum target fields.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate mapped value is a valid enum member at design time.",
@@ -3092,7 +3092,7 @@
   {
     "description": "Never expose secret values in mapping UI - show placeholder only.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate referenced secret exists at publish time.",
@@ -3112,7 +3112,7 @@
   {
     "description": "Show secret picker UI for selecting from available tenant secrets.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Mark input fields as sensitive in action inputSchema (requiresSecret hint).",
@@ -3152,7 +3152,7 @@
   {
     "description": "Show item and $index in available data tree only when editing steps inside forEach.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Infer item type from forEach items expression for autocomplete and validation.",
@@ -3172,7 +3172,7 @@
   {
     "description": "Show empty state in mapping editor when action has no required inputs.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show error state in mapping editor when action schema fetch fails.",
