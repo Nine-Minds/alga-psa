@@ -1,8 +1,7 @@
 import React from 'react';
 import AssetDocuments from '../AssetDocuments';
 import { Asset } from '../../../interfaces/asset.interfaces';
-import { Card } from 'server/src/components/ui/Card';
-import { Text, Tabs } from '@mantine/core';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 
 interface DocumentsPasswordsTabProps {
   asset: Asset;
@@ -17,10 +16,15 @@ export const DocumentsPasswordsTab: React.FC<DocumentsPasswordsTabProps> = ({ as
       />
       
       {/* Passwords Section Placeholder - could be a separate component later */}
-      <Card title="Passwords & Secrets">
-         <div className="text-center py-8 text-gray-500">
-           <Text c="dimmed">Secure password management coming soon.</Text>
-         </div>
+      <Card>
+         <CardHeader>
+           <CardTitle>Passwords & Secrets</CardTitle>
+         </CardHeader>
+         <CardContent>
+           <div className="text-center py-8">
+             <p className="text-gray-500">Secure password management coming soon.</p>
+           </div>
+         </CardContent>
       </Card>
     </div>
   );

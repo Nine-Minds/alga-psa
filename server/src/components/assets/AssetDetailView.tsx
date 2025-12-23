@@ -7,7 +7,7 @@ import { AssetDashboardGrid } from './AssetDashboardGrid';
 import { AssetDetailTabs } from './AssetDetailTabs';
 import { useAssetDetail } from '../../hooks/useAssetDetail';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
-import { Alert, Container } from '@mantine/core';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
 interface AssetDetailViewProps {
@@ -34,11 +34,15 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
 
   if (!asset) {
     return (
-      <Container size="xl" py="xl">
-        <Alert icon={<AlertCircle size={16} />} title="Error" color="red">
-          Asset not found or you do not have permission to view it.
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Asset not found or you do not have permission to view it.
+          </AlertDescription>
         </Alert>
-      </Container>
+      </div>
     );
   }
 
@@ -50,7 +54,7 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
         isRefreshing={isRefreshing}
       />
       
-      <Container size="xl" py="xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AssetMetricsBanner 
           metrics={metrics} 
           isLoading={isLoading} 
@@ -66,7 +70,7 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
         />
         
         <AssetDetailTabs asset={asset} />
-      </Container>
+      </div>
     </div>
   );
 };

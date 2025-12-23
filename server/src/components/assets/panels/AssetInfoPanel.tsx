@@ -1,15 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
-import { Group, Text, ActionIcon, CopyButton, Tooltip } from '@mantine/core';
+import { Button } from 'server/src/components/ui/Button';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { ExternalLink, Copy, Check } from 'lucide-react';
 import { Asset } from '../../../interfaces/asset.interfaces';
 import { formatDateOnly } from '../../../lib/utils/dateTimeUtils';
 import Link from 'next/link';
+import { cn } from 'server/src/lib/utils';
 
 interface AssetInfoPanelProps {
   asset: Asset;
   isLoading: boolean;
 }
+
+const InfoRow = ({ label, value, copyable = false, link = null }: { label: string, value: React.ReactNode, copyable?: boolean, link?: string | null }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (typeof value === 'string') {
+      navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="flex items-start gap-2 min-h-[24px]">
+      <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{label}:</span>
+      <div className="flex-1 flex items-center gap-2">
+        {link ? (
+          <Link href={link} className="text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1">
+            <span className="text-sm">{value}</span>
+            <ExternalLink size={12} />
+          </Link>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-gray-900">{value}</span>
+            {copyable && typeof value === 'string' && (
+              <Tooltip content={copied ? 'Copied' : 'Copy'}>
+                <Button
+                  id={`copy-${label.toLowerCase().replace(/\s+/g, '-')}`}
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-5 w-5 p-0",
+                    copied ? "text-emerald-500" : "text-gray-400 hover:text-gray-600"
+                  )}
+                  onClick={handleCopy}
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                </Button>
+              </Tooltip>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
   asset,
@@ -18,35 +66,6 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
   if (isLoading) {
     return <Card className="h-64 animate-pulse bg-gray-50" />;
   }
-
-  const InfoRow = ({ label, value, copyable = false, link = null }: { label: string, value: React.ReactNode, copyable?: boolean, link?: string | null }) => (
-    <Group gap="xs" align="flex-start" className="min-h-[24px]">
-      <Text size="sm" fw={700} className="w-32 shrink-0">{label}:</Text>
-      <div className="flex-1 flex items-center gap-2">
-        {link ? (
-          <Link href={link} className="text-primary-600 hover:underline flex items-center gap-1">
-            <Text size="sm">{value}</Text>
-            <ExternalLink size={12} />
-          </Link>
-        ) : (
-          <Group gap={4}>
-            <Text size="sm">{value}</Text>
-            {copyable && typeof value === 'string' && (
-              <CopyButton value={value} timeout={2000}>
-                {({ copied, copy }) => (
-                  <Tooltip label={copied ? 'Copied' : 'Copy'} withArrow position="right">
-                    <ActionIcon color={copied ? 'teal' : 'gray'} variant="subtle" onClick={copy} size="xs">
-                      {copied ? <Check size={12} /> : <Copy size={12} />}
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-              </CopyButton>
-            )}
-          </Group>
-        )}
-      </div>
-    </Group>
-  );
 
   const getModelName = () => {
     // Try to get model from system_info if available

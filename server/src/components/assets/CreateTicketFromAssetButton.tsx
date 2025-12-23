@@ -27,7 +27,7 @@ interface CreateTicketFromAssetButtonProps {
     size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export default function CreateTicketFromAssetButton({ asset, defaultBoardId, variant = 'secondary', size = 'sm' }: CreateTicketFromAssetButtonProps) {
+export default function CreateTicketFromAssetButton({ asset, defaultBoardId, variant = 'default', size = 'sm' }: CreateTicketFromAssetButtonProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [title, setTitle] = useState(`Issue with ${asset.name}`);
     const [description, setDescription] = useState('');
