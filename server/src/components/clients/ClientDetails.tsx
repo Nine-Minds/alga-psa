@@ -301,11 +301,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       } else {
         toast.success("Client has been marked as inactive successfully.");
       }
+
+      // Close dialog first, then refresh in background
+      resetDeleteState();
       router.refresh();
     } catch (error: any) {
       handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
-    } finally {
-      resetDeleteState();
     }
   };
 
@@ -323,11 +324,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       // Update local state immediately
       setEditedClient(prev => ({ ...prev, is_inactive: true }));
       toast.success("Client has been marked as inactive successfully.");
+
+      // Close dialog first, then refresh in background
+      resetDeleteState();
       router.refresh();
     } catch (error: any) {
       handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
-    } finally {
-      resetDeleteState();
     }
   };
 
