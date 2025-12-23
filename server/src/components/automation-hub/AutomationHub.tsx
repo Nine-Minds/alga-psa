@@ -5,6 +5,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { DnDFlow as WorkflowDesigner } from '@product/workflows/entry';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from 'server/src/components/ui/Tabs';
 import WorkflowList from './WorkflowList';
+import CreateWorkflowDialog, { WorkflowTriggerType } from './CreateWorkflowDialog';
 import { List, PenTool, Play, Zap } from 'lucide-react';
 
 type TabValue = 'workflows' | 'designer' | 'runs' | 'events';
@@ -12,6 +13,11 @@ type TabValue = 'workflows' | 'designer' | 'runs' | 'events';
 export default function AutomationHub() {
   const [activeTab, setActiveTab] = useState<TabValue>('workflows');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newWorkflowConfig, setNewWorkflowConfig] = useState<{
+    name: string;
+    triggerType: WorkflowTriggerType;
+  } | null>(null);
 
   const handleSelectWorkflow = useCallback((workflowId: string) => {
     setSelectedWorkflowId(workflowId);
@@ -19,8 +25,14 @@ export default function AutomationHub() {
   }, []);
 
   const handleCreateNew = useCallback(() => {
+    setIsCreateDialogOpen(true);
+  }, []);
+
+  const handleCreateWorkflow = useCallback((name: string, triggerType: WorkflowTriggerType) => {
+    setNewWorkflowConfig({ name, triggerType });
     setSelectedWorkflowId(null);
     setActiveTab('designer');
+    setIsCreateDialogOpen(false);
   }, []);
 
   return (
@@ -87,6 +99,13 @@ export default function AutomationHub() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Create Workflow Dialog */}
+        <CreateWorkflowDialog
+          isOpen={isCreateDialogOpen}
+          onClose={() => setIsCreateDialogOpen(false)}
+          onCreate={handleCreateWorkflow}
+        />
       </div>
     </ReflectionContainer>
   );
