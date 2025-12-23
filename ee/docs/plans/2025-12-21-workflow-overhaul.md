@@ -1327,44 +1327,35 @@ Log all secret operations:
 - Sanitize secret names to prevent injection
 - Rate limit secret access to prevent enumeration
 
-### 18.7 API Endpoints
+### 18.7 Server Actions + API Surface
 
-#### 18.7.1 List Secrets
+**Principle:** Server actions are the first-class implementation. API routes are a thin external automation layer and must delegate to the server actions without re-implementing business logic.
 
-```
-GET /api/tenants/{tenantId}/secrets
-Response: { secrets: SecretMetadata[] }
-```
+#### 18.7.1 Server Actions (First-Class)
 
-#### 18.7.2 Create Secret
+| Capability | Server Action |
+|------------|---------------|
+| List secrets | List tenant secrets (metadata only) |
+| Get secret metadata | Get secret by name (no value) |
+| Create secret | Create new secret (encrypts value) |
+| Update secret | Update secret value/description |
+| Delete secret | Delete secret by name |
+| Check exists | Check if secret exists |
+| Resolve for runtime | Get decrypted value (internal only) |
 
-```
-POST /api/tenants/{tenantId}/secrets
-Body: { name: string, value: string, description?: string }
-Response: { secret: SecretMetadata }
-```
+#### 18.7.2 API Routes (External Automation Shims)
 
-#### 18.7.3 Update Secret
+These routes delegate to server actions for external automation use cases:
 
-```
-PATCH /api/tenants/{tenantId}/secrets/{name}
-Body: { value?: string, description?: string }
-Response: { secret: SecretMetadata }
-```
+| Method | Route | Delegates To |
+|--------|-------|--------------|
+| GET | `/api/tenants/{tenantId}/secrets` | List secrets action |
+| POST | `/api/tenants/{tenantId}/secrets` | Create secret action |
+| PATCH | `/api/tenants/{tenantId}/secrets/{name}` | Update secret action |
+| DELETE | `/api/tenants/{tenantId}/secrets/{name}` | Delete secret action |
+| HEAD | `/api/tenants/{tenantId}/secrets/{name}` | Check exists action |
 
-#### 18.7.4 Delete Secret
-
-```
-DELETE /api/tenants/{tenantId}/secrets/{name}
-Response: { success: boolean }
-```
-
-#### 18.7.5 Check Secret Exists
-
-```
-HEAD /api/tenants/{tenantId}/secrets/{name}
-Response: 200 if exists, 404 if not
-```
+**Note:** There is no API route to retrieve decrypted secret values. Runtime resolution is internal only.
 
 ### 18.8 Implementation Priority
 
@@ -1372,7 +1363,7 @@ Response: 200 if exists, 404 if not
 |----------|-----------|-------------|
 | P0 | Data Model | Secret entity and database schema |
 | P0 | Secret Provider | Basic encryption/decryption |
-| P0 | API Endpoints | CRUD operations |
+| P0 | Server Actions | CRUD operations (first-class) |
 | P0 | Runtime Resolution | Resolve $secret in workflows |
 | P1 | Settings UI | List, create, edit, delete secrets |
 | P1 | Mapping Integration | Secret picker in mapping editor |
