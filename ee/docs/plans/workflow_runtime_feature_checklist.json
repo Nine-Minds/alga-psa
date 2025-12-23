@@ -2042,7 +2042,7 @@
   {
     "description": "Implement auto-mapping suggestions for fields with matching names.",
     "reference": "§17.3.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Filter auto-mapping suggestions by type compatibility.",
@@ -2057,12 +2057,12 @@
   {
     "description": "Provide 'Auto-map matching fields' button to apply all suggestions at once.",
     "reference": "§17.3.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show mapping suggestion confidence score when multiple options exist.",
     "reference": "§17.3.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Remember and suggest previously used mappings for same action type.",
