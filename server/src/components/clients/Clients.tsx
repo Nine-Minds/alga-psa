@@ -377,6 +377,10 @@ const Clients: React.FC = () => {
     bucket_usage?: number;
   } | null>(null);
 
+  // Deactivate dialog state (for showing contact choices)
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [activeContactsToDeactivate, setActiveContactsToDeactivate] = useState<any[]>([]);
+
   // Quick View state
   const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
@@ -571,26 +575,65 @@ const Clients: React.FC = () => {
   const handleMarkClientInactive = async () => {
     if (!clientToDelete) return;
 
+    // Close the delete dialog first
+    resetDeleteState();
+
     try {
-      // Use atomic server action to mark client and contacts as inactive in a single transaction
-      const result = await markClientInactiveWithContacts(clientToDelete.client_id, true);
+      // Fetch active contacts for this client - same flow as direct "Mark as Inactive"
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const activeContacts = await getContactsByClient(clientToDelete.client_id, 'active');
 
-      if (!result.success) {
-        setDeleteError(result.message || 'Failed to mark client as inactive');
-        return;
-      }
-
-      await refreshClients();
-      resetDeleteState();
-
-      if (result.contactsDeactivated > 0) {
-        toast.success(`${clientToDelete.client_name} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been marked as inactive successfully.`);
+      if (activeContacts.length > 0) {
+        // Show deactivate dialog with choices
+        setActiveContactsToDeactivate(activeContacts);
+        setIsDeactivateDialogOpen(true);
       } else {
+        // No contacts to warn about, use atomic action to deactivate the client only
+        const result = await markClientInactiveWithContacts(clientToDelete.client_id, false);
+
+        if (!result.success) {
+          toast.error(result.message || 'Failed to mark client as inactive');
+          return;
+        }
+
+        await refreshClients();
         toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
       }
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      toast.error('An error occurred while marking the client as inactive. Please try again.');
+    }
+  };
+
+  // Handler for deactivating client with choice about contacts
+  const handleDeactivateClient = async (deactivateContacts: boolean) => {
+    if (!clientToDelete) return;
+
+    try {
+      // Use atomic server action to deactivate client and optionally contacts
+      const result = await markClientInactiveWithContacts(clientToDelete.client_id, deactivateContacts);
+
+      if (!result.success) {
+        toast.error(result.message || 'Failed to deactivate client');
+        setIsDeactivateDialogOpen(false);
+        return;
+      }
+
+      setIsDeactivateDialogOpen(false);
+      setActiveContactsToDeactivate([]);
+      await refreshClients();
+
+      if (deactivateContacts && result.contactsDeactivated > 0) {
+        toast.success(`${clientToDelete.client_name} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
+      } else {
+        toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
+      }
+
+      // Clear clientToDelete after successful operation
+      setClientToDelete(null);
+    } catch (error: any) {
+      console.error('Error deactivating client:', error);
+      toast.error('An error occurred while deactivating the client. Please try again.');
     }
   };
 
@@ -599,21 +642,28 @@ const Clients: React.FC = () => {
     if (selectedClients.length === 0) return;
 
     try {
-      const results = await Promise.all(
-        selectedClients.map(async (clientId: string) => {
-          try {
-            // Use atomic server action for each client
-            const result = await markClientInactiveWithContacts(clientId, true);
-            return { clientId, success: result.success, contactsDeactivated: result.contactsDeactivated };
-          } catch (error) {
-            return { clientId, success: false, contactsDeactivated: 0 };
-          }
-        })
-      );
+      // Process in chunks of 10 to avoid overwhelming the server
+      const CHUNK_SIZE = 10;
+      const results: { clientId: string; success: boolean; contactsDeactivated: number }[] = [];
+
+      for (let i = 0; i < selectedClients.length; i += CHUNK_SIZE) {
+        const chunk = selectedClients.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (clientId: string) => {
+            try {
+              const result = await markClientInactiveWithContacts(clientId, true);
+              return { clientId, success: result.success, contactsDeactivated: result.contactsDeactivated || 0 };
+            } catch (error) {
+              return { clientId, success: false, contactsDeactivated: 0 };
+            }
+          })
+        );
+        results.push(...chunkResults);
+      }
 
       const successCount = results.filter(r => r.success).length;
       const failCount = results.length - successCount;
-      const totalContactsDeactivated = results.reduce((sum, r) => sum + (r.contactsDeactivated || 0), 0);
+      const totalContactsDeactivated = results.reduce((sum, r) => sum + r.contactsDeactivated, 0);
 
       if (failCount > 0) {
         toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be marked as inactive.`);
@@ -640,21 +690,28 @@ const Clients: React.FC = () => {
     if (selectedClients.length === 0) return;
 
     try {
-      const results = await Promise.all(
-        selectedClients.map(async (clientId: string) => {
-          try {
-            // Use atomic server action for each client
-            const result = await markClientActiveWithContacts(clientId, true);
-            return { clientId, success: result.success, contactsReactivated: result.contactsReactivated };
-          } catch (error) {
-            return { clientId, success: false, contactsReactivated: 0 };
-          }
-        })
-      );
+      // Process in chunks of 10 to avoid overwhelming the server
+      const CHUNK_SIZE = 10;
+      const results: { clientId: string; success: boolean; contactsReactivated: number }[] = [];
+
+      for (let i = 0; i < selectedClients.length; i += CHUNK_SIZE) {
+        const chunk = selectedClients.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (clientId: string) => {
+            try {
+              const result = await markClientActiveWithContacts(clientId, true);
+              return { clientId, success: result.success, contactsReactivated: result.contactsReactivated || 0 };
+            } catch (error) {
+              return { clientId, success: false, contactsReactivated: 0 };
+            }
+          })
+        );
+        results.push(...chunkResults);
+      }
 
       const successCount = results.filter(r => r.success).length;
       const failCount = results.length - successCount;
-      const totalContactsReactivated = results.reduce((sum, r) => sum + (r.contactsReactivated || 0), 0);
+      const totalContactsReactivated = results.reduce((sum, r) => sum + r.contactsReactivated, 0);
 
       if (failCount > 0) {
         toast.error(`${failCount} client${failCount !== 1 ? 's' : ''} could not be reactivated.`);
@@ -1255,7 +1312,40 @@ const Clients: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
+      {/* Deactivate Client Dialog - shows contact choices */}
+      <ConfirmationDialog
+        id="deactivate-client-dialog"
+        isOpen={isDeactivateDialogOpen}
+        onClose={() => {
+          setIsDeactivateDialogOpen(false);
+          setActiveContactsToDeactivate([]);
+          setClientToDelete(null);
+        }}
+        onConfirm={() => handleDeactivateClient(true)}
+        title="Deactivate Client"
+        message={
+          <div className="space-y-3">
+            <p>
+              This client has {activeContactsToDeactivate.length} active contact{activeContactsToDeactivate.length !== 1 ? 's' : ''}. Would you like to deactivate {activeContactsToDeactivate.length === 1 ? 'this contact' : 'all these contacts'} as well?
+            </p>
+            <div className="bg-gray-50 rounded-md p-3 max-h-32 overflow-y-auto">
+              <ul className="text-sm text-gray-600 space-y-1">
+                {activeContactsToDeactivate.map((contact: any) => (
+                  <li key={contact.contact_name_id}>• {contact.full_name}</li>
+                ))}
+              </ul>
+            </div>
+            <p className="text-sm text-gray-500">
+              Deactivating contacts will also deactivate their client portal access.
+            </p>
+          </div>
+        }
+        confirmLabel="Deactivate All"
+        cancelLabel="Client Only"
+        onCancel={() => handleDeactivateClient(false)}
+      />
+
       {/* CSV Import Dialog */}
       <ClientsImportDialog
         isOpen={isImportDialogOpen}

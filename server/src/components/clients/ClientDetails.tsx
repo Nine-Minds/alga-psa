@@ -281,29 +281,38 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   };
 
   const handleMarkClientInactive = async () => {
+    // Close the delete dialog first
+    setIsDeleteDialogOpen(false);
+    setDeleteError(null);
+    setShowDeactivateOption(false);
+    setDeleteDependencies(null);
+
     try {
-      // Use atomic server action to mark client and contacts as inactive in a single transaction
-      const result = await markClientInactiveWithContacts(editedClient.client_id, true);
+      // Fetch active contacts for this client - same flow as direct "Mark as Inactive" button
+      const { getContactsByClient } = await import('server/src/lib/actions/contact-actions/contactActions');
+      const activeContacts = await getContactsByClient(editedClient.client_id, 'active');
 
-      if (!result.success) {
-        setDeleteError(result.message || 'Failed to mark client as inactive');
-        return;
-      }
-
-      setIsDeleteDialogOpen(false);
-
-      // Update local state immediately to reflect the change
-      setEditedClient(prev => ({ ...prev, is_inactive: true }));
-
-      if (result.contactsDeactivated > 0) {
-        toast.success(`Client and ${result.contactsDeactivated} contact(s) have been marked as inactive successfully.`);
+      if (activeContacts.length > 0) {
+        // Show deactivate dialog with choices (same as handleDirectMarkInactive)
+        setActiveContactsToDeactivate(activeContacts);
+        setIsDeactivateDialogOpen(true);
       } else {
+        // No contacts to warn about, use atomic action to deactivate the client
+        const result = await markClientInactiveWithContacts(editedClient.client_id, false);
+
+        if (!result.success) {
+          toast.error(result.message || 'Failed to mark client as inactive');
+          return;
+        }
+
+        // Update local state immediately
+        setEditedClient(prev => ({ ...prev, is_inactive: true }));
         toast.success("Client has been marked as inactive successfully.");
+        router.refresh();
       }
-      router.refresh();
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
-      setDeleteError('An error occurred while marking the client as inactive. Please try again.');
+      toast.error('An error occurred while marking the client as inactive. Please try again.');
     }
   };
 
