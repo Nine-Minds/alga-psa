@@ -214,7 +214,7 @@ impl RedisPublisher {
                     cmd.arg("truncated")
                         .arg(if event.truncated { "1" } else { "0" });
 
-                    cmd.query_async::<()>(&mut conn).await
+                    cmd.query_async(&mut conn).await
                 }
                 _ => Err(RedisError::from((
                     ErrorKind::IoError,
