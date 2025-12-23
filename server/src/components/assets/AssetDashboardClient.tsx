@@ -451,13 +451,8 @@ const handleAssetAdded = async () => {
                 return;
               }
 
-              if (event.shiftKey || event.altKey) {
-                event.preventDefault();
-                openAssetRecordPage(record.asset_id);
-                return;
-              }
-
-              openDrawerForAsset(record);
+              event.preventDefault();
+              openAssetRecordPage(record.asset_id);
             }}
             onAuxClick={(event) => {
               if (event.button === 1) {
@@ -979,7 +974,7 @@ const handleAssetAdded = async () => {
               totalItems={totalAssets}
               onPageChange={setCurrentPage}
               onItemsPerPageChange={setPageSize}
-              onRowClick={(asset) => openDrawerForAsset(asset)}
+              onRowClick={(asset) => openAssetRecordPage(asset.asset_id)}
             />
           </Card>
       </div>
