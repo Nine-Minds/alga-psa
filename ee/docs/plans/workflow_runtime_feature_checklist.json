@@ -172,7 +172,7 @@
   {
     "description": "Expose JSON Schemas to GUI for payload, node configs, action I/O, and human task forms.",
     "reference": "§4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ensure TypeScript types are derived via z.infer from the same Zod schemas.",
@@ -1997,12 +1997,12 @@
   {
     "description": "Support collapsing/expanding sections in mapping editor.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement dropdown/picker for selecting source fields for each target input.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Filter dropdown options by type compatibility with target field.",
