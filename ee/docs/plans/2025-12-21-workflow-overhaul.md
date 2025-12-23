@@ -838,6 +838,551 @@ Users need visibility into action input/output schemas to understand data flow, 
 
 ---
 
+## 17. Type-Safe Input Mapping System
+
+Actions require specific input shapes, and workflows produce typed outputs. This section specifies a formal input mapping system that enforces type safety from design time through runtime.
+
+### 17.1 Problem Statement
+
+The current system allows loose coupling between step outputs and action inputs:
+- Config values are stored directly without explicit mapping
+- No design-time validation of type compatibility
+- No completeness checking for required inputs
+- Runtime errors when shapes don't match
+
+The `control.callWorkflow` block already has `inputMapping` and `outputMapping` fields. Regular action steps need the same rigor.
+
+### 17.2 Data Model
+
+#### 17.2.1 InputMapping on Action Steps
+
+Extend the `action.call` node config to include explicit input mapping:
+
+```typescript
+type ActionCallConfig = {
+  actionId: string;
+  version: number;
+  inputMapping: Record<string, Expr>;  // target input field → source expression
+  saveAs?: string;
+  onError?: OnErrorPolicy;
+  idempotencyKey?: Expr;
+};
+```
+
+**Example:**
+```json
+{
+  "type": "action.call",
+  "config": {
+    "actionId": "create_ticket_from_email",
+    "version": 1,
+    "inputMapping": {
+      "tenantId": { "$expr": "payload.tenantId" },
+      "emailData": { "$expr": "payload.emailData" },
+      "clientId": { "$expr": "vars.matchedClient.client_id" },
+      "ticketDefaults": { "$expr": "vars.ticketDefaults" }
+    },
+    "saveAs": "createdTicket"
+  }
+}
+```
+
+#### 17.2.2 Mapping Metadata
+
+Each mapping entry tracks:
+- **targetField**: The action input field name (from inputSchema)
+- **sourceExpr**: Expression referencing available data
+- **sourceType**: Inferred type from source schema (design-time)
+- **targetType**: Expected type from action inputSchema
+- **compatibility**: `compatible` | `warning` | `error` | `unknown`
+
+#### 17.2.3 Available Data Context
+
+At each step, the available data context includes:
+- `payload.*` — Trigger/event payload (from payloadSchemaRef)
+- `vars.*` — Outputs from previous steps (keyed by saveAs)
+- `meta.*` — Workflow metadata (state, tags, traceId)
+- `error.*` — Current error if in catch block
+- `item` / `index` — Loop variables if inside forEach
+
+### 17.3 Mapping UI
+
+#### 17.3.1 Input Mapping Editor
+
+A dedicated panel for configuring action inputs with:
+- **Left column**: Available data tree (payload, vars by step, meta)
+- **Right column**: Required inputs from action inputSchema
+- **Mapping lines**: Visual connection between source → target
+- **Type indicators**: Color-coded compatibility status
+
+#### 17.3.2 Field Selection
+
+For each target input field:
+- Dropdown/picker showing compatible fields from available data
+- Expression editor for complex mappings
+- Type badge showing expected type
+- Required indicator (asterisk or badge)
+
+#### 17.3.3 Auto-Mapping Suggestions
+
+When action is first added:
+- Suggest mappings for fields with matching names and compatible types
+- Highlight unmapped required fields
+- Offer "Auto-map matching fields" button
+
+#### 17.3.4 Nested Object Mapping
+
+For complex input schemas with nested objects:
+- Collapsible sections for object properties
+- Option to map entire object or individual fields
+- Visual tree representation matching input schema structure
+
+### 17.4 Design Surface Affordances
+
+#### 17.4.1 Step Validation Status
+
+Each step card on the canvas shows:
+- **Green checkmark**: All required inputs mapped with compatible types
+- **Yellow warning**: All required inputs mapped but type warnings exist
+- **Red error**: Missing required mappings or type errors
+- **Gray incomplete**: Action selected but mapping not configured
+
+#### 17.4.2 Validation Badge Details
+
+On hover or click, show:
+- Count of mapped vs required fields
+- List of missing required fields
+- List of type compatibility warnings
+- Quick link to open mapping editor
+
+#### 17.4.3 Step List Indicators
+
+In the step list sidebar:
+- Same status icons as canvas
+- Filter by validation status
+- Batch view of all mapping issues
+
+#### 17.4.4 Breadcrumb Trail
+
+When a validation error references a nested mapping:
+- Show full path: "Create Ticket → inputMapping → ticketDefaults.priority"
+- Click to navigate directly to the field
+
+### 17.5 Publish Validation
+
+#### 17.5.1 Mapping Completeness Rules
+
+| Rule | Severity | Code |
+|------|----------|------|
+| Required input field not mapped | Error | `REQUIRED_INPUT_UNMAPPED` |
+| Optional input field not mapped | — | (allowed) |
+| Mapping expression invalid syntax | Error | `INVALID_MAPPING_EXPR` |
+| Mapping references undefined path | Error | `UNDEFINED_MAPPING_SOURCE` |
+| Mapping references future step | Error | `FORWARD_REFERENCE` |
+
+#### 17.5.2 Type Compatibility Rules
+
+| Rule | Severity | Code |
+|------|----------|------|
+| Types match exactly | — | (pass) |
+| Nullable source → non-null target | Warning | `NULLABLE_TO_REQUIRED` |
+| String → Number (parseable) | Warning | `TYPE_COERCION` |
+| Incompatible types (object → string) | Error | `TYPE_MISMATCH` |
+| Array element type mismatch | Warning | `ARRAY_ELEMENT_MISMATCH` |
+| Unknown source type | Warning | `UNKNOWN_SOURCE_TYPE` |
+
+#### 17.5.3 Structural Compatibility
+
+For object inputs:
+- All required properties must be present in source or have defaults
+- Extra properties in source are allowed (passed through or ignored per schema)
+- Nested object compatibility checked recursively
+
+#### 17.5.4 Validation Error Format
+
+```typescript
+type MappingValidationError = PublishError & {
+  targetField?: string;       // The input field with the issue
+  sourceExpr?: string;        // The expression that failed
+  expectedType?: string;      // What the action expects
+  actualType?: string;        // What the source provides
+};
+```
+
+### 17.6 Runtime Integration
+
+#### 17.6.1 Mapping Resolution
+
+Before invoking an action handler:
+1. Load the step's `inputMapping` configuration
+2. For each target field, evaluate the source expression against current context
+3. Build the resolved input object
+4. Validate against action's inputSchema (Zod)
+5. Pass validated input to handler
+
+#### 17.6.2 Resolution Algorithm
+
+```typescript
+function resolveInputMapping(
+  mapping: Record<string, Expr>,
+  context: { payload, vars, meta, error, item?, index? },
+  inputSchema: ZodSchema
+): ResolvedInput {
+  const resolved: Record<string, unknown> = {};
+
+  for (const [targetField, sourceExpr] of Object.entries(mapping)) {
+    resolved[targetField] = evaluateExpr(sourceExpr, context);
+  }
+
+  // Apply defaults from schema for unmapped optional fields
+  const withDefaults = applySchemaDefaults(resolved, inputSchema);
+
+  // Validate final shape
+  return inputSchema.parse(withDefaults);
+}
+```
+
+#### 17.6.3 Runtime Error Handling
+
+When mapping resolution fails:
+- Capture which field failed and why
+- Include source expression and evaluated value
+- Include expected vs actual type
+- Classify as `ValidationError` (non-retryable)
+
+#### 17.6.4 Coercion Rules
+
+Limited automatic coercion at runtime:
+- `null` / `undefined` → Use schema default if available
+- String containing number → Parse to number if target expects number
+- ISO date string → Parse to Date if target expects Date
+- All other mismatches → Validation error
+
+### 17.7 Migration and Backwards Compatibility
+
+#### 17.7.1 Existing Workflows
+
+Workflows created before input mapping:
+- Continue to work with legacy `args` field
+- Designer shows upgrade prompt to convert to `inputMapping`
+- Auto-migration tool to convert `args` → `inputMapping`
+
+#### 17.7.2 Schema Evolution
+
+When action inputSchema changes:
+- Designer highlights affected workflows
+- Show diff of added/removed/changed fields
+- Validation re-runs on next edit or publish
+
+### 17.8 Implementation Priority
+
+| Priority | Component | Description |
+|----------|-----------|-------------|
+| P0 | Data Model | Add inputMapping to action.call config schema |
+| P0 | Runtime | Implement mapping resolution in action executor |
+| P0 | Publish Validation | Completeness checking for required fields |
+| P1 | Mapping UI | Basic field picker and mapping editor |
+| P1 | Type Validation | Type compatibility checking at publish |
+| P1 | Canvas Badges | Validation status indicators on steps |
+| P2 | Auto-Suggestions | Smart mapping suggestions |
+| P2 | Type Coercion | Runtime coercion for compatible types |
+| P3 | Migration Tool | Auto-convert legacy args to inputMapping |
+| P3 | Schema Diff | Highlight changes when action version updates |
+
+---
+
+## 18. Tenant Secrets Management
+
+Workflows often need access to sensitive credentials (API keys, tokens, passwords). This section specifies a tenant-level secrets management system that integrates with workflow input mapping.
+
+### 18.1 Overview
+
+Secrets are:
+- **Tenant-scoped**: Each tenant manages their own secrets
+- **Encrypted at rest**: Values stored using envelope encryption
+- **Never exposed**: Values never appear in logs, UI responses, or API outputs
+- **Referenced by name**: Workflows use `{ $secret: "secretName" }` syntax
+- **Audited**: All access and modifications are logged
+
+### 18.2 Data Model
+
+#### 18.2.1 Secret Entity
+
+```typescript
+type TenantSecret = {
+  id: string;                    // UUID
+  tenant_id: string;             // Owning tenant
+  name: string;                  // Unique within tenant, e.g., "STRIPE_API_KEY"
+  description?: string;          // Human-readable description
+  encrypted_value: string;       // Encrypted secret value
+  encryption_key_id: string;     // Reference to encryption key used
+  created_at: string;            // ISO timestamp
+  updated_at: string;            // ISO timestamp
+  created_by: string;            // User ID who created
+  updated_by: string;            // User ID who last updated
+  last_accessed_at?: string;     // Last time secret was read by a workflow
+};
+```
+
+#### 18.2.2 Database Schema
+
+```sql
+CREATE TABLE tenant_secrets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  encrypted_value TEXT NOT NULL,
+  encryption_key_id VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by UUID NOT NULL REFERENCES users(id),
+  updated_by UUID NOT NULL REFERENCES users(id),
+  last_accessed_at TIMESTAMPTZ,
+  UNIQUE(tenant_id, name)
+);
+
+CREATE INDEX idx_tenant_secrets_tenant_id ON tenant_secrets(tenant_id);
+```
+
+#### 18.2.3 Secret Reference Syntax
+
+In workflow inputMapping:
+
+```json
+{
+  "apiKey": { "$secret": "STRIPE_API_KEY" },
+  "webhookToken": { "$secret": "WEBHOOK_SECRET" }
+}
+```
+
+### 18.3 Secret Provider
+
+#### 18.3.1 Encryption Strategy
+
+- **Envelope encryption**: Each secret encrypted with a data encryption key (DEK)
+- **DEK encrypted with master key**: Master key stored in secure key management
+- **Key rotation support**: Ability to re-encrypt secrets with new keys
+
+#### 18.3.2 Provider Interface
+
+```typescript
+interface SecretProvider {
+  // Store a new secret (encrypts value)
+  create(tenantId: string, name: string, value: string): Promise<void>;
+
+  // Update secret value (re-encrypts)
+  update(tenantId: string, name: string, value: string): Promise<void>;
+
+  // Retrieve decrypted value (for runtime use only)
+  get(tenantId: string, name: string): Promise<string>;
+
+  // Check if secret exists (no decryption)
+  exists(tenantId: string, name: string): Promise<boolean>;
+
+  // Delete secret
+  delete(tenantId: string, name: string): Promise<void>;
+
+  // List secret names (no values)
+  list(tenantId: string): Promise<SecretMetadata[]>;
+}
+
+type SecretMetadata = {
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  lastAccessedAt?: string;
+};
+```
+
+#### 18.3.3 Implementation Notes
+
+- Use established encryption library (e.g., Node.js crypto with AES-256-GCM)
+- Master key from environment variable or key management service
+- Consider integration with external secret managers (Vault, AWS Secrets Manager) in future
+
+### 18.4 Settings UI
+
+#### 18.4.1 Secrets List View
+
+Located at: **Settings → Secrets**
+
+| Column | Description |
+|--------|-------------|
+| Name | Secret identifier (e.g., `STRIPE_API_KEY`) |
+| Description | Human-readable description |
+| Last Updated | Relative timestamp |
+| Last Accessed | When a workflow last used this secret |
+| Actions | Edit, Delete |
+
+Features:
+- Search/filter by name
+- Sort by name, updated, accessed
+- Pagination for large secret lists
+
+#### 18.4.2 Create Secret Dialog
+
+Fields:
+- **Name** (required): Uppercase with underscores recommended (e.g., `API_KEY_NAME`)
+- **Value** (required): Password input, never shown after save
+- **Description** (optional): What this secret is used for
+
+Validation:
+- Name must be unique within tenant
+- Name must match pattern: `^[A-Z][A-Z0-9_]{0,254}$`
+- Value cannot be empty
+
+#### 18.4.3 Edit Secret Dialog
+
+Fields:
+- **Description**: Editable
+- **New Value**: Optional - only update if provided
+- Shows "Value last updated: X days ago"
+
+Note: Cannot view current value, only replace it.
+
+#### 18.4.4 Delete Secret Confirmation
+
+- Show warning if secret is referenced by any workflows
+- List workflows that reference this secret
+- Require typing secret name to confirm deletion
+
+### 18.5 Workflow Integration
+
+#### 18.5.1 Secret Reference in InputMapping
+
+```typescript
+type MappingValue = Expr | LiteralValue | SecretRef;
+
+type SecretRef = {
+  $secret: string;  // Secret name
+};
+```
+
+#### 18.5.2 Secret Picker in Mapping UI
+
+When mapping a field marked as sensitive:
+- Show "Use Secret" option alongside Expression/Literal
+- Display dropdown of available tenant secrets
+- Show "Manage Secrets" link to settings
+- Show placeholder text: `••••••••` for mapped secrets
+
+#### 18.5.3 Publish-Time Validation
+
+- Verify all referenced secrets exist
+- Return `SECRET_NOT_FOUND` error if missing
+- Warning if secret hasn't been accessed recently (may be stale)
+
+#### 18.5.4 Runtime Resolution
+
+```typescript
+async function resolveSecretRef(
+  ref: SecretRef,
+  tenantId: string,
+  secretProvider: SecretProvider
+): Promise<string> {
+  const value = await secretProvider.get(tenantId, ref.$secret);
+  // Update last_accessed_at
+  await updateSecretAccessTime(tenantId, ref.$secret);
+  return value;
+}
+```
+
+### 18.6 Security
+
+#### 18.6.1 Access Control
+
+| Permission | Description |
+|------------|-------------|
+| `secrets.view` | List secret names and metadata |
+| `secrets.manage` | Create, update, delete secrets |
+| `secrets.use` | Reference secrets in workflows |
+
+Default role assignments:
+- Admin: All permissions
+- Editor: `secrets.view`, `secrets.use`
+- Viewer: None
+
+#### 18.6.2 Audit Logging
+
+Log all secret operations:
+- `secret.created` - Who, when, secret name (not value)
+- `secret.updated` - Who, when, secret name
+- `secret.deleted` - Who, when, secret name
+- `secret.accessed` - Workflow run ID, secret name, timestamp
+
+#### 18.6.3 Value Protection
+
+**Never expose secret values in:**
+- API responses (return metadata only)
+- UI (show placeholder `••••••••`)
+- Logs (redact before logging)
+- Workflow snapshots (replace with `[REDACTED]`)
+- Error messages (show secret name, not value)
+
+#### 18.6.4 Input Validation
+
+- Reject secrets with values exceeding 64KB
+- Sanitize secret names to prevent injection
+- Rate limit secret access to prevent enumeration
+
+### 18.7 API Endpoints
+
+#### 18.7.1 List Secrets
+
+```
+GET /api/tenants/{tenantId}/secrets
+Response: { secrets: SecretMetadata[] }
+```
+
+#### 18.7.2 Create Secret
+
+```
+POST /api/tenants/{tenantId}/secrets
+Body: { name: string, value: string, description?: string }
+Response: { secret: SecretMetadata }
+```
+
+#### 18.7.3 Update Secret
+
+```
+PATCH /api/tenants/{tenantId}/secrets/{name}
+Body: { value?: string, description?: string }
+Response: { secret: SecretMetadata }
+```
+
+#### 18.7.4 Delete Secret
+
+```
+DELETE /api/tenants/{tenantId}/secrets/{name}
+Response: { success: boolean }
+```
+
+#### 18.7.5 Check Secret Exists
+
+```
+HEAD /api/tenants/{tenantId}/secrets/{name}
+Response: 200 if exists, 404 if not
+```
+
+### 18.8 Implementation Priority
+
+| Priority | Component | Description |
+|----------|-----------|-------------|
+| P0 | Data Model | Secret entity and database schema |
+| P0 | Secret Provider | Basic encryption/decryption |
+| P0 | API Endpoints | CRUD operations |
+| P0 | Runtime Resolution | Resolve $secret in workflows |
+| P1 | Settings UI | List, create, edit, delete secrets |
+| P1 | Mapping Integration | Secret picker in mapping editor |
+| P1 | Audit Logging | Log all secret operations |
+| P2 | Usage Analysis | Show which workflows use each secret |
+| P2 | Key Rotation | Re-encrypt secrets with new keys |
+| P3 | External Providers | Vault, AWS Secrets Manager integration |
+
+---
+
 ## Appendix A: Validation Error Format (Publish-Time)
 
 ```typescript

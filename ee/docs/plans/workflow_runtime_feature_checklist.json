@@ -1893,5 +1893,1308 @@
     "description": "Show schema diff when action version changes highlighting added/removed/changed fields.",
     "reference": "\u00a716.7",
     "implemented": false
+  },
+
+  {
+    "description": "Define InputMapping type as Record<string, Expr> for action.call config.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Extend action.call config schema to include inputMapping field.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support inputMapping alongside legacy args field for backwards compatibility.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Store actionId and version in action.call config.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Store saveAs in action.call config for output naming.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support onError policy in action.call config.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support idempotencyKey expression in action.call config.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Define MappingMetadata type tracking targetField, sourceExpr, sourceType, targetType, compatibility.",
+    "reference": "\u00a717.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement compatibility status enum: compatible, warning, error, unknown.",
+    "reference": "\u00a717.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Build available data context including payload fields from payloadSchemaRef.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Build available data context including vars from previous steps with saveAs.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Build available data context including meta fields (state, tags, traceId).",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Build available data context including error fields when in catch block.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Build available data context including item/index when inside forEach.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Track output schemas for each step based on action outputSchema and saveAs config.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement Input Mapping Editor panel in step configuration.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show available data tree in left column of mapping editor (payload, vars, meta).",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show required inputs from action inputSchema in right column of mapping editor.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Display visual connection lines between source and target in mapping editor.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show color-coded type indicators in mapping editor (green=compatible, yellow=warning, red=error).",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Support collapsing/expanding sections in mapping editor.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement dropdown/picker for selecting source fields for each target input.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Filter dropdown options by type compatibility with target field.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show expression editor for complex mappings that can't use simple field selection.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Display type badge showing expected type next to each target field.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show required indicator (asterisk or badge) for mandatory input fields.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show optional indicator for non-required input fields.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Display field description from inputSchema as tooltip or helper text.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show default value from schema when field is optional and unmapped.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement auto-mapping suggestions for fields with matching names.",
+    "reference": "\u00a717.3.3",
+    "implemented": false
+  },
+  {
+    "description": "Filter auto-mapping suggestions by type compatibility.",
+    "reference": "\u00a717.3.3",
+    "implemented": false
+  },
+  {
+    "description": "Highlight unmapped required fields prominently in mapping editor.",
+    "reference": "\u00a717.3.3",
+    "implemented": false
+  },
+  {
+    "description": "Provide 'Auto-map matching fields' button to apply all suggestions at once.",
+    "reference": "\u00a717.3.3",
+    "implemented": false
+  },
+  {
+    "description": "Show mapping suggestion confidence score when multiple options exist.",
+    "reference": "\u00a717.3.3",
+    "implemented": false
+  },
+  {
+    "description": "Remember and suggest previously used mappings for same action type.",
+    "reference": "\u00a717.3.3",
+    "implemented": false
+  },
+  {
+    "description": "Support collapsible sections for nested object properties in mapping editor.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Allow mapping entire object vs individual fields for nested structures.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Display visual tree representation matching input schema structure.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Support drag-and-drop from source tree to target field.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Show nested field paths in human-readable format (e.g., ticketDefaults.priority).",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Validate nested object structure compatibility recursively.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Support array element type display in nested structures.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Show green checkmark on step card when all required inputs are mapped with compatible types.",
+    "reference": "\u00a717.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Show yellow warning icon on step card when all required inputs mapped but type warnings exist.",
+    "reference": "\u00a717.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Show red error icon on step card when missing required mappings or type errors.",
+    "reference": "\u00a717.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Show gray incomplete icon on step card when action selected but mapping not configured.",
+    "reference": "\u00a717.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Update validation status icon in real-time as mappings change.",
+    "reference": "\u00a717.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Show validation status on control blocks based on nested step statuses.",
+    "reference": "\u00a717.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Display count of mapped vs required fields on hover over validation badge.",
+    "reference": "\u00a717.4.2",
+    "implemented": false
+  },
+  {
+    "description": "List missing required fields in validation badge tooltip.",
+    "reference": "\u00a717.4.2",
+    "implemented": false
+  },
+  {
+    "description": "List type compatibility warnings in validation badge tooltip.",
+    "reference": "\u00a717.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Provide quick link to open mapping editor from validation badge.",
+    "reference": "\u00a717.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Show detailed error messages in validation badge popup.",
+    "reference": "\u00a717.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Support clicking validation badge to expand full error details.",
+    "reference": "\u00a717.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Show same validation status icons in step list sidebar.",
+    "reference": "\u00a717.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement filter by validation status in step list (all, valid, warnings, errors).",
+    "reference": "\u00a717.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Provide batch view of all mapping issues across workflow.",
+    "reference": "\u00a717.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Show summary count of steps with errors/warnings at top of step list.",
+    "reference": "\u00a717.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Support jump to step from validation issue in batch view.",
+    "reference": "\u00a717.4.3",
+    "implemented": false
+  },
+  {
+    "description": "Show breadcrumb trail for nested mapping errors (e.g., Create Ticket → inputMapping → ticketDefaults.priority).",
+    "reference": "\u00a717.4.4",
+    "implemented": false
+  },
+  {
+    "description": "Support click on breadcrumb to navigate directly to the field.",
+    "reference": "\u00a717.4.4",
+    "implemented": false
+  },
+  {
+    "description": "Highlight the specific field with error when navigating from breadcrumb.",
+    "reference": "\u00a717.4.4",
+    "implemented": false
+  },
+  {
+    "description": "Show full path in error messages for deeply nested validation failures.",
+    "reference": "\u00a717.4.4",
+    "implemented": false
+  },
+  {
+    "description": "Validate that all required input fields have mappings at publish time.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Return REQUIRED_INPUT_UNMAPPED error code for missing required mappings.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Allow optional input fields to be unmapped without error.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Validate mapping expression syntax at publish time.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Return INVALID_MAPPING_EXPR error code for invalid expression syntax.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Validate that mapping references exist in available data context.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Return UNDEFINED_MAPPING_SOURCE error code for undefined path references.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Detect and block forward references to steps that execute later.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Return FORWARD_REFERENCE error code for forward reference violations.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Pass validation when source and target types match exactly.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Return NULLABLE_TO_REQUIRED warning when nullable source maps to non-null target.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Return TYPE_COERCION warning when string maps to number (parseable).",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Return TYPE_MISMATCH error for incompatible types (e.g., object → string).",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Return ARRAY_ELEMENT_MISMATCH warning for array element type mismatches.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Return UNKNOWN_SOURCE_TYPE warning when source type cannot be determined.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement type inference from expression paths to determine source types.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Support union types in compatibility checking.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate all required properties present in source for object inputs.",
+    "reference": "\u00a717.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Allow extra properties in source object (passthrough or ignore per schema).",
+    "reference": "\u00a717.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Check nested object compatibility recursively.",
+    "reference": "\u00a717.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Validate array element types for array inputs.",
+    "reference": "\u00a717.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Support schema defaults when checking structural compatibility.",
+    "reference": "\u00a717.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement MappingValidationError type extending PublishError with mapping-specific fields.",
+    "reference": "\u00a717.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Include targetField in mapping validation errors.",
+    "reference": "\u00a717.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Include sourceExpr in mapping validation errors.",
+    "reference": "\u00a717.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Include expectedType in mapping validation errors.",
+    "reference": "\u00a717.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Include actualType in mapping validation errors.",
+    "reference": "\u00a717.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Load inputMapping from step config before action invocation.",
+    "reference": "\u00a717.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Evaluate each source expression against current runtime context.",
+    "reference": "\u00a717.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Build resolved input object from mapping results.",
+    "reference": "\u00a717.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Validate resolved input against action inputSchema (Zod).",
+    "reference": "\u00a717.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Pass validated input to action handler.",
+    "reference": "\u00a717.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement resolveInputMapping function per \u00a717.6.2 algorithm.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Iterate over inputMapping entries to resolve each field.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Apply schema defaults for unmapped optional fields.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Parse resolved input through Zod schema for final validation.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Capture which field failed when mapping resolution fails.",
+    "reference": "\u00a717.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Include source expression in runtime mapping errors.",
+    "reference": "\u00a717.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Include evaluated value in runtime mapping errors.",
+    "reference": "\u00a717.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Include expected vs actual type in runtime mapping errors.",
+    "reference": "\u00a717.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Classify mapping resolution failures as ValidationError (non-retryable).",
+    "reference": "\u00a717.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Log detailed mapping resolution errors for debugging.",
+    "reference": "\u00a717.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Coerce null/undefined to schema default when available.",
+    "reference": "\u00a717.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Coerce string containing number to number when target expects number.",
+    "reference": "\u00a717.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Coerce ISO date string to Date when target expects Date.",
+    "reference": "\u00a717.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Fail validation for type mismatches that cannot be coerced.",
+    "reference": "\u00a717.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Log coercion actions for audit/debugging purposes.",
+    "reference": "\u00a717.6.4",
+    "implemented": false
+  },
+  {
+    "description": "Support legacy args field in existing workflows.",
+    "reference": "\u00a717.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Show upgrade prompt in designer to convert args to inputMapping.",
+    "reference": "\u00a717.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement auto-migration tool to convert args to inputMapping.",
+    "reference": "\u00a717.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Preserve existing behavior when running workflows with legacy args.",
+    "reference": "\u00a717.7.1",
+    "implemented": false
+  },
+  {
+    "description": "Detect affected workflows when action inputSchema changes.",
+    "reference": "\u00a717.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Highlight workflows affected by schema changes in workflow list.",
+    "reference": "\u00a717.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Show diff of added/removed/changed fields when action version updates.",
+    "reference": "\u00a717.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Re-run validation on next edit or publish after schema change.",
+    "reference": "\u00a717.7.2",
+    "implemented": false
+  },
+  {
+    "description": "Create unit tests for inputMapping schema validation.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create unit tests for mapping expression evaluation.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create unit tests for type compatibility checking.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create unit tests for structural compatibility validation.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create unit tests for runtime mapping resolution.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create unit tests for type coercion rules.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create integration tests for mapping UI components.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create integration tests for publish validation with mappings.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create integration tests for runtime mapping execution.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Create E2E tests for complete mapping workflow (create, validate, publish, run).",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Test mapping editor with various action schemas (simple, nested, arrays).",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Test validation badges update correctly as mappings change.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Test auto-mapping suggestions accuracy and relevance.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Test migration path from legacy args to inputMapping.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Document inputMapping config schema and usage.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Document available data context at each step type.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Document type compatibility rules and coercion behavior.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Document mapping editor UI interactions.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Document validation error codes and remediation steps.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Document migration guide for upgrading existing workflows.",
+    "reference": "\u00a717",
+    "implemented": false
+  },
+  {
+    "description": "Show mapping completion percentage in workflow list for each workflow.",
+    "reference": "\u00a717.4",
+    "implemented": false
+  },
+  {
+    "description": "Support keyboard navigation in mapping editor (tab between fields, arrow keys in tree).",
+    "reference": "\u00a717.3",
+    "implemented": false
+  },
+  {
+    "description": "Provide undo/redo for mapping changes.",
+    "reference": "\u00a717.3",
+    "implemented": false
+  },
+  {
+    "description": "Support copy/paste of mappings between similar steps.",
+    "reference": "\u00a717.3",
+    "implemented": false
+  },
+  {
+    "description": "Show mapping history/changelog per step.",
+    "reference": "\u00a717.3",
+    "implemented": false
+  },
+  {
+    "description": "Support bulk mapping operations (clear all, reset to defaults).",
+    "reference": "\u00a717.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement search/filter in available data tree for large schemas.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show type icons in available data tree (string, number, boolean, object, array).",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Support pinning frequently used fields in available data tree.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Group available data by source (payload vs vars vs meta) in tree view.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show sample values from test data in available data tree (if available).",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Validate expressions in real-time as user types in expression editor.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show autocomplete suggestions in expression editor based on current context.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Highlight syntax errors in expression editor with error message.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Support common expression patterns as snippets/templates.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Provide expression builder for complex transformations (string concat, conditionals).",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show preview of evaluated expression result when test data available.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Support clearing individual field mappings.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Indicate when mapped field will use schema default vs explicit mapping.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate that referenced vars come from steps with saveAs configured.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Warn when referencing optional source field without null handling.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Check enum value compatibility between source and target.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate literal values in expressions match target type.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Support validation of conditional expressions (ternary) type inference.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Cache type inference results for performance.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Track expression evaluation metrics (time, memory) for monitoring.",
+    "reference": "\u00a717.6",
+    "implemented": false
+  },
+  {
+    "description": "Implement circuit breaker for expression evaluation timeouts.",
+    "reference": "\u00a717.6",
+    "implemented": false
+  },
+  {
+    "description": "Log resolved input values (redacted) for run debugging.",
+    "reference": "\u00a717.6",
+    "implemented": false
+  },
+  {
+    "description": "Support dry-run mode to validate mappings without executing action.",
+    "reference": "\u00a717.6",
+    "implemented": false
+  },
+  {
+    "description": "Show mapping resolution details in run viewer step detail.",
+    "reference": "\u00a717.6",
+    "implemented": false
+  },
+  {
+    "description": "Include mapping source expressions in action invocation logs.",
+    "reference": "\u00a717.6",
+    "implemented": false
+  },
+  {
+    "description": "Support JSONata expressions in inputMapping values.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement expression sandboxing for mapping evaluation.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support helper functions in mapping expressions (coalesce, len, etc.).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Enforce expression output size limits in mapping resolution.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Handle circular references in expression evaluation gracefully.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+
+  {
+    "description": "Support literal values in inputMapping (not just expressions).",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Define MappingValue union type: Expr | LiteralValue for inputMapping entries.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support literal string values in inputMapping.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support literal number values in inputMapping.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support literal boolean values in inputMapping.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support literal null values in inputMapping.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support literal object values in inputMapping (static JSON objects).",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support literal array values in inputMapping (static JSON arrays).",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Provide UI toggle between Expression mode and Literal mode per field.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate literal values against target field schema.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Show appropriate input control for literal mode based on target type (text input, number input, checkbox, etc.).",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Support string concatenation in mapping expressions (combining multiple sources).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support substring extraction in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support regex extraction in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support string case transformation (upper, lower, capitalize) in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support string trim/pad operations in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support number formatting in mapping expressions (decimal places, currency).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support date parsing from string in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support date formatting to string in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support date arithmetic (add days, diff) in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support object construction from multiple sources in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support object property access with optional chaining in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support object spread/merge in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support array map operation in mapping expressions (transform each element).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support array filter operation in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support array reduce operation in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support array flatten operation in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support array first/last/nth element access in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support array length check in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support array includes/find operations in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support conditional/ternary expressions in inputMapping (condition ? valueA : valueB).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support null coalescing in mapping expressions (value ?? defaultValue).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Support explicit default value per mapping field when source is undefined.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Define DefaultValue option in mapping entry (separate from schema default).",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "UI for specifying per-field default value in mapping editor.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Support omit-if-undefined behavior vs null-if-undefined per field.",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support mapping multiple source fields to single target object.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Support field-by-field mapping for nested object targets.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Support merging base object with field overrides in mapping.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Show merge preview when combining multiple sources into target object.",
+    "reference": "\u00a717.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Validate partial object mapping has all required nested fields covered.",
+    "reference": "\u00a717.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement mapping editor panel layout container component.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement source data tree browser component.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement target fields list component with schema-driven rendering.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement visual connection line renderer between source and target.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement mapping editor state management (selected field, draft changes, validation state).",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement mapping editor toolbar (save, reset, auto-map, expand/collapse all).",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Define allowlist of permitted JSONata functions for mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Document permitted JSONata functions with examples.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement custom helper functions for common mapping patterns (coalesce, isEmpty, formatDate, etc.).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Document custom helper functions available in mapping expressions.",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Enforce expression complexity limits (max depth, max operations).",
+    "reference": "\u00a717.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Show warning when expression approaches complexity limits.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Provide expression testing sandbox in mapping editor (enter sample data, see result).",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Load sample data from recent workflow runs for expression testing.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show live expression result preview as user types.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate expression output type matches target field type in testing sandbox.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Support saving expression test cases for regression testing.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+
+  {
+    "description": "Detect enum types in target field schema.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Show dropdown of valid enum values instead of free text for enum target fields.",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate mapped value is a valid enum member at design time.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Return INVALID_ENUM_VALUE error when mapped value not in allowed enum values.",
+    "reference": "\u00a717.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Support mapping expression that resolves to enum value with runtime validation.",
+    "reference": "\u00a717.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Define secret reference syntax { $secret: \"secretName\" } for secure credential mapping. [Needs further design]",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Support $secret references in inputMapping for sensitive fields. [Needs further design]",
+    "reference": "\u00a717.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Never expose secret values in mapping UI - show placeholder only. [Needs further design]",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Validate referenced secret exists at publish time. [Needs further design]",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Resolve $secret references securely at runtime without logging values. [Needs further design]",
+    "reference": "\u00a717.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Redact secret values in all action invocation logs and snapshots. [Needs further design]",
+    "reference": "\u00a717.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Show secret picker UI for selecting from available tenant secrets. [Needs further design]",
+    "reference": "\u00a717.3.2",
+    "implemented": false
+  },
+  {
+    "description": "Mark input fields as sensitive in action inputSchema (requiresSecret hint). [Needs further design]",
+    "reference": "\u00a717.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Track data context separately for if-block then branch vs else branch.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Show branch-specific available data when editing steps inside if/else blocks.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Support type narrowing based on if-block condition (e.g., type === 'email' narrows type).",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Indicate in UI which data is branch-conditional vs always available.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Add item variable to available data context when inside forEach body.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Add $index variable to available data context when inside forEach body.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Show item and $index in available data tree only when editing steps inside forEach.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Infer item type from forEach items expression for autocomplete and validation.",
+    "reference": "\u00a717.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Warn if referencing item or $index outside of forEach body.",
+    "reference": "\u00a717.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Show loading state in mapping editor while fetching action schema.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show empty state in mapping editor when action has no required inputs.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show error state in mapping editor when action schema fetch fails.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Show retry option when action schema fetch fails.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Cache action schemas client-side to avoid repeated fetches.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
+  },
+  {
+    "description": "Invalidate schema cache when action version changes.",
+    "reference": "\u00a717.3.1",
+    "implemented": false
   }
 ]
