@@ -21,6 +21,7 @@ import {
   NinjaOneActivity,
   NinjaOneDeviceLink,
   NinjaOneDevicePatchStatus,
+  NinjaOneOrganizationQueryParams,
   NinjaOneDeviceQueryParams,
   NinjaOneAlertQueryParams,
   NinjaOneActivityQueryParams,
@@ -314,9 +315,29 @@ export class NinjaOneClient {
   /**
    * Get all organizations
    */
-  async getOrganizations(): Promise<NinjaOneOrganization[]> {
-    const response = await this.axiosInstance.get<NinjaOneOrganization[]>('/organizations');
-    return response.data;
+  async getOrganizations(params?: NinjaOneOrganizationQueryParams): Promise<NinjaOneOrganization[]> {
+    const organizations: NinjaOneOrganization[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number> = {
+        pageSize: params?.pageSize || 100,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneOrganization[]>('/organizations', {
+        params: queryParams,
+      });
+
+      organizations.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return organizations;
   }
 
   /**
@@ -388,11 +409,30 @@ export class NinjaOneClient {
     deviceId: number,
     params?: NinjaOneActivityQueryParams
   ): Promise<NinjaOneActivity[]> {
-    const response = await this.axiosInstance.get<NinjaOneActivity[]>(
-      `/device/${deviceId}/activities`,
-      { params }
-    );
-    return response.data;
+    const activities: NinjaOneActivity[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number | undefined> = {
+        ...params,
+        pageSize: params?.pageSize || 100,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneActivity[]>(
+        `/device/${deviceId}/activities`,
+        { params: queryParams }
+      );
+
+      activities.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return activities;
   }
 
   // ============ Alerts API ============
@@ -401,10 +441,31 @@ export class NinjaOneClient {
    * Get all active alerts
    */
   async getAlerts(params?: NinjaOneAlertQueryParams): Promise<NinjaOneAlert[]> {
-    const response = await this.axiosInstance.get<NinjaOneAlert[]>('/alerts', {
-      params,
-    });
-    return response.data;
+    const alerts: NinjaOneAlert[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number | undefined> = {
+        pageSize: params?.pageSize || 100,
+        sourceType: params?.sourceType,
+        deviceFilter: params?.deviceFilter,
+        lang: params?.lang,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneAlert[]>('/alerts', {
+        params: queryParams,
+      });
+
+      alerts.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return alerts;
   }
 
   /**
@@ -430,10 +491,29 @@ export class NinjaOneClient {
    * Get activities with optional filters
    */
   async getActivities(params?: NinjaOneActivityQueryParams): Promise<NinjaOneActivity[]> {
-    const response = await this.axiosInstance.get<NinjaOneActivity[]>('/activities', {
-      params,
-    });
-    return response.data;
+    const activities: NinjaOneActivity[] = [];
+    let cursor: string | undefined = params?.after;
+
+    do {
+      const queryParams: Record<string, string | number | undefined> = {
+        ...params,
+        pageSize: params?.pageSize || 100,
+      };
+
+      if (cursor) queryParams.after = cursor;
+
+      const response = await this.axiosInstance.get<NinjaOneActivity[]>('/activities', {
+        params: queryParams,
+      });
+
+      activities.push(...response.data);
+
+      // Check for pagination cursor in response headers
+      const linkHeader = response.headers['link'];
+      cursor = this.extractCursorFromLink(linkHeader);
+    } while (cursor);
+
+    return activities;
   }
 
   // ============ Patch Management API ============
