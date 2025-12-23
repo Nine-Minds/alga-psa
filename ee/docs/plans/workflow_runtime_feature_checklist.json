@@ -2717,7 +2717,7 @@
   {
     "description": "Implement circuit breaker for expression evaluation timeouts.",
     "reference": "§17.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Log resolved input values (redacted) for run debugging.",
