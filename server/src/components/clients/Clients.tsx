@@ -573,6 +573,7 @@ const Clients: React.FC = () => {
   const handleMarkClientInactiveAll = async () => {
     if (!clientToDelete) return;
 
+    const clientName = clientToDelete.client_name;
     try {
       // Use atomic action to deactivate client AND all contacts
       const result = await markClientInactiveWithContacts(clientToDelete.client_id, true);
@@ -582,17 +583,18 @@ const Clients: React.FC = () => {
         return;
       }
 
-      resetDeleteState();
       await refreshClients();
 
       if (result.contactsDeactivated > 0) {
-        toast.success(`${clientToDelete.client_name} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
+        toast.success(`${clientName} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
       } else {
-        toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
+        toast.success(`${clientName} has been marked as inactive successfully.`);
       }
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
       toast.error('An error occurred while marking the client as inactive. Please try again.');
+    } finally {
+      resetDeleteState();
     }
   };
 
@@ -600,6 +602,7 @@ const Clients: React.FC = () => {
   const handleMarkClientInactiveOnly = async () => {
     if (!clientToDelete) return;
 
+    const clientName = clientToDelete.client_name;
     try {
       // Use atomic action to deactivate client only
       const result = await markClientInactiveWithContacts(clientToDelete.client_id, false);
@@ -609,12 +612,13 @@ const Clients: React.FC = () => {
         return;
       }
 
-      resetDeleteState();
       await refreshClients();
-      toast.success(`${clientToDelete.client_name} has been marked as inactive successfully.`);
+      toast.success(`${clientName} has been marked as inactive successfully.`);
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
       toast.error('An error occurred while marking the client as inactive. Please try again.');
+    } finally {
+      resetDeleteState();
     }
   };
 

@@ -292,8 +292,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
 
-      resetDeleteState();
-
       // Update local state immediately
       setEditedClient(prev => ({ ...prev, is_inactive: true }));
 
@@ -306,6 +304,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
       toast.error('An error occurred while marking the client as inactive. Please try again.');
+    } finally {
+      resetDeleteState();
     }
   };
 
@@ -320,8 +320,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
 
-      resetDeleteState();
-
       // Update local state immediately
       setEditedClient(prev => ({ ...prev, is_inactive: true }));
       toast.success("Client has been marked as inactive successfully.");
@@ -329,6 +327,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } catch (error: any) {
       console.error('Error marking client as inactive:', error);
       toast.error('An error occurred while marking the client as inactive. Please try again.');
+    } finally {
+      resetDeleteState();
     }
   };
 
