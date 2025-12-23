@@ -357,3 +357,77 @@ function pathExistsInSchema(path: string, payloadSchemaJson: Record<string, unkn
   }
   return true;
 }
+
+/**
+ * Verify that all referenced secrets exist.
+ * Call this after validateWorkflowDefinition with the secretRefs.
+ *
+ * @param secretRefs - Set of secret names referenced in the workflow
+ * @param existingSecrets - Set of secret names that actually exist
+ * @returns Validation errors for missing secrets
+ */
+export function verifySecretsExist(
+  secretRefs: Set<string>,
+  existingSecrets: Set<string>
+): PublishError[] {
+  const errors: PublishError[] = [];
+
+  for (const secretName of secretRefs) {
+    if (!existingSecrets.has(secretName)) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'workflow',
+        code: 'SECRET_NOT_FOUND',
+        message: `Secret "${secretName}" is referenced but does not exist. Create it in Settings → Secrets.`
+      });
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Check if any referenced secrets haven't been accessed recently.
+ * Returns warnings for potentially stale secrets.
+ *
+ * @param secretRefs - Set of secret names referenced in the workflow
+ * @param secretLastAccessed - Map of secret name to last accessed timestamp (or undefined if never accessed)
+ * @param staleThresholdDays - Number of days after which a secret is considered stale (default: 90)
+ * @returns Validation warnings for stale secrets
+ */
+export function checkStaleSecrets(
+  secretRefs: Set<string>,
+  secretLastAccessed: Map<string, string | undefined>,
+  staleThresholdDays = 90
+): PublishError[] {
+  const warnings: PublishError[] = [];
+  const now = Date.now();
+  const staleThreshold = staleThresholdDays * 24 * 60 * 60 * 1000;
+
+  for (const secretName of secretRefs) {
+    const lastAccessed = secretLastAccessed.get(secretName);
+
+    if (!lastAccessed) {
+      warnings.push({
+        severity: 'warning',
+        stepPath: 'workflow',
+        code: 'SECRET_NEVER_ACCESSED',
+        message: `Secret "${secretName}" has never been accessed. Verify it contains the correct value.`
+      });
+      continue;
+    }
+
+    const lastAccessedTime = new Date(lastAccessed).getTime();
+    if (now - lastAccessedTime > staleThreshold) {
+      const daysSinceAccess = Math.floor((now - lastAccessedTime) / (24 * 60 * 60 * 1000));
+      warnings.push({
+        severity: 'warning',
+        stepPath: 'workflow',
+        code: 'SECRET_STALE',
+        message: `Secret "${secretName}" hasn't been accessed in ${daysSinceAccess} days. Verify it's still valid.`
+      });
+    }
+  }
+
+  return warnings;
+}

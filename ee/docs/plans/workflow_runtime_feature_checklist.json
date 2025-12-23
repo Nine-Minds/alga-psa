@@ -1,392 +1,392 @@
 [
   {
     "description": "Define workflow system goals, non-goals, and success criteria for MVP.",
-    "reference": "\u00a71",
+    "reference": "§1",
     "implemented": false
   },
   {
-    "description": "State the unit of execution as Envelope<TIn> \u2192 Envelope<TOut> transforms.",
-    "reference": "\u00a71",
+    "description": "State the unit of execution as Envelope<TIn> → Envelope<TOut> transforms.",
+    "reference": "§1",
     "implemented": false
   },
   {
     "description": "Commit to data-defined workflows executed by an interpreter (no runtime code generation).",
-    "reference": "\u00a71",
+    "reference": "§1",
     "implemented": false
   },
   {
     "description": "Use inbound email processing as the MVP reference workflow for capability parity.",
-    "reference": "\u00a71",
+    "reference": "§1",
     "implemented": false
   },
   {
     "description": "Include a node-in-pipe GUI designer in scope.",
-    "reference": "\u00a71",
+    "reference": "§1",
     "implemented": false
   },
   {
     "description": "Provide and use consistent terminology: workflow definition, step, node type, action, publish, run, resume.",
-    "reference": "\u00a72",
+    "reference": "§2",
     "implemented": false
   },
   {
     "description": "Explicitly constrain MVP to structured pipelines (no arbitrary DAG).",
-    "reference": "\u00a72",
+    "reference": "§2",
     "implemented": false
   },
   {
     "description": "Implement Envelope with run metadata, payload, meta, vars, and optional error (v=1).",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Persist env.meta.state to mirror legacy setState behavior.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
-    "description": "Represent workflow definitions as structured pipeline AST per \u00a73.2.",
-    "reference": "\u00a73",
+    "description": "Represent workflow definitions as structured pipeline AST per §3.2.",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Support step types: NodeStep, IfBlock, ForEachBlock, TryCatchBlock, CallWorkflowBlock, ReturnStep.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Require unique Step.id across the entire workflow definition tree.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Enforce structured constraints: top-to-bottom execution within a pipe.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Disallow cycles except implicit iteration inside control.forEach.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Define and parse RetryPolicy shape on steps.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Define and parse OnErrorPolicy shape on steps.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Define Expr shape as {$expr: string} and validate it at publish time.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Define nodePath format for step addressing (string paths into nested tree).",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Store workflow trigger metadata optionally on the definition.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Support CallWorkflowBlock inputMapping and outputMapping expressions.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Ensure all workflow JSON is serializable and stable for storage.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Version workflow definitions as immutable published versions.",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Use Zod as canonical schema system for payloads, node configs, action I/O, and forms.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Provide SchemaRegistry to register Zod schemas by stable refs.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
-    "description": "At publish time, load payloadSchemaRef and convert Zod\u2192JSON Schema via zod-to-json-schema.",
-    "reference": "\u00a74",
+    "description": "At publish time, load payloadSchemaRef and convert Zod→JSON Schema via zod-to-json-schema.",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Store payload_schema_json alongside the published plan for GUI reflection and runtime tooling.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Validate workflow JSON structure against a WorkflowDefinition Zod schema during publish.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Validate every NodeStep.type exists in NodeTypeRegistry during publish.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Validate every action.call references an ActionRegistry entry (id + version) during publish.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Validate NodeStep.config using NodeType.configSchema during publish.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Compile/validate all expressions during publish.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "At runtime, validate Action input with ActionDef.inputSchema before handler invocation.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "At runtime, validate Action output with ActionDef.outputSchema before writing into payload.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Apply redaction rules before persisting envelope snapshots and invocation logs.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
     "description": "Expose JSON Schemas to GUI for payload, node configs, action I/O, and human task forms.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": false
   },
   {
     "description": "Ensure TypeScript types are derived via z.infer from the same Zod schemas.",
-    "reference": "\u00a74",
+    "reference": "§4",
     "implemented": true
   },
   {
-    "description": "Document the startup\u2192publish\u2192runtime validation pipeline.",
-    "reference": "\u00a74",
+    "description": "Document the startup→publish→runtime validation pipeline.",
+    "reference": "§4",
     "implemented": false
   },
   {
     "description": "Use a safe, deterministic expression engine with JSON-serializable outputs only.",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Adopt JSONata as the MVP expression engine.",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Restrict expression functions to an allowlist (helpers only).",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Provide evaluation context: payload, vars, meta, error, helpers.",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Enforce evaluation timeout (25ms) and max output size (256KB).",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Disallow user-defined functions and any Node.js/global access.",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Compile expressions at publish time and reject invalid syntax.",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Surface expression syntax errors in GUI during editing.",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": false
   },
   {
     "description": "Support expressions inside node configs, including nested objects (recursive resolution).",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": true
   },
   {
     "description": "Document expression best practices (coalesce, null handling, array ops).",
-    "reference": "\u00a75",
+    "reference": "§5",
     "implemented": false
   },
   {
     "description": "Implement components: API, Worker, Event routing, Scheduler, Registries.",
-    "reference": "\u00a76.1",
+    "reference": "§6.1",
     "implemented": true
   },
   {
-    "description": "Interpreter executes steps deterministically (same inputs \u21d2 same results, ignoring time-based helpers).",
-    "reference": "\u00a76.2",
+    "description": "Interpreter executes steps deterministically (same inputs ⇒ same results, ignoring time-based helpers).",
+    "reference": "§6.2",
     "implemented": true
   },
   {
     "description": "Persist nodePath pointer after each completed step for crash-safe resume.",
-    "reference": "\u00a76.2.2",
+    "reference": "§6.2.2",
     "implemented": true
   },
   {
     "description": "Implement run statuses: RUNNING, WAITING, SUCCEEDED, FAILED, CANCELED.",
-    "reference": "\u00a76.2.3",
+    "reference": "§6.2.3",
     "implemented": true
   },
   {
     "description": "Insert workflow_run_steps STARTED record before step execution.",
-    "reference": "\u00a76.2.3",
+    "reference": "§6.2.3",
     "implemented": true
   },
   {
     "description": "Update workflow_run_steps to SUCCEEDED with duration_ms and attempt count on success.",
-    "reference": "\u00a76.2.3",
+    "reference": "§6.2.3",
     "implemented": true
   },
   {
     "description": "On retryable failure, schedule a retry wait instead of sleeping inside worker.",
-    "reference": "\u00a76.4.2",
+    "reference": "§6.4.2",
     "implemented": true
   },
   {
     "description": "On non-retryable failure, bubble to nearest enclosing tryCatch; fail run if none.",
-    "reference": "\u00a76.2.3",
+    "reference": "§6.2.3",
     "implemented": true
   },
   {
     "description": "Implement control.if: evaluate condition (Expr) and execute then/else pipe.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Treat control.if evaluation failures as ExpressionError.",
-    "reference": "\u00a76.4.1",
+    "reference": "§6.4.1",
     "implemented": true
   },
   {
     "description": "Implement control.forEach iteration over items Expr; set vars[itemVar] per iteration.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Restore previous vars[itemVar] after forEach finishes.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Support forEach concurrency default=1; ignore or cap >1 in MVP if needed.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Implement per-item error behavior (continue vs fail) for forEach.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Implement control.tryCatch to catch errors from nested steps and execute catch pipe.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Support captureErrorAs to copy env.error into env.vars[captureErrorAs].",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Implement control.return to terminate a run immediately.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Implement a run lease mechanism to prevent double execution across workers.",
-    "reference": "\u00a76.3",
+    "reference": "§6.3",
     "implemented": true
   },
   {
     "description": "Store lease_owner and lease_expires_at on workflow_runs.",
-    "reference": "\u00a76.3",
+    "reference": "§6.3",
     "implemented": true
   },
   {
     "description": "Scheduler reclaims stale leases and re-queues runs safely.",
-    "reference": "\u00a76.1",
+    "reference": "§6.1",
     "implemented": true
   },
   {
     "description": "Define error category codes: ValidationError, ExpressionError, TransientError, ActionError, TimeoutError.",
-    "reference": "\u00a76.4.1",
+    "reference": "§6.4.1",
     "implemented": true
   },
   {
     "description": "Implement RetryPolicy backoff with multiplier and jitter.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Implement retry scheduling via workflow_run_waits (wait_type='retry').",
-    "reference": "\u00a76.4.2",
+    "reference": "§6.4.2",
     "implemented": true
   },
   {
     "description": "Enforce idempotency requirement for side-effect actions.",
-    "reference": "\u00a76.4.3",
+    "reference": "§6.4.3",
     "implemented": true
   },
   {
     "description": "Create unique constraint for (action_id, action_version, idempotency_key).",
-    "reference": "\u00a76.4.3",
+    "reference": "§6.4.3",
     "implemented": true
   },
   {
     "description": "On duplicate idempotency key, return stored output without calling handler.",
-    "reference": "\u00a76.4.3",
+    "reference": "§6.4.3",
     "implemented": true
   },
   {
     "description": "Treat STARTED invocation with stale lease as retryable TransientError.",
-    "reference": "\u00a76.4.3",
+    "reference": "§6.4.3",
     "implemented": true
   },
   {
     "description": "Implement event.wait node that registers wait_type='event' and parks run.",
-    "reference": "\u00a76.5",
+    "reference": "§6.5",
     "implemented": true
   },
   {
     "description": "event.wait uses correlationKey Expr to compute wait key.",
-    "reference": "\u00a76.5",
+    "reference": "§6.5",
     "implemented": true
   },
   {
     "description": "event.wait supports timeoutMs mapped to wait.timeout_at.",
-    "reference": "\u00a76.5",
+    "reference": "§6.5",
     "implemented": true
   },
   {
     "description": "Implement POST /workflow/events to insert workflow_events and resume one matching run atomically.",
-    "reference": "\u00a76.5",
+    "reference": "§6.5",
     "implemented": true
   },
   {
@@ -396,27 +396,27 @@
   },
   {
     "description": "Implement human.task wait pattern for manual interventions (record + wait + validate output).",
-    "reference": "\u00a76.5",
+    "reference": "§6.5",
     "implemented": true
   },
   {
     "description": "Mark timeout resumes as TimeoutError and route through tryCatch if present.",
-    "reference": "\u00a76.4.1",
+    "reference": "§6.4.1",
     "implemented": true
   },
   {
     "description": "Persist sanitized envelope snapshot per checkpoint and cap size/retention.",
-    "reference": "\u00a76.6",
+    "reference": "§6.6",
     "implemented": true
   },
   {
     "description": "Include tenant_id (if available) in log context for every step.",
-    "reference": "\u00a76.6",
+    "reference": "§6.6",
     "implemented": true
   },
   {
     "description": "Persist action invocation logs (sanitized input/output) for run viewer debugging.",
-    "reference": "\u00a76.3",
+    "reference": "§6.3",
     "implemented": true
   },
   {
@@ -431,42 +431,42 @@
   },
   {
     "description": "Implement redaction rules as JSON pointers; always mask secretRef fields.",
-    "reference": "\u00a76.6",
+    "reference": "§6.6",
     "implemented": true
   },
   {
     "description": "Expose run history: steps, attempts, errors, and snapshots for GUI run viewer.",
-    "reference": "\u00a710.3",
+    "reference": "§10.3",
     "implemented": true
   },
   {
     "description": "Support canceling runs and marking status CANCELED.",
-    "reference": "\u00a711.2",
+    "reference": "§11.2",
     "implemented": true
   },
   {
     "description": "Support admin resume endpoint for WAITING runs with audit logging.",
-    "reference": "\u00a711.2",
+    "reference": "§11.2",
     "implemented": true
   },
   {
     "description": "Ensure all persisted snapshots are JSON-serializable (no functions, Dates).",
-    "reference": "\u00a73.1",
+    "reference": "§3.1",
     "implemented": true
   },
   {
     "description": "Ensure helper nowIso() is the only time-based helper enabled by default.",
-    "reference": "\u00a75.3",
+    "reference": "§5.3",
     "implemented": true
   },
   {
     "description": "Implement max snapshot size enforcement with truncation markers.",
-    "reference": "\u00a76.6",
+    "reference": "§6.6",
     "implemented": true
   },
   {
     "description": "Implement payload redaction before writing workflow_action_invocations.input_json/output_json.",
-    "reference": "\u00a74.2",
+    "reference": "§4.2",
     "implemented": true
   },
   {
@@ -486,487 +486,487 @@
   },
   {
     "description": "Ensure transform.assign rejects writes to unknown or disallowed payload paths at publish time (best-effort).",
-    "reference": "\u00a74.2",
+    "reference": "§4.2",
     "implemented": true
   },
   {
     "description": "Persist publish-time payload_schema_json for GUI field picking.",
-    "reference": "\u00a74.2",
+    "reference": "§4.2",
     "implemented": true
   },
   {
     "description": "Persist who published a workflow version and when (audit fields).",
-    "reference": "\u00a73",
+    "reference": "§3",
     "implemented": true
   },
   {
     "description": "Provide default retry policies per node/action if step.retry omitted.",
-    "reference": "\u00a73.2",
+    "reference": "§3.2",
     "implemented": true
   },
   {
     "description": "Implement SchemaRegistry register/get/toJsonSchema methods.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "SchemaRegistry keys are stable refs (e.g., payload.EmailWorkflowPayload.v1).",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "Implement ActionRegistry keyed by (id, version).",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "ActionRegistry returns action metadata for GUI discovery (label/category/description/icon).",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "ActionRegistry stores sideEffectful flag and retryHint.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "ActionRegistry stores idempotency strategy (engineProvided/actionProvided).",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "Implement NodeTypeRegistry keyed by nodeType id.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "NodeTypeRegistry stores configSchema (Zod) and handler function.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "NodeTypeRegistry stores UI metadata for palette and config panel forms.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "Registries are initialized at service startup and immutable during process lifetime in MVP.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "Registry discovery endpoint returns JSON Schemas (converted) for UI form generation.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "Registry discovery endpoint returns examples/snippets where available.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "NodeTypeRegistry includes structural nodes and domain nodes for email workflow.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "SchemaRegistry is used during publish to validate payloadSchemaRef existence.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": true
   },
   {
     "description": "Registries have unit tests covering lookups and schema conversions.",
-    "reference": "\u00a77",
+    "reference": "§7",
     "implemented": false
   },
   {
     "description": "Implement NodeType state.set with config {state:string}.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Implement NodeType event.wait with config (eventName, correlationKey Expr, timeoutMs, assign).",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Implement NodeType transform.assign with config assign map[path]=Expr.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Implement NodeType action.call with config (actionId, version, args, saveAs, onError, idempotencyKey).",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Implement NodeType email.parseBody with legacy-parity fallback behavior.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Implement NodeType email.renderCommentBlocks with HTML->blocks conversion fallback.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Implement control.if, control.forEach, control.tryCatch, control.return as interpreter-managed blocks.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action parse_email_reply with Zod input/output schemas.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action find_ticket_by_reply_token with Zod input/output schemas.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action find_ticket_by_email_thread with Zod input/output schemas.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action convert_html_to_blocks with Zod input/output schemas.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action create_comment_from_email with Zod I/O + idempotency.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action process_email_attachment with Zod I/O + idempotency.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action find_contact_by_email with Zod input/output schemas.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action resolve_inbound_ticket_defaults with Zod input/output schemas.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action create_ticket_from_email with Zod I/O + idempotency.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action create_human_task_for_email_processing_failure with Zod input/output schemas.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Register Action send_ticket_acknowledgement_email (stub) and set onError=continue at call sites.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Document recommended idempotency keys for email workflow actions.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": false
   },
   {
     "description": "Provide Zod config schemas for node types per Appendix B.1.",
-    "reference": "\u00a78",
+    "reference": "§8",
     "implemented": true
   },
   {
     "description": "Define EmailWorkflowPayload Zod schema and register as payload.EmailWorkflowPayload.v1.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Include fields: emailData, providerId, tenantId, processedAt, parsedEmail, existingTicket, matchedClient, ticketDefaults, targetTicketId.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Implement workflow steps to wait for INBOUND_EMAIL_RECEIVED with 10s timeout.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": false
   },
   {
     "description": "Extract and store emailData/providerId/tenantId/processedAt from event payload.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Parse and sanitize email body via email.parseBody node; store confidence and metadata.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Resolve existing ticket via reply token when present.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Fallback to threading header lookup when reply token not matched.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "If existing ticket: create comment (author_type=contact) with parsed content.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "If existing ticket: process attachments with per-item error continue behavior.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Return early after handling reply path.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "If new email: attempt exact contact match by sender email and store matchedClient if found.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Resolve inbound ticket defaults by tenantId+providerId; if missing, set ERROR_NO_TICKET_DEFAULTS and return.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Compute final client/contact/location rules with the same override behavior as legacy code.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Create ticket and store ticket_id into payload.targetTicketId.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Process new-ticket attachments with per-item error continue behavior.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Create initial comment (author_type=internal) using HTML->blocks conversion fallback.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": false
   },
   {
     "description": "Set EMAIL_PROCESSED state on success.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Optionally invoke ack action when matchedClient exists; do not fail workflow if it errors.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Outer catch sets ERROR_PROCESSING_EMAIL and AWAITING_MANUAL_RESOLUTION.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Outer catch creates human task for manual intervention with sufficient context.",
-    "reference": "\u00a79",
+    "reference": "§9",
     "implemented": true
   },
   {
     "description": "Render workflows as a vertical node-in-pipe canvas with step cards (top-to-bottom).",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Render control.if blocks with THEN and ELSE nested pipes.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Render control.tryCatch blocks with TRY and CATCH nested pipes.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Render control.forEach blocks with BODY nested pipe and itemVar/concurrency display.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Provide node palette with search powered by NodeType registry discovery.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Support drag/drop reorder within a pipe and move between nested pipes.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Open a right-side config panel when a step is selected.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Generate config forms from node config JSON Schema and validate required fields.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Provide expression editor for Expr fields with field picker insertion.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Field picker browses payload schema and vars/error/meta trees.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Validate expressions locally (syntax) and display errors inline.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Publish button triggers server-side validation and blocks publish on severity=error.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Highlight publish validation errors by stepPath and show breadcrumb to nested location.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Provide run list view with status filters and timestamps.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Provide run details view with step timeline, attempts, and errors.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Show sanitized envelope snapshots and action invocation logs per step.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Provide admin resume/cancel UI actions where permitted.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Ensure all displayed sensitive fields are redacted/masked per rules.",
-    "reference": "\u00a710",
+    "reference": "§10",
     "implemented": true
   },
   {
     "description": "Implement workflow definition CRUD endpoints (list/get/create/update).",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement publish endpoint returning {ok,publishedVersion,errors} per Appendix A.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement start run endpoint that creates workflow_runs record and initial nodePath.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement get run endpoint returning status + nodePath + timestamps.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement list run steps endpoint returning workflow_run_steps entries and links to snapshots.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement cancel run endpoint to mark CANCELED and release any waits/leases.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement resume run endpoint for admins to resume WAITING runs (audited).",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement node registry endpoint returning node defs + config schemas + UI metadata.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement action registry endpoint returning action defs + I/O schemas + UI metadata.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement schema endpoint returning JSON Schema for payload/form schemas.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement event submit endpoint to route events to waits atomically.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Implement admin event list endpoint for debugging.",
-    "reference": "\u00a711",
+    "reference": "§11",
     "implemented": true
   },
   {
     "description": "Register legacy action implementations with schemas in the new ActionRegistry.",
-    "reference": "\u00a712",
+    "reference": "§12",
     "implemented": false
   },
   {
     "description": "Recreate email workflow as data and validate behavioral parity in a canary tenant.",
-    "reference": "\u00a712",
+    "reference": "§12",
     "implemented": false
   },
   {
     "description": "Run both systems in parallel to compare outcomes and side effects.",
-    "reference": "\u00a712",
+    "reference": "§12",
     "implemented": false
   },
   {
     "description": "Switch routing to the new runtime only after parity and idempotency checks.",
-    "reference": "\u00a712",
+    "reference": "§12",
     "implemented": false
   },
   {
     "description": "Create unit tests for expression engine sandboxing and helper allowlist.",
-    "reference": "\u00a713",
+    "reference": "§13",
     "implemented": false
   },
   {
     "description": "Create integration tests for waits/resume/timeouts and retry scheduling.",
-    "reference": "\u00a713",
+    "reference": "§13",
     "implemented": false
   },
   {
     "description": "Create integration tests for tryCatch/forEach semantics and idempotency caching.",
-    "reference": "\u00a713",
+    "reference": "§13",
     "implemented": false
   },
   {
     "description": "Create E2E tests for the email workflow (new ticket + reply path + attachments).",
-    "reference": "\u00a713",
+    "reference": "§13",
     "implemented": false
   },
   {
@@ -980,7 +980,7 @@
     "implemented": false
   },
   {
-    "description": "Implement node type table (ID \u2192 config fields \u2192 behavior) as the contract for implementers.",
+    "description": "Implement node type table (ID → config fields → behavior) as the contract for implementers.",
     "reference": "Appendix B",
     "implemented": true
   },
@@ -1001,2566 +1001,2562 @@
   },
   {
     "description": "Implement GET /workflow-runs list endpoint with filterable query params.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Support workflow run status filters (RUNNING/WAITING/SUCCEEDED/FAILED/CANCELED).",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Support workflowId filter in run list queries.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Support workflowVersion filter in run list queries.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Support date range filters (from/to) in run list queries.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Support cursor pagination for run list queries.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Support sorting by startedAt and updatedAt in run list queries.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Run list includes columns: runId, workflow name, version, status, startedAt, updatedAt, duration.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Run list shows tenant context where relevant (admin scope).",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Run list includes quick filter chips for common windows (last 24h/7d).",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Run list supports search by runId.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Run list supports search by correlation key where indexed.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Run list includes empty state and loading state visuals.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Run list supports bulk select actions (cancel/resume) with confirmation.",
-    "reference": "\u00a714.1",
+    "reference": "§14.1",
     "implemented": true
   },
   {
     "description": "Provide a run detail route/page with timeline layout.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Timeline displays steps in execution order with status badges.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Timeline shows attempt count per step.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Timeline shows duration per step attempt.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Timeline shows retry schedule and next retry time when applicable.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Run detail shows current nodePath and run status header.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Run detail shows run metadata (workflowId/version/trigger/runId).",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Step detail panel shows redacted envelope snapshot.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Step detail panel shows action invocation inputs and outputs (sanitized).",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Step detail panel shows error category, message, and at timestamp.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Step detail panel shows start/end timestamps for the attempt.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Step detail panel provides payload/vars/meta tabs.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Step detail panel highlights redaction markers.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Run detail shows wait history (event/human/retry/timeout).",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Run detail shows correlation key and event name for waits.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Run detail supports deep-linking to a specific step.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Timeline supports collapsing nested blocks for readability.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Timeline supports filtering by node type or status.",
-    "reference": "\u00a714.2",
+    "reference": "§14.2",
     "implemented": true
   },
   {
     "description": "Persist structured run log entries (level, message, timestamp).",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log entries include tenant_id, run_id, and step_id context.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log entries include correlation identifiers where available.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Provide UI log viewer with level filters.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Provide UI log viewer with full-text search.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log viewer supports export for a run.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Action invocation logs show input/output sizes and truncation markers.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log viewer enforces redaction rules on all payload fields.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log viewer shows human task creation and completion events.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log viewer shows event.wait resume events with correlation keys.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log entries are append-only and immutable.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Log API supports pagination for large runs.",
-    "reference": "\u00a714.3",
+    "reference": "§14.3",
     "implemented": true
   },
   {
     "description": "Create audit log records for workflow definition create/update/publish.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Create audit log records for run resume/cancel/retry/replay.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Audit records include actor id, role, and source (UI/API/worker).",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Audit records include timestamps and target identifiers.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Audit records capture publish diff summary (draft hash or version).",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Audit records include reason/comment for manual actions.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Expose audit log viewer for workflow definitions.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Expose audit log viewer for workflow runs.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Audit logs have longer retention than run snapshots.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": false
   },
   {
     "description": "Audit logs are exportable with redactions applied.",
-    "reference": "\u00a714.4",
+    "reference": "§14.4",
     "implemented": true
   },
   {
     "description": "Define permissions: workflow.view, workflow.manage, workflow.publish, workflow.admin.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Enforce RBAC in workflow run list endpoint.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Enforce RBAC in workflow run detail endpoints.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Enforce RBAC in publish endpoint and designer UI.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Hide admin controls in UI when permission is missing.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Apply field-level redaction based on role.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Enforce tenant scoping for all run queries.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Support read-only role for run history and snapshots.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Prevent editing system workflows without admin permission.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Support per-workflow visibility toggles.",
-    "reference": "\u00a714.5",
+    "reference": "§14.5",
     "implemented": true
   },
   {
     "description": "Add tenant-level retention policy for workflow runs.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Add tenant-level retention policy for snapshots.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Add tenant-level retention policy for invocation logs.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Support per-workflow retention overrides.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Implement scheduled purge job honoring retention policies.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Purge job writes audit log entries for deletions.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Export run list to CSV with redactions applied.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": true
   },
   {
     "description": "Export run detail to JSON with redactions applied.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": true
   },
   {
     "description": "Expose export job status endpoint.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "UI shows export progress and completion status.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Support legal hold to pause retention purge for selected runs.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Retention policies are tenant-configurable and audited.",
-    "reference": "\u00a714.6",
+    "reference": "§14.6",
     "implemented": false
   },
   {
     "description": "Emit metric for workflow run started count.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for workflow run succeeded count.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for workflow run failed count.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for step duration histogram.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for retry count per workflow.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for wait queue length by type.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for lease contention or stale lease recoveries.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for action call latency by action id.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Emit metric for error category counts.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Provide dashboard view for workflow health by definition.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Provide alert policy configuration per tenant.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Alert on failure rate threshold by workflow.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Alert on backlog growth threshold.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Alert on repeated retries for the same run.",
-    "reference": "\u00a714.7",
+    "reference": "§14.7",
     "implemented": false
   },
   {
     "description": "Provide UI action to cancel a run with confirmation.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Provide UI action to resume a waiting run with confirmation.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Provide UI action to retry from the last failed step.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Provide UI action to replay a run with new payload.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Provide UI action to requeue event waits.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Implement POST /workflow-runs/{runId}/retry endpoint.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Implement POST /workflow-runs/{runId}/replay endpoint.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Implement GET /workflow-runs/dead-letter endpoint.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Provide dead-letter queue UI for repeatedly failing runs.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Allow bulk cancel/resume actions from run list.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Support pausing a workflow definition to stop new runs.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Support per-workflow concurrency limits.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Auto-pause workflow after sustained failure rate.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Require reason fields for admin interventions.",
-    "reference": "\u00a714.8",
+    "reference": "§14.8",
     "implemented": true
   },
   {
     "description": "Provide event list view with filters (eventName, date range).",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Event list shows correlation key and matched run id.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Event list shows unmatched events awaiting waits.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Event list shows redacted payload previews.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Event detail view links to matched run timeline.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Event detail shows wait timeout vs resume outcome.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Event retention policy configured per tenant.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": false
   },
   {
     "description": "Event export to CSV/JSON with redactions.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Log event ingestion failures with operator visibility.",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Expose event stats (matched vs unmatched counts).",
-    "reference": "\u00a714.9",
+    "reference": "§14.9",
     "implemented": true
   },
   {
     "description": "Paginate all run-related APIs (timeline, snapshots, invocations).",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": false
   },
   {
     "description": "Index workflow_runs by workflow_id, status, updated_at.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": true
   },
   {
     "description": "Index workflow_run_steps by run_id and step_id.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": true
   },
   {
     "description": "Index workflow_run_waits by wait_type and status.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": true
   },
   {
     "description": "Cap UI fetch sizes for snapshots and logs.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": false
   },
   {
     "description": "Cache registry metadata for UI performance.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": false
   },
   {
     "description": "Implement rate limits for workflow run creation per tenant.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": true
   },
   {
     "description": "Enforce maximum payload size at run start.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": true
   },
   {
     "description": "Expose queue depth and worker health in admin UI.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": false
   },
   {
     "description": "Create load test plan for throughput and retention operations.",
-    "reference": "\u00a714.10",
+    "reference": "§14.10",
     "implemented": false
   },
   {
     "description": "Display workflow definitions in a sortable table with columns: name, description, status, version, last modified, trigger type.",
-    "reference": "\u00a715.1",
+    "reference": "§15.1",
     "implemented": true
   },
   {
     "description": "Support sorting by name, status, version, and last modified date.",
-    "reference": "\u00a715.1",
+    "reference": "§15.1",
     "implemented": true
   },
   {
     "description": "Provide text search/filter by workflow name and description.",
-    "reference": "\u00a715.1",
+    "reference": "§15.1",
     "implemented": true
   },
   {
     "description": "Support filtering by workflow status (active, draft, paused, archived).",
-    "reference": "\u00a715.1",
+    "reference": "§15.1",
     "implemented": true
   },
   {
     "description": "Support filtering by trigger type (event-based, scheduled, manual).",
-    "reference": "\u00a715.1",
+    "reference": "§15.1",
     "implemented": true
   },
   {
     "description": "Implement cursor-based pagination for workflow list.",
-    "reference": "\u00a715.1",
+    "reference": "§15.1",
     "implemented": false
   },
   {
     "description": "Show workflow count summary (total, active, draft, paused).",
-    "reference": "\u00a715.1",
+    "reference": "§15.1",
     "implemented": true
   },
   {
     "description": "Display workflow status badge (active/draft/paused/archived) with color coding.",
-    "reference": "\u00a715.2",
+    "reference": "§15.2",
     "implemented": true
   },
   {
     "description": "Show current published version number and draft indicator if unpublished changes exist.",
-    "reference": "\u00a715.2",
+    "reference": "§15.2",
     "implemented": true
   },
   {
     "description": "Display last modified timestamp with relative time (e.g., '2 hours ago').",
-    "reference": "\u00a715.2",
+    "reference": "§15.2",
     "implemented": true
   },
   {
     "description": "Show trigger type icon/badge (event, schedule, manual) for quick identification.",
-    "reference": "\u00a715.2",
+    "reference": "§15.2",
     "implemented": true
   },
   {
     "description": "Provide 'Create New Workflow' button with workflow type selection.",
-    "reference": "\u00a715.3",
+    "reference": "§15.3",
     "implemented": false
   },
   {
     "description": "Enable row click to open workflow in designer.",
-    "reference": "\u00a715.3",
+    "reference": "§15.3",
     "implemented": true
   },
   {
     "description": "Provide quick-action menu per row: Edit, Duplicate, Pause/Resume, Archive, Delete.",
-    "reference": "\u00a715.3",
+    "reference": "§15.3",
     "implemented": true
   },
   {
     "description": "Support bulk selection with bulk actions (pause, resume, archive, delete).",
-    "reference": "\u00a715.3",
+    "reference": "§15.3",
     "implemented": true
   },
   {
     "description": "Show confirmation dialogs for destructive actions (delete, archive) with workflow name.",
-    "reference": "\u00a715.3",
+    "reference": "§15.3",
     "implemented": true
   },
   {
     "description": "Provide 'View Runs' action to navigate to filtered run list for that workflow.",
-    "reference": "\u00a715.3",
+    "reference": "§15.3",
     "implemented": true
   },
   {
     "description": "Provide tab navigation between Workflows, Runs, and Events views.",
-    "reference": "\u00a715.4",
+    "reference": "§15.4",
     "implemented": true
   },
   {
     "description": "Support URL-based filtering for shareable filtered views.",
-    "reference": "\u00a715.4",
+    "reference": "§15.4",
     "implemented": true
   },
   {
     "description": "Display empty state with illustration and 'Create your first workflow' CTA when no workflows exist.",
-    "reference": "\u00a715.5",
+    "reference": "§15.5",
     "implemented": true
   },
   {
     "description": "Show skeleton loading state while fetching workflow list.",
-    "reference": "\u00a715.5",
+    "reference": "§15.5",
     "implemented": true
   },
   {
     "description": "Display 'No results' state with suggestions when filters return empty results.",
-    "reference": "\u00a715.5",
+    "reference": "§15.5",
     "implemented": true
   },
   {
     "description": "Show collapsible Input Schema Reference section in StepConfigPanel listing all input fields, types, required/optional, descriptions, and defaults.",
-    "reference": "\u00a716.1",
+    "reference": "§16.1",
     "implemented": false
   },
   {
     "description": "Show collapsible Output Schema Reference section in StepConfigPanel listing all output fields, types, nullable indicators, and nested structure.",
-    "reference": "\u00a716.1",
+    "reference": "§16.1",
     "implemented": false
   },
   {
     "description": "Provide 'Copy path' button for each output field to copy expression syntax (e.g., ${vars.stepName.field}).",
-    "reference": "\u00a716.1",
+    "reference": "§16.1",
     "implemented": false
   },
   {
     "description": "Show output availability preview when saveAs is configured (e.g., 'Output will be available at ${vars.myStep.*}').",
-    "reference": "\u00a716.1",
+    "reference": "§16.1",
     "implemented": false
   },
   {
     "description": "Validate that saveAs does not conflict with existing variable names and show warning if it does.",
-    "reference": "\u00a716.1",
+    "reference": "§16.1",
     "implemented": false
   },
   {
     "description": "Implement context-aware autocomplete in expression fields showing previous steps with their saveAs names when typing ${vars.",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Support drilling into output schemas in autocomplete (e.g., ${vars.createTicket. shows ticket_id, ticket_number).",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Support nested path autocomplete for complex output structures (e.g., ${vars.parseEmail.parsed.headers.subject}).",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Enhance field picker to show previous step outputs organized by step name in addition to payload schema.",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Add global variables (env, secrets) to field picker with appropriate access patterns.",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Provide visual tree browser in field picker for navigating complex nested structures.",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Implement real-time expression validation checking that referenced paths exist in available schemas.",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Show warning when expression references a step that executes after the current step (order dependency violation).",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Show type mismatch warnings when passing incompatible types between steps (e.g., string where number expected).",
-    "reference": "\u00a716.2",
+    "reference": "§16.2",
     "implemented": false
   },
   {
     "description": "Support optional edge labels/annotations showing data shape between nodes (toggle-able, collapsed shows '3 fields').",
-    "reference": "\u00a716.3",
+    "reference": "§16.3",
     "implemented": false
   },
   {
     "description": "Add step output preview badge on each node showing output availability with hover for quick schema summary.",
-    "reference": "\u00a716.3",
+    "reference": "§16.3",
     "implemented": false
   },
   {
     "description": "Provide Data Flow sidebar/panel showing available data context at any selected step (payload, vars by step, env, secrets).",
-    "reference": "\u00a716.3",
+    "reference": "§16.3",
     "implemented": false
   },
   {
     "description": "Show action documentation panel when selecting an action type with description, examples, and common use cases.",
-    "reference": "\u00a716.4",
+    "reference": "§16.4",
     "implemented": false
   },
   {
     "description": "Implement schema tooltips on hover for any field in config forms showing type, constraints, description, and examples.",
-    "reference": "\u00a716.4",
+    "reference": "§16.4",
     "implemented": false
   },
   {
     "description": "Provide 'What can I access here?' helper button in expression fields that opens contextual field picker with explanation.",
-    "reference": "\u00a716.4",
+    "reference": "§16.4",
     "implemented": false
   },
   {
     "description": "Enhance pre-publish validation to check all expressions reference valid paths in available schemas.",
-    "reference": "\u00a716.5",
+    "reference": "§16.5",
     "implemented": false
   },
   {
     "description": "Enhance pre-publish validation to verify required inputs are provided or have valid expressions.",
-    "reference": "\u00a716.5",
+    "reference": "§16.5",
     "implemented": false
   },
   {
     "description": "Enhance pre-publish validation to check type compatibility where determinable at publish time.",
-    "reference": "\u00a716.5",
+    "reference": "§16.5",
     "implemented": false
   },
   {
     "description": "Improve runtime error context to show which input field caused validation failure with expected vs actual type.",
-    "reference": "\u00a716.5",
+    "reference": "§16.5",
     "implemented": false
   },
   {
     "description": "Show missing mapping warnings when action has required inputs that are not mapped, with suggestions from available context.",
-    "reference": "\u00a716.5",
+    "reference": "§16.5",
     "implemented": false
   },
   {
     "description": "Enhance action browser/palette to show input/output schema preview when browsing available actions.",
-    "reference": "\u00a716.6",
+    "reference": "§16.6",
     "implemented": false
   },
   {
     "description": "Make action browser filterable by category and searchable by field name (e.g., find actions that return ticket_id).",
-    "reference": "\u00a716.6",
+    "reference": "§16.6",
     "implemented": false
   },
   {
     "description": "Show 'This action returns: field1, field2, ...' summary in action browser entries.",
-    "reference": "\u00a716.6",
+    "reference": "§16.6",
     "implemented": false
   },
   {
     "description": "Document node type schemas for non-action nodes (conditions, loops) including special behaviors (e.g., forEach exposes item/index).",
-    "reference": "\u00a716.6",
+    "reference": "§16.6",
     "implemented": false
   },
   {
     "description": "Provide JSON Schema view toggle for power users to see raw schema definition.",
-    "reference": "\u00a716.7",
+    "reference": "§16.7",
     "implemented": false
   },
   {
     "description": "Support copying schema as JSON for external use or documentation.",
-    "reference": "\u00a716.7",
+    "reference": "§16.7",
     "implemented": false
   },
   {
     "description": "Provide test step feature to enter sample input data and preview output schema/structure.",
-    "reference": "\u00a716.7",
+    "reference": "§16.7",
     "implemented": false
   },
   {
     "description": "Show schema diff when action version changes highlighting added/removed/changed fields.",
-    "reference": "\u00a716.7",
+    "reference": "§16.7",
     "implemented": false
   },
-
   {
     "description": "Define InputMapping type as Record<string, Expr> for action.call config.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Extend action.call config schema to include inputMapping field.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support inputMapping alongside legacy args field for backwards compatibility.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Store actionId and version in action.call config.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Store saveAs in action.call config for output naming.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support onError policy in action.call config.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support idempotencyKey expression in action.call config.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Define MappingMetadata type tracking targetField, sourceExpr, sourceType, targetType, compatibility.",
-    "reference": "\u00a717.2.2",
+    "reference": "§17.2.2",
     "implemented": false
   },
   {
     "description": "Implement compatibility status enum: compatible, warning, error, unknown.",
-    "reference": "\u00a717.2.2",
+    "reference": "§17.2.2",
     "implemented": false
   },
   {
     "description": "Build available data context including payload fields from payloadSchemaRef.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Build available data context including vars from previous steps with saveAs.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Build available data context including meta fields (state, tags, traceId).",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Build available data context including error fields when in catch block.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Build available data context including item/index when inside forEach.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Track output schemas for each step based on action outputSchema and saveAs config.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Implement Input Mapping Editor panel in step configuration.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show available data tree in left column of mapping editor (payload, vars, meta).",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show required inputs from action inputSchema in right column of mapping editor.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Display visual connection lines between source and target in mapping editor.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show color-coded type indicators in mapping editor (green=compatible, yellow=warning, red=error).",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Support collapsing/expanding sections in mapping editor.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Implement dropdown/picker for selecting source fields for each target input.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Filter dropdown options by type compatibility with target field.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show expression editor for complex mappings that can't use simple field selection.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Display type badge showing expected type next to each target field.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show required indicator (asterisk or badge) for mandatory input fields.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show optional indicator for non-required input fields.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Display field description from inputSchema as tooltip or helper text.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show default value from schema when field is optional and unmapped.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Implement auto-mapping suggestions for fields with matching names.",
-    "reference": "\u00a717.3.3",
+    "reference": "§17.3.3",
     "implemented": false
   },
   {
     "description": "Filter auto-mapping suggestions by type compatibility.",
-    "reference": "\u00a717.3.3",
+    "reference": "§17.3.3",
     "implemented": false
   },
   {
     "description": "Highlight unmapped required fields prominently in mapping editor.",
-    "reference": "\u00a717.3.3",
+    "reference": "§17.3.3",
     "implemented": false
   },
   {
     "description": "Provide 'Auto-map matching fields' button to apply all suggestions at once.",
-    "reference": "\u00a717.3.3",
+    "reference": "§17.3.3",
     "implemented": false
   },
   {
     "description": "Show mapping suggestion confidence score when multiple options exist.",
-    "reference": "\u00a717.3.3",
+    "reference": "§17.3.3",
     "implemented": false
   },
   {
     "description": "Remember and suggest previously used mappings for same action type.",
-    "reference": "\u00a717.3.3",
+    "reference": "§17.3.3",
     "implemented": false
   },
   {
     "description": "Support collapsible sections for nested object properties in mapping editor.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Allow mapping entire object vs individual fields for nested structures.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Display visual tree representation matching input schema structure.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Support drag-and-drop from source tree to target field.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Show nested field paths in human-readable format (e.g., ticketDefaults.priority).",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Validate nested object structure compatibility recursively.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Support array element type display in nested structures.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Show green checkmark on step card when all required inputs are mapped with compatible types.",
-    "reference": "\u00a717.4.1",
+    "reference": "§17.4.1",
     "implemented": false
   },
   {
     "description": "Show yellow warning icon on step card when all required inputs mapped but type warnings exist.",
-    "reference": "\u00a717.4.1",
+    "reference": "§17.4.1",
     "implemented": false
   },
   {
     "description": "Show red error icon on step card when missing required mappings or type errors.",
-    "reference": "\u00a717.4.1",
+    "reference": "§17.4.1",
     "implemented": false
   },
   {
     "description": "Show gray incomplete icon on step card when action selected but mapping not configured.",
-    "reference": "\u00a717.4.1",
+    "reference": "§17.4.1",
     "implemented": false
   },
   {
     "description": "Update validation status icon in real-time as mappings change.",
-    "reference": "\u00a717.4.1",
+    "reference": "§17.4.1",
     "implemented": false
   },
   {
     "description": "Show validation status on control blocks based on nested step statuses.",
-    "reference": "\u00a717.4.1",
+    "reference": "§17.4.1",
     "implemented": false
   },
   {
     "description": "Display count of mapped vs required fields on hover over validation badge.",
-    "reference": "\u00a717.4.2",
+    "reference": "§17.4.2",
     "implemented": false
   },
   {
     "description": "List missing required fields in validation badge tooltip.",
-    "reference": "\u00a717.4.2",
+    "reference": "§17.4.2",
     "implemented": false
   },
   {
     "description": "List type compatibility warnings in validation badge tooltip.",
-    "reference": "\u00a717.4.2",
+    "reference": "§17.4.2",
     "implemented": false
   },
   {
     "description": "Provide quick link to open mapping editor from validation badge.",
-    "reference": "\u00a717.4.2",
+    "reference": "§17.4.2",
     "implemented": false
   },
   {
     "description": "Show detailed error messages in validation badge popup.",
-    "reference": "\u00a717.4.2",
+    "reference": "§17.4.2",
     "implemented": false
   },
   {
     "description": "Support clicking validation badge to expand full error details.",
-    "reference": "\u00a717.4.2",
+    "reference": "§17.4.2",
     "implemented": false
   },
   {
     "description": "Show same validation status icons in step list sidebar.",
-    "reference": "\u00a717.4.3",
+    "reference": "§17.4.3",
     "implemented": false
   },
   {
     "description": "Implement filter by validation status in step list (all, valid, warnings, errors).",
-    "reference": "\u00a717.4.3",
+    "reference": "§17.4.3",
     "implemented": false
   },
   {
     "description": "Provide batch view of all mapping issues across workflow.",
-    "reference": "\u00a717.4.3",
+    "reference": "§17.4.3",
     "implemented": false
   },
   {
     "description": "Show summary count of steps with errors/warnings at top of step list.",
-    "reference": "\u00a717.4.3",
+    "reference": "§17.4.3",
     "implemented": false
   },
   {
     "description": "Support jump to step from validation issue in batch view.",
-    "reference": "\u00a717.4.3",
+    "reference": "§17.4.3",
     "implemented": false
   },
   {
     "description": "Show breadcrumb trail for nested mapping errors (e.g., Create Ticket → inputMapping → ticketDefaults.priority).",
-    "reference": "\u00a717.4.4",
+    "reference": "§17.4.4",
     "implemented": false
   },
   {
     "description": "Support click on breadcrumb to navigate directly to the field.",
-    "reference": "\u00a717.4.4",
+    "reference": "§17.4.4",
     "implemented": false
   },
   {
     "description": "Highlight the specific field with error when navigating from breadcrumb.",
-    "reference": "\u00a717.4.4",
+    "reference": "§17.4.4",
     "implemented": false
   },
   {
     "description": "Show full path in error messages for deeply nested validation failures.",
-    "reference": "\u00a717.4.4",
+    "reference": "§17.4.4",
     "implemented": false
   },
   {
     "description": "Validate that all required input fields have mappings at publish time.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Return REQUIRED_INPUT_UNMAPPED error code for missing required mappings.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Allow optional input fields to be unmapped without error.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Validate mapping expression syntax at publish time.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Return INVALID_MAPPING_EXPR error code for invalid expression syntax.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Validate that mapping references exist in available data context.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Return UNDEFINED_MAPPING_SOURCE error code for undefined path references.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Detect and block forward references to steps that execute later.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Return FORWARD_REFERENCE error code for forward reference violations.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Pass validation when source and target types match exactly.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Return NULLABLE_TO_REQUIRED warning when nullable source maps to non-null target.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Return TYPE_COERCION warning when string maps to number (parseable).",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Return TYPE_MISMATCH error for incompatible types (e.g., object → string).",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Return ARRAY_ELEMENT_MISMATCH warning for array element type mismatches.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Return UNKNOWN_SOURCE_TYPE warning when source type cannot be determined.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Implement type inference from expression paths to determine source types.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Support union types in compatibility checking.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Validate all required properties present in source for object inputs.",
-    "reference": "\u00a717.5.3",
+    "reference": "§17.5.3",
     "implemented": false
   },
   {
     "description": "Allow extra properties in source object (passthrough or ignore per schema).",
-    "reference": "\u00a717.5.3",
+    "reference": "§17.5.3",
     "implemented": false
   },
   {
     "description": "Check nested object compatibility recursively.",
-    "reference": "\u00a717.5.3",
+    "reference": "§17.5.3",
     "implemented": false
   },
   {
     "description": "Validate array element types for array inputs.",
-    "reference": "\u00a717.5.3",
+    "reference": "§17.5.3",
     "implemented": false
   },
   {
     "description": "Support schema defaults when checking structural compatibility.",
-    "reference": "\u00a717.5.3",
+    "reference": "§17.5.3",
     "implemented": false
   },
   {
     "description": "Implement MappingValidationError type extending PublishError with mapping-specific fields.",
-    "reference": "\u00a717.5.4",
+    "reference": "§17.5.4",
     "implemented": false
   },
   {
     "description": "Include targetField in mapping validation errors.",
-    "reference": "\u00a717.5.4",
+    "reference": "§17.5.4",
     "implemented": false
   },
   {
     "description": "Include sourceExpr in mapping validation errors.",
-    "reference": "\u00a717.5.4",
+    "reference": "§17.5.4",
     "implemented": false
   },
   {
     "description": "Include expectedType in mapping validation errors.",
-    "reference": "\u00a717.5.4",
+    "reference": "§17.5.4",
     "implemented": false
   },
   {
     "description": "Include actualType in mapping validation errors.",
-    "reference": "\u00a717.5.4",
+    "reference": "§17.5.4",
     "implemented": false
   },
   {
     "description": "Load inputMapping from step config before action invocation.",
-    "reference": "\u00a717.6.1",
-    "implemented": false
+    "reference": "§17.6.1",
+    "implemented": true
   },
   {
     "description": "Evaluate each source expression against current runtime context.",
-    "reference": "\u00a717.6.1",
-    "implemented": false
+    "reference": "§17.6.1",
+    "implemented": true
   },
   {
     "description": "Build resolved input object from mapping results.",
-    "reference": "\u00a717.6.1",
-    "implemented": false
+    "reference": "§17.6.1",
+    "implemented": true
   },
   {
     "description": "Validate resolved input against action inputSchema (Zod).",
-    "reference": "\u00a717.6.1",
+    "reference": "§17.6.1",
     "implemented": false
   },
   {
     "description": "Pass validated input to action handler.",
-    "reference": "\u00a717.6.1",
-    "implemented": false
+    "reference": "§17.6.1",
+    "implemented": true
   },
   {
-    "description": "Implement resolveInputMapping function per \u00a717.6.2 algorithm.",
-    "reference": "\u00a717.6.2",
-    "implemented": false
+    "description": "Implement resolveInputMapping function per §17.6.2 algorithm.",
+    "reference": "§17.6.2",
+    "implemented": true
   },
   {
     "description": "Iterate over inputMapping entries to resolve each field.",
-    "reference": "\u00a717.6.2",
-    "implemented": false
+    "reference": "§17.6.2",
+    "implemented": true
   },
   {
     "description": "Apply schema defaults for unmapped optional fields.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Parse resolved input through Zod schema for final validation.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Capture which field failed when mapping resolution fails.",
-    "reference": "\u00a717.6.3",
+    "reference": "§17.6.3",
     "implemented": false
   },
   {
     "description": "Include source expression in runtime mapping errors.",
-    "reference": "\u00a717.6.3",
+    "reference": "§17.6.3",
     "implemented": false
   },
   {
     "description": "Include evaluated value in runtime mapping errors.",
-    "reference": "\u00a717.6.3",
+    "reference": "§17.6.3",
     "implemented": false
   },
   {
     "description": "Include expected vs actual type in runtime mapping errors.",
-    "reference": "\u00a717.6.3",
+    "reference": "§17.6.3",
     "implemented": false
   },
   {
     "description": "Classify mapping resolution failures as ValidationError (non-retryable).",
-    "reference": "\u00a717.6.3",
+    "reference": "§17.6.3",
     "implemented": false
   },
   {
     "description": "Log detailed mapping resolution errors for debugging.",
-    "reference": "\u00a717.6.3",
+    "reference": "§17.6.3",
     "implemented": false
   },
   {
     "description": "Coerce null/undefined to schema default when available.",
-    "reference": "\u00a717.6.4",
+    "reference": "§17.6.4",
     "implemented": false
   },
   {
     "description": "Coerce string containing number to number when target expects number.",
-    "reference": "\u00a717.6.4",
+    "reference": "§17.6.4",
     "implemented": false
   },
   {
     "description": "Coerce ISO date string to Date when target expects Date.",
-    "reference": "\u00a717.6.4",
+    "reference": "§17.6.4",
     "implemented": false
   },
   {
     "description": "Fail validation for type mismatches that cannot be coerced.",
-    "reference": "\u00a717.6.4",
+    "reference": "§17.6.4",
     "implemented": false
   },
   {
     "description": "Log coercion actions for audit/debugging purposes.",
-    "reference": "\u00a717.6.4",
+    "reference": "§17.6.4",
     "implemented": false
   },
   {
     "description": "Support legacy args field in existing workflows.",
-    "reference": "\u00a717.7.1",
+    "reference": "§17.7.1",
     "implemented": false
   },
   {
     "description": "Show upgrade prompt in designer to convert args to inputMapping.",
-    "reference": "\u00a717.7.1",
+    "reference": "§17.7.1",
     "implemented": false
   },
   {
     "description": "Implement auto-migration tool to convert args to inputMapping.",
-    "reference": "\u00a717.7.1",
+    "reference": "§17.7.1",
     "implemented": false
   },
   {
     "description": "Preserve existing behavior when running workflows with legacy args.",
-    "reference": "\u00a717.7.1",
+    "reference": "§17.7.1",
     "implemented": false
   },
   {
     "description": "Detect affected workflows when action inputSchema changes.",
-    "reference": "\u00a717.7.2",
+    "reference": "§17.7.2",
     "implemented": false
   },
   {
     "description": "Highlight workflows affected by schema changes in workflow list.",
-    "reference": "\u00a717.7.2",
+    "reference": "§17.7.2",
     "implemented": false
   },
   {
     "description": "Show diff of added/removed/changed fields when action version updates.",
-    "reference": "\u00a717.7.2",
+    "reference": "§17.7.2",
     "implemented": false
   },
   {
     "description": "Re-run validation on next edit or publish after schema change.",
-    "reference": "\u00a717.7.2",
+    "reference": "§17.7.2",
     "implemented": false
   },
   {
     "description": "Create unit tests for inputMapping schema validation.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create unit tests for mapping expression evaluation.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create unit tests for type compatibility checking.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create unit tests for structural compatibility validation.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create unit tests for runtime mapping resolution.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create unit tests for type coercion rules.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create integration tests for mapping UI components.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create integration tests for publish validation with mappings.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create integration tests for runtime mapping execution.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Create E2E tests for complete mapping workflow (create, validate, publish, run).",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Test mapping editor with various action schemas (simple, nested, arrays).",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Test validation badges update correctly as mappings change.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Test auto-mapping suggestions accuracy and relevance.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Test migration path from legacy args to inputMapping.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Document inputMapping config schema and usage.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Document available data context at each step type.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Document type compatibility rules and coercion behavior.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Document mapping editor UI interactions.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Document validation error codes and remediation steps.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Document migration guide for upgrading existing workflows.",
-    "reference": "\u00a717",
+    "reference": "§17",
     "implemented": false
   },
   {
     "description": "Show mapping completion percentage in workflow list for each workflow.",
-    "reference": "\u00a717.4",
+    "reference": "§17.4",
     "implemented": false
   },
   {
     "description": "Support keyboard navigation in mapping editor (tab between fields, arrow keys in tree).",
-    "reference": "\u00a717.3",
+    "reference": "§17.3",
     "implemented": false
   },
   {
     "description": "Provide undo/redo for mapping changes.",
-    "reference": "\u00a717.3",
+    "reference": "§17.3",
     "implemented": false
   },
   {
     "description": "Support copy/paste of mappings between similar steps.",
-    "reference": "\u00a717.3",
+    "reference": "§17.3",
     "implemented": false
   },
   {
     "description": "Show mapping history/changelog per step.",
-    "reference": "\u00a717.3",
+    "reference": "§17.3",
     "implemented": false
   },
   {
     "description": "Support bulk mapping operations (clear all, reset to defaults).",
-    "reference": "\u00a717.3",
+    "reference": "§17.3",
     "implemented": false
   },
   {
     "description": "Implement search/filter in available data tree for large schemas.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show type icons in available data tree (string, number, boolean, object, array).",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Support pinning frequently used fields in available data tree.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Group available data by source (payload vs vars vs meta) in tree view.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show sample values from test data in available data tree (if available).",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Validate expressions in real-time as user types in expression editor.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show autocomplete suggestions in expression editor based on current context.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Highlight syntax errors in expression editor with error message.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Support common expression patterns as snippets/templates.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Provide expression builder for complex transformations (string concat, conditionals).",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show preview of evaluated expression result when test data available.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Support clearing individual field mappings.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Indicate when mapped field will use schema default vs explicit mapping.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Validate that referenced vars come from steps with saveAs configured.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Warn when referencing optional source field without null handling.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Check enum value compatibility between source and target.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Validate literal values in expressions match target type.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Support validation of conditional expressions (ternary) type inference.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Cache type inference results for performance.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Track expression evaluation metrics (time, memory) for monitoring.",
-    "reference": "\u00a717.6",
+    "reference": "§17.6",
     "implemented": false
   },
   {
     "description": "Implement circuit breaker for expression evaluation timeouts.",
-    "reference": "\u00a717.6",
+    "reference": "§17.6",
     "implemented": false
   },
   {
     "description": "Log resolved input values (redacted) for run debugging.",
-    "reference": "\u00a717.6",
+    "reference": "§17.6",
     "implemented": false
   },
   {
     "description": "Support dry-run mode to validate mappings without executing action.",
-    "reference": "\u00a717.6",
+    "reference": "§17.6",
     "implemented": false
   },
   {
     "description": "Show mapping resolution details in run viewer step detail.",
-    "reference": "\u00a717.6",
+    "reference": "§17.6",
     "implemented": false
   },
   {
     "description": "Include mapping source expressions in action invocation logs.",
-    "reference": "\u00a717.6",
+    "reference": "§17.6",
     "implemented": false
   },
   {
     "description": "Support JSONata expressions in inputMapping values.",
-    "reference": "\u00a717.6.2",
-    "implemented": false
+    "reference": "§17.6.2",
+    "implemented": true
   },
   {
     "description": "Implement expression sandboxing for mapping evaluation.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support helper functions in mapping expressions (coalesce, len, etc.).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Enforce expression output size limits in mapping resolution.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Handle circular references in expression evaluation gracefully.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
-
   {
     "description": "Support literal values in inputMapping (not just expressions).",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Define MappingValue union type: Expr | LiteralValue for inputMapping entries.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support literal string values in inputMapping.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support literal number values in inputMapping.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support literal boolean values in inputMapping.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support literal null values in inputMapping.",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support literal object values in inputMapping (static JSON objects).",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Support literal array values in inputMapping (static JSON arrays).",
-    "reference": "\u00a717.2.1",
-    "implemented": false
+    "reference": "§17.2.1",
+    "implemented": true
   },
   {
     "description": "Provide UI toggle between Expression mode and Literal mode per field.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Validate literal values against target field schema.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Show appropriate input control for literal mode based on target type (text input, number input, checkbox, etc.).",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Support string concatenation in mapping expressions (combining multiple sources).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support substring extraction in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support regex extraction in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support string case transformation (upper, lower, capitalize) in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support string trim/pad operations in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support number formatting in mapping expressions (decimal places, currency).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support date parsing from string in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support date formatting to string in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support date arithmetic (add days, diff) in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support object construction from multiple sources in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support object property access with optional chaining in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support object spread/merge in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support array map operation in mapping expressions (transform each element).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support array filter operation in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support array reduce operation in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support array flatten operation in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support array first/last/nth element access in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support array length check in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support array includes/find operations in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support conditional/ternary expressions in inputMapping (condition ? valueA : valueB).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support null coalescing in mapping expressions (value ?? defaultValue).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Support explicit default value per mapping field when source is undefined.",
-    "reference": "\u00a717.2.1",
+    "reference": "§17.2.1",
     "implemented": false
   },
   {
     "description": "Define DefaultValue option in mapping entry (separate from schema default).",
-    "reference": "\u00a717.2.1",
+    "reference": "§17.2.1",
     "implemented": false
   },
   {
     "description": "UI for specifying per-field default value in mapping editor.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Support omit-if-undefined behavior vs null-if-undefined per field.",
-    "reference": "\u00a717.2.1",
+    "reference": "§17.2.1",
     "implemented": false
   },
   {
     "description": "Support mapping multiple source fields to single target object.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Support field-by-field mapping for nested object targets.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Support merging base object with field overrides in mapping.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Show merge preview when combining multiple sources into target object.",
-    "reference": "\u00a717.3.4",
+    "reference": "§17.3.4",
     "implemented": false
   },
   {
     "description": "Validate partial object mapping has all required nested fields covered.",
-    "reference": "\u00a717.5.3",
+    "reference": "§17.5.3",
     "implemented": false
   },
   {
     "description": "Implement mapping editor panel layout container component.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Implement source data tree browser component.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Implement target fields list component with schema-driven rendering.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Implement visual connection line renderer between source and target.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Implement mapping editor state management (selected field, draft changes, validation state).",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Implement mapping editor toolbar (save, reset, auto-map, expand/collapse all).",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Define allowlist of permitted JSONata functions for mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Document permitted JSONata functions with examples.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Implement custom helper functions for common mapping patterns (coalesce, isEmpty, formatDate, etc.).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Document custom helper functions available in mapping expressions.",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Enforce expression complexity limits (max depth, max operations).",
-    "reference": "\u00a717.6.2",
+    "reference": "§17.6.2",
     "implemented": false
   },
   {
     "description": "Show warning when expression approaches complexity limits.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Provide expression testing sandbox in mapping editor (enter sample data, see result).",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Load sample data from recent workflow runs for expression testing.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show live expression result preview as user types.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Validate expression output type matches target field type in testing sandbox.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Support saving expression test cases for regression testing.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
-
   {
     "description": "Detect enum types in target field schema.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Show dropdown of valid enum values instead of free text for enum target fields.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Validate mapped value is a valid enum member at design time.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Return INVALID_ENUM_VALUE error when mapped value not in allowed enum values.",
-    "reference": "\u00a717.5.2",
+    "reference": "§17.5.2",
     "implemented": false
   },
   {
     "description": "Support mapping expression that resolves to enum value with runtime validation.",
-    "reference": "\u00a717.6.1",
+    "reference": "§17.6.1",
     "implemented": false
   },
   {
     "description": "Define secret reference syntax { $secret: \"secretName\" } for secure credential mapping.",
-    "reference": "\u00a717.2.1",
+    "reference": "§17.2.1",
     "implemented": false
   },
   {
     "description": "Support $secret references in inputMapping for sensitive fields.",
-    "reference": "\u00a717.2.1",
+    "reference": "§17.2.1",
     "implemented": false
   },
   {
     "description": "Never expose secret values in mapping UI - show placeholder only.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Validate referenced secret exists at publish time.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Resolve $secret references securely at runtime without logging values.",
-    "reference": "\u00a717.6.1",
+    "reference": "§17.6.1",
     "implemented": false
   },
   {
     "description": "Redact secret values in all action invocation logs and snapshots.",
-    "reference": "\u00a717.6.3",
+    "reference": "§17.6.3",
     "implemented": false
   },
   {
     "description": "Show secret picker UI for selecting from available tenant secrets.",
-    "reference": "\u00a717.3.2",
+    "reference": "§17.3.2",
     "implemented": false
   },
   {
     "description": "Mark input fields as sensitive in action inputSchema (requiresSecret hint).",
-    "reference": "\u00a717.2.2",
+    "reference": "§17.2.2",
     "implemented": false
   },
   {
     "description": "Track data context separately for if-block then branch vs else branch.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Show branch-specific available data when editing steps inside if/else blocks.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Support type narrowing based on if-block condition (e.g., type === 'email' narrows type).",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Indicate in UI which data is branch-conditional vs always available.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Add item variable to available data context when inside forEach body.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Add $index variable to available data context when inside forEach body.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Show item and $index in available data tree only when editing steps inside forEach.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Infer item type from forEach items expression for autocomplete and validation.",
-    "reference": "\u00a717.2.3",
+    "reference": "§17.2.3",
     "implemented": false
   },
   {
     "description": "Warn if referencing item or $index outside of forEach body.",
-    "reference": "\u00a717.5.1",
+    "reference": "§17.5.1",
     "implemented": false
   },
   {
     "description": "Show loading state in mapping editor while fetching action schema.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show empty state in mapping editor when action has no required inputs.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show error state in mapping editor when action schema fetch fails.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Show retry option when action schema fetch fails.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Cache action schemas client-side to avoid repeated fetches.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
   {
     "description": "Invalidate schema cache when action version changes.",
-    "reference": "\u00a717.3.1",
+    "reference": "§17.3.1",
     "implemented": false
   },
-
   {
     "description": "Define TenantSecret entity with id, tenant_id, name, description, encrypted_value, encryption_key_id, timestamps, and audit fields.",
-    "reference": "\u00a718.2.1",
-    "implemented": false
+    "reference": "§18.2.1",
+    "implemented": true
   },
   {
     "description": "Create tenant_secrets database table with UUID primary key and tenant_id foreign key.",
-    "reference": "\u00a718.2.2",
-    "implemented": false
+    "reference": "§18.2.2",
+    "implemented": true
   },
   {
     "description": "Add unique constraint on (tenant_id, name) for tenant secrets.",
-    "reference": "\u00a718.2.2",
-    "implemented": false
+    "reference": "§18.2.2",
+    "implemented": true
   },
   {
     "description": "Create index on tenant_secrets.tenant_id for efficient lookups.",
-    "reference": "\u00a718.2.2",
-    "implemented": false
+    "reference": "§18.2.2",
+    "implemented": true
   },
   {
     "description": "Define secret reference syntax { $secret: \"secretName\" } for workflow inputMapping.",
-    "reference": "\u00a718.2.3",
-    "implemented": false
+    "reference": "§18.2.3",
+    "implemented": true
   },
   {
     "description": "Implement SecretProvider interface with create, update, get, exists, delete, list methods.",
-    "reference": "\u00a718.3.2",
-    "implemented": false
+    "reference": "§18.3.2",
+    "implemented": true
   },
   {
     "description": "Implement envelope encryption for secret values using AES-256-GCM.",
-    "reference": "\u00a718.3.1",
+    "reference": "§18.3.1",
     "implemented": false
   },
   {
     "description": "Store data encryption keys (DEK) encrypted with master key.",
-    "reference": "\u00a718.3.1",
+    "reference": "§18.3.1",
     "implemented": false
   },
   {
     "description": "Load master key from environment variable or key management service.",
-    "reference": "\u00a718.3.3",
+    "reference": "§18.3.3",
     "implemented": false
   },
   {
     "description": "Implement SecretProvider.create() to encrypt and store new secrets.",
-    "reference": "\u00a718.3.2",
-    "implemented": false
+    "reference": "§18.3.2",
+    "implemented": true
   },
   {
     "description": "Implement SecretProvider.update() to re-encrypt and update secret values.",
-    "reference": "\u00a718.3.2",
-    "implemented": false
+    "reference": "§18.3.2",
+    "implemented": true
   },
   {
     "description": "Implement SecretProvider.get() to retrieve and decrypt secret values for runtime use.",
-    "reference": "\u00a718.3.2",
-    "implemented": false
+    "reference": "§18.3.2",
+    "implemented": true
   },
   {
     "description": "Implement SecretProvider.exists() to check secret existence without decryption.",
-    "reference": "\u00a718.3.2",
-    "implemented": false
+    "reference": "§18.3.2",
+    "implemented": true
   },
   {
     "description": "Implement SecretProvider.delete() to remove secrets.",
-    "reference": "\u00a718.3.2",
-    "implemented": false
+    "reference": "§18.3.2",
+    "implemented": true
   },
   {
     "description": "Implement SecretProvider.list() to return secret metadata without values.",
-    "reference": "\u00a718.3.2",
-    "implemented": false
+    "reference": "§18.3.2",
+    "implemented": true
   },
   {
     "description": "Build secrets list view in Settings area showing name, description, last updated, last accessed, and actions.",
-    "reference": "\u00a718.4.1",
-    "implemented": false
+    "reference": "§18.4.1",
+    "implemented": true
   },
   {
     "description": "Implement search/filter by secret name in secrets list.",
-    "reference": "\u00a718.4.1",
-    "implemented": false
+    "reference": "§18.4.1",
+    "implemented": true
   },
   {
     "description": "Implement sort by name, updated, accessed in secrets list.",
-    "reference": "\u00a718.4.1",
-    "implemented": false
+    "reference": "§18.4.1",
+    "implemented": true
   },
   {
     "description": "Implement pagination for large secret lists.",
-    "reference": "\u00a718.4.1",
-    "implemented": false
+    "reference": "§18.4.1",
+    "implemented": true
   },
   {
     "description": "Build create secret dialog with name, value (password input), and description fields.",
-    "reference": "\u00a718.4.2",
-    "implemented": false
+    "reference": "§18.4.2",
+    "implemented": true
   },
   {
     "description": "Validate secret name is unique within tenant on create.",
-    "reference": "\u00a718.4.2",
-    "implemented": false
+    "reference": "§18.4.2",
+    "implemented": true
   },
   {
     "description": "Validate secret name matches pattern ^[A-Z][A-Z0-9_]{0,254}$.",
-    "reference": "\u00a718.4.2",
-    "implemented": false
+    "reference": "§18.4.2",
+    "implemented": true
   },
   {
     "description": "Validate secret value is not empty on create.",
-    "reference": "\u00a718.4.2",
-    "implemented": false
+    "reference": "§18.4.2",
+    "implemented": true
   },
   {
     "description": "Build edit secret dialog with description and optional new value fields.",
-    "reference": "\u00a718.4.3",
-    "implemented": false
+    "reference": "§18.4.3",
+    "implemented": true
   },
   {
     "description": "Show 'Value last updated: X days ago' in edit secret dialog.",
-    "reference": "\u00a718.4.3",
-    "implemented": false
+    "reference": "§18.4.3",
+    "implemented": true
   },
   {
     "description": "Never show current secret value in edit dialog - only allow replacement.",
-    "reference": "\u00a718.4.3",
-    "implemented": false
+    "reference": "§18.4.3",
+    "implemented": true
   },
   {
     "description": "Build delete secret confirmation dialog.",
-    "reference": "\u00a718.4.4",
-    "implemented": false
+    "reference": "§18.4.4",
+    "implemented": true
   },
   {
     "description": "Show warning in delete dialog if secret is referenced by workflows.",
-    "reference": "\u00a718.4.4",
-    "implemented": false
+    "reference": "§18.4.4",
+    "implemented": true
   },
   {
     "description": "List workflows that reference the secret in delete confirmation.",
-    "reference": "\u00a718.4.4",
-    "implemented": false
+    "reference": "§18.4.4",
+    "implemented": true
   },
   {
     "description": "Require typing secret name to confirm deletion.",
-    "reference": "\u00a718.4.4",
-    "implemented": false
+    "reference": "§18.4.4",
+    "implemented": true
   },
   {
     "description": "Support SecretRef type { $secret: string } in MappingValue union type.",
-    "reference": "\u00a718.5.1",
-    "implemented": false
+    "reference": "§18.5.1",
+    "implemented": true
   },
   {
     "description": "Show 'Use Secret' option in mapping UI alongside Expression/Literal for sensitive fields.",
-    "reference": "\u00a718.5.2",
+    "reference": "§18.5.2",
     "implemented": false
   },
   {
     "description": "Display dropdown of available tenant secrets in secret picker.",
-    "reference": "\u00a718.5.2",
+    "reference": "§18.5.2",
     "implemented": false
   },
   {
     "description": "Show 'Manage Secrets' link from secret picker to settings.",
-    "reference": "\u00a718.5.2",
+    "reference": "§18.5.2",
     "implemented": false
   },
   {
     "description": "Show placeholder text for mapped secrets in UI.",
-    "reference": "\u00a718.5.2",
+    "reference": "§18.5.2",
     "implemented": false
   },
   {
     "description": "Verify all referenced secrets exist at publish time.",
-    "reference": "\u00a718.5.3",
-    "implemented": false
+    "reference": "§18.5.3",
+    "implemented": true
   },
   {
     "description": "Return SECRET_NOT_FOUND error when referenced secret doesn't exist.",
-    "reference": "\u00a718.5.3",
-    "implemented": false
+    "reference": "§18.5.3",
+    "implemented": true
   },
   {
     "description": "Show warning at publish if secret hasn't been accessed recently (may be stale).",
-    "reference": "\u00a718.5.3",
-    "implemented": false
+    "reference": "§18.5.3",
+    "implemented": true
   },
   {
     "description": "Implement resolveSecretRef() function to retrieve decrypted secret values at runtime.",
-    "reference": "\u00a718.5.4",
-    "implemented": false
+    "reference": "§18.5.4",
+    "implemented": true
   },
   {
     "description": "Update last_accessed_at timestamp when secret is accessed by workflow.",
-    "reference": "\u00a718.5.4",
-    "implemented": false
+    "reference": "§18.5.4",
+    "implemented": true
   },
   {
     "description": "Define secrets.view permission to list secret names and metadata.",
-    "reference": "\u00a718.6.1",
-    "implemented": false
+    "reference": "§18.6.1",
+    "implemented": true
   },
   {
     "description": "Define secrets.manage permission to create, update, delete secrets.",
-    "reference": "\u00a718.6.1",
-    "implemented": false
+    "reference": "§18.6.1",
+    "implemented": true
   },
   {
     "description": "Define secrets.use permission to reference secrets in workflows.",
-    "reference": "\u00a718.6.1",
-    "implemented": false
+    "reference": "§18.6.1",
+    "implemented": true
   },
   {
     "description": "Assign all secret permissions to Admin role by default.",
-    "reference": "\u00a718.6.1",
-    "implemented": false
+    "reference": "§18.6.1",
+    "implemented": true
   },
   {
     "description": "Assign secrets.view and secrets.use to Editor role by default.",
-    "reference": "\u00a718.6.1",
-    "implemented": false
+    "reference": "§18.6.1",
+    "implemented": true
   },
   {
     "description": "Assign no secret permissions to Viewer role by default.",
-    "reference": "\u00a718.6.1",
-    "implemented": false
+    "reference": "§18.6.1",
+    "implemented": true
   },
   {
     "description": "Log secret.created audit event with who, when, and secret name (not value).",
-    "reference": "\u00a718.6.2",
-    "implemented": false
+    "reference": "§18.6.2",
+    "implemented": true
   },
   {
     "description": "Log secret.updated audit event with who, when, and secret name.",
-    "reference": "\u00a718.6.2",
-    "implemented": false
+    "reference": "§18.6.2",
+    "implemented": true
   },
   {
     "description": "Log secret.deleted audit event with who, when, and secret name.",
-    "reference": "\u00a718.6.2",
-    "implemented": false
+    "reference": "§18.6.2",
+    "implemented": true
   },
   {
     "description": "Log secret.accessed audit event with workflow run ID, secret name, and timestamp.",
-    "reference": "\u00a718.6.2",
-    "implemented": false
+    "reference": "§18.6.2",
+    "implemented": true
   },
   {
     "description": "Never expose secret values in API responses - return metadata only.",
-    "reference": "\u00a718.6.3",
-    "implemented": false
+    "reference": "§18.6.3",
+    "implemented": true
   },
   {
     "description": "Show placeholder instead of secret values in UI.",
-    "reference": "\u00a718.6.3",
-    "implemented": false
+    "reference": "§18.6.3",
+    "implemented": true
   },
   {
     "description": "Redact secret values before logging.",
-    "reference": "\u00a718.6.3",
+    "reference": "§18.6.3",
     "implemented": false
   },
   {
     "description": "Replace secret values with [REDACTED] in workflow snapshots.",
-    "reference": "\u00a718.6.3",
+    "reference": "§18.6.3",
     "implemented": false
   },
   {
     "description": "Show secret name (not value) in error messages.",
-    "reference": "\u00a718.6.3",
-    "implemented": false
+    "reference": "§18.6.3",
+    "implemented": true
   },
   {
     "description": "Reject secrets with values exceeding 64KB.",
-    "reference": "\u00a718.6.4",
-    "implemented": false
+    "reference": "§18.6.4",
+    "implemented": true
   },
   {
     "description": "Sanitize secret names to prevent injection attacks.",
-    "reference": "\u00a718.6.4",
-    "implemented": false
+    "reference": "§18.6.4",
+    "implemented": true
   },
   {
     "description": "Rate limit secret access to prevent enumeration.",
-    "reference": "\u00a718.6.4",
+    "reference": "§18.6.4",
     "implemented": false
   },
   {
     "description": "Implement listTenantSecrets server action to return secret metadata (no values).",
-    "reference": "\u00a718.7.1",
-    "implemented": false
+    "reference": "§18.7.1",
+    "implemented": true
   },
   {
     "description": "Implement getSecretMetadata server action to get single secret metadata by name.",
-    "reference": "\u00a718.7.1",
-    "implemented": false
+    "reference": "§18.7.1",
+    "implemented": true
   },
   {
     "description": "Implement createSecret server action to encrypt and store new secrets.",
-    "reference": "\u00a718.7.1",
-    "implemented": false
+    "reference": "§18.7.1",
+    "implemented": true
   },
   {
     "description": "Implement updateSecret server action to update secret value/description.",
-    "reference": "\u00a718.7.1",
-    "implemented": false
+    "reference": "§18.7.1",
+    "implemented": true
   },
   {
     "description": "Implement deleteSecret server action to remove secrets.",
-    "reference": "\u00a718.7.1",
-    "implemented": false
+    "reference": "§18.7.1",
+    "implemented": true
   },
   {
     "description": "Implement secretExists server action to check if secret exists.",
-    "reference": "\u00a718.7.1",
-    "implemented": false
+    "reference": "§18.7.1",
+    "implemented": true
   },
   {
     "description": "Implement resolveSecretForRuntime server action (internal only, returns decrypted value).",
-    "reference": "\u00a718.7.1",
-    "implemented": false
+    "reference": "§18.7.1",
+    "implemented": true
   },
   {
     "description": "Create GET /api/tenants/{tenantId}/secrets API route shim delegating to listTenantSecrets action.",
-    "reference": "\u00a718.7.2",
+    "reference": "§18.7.2",
     "implemented": false
   },
   {
     "description": "Create POST /api/tenants/{tenantId}/secrets API route shim delegating to createSecret action.",
-    "reference": "\u00a718.7.2",
+    "reference": "§18.7.2",
     "implemented": false
   },
   {
     "description": "Create PATCH /api/tenants/{tenantId}/secrets/{name} API route shim delegating to updateSecret action.",
-    "reference": "\u00a718.7.2",
+    "reference": "§18.7.2",
     "implemented": false
   },
   {
     "description": "Create DELETE /api/tenants/{tenantId}/secrets/{name} API route shim delegating to deleteSecret action.",
-    "reference": "\u00a718.7.2",
+    "reference": "§18.7.2",
     "implemented": false
   },
   {
     "description": "Create HEAD /api/tenants/{tenantId}/secrets/{name} API route shim delegating to secretExists action.",
-    "reference": "\u00a718.7.2",
+    "reference": "§18.7.2",
     "implemented": false
   },
   {
     "description": "Ensure no API route exposes decrypted secret values (runtime resolution is internal only).",
-    "reference": "\u00a718.7.2",
+    "reference": "§18.7.2",
     "implemented": false
   },
   {
     "description": "Support key rotation to re-encrypt secrets with new encryption keys.",
-    "reference": "\u00a718.8",
+    "reference": "§18.8",
     "implemented": false
   },
   {
     "description": "Track which workflows use each secret for usage analysis.",
-    "reference": "\u00a718.8",
-    "implemented": false
+    "reference": "§18.8",
+    "implemented": true
   }
 ]
