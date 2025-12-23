@@ -972,12 +972,12 @@
   {
     "description": "Define stable publish error codes (e.g., UNKNOWN_NODE_TYPE, UNKNOWN_ACTION, INVALID_CONFIG, INVALID_EXPR).",
     "reference": "Appendix A",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Publish validator must include stepPath and message for every error and warning.",
     "reference": "Appendix A",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement node type table (ID → config fields → behavior) as the contract for implementers.",
@@ -1782,7 +1782,7 @@
   {
     "description": "Provide visual tree browser in field picker for navigating complex nested structures.",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement real-time expression validation checking that referenced paths exist in available schemas.",
@@ -1837,7 +1837,7 @@
   {
     "description": "Enhance pre-publish validation to verify required inputs are provided or have valid expressions.",
     "reference": "§16.5",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Enhance pre-publish validation to check type compatibility where determinable at publish time.",
@@ -1852,7 +1852,7 @@
   {
     "description": "Show missing mapping warnings when action has required inputs that are not mapped, with suggestions from available context.",
     "reference": "§16.5",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Enhance action browser/palette to show input/output schema preview when browsing available actions.",
