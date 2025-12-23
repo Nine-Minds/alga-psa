@@ -111,6 +111,7 @@ export async function createClientLocation(
   });
 
   revalidatePath(`/msp/clients/${clientId}`);
+  revalidatePath('/client-portal/client-settings');
 
   return newLocation;
 }
@@ -146,6 +147,7 @@ export async function updateClientLocation(
   });
 
   revalidatePath(`/msp/clients/${updatedLocation.client_id}`);
+  revalidatePath('/client-portal/client-settings');
 
   return updatedLocation;
 }
@@ -235,6 +237,7 @@ export async function deleteClientLocation(locationId: string): Promise<void> {
   });
 
   revalidatePath(`/msp/clients/${clientId}`);
+  revalidatePath('/client-portal/client-settings');
 }
 
 export async function setDefaultClientLocation(locationId: string): Promise<void> {
@@ -287,6 +290,7 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
   });
 
   revalidatePath(`/msp/clients/${clientId}`);
+  revalidatePath('/client-portal/client-settings');
 }
 
 export async function getDefaultClientLocation(clientId: string): Promise<IClientLocation | null> {
