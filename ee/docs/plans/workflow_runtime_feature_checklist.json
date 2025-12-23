@@ -2072,7 +2072,7 @@
   {
     "description": "Support collapsible sections for nested object properties in mapping editor.",
     "reference": "§17.3.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Allow mapping entire object vs individual fields for nested structures.",
@@ -2212,27 +2212,27 @@
   {
     "description": "Validate that all required input fields have mappings at publish time.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return REQUIRED_INPUT_UNMAPPED error code for missing required mappings.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Allow optional input fields to be unmapped without error.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate mapping expression syntax at publish time.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return INVALID_MAPPING_EXPR error code for invalid expression syntax.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate that mapping references exist in available data context.",
@@ -2747,12 +2747,12 @@
   {
     "description": "Implement expression sandboxing for mapping evaluation.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support helper functions in mapping expressions (coalesce, len, etc.).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Enforce expression output size limits in mapping resolution.",
@@ -2822,12 +2822,12 @@
   {
     "description": "Support string concatenation in mapping expressions (combining multiple sources).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support substring extraction in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support regex extraction in mapping expressions.",
@@ -2837,17 +2837,17 @@
   {
     "description": "Support string case transformation (upper, lower, capitalize) in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support string trim/pad operations in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support number formatting in mapping expressions (decimal places, currency).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support date parsing from string in mapping expressions.",
@@ -2857,7 +2857,7 @@
   {
     "description": "Support date formatting to string in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support date arithmetic (add days, diff) in mapping expressions.",
@@ -2872,57 +2872,57 @@
   {
     "description": "Support object property access with optional chaining in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support object spread/merge in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array map operation in mapping expressions (transform each element).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array filter operation in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array reduce operation in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array flatten operation in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array first/last/nth element access in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array length check in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support array includes/find operations in mapping expressions.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support conditional/ternary expressions in inputMapping (condition ? valueA : valueB).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support null coalescing in mapping expressions (value ?? defaultValue).",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support explicit default value per mapping field when source is undefined.",
@@ -3102,12 +3102,12 @@
   {
     "description": "Resolve $secret references securely at runtime without logging values.",
     "reference": "§17.6.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Redact secret values in all action invocation logs and snapshots.",
     "reference": "§17.6.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show secret picker UI for selecting from available tenant secrets.",
