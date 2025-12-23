@@ -1767,7 +1767,7 @@
   {
     "description": "Support nested path autocomplete for complex output structures (e.g., ${vars.parseEmail.parsed.headers.subject}).",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Enhance field picker to show previous step outputs organized by step name in addition to payload schema.",
@@ -3147,7 +3147,7 @@
   {
     "description": "Add $index variable to available data context when inside forEach body.",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show item and $index in available data tree only when editing steps inside forEach.",
