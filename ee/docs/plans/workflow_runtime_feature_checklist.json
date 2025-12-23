@@ -2242,17 +2242,17 @@
   {
     "description": "Return UNDEFINED_MAPPING_SOURCE error code for undefined path references.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Detect and block forward references to steps that execute later.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Return FORWARD_REFERENCE error code for forward reference violations.",
     "reference": "§17.5.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Pass validation when source and target types match exactly.",
@@ -2362,7 +2362,7 @@
   {
     "description": "Validate resolved input against action inputSchema (Zod).",
     "reference": "§17.6.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Pass validated input to action handler.",
@@ -2382,12 +2382,12 @@
   {
     "description": "Apply schema defaults for unmapped optional fields.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Parse resolved input through Zod schema for final validation.",
     "reference": "§17.6.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Capture which field failed when mapping resolution fails.",
@@ -2447,7 +2447,7 @@
   {
     "description": "Support legacy args field in existing workflows.",
     "reference": "§17.7.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show upgrade prompt in designer to convert args to inputMapping.",
@@ -2467,7 +2467,7 @@
   {
     "description": "Detect affected workflows when action inputSchema changes.",
     "reference": "§17.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Highlight workflows affected by schema changes in workflow list.",
@@ -2482,22 +2482,22 @@
   {
     "description": "Re-run validation on next edit or publish after schema change.",
     "reference": "§17.7.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create unit tests for inputMapping schema validation.",
     "reference": "§17",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create unit tests for mapping expression evaluation.",
     "reference": "§17",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create unit tests for type compatibility checking.",
     "reference": "§17",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create unit tests for structural compatibility validation.",
