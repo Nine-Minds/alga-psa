@@ -1967,7 +1967,7 @@
   {
     "description": "Track output schemas for each step based on action outputSchema and saveAs config.",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement Input Mapping Editor panel in step configuration.",
@@ -2127,7 +2127,7 @@
   {
     "description": "Update validation status icon in real-time as mappings change.",
     "reference": "§17.4.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show validation status on control blocks based on nested step statuses.",
@@ -2207,7 +2207,7 @@
   {
     "description": "Show full path in error messages for deeply nested validation failures.",
     "reference": "§17.4.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Validate that all required input fields have mappings at publish time.",
