@@ -1,8 +1,11 @@
 import { z } from 'zod';
 
 export const exprSchema = z.object({
-  $expr: z.string().min(1)
-}).strict();
+  $expr: z.string().optional().default('')  // Allow undefined/empty for drafts; runtime validates
+}).passthrough().transform((val) => {
+  // Normalize: keep only $expr, discard other keys (like empty string keys from corrupted data)
+  return { $expr: val.$expr ?? '' };
+});
 
 export type Expr = z.infer<typeof exprSchema>;
 
@@ -87,7 +90,10 @@ export type Step = NodeStep | IfBlock | ForEachBlock | TryCatchBlock | CallWorkf
 
 export const nodeStepSchema = z.object({
   id: z.string().min(1),
-  type: z.string().min(1),
+  type: z.string().min(1).refine(
+    t => !t.startsWith('control.'),
+    { message: 'Node step type cannot start with "control." - use a control block schema instead' }
+  ),
   name: z.string().optional(),
   config: z.unknown().optional(),
   retry: retryPolicySchema.optional(),
@@ -136,14 +142,47 @@ export const returnStepSchema = z.object({
   type: z.literal('control.return')
 }).strict();
 
-export const stepSchema: z.ZodType<Step> = z.lazy(() => z.union([
-  nodeStepSchema,
-  ifBlockSchema,
-  forEachBlockSchema,
-  tryCatchBlockSchema,
-  callWorkflowBlockSchema,
-  returnStepSchema
-])) as z.ZodType<Step>;
+// Custom step schema that routes to the correct schema based on type
+const stepSchemaInner = z.unknown().transform((val, ctx) => {
+  const obj = val as Record<string, unknown>;
+  const type = obj?.type as string | undefined;
+
+  if (!type) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Step must have a type field' });
+    return z.NEVER;
+  }
+
+  let result: z.SafeParseReturnType<unknown, Step>;
+
+  switch (type) {
+    case 'control.if':
+      result = ifBlockSchema.safeParse(val);
+      break;
+    case 'control.forEach':
+      result = forEachBlockSchema.safeParse(val);
+      break;
+    case 'control.tryCatch':
+      result = tryCatchBlockSchema.safeParse(val);
+      break;
+    case 'control.callWorkflow':
+      result = callWorkflowBlockSchema.safeParse(val);
+      break;
+    case 'control.return':
+      result = returnStepSchema.safeParse(val);
+      break;
+    default:
+      result = nodeStepSchema.safeParse(val);
+  }
+
+  if (!result.success) {
+    result.error.issues.forEach(issue => ctx.addIssue(issue));
+    return z.NEVER;
+  }
+
+  return result.data;
+});
+
+export const stepSchema: z.ZodType<Step> = z.lazy(() => stepSchemaInner) as z.ZodType<Step>;
 
 export const workflowDefinitionSchema = z.object({
   id: z.string().min(1),
