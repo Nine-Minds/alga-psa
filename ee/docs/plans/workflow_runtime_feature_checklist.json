@@ -2,37 +2,37 @@
   {
     "description": "Define workflow system goals, non-goals, and success criteria for MVP.",
     "reference": "§1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "State the unit of execution as Envelope<TIn> → Envelope<TOut> transforms.",
     "reference": "§1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Commit to data-defined workflows executed by an interpreter (no runtime code generation).",
     "reference": "§1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Use inbound email processing as the MVP reference workflow for capability parity.",
     "reference": "§1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Include a node-in-pipe GUI designer in scope.",
     "reference": "§1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide and use consistent terminology: workflow definition, step, node type, action, publish, run, resume.",
     "reference": "§2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Explicitly constrain MVP to structured pipelines (no arbitrary DAG).",
     "reference": "§2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement Envelope with run metadata, payload, meta, vars, and optional error (v=1).",
@@ -1822,7 +1822,7 @@
   {
     "description": "Implement schema tooltips on hover for any field in config forms showing type, constraints, description, and examples.",
     "reference": "§16.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide 'What can I access here?' helper button in expression fields that opens contextual field picker with explanation.",
@@ -1932,12 +1932,12 @@
   {
     "description": "Define MappingMetadata type tracking targetField, sourceExpr, sourceType, targetType, compatibility.",
     "reference": "§17.2.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement compatibility status enum: compatible, warning, error, unknown.",
     "reference": "§17.2.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Build available data context including payload fields from payloadSchemaRef.",
@@ -2077,7 +2077,7 @@
   {
     "description": "Allow mapping entire object vs individual fields for nested structures.",
     "reference": "§17.3.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Display visual tree representation matching input schema structure.",
@@ -2202,7 +2202,7 @@
   {
     "description": "Highlight the specific field with error when navigating from breadcrumb.",
     "reference": "§17.4.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show full path in error messages for deeply nested validation failures.",
@@ -2502,12 +2502,12 @@
   {
     "description": "Create unit tests for structural compatibility validation.",
     "reference": "§17",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create unit tests for runtime mapping resolution.",
     "reference": "§17",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Create unit tests for type coercion rules.",
@@ -2642,7 +2642,7 @@
   {
     "description": "Validate expressions in real-time as user types in expression editor.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show autocomplete suggestions in expression editor based on current context.",
@@ -2652,7 +2652,7 @@
   {
     "description": "Highlight syntax errors in expression editor with error message.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support common expression patterns as snippets/templates.",
@@ -2672,7 +2672,7 @@
   {
     "description": "Support clearing individual field mappings.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Indicate when mapped field will use schema default vs explicit mapping.",
@@ -2992,12 +2992,12 @@
   {
     "description": "Implement mapping editor state management (selected field, draft changes, validation state).",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement mapping editor toolbar (save, reset, auto-map, expand/collapse all).",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Define allowlist of permitted JSONata functions for mapping expressions.",
@@ -3082,12 +3082,12 @@
   {
     "description": "Define secret reference syntax { $secret: \"secretName\" } for secure credential mapping.",
     "reference": "§17.2.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support $secret references in inputMapping for sensitive fields.",
     "reference": "§17.2.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Never expose secret values in mapping UI - show placeholder only.",
@@ -3142,7 +3142,7 @@
   {
     "description": "Add item variable to available data context when inside forEach body.",
     "reference": "§17.2.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add $index variable to available data context when inside forEach body.",
@@ -3227,17 +3227,17 @@
   {
     "description": "Implement envelope encryption for secret values using AES-256-GCM.",
     "reference": "§18.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Store data encryption keys (DEK) encrypted with master key.",
     "reference": "§18.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Load master key from environment variable or key management service.",
     "reference": "§18.3.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement SecretProvider.create() to encrypt and store new secrets.",
