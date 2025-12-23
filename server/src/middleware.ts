@@ -102,6 +102,7 @@ const _middleware = auth((request) => {
       '/api/webhooks/ninjaone',
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',
+      '/api/ext-debug/',  // Extension debug stream uses session auth
       '/api/internal/ext-storage/',  // Runner storage API uses x-runner-auth token
     ];
 
