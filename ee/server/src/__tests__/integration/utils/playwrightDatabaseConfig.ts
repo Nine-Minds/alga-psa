@@ -1,11 +1,35 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'node:fs';
 import { knex, Knex } from 'knex';
 
 // Load EE server env first
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 // Also load main server/.env for DB creds if present
 dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
+
+function resolveSecretValue(raw?: string): string | undefined {
+  if (!raw) return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  const candidates: string[] = [trimmed];
+  if (trimmed.startsWith('/run/secrets/')) {
+    candidates.push(path.resolve(process.cwd(), 'secrets', path.basename(trimmed)));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return fs.readFileSync(candidate, 'utf8').trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return trimmed;
+}
 
 type RawConfig = {
   host: string;
@@ -19,24 +43,14 @@ type RawConfig = {
 };
 
 const secretsDbPassword = (
-  process.env.PLAYWRIGHT_DB_APP_PASSWORD ??
+  resolveSecretValue(process.env.PLAYWRIGHT_DB_APP_PASSWORD) ??
   'postpass123'
 );
 
-function isLikelySecretFilePath(value: string | undefined): boolean {
-  if (!value) return false;
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return false;
-  return trimmed.startsWith('/') || trimmed.includes('/run/secrets/');
-}
-
-const envAdminPassword =
-  process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD ??
-  (isLikelySecretFilePath(process.env.DB_PASSWORD_ADMIN) ? undefined : process.env.DB_PASSWORD_ADMIN) ??
-  (isLikelySecretFilePath(process.env.DB_PASSWORD) ? undefined : process.env.DB_PASSWORD);
-
 const secretsAdminPassword = (
-  envAdminPassword ??
+  resolveSecretValue(process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD) ??
+  resolveSecretValue(process.env.DB_PASSWORD_ADMIN) ??
+  resolveSecretValue(process.env.DB_PASSWORD) ??
   'postpass123'
 );
 

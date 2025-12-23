@@ -1618,5 +1618,280 @@
     "description": "Create load test plan for throughput and retention operations.",
     "reference": "\u00a714.10",
     "implemented": false
+  },
+  {
+    "description": "Display workflow definitions in a sortable table with columns: name, description, status, version, last modified, trigger type.",
+    "reference": "\u00a715.1",
+    "implemented": true
+  },
+  {
+    "description": "Support sorting by name, status, version, and last modified date.",
+    "reference": "\u00a715.1",
+    "implemented": true
+  },
+  {
+    "description": "Provide text search/filter by workflow name and description.",
+    "reference": "\u00a715.1",
+    "implemented": true
+  },
+  {
+    "description": "Support filtering by workflow status (active, draft, paused, archived).",
+    "reference": "\u00a715.1",
+    "implemented": true
+  },
+  {
+    "description": "Support filtering by trigger type (event-based, scheduled, manual).",
+    "reference": "\u00a715.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement cursor-based pagination for workflow list.",
+    "reference": "\u00a715.1",
+    "implemented": false
+  },
+  {
+    "description": "Show workflow count summary (total, active, draft, paused).",
+    "reference": "\u00a715.1",
+    "implemented": true
+  },
+  {
+    "description": "Display workflow status badge (active/draft/paused/archived) with color coding.",
+    "reference": "\u00a715.2",
+    "implemented": true
+  },
+  {
+    "description": "Show current published version number and draft indicator if unpublished changes exist.",
+    "reference": "\u00a715.2",
+    "implemented": true
+  },
+  {
+    "description": "Display last modified timestamp with relative time (e.g., '2 hours ago').",
+    "reference": "\u00a715.2",
+    "implemented": true
+  },
+  {
+    "description": "Show trigger type icon/badge (event, schedule, manual) for quick identification.",
+    "reference": "\u00a715.2",
+    "implemented": true
+  },
+  {
+    "description": "Provide 'Create New Workflow' button with workflow type selection.",
+    "reference": "\u00a715.3",
+    "implemented": false
+  },
+  {
+    "description": "Enable row click to open workflow in designer.",
+    "reference": "\u00a715.3",
+    "implemented": true
+  },
+  {
+    "description": "Provide quick-action menu per row: Edit, Duplicate, Pause/Resume, Archive, Delete.",
+    "reference": "\u00a715.3",
+    "implemented": true
+  },
+  {
+    "description": "Support bulk selection with bulk actions (pause, resume, archive, delete).",
+    "reference": "\u00a715.3",
+    "implemented": true
+  },
+  {
+    "description": "Show confirmation dialogs for destructive actions (delete, archive) with workflow name.",
+    "reference": "\u00a715.3",
+    "implemented": true
+  },
+  {
+    "description": "Provide 'View Runs' action to navigate to filtered run list for that workflow.",
+    "reference": "\u00a715.3",
+    "implemented": true
+  },
+  {
+    "description": "Provide tab navigation between Workflows, Runs, and Events views.",
+    "reference": "\u00a715.4",
+    "implemented": true
+  },
+  {
+    "description": "Support URL-based filtering for shareable filtered views.",
+    "reference": "\u00a715.4",
+    "implemented": true
+  },
+  {
+    "description": "Display empty state with illustration and 'Create your first workflow' CTA when no workflows exist.",
+    "reference": "\u00a715.5",
+    "implemented": true
+  },
+  {
+    "description": "Show skeleton loading state while fetching workflow list.",
+    "reference": "\u00a715.5",
+    "implemented": true
+  },
+  {
+    "description": "Display 'No results' state with suggestions when filters return empty results.",
+    "reference": "\u00a715.5",
+    "implemented": true
+  },
+  {
+    "description": "Show collapsible Input Schema Reference section in StepConfigPanel listing all input fields, types, required/optional, descriptions, and defaults.",
+    "reference": "\u00a716.1",
+    "implemented": false
+  },
+  {
+    "description": "Show collapsible Output Schema Reference section in StepConfigPanel listing all output fields, types, nullable indicators, and nested structure.",
+    "reference": "\u00a716.1",
+    "implemented": false
+  },
+  {
+    "description": "Provide 'Copy path' button for each output field to copy expression syntax (e.g., ${vars.stepName.field}).",
+    "reference": "\u00a716.1",
+    "implemented": false
+  },
+  {
+    "description": "Show output availability preview when saveAs is configured (e.g., 'Output will be available at ${vars.myStep.*}').",
+    "reference": "\u00a716.1",
+    "implemented": false
+  },
+  {
+    "description": "Validate that saveAs does not conflict with existing variable names and show warning if it does.",
+    "reference": "\u00a716.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement context-aware autocomplete in expression fields showing previous steps with their saveAs names when typing ${vars.",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Support drilling into output schemas in autocomplete (e.g., ${vars.createTicket. shows ticket_id, ticket_number).",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Support nested path autocomplete for complex output structures (e.g., ${vars.parseEmail.parsed.headers.subject}).",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Enhance field picker to show previous step outputs organized by step name in addition to payload schema.",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Add global variables (env, secrets) to field picker with appropriate access patterns.",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Provide visual tree browser in field picker for navigating complex nested structures.",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement real-time expression validation checking that referenced paths exist in available schemas.",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Show warning when expression references a step that executes after the current step (order dependency violation).",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Show type mismatch warnings when passing incompatible types between steps (e.g., string where number expected).",
+    "reference": "\u00a716.2",
+    "implemented": false
+  },
+  {
+    "description": "Support optional edge labels/annotations showing data shape between nodes (toggle-able, collapsed shows '3 fields').",
+    "reference": "\u00a716.3",
+    "implemented": false
+  },
+  {
+    "description": "Add step output preview badge on each node showing output availability with hover for quick schema summary.",
+    "reference": "\u00a716.3",
+    "implemented": false
+  },
+  {
+    "description": "Provide Data Flow sidebar/panel showing available data context at any selected step (payload, vars by step, env, secrets).",
+    "reference": "\u00a716.3",
+    "implemented": false
+  },
+  {
+    "description": "Show action documentation panel when selecting an action type with description, examples, and common use cases.",
+    "reference": "\u00a716.4",
+    "implemented": false
+  },
+  {
+    "description": "Implement schema tooltips on hover for any field in config forms showing type, constraints, description, and examples.",
+    "reference": "\u00a716.4",
+    "implemented": false
+  },
+  {
+    "description": "Provide 'What can I access here?' helper button in expression fields that opens contextual field picker with explanation.",
+    "reference": "\u00a716.4",
+    "implemented": false
+  },
+  {
+    "description": "Enhance pre-publish validation to check all expressions reference valid paths in available schemas.",
+    "reference": "\u00a716.5",
+    "implemented": false
+  },
+  {
+    "description": "Enhance pre-publish validation to verify required inputs are provided or have valid expressions.",
+    "reference": "\u00a716.5",
+    "implemented": false
+  },
+  {
+    "description": "Enhance pre-publish validation to check type compatibility where determinable at publish time.",
+    "reference": "\u00a716.5",
+    "implemented": false
+  },
+  {
+    "description": "Improve runtime error context to show which input field caused validation failure with expected vs actual type.",
+    "reference": "\u00a716.5",
+    "implemented": false
+  },
+  {
+    "description": "Show missing mapping warnings when action has required inputs that are not mapped, with suggestions from available context.",
+    "reference": "\u00a716.5",
+    "implemented": false
+  },
+  {
+    "description": "Enhance action browser/palette to show input/output schema preview when browsing available actions.",
+    "reference": "\u00a716.6",
+    "implemented": false
+  },
+  {
+    "description": "Make action browser filterable by category and searchable by field name (e.g., find actions that return ticket_id).",
+    "reference": "\u00a716.6",
+    "implemented": false
+  },
+  {
+    "description": "Show 'This action returns: field1, field2, ...' summary in action browser entries.",
+    "reference": "\u00a716.6",
+    "implemented": false
+  },
+  {
+    "description": "Document node type schemas for non-action nodes (conditions, loops) including special behaviors (e.g., forEach exposes item/index).",
+    "reference": "\u00a716.6",
+    "implemented": false
+  },
+  {
+    "description": "Provide JSON Schema view toggle for power users to see raw schema definition.",
+    "reference": "\u00a716.7",
+    "implemented": false
+  },
+  {
+    "description": "Support copying schema as JSON for external use or documentation.",
+    "reference": "\u00a716.7",
+    "implemented": false
+  },
+  {
+    "description": "Provide test step feature to enter sample input data and preview output schema/structure.",
+    "reference": "\u00a716.7",
+    "implemented": false
+  },
+  {
+    "description": "Show schema diff when action version changes highlighting added/removed/changed fields.",
+    "reference": "\u00a716.7",
+    "implemented": false
   }
 ]

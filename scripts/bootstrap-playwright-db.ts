@@ -11,6 +11,31 @@ dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
 
 const require = createRequire(import.meta.url);
 
+function resolveSecretValue(raw?: string): string | undefined {
+  if (!raw) return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  const candidates: string[] = [trimmed];
+
+  // If running locally, a docker-style secret path often corresponds to ./secrets/<name>
+  if (trimmed.startsWith('/run/secrets/')) {
+    candidates.push(path.resolve(process.cwd(), 'secrets', path.basename(trimmed)));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      if (fsSync.existsSync(candidate) && fsSync.statSync(candidate).isFile()) {
+        return fsSync.readFileSync(candidate, 'utf8').trim();
+      }
+    } catch {
+      // ignore and fall back to next candidate / literal value
+    }
+  }
+
+  return trimmed;
+}
+
 class DirectoryMigrationSource {
   private readonly directory: string;
   private readonly filter?: (name: string) => boolean;
@@ -64,17 +89,17 @@ function getCfg(): DbCfg {
   const adminUser =
     process.env.PLAYWRIGHT_DB_ADMIN_USER ?? process.env.DB_USER_ADMIN ?? 'postgres';
   const adminPassword =
-    process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD ??
-    process.env.DB_PASSWORD_ADMIN ??
-    process.env.DB_PASSWORD ??
+    resolveSecretValue(process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD) ??
+    resolveSecretValue(process.env.DB_PASSWORD_ADMIN) ??
+    resolveSecretValue(process.env.DB_PASSWORD) ??
     'postpass123';
   const appUser =
     process.env.PLAYWRIGHT_DB_APP_USER ??
     process.env.DB_USER_SERVER ??
     'app_user';
   const appPassword =
-    process.env.PLAYWRIGHT_DB_APP_PASSWORD ??
-    process.env.DB_PASSWORD_SERVER ??
+    resolveSecretValue(process.env.PLAYWRIGHT_DB_APP_PASSWORD) ??
+    resolveSecretValue(process.env.DB_PASSWORD_SERVER) ??
     'postpass123';
   const ssl =
     (process.env.PLAYWRIGHT_DB_SSL ?? process.env.DB_SSL ?? '').toLowerCase() === 'true';

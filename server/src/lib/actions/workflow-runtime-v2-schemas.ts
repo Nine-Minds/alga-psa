@@ -39,6 +39,10 @@ export const UpdateWorkflowDefinitionMetadataInput = z.object({
   retentionPolicyOverride: z.record(z.any()).optional()
 });
 
+export const DeleteWorkflowDefinitionInput = z.object({
+  workflowId: z.string().min(1)
+});
+
 export const GetWorkflowDefinitionVersionInput = z.object({
   workflowId: z.string().min(1),
   version: versionNumber

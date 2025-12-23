@@ -145,12 +145,50 @@ const resolvedBaseUrl = process.env.PLAYWRIGHT_BASE_URL || `http://${webHost}:${
 
 process.env.PLAYWRIGHT_APP_PORT = String(resolvedWebPort);
 process.env.PLAYWRIGHT_APP_PORT_LOCKED = 'true';
-process.env.EE_BASE_URL = process.env.EE_BASE_URL || resolvedBaseUrl;
-process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || resolvedBaseUrl;
 process.env.HOST = process.env.HOST || resolvedBaseUrl;
 process.env.APP_PORT = process.env.APP_PORT || String(resolvedWebPort);
 process.env.EXPOSE_SERVER_PORT = process.env.EXPOSE_SERVER_PORT || String(resolvedWebPort);
 process.env.PORT = process.env.PORT || String(resolvedWebPort);
+
+function parseTruthyEnv(value?: string): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'y' || normalized === 'on';
+}
+
+// Decide whether Playwright should manage starting the dev server.
+// - In CI, some pipelines start the server externally and only want tests to connect.
+// - However, if no explicit base URL is provided, disabling webServer causes hard-to-debug ECONNREFUSED.
+const explicitBaseUrlProvided = Boolean(
+  process.env.PLAYWRIGHT_BASE_URL || process.env.EE_BASE_URL || process.env.NEXTAUTH_URL
+);
+const isCi = parseTruthyEnv(process.env.CI);
+const shouldRunWebServer =
+  process.env.PW_WEBSERVER === 'true'
+    ? true
+    : process.env.PW_WEBSERVER === 'false'
+      ? false
+      : !(isCi && explicitBaseUrlProvided);
+
+// If Playwright is managing the dev server, make the computed base URL authoritative.
+// This avoids a mismatch where an env file sets EE_BASE_URL/NEXTAUTH_URL to a different port.
+if (shouldRunWebServer && !process.env.PLAYWRIGHT_BASE_URL) {
+  process.env.EE_BASE_URL = resolvedBaseUrl;
+  process.env.NEXTAUTH_URL = resolvedBaseUrl;
+} else {
+  process.env.EE_BASE_URL = process.env.EE_BASE_URL || resolvedBaseUrl;
+  process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || resolvedBaseUrl;
+}
+
+console.log('[Playwright] webServer', {
+  CI: process.env.CI,
+  isCi,
+  explicitBaseUrlProvided,
+  shouldRunWebServer,
+  resolvedBaseUrl,
+  EE_BASE_URL: process.env.EE_BASE_URL,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+});
 
 /**
  * Playwright configuration for EE server integration tests
@@ -245,7 +283,7 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: process.env.CI ? undefined : {
+  webServer: shouldRunWebServer ? {
     // Reset DB once per session before starting the dev server.
     command: 'cd ../../ && node --import tsx/esm scripts/bootstrap-playwright-db.ts && NEXT_PUBLIC_EDITION=enterprise npm run dev',
     url: resolvedBaseUrl,
@@ -270,15 +308,16 @@ export default defineConfig({
       NEXT_PUBLIC_EXTERNAL_APP_URL: resolvedBaseUrl,
       NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'test-nextauth-secret',
       NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? 'true',
-      DB_HOST: process.env.DB_HOST,
-      DB_PORT: process.env.DB_PORT,
-      DB_NAME: process.env.DB_NAME,
-      DB_NAME_SERVER: process.env.DB_NAME_SERVER,
-      DB_USER: process.env.DB_USER,
-      DB_PASSWORD: process.env.DB_PASSWORD,
-      DB_USER_SERVER: process.env.DB_USER_SERVER,
-      DB_PASSWORD_SERVER: process.env.DB_PASSWORD_SERVER,
-      DB_PASSWORD_ADMIN: process.env.DB_PASSWORD_ADMIN,
+      // Explicitly set DB config for Playwright - override server/.env settings
+      DB_HOST: process.env.PLAYWRIGHT_DB_HOST || process.env.DB_HOST || 'localhost',
+      DB_PORT: process.env.PLAYWRIGHT_DB_PORT || process.env.DB_PORT || '5439',
+      DB_NAME: process.env.PLAYWRIGHT_DB_NAME || process.env.DB_NAME || 'alga_contract_wizard_test',
+      DB_NAME_SERVER: process.env.PLAYWRIGHT_DB_NAME || process.env.DB_NAME_SERVER || 'alga_contract_wizard_test',
+      DB_USER: process.env.PLAYWRIGHT_DB_ADMIN_USER || process.env.DB_USER || 'postgres',
+      DB_PASSWORD: process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD || process.env.DB_PASSWORD || '',
+      DB_USER_SERVER: process.env.PLAYWRIGHT_DB_ADMIN_USER || process.env.DB_USER_SERVER || 'postgres',
+      DB_PASSWORD_SERVER: process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD || process.env.DB_PASSWORD_SERVER || '',
+      DB_PASSWORD_ADMIN: process.env.PLAYWRIGHT_DB_ADMIN_PASSWORD || process.env.DB_PASSWORD_ADMIN || '',
       // Use S3/MinIO for file uploads (not local storage)
       // MinIO test instance runs on port 9002 (separate from Payload MinIO on 9000)
       STORAGE_DEFAULT_PROVIDER: 's3', // Use S3/MinIO instead of local storage
@@ -289,7 +328,7 @@ export default defineConfig({
       STORAGE_S3_REGION: process.env.STORAGE_S3_REGION || 'us-east-1',
       STORAGE_S3_FORCE_PATH_STYLE: process.env.STORAGE_S3_FORCE_PATH_STYLE || 'true',
     }
-  },
+  } : undefined,
 
   /* Global test timeout */
   timeout: 60000,

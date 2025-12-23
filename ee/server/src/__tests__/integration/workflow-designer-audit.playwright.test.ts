@@ -128,8 +128,10 @@ async function restoreWorkflowDefinitions(db: Knex, snapshot: WorkflowDefinition
 
 async function openAuditTab(page: Page, tenantId: string, workflowName?: string): Promise<void> {
   await page.context().setExtraHTTPHeaders({ 'x-tenant-id': tenantId });
+
   await page.goto(`${TEST_CONFIG.baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForLoadState('networkidle', { timeout: 30_000 });
+
   await page.goto(`${TEST_CONFIG.baseUrl}/msp/workflows`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   if (workflowName) {
     await page.getByRole('button', { name: workflowName }).click();
