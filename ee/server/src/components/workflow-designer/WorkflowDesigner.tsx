@@ -223,6 +223,14 @@ type DataContext = {
     meta: SchemaField[];
     error: SchemaField[];
   };
+  // §17.3.1 - forEach loop context (available when editing steps inside forEach)
+  forEach?: {
+    itemVar: string;
+    indexVar: string;
+    itemType?: string;
+  };
+  // §17.3.1 - Indicates if we're inside a catch block (error context is available)
+  inCatchBlock?: boolean;
 };
 
 // Extract fields from a JSON Schema for display
@@ -336,6 +344,12 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
   });
 };
 
+// Block context for tracking forEach and catch blocks
+type BlockContext = {
+  forEach?: { itemVar: string; indexVar: string; itemType?: string };
+  inCatchBlock?: boolean;
+};
+
 // Build data context for a specific step position in the workflow
 const buildDataContext = (
   definition: WorkflowDefinition,
@@ -365,9 +379,13 @@ const buildDataContext = (
   };
 
   // Walk through steps to build context up to currentStepId
-  const walkSteps = (steps: Step[], stopAtId: string): boolean => {
+  // Returns the block context if the target step is found
+  const walkSteps = (steps: Step[], stopAtId: string, blockCtx: BlockContext): BlockContext | null => {
     for (const step of steps) {
-      if (step.id === stopAtId) return true;
+      if (step.id === stopAtId) {
+        // Found the target step - return the current block context
+        return blockCtx;
+      }
 
       // Handle any node step (not control blocks) that has saveAs configured
       if (!step.type.startsWith('control.')) {
@@ -416,24 +434,53 @@ const buildDataContext = (
         }
       }
 
-      // Walk nested blocks
+      // Walk nested blocks with updated context
       if (step.type === 'control.if') {
         const ifBlock = step as IfBlock;
-        if (walkSteps(ifBlock.then, stopAtId)) return true;
-        if (ifBlock.else && walkSteps(ifBlock.else, stopAtId)) return true;
+        const found = walkSteps(ifBlock.then, stopAtId, blockCtx);
+        if (found) return found;
+        if (ifBlock.else) {
+          const foundElse = walkSteps(ifBlock.else, stopAtId, blockCtx);
+          if (foundElse) return foundElse;
+        }
       } else if (step.type === 'control.forEach') {
         const forEachBlock = step as ForEachBlock;
-        if (walkSteps(forEachBlock.body, stopAtId)) return true;
+        // §17.3.1 - Pass forEach context to child steps
+        const forEachCtx: BlockContext = {
+          ...blockCtx,
+          forEach: {
+            itemVar: forEachBlock.itemVar,
+            indexVar: '$index',
+            itemType: 'any' // Could be inferred from items expression if needed
+          }
+        };
+        const found = walkSteps(forEachBlock.body, stopAtId, forEachCtx);
+        if (found) return found;
       } else if (step.type === 'control.tryCatch') {
         const tryCatchBlock = step as TryCatchBlock;
-        if (walkSteps(tryCatchBlock.try, stopAtId)) return true;
-        if (walkSteps(tryCatchBlock.catch, stopAtId)) return true;
+        const foundTry = walkSteps(tryCatchBlock.try, stopAtId, blockCtx);
+        if (foundTry) return foundTry;
+        // §17.3.1 - Pass catch block context (error is available)
+        const catchCtx: BlockContext = { ...blockCtx, inCatchBlock: true };
+        const foundCatch = walkSteps(tryCatchBlock.catch, stopAtId, catchCtx);
+        if (foundCatch) return foundCatch;
       }
     }
-    return false;
+    return null;
   };
 
-  walkSteps(definition.steps, currentStepId);
+  const foundBlockCtx = walkSteps(definition.steps, currentStepId, {});
+
+  // Apply block context to DataContext
+  if (foundBlockCtx) {
+    if (foundBlockCtx.forEach) {
+      context.forEach = foundBlockCtx.forEach;
+    }
+    if (foundBlockCtx.inCatchBlock) {
+      context.inCatchBlock = true;
+    }
+  }
+
   return context;
 };
 
@@ -856,6 +903,18 @@ const buildEnhancedFieldOptions = (
         }
       });
     });
+
+    // §17.3.1 - Add forEach item and index when inside a forEach loop
+    if (dataContext.forEach) {
+      options.push({
+        value: dataContext.forEach.itemVar,
+        label: `🔄 ${dataContext.forEach.itemVar} (current item)`
+      });
+      options.push({
+        value: dataContext.forEach.indexVar,
+        label: `🔢 ${dataContext.forEach.indexVar} (loop index)`
+      });
+    }
   }
 
   return options;
