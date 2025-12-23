@@ -1772,12 +1772,12 @@
   {
     "description": "Enhance field picker to show previous step outputs organized by step name in addition to payload schema.",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add global variables (env, secrets) to field picker with appropriate access patterns.",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide visual tree browser in field picker for navigating complex nested structures.",
@@ -1792,7 +1792,7 @@
   {
     "description": "Show warning when expression references a step that executes after the current step (order dependency violation).",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show type mismatch warnings when passing incompatible types between steps (e.g., string where number expected).",
@@ -1832,7 +1832,7 @@
   {
     "description": "Enhance pre-publish validation to check all expressions reference valid paths in available schemas.",
     "reference": "§16.5",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Enhance pre-publish validation to verify required inputs are provided or have valid expressions.",
