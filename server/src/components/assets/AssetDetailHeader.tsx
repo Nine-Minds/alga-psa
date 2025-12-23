@@ -11,9 +11,11 @@ import {
   Edit,
   Trash2,
   RefreshCw,
-  Power
+  Power,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
+import BackNav from 'server/src/components/ui/BackNav';
 import { StatusBadge } from './shared/StatusBadge';
 import { Asset } from '../../interfaces/asset.interfaces';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
@@ -64,6 +66,13 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
     <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 bg-white border-b border-gray-200">
         <div className="flex items-center gap-4">
+          <BackNav href="/msp/assets">
+            <div className="flex items-center gap-2">
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">Back to Assets</span>
+            </div>
+          </BackNav>
+          <div className="h-10 w-px bg-gray-200 mx-2 hidden md:block" />
           <Icon size={40} className="text-gray-700" />
           <div>
             <div className="flex items-center gap-2">
