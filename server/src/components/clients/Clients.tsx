@@ -562,17 +562,17 @@ const Clients: React.FC = () => {
         return;
       }
 
-      await refreshClients();
-
       if (result.contactsDeactivated > 0) {
         toast.success(`${clientName} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
       } else {
         toast.success(`${clientName} has been marked as inactive successfully.`);
       }
+
+      // Close dialog first, then refresh
+      resetDeleteState();
+      await refreshClients();
     } catch (error: any) {
       handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
-    } finally {
-      resetDeleteState();
     }
   };
 
@@ -590,12 +590,13 @@ const Clients: React.FC = () => {
         return;
       }
 
-      await refreshClients();
       toast.success(`${clientName} has been marked as inactive successfully.`);
+
+      // Close dialog first, then refresh
+      resetDeleteState();
+      await refreshClients();
     } catch (error: any) {
       handleError(error, 'An error occurred while marking the client as inactive. Please try again.');
-    } finally {
-      resetDeleteState();
     }
   };
 
