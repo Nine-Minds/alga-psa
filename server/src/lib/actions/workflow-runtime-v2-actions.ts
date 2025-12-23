@@ -27,6 +27,7 @@ import { auditLog } from 'server/src/lib/logging/auditLog';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import {
   CreateWorkflowDefinitionInput,
+  DeleteWorkflowDefinitionInput,
   GetWorkflowDefinitionVersionInput,
   PublishWorkflowDefinitionInput,
   RunIdInput,
@@ -363,6 +364,75 @@ export async function updateWorkflowDefinitionMetadataAction(input: unknown) {
   });
 
   return updated;
+}
+
+export async function deleteWorkflowDefinitionAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = DeleteWorkflowDefinitionInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'manage', knex);
+
+  const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  if (!current) {
+    return throwHttpError(404, 'Not found');
+  }
+  if (current.is_system) {
+    return throwHttpError(403, 'System workflows cannot be deleted');
+  }
+
+  // Check for active runs
+  const activeRuns = await knex('workflow_runs')
+    .where({ workflow_id: parsed.workflowId })
+    .whereIn('status', ['RUNNING', 'WAITING'])
+    .count('* as count')
+    .first();
+
+  if (activeRuns && Number(activeRuns.count) > 0) {
+    return throwHttpError(409, 'Cannot delete workflow with active runs. Cancel all runs first.');
+  }
+
+  // Delete related records in order (respecting foreign key constraints)
+  await knex.transaction(async (trx) => {
+    // Delete run-related data
+    const runIds = await trx('workflow_runs')
+      .where({ workflow_id: parsed.workflowId })
+      .pluck('run_id');
+
+    if (runIds.length > 0) {
+      await trx('workflow_run_logs').whereIn('run_id', runIds).del();
+      await trx('workflow_action_invocations').whereIn('run_id', runIds).del();
+      await trx('workflow_run_snapshots').whereIn('run_id', runIds).del();
+      await trx('workflow_run_waits').whereIn('run_id', runIds).del();
+      await trx('workflow_run_steps').whereIn('run_id', runIds).del();
+      await trx('workflow_runs').whereIn('run_id', runIds).del();
+    }
+
+    // Delete versions
+    await trx('workflow_definition_versions')
+      .where({ workflow_id: parsed.workflowId })
+      .del();
+
+    // Delete the definition
+    await trx('workflow_definitions')
+      .where({ workflow_id: parsed.workflowId })
+      .del();
+  });
+
+  await auditWorkflowEvent(knex, user, {
+    operation: 'workflow_definition_delete',
+    tableName: 'workflow_definitions',
+    recordId: parsed.workflowId,
+    changedData: {
+      name: current.name,
+      status: current.status
+    },
+    details: {
+      deletedAt: new Date().toISOString()
+    },
+    source: 'api'
+  });
+
+  return { deleted: true, workflowId: parsed.workflowId };
 }
 
 export async function publishWorkflowDefinitionAction(input: unknown) {

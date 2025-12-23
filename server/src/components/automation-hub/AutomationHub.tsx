@@ -1,139 +1,92 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Card } from 'server/src/components/ui/Card';
+import React, { useState, useCallback } from 'react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import CustomTabs from 'server/src/components/ui/CustomTabs';
-import { LayoutTemplate, Code2, Bell, History } from 'lucide-react';
+import { DnDFlow as WorkflowDesigner } from '@product/workflows/entry';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from 'server/src/components/ui/Tabs';
+import WorkflowList from './WorkflowList';
+import { List, PenTool, Play, Zap } from 'lucide-react';
 
-// Import tab content components
-import TemplateLibrary from 'server/src/components/automation-hub/TemplateLibrary';
-import Workflows from 'server/src/components/automation-hub/Workflows';
-import EventsCatalog from 'server/src/components/automation-hub/EventsCatalog';
-import LogsHistory from 'server/src/components/automation-hub/LogsHistory';
-import FeatureFlagPageWrapper from '../FeatureFlagPageWrapper';
+type TabValue = 'workflows' | 'designer' | 'runs' | 'events';
 
 export default function AutomationHub() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  
-  // Get current tab from URL or default to template-library
-  const currentTab = searchParams?.get('tab') || 'template-library';
-  
-  // Get execution ID for logs history if present
-  const executionId = searchParams?.get('executionId');
-  
-  // Get workflow ID if present
-  const workflowId = searchParams?.get('workflowId');
-  
-  const handleTabChange = (value: string) => {
-    // Preserve other query parameters like executionId and workflowId
-    const params = new URLSearchParams(searchParams?.toString() || '');
-    params.set('tab', value);
-    
-    // If switching away from logs-history tab, remove executionId
-    if (value !== 'logs-history') {
-      params.delete('executionId');
-    }
-    
-    // If switching away from workflows tab, remove workflowId
-    if (value !== 'workflows') {
-      params.delete('workflowId');
-    }
-    
-    router.push(`/msp/automation-hub?${params.toString()}`);
-  };
+  const [activeTab, setActiveTab] = useState<TabValue>('workflows');
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
 
-  // Define the tabs for the navigation
-  const tabs = [
-    {
-      label: 'Template Library',
-      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><TemplateLibrary /></FeatureFlagPageWrapper>
-    },
-    {
-      label: 'Workflows',
-      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><Workflows workflowId={workflowId} /></FeatureFlagPageWrapper>
-    },
-    {
-      label: 'Events Catalog',
-      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><EventsCatalog /></FeatureFlagPageWrapper>
-    },
-    {
-      label: 'Logs & History',
-      content: <LogsHistory />,
-    },
-  ];
+  const handleSelectWorkflow = useCallback((workflowId: string) => {
+    setSelectedWorkflowId(workflowId);
+    setActiveTab('designer');
+  }, []);
 
-  // Map tab labels to their respective URL parameter values
-  const tabValues: Record<string, string> = {
-    'Template Library': 'template-library',
-    'Workflows': 'workflows',
-    'Events Catalog': 'events-catalog',
-    'Logs & History': 'logs-history',
-  };
-
-  // Map URL parameter values to tab labels
-  const valueToLabel: Record<string, string> = {
-    'template-library': 'Template Library',
-    'workflows': 'Workflows',
-    'events-catalog': 'Events Catalog',
-    'logs-history': 'Logs & History',
-  };
-
-  // Get the active tab label based on the URL parameter
-  const getActiveTab = () => {
-    return valueToLabel[currentTab] || 'Template Library';
-  };
-
-  // Update URLs in components to use the new tab-based navigation
-  useEffect(() => {
-    // Update any links in the document that point to the old URLs
-    const updateLinks = () => {
-      const links = document.querySelectorAll('a[href^="/msp/automation-hub/"]');
-      links.forEach(link => {
-        const href = link.getAttribute('href');
-        if (href) {
-          // Extract the section from the URL
-          const section = href.split('/').pop();
-          if (section && ['template-library', 'workflows', 'events-catalog', 'logs-history'].includes(section)) {
-            link.setAttribute('href', `/msp/automation-hub?tab=${section}`);
-          }
-        }
-      });
-    };
-    
-    // Run after render
-    setTimeout(updateLinks, 100);
-  }, [currentTab]);
+  const handleCreateNew = useCallback(() => {
+    setSelectedWorkflowId(null);
+    setActiveTab('designer');
+  }, []);
 
   return (
     <ReflectionContainer id="automation-hub-container" label="Automation Hub">
       <div className="flex flex-col h-full">
-        <Card className="p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-4 text-gray-900">Automation Hub</h1>
-          <p className="text-gray-600 mb-6">
-            Create, manage, and monitor TypeScript-based workflows with event-based triggers
-          </p>
-          
-          <CustomTabs
-            tabs={tabs}
-            defaultTab={getActiveTab()}
-            onTabChange={(tabLabel) => {
-              const tabValue = tabValues[tabLabel];
-              if (tabValue) {
-                handleTabChange(tabValue);
-              }
-            }}
-            tabStyles={{
-              root: "flex flex-col h-full",
-              list: "-mb-px",
-              trigger: "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm",
-              activeTrigger: "data-[state=active]:border-primary-500 data-[state=active]:text-primary-600",
-              content: "flex-1 overflow-auto mt-4", // Style the content properly
-            }}
-          />
-        </Card>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+          <div className="border-b border-[rgb(var(--color-border-200))] bg-white px-6">
+            <TabsList className="gap-1 -mb-px">
+              <TabsTrigger value="workflows" className="flex items-center gap-2">
+                <List className="w-4 h-4" />
+                Workflows
+              </TabsTrigger>
+              <TabsTrigger value="designer" className="flex items-center gap-2">
+                <PenTool className="w-4 h-4" />
+                Designer
+              </TabsTrigger>
+              <TabsTrigger value="runs" className="flex items-center gap-2">
+                <Play className="w-4 h-4" />
+                Runs
+              </TabsTrigger>
+              <TabsTrigger value="events" className="flex items-center gap-2">
+                <Zap className="w-4 h-4" />
+                Events
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="workflows" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
+            <WorkflowList
+              onSelectWorkflow={handleSelectWorkflow}
+              onCreateNew={handleCreateNew}
+            />
+          </TabsContent>
+
+          <TabsContent value="designer" className="flex-1 overflow-hidden">
+            <WorkflowDesigner />
+          </TabsContent>
+
+          <TabsContent value="runs" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="w-16 h-16 rounded-full bg-[rgb(var(--color-border-100))] flex items-center justify-center mb-4">
+                <Play className="w-8 h-8 text-[rgb(var(--color-text-400))]" />
+              </div>
+              <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
+                Workflow Runs
+              </h3>
+              <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md">
+                View and manage workflow execution history. This feature is coming soon.
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="events" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="w-16 h-16 rounded-full bg-[rgb(var(--color-border-100))] flex items-center justify-center mb-4">
+                <Zap className="w-8 h-8 text-[rgb(var(--color-text-400))]" />
+              </div>
+              <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
+                Workflow Events
+              </h3>
+              <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md">
+                Monitor events that trigger workflows. This feature is coming soon.
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </ReflectionContainer>
   );

@@ -1,13 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import Sidebar from './Sidebar';
-import { useEffect } from 'react';
 import {
   navigationSections as originalSections,
   bottomMenuItems,
-  MenuItem,
   NavigationSection,
   menuItems as legacyMenuItems,
   NavMode
@@ -23,8 +21,6 @@ interface SidebarWithFeatureFlagsProps {
 }
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
-  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
-  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections = typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
 
@@ -45,21 +41,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       ];
     }
 
-    return originalSections.map((section) => ({
-      ...section,
-      items: section.items.map((item) => {
-        if (item.name === 'Automation Hub' && !isAdvancedFeaturesEnabled) {
-          return {
-            ...item,
-            href: '/msp/automation-hub',
-            subItems: undefined,
-            underConstruction: true
-          } as MenuItem;
-        }
-        return item;
-      })
-    }));
-  }, [isAdvancedFeaturesEnabled, useNavigationSections]);
+    // Automation Hub is now fully available with the new workflow designer
+    return originalSections;
+  }, [useNavigationSections]);
 
   return (
     <Sidebar

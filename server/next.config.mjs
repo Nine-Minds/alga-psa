@@ -13,7 +13,7 @@ try {
 }
 
 // Determine if this is an EE build
-const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+const isEE = process.env.EDITION === 'ee' || process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 // DEBUG LOGGING - Remove after troubleshooting
 console.log('=== BUILD DEBUG ===');

@@ -681,6 +681,163 @@ The MVP runtime and designer must be production‑ready for operators and tenant
 
 ---
 
+## 15. Workflow List Screen
+
+The Workflow List provides a central hub for discovering, managing, and navigating to workflow definitions.
+
+### 15.1 List Display and Filtering
+
+- Sortable table with columns: name, description, status, version, last modified, trigger type.
+- Text search/filter by workflow name and description.
+- Status filter (active, draft, paused, archived).
+- Trigger type filter (event-based, scheduled, manual).
+- Cursor-based pagination for large lists.
+- Summary counts (total, active, draft, paused).
+
+### 15.2 Status and Metadata Display
+
+- Status badge with color coding (active/draft/paused/archived).
+- Published version number with draft indicator for unpublished changes.
+- Last modified timestamp with relative time display.
+- Trigger type icon/badge for quick identification.
+
+### 15.3 Actions and Navigation
+
+- Create New Workflow button with type selection.
+- Row click to open workflow in designer.
+- Quick-action menu: Edit, Duplicate, Pause/Resume, Archive, Delete.
+- Bulk selection with bulk actions (pause, resume, archive, delete).
+- Confirmation dialogs for destructive actions.
+- View Runs action to navigate to filtered run list.
+
+### 15.4 Navigation and URL State
+
+- Tab navigation between Workflows, Runs, and Events views.
+- URL-based filtering for shareable filtered views.
+
+### 15.5 Empty and Loading States
+
+- Empty state with illustration and "Create your first workflow" CTA.
+- Skeleton loading state while fetching.
+- "No results" state with suggestions when filters return empty.
+
+---
+
+## 16. Designer Schema Exposure
+
+Users need visibility into action input/output schemas to understand data flow, author expressions correctly, and debug workflows. This section specifies how schemas are surfaced in the GUI designer.
+
+### 16.1 Step Configuration Panel Schema Reference
+
+**Purpose:** Show input and output schemas directly in the step configuration panel so users understand what data a step expects and produces.
+
+**Required UI capabilities:**
+- Collapsible "Input Schema" section listing all input fields with name, type, required/optional indicator, description, and default value.
+- Collapsible "Output Schema" section listing all output fields with name, type, nullable indicator, and hierarchical nested structure display.
+- "Copy path" button for each output field that copies the expression syntax (e.g., `${vars.stepName.ticket_id}`).
+- When `saveAs` is configured, show preview text: "Output will be available at `${vars.myStep.*}`".
+- Validate `saveAs` does not conflict with existing variable names; show warning if it does.
+
+### 16.2 Expression Authoring
+
+**Purpose:** Provide intelligent autocomplete and validation for expression fields so users can discover and reference available data without guessing.
+
+**Required UI capabilities:**
+- Context-aware autocomplete when typing `${vars.` that shows all previous steps with their `saveAs` names.
+- Drill-down autocomplete into output schemas (e.g., `${vars.createTicket.` shows `ticket_id`, `ticket_number`).
+- Support nested path autocomplete for complex structures (e.g., `${vars.parseEmail.parsed.headers.subject}`).
+- Enhanced field picker showing:
+  - Payload schema fields (current behavior).
+  - Previous step outputs organized by step name.
+  - Global variables (`env`, `secrets`) with appropriate access patterns.
+  - Visual tree browser for navigating complex nested structures.
+- Real-time expression validation:
+  - Check that referenced paths exist in available schemas.
+  - Warn when referencing a step that executes after the current step (order dependency).
+  - Warn on type mismatches (e.g., passing string where number expected).
+
+### 16.3 Visual Data Flow
+
+**Purpose:** Help users understand data flow through the workflow at a glance.
+
+**Required UI capabilities:**
+- Optional edge labels/annotations showing data shape between nodes (toggle-able; collapsed shows "3 fields").
+- Step output preview badge on each node showing output availability with hover for quick schema summary.
+- Data Flow sidebar/panel showing available data context at any selected step:
+  - Payload fields.
+  - Variables by source step.
+  - Environment variables.
+  - Available secrets.
+
+### 16.4 Documentation and Help
+
+**Purpose:** Provide contextual help so users can understand actions without leaving the designer.
+
+**Required UI capabilities:**
+- Action documentation panel when selecting an action type showing description, examples, and common use cases.
+- Schema tooltips on hover for any field in config forms showing type, constraints, description, and examples.
+- "What can I access here?" helper button in expression fields that opens contextual field picker with explanation.
+
+### 16.5 Validation and Error Handling
+
+**Purpose:** Catch schema-related errors early and provide actionable feedback.
+
+**Required capabilities:**
+- Pre-publish validation:
+  - Check all expressions reference valid paths in available schemas.
+  - Verify required inputs are provided or have valid expressions.
+  - Check type compatibility where determinable at publish time.
+- Runtime error context:
+  - Show which input field caused validation failure.
+  - Display expected type vs actual value received.
+- Missing mapping warnings:
+  - Warn when action has required inputs that are not mapped.
+  - Suggest fields from available context that match the expected type.
+
+### 16.6 Schema Discovery and Registry
+
+**Purpose:** Help users find the right action for their needs and understand its contract.
+
+**Required UI capabilities:**
+- Action browser/palette with input/output schema preview when browsing available actions.
+- Filterable by category, searchable by field name (e.g., find actions that return `ticket_id`).
+- Summary text: "This action returns: ticket_id, ticket_number, ..." in action browser entries.
+- Document node type schemas for non-action nodes (conditions, loops) including special behaviors (e.g., `forEach` exposes `item` and `index` variables).
+
+### 16.7 Developer Experience
+
+**Purpose:** Support power users and debugging scenarios.
+
+**Required UI capabilities:**
+- JSON Schema view toggle to see raw schema definition.
+- Copy schema as JSON for external use or documentation.
+- Test step feature to enter sample input data and preview output schema/structure.
+- Schema diff when action version changes highlighting added/removed/changed fields.
+
+### 16.8 Implementation Notes
+
+**Data sources for schema information:**
+- `ActionRegistry` provides `inputSchema` and `outputSchema` (Zod schemas convertible to JSON Schema).
+- `NodeTypeRegistry` provides `configSchema` for node configuration.
+- Published workflow versions store `payload_schema_json` for payload field discovery.
+- Step `saveAs` configuration determines where outputs are stored in `vars`.
+
+**Schema resolution at design time:**
+1. Load action registry to get all available actions with their schemas.
+2. For the current workflow, build a "data context" map that tracks what's available at each step:
+   - Start with `payload` (from `payloadSchemaRef`).
+   - After each step with `saveAs`, add `vars.{saveAs}` with the action's output schema.
+   - Track `env` and `secrets` as global scopes.
+3. Use this context map to power autocomplete, validation, and the data flow panel.
+
+**Priority order for implementation:**
+1. P0 (Essential): Input/Output schema reference sections, context-aware autocomplete, field picker enhancement.
+2. P1 (Important): SaveAs preview, expression validation, pre-publish schema checks, missing mapping warnings.
+3. P2 (Valuable): Data flow panel, action documentation, schema tooltips, action browser enhancements.
+4. P3 (Nice to have): Edge labels, JSON schema toggle, test step feature, schema diff.
+
+---
+
 ## Appendix A: Validation Error Format (Publish-Time)
 
 ```typescript
