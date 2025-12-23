@@ -13,6 +13,7 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import { ISO8601String } from 'server/src/types/types.d';
@@ -99,7 +100,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[]>([]);
   const [showContractLineSelector, setShowContractLineSelector] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
-  const prevServiceIdRef = useRef<string | undefined | null>(undefined);
+  const prevServiceIdRef = useRef<string | undefined | null>();
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (entry?.start_time) {
       return parseISO(entry.start_time);

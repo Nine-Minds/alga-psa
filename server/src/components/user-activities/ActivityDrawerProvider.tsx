@@ -67,9 +67,9 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
   }), [openActivityDrawer, selectedActivityId]);
   
   return (
-    <ActivityDrawerContext value={contextValue}>
+    <ActivityDrawerContext.Provider value={contextValue}>
       {children}
-    </ActivityDrawerContext>
+    </ActivityDrawerContext.Provider>
   );
 }
 

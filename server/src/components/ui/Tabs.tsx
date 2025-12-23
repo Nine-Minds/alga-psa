@@ -31,11 +31,11 @@ export function Tabs({
   ...props
 }: TabsProps) {
   return (
-    <TabsContext value={{ value, onValueChange }}>
+    <TabsContext.Provider value={{ value, onValueChange }}>
       <div className={cn('w-full', className)} {...props}>
         {children}
       </div>
-    </TabsContext>
+    </TabsContext.Provider>
   );
 }
 

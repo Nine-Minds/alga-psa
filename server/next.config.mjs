@@ -204,7 +204,7 @@ const nextConfig = {
         : '@product/client-portal-domain/oss/entry',
       '@product/workflows/entry': isEE
         ? '@product/workflows/ee/entry'
-        : './src/empty/components/flow/DnDFlow.tsx',
+        : '@product/workflows/oss/entry',
       '@product/billing/entry': isEE
         ? '@product/billing/ee/entry'
         : '@product/billing/oss/entry',

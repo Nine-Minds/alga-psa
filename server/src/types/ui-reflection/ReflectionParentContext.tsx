@@ -37,9 +37,9 @@ export function ReflectionParentProvider({
   const providerId = `provider_${Date.now()}_${++providerCounter}`;
 
   return (
-    <ReflectionParentContext value={value}>
+    <ReflectionParentContext.Provider value={value}>
       {children}
-    </ReflectionParentContext>
+    </ReflectionParentContext.Provider>
   );
 }
 

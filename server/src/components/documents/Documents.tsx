@@ -70,7 +70,7 @@ interface DocumentsProps {
   isLoading?: boolean;
   onDocumentCreated?: () => Promise<void>;
   isInDrawer?: boolean;
-  uploadFormRef?: React.RefObject<HTMLDivElement | null>;
+  uploadFormRef?: React.RefObject<HTMLDivElement>;
   filters?: DocumentFilters;
   namespace?: 'common' | 'clientPortal';
 }
@@ -89,7 +89,7 @@ const Documents = ({
   searchTermFromParent = '',
   filters,
   namespace = 'common'
-}: DocumentsProps): React.JSX.Element => {
+}: DocumentsProps): JSX.Element => {
   const { t } = useTranslation('common');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -179,7 +179,7 @@ const Documents = ({
   const [currentFolder, setCurrentFolder] = useState<string | null>(() => {
     // Initialize from URL on mount (only in folder mode)
     if (!entityId && !entityType) {
-      const folderParam = searchParams?.get('folder') ?? null;
+      const folderParam = searchParams.get('folder');
       return folderParam || null;
     }
     return null;
@@ -189,7 +189,7 @@ const Documents = ({
   // Sync currentFolder with URL changes (for breadcrumb navigation)
   useEffect(() => {
     if (!entityId && !entityType) {
-      const folderParam = searchParams?.get('folder') ?? null;
+      const folderParam = searchParams.get('folder');
       setCurrentFolder(folderParam || null);
     }
   }, [searchParams, entityId, entityType]);
@@ -338,7 +338,7 @@ const Documents = ({
 
     // Update URL to persist folder selection
     if (inFolderMode) {
-      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      const params = new URLSearchParams(searchParams.toString());
       if (folderPath) {
         params.set('folder', folderPath);
       } else {

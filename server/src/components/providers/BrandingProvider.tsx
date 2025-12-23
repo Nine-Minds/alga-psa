@@ -438,8 +438,8 @@ export function BrandingProvider({
   }, [branding]);
 
   return (
-    <BrandingContext value={{ branding, isLoading, refreshBranding: loadBranding }}>
+    <BrandingContext.Provider value={{ branding, isLoading, refreshBranding: loadBranding }}>
       {children}
-    </BrandingContext>
+    </BrandingContext.Provider>
   );
 }

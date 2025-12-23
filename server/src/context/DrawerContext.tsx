@@ -332,7 +332,7 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [state.isOpen, canGoBack, canGoForward]);
 
   return (
-    <DrawerContext value={{
+    <DrawerContext.Provider value={{
       openDrawer,
       replaceDrawer,
       closeDrawer,
@@ -422,7 +422,7 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           </div>
         )}
       </Drawer>
-    </DrawerContext>
+    </DrawerContext.Provider>
   );
 };
 
