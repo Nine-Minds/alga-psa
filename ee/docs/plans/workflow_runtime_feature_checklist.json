@@ -2722,7 +2722,7 @@
   {
     "description": "Log resolved input values (redacted) for run debugging.",
     "reference": "§17.6",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support dry-run mode to validate mappings without executing action.",
