@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
@@ -405,6 +405,75 @@ const LiteralValueEditor: React.FC<{
 };
 
 /**
+ * Auto-mapping suggestion for a target field.
+ */
+interface AutoMappingSuggestion {
+  targetField: string;
+  sourcePath: string;
+  confidence: 'exact' | 'fuzzy';
+}
+
+/**
+ * Find auto-mapping suggestions based on field name matching.
+ *
+ * @param targetFields - Fields to find suggestions for
+ * @param fieldOptions - Available source fields from data context
+ * @param currentMappings - Current mappings to exclude already-mapped fields
+ * @returns Array of suggestions with confidence levels
+ */
+function findAutoMappingSuggestions(
+  targetFields: ActionInputField[],
+  fieldOptions: SelectOption[],
+  currentMappings: InputMapping
+): AutoMappingSuggestion[] {
+  const suggestions: AutoMappingSuggestion[] = [];
+  const mappedFields = new Set(Object.keys(currentMappings));
+
+  // Extract field names from options (e.g., "payload.ticketId" -> "ticketId")
+  const optionsByFieldName = new Map<string, string[]>();
+  fieldOptions.forEach(opt => {
+    const parts = opt.value.split('.');
+    const fieldName = parts[parts.length - 1].toLowerCase();
+    if (!optionsByFieldName.has(fieldName)) {
+      optionsByFieldName.set(fieldName, []);
+    }
+    optionsByFieldName.get(fieldName)!.push(opt.value);
+  });
+
+  for (const field of targetFields) {
+    // Skip already-mapped fields
+    if (mappedFields.has(field.name)) continue;
+
+    const fieldNameLower = field.name.toLowerCase();
+
+    // Try exact match first
+    const exactMatches = optionsByFieldName.get(fieldNameLower);
+    if (exactMatches && exactMatches.length > 0) {
+      suggestions.push({
+        targetField: field.name,
+        sourcePath: exactMatches[0],
+        confidence: 'exact'
+      });
+      continue;
+    }
+
+    // Try fuzzy match (contains)
+    for (const [optFieldName, optPaths] of optionsByFieldName) {
+      if (optFieldName.includes(fieldNameLower) || fieldNameLower.includes(optFieldName)) {
+        suggestions.push({
+          targetField: field.name,
+          sourcePath: optPaths[0],
+          confidence: 'fuzzy'
+        });
+        break;
+      }
+    }
+  }
+
+  return suggestions;
+}
+
+/**
  * InputMappingEditor component
  *
  * Provides a visual editor for mapping action inputs using expressions,
@@ -449,6 +518,34 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     };
   }, [targetFields, value]);
 
+  // §17.3.3 - Auto-mapping suggestions
+  const suggestions = useMemo(() =>
+    findAutoMappingSuggestions(targetFields, fieldOptions, value),
+    [targetFields, fieldOptions, value]
+  );
+
+  const suggestionMap = useMemo(() => {
+    const map = new Map<string, AutoMappingSuggestion>();
+    suggestions.forEach(s => map.set(s.targetField, s));
+    return map;
+  }, [suggestions]);
+
+  // Apply all auto-mapping suggestions
+  const handleAutoMapAll = useCallback(() => {
+    if (suggestions.length === 0) return;
+
+    const newMappings = { ...value };
+    suggestions.forEach(s => {
+      newMappings[s.targetField] = { $expr: s.sourcePath };
+    });
+    onChange(newMappings);
+  }, [suggestions, value, onChange]);
+
+  // Apply single suggestion
+  const handleApplySuggestion = useCallback((suggestion: AutoMappingSuggestion) => {
+    onChange({ ...value, [suggestion.targetField]: { $expr: suggestion.sourcePath } });
+  }, [value, onChange]);
+
   const handleFieldChange = useCallback((fieldName: string, newValue: MappingValue | undefined) => {
     if (newValue === undefined) {
       // Remove mapping
@@ -483,8 +580,24 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold">Input Mapping</Label>
-        <div className="text-xs text-gray-500">
-          {Object.keys(value).length} / {targetFields.length} fields mapped
+        <div className="flex items-center gap-3">
+          {/* §17.3.3 - Auto-map button */}
+          {suggestions.length > 0 && (
+            <Button
+              id={`auto-map-${stepId}`}
+              variant="ghost"
+              size="sm"
+              onClick={handleAutoMapAll}
+              disabled={disabled}
+              className="text-xs text-primary-600 hover:text-primary-700"
+            >
+              <Wand2 className="w-3.5 h-3.5 mr-1" />
+              Auto-map ({suggestions.length})
+            </Button>
+          )}
+          <div className="text-xs text-gray-500">
+            {Object.keys(value).length} / {targetFields.length} fields mapped
+          </div>
         </div>
       </div>
 
@@ -528,30 +641,60 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
 
           {showUnmapped && (
             <div className="space-y-1 pl-5">
-              {unmappedFields.map(field => (
-                <div
-                  key={field.name}
-                  className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700">{field.name}</span>
-                    {field.required && (
-                      <Badge className="text-xs bg-red-100 text-red-700">required</Badge>
-                    )}
-                    <span className="text-xs text-gray-400">{field.type}</span>
-                  </div>
-                  <Button
-                    id={`add-mapping-${stepId}-${field.name}`}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleAddMapping(field.name)}
-                    disabled={disabled}
+              {unmappedFields.map(field => {
+                const suggestion = suggestionMap.get(field.name);
+                return (
+                  <div
+                    key={field.name}
+                    className={`flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 ${
+                      suggestion ? 'bg-primary-50 border border-primary-100' : ''
+                    }`}
                   >
-                    <Plus className="w-3.5 h-3.5 mr-1" />
-                    Map
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-sm text-gray-700">{field.name}</span>
+                      {field.required && (
+                        <Badge className="text-xs bg-red-100 text-red-700">required</Badge>
+                      )}
+                      <span className="text-xs text-gray-400">{field.type}</span>
+                      {/* §17.3.3 - Show suggestion indicator */}
+                      {suggestion && (
+                        <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
+                          <Sparkles className="w-3 h-3" />
+                          <span className="truncate">← {suggestion.sourcePath}</span>
+                          {suggestion.confidence === 'fuzzy' && (
+                            <span className="text-primary-400">(fuzzy)</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {suggestion && (
+                        <Button
+                          id={`apply-suggestion-${stepId}-${field.name}`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleApplySuggestion(suggestion)}
+                          disabled={disabled}
+                          className="text-xs text-primary-600"
+                          title={`Apply suggestion: ${suggestion.sourcePath}`}
+                        >
+                          <Wand2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        id={`add-mapping-${stepId}-${field.name}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAddMapping(field.name)}
+                        disabled={disabled}
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-1" />
+                        Map
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
