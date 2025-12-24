@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
+import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -26,26 +27,30 @@ function getInternalUserInfo(request: NextRequest): { user_id: string; tenant: s
 }
 
 /**
- * Check if this is a runner service request with valid auth.
+ * Validate API key auth (used by extension uiProxy calls).
  */
-function getRunnerAuth(request: NextRequest): { user_id: string; tenant: string } | null {
-  const runnerAuth = request.headers.get('x-runner-auth');
-  const runnerTenant = request.headers.get('x-alga-tenant');
+async function getApiKeyAuth(request: NextRequest): Promise<{ user_id: string; tenant: string; email?: string } | null> {
+  const apiKey = request.headers.get('x-api-key');
   const extensionId = request.headers.get('x-alga-extension');
 
-  if (!runnerAuth || !runnerTenant) {
+  if (!apiKey) {
     return null;
   }
 
-  const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
-  if (!expectedToken || runnerAuth !== expectedToken) {
-    console.warn('[tenant-management/tenants] Invalid runner auth token');
+  const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+  if (!keyRecord) {
+    console.warn('[tenant-management/tenants] Invalid API key');
     return null;
   }
+
+  // Get user info from headers (forwarded by runner from ext-proxy)
+  const headerUserId = request.headers.get('x-user-id');
+  const headerUserEmail = request.headers.get('x-user-email');
 
   return {
-    user_id: extensionId ? `extension:${extensionId}` : 'runner',
-    tenant: runnerTenant,
+    user_id: headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id),
+    tenant: keyRecord.tenant,
+    email: headerUserEmail || undefined,
   };
 }
 
@@ -53,8 +58,8 @@ export async function GET(req: NextRequest) {
   try {
     // Check for internal ext-proxy request first
     const internalUser = getInternalUserInfo(req);
-    // Check for runner service auth
-    const runnerUser = getRunnerAuth(req);
+    // Check for API key auth (extension uiProxy calls)
+    const apiKeyUser = await getApiKeyAuth(req);
     let userTenant: string;
     let userId: string;
     let userEmail: string | undefined;
@@ -64,11 +69,11 @@ export async function GET(req: NextRequest) {
       userTenant = internalUser.tenant;
       userId = internalUser.user_id;
       userEmail = internalUser.email;
-    } else if (runnerUser) {
-      // Trust the runner service auth
-      userTenant = runnerUser.tenant;
-      userId = runnerUser.user_id;
-      userEmail = undefined;
+    } else if (apiKeyUser) {
+      // Trust the API key auth
+      userTenant = apiKeyUser.tenant;
+      userId = apiKeyUser.user_id;
+      userEmail = apiKeyUser.email;
     } else {
       // Normal request - get user from session
       const session = await getSession();

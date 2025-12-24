@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import {
   PlatformReportAuditService,
   extractClientInfo,
@@ -32,29 +33,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // RUNNER SERVICE AUTH
-    const runnerAuth = request.headers.get('x-runner-auth');
-    const runnerTenant = request.headers.get('x-alga-tenant');
+    // API KEY AUTH
+    const apiKey = request.headers.get('x-api-key');
     const extensionId = request.headers.get('x-alga-extension');
     let userId: string | undefined;
     let userEmail: string | undefined;
 
-    if (runnerAuth && runnerTenant) {
-      const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
-      if (expectedToken && runnerAuth === expectedToken) {
-        if (runnerTenant !== MASTER_BILLING_TENANT_ID) {
+    if (apiKey) {
+      const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+      if (keyRecord) {
+        if (keyRecord.tenant !== MASTER_BILLING_TENANT_ID) {
           return NextResponse.json(
             { success: false, error: 'Access denied' },
             { status: 403 }
           );
         }
-        userId = extensionId ? `extension:${extensionId}` : 'runner';
+        // Get user info from headers (forwarded by runner from ext-proxy)
+        const headerUserId = request.headers.get('x-user-id');
+        const headerUserEmail = request.headers.get('x-user-email');
+
+        userId = headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id);
+        userEmail = headerUserEmail || undefined;
       } else {
-        console.warn('[platform-reports/access] Invalid runner auth token');
+        console.warn('[platform-reports/access] Invalid API key');
       }
     }
 
-    // SESSION AUTH if runner auth didn't succeed
+    // SESSION AUTH if API key auth didn't succeed
     if (!userId) {
       const user = await getCurrentUser();
 

@@ -1,6 +1,40 @@
 import { NextRequest } from 'next/server';
 import { getSession } from 'server/src/lib/auth/getSession';
 
+export interface ExtProxyUserInfo {
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  user_type: string;
+}
+
+/**
+ * Get full user info from session for passing to runner.
+ * Returns null if no valid session exists.
+ */
+export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUserInfo | null> {
+  // Check for internal header first (not typically used for user info)
+  const headerTenant = req.headers.get('x-alga-tenant');
+  if (headerTenant) {
+    // When using header-based auth, we don't have user info
+    return null;
+  }
+
+  const session = await getSession();
+  const user = session?.user as any;
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    user_id: user.user_id || user.id || '',
+    user_email: user.email || '',
+    user_name: user.name || user.username || '',
+    user_type: user.user_type || 'internal',
+  };
+}
+
 export async function getTenantFromAuth(req: NextRequest): Promise<string> {
   // Minimal scaffolding:
   // - Prefer internal header `x-alga-tenant` (e.g., set by edge/auth middleware)

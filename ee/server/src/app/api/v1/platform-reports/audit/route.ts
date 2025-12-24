@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import {
   PlatformReportAuditService,
   AuditEventType,
@@ -21,26 +22,25 @@ const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
 /**
  * Verify the caller has access to audit logs.
- * Supports both runner service auth and session auth.
+ * Supports both API key auth and session auth.
  */
 async function assertMasterTenantAccess(request: NextRequest): Promise<string> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // RUNNER SERVICE AUTH
-  const runnerAuth = request.headers.get('x-runner-auth');
-  const runnerTenant = request.headers.get('x-alga-tenant');
+  // API KEY AUTH
+  const apiKey = request.headers.get('x-api-key');
 
-  if (runnerAuth && runnerTenant) {
-    const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
-    if (expectedToken && runnerAuth === expectedToken) {
-      if (runnerTenant === MASTER_BILLING_TENANT_ID) {
+  if (apiKey) {
+    const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+    if (keyRecord) {
+      if (keyRecord.tenant === MASTER_BILLING_TENANT_ID) {
         return MASTER_BILLING_TENANT_ID; // Auth OK
       }
-      throw new Error('Access denied: Extension not authorized for audit logs');
+      throw new Error('Access denied: API key not authorized for audit logs');
     }
-    console.warn('[platform-reports/audit] Invalid runner auth token');
+    console.warn('[platform-reports/audit] Invalid API key');
   }
 
   // SESSION AUTH
