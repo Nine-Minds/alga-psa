@@ -582,5 +582,108 @@
         "implemented": false
       }
     ]
+  },
+  {
+    "section": "Palette to Pipeline Drag & Drop Tests",
+    "tests": [
+      {
+        "id": "PPD-T001",
+        "description": "UI: Palette step items have drag cursor on hover. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-001",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T002",
+        "description": "UI: Dragging palette item shows ghost/preview at cursor. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-010",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T003",
+        "description": "UI: Drop zones appear in pipeline when dragging from palette. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-002",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T004",
+        "description": "UI: Drop zone between steps highlights on drag hover. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-006",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T005",
+        "description": "UI: Dropping palette item between steps inserts at that position. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-007",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T006",
+        "description": "UI: Dropping palette item at pipeline start inserts as first step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-004",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T007",
+        "description": "UI: Dropping palette item at pipeline end appends as last step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-005",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T008",
+        "description": "UI: Dropping on empty pipeline creates first step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-008",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T009",
+        "description": "UI: Dropping palette item into THEN branch adds step to THEN. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-009",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T010",
+        "description": "UI: Dropping palette item into ELSE branch adds step to ELSE. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-009",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T011",
+        "description": "UI: Dropping palette item into forEach BODY adds step to body. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-009",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T012",
+        "description": "UI: Newly dropped step is automatically selected. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-011",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T013",
+        "description": "UI: Drag cancel (Escape key) does not create step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-001",
+        "implemented": false
+      },
+      {
+        "id": "PPD-T014",
+        "description": "UI: Dropping outside valid zone does not create step. Mocks: non-target dependencies.",
+        "reference": "playwright integration (mocks for non-target dependencies)",
+        "featureRef": "PPD-002",
+        "implemented": false
+      }
+    ]
   }
 ]

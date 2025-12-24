@@ -1056,6 +1056,8 @@ const WorkflowDesigner: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [selectedPipePath, setSelectedPipePath] = useState<string>('root');
+  // For insert-between functionality: stores where to insert the next step
+  const [pendingInsertPosition, setPendingInsertPosition] = useState<{ pipePath: string; index: number } | null>(null);
   const [publishErrors, setPublishErrors] = useState<PublishError[]>([]);
   const [publishWarnings, setPublishWarnings] = useState<PublishError[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -1365,6 +1367,7 @@ const WorkflowDesigner: React.FC = () => {
 
   // §16.6 - Enhanced handleAddStep to accept initial config (for pre-configured action items)
   // §19.4 - Auto-generate saveAs name for action.call steps
+  // IBF - Supports insert-between via pendingInsertPosition
   const handleAddStep = (type: Step['type'], initialConfig?: Record<string, unknown>) => {
     if (!activeDefinition) return;
     let newStep = createStepFromPalette(type, nodeRegistryMap);
@@ -1387,12 +1390,30 @@ const WorkflowDesigner: React.FC = () => {
         }
       };
     }
-    const segments = parsePipePath(selectedPipePath);
+
+    // Use pending insert position if set, otherwise append to selected pipe
+    const pipePath = pendingInsertPosition?.pipePath ?? selectedPipePath;
+    const insertIndex = pendingInsertPosition?.index;
+
+    const segments = parsePipePath(pipePath);
     const steps = getStepsAtPath(activeDefinition.steps as Step[], segments);
-    const nextSteps = [...steps, newStep];
+
+    // Insert at specific index or append
+    let nextSteps: Step[];
+    if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= steps.length) {
+      nextSteps = [...steps.slice(0, insertIndex), newStep, ...steps.slice(insertIndex)];
+    } else {
+      nextSteps = [...steps, newStep];
+    }
+
     const updatedSteps = updateStepsAtPath(activeDefinition.steps as Step[], segments, nextSteps);
     setActiveDefinition({ ...activeDefinition, steps: updatedSteps });
     setSelectedStepId(newStep.id);
+
+    // Clear pending insert position after use
+    if (pendingInsertPosition) {
+      setPendingInsertPosition(null);
+    }
   };
 
   const handleDeleteStep = (stepId: string) => {
@@ -1410,6 +1431,14 @@ const WorkflowDesigner: React.FC = () => {
       steps: updateStepById(activeDefinition.steps as Step[], stepId, updater)
     });
   };
+
+  // IBF - Handle insert-between: set pending position and update selected pipe
+  const handleInsertStep = useCallback((pipePath: string, index: number) => {
+    setPendingInsertPosition({ pipePath, index });
+    setSelectedPipePath(pipePath);
+    // Focus the palette to help user understand they should select a step type
+    // The palette already shows "Insert into" which now points to the right pipe
+  }, []);
 
   const hoveredPipePathRef = useRef<string | null>(null);
   const isDraggingRef = useRef(false);
@@ -1756,8 +1785,11 @@ const WorkflowDesigner: React.FC = () => {
                       onDeleteStep={handleDeleteStep}
                       onSelectPipe={handlePipeSelect}
                       onPipeHover={handlePipeHover}
+                      onInsertStep={(index) => handleInsertStep('root', index)}
+                      onInsertAtPath={handleInsertStep}
                       nodeRegistry={nodeRegistryMap}
                       errorMap={errorsByStepId}
+                      isRoot={true}
                     />
                   </DragDropContext>
                 </div>
@@ -2012,6 +2044,7 @@ const Pipe: React.FC<{
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
   onInsertStep?: (index: number) => void;
+  onInsertAtPath?: (pipePath: string, index: number) => void;
   nodeRegistry: Record<string, NodeRegistryItem>;
   errorMap: Map<string, PublishError[]>;
   isRoot?: boolean;
@@ -2026,6 +2059,7 @@ const Pipe: React.FC<{
   onSelectPipe,
   onPipeHover,
   onInsertStep,
+  onInsertAtPath,
   nodeRegistry,
   errorMap,
   isRoot = false,
@@ -2092,6 +2126,7 @@ const Pipe: React.FC<{
                       onSelectPipe={onSelectPipe}
                       onPipeHover={onPipeHover}
                       onInsertStep={onInsertStep}
+                      onInsertAtPath={onInsertAtPath}
                       dragHandleProps={dragProvided.dragHandleProps}
                       nodeRegistry={nodeRegistry}
                       errorCount={errorMap.get(step.id)?.length ?? 0}
@@ -2143,6 +2178,7 @@ const StepCard: React.FC<{
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
   onInsertStep?: (index: number) => void;
+  onInsertAtPath?: (pipePath: string, index: number) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   nodeRegistry: Record<string, NodeRegistryItem>;
   errorCount: number;
@@ -2158,6 +2194,7 @@ const StepCard: React.FC<{
   onSelectPipe,
   onPipeHover,
   onInsertStep,
+  onInsertAtPath,
   dragHandleProps,
   nodeRegistry,
   errorCount,
@@ -2241,34 +2278,42 @@ const StepCard: React.FC<{
 
       {step.type === 'control.if' && (() => {
         const ifStep = step as IfBlock;
+        const thenPath = `${stepPath}.then`;
+        const elsePath = `${stepPath}.else`;
         return (
           <div className="mt-3 space-y-2">
             <BlockSection title="THEN" idPrefix={`${step.id}-then`}>
               <Pipe
                 steps={ifStep.then}
-                pipePath={`${stepPath}.then`}
-                stepPathPrefix={`${stepPath}.then`}
+                pipePath={thenPath}
+                stepPathPrefix={thenPath}
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
+                onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(thenPath, index) : undefined}
+                onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                disabled={disabled}
               />
             </BlockSection>
             <BlockSection title="ELSE" idPrefix={`${step.id}-else`}>
               <Pipe
                 steps={ifStep.else ?? []}
-                pipePath={`${stepPath}.else`}
-                stepPathPrefix={`${stepPath}.else`}
+                pipePath={elsePath}
+                stepPathPrefix={elsePath}
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
+                onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(elsePath, index) : undefined}
+                onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                disabled={disabled}
               />
             </BlockSection>
           </div>
@@ -2277,34 +2322,42 @@ const StepCard: React.FC<{
 
       {step.type === 'control.tryCatch' && (() => {
         const tcStep = step as TryCatchBlock;
+        const tryPath = `${stepPath}.try`;
+        const catchPath = `${stepPath}.catch`;
         return (
           <div className="mt-3 space-y-2">
             <BlockSection title="TRY" idPrefix={`${step.id}-try`}>
               <Pipe
                 steps={tcStep.try}
-                pipePath={`${stepPath}.try`}
-                stepPathPrefix={`${stepPath}.try`}
+                pipePath={tryPath}
+                stepPathPrefix={tryPath}
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
+                onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(tryPath, index) : undefined}
+                onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                disabled={disabled}
               />
             </BlockSection>
             <BlockSection title="CATCH" idPrefix={`${step.id}-catch`}>
               <Pipe
                 steps={tcStep.catch}
-                pipePath={`${stepPath}.catch`}
-                stepPathPrefix={`${stepPath}.catch`}
+                pipePath={catchPath}
+                stepPathPrefix={catchPath}
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
+                onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(catchPath, index) : undefined}
+                onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                disabled={disabled}
               />
             </BlockSection>
           </div>
@@ -2313,21 +2366,25 @@ const StepCard: React.FC<{
 
       {step.type === 'control.forEach' && (() => {
         const feStep = step as ForEachBlock;
+        const bodyPath = `${stepPath}.body`;
         return (
           <div className="mt-3">
             <div className="text-xs text-gray-500 mb-2">Item: {feStep.itemVar} | Concurrency: {feStep.concurrency ?? 1}</div>
             <BlockSection title="BODY" idPrefix={`${step.id}-body`}>
               <Pipe
                 steps={feStep.body}
-                pipePath={`${stepPath}.body`}
-                stepPathPrefix={`${stepPath}.body`}
+                pipePath={bodyPath}
+                stepPathPrefix={bodyPath}
                 selectedStepId={selectedStepId}
                 onSelectStep={onSelectStep}
                 onDeleteStep={onDeleteStep}
                 onSelectPipe={onSelectPipe}
                 onPipeHover={onPipeHover}
+                onInsertStep={onInsertAtPath ? (index) => onInsertAtPath(bodyPath, index) : undefined}
+                onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                disabled={disabled}
               />
             </BlockSection>
           </div>
