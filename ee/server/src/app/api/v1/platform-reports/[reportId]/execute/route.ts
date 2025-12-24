@@ -22,13 +22,35 @@ const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
 /**
  * Verify the caller has access to platform reports.
+ * Supports both runner service auth and session auth.
  */
-async function assertMasterTenantAccess(): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
+async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // Validate the user session
+  // RUNNER SERVICE AUTH
+  const runnerAuth = request.headers.get('x-runner-auth');
+  const runnerTenant = request.headers.get('x-alga-tenant');
+  const extensionId = request.headers.get('x-alga-extension');
+
+  if (runnerAuth && runnerTenant) {
+    const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
+    if (expectedToken && runnerAuth === expectedToken) {
+      if (runnerTenant === MASTER_BILLING_TENANT_ID) {
+        console.log('[platform-reports/execute] Runner auth accepted:', { extensionId, tenant: runnerTenant });
+        return {
+          tenantId: MASTER_BILLING_TENANT_ID,
+          userId: extensionId ? `extension:${extensionId}` : 'runner',
+          userEmail: undefined,
+        };
+      }
+      throw new Error('Access denied: Extension not authorized for platform reports');
+    }
+    console.warn('[platform-reports/execute] Invalid runner auth token');
+  }
+
+  // SESSION AUTH
   const user = await getCurrentUser();
 
   if (!user) {
@@ -59,7 +81,7 @@ export async function POST(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess();
+    const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
     const { reportId } = await context.params;
 
     const service = new PlatformReportService(masterTenantId);

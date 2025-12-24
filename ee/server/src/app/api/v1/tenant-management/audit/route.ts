@@ -23,15 +23,44 @@ function getInternalUserInfo(request: NextRequest): { user_id: string; tenant: s
   return { user_id: userId, tenant };
 }
 
+/**
+ * Check if this is a runner service request with valid auth.
+ */
+function getRunnerAuth(request: NextRequest): { user_id: string; tenant: string } | null {
+  const runnerAuth = request.headers.get('x-runner-auth');
+  const runnerTenant = request.headers.get('x-alga-tenant');
+  const extensionId = request.headers.get('x-alga-extension');
+
+  if (!runnerAuth || !runnerTenant) {
+    return null;
+  }
+
+  const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
+  if (!expectedToken || runnerAuth !== expectedToken) {
+    console.warn('[tenant-management/audit] Invalid runner auth token');
+    return null;
+  }
+
+  return {
+    user_id: extensionId ? `extension:${extensionId}` : 'runner',
+    tenant: runnerTenant,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     // Check for internal ext-proxy request first
     const internalUser = getInternalUserInfo(req);
+    // Check for runner service auth
+    const runnerUser = getRunnerAuth(req);
     let userTenant: string;
 
     if (internalUser) {
       // Trust the user info from ext-proxy (it already validated the session)
       userTenant = internalUser.tenant;
+    } else if (runnerUser) {
+      // Trust the runner service auth
+      userTenant = runnerUser.tenant;
     } else {
       // Normal request - get user from session
       const user = await getCurrentUser();
