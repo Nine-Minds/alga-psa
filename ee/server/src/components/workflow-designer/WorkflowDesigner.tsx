@@ -5,7 +5,7 @@ import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
-import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle, FileJson, Code, Check, Eye, EyeOff, Play } from 'lucide-react';
+import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle, FileJson, Code, Check, Eye, EyeOff, Play, Trash2 } from 'lucide-react';
 import {
   getStepTypeColor,
   getStepTypeIcon,
@@ -2362,8 +2362,9 @@ const StepCard: React.FC<{
                 onClick={() => onDeleteStep(step.id)}
                 className="text-gray-400 hover:text-red-500 p-1 h-auto"
                 data-testid={`step-delete-${step.id}`}
+                title="Delete step"
               >
-                <AlertTriangle className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </>
           )}
