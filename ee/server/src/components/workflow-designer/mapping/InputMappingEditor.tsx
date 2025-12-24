@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Card } from '@/components/ui/Card';
+import { ExpressionTextArea } from './ExpressionTextArea';
 import { Badge } from '@/components/ui/Badge';
 import { Label } from '@/components/ui/Label';
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
@@ -412,6 +413,49 @@ const MappingFieldEditor: React.FC<{
     { value: 'literal', label: 'Literal' },
   ];
 
+  // §16.2 - Type mismatch warning for expression mappings
+  const typeMismatchWarning = useMemo(() => {
+    if (valueType !== 'expr' || !value || !('$expr' in (value as object))) {
+      return null;
+    }
+
+    const expr = (value as Expr).$expr;
+    if (!expr?.trim()) return null;
+
+    // Extract the first path-like token from the expression
+    const sourcePath = expr.trim().split(/[\s+\-*/%()[\]{},<>=!&|?:]+/)[0];
+    if (!sourcePath) return null;
+
+    // Find the source type from field options
+    const sourceOption = fieldOptions.find(opt => opt.value === sourcePath);
+    const sourceType = inferTypeFromPath(sourcePath);
+
+    // Get target type
+    const targetType = field.type;
+
+    if (!sourceType || !targetType) return null;
+
+    const compatibility = getTypeCompatibility(sourceType, targetType);
+
+    if (compatibility === TypeCompatibility.COERCIBLE) {
+      return {
+        type: 'warning' as const,
+        message: `Type "${sourceType}" will be converted to "${targetType}"`,
+        compatibility
+      };
+    }
+
+    if (compatibility === TypeCompatibility.INCOMPATIBLE) {
+      return {
+        type: 'error' as const,
+        message: `Type "${sourceType}" is incompatible with expected "${targetType}"`,
+        compatibility
+      };
+    }
+
+    return null;
+  }, [valueType, value, fieldOptions, field.type]);
+
   const secretOptions: SelectOption[] = secrets.map(s => ({
     value: s.name,
     label: s.name,
@@ -465,12 +509,13 @@ const MappingFieldEditor: React.FC<{
                   disabled={disabled}
                 />
               </div>
-              <TextArea
+              {/* §16.2 - Expression textarea with context-aware autocomplete */}
+              <ExpressionTextArea
                 id={`${idPrefix}-expr`}
                 value={getDisplayValue(value)}
-                onChange={(e) => handleExpressionChange(e.target.value)}
+                onChange={handleExpressionChange}
+                fieldOptions={fieldOptions}
                 rows={2}
-                placeholder="Enter JSONata expression..."
                 className={expressionError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
                 disabled={disabled}
               />
@@ -478,6 +523,15 @@ const MappingFieldEditor: React.FC<{
                 <div className="flex items-center gap-1 text-xs text-red-600">
                   <AlertTriangle className="w-3 h-3" />
                   {expressionError}
+                </div>
+              )}
+              {/* §16.2 - Type mismatch warning */}
+              {!expressionError && typeMismatchWarning && (
+                <div className={`flex items-center gap-1 text-xs ${
+                  typeMismatchWarning.type === 'error' ? 'text-red-600' : 'text-yellow-600'
+                }`}>
+                  <AlertTriangle className="w-3 h-3" />
+                  {typeMismatchWarning.message}
                 </div>
               )}
             </div>

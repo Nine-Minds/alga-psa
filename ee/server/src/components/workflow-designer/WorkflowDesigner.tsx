@@ -2281,6 +2281,39 @@ const StepConfigPanel: React.FC<{
     toast.success(`Copied: ${path}`, { duration: 1500 });
   }, []);
 
+  // §16.1 - Validate saveAs doesn't conflict with existing variable names
+  const saveAsValidation = useMemo(() => {
+    if (!saveAs) return null;
+
+    // Check for conflicts with previous steps' saveAs names
+    const existingSaveAsNames = dataContext.steps.map(s => s.saveAs);
+    if (existingSaveAsNames.includes(saveAs)) {
+      return {
+        type: 'error' as const,
+        message: `"${saveAs}" conflicts with an existing step output variable`
+      };
+    }
+
+    // Check for reserved names
+    const reservedNames = ['payload', 'vars', 'meta', 'error', 'env', 'secrets', '$item', '$index'];
+    if (reservedNames.includes(saveAs)) {
+      return {
+        type: 'error' as const,
+        message: `"${saveAs}" is a reserved variable name`
+      };
+    }
+
+    // Check for invalid characters (should be valid JS identifier)
+    if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(saveAs)) {
+      return {
+        type: 'warning' as const,
+        message: 'Variable name should start with a letter and contain only letters, numbers, and underscores'
+      };
+    }
+
+    return null;
+  }, [saveAs, dataContext.steps]);
+
   const handleNodeConfigChange = (config: Record<string, unknown>) => {
     onChange({ ...step, config });
   };
@@ -2349,24 +2382,36 @@ const StepConfigPanel: React.FC<{
       )}
 
       {!step.type.startsWith('control.') && (
-        <Input
-          id={`workflow-step-saveAs-${step.id}`}
-          label="Save output as"
-          placeholder="e.g., ticketDefaults"
-          value={((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs ?? ''}
-          onChange={(event) => {
-            const nodeStep = step as NodeStep;
-            const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
-            const value = event.target.value.trim();
-            onChange({
-              ...nodeStep,
-              config: {
-                ...existingConfig,
-                saveAs: value || undefined
-              }
-            });
-          }}
-        />
+        <div className="space-y-1">
+          <Input
+            id={`workflow-step-saveAs-${step.id}`}
+            label="Save output as"
+            placeholder="e.g., ticketDefaults"
+            value={((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs ?? ''}
+            onChange={(event) => {
+              const nodeStep = step as NodeStep;
+              const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+              const value = event.target.value.trim();
+              onChange({
+                ...nodeStep,
+                config: {
+                  ...existingConfig,
+                  saveAs: value || undefined
+                }
+              });
+            }}
+            className={saveAsValidation?.type === 'error' ? 'border-red-500' : saveAsValidation?.type === 'warning' ? 'border-yellow-500' : ''}
+          />
+          {/* §16.1 - saveAs conflict validation warning */}
+          {saveAsValidation && (
+            <div className={`flex items-center gap-1 text-xs ${
+              saveAsValidation.type === 'error' ? 'text-red-600' : 'text-yellow-600'
+            }`}>
+              <AlertTriangle className="w-3 h-3" />
+              {saveAsValidation.message}
+            </div>
+          )}
+        </div>
       )}
 
       {step.type === 'control.if' && (() => {
