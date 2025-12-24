@@ -189,9 +189,30 @@ const isExprSchema = (schema: JsonSchema | undefined, root?: JsonSchema): boolea
 };
 
 const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
-  if (!schema.$ref || !root?.definitions) return schema;
-  const refKey = schema.$ref.replace('#/definitions/', '');
-  return root.definitions?.[refKey] ?? schema;
+  // Handle $ref
+  if (schema.$ref && root?.definitions) {
+    const refKey = schema.$ref.replace('#/definitions/', '');
+    const resolved = root.definitions?.[refKey];
+    if (resolved) return resolveSchema(resolved, root);
+  }
+
+  // Handle anyOf (used for nullable types) - extract the non-null variant
+  if (schema.anyOf?.length) {
+    const nonNullVariant = schema.anyOf.find(
+      (variant) => variant.type !== 'null' && !(Array.isArray(variant.type) && variant.type.length === 1 && variant.type[0] === 'null')
+    );
+    if (nonNullVariant) {
+      // Merge nullable info back into resolved schema
+      const resolved = resolveSchema(nonNullVariant, root);
+      return {
+        ...resolved,
+        // Mark as nullable if there was a null variant
+        type: Array.isArray(resolved.type) ? resolved.type : resolved.type ? [resolved.type, 'null'] : ['null']
+      };
+    }
+  }
+
+  return schema;
 };
 
 const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
@@ -2924,12 +2945,16 @@ const StepConfigPanel: React.FC<{
           fieldOptions={enhancedFieldOptions}
           actionRegistry={actionRegistry}
           stepId={step.id}
+          excludeFields={step.type === 'action.call' ? ['inputMapping'] : []}
         />
       )}
 
       {/* §17 - Input Mapping Panel for action.call steps */}
       {step.type === 'action.call' && selectedAction && actionInputFields.length > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 mb-3">
+            Map workflow data to action inputs. Drag fields or click to assign values.
+          </p>
           <MappingPanel
             value={inputMapping}
             onChange={handleInputMappingChange}
@@ -3123,10 +3148,15 @@ const SchemaForm: React.FC<{
   fieldOptions: SelectOption[];
   actionRegistry: ActionRegistryItem[];
   stepId: string;
-}> = ({ schema, rootSchema, value, onChange, fieldOptions, actionRegistry, stepId }) => {
+  excludeFields?: string[];
+}> = ({ schema, rootSchema, value, onChange, fieldOptions, actionRegistry, stepId, excludeFields = [] }) => {
   const resolved = resolveSchema(schema, rootSchema);
   const configValue = value ?? {};
-  const properties = resolved.properties ?? {};
+  const allProperties = resolved.properties ?? {};
+  // Filter out excluded fields (e.g., inputMapping when MappingPanel is shown)
+  const properties = Object.fromEntries(
+    Object.entries(allProperties).filter(([key]) => !excludeFields.includes(key))
+  );
   const required = resolved.required ?? [];
   const [showAdvanced, setShowAdvanced] = useState(false);
 
