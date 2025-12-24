@@ -14,26 +14,9 @@
  * - Keyboard navigation (Arrow keys, Enter, Escape, Tab)
  */
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { ChevronRight, Hash, ToggleLeft, Type, Braces, List, Calendar, HelpCircle } from 'lucide-react';
-
-/**
- * Autocomplete suggestion item
- */
-export interface AutocompleteSuggestion {
-  /** Full path to insert (e.g., "payload.ticket.id") */
-  path: string;
-  /** Display label (e.g., "id") */
-  label: string;
-  /** Data type */
-  type?: string;
-  /** Description/tooltip */
-  description?: string;
-  /** Whether this item has children (can drill down) */
-  hasChildren?: boolean;
-  /** Parent path for grouping */
-  parentPath?: string;
-}
+import type { AutocompleteSuggestion } from './expressionAutocompleteUtils';
 
 /**
  * Props for the autocomplete dropdown
@@ -45,6 +28,10 @@ export interface ExpressionAutocompleteProps {
   cursorPosition: number;
   /** Available suggestions based on data context */
   suggestions: AutocompleteSuggestion[];
+  /** Highlighted suggestion index */
+  selectedIndex: number;
+  /** Update highlighted suggestion index */
+  onHighlight: (index: number) => void;
   /** Callback when a suggestion is selected */
   onSelect: (suggestion: AutocompleteSuggestion) => void;
   /** Callback to close the dropdown */
@@ -85,18 +72,14 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
   expression,
   cursorPosition,
   suggestions,
+  selectedIndex,
+  onHighlight,
   onSelect,
   onClose,
   position,
   visible
 }) => {
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
-
-  // Reset selection when suggestions change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [suggestions]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -111,11 +94,11 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => Math.min(prev + 1, suggestions.length - 1));
+        onHighlight(Math.min(selectedIndex + 1, suggestions.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => Math.max(prev - 1, 0));
+        onHighlight(Math.max(selectedIndex - 1, 0));
         break;
       case 'Enter':
       case 'Tab':
@@ -129,7 +112,7 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
         onClose();
         break;
     }
-  }, [suggestions, selectedIndex, onSelect, onClose]);
+  }, [suggestions, selectedIndex, onHighlight, onSelect, onClose]);
 
   if (!visible || suggestions.length === 0) {
     return null;
@@ -158,7 +141,7 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
               : 'hover:bg-gray-50'
           }`}
           onClick={() => onSelect(suggestion)}
-          onMouseEnter={() => setSelectedIndex(index)}
+          onMouseEnter={() => onHighlight(index)}
         >
           {getTypeIcon(suggestion.type)}
           <span className="flex-1 truncate font-mono text-xs">
@@ -177,101 +160,12 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
 };
 
 /**
- * Known root paths for autocomplete triggers
- */
-const ROOT_TRIGGERS = ['payload', 'vars', 'meta', 'error', 'env', 'secrets', '$item', '$index'];
-
-/**
- * Extract the current path being typed at cursor position
- *
- * @param expression - Full expression text
- * @param cursorPosition - Current cursor position
- * @returns The path segment being typed, or null if not in a completable position
- */
-export function extractCurrentPath(expression: string, cursorPosition: number): string | null {
-  // Get text before cursor
-  const textBeforeCursor = expression.slice(0, cursorPosition);
-
-  // Find the start of the current token (word boundary)
-  // Look backwards for whitespace, operators, or opening brackets
-  const tokenBoundary = /[\s+\-*/%()[\]{},<>=!&|?:]/;
-  let tokenStart = textBeforeCursor.length;
-
-  for (let i = textBeforeCursor.length - 1; i >= 0; i--) {
-    if (tokenBoundary.test(textBeforeCursor[i])) {
-      tokenStart = i + 1;
-      break;
-    }
-    if (i === 0) {
-      tokenStart = 0;
-    }
-  }
-
-  const currentToken = textBeforeCursor.slice(tokenStart);
-
-  // Check if the token starts with a known root or contains a dot (drilling down)
-  if (!currentToken) return null;
-
-  // Check for root trigger match
-  for (const trigger of ROOT_TRIGGERS) {
-    if (currentToken.startsWith(trigger)) {
-      return currentToken;
-    }
-  }
-
-  return null;
-}
-
-/**
  * Filter suggestions based on the current path being typed
  *
  * @param allSuggestions - All available suggestions from data context
  * @param currentPath - The path currently being typed
  * @returns Filtered and sorted suggestions
  */
-export function filterSuggestions(
-  allSuggestions: AutocompleteSuggestion[],
-  currentPath: string | null
-): AutocompleteSuggestion[] {
-  if (!currentPath) return [];
-
-  const lowerPath = currentPath.toLowerCase();
-
-  // If path ends with '.', show children at that level
-  if (currentPath.endsWith('.')) {
-    const parentPath = currentPath.slice(0, -1);
-    return allSuggestions.filter(s =>
-      s.path.toLowerCase().startsWith(parentPath.toLowerCase() + '.') &&
-      s.path.split('.').length === parentPath.split('.').length + 1
-    );
-  }
-
-  // Otherwise, filter by prefix match
-  const pathParts = currentPath.split('.');
-  const searchTerm = pathParts[pathParts.length - 1].toLowerCase();
-  const parentPath = pathParts.slice(0, -1).join('.');
-
-  // First priority: exact parent path with matching children
-  const exactParentMatches = allSuggestions.filter(s => {
-    const sParts = s.path.split('.');
-    const sParent = sParts.slice(0, -1).join('.');
-    const sLeaf = sParts[sParts.length - 1].toLowerCase();
-
-    return sParent.toLowerCase() === parentPath.toLowerCase() &&
-           sLeaf.startsWith(searchTerm);
-  });
-
-  if (exactParentMatches.length > 0) {
-    return exactParentMatches.sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  // Fallback: prefix match on full path
-  return allSuggestions
-    .filter(s => s.path.toLowerCase().startsWith(lowerPath))
-    .sort((a, b) => a.path.length - b.path.length || a.label.localeCompare(b.label))
-    .slice(0, 20);
-}
-
 /**
  * Build suggestions from data context fields
  *
@@ -303,13 +197,16 @@ export function calculateDropdownPosition(
   textarea: HTMLTextAreaElement,
   cursorPosition: number
 ): { top: number; left: number } {
+  const style = window.getComputedStyle(textarea);
+  const lineHeight = parseInt(style.lineHeight) || 20;
+
   // Create a mirror element to measure cursor position
   const mirror = document.createElement('div');
-  const style = window.getComputedStyle(textarea);
+  const textareaRect = textarea.getBoundingClientRect();
 
-  // Copy styles
+  // Copy styles and position mirror at same location as textarea
   mirror.style.cssText = `
-    position: absolute;
+    position: fixed;
     visibility: hidden;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -320,6 +217,8 @@ export function calculateDropdownPosition(
     line-height: ${style.lineHeight};
     padding: ${style.padding};
     border: ${style.border};
+    top: ${textareaRect.top}px;
+    left: ${textareaRect.left}px;
   `;
 
   // Insert text up to cursor with a marker span
@@ -330,19 +229,23 @@ export function calculateDropdownPosition(
 
   const marker = mirror.querySelector('#cursor-marker');
   const markerRect = marker?.getBoundingClientRect();
-  const textareaRect = textarea.getBoundingClientRect();
 
   document.body.removeChild(mirror);
 
   if (!markerRect) {
+    // Fallback: position below textarea
     return { top: textarea.offsetHeight + 4, left: 0 };
   }
 
-  // Position below the cursor
-  return {
-    top: markerRect.top - textareaRect.top + parseInt(style.lineHeight) + 4,
-    left: Math.min(markerRect.left - textareaRect.left, textarea.offsetWidth - 220)
-  };
+  // Calculate position relative to textarea
+  let left = markerRect.left - textareaRect.left;
+  const top = markerRect.top - textareaRect.top + lineHeight + 4;
+
+  // Ensure left is never negative and doesn't overflow
+  left = Math.max(0, left);
+  left = Math.min(left, textarea.offsetWidth - 220);
+
+  return { top, left };
 }
 
 export default ExpressionAutocomplete;

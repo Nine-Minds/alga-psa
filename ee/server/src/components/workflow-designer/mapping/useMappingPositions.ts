@@ -69,6 +69,10 @@ export interface MappingPositionsHandlers {
   registerTargetRef: (id: string, element: HTMLElement | null) => void;
   /** Set the container element */
   setContainerRef: (element: HTMLElement | null) => void;
+  /** Register an additional scroll container */
+  registerScrollContainer: (element: HTMLElement | null) => void;
+  /** Unregister a scroll container */
+  unregisterScrollContainer: (element: HTMLElement | null) => void;
   /** Force recalculation of all positions */
   recalculatePositions: () => void;
   /** Get position for a source field */
@@ -130,6 +134,8 @@ export function useMappingPositions(
   const containerRef = useRef<HTMLElement | null>(null);
   const sourceRefs = useRef<Map<string, HTMLElement>>(new Map());
   const targetRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const extraScrollContainers = useRef<Set<HTMLElement>>(new Set());
+  const [containerElement, setContainerElement] = useState<HTMLElement | null>(null);
 
   // State
   const [state, setState] = useState<MappingPositionsState>({
@@ -216,8 +222,36 @@ export function useMappingPositions(
   // Set container ref
   const setContainerRef = useCallback((element: HTMLElement | null) => {
     containerRef.current = element;
+    setContainerElement(element);
     debouncedRecalculate();
   }, [debouncedRecalculate]);
+
+  const handleScroll = useCallback(() => {
+    if (updateOnScroll) {
+      debouncedRecalculate();
+    }
+  }, [updateOnScroll, debouncedRecalculate]);
+
+  const handleResize = useCallback(() => {
+    if (updateOnResize) {
+      debouncedRecalculate();
+    }
+  }, [updateOnResize, debouncedRecalculate]);
+
+  const registerScrollContainer = useCallback((element: HTMLElement | null) => {
+    if (!element || !updateOnScroll) return;
+    if (extraScrollContainers.current.has(element)) return;
+    extraScrollContainers.current.add(element);
+    element.addEventListener('scroll', handleScroll, { passive: true });
+    debouncedRecalculate();
+  }, [updateOnScroll, handleScroll, debouncedRecalculate]);
+
+  const unregisterScrollContainer = useCallback((element: HTMLElement | null) => {
+    if (!element) return;
+    if (!extraScrollContainers.current.has(element)) return;
+    element.removeEventListener('scroll', handleScroll);
+    extraScrollContainers.current.delete(element);
+  }, [handleScroll]);
 
   // Get source position
   const getSourcePosition = useCallback((id: string): FieldRect | null => {
@@ -243,21 +277,8 @@ export function useMappingPositions(
 
   // Set up scroll and resize listeners
   useEffect(() => {
-    const container = containerRef.current;
+    const container = containerElement;
 
-    const handleScroll = () => {
-      if (updateOnScroll) {
-        debouncedRecalculate();
-      }
-    };
-
-    const handleResize = () => {
-      if (updateOnResize) {
-        debouncedRecalculate();
-      }
-    };
-
-    // Add event listeners
     if (container && updateOnScroll) {
       container.addEventListener('scroll', handleScroll, { passive: true });
     }
@@ -266,7 +287,6 @@ export function useMappingPositions(
       window.addEventListener('resize', handleResize, { passive: true });
     }
 
-    // Set up ResizeObserver for container size changes
     let resizeObserver: ResizeObserver | null = null;
     if (container && updateOnResize) {
       resizeObserver = new ResizeObserver(() => {
@@ -275,10 +295,8 @@ export function useMappingPositions(
       resizeObserver.observe(container);
     }
 
-    // Initial calculation
     recalculatePositions();
 
-    // Cleanup
     return () => {
       if (container && updateOnScroll) {
         container.removeEventListener('scroll', handleScroll);
@@ -289,16 +307,30 @@ export function useMappingPositions(
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
+      extraScrollContainers.current.forEach((element) => {
+        element.removeEventListener('scroll', handleScroll);
+      });
+      extraScrollContainers.current.clear();
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [updateOnScroll, updateOnResize, debouncedRecalculate, recalculatePositions]);
+  }, [
+    containerElement,
+    updateOnScroll,
+    updateOnResize,
+    handleScroll,
+    handleResize,
+    debouncedRecalculate,
+    recalculatePositions
+  ]);
 
   const handlers: MappingPositionsHandlers = {
     registerSourceRef,
     registerTargetRef,
     setContainerRef,
+    registerScrollContainer,
+    unregisterScrollContainer,
     recalculatePositions,
     getSourcePosition,
     getTargetPosition,

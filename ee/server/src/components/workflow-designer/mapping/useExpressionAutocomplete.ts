@@ -7,12 +7,8 @@
  */
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import {
-  extractCurrentPath,
-  filterSuggestions,
-  calculateDropdownPosition,
-  type AutocompleteSuggestion
-} from './ExpressionAutocomplete';
+import { calculateDropdownPosition } from './ExpressionAutocomplete';
+import { extractCurrentPath, filterSuggestions, type AutocompleteSuggestion } from './expressionAutocompleteUtils';
 
 /**
  * Options for the autocomplete hook
@@ -44,6 +40,8 @@ export interface ExpressionAutocompleteState {
   currentPath: string | null;
   /** Dropdown position */
   position: { top: number; left: number };
+  /** Currently highlighted suggestion index */
+  selectedIndex: number;
 }
 
 /**
@@ -56,6 +54,8 @@ export interface ExpressionAutocompleteHandlers {
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   /** Handle selection from dropdown */
   handleSelect: (suggestion: AutocompleteSuggestion) => void;
+  /** Update highlighted suggestion index */
+  setSelectedIndex: (index: number) => void;
   /** Close the dropdown */
   close: () => void;
   /** Handle focus */
@@ -81,6 +81,7 @@ export function useExpressionAutocomplete(
   } = options;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const suppressNextOpenRef = useRef(false);
   const [isOpen, setIsOpen] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -102,6 +103,12 @@ export function useExpressionAutocomplete(
 
   // Update visibility based on filtered suggestions
   useEffect(() => {
+    if (suppressNextOpenRef.current) {
+      suppressNextOpenRef.current = false;
+      setIsOpen(false);
+      return;
+    }
+
     const shouldOpen = filteredSuggestions.length > 0 && !disabled;
     setIsOpen(shouldOpen);
     if (shouldOpen) {
@@ -196,6 +203,7 @@ export function useExpressionAutocomplete(
     // Keep open if drilling down, close otherwise
     if (!suggestion.hasChildren) {
       setIsOpen(false);
+      suppressNextOpenRef.current = true;
     }
 
     // Restore focus and cursor position
@@ -211,6 +219,10 @@ export function useExpressionAutocomplete(
   const handleSelect = useCallback((suggestion: AutocompleteSuggestion) => {
     handleSelectInternal(suggestion);
   }, [handleSelectInternal]);
+
+  const handleSetSelectedIndex = useCallback((index: number) => {
+    setSelectedIndex(index);
+  }, []);
 
   // Close handler
   const close = useCallback(() => {
@@ -236,13 +248,15 @@ export function useExpressionAutocomplete(
     cursorPosition,
     filteredSuggestions,
     currentPath,
-    position
+    position,
+    selectedIndex
   };
 
   const handlers: ExpressionAutocompleteHandlers = {
     handleChange,
     handleKeyDown,
     handleSelect,
+    setSelectedIndex: handleSetSelectedIndex,
     close,
     handleFocus,
     handleBlur,

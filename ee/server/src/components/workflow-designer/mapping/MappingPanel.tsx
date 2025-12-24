@@ -9,13 +9,15 @@
  * §19 - Mapping Editor UX Enhancements
  */
 
-import React, { useRef, useCallback, useMemo } from 'react';
+import React, { useRef, useCallback, useMemo, useState, useEffect } from 'react';
 import { SourceDataTree, type DataTreeContext, type DataField } from './SourceDataTree';
 import { InputMappingEditor, type ActionInputField } from './InputMappingEditor';
 import { useMappingDnd } from './useMappingDnd';
 import { useMappingPositions } from './useMappingPositions';
+import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
+import { TypeCompatibility, getTypeCompatibility } from './typeCompatibility';
 import type { SelectOption } from '@/components/ui/CustomSelect';
-import type { InputMapping } from '@shared/workflow/runtime';
+import type { Expr, InputMapping } from '@shared/workflow/runtime';
 
 /**
  * Schema field type from WorkflowDesigner's DataContext
@@ -113,6 +115,34 @@ const convertToDataTreeContext = (ctx: WorkflowDataContext): DataTreeContext => 
   forEach: ctx.forEach
 });
 
+const buildSourceTypeLookup = (ctx: WorkflowDataContext): Map<string, string> => {
+  const map = new Map<string, string>();
+
+  const addField = (field: SchemaField, basePath: string) => {
+    const path = basePath ? `${basePath}.${field.name}` : field.name;
+    if (field.type) {
+      map.set(path, field.type);
+    }
+    field.children?.forEach(child => addField(child, path));
+  };
+
+  ctx.payload.forEach(field => addField(field, 'payload'));
+  ctx.steps.forEach(stepOutput => {
+    const basePath = `vars.${stepOutput.saveAs}`;
+    stepOutput.fields.forEach(field => addField(field, basePath));
+  });
+  ctx.globals.meta.forEach(field => addField(field, 'meta'));
+  ctx.globals.error.forEach(field => addField(field, 'error'));
+  if (ctx.forEach?.itemVar) {
+    map.set(ctx.forEach.itemVar, ctx.forEach.itemType ?? 'any');
+  }
+  if (ctx.forEach?.indexVar) {
+    map.set(ctx.forEach.indexVar, 'number');
+  }
+
+  return map;
+};
+
 export interface MappingPanelProps {
   /**
    * Current input mapping value
@@ -182,6 +212,7 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
     () => convertToDataTreeContext(dataContext),
     [dataContext]
   );
+  const sourceTypeMap = useMemo(() => buildSourceTypeLookup(dataContext), [dataContext]);
 
   // §19.2 - Shared drag-and-drop state
   const [dndState, dndHandlers] = useMappingDnd({
@@ -192,11 +223,16 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
 
   // §19.3 - Shared position tracking for connection lines
   const [positionsState, positionsHandlers] = useMappingPositions();
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
 
   // Register container ref
   React.useEffect(() => {
     positionsHandlers.setContainerRef(containerRef.current);
-  }, [positionsHandlers]);
+  }, [positionsHandlers.setContainerRef]);
+
+  useEffect(() => {
+    positionsHandlers.recalculatePositions();
+  }, [value, positionsHandlers.recalculatePositions]);
 
   // Handle field selection from source tree (click to insert)
   const handleSelectField = useCallback((path: string) => {
@@ -212,17 +248,73 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
     return field?.type;
   }, [dndState.dropTarget, targetFields]);
 
-  // Build source positions map for InputMappingEditor
-  const sourcePositions = useMemo(() => {
-    const map = new Map<string, { centerY: number; right: number }>();
-    positionsState.sourcePositions.forEach((rect, path) => {
-      map.set(path, { centerY: rect.centerY, right: rect.right });
-    });
-    return map;
-  }, [positionsState.sourcePositions]);
+  const connections: ConnectionData[] = useMemo(() => {
+    const result: ConnectionData[] = [];
+
+    for (const [fieldName, mappingValue] of Object.entries(value)) {
+      if (typeof mappingValue !== 'object' || !mappingValue || !('$expr' in mappingValue)) {
+        continue;
+      }
+
+      const expr = (mappingValue as Expr).$expr;
+      if (!expr) continue;
+
+      const sourcePath = expr.trim().split(/[\s+\-*/()[\]{}]+/)[0];
+      if (!sourcePath) continue;
+
+      const field = targetFields.find(f => f.name === fieldName);
+      const sourceType = sourceTypeMap.get(sourcePath);
+      const targetType = field?.type;
+      const compatibility = getTypeCompatibility(sourceType, targetType);
+      const sourceRect = positionsState.sourcePositions.get(sourcePath) || null;
+      const targetRect = positionsState.targetPositions.get(fieldName) || null;
+
+      result.push({
+        id: `${sourcePath}->${fieldName}`,
+        sourceId: sourcePath,
+        targetId: fieldName,
+        sourceRect,
+        targetRect,
+        sourceType,
+        targetType,
+        compatibility
+      });
+    }
+
+    return result;
+  }, [value, targetFields, positionsState.sourcePositions, positionsState.targetPositions]);
+
+  const handleConnectionClick = useCallback((connectionId: string) => {
+    setSelectedConnectionId(prev => (prev === connectionId ? null : connectionId));
+  }, []);
+
+  const handleConnectionDelete = useCallback((connectionId: string) => {
+    const targetField = connectionId.split('->')[1];
+    if (!targetField) return;
+    const next = { ...value };
+    delete next[targetField];
+    onChange(next);
+    setSelectedConnectionId(null);
+  }, [onChange, value]);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div
+      ref={containerRef}
+      className="relative"
+      data-automation-id={`mapping-panel-${stepId}`}
+    >
+      {positionsState.containerRect && connections.length > 0 && (
+        <MappingConnectionsOverlay
+          connections={connections}
+          width={positionsState.containerRect.width}
+          height={positionsState.containerRect.height}
+          selectedConnectionId={selectedConnectionId}
+          onConnectionClick={handleConnectionClick}
+          onConnectionDelete={handleConnectionDelete}
+          interactive={!disabled}
+          disabled={disabled}
+        />
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left panel: Source Data Tree */}
         <div className="min-w-0">
@@ -234,6 +326,8 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
             targetType={activeTargetType}
             dndHandlers={dndHandlers}
             onRegisterRef={positionsHandlers.registerSourceRef}
+            onRegisterScrollContainer={positionsHandlers.registerScrollContainer}
+            onUnregisterScrollContainer={positionsHandlers.unregisterScrollContainer}
           />
         </div>
 
@@ -245,8 +339,9 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
             targetFields={targetFields}
             fieldOptions={fieldOptions}
             stepId={stepId}
+            positionsHandlers={positionsHandlers}
+            sourceTypeMap={sourceTypeMap}
             disabled={disabled}
-            sourcePositions={sourcePositions}
           />
         </div>
       </div>
