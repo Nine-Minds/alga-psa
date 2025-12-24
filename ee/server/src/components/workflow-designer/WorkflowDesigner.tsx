@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle, FileJson, Code, Check, Eye, EyeOff } from 'lucide-react';
@@ -1635,8 +1636,9 @@ const WorkflowDesigner: React.FC = () => {
         </aside>
 
         <main className="flex-1 overflow-hidden bg-gray-50">
-          <div className="flex h-full">
-            <div className="flex-1 overflow-y-auto p-6">
+          <PanelGroup direction="horizontal" className="h-full">
+            <Panel defaultSize={65} minSize={40}>
+              <div className="h-full overflow-y-auto p-6">
               <div className="max-w-4xl mx-auto space-y-6">
                 <Card className="p-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -1716,8 +1718,15 @@ const WorkflowDesigner: React.FC = () => {
                 </div>
               </div>
             </div>
+            </Panel>
 
-            <aside className="w-96 border-l bg-white overflow-y-auto p-4 space-y-4">
+            <PanelResizeHandle className="w-2 hover:bg-[rgb(var(--color-primary-50))] transition-colors relative flex items-center justify-center group">
+              <div className="absolute inset-y-0 w-1 bg-[rgb(var(--color-border-200))] group-hover:bg-[rgb(var(--color-primary-400))] transition-colors"></div>
+              <GripVertical className="h-4 w-4 text-[rgb(var(--color-text-400))] group-hover:text-[rgb(var(--color-primary-600))] relative z-10" />
+            </PanelResizeHandle>
+
+            <Panel defaultSize={35} minSize={20} maxSize={50}>
+              <aside className="h-full bg-white overflow-y-auto p-4 space-y-4">
               {activeWorkflowRecord && metadataDraft && canEditMetadata && (
                 <Card className="p-3 space-y-3">
                   <div>
@@ -1828,7 +1837,8 @@ const WorkflowDesigner: React.FC = () => {
                 </div>
               )}
             </aside>
-          </div>
+            </Panel>
+          </PanelGroup>
         </main>
       </div>
 

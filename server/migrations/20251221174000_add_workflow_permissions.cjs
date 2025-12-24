@@ -3,7 +3,9 @@ exports.up = async function (knex) {
   if (!tenants.length) return;
 
   const newPermissions = [
+    { resource: 'workflow', action: 'read' },
     { resource: 'workflow', action: 'view' },
+    { resource: 'workflow', action: 'manage' },
     { resource: 'workflow', action: 'publish' },
     { resource: 'workflow', action: 'admin' }
   ];
@@ -34,7 +36,7 @@ exports.up = async function (knex) {
       const newPermIds = await knex('permissions')
         .where({ tenant })
         .where((builder) => {
-          builder.where('resource', 'workflow').whereIn('action', ['view', 'publish', 'admin']);
+          builder.where('resource', 'workflow').whereIn('action', ['read', 'view', 'manage', 'publish', 'admin']);
         })
         .select('permission_id');
 
@@ -66,7 +68,7 @@ exports.down = async function (knex) {
     const perms = await knex('permissions')
       .where({ tenant })
       .where('resource', 'workflow')
-      .whereIn('action', ['view', 'publish', 'admin'])
+      .whereIn('action', ['read', 'view', 'manage', 'publish', 'admin'])
       .select('permission_id');
 
     const permIds = perms.map((perm) => perm.permission_id);
