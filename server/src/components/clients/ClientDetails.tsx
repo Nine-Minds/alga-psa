@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { PartialBlock } from '@blocknote/core';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
@@ -193,11 +193,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
-  
-  // Update editedClient when client prop changes
-  useEffect(() => {
-    setEditedClient(client);
-  }, [client]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
@@ -239,6 +234,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
+  const memoizedRouter = useMemo(() => router, [router]);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -488,12 +484,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   // 1. Implement refreshClientData function
   const refreshClientData = useCallback(async () => {
-    if (!client?.client_id) return; // Ensure client_id is available
+    if (!client?.client_id) return;
 
     try {
       const latestClientData = await getClientById(client.client_id);
       if (latestClientData) {
-        setEditedClient(latestClientData);
+        setEditedClient({
+          ...latestClientData,
+          client_type: latestClientData.client_type || 'company'
+        });
+        setHasUnsavedChanges(false);
       }
     } catch (error) {
       console.error('Error refreshing client data:', error);
@@ -501,34 +501,32 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     }
   }, [client?.client_id]);
 
-  // 2. Implement Initial Load Logic
+  // Combined Initial Load Logic
   useEffect(() => {
-    // Set initial state when the client prop changes
     setEditedClient({
       ...client,
-      // Ensure client_type has a value
       client_type: client.client_type || 'company'
     });
-    // Reset unsaved changes flag when client prop changes
     setHasUnsavedChanges(false);
-  }, [client]); // Dependency on the client prop
-  
-  useEffect(() => {
-    if (editedClient?.logoUrl !== client?.logoUrl) {
-      // Logo URL has changed
-    }
-  }, [editedClient?.logoUrl, client?.logoUrl]);
+  }, [client]);
 
-  // Existing useEffect for fetching user and users
+  // Fetch current user once on mount
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const user = await getCurrentUser();
-        setCurrentUser(user);
+        if (user) {
+          setCurrentUser(prev => (prev?.user_id === user.user_id ? prev : user));
+        }
       } catch (error) {
         console.error('Error fetching current user:', error);
       }
     };
+    fetchUser();
+  }, []);
+
+  // Fetch MSP users once or when needed
+  useEffect(() => {
     const fetchAllUsers = async () => {
       if (internalUsers.length > 0) return;
       setIsLoadingUsers(true);
@@ -541,8 +539,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         setIsLoadingUsers(false);
       }
     };
-
-    fetchUser();
     fetchAllUsers();
   }, [internalUsers.length]);
 
@@ -564,10 +560,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     };
 
-    if (currentUser) {
-      fetchTicketFormOptions();
-    }
-  }, [currentUser]);
+    fetchTicketFormOptions();
+  }, [currentUser?.user_id]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -856,13 +850,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   };
   
 
-  const handleTabChange = async (tabValue: string) => {
+  const handleTabChange = useCallback(async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tabValue);
-    router.push(`${pathname}?${params.toString()}`);
-  };
+    memoizedRouter.push(`${pathname}?${params.toString()}`);
+  }, [pathname, memoizedRouter, searchParams]);
 
-  const tabContent = [
+  const tabContent = useMemo(() => [
     {
       label: "Details",
       content: (
@@ -1104,7 +1098,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               entityId={client.client_id}
               entityType="client"
               onDocumentCreated={async () => {
-                router.refresh();
+                memoizedRouter.refresh();
               }}
             />
           ) : (
@@ -1243,17 +1237,48 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     }
-  ];
+  ], [
+    editedClient, 
+    internalUsers, 
+    isLoadingUsers, 
+    t, 
+    id, 
+    tags, 
+    handleTagsChange, 
+    isInDrawer, 
+    locationsRefreshKey, 
+    surveySummary, 
+    hasAttemptedSubmit, 
+    fieldErrors, 
+    handleSave, 
+    isSaving, 
+    setIsQuickAddTicketOpen, 
+    ticketFormOptions, 
+    client.client_id, 
+    client.client_name, 
+    handleBillingConfigSave, 
+    contacts, 
+    isBillingEnabled, 
+    currentUser, 
+    documents, 
+    memoizedRouter, 
+    handleSaveNote, 
+    noteDocument, 
+    currentContent, 
+    handleContentChange, 
+    hasUnsavedNoteChanges, 
+    interactions
+  ]);
 
   // Find the matching tab label case-insensitively
-  const findTabLabel = (urlTab: string | null | undefined): string => {
+  const findTabLabel = useCallback((urlTab: string | null | undefined): string => {
     if (!urlTab) return 'Details';
     
     const matchingTab = tabContent.find(
       tab => tab.label.toLowerCase() === urlTab.toLowerCase()
     );
     return matchingTab?.label || 'Details';
-  };
+  }, [tabContent]);
 
   return (
     <ReflectionContainer id={id} label="Client Details">
