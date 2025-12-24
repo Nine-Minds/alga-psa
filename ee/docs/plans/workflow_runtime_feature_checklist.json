@@ -3558,5 +3558,865 @@
     "description": "Track which workflows use each secret for usage analysis.",
     "reference": "§18.8",
     "implemented": true
+  },
+  {
+    "description": "Define §19 Mapping Editor UX Enhancements section in PRD.",
+    "reference": "§19",
+    "implemented": true
+  },
+  {
+    "description": "Create typeCompatibility.ts module with type compatibility utilities.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Define TypeCompatibility enum: EXACT, COERCIBLE, INCOMPATIBLE, UNKNOWN.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement getTypeCompatibility(sourceType, targetType) function.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Define type compatibility matrix for primitive types (string, number, boolean).",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle string-to-number coercion in compatibility matrix.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle number-to-string coercion in compatibility matrix.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle boolean-to-string coercion in compatibility matrix.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle null/undefined compatibility with optional fields.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle array type compatibility (check element types).",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle object type compatibility (structural subtyping).",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle union type compatibility (any branch compatible).",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle any/unknown type as UNKNOWN compatibility.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement inferTypeFromJsonSchema(schema) to extract type info from JSON Schema.",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle JSON Schema type arrays (e.g., ['string', 'null']).",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Extract format constraints from JSON Schema (date, email, uri).",
+    "reference": "§19.1",
+    "implemented": true
+  },
+  {
+    "description": "Define color scheme constant: green (#22c55e) for exact match.",
+    "reference": "§19.1.1",
+    "implemented": true
+  },
+  {
+    "description": "Define color scheme constant: yellow (#eab308) for coercible match.",
+    "reference": "§19.1.1",
+    "implemented": true
+  },
+  {
+    "description": "Define color scheme constant: red (#ef4444) for incompatible types.",
+    "reference": "§19.1.1",
+    "implemented": true
+  },
+  {
+    "description": "Define color scheme constant: gray (#9ca3af) for unknown compatibility.",
+    "reference": "§19.1.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement getCompatibilityColor(compatibility) utility function.",
+    "reference": "§19.1.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement getCompatibilityLabel(compatibility) for accessibility text.",
+    "reference": "§19.1.1",
+    "implemented": true
+  },
+  {
+    "description": "Add type badge component to SourceDataTree nodes.",
+    "reference": "§19.1.2",
+    "implemented": false
+  },
+  {
+    "description": "Display type icon (string/number/boolean/array/object) on source fields.",
+    "reference": "§19.1.2",
+    "implemented": false
+  },
+  {
+    "description": "Color-code source field type badges based on selected target type.",
+    "reference": "§19.1.2",
+    "implemented": true
+  },
+  {
+    "description": "Show tooltip with full type description on hover over type badge.",
+    "reference": "§19.1.2",
+    "implemented": false
+  },
+  {
+    "description": "Dim incompatible source fields when target is selected.",
+    "reference": "§19.1.2",
+    "implemented": false
+  },
+  {
+    "description": "Highlight exact-match source fields when target is selected.",
+    "reference": "§19.1.2",
+    "implemented": false
+  },
+  {
+    "description": "Add compatibility indicator to target field display.",
+    "reference": "§19.1.3",
+    "implemented": false
+  },
+  {
+    "description": "Show compatibility status when mapping is configured.",
+    "reference": "§19.1.3",
+    "implemented": false
+  },
+  {
+    "description": "Display warning icon for coercible mappings.",
+    "reference": "§19.1.3",
+    "implemented": false
+  },
+  {
+    "description": "Display error icon for incompatible mappings.",
+    "reference": "§19.1.3",
+    "implemented": false
+  },
+  {
+    "description": "Show compatibility tooltip explaining the type relationship.",
+    "reference": "§19.1.3",
+    "implemented": false
+  },
+  {
+    "description": "Create useMappingDnd.ts hook for drag-and-drop state management.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Track isDragging state in mapping DnD hook.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Track draggedItem (source field path and type) in DnD state.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Track dropTarget (target field being hovered) in DnD state.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement handleDragStart callback with source field data.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement handleDragOver callback for drop zone detection.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement handleDrop callback to create mapping.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement handleDragEnd callback for cleanup.",
+    "reference": "§19.2",
+    "implemented": true
+  },
+  {
+    "description": "Add draggable wrapper to SourceDataTree leaf nodes.",
+    "reference": "§19.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Set draggable='true' attribute on source field elements.",
+    "reference": "§19.2.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement onDragStart handler on source fields.",
+    "reference": "§19.2.1",
+    "implemented": true
+  },
+  {
+    "description": "Store source field path and type in dataTransfer during drag.",
+    "reference": "§19.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Add drag handle icon to draggable source fields.",
+    "reference": "§19.2.1",
+    "implemented": true
+  },
+  {
+    "description": "Apply dragging style (opacity, cursor) to source field during drag.",
+    "reference": "§19.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Create drag preview element for dragged source field.",
+    "reference": "§19.2.1",
+    "implemented": false
+  },
+  {
+    "description": "Add drop zone to unmapped target fields in InputMappingEditor.",
+    "reference": "§19.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement onDragOver handler on target fields to enable dropping.",
+    "reference": "§19.2.2",
+    "implemented": true
+  },
+  {
+    "description": "Implement onDrop handler to create { $expr: path } mapping.",
+    "reference": "§19.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Apply hover highlight style when dragging over valid drop target.",
+    "reference": "§19.2.2",
+    "implemented": true
+  },
+  {
+    "description": "Color drop zone border based on type compatibility.",
+    "reference": "§19.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Show + icon in drop zone when dragging compatible field.",
+    "reference": "§19.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Show warning icon in drop zone when dragging coercible field.",
+    "reference": "§19.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Show blocked icon when dragging over incompatible target.",
+    "reference": "§19.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Prevent drop on incompatible targets (but allow with override).",
+    "reference": "§19.2.2",
+    "implemented": false
+  },
+  {
+    "description": "Highlight all compatible targets when drag starts.",
+    "reference": "§19.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Dim all incompatible targets when drag starts.",
+    "reference": "§19.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Show connection preview line from source to cursor during drag.",
+    "reference": "§19.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Animate drop zone expansion on hover during drag.",
+    "reference": "§19.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Show success animation when mapping is created via drop.",
+    "reference": "§19.2.3",
+    "implemented": false
+  },
+  {
+    "description": "Create MappingConnectionsOverlay.tsx SVG component.",
+    "reference": "§19.3",
+    "implemented": true
+  },
+  {
+    "description": "Position SVG overlay absolutely over mapping editor container.",
+    "reference": "§19.3",
+    "implemented": true
+  },
+  {
+    "description": "Set pointer-events: none on SVG overlay to allow interaction with elements below.",
+    "reference": "§19.3",
+    "implemented": true
+  },
+  {
+    "description": "Set z-index appropriately for overlay visibility.",
+    "reference": "§19.3",
+    "implemented": true
+  },
+  {
+    "description": "Create useMappingPositions.ts hook for DOM position tracking.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Track refs for all source field elements.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Track refs for all target field elements.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement getFieldRect(fieldId) to get bounding rectangle.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Handle scroll offset in position calculations.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Update positions on window resize.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Update positions on container scroll.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Debounce position updates for performance.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Use ResizeObserver to detect element size changes.",
+    "reference": "§19.3.1",
+    "implemented": true
+  },
+  {
+    "description": "Implement calculateBezierPath(sourceRect, targetRect) function.",
+    "reference": "§19.3.2",
+    "implemented": true
+  },
+  {
+    "description": "Calculate control points for smooth bezier curves.",
+    "reference": "§19.3.2",
+    "implemented": true
+  },
+  {
+    "description": "Handle left-to-right curve direction (source on left, target on right).",
+    "reference": "§19.3.2",
+    "implemented": true
+  },
+  {
+    "description": "Adjust curve tension based on horizontal distance.",
+    "reference": "§19.3.2",
+    "implemented": true
+  },
+  {
+    "description": "Handle edge case when source and target are at same Y position.",
+    "reference": "§19.3.2",
+    "implemented": true
+  },
+  {
+    "description": "Avoid curve overlap when multiple connections are close together.",
+    "reference": "§19.3.2",
+    "implemented": true
+  },
+  {
+    "description": "Render SVG path elements for each active mapping connection.",
+    "reference": "§19.3.3",
+    "implemented": true
+  },
+  {
+    "description": "Apply stroke color based on type compatibility.",
+    "reference": "§19.3.3",
+    "implemented": true
+  },
+  {
+    "description": "Set default stroke width of 2px for connection lines.",
+    "reference": "§19.3.3",
+    "implemented": true
+  },
+  {
+    "description": "Apply fill='none' to path elements.",
+    "reference": "§19.3.3",
+    "implemented": true
+  },
+  {
+    "description": "Add subtle drop shadow to connection lines for depth.",
+    "reference": "§19.3.3",
+    "implemented": true
+  },
+  {
+    "description": "Animate connection line on initial render.",
+    "reference": "§19.3.3",
+    "implemented": true
+  },
+  {
+    "description": "Increase stroke width to 3px on hover over connection line.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Change cursor to pointer on hover over connection line.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Highlight connected source and target fields on connection hover.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Show connection tooltip with source → target info on hover.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Apply selected state styling to clicked connection.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Show delete button/icon when connection is selected.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Enable pointer-events on path elements for interaction.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Add invisible wider path for easier hover target.",
+    "reference": "§19.3.4",
+    "implemented": false
+  },
+  {
+    "description": "Implement click-to-delete for connection lines.",
+    "reference": "§19.3.5",
+    "implemented": false
+  },
+  {
+    "description": "Show confirmation before deleting connection on click.",
+    "reference": "§19.3.5",
+    "implemented": false
+  },
+  {
+    "description": "Animate connection removal with fade-out effect.",
+    "reference": "§19.3.5",
+    "implemented": false
+  },
+  {
+    "description": "Update mapping state immediately after connection deletion.",
+    "reference": "§19.3.5",
+    "implemented": false
+  },
+  {
+    "description": "Group source field dropdown options by compatibility level.",
+    "reference": "§19.4",
+    "implemented": false
+  },
+  {
+    "description": "Show exact matches section first in dropdown.",
+    "reference": "§19.4",
+    "implemented": false
+  },
+  {
+    "description": "Show coercible matches section second in dropdown.",
+    "reference": "§19.4",
+    "implemented": false
+  },
+  {
+    "description": "Show incompatible options last and grayed out in dropdown.",
+    "reference": "§19.4",
+    "implemented": false
+  },
+  {
+    "description": "Add section headers for compatibility groups in dropdown.",
+    "reference": "§19.4",
+    "implemented": false
+  },
+  {
+    "description": "Add compatibility icon/badge to each dropdown option.",
+    "reference": "§19.4.1",
+    "implemented": true
+  },
+  {
+    "description": "Show checkmark icon for exact match options.",
+    "reference": "§19.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Show warning icon for coercible options.",
+    "reference": "§19.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Show X icon for incompatible options.",
+    "reference": "§19.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Apply strikethrough style to incompatible option labels.",
+    "reference": "§19.4.1",
+    "implemented": false
+  },
+  {
+    "description": "Prioritize compatible options in search results.",
+    "reference": "§19.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Sort search results by compatibility then by relevance.",
+    "reference": "§19.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Maintain compatibility grouping while filtering by search.",
+    "reference": "§19.4.2",
+    "implemented": false
+  },
+  {
+    "description": "Create useMappingKeyboard.ts hook for keyboard navigation.",
+    "reference": "§19.5",
+    "implemented": false
+  },
+  {
+    "description": "Track focused element (source tree vs target fields).",
+    "reference": "§19.5",
+    "implemented": false
+  },
+  {
+    "description": "Track focused field index within current panel.",
+    "reference": "§19.5",
+    "implemented": false
+  },
+  {
+    "description": "Implement Arrow Up key to move focus to previous target field.",
+    "reference": "§19.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement Arrow Down key to move focus to next target field.",
+    "reference": "§19.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement Arrow Left key to expand tree node or move to parent.",
+    "reference": "§19.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement Arrow Right key to expand tree node or move to first child.",
+    "reference": "§19.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Handle Home key to focus first field.",
+    "reference": "§19.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Handle End key to focus last field.",
+    "reference": "§19.5.1",
+    "implemented": false
+  },
+  {
+    "description": "Implement Tab key to move focus between source and target panels.",
+    "reference": "§19.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement Shift+Tab for reverse panel navigation.",
+    "reference": "§19.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Preserve focused item index when switching panels.",
+    "reference": "§19.5.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement Enter key to open field picker on focused target.",
+    "reference": "§19.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement Enter key to confirm selection in open dropdown.",
+    "reference": "§19.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement Space key to toggle tree node expansion.",
+    "reference": "§19.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement Delete/Backspace to remove mapping from focused field.",
+    "reference": "§19.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement Escape to cancel current operation and close dropdowns.",
+    "reference": "§19.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement Ctrl+A to select all mappings.",
+    "reference": "§19.5.3",
+    "implemented": false
+  },
+  {
+    "description": "Add visible focus ring to focused target fields.",
+    "reference": "§19.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Add visible focus ring to focused source tree nodes.",
+    "reference": "§19.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Ensure focus ring meets WCAG 2.1 contrast requirements.",
+    "reference": "§19.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Scroll focused element into view when navigating with keyboard.",
+    "reference": "§19.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Announce focus changes to screen readers via ARIA.",
+    "reference": "§19.5.4",
+    "implemented": false
+  },
+  {
+    "description": "Create MappingEditorSkeleton.tsx loading state component.",
+    "reference": "§19.6",
+    "implemented": true
+  },
+  {
+    "description": "Design skeleton layout matching actual editor structure.",
+    "reference": "§19.6",
+    "implemented": true
+  },
+  {
+    "description": "Add skeleton for source tree panel.",
+    "reference": "§19.6",
+    "implemented": true
+  },
+  {
+    "description": "Add skeleton for target fields panel.",
+    "reference": "§19.6",
+    "implemented": true
+  },
+  {
+    "description": "Add skeleton for toolbar.",
+    "reference": "§19.6",
+    "implemented": true
+  },
+  {
+    "description": "Apply shimmer animation to skeleton elements.",
+    "reference": "§19.6",
+    "implemented": true
+  },
+  {
+    "description": "Show loading skeleton while fetching action schema.",
+    "reference": "§19.6.1",
+    "implemented": true
+  },
+  {
+    "description": "Show loading skeleton while resolving available data context.",
+    "reference": "§19.6.1",
+    "implemented": true
+  },
+  {
+    "description": "Transition smoothly from skeleton to loaded content.",
+    "reference": "§19.6.1",
+    "implemented": false
+  },
+  {
+    "description": "Create error state component for schema fetch failure.",
+    "reference": "§19.6.2",
+    "implemented": true
+  },
+  {
+    "description": "Display error message explaining what went wrong.",
+    "reference": "§19.6.2",
+    "implemented": true
+  },
+  {
+    "description": "Show retry button in error state.",
+    "reference": "§19.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement retry logic with exponential backoff.",
+    "reference": "§19.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Show retry count/limit in error state.",
+    "reference": "§19.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Provide contact support link for persistent errors.",
+    "reference": "§19.6.2",
+    "implemented": false
+  },
+  {
+    "description": "Implement client-side cache for action schemas.",
+    "reference": "§19.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Cache schema by actionId and version key.",
+    "reference": "§19.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Set cache TTL for schema entries (e.g., 5 minutes).",
+    "reference": "§19.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Invalidate cache entry when action version changes.",
+    "reference": "§19.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Implement cache-first strategy for schema fetching.",
+    "reference": "§19.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Add manual cache refresh option in UI.",
+    "reference": "§19.6.3",
+    "implemented": false
+  },
+  {
+    "description": "Add accessibility labels to all interactive elements in mapping editor.",
+    "reference": "§19.7",
+    "implemented": false
+  },
+  {
+    "description": "Implement ARIA live regions for dynamic content updates.",
+    "reference": "§19.7",
+    "implemented": false
+  },
+  {
+    "description": "Add aria-describedby for field help text.",
+    "reference": "§19.7",
+    "implemented": false
+  },
+  {
+    "description": "Ensure all colors meet WCAG contrast requirements.",
+    "reference": "§19.7",
+    "implemented": false
+  },
+  {
+    "description": "Provide text alternatives for color-coded information.",
+    "reference": "§19.7",
+    "implemented": false
+  },
+  {
+    "description": "Test mapping editor with screen reader.",
+    "reference": "§19.7",
+    "implemented": false
+  },
+  {
+    "description": "Write unit tests for typeCompatibility.ts module.",
+    "reference": "§19.8",
+    "implemented": true
+  },
+  {
+    "description": "Write unit tests for useMappingDnd.ts hook.",
+    "reference": "§19.8",
+    "implemented": true
+  },
+  {
+    "description": "Write unit tests for useMappingPositions.ts hook.",
+    "reference": "§19.8",
+    "implemented": true
+  },
+  {
+    "description": "Write unit tests for useMappingKeyboard.ts hook.",
+    "reference": "§19.8",
+    "implemented": false
+  },
+  {
+    "description": "Write unit tests for calculateBezierPath function.",
+    "reference": "§19.8",
+    "implemented": true
+  },
+  {
+    "description": "Write integration tests for drag-and-drop mapping flow.",
+    "reference": "§19.8",
+    "implemented": false
+  },
+  {
+    "description": "Write integration tests for keyboard navigation.",
+    "reference": "§19.8",
+    "implemented": false
+  },
+  {
+    "description": "Write Playwright tests for visual connection rendering.",
+    "reference": "§19.8",
+    "implemented": false
+  },
+  {
+    "description": "Write Playwright tests for type compatibility indicators.",
+    "reference": "§19.8",
+    "implemented": false
+  },
+  {
+    "description": "Write Playwright tests for loading and error states.",
+    "reference": "§19.8",
+    "implemented": false
   }
 ]

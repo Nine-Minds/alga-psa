@@ -19,7 +19,7 @@ import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
-import { InputMappingEditor, type ActionInputField } from './mapping';
+import { MappingPanel, type ActionInputField } from './mapping';
 import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createWorkflowDefinitionAction,
@@ -2486,13 +2486,14 @@ const StepConfigPanel: React.FC<{
         />
       )}
 
-      {/* §17 - Input Mapping Editor for action.call steps */}
+      {/* §17 - Input Mapping Panel for action.call steps */}
       {step.type === 'action.call' && selectedAction && actionInputFields.length > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <InputMappingEditor
+          <MappingPanel
             value={inputMapping}
             onChange={handleInputMappingChange}
             targetFields={actionInputFields}
+            dataContext={dataContext}
             fieldOptions={enhancedFieldOptions}
             stepId={step.id}
           />
