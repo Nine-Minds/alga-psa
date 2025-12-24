@@ -229,8 +229,8 @@ describe('workflow runtime v2 E2E tests', () => {
   it('E2E: idempotent action call returns cached output on duplicate request. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [
-        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' } }),
-        actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })
+        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' } }),
+        actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })
       ]
     });
     await publishWorkflow(workflowId, 1);
@@ -241,7 +241,7 @@ describe('workflow runtime v2 E2E tests', () => {
 
   it('E2E: canceling a running workflow stops execution and prevents further steps. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } }), actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })]
+      steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } }), actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })]
     });
     await publishWorkflow(workflowId, 1);
 

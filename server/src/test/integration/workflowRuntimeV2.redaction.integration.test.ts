@@ -96,7 +96,7 @@ describe('workflow runtime v2 redaction + snapshot integration tests', () => {
 
   it('Action invocation logs store redacted input/output JSON. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', args: { value: { secretRef: 'token' } }, saveAs: 'payload.output' })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: { secretRef: 'token' } }, saveAs: 'payload.output' })]
     });
     await publishWorkflow(workflowId, 1);
 

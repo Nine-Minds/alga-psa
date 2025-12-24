@@ -201,7 +201,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('control.forEach with empty list skips body without error. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', body: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })] })]
+      steps: [forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', body: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })] })]
     });
     await publishWorkflow(workflowId, 1);
     await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { items: [] } });
@@ -218,7 +218,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
       return { count: callCount };
     });
     const workflowId = await createDraftWorkflow({
-      steps: [forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', onItemError: 'continue', body: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })] })]
+      steps: [forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', onItemError: 'continue', body: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })] })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { items: [1, 2] } });
@@ -231,7 +231,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
       throw new Error('fail');
     });
     const workflowId = await createDraftWorkflow({
-      steps: [forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', onItemError: 'fail', body: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })] })]
+      steps: [forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', onItemError: 'fail', body: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })] })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { items: [1, 2] } });
@@ -261,7 +261,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('control.tryCatch executes CATCH pipe when TRY throws ActionError. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })], catchSteps: [stateSetStep('state-1', 'RECOVERED')] })]
+      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })], catchSteps: [stateSetStep('state-1', 'RECOVERED')] })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -281,7 +281,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('control.tryCatch propagates error when CATCH pipe also fails. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })], catchSteps: [actionCallStep({ id: 'fail-2', actionId: 'test.fail', args: {} })] })]
+      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })], catchSteps: [actionCallStep({ id: 'fail-2', actionId: 'test.fail', inputMapping: {} })] })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -295,7 +295,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
         {
           id: 'try-1',
           type: 'control.tryCatch',
-          try: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })],
+          try: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })],
           catch: [assignStep('assign-err', { 'payload.errCategory': { $expr: 'vars.err.category' } })],
           captureErrorAs: 'err'
         }
@@ -317,7 +317,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
             {
               id: 'inner',
               type: 'control.tryCatch',
-              try: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })],
+              try: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })],
               catch: [stateSetStep('state-inner', 'INNER_RECOVERED')]
             }
           ],
@@ -336,7 +336,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     const workflowId = await createDraftWorkflow({
       steps: [
         ifStep('if-1', { $expr: 'true' }, [returnStep('return-1')]),
-        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })
+        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })
       ]
     });
     await publishWorkflow(workflowId, 1);
@@ -349,7 +349,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     const workflowId = await createDraftWorkflow({
       steps: [
         forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', body: [returnStep('return-1')] }),
-        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })
+        actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })
       ]
     });
     await publishWorkflow(workflowId, 1);
@@ -360,7 +360,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('control.return inside control.tryCatch stops the run even if in catch. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })], catchSteps: [returnStep('return-1')] }), actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })]
+      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })], catchSteps: [returnStep('return-1')] }), actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -416,7 +416,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('control.tryCatch catch pipe can set meta.state for error states. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })], catchSteps: [stateSetStep('state-1', 'ERROR')] })]
+      steps: [tryCatchStep('try-1', { trySteps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })], catchSteps: [stateSetStep('state-1', 'ERROR')] })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -451,7 +451,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
   });
 
   it('CallWorkflowBlock propagates child failure to parent unless caught. Mocks: non-target dependencies.', async () => {
-    const childId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })] });
+    const childId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })] });
     await publishWorkflow(childId, 1);
 
     const parentId = await createDraftWorkflow({
@@ -464,7 +464,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
   });
 
   it('CallWorkflowBlock respects parent retry policy on call failure. Mocks: non-target dependencies.', async () => {
-    const childId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })] });
+    const childId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })] });
     await publishWorkflow(childId, 1);
 
     const parentId = await createDraftWorkflow({
@@ -836,7 +836,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('Retry uses step retry policy when provided. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [{ id: 'retry', type: 'action.call', retry: { maxAttempts: 2, backoffMs: 5, retryOn: ['ActionError'] }, config: { actionId: 'test.fail', version: 1, args: {} } }]
+      steps: [{ id: 'retry', type: 'action.call', retry: { maxAttempts: 2, backoffMs: 5, retryOn: ['ActionError'] }, config: { actionId: 'test.fail', version: 1, inputMapping: {} } }]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -867,7 +867,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
   });
 
   it('Retry backoff multiplies delay with each attempt. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [{ id: 'retry', type: 'action.call', retry: { maxAttempts: 3, backoffMs: 5, backoffMultiplier: 2, jitter: false, retryOn: ['ActionError'] }, config: { actionId: 'test.fail', version: 1, args: {} } }] });
+    const workflowId = await createDraftWorkflow({ steps: [{ id: 'retry', type: 'action.call', retry: { maxAttempts: 3, backoffMs: 5, backoffMultiplier: 2, jitter: false, retryOn: ['ActionError'] }, config: { actionId: 'test.fail', version: 1, inputMapping: {} } }] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const waits = await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'retry' }).orderBy('created_at', 'asc');
@@ -875,7 +875,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
   });
 
   it('Retry backoff applies jitter to avoid thundering herd. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [{ id: 'retry', type: 'action.call', retry: { maxAttempts: 2, backoffMs: 5, jitter: true, retryOn: ['ActionError'] }, config: { actionId: 'test.fail', version: 1, args: {} } }] });
+    const workflowId = await createDraftWorkflow({ steps: [{ id: 'retry', type: 'action.call', retry: { maxAttempts: 2, backoffMs: 5, jitter: true, retryOn: ['ActionError'] }, config: { actionId: 'test.fail', version: 1, inputMapping: {} } }] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const waits = await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'retry' });
@@ -891,7 +891,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
   });
 
   it('Non-retryable ActionError does not schedule retry. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'fail', actionId: 'test.fail', args: {} })] });
+    const workflowId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'fail', actionId: 'test.fail', inputMapping: {} })] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const waits = await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'retry' });
@@ -911,7 +911,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('Idempotency key uniqueness prevents duplicate side-effectful action calls. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' } }), actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' } }), actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })]
     });
     await publishWorkflow(workflowId, 1);
     await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -920,7 +920,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('Duplicate idempotency key returns previously stored output without calling handler. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'payload.first' }), actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'payload.second' })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'payload.first' }), actionCallStep({ id: 'action-2', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, saveAs: 'payload.second' })]
     });
     await publishWorkflow(workflowId, 1);
     await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -942,7 +942,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
       handler: async () => ({ foo: 'bar' })
     });
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' } }), actionCallStep({ id: 'action-2', actionId, version: 2, args: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' } }), actionCallStep({ id: 'action-2', actionId, version: 2, inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })]
     });
     await publishWorkflow(workflowId, 1);
     await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -952,7 +952,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('Idempotency behavior is scoped by tenant when tenant_id exists. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' } })]
     });
     await publishWorkflow(workflowId, 1);
     const tenantA = uuidv4();
@@ -985,7 +985,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
   });
 
   it('Stale lease TransientError triggers retry scheduling. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, retry: { maxAttempts: 2, backoffMs: 5, retryOn: ['TransientError'] } })] });
+    const workflowId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {}, idempotencyKeyExpr: { $expr: '"fixed"' }, retry: { maxAttempts: 2, backoffMs: 5, retryOn: ['TransientError'] } })] });
     await publishWorkflow(workflowId, 1);
     const runtime = new WorkflowRuntimeV2();
     const runId = await runtime.startRun(db, { workflowId, version: 1, payload: {}, tenantId });
@@ -1063,7 +1063,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('Idempotency uses engineProvided key when configured. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -1073,7 +1073,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
 
   it('Idempotency uses actionProvided key when configured. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.actionProvided', args: { key: 'abc' } })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.actionProvided', inputMapping: { key: 'abc' } })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -1082,7 +1082,7 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
   });
 
   it('Concurrent retries for same step do not execute in parallel. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'retry', actionId: 'test.retryable', args: { key: 'abc' }, retry: { maxAttempts: 2, backoffMs: 5, retryOn: ['ActionError'] } })] });
+    const workflowId = await createDraftWorkflow({ steps: [actionCallStep({ id: 'retry', actionId: 'test.retryable', inputMapping: { key: 'abc' }, retry: { maxAttempts: 2, backoffMs: 5, retryOn: ['ActionError'] } })] });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'retry' }).update({ timeout_at: new Date(Date.now() - 1000).toISOString() });

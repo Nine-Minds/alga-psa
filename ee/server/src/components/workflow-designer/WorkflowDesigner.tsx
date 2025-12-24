@@ -950,6 +950,29 @@ const getStepLabel = (step: Step, nodeRegistry: Record<string, NodeRegistryItem>
 
 const ensureExpr = (value: Expr | undefined): Expr => ({ $expr: value?.$expr ?? '' });
 
+/**
+ * Generate a smart default saveAs variable name from an action ID.
+ * Converts snake_case or kebab-case to camelCase and adds "Result" suffix.
+ * e.g., "lookup_threading_headers" → "threadingHeadersResult"
+ *       "create_ticket_from_email" → "ticketFromEmailResult"
+ */
+const generateSaveAsName = (actionId: string): string => {
+  // Remove common prefixes like "get_", "create_", "update_", "delete_", "find_", "lookup_", "resolve_"
+  const prefixPattern = /^(get_|create_|update_|delete_|find_|lookup_|resolve_|fetch_|load_|process_|send_|call_)/i;
+  let cleaned = actionId.replace(prefixPattern, '');
+
+  // If cleaning removed everything, use the original
+  if (!cleaned) cleaned = actionId;
+
+  // Convert snake_case or kebab-case to camelCase
+  const camelCase = cleaned
+    .toLowerCase()
+    .replace(/[-_](.)/g, (_, char) => char.toUpperCase());
+
+  // Add "Result" suffix
+  return camelCase + 'Result';
+};
+
 const createStepFromPalette = (
   type: Step['type'],
   nodeRegistry: Record<string, NodeRegistryItem>
@@ -1331,15 +1354,27 @@ const WorkflowDesigner: React.FC = () => {
   };
 
   // §16.6 - Enhanced handleAddStep to accept initial config (for pre-configured action items)
+  // §19.4 - Auto-generate saveAs name for action.call steps
   const handleAddStep = (type: Step['type'], initialConfig?: Record<string, unknown>) => {
     if (!activeDefinition) return;
     let newStep = createStepFromPalette(type, nodeRegistryMap);
     // Apply initial config if provided (e.g., for action items with pre-selected actionId)
     if (initialConfig && 'config' in newStep) {
       const existingConfig = (newStep as NodeStep).config as Record<string, unknown> | undefined;
+
+      // §19.4 - Auto-generate saveAs name when adding action.call with actionId
+      let autoSaveAs: string | undefined;
+      if (type === 'action.call' && initialConfig.actionId && typeof initialConfig.actionId === 'string') {
+        autoSaveAs = generateSaveAsName(initialConfig.actionId);
+      }
+
       newStep = {
         ...newStep,
-        config: { ...existingConfig, ...initialConfig }
+        config: {
+          ...existingConfig,
+          ...initialConfig,
+          ...(autoSaveAs ? { saveAs: autoSaveAs } : {})
+        }
       };
     }
     const segments = parsePipePath(selectedPipePath);
@@ -2304,6 +2339,7 @@ const StepConfigPanel: React.FC<{
   }, [step, dataContext]);
 
   const handleCopyPath = useCallback((path: string) => {
+    navigator.clipboard.writeText(path);
     toast.success(`Copied: ${path}`, { duration: 1500 });
   }, []);
 
@@ -2407,38 +2443,96 @@ const StepConfigPanel: React.FC<{
         />
       )}
 
-      {!step.type.startsWith('control.') && (
-        <div className="space-y-1">
-          <Input
-            id={`workflow-step-saveAs-${step.id}`}
-            label="Save output as"
-            placeholder="e.g., ticketDefaults"
-            value={((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs ?? ''}
-            onChange={(event) => {
-              const nodeStep = step as NodeStep;
-              const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
-              const value = event.target.value.trim();
-              onChange({
-                ...nodeStep,
-                config: {
-                  ...existingConfig,
-                  saveAs: value || undefined
-                }
-              });
-            }}
-            className={saveAsValidation?.type === 'error' ? 'border-red-500' : saveAsValidation?.type === 'warning' ? 'border-yellow-500' : ''}
-          />
-          {/* §16.1 - saveAs conflict validation warning */}
-          {saveAsValidation && (
-            <div className={`flex items-center gap-1 text-xs ${
-              saveAsValidation.type === 'error' ? 'text-red-600' : 'text-yellow-600'
-            }`}>
-              <AlertTriangle className="w-3 h-3" />
-              {saveAsValidation.message}
+      {/* §19.4 - Enhanced Save Output section with toggle, preview, and copy */}
+      {!step.type.startsWith('control.') && (() => {
+        const nodeStep = step as NodeStep;
+        const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+        const currentSaveAs = (existingConfig?.saveAs as string) ?? '';
+        const isSaveEnabled = !!currentSaveAs;
+        const actionId = (existingConfig?.actionId as string) ?? '';
+
+        const handleToggleSave = (enabled: boolean) => {
+          if (enabled) {
+            // Auto-generate name from actionId if available
+            const autoName = actionId ? generateSaveAsName(actionId) : 'result';
+            onChange({
+              ...nodeStep,
+              config: { ...existingConfig, saveAs: autoName }
+            });
+          } else {
+            onChange({
+              ...nodeStep,
+              config: { ...existingConfig, saveAs: undefined }
+            });
+          }
+        };
+
+        const handleSaveAsChange = (value: string) => {
+          onChange({
+            ...nodeStep,
+            config: { ...existingConfig, saveAs: value.trim() || undefined }
+          });
+        };
+
+        return (
+          <div className="space-y-2">
+            {/* Toggle row */}
+            <div className="flex items-center justify-between">
+              <Label htmlFor={`workflow-step-saveAs-toggle-${step.id}`} className="text-sm font-medium">
+                Save output
+              </Label>
+              <Switch
+                id={`workflow-step-saveAs-toggle-${step.id}`}
+                checked={isSaveEnabled}
+                onCheckedChange={handleToggleSave}
+              />
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Input and copy button when enabled */}
+            {isSaveEnabled && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id={`workflow-step-saveAs-${step.id}`}
+                    placeholder="e.g., ticketDefaults"
+                    value={currentSaveAs}
+                    onChange={(event) => handleSaveAsChange(event.target.value)}
+                    className={`flex-1 ${saveAsValidation?.type === 'error' ? 'border-red-500' : saveAsValidation?.type === 'warning' ? 'border-yellow-500' : ''}`}
+                  />
+                  <Button
+                    id={`workflow-step-saveAs-copy-${step.id}`}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyPath(`vars.${currentSaveAs}`)}
+                    title="Copy full path"
+                    className="flex-shrink-0"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Path preview */}
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <span>Accessible as:</span>
+                  <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-mono">
+                    vars.{currentSaveAs}
+                  </code>
+                </div>
+
+                {/* §16.1 - saveAs conflict validation warning */}
+                {saveAsValidation && (
+                  <div className={`flex items-center gap-1 text-xs ${
+                    saveAsValidation.type === 'error' ? 'text-red-600' : 'text-yellow-600'
+                  }`}>
+                    <AlertTriangle className="w-3 h-3" />
+                    {saveAsValidation.message}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {step.type === 'control.if' && (() => {
         const ifStep = step as IfBlock;

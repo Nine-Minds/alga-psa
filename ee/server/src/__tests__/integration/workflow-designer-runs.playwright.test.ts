@@ -66,7 +66,7 @@ const RUN_DETAIL_STEPS: Step[] = [
       {
         id: RUN_DETAIL_STEP_IDS.elseStep,
         type: 'action.call',
-        config: { actionId: 'test.action', version: 1, args: { value: 'foo' } }
+        config: { actionId: 'test.action', version: 1, inputMapping: { value: 'foo' } }
       }
     ]
   },

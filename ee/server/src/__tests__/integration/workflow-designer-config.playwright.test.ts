@@ -88,11 +88,11 @@ test.describe('Workflow Designer UI - config fields', () => {
     try {
       const stepId = await addActionCallStep(page, workflowPage);
 
-      const argsField = page.locator(`#config-${stepId}-args-json`);
-      await argsField.fill('{');
+      const inputMappingField = page.locator(`#config-${stepId}-inputMapping-json`);
+      await inputMappingField.fill('{');
 
       await expect(page.getByText('Invalid JSON')).toBeVisible();
-      await expect(argsField).toHaveClass(/border-red-500/);
+      await expect(inputMappingField).toHaveClass(/border-red-500/);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
@@ -113,12 +113,12 @@ test.describe('Workflow Designer UI - config fields', () => {
       const stepId = await workflowPage.getFirstStepId();
       await workflowPage.stepSelectButton(stepId).click();
 
-      const argsField = page.locator(`#config-${stepId}-args-json`);
-      await argsField.fill('{');
+      const inputMappingField = page.locator(`#config-${stepId}-inputMapping-json`);
+      await inputMappingField.fill('{');
       await expect(page.getByText('Invalid JSON')).toBeVisible();
 
       const payload = '{"foo":"bar","count":2}';
-      await argsField.fill(payload);
+      await inputMappingField.fill(payload);
       await expect(page.getByText('Invalid JSON')).toHaveCount(0);
 
       await workflowPage.saveDraft();
@@ -130,7 +130,7 @@ test.describe('Workflow Designer UI - config fields', () => {
       await workflowPage.stepSelectButton(stepId).click();
 
       const expectedFormatted = '{\n  "foo": "bar",\n  "count": 2\n}';
-      await expect(page.locator(`#config-${stepId}-args-json`)).toHaveValue(expectedFormatted);
+      await expect(page.locator(`#config-${stepId}-inputMapping-json`)).toHaveValue(expectedFormatted);
     } finally {
       await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
@@ -161,7 +161,7 @@ test.describe('Workflow Designer UI - config fields', () => {
     }
   });
 
-  test('action.call config args/saveAs/idempotencyKey persist after save', async ({ page }) => {
+  test('action.call config inputMapping/saveAs/idempotencyKey persist after save', async ({ page }) => {
     test.setTimeout(120000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
@@ -179,7 +179,7 @@ test.describe('Workflow Designer UI - config fields', () => {
       await page.locator(`#config-${stepId}-version`).fill('2');
       await page.locator(`#config-${stepId}-saveAs`).fill('payload.actionResult');
       await page.locator(`#config-${stepId}-idempotencyKey-expr`).fill('payload.messageId');
-      await page.locator(`#config-${stepId}-args-json`).fill('{"foo":"bar"}');
+      await page.locator(`#config-${stepId}-inputMapping-json`).fill('{"foo":"bar"}');
 
       await workflowPage.saveDraft();
       await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
@@ -193,7 +193,7 @@ test.describe('Workflow Designer UI - config fields', () => {
       await expect(page.locator(`#config-${stepId}-version`)).toHaveValue('2');
       await expect(page.locator(`#config-${stepId}-saveAs`)).toHaveValue('payload.actionResult');
       await expect(page.locator(`#config-${stepId}-idempotencyKey-expr`)).toHaveValue('payload.messageId');
-      await expect(page.locator(`#config-${stepId}-args-json`)).toHaveValue(/"foo": "bar"/);
+      await expect(page.locator(`#config-${stepId}-inputMapping-json`)).toHaveValue(/"foo": "bar"/);
     } finally {
       await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
