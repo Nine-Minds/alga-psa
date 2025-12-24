@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import {
   PlatformReportService,
   UpdateReportInput,
@@ -27,7 +28,7 @@ const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
  *
  * SECURITY: Platform reports provide cross-tenant data access, so we MUST verify
  * that the caller has appropriate access via either:
- * 1. Runner service auth (x-runner-auth header) - for extension uiProxy calls
+ * 1. API key auth (x-api-key header) - for extension uiProxy calls
  * 2. Session auth - for direct browser calls
  */
 async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
@@ -35,25 +36,27 @@ async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantI
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // RUNNER SERVICE AUTH: Check if this is a call from the extension runner
-  const runnerAuth = request.headers.get('x-runner-auth');
-  const runnerTenant = request.headers.get('x-alga-tenant');
+  // API KEY AUTH: Check for x-api-key header (used by extension uiProxy)
+  const apiKey = request.headers.get('x-api-key');
   const extensionId = request.headers.get('x-alga-extension');
 
-  if (runnerAuth && runnerTenant) {
-    const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
-    if (expectedToken && runnerAuth === expectedToken) {
-      if (runnerTenant === MASTER_BILLING_TENANT_ID) {
-        console.log('[platform-reports/:id] Runner auth accepted:', { extensionId, tenant: runnerTenant });
+  if (apiKey) {
+    const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+    if (keyRecord) {
+      if (keyRecord.tenant === MASTER_BILLING_TENANT_ID) {
+        // Get user info from headers (forwarded by runner from ext-proxy)
+        const headerUserId = request.headers.get('x-user-id');
+        const headerUserEmail = request.headers.get('x-user-email');
+
         return {
           tenantId: MASTER_BILLING_TENANT_ID,
-          userId: extensionId ? `extension:${extensionId}` : 'runner',
-          userEmail: undefined,
+          userId: headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id),
+          userEmail: headerUserEmail || undefined,
         };
       }
-      throw new Error('Access denied: Extension not authorized for platform reports');
+      throw new Error('Access denied: API key not authorized for platform reports');
     }
-    console.warn('[platform-reports/:id] Invalid runner auth token');
+    console.warn('[platform-reports/:id] Invalid API key');
   }
 
   // SESSION AUTH: Fall back to browser session-based authentication

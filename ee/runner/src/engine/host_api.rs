@@ -891,15 +891,13 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 None => (trimmed_route, None),
             };
 
-            // Build URL by joining base URL with the route directly
-            // The route should be an absolute platform API path like /api/v1/platform-reports
-            // The platform API will check for x-runner-auth header for service auth
+            // Build URL: {UI_PROXY_BASE_URL}{route}
+            // Extension calls actual API routes directly (e.g., /api/v1/platform-reports)
+            // Authentication is via api_key from secret envelope
             let mut url = base_url.clone();
             {
                 let mut segments = url.path_segments_mut().map_err(|_| ProxyError::Internal)?;
-                // Clear existing path segments to start fresh
-                segments.clear();
-                // Add each segment from the route path
+                segments.pop_if_empty();
                 for segment in path_part.trim_start_matches('/').split('/') {
                     if segment.is_empty() {
                         continue;
@@ -927,7 +925,7 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
             }
 
             let client: &Client = &HTTP_CLIENT;
-            // Use GET if no payload, POST if payload is present
+            // Use GET when no payload, POST when payload is present
             let mut request = if payload.is_some() {
                 client.post(url.clone())
             } else {
@@ -943,8 +941,17 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
             if let Some(version) = ctx.version_id.clone() {
                 request = request.header("x-ext-version-id", version);
             }
-            if let Some(auth) = runtime.ui_proxy_auth.clone() {
-                request = request.header("x-runner-auth", auth);
+            // Get API key from extension's secret envelope for authentication
+            if let Some(ref secrets) = ctx.secrets {
+                if let Some(api_key) = secrets.values.get("api_key") {
+                    request = request.header("x-api-key", api_key);
+                }
+            }
+
+            // Forward user info for activity logging
+            if let Some(ref user) = ctx.user {
+                request = request.header("x-user-id", &user.user_id);
+                request = request.header("x-user-email", &user.user_email);
             }
 
             let has_body = payload.is_some();
@@ -952,8 +959,6 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
                 request = request
                     .header("content-type", "application/json")
                     .body(body);
-            } else {
-                request = request.header("content-type", "application/json");
             }
 
             let started = Instant::now();
