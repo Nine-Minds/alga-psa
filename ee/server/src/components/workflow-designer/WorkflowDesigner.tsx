@@ -1,11 +1,19 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
-import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle, FileJson, Code, Check, Eye, EyeOff, Play, Trash2 } from 'lucide-react';
+import {
+  Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle,
+  FileJson, Code, Check, Eye, EyeOff, Play, Trash2,
+  // Dense palette icons
+  GitBranch, Repeat, Shield, CornerDownRight, ArrowRight, Clock, User, Settings,
+  Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
+  FileText, Layers, Box, Cog, Terminal, Globe, Search
+} from 'lucide-react';
 import {
   getStepTypeColor,
   getStepTypeIcon,
@@ -1712,24 +1720,62 @@ const WorkflowDesigner: React.FC = () => {
     return `palette:${item.type}`;
   };
 
+  // Dense palette icon mapping
+  const getPaletteIcon = (item: typeof paletteItems[0]): React.ReactNode => {
+    const iconClass = "h-5 w-5";
+    const itemWithAction = item as typeof item & { actionId?: string };
+
+    // If it's an action with a specific actionId, try to match by actionId
+    if (itemWithAction.actionId) {
+      const actionId = itemWithAction.actionId.toLowerCase();
+      if (actionId.includes('email') || actionId.includes('mail')) return <Mail className={iconClass} />;
+      if (actionId.includes('send')) return <Send className={iconClass} />;
+      if (actionId.includes('http') || actionId.includes('api') || actionId.includes('fetch')) return <Globe className={iconClass} />;
+      if (actionId.includes('db') || actionId.includes('query') || actionId.includes('sql')) return <Database className={iconClass} />;
+      if (actionId.includes('file') || actionId.includes('read') || actionId.includes('write')) return <FileText className={iconClass} />;
+      if (actionId.includes('log') || actionId.includes('print')) return <Terminal className={iconClass} />;
+      return <Zap className={iconClass} />;
+    }
+
+    // Match by step type
+    switch (item.type) {
+      case 'control.if': return <GitBranch className={iconClass} />;
+      case 'control.forEach': return <Repeat className={iconClass} />;
+      case 'control.tryCatch': return <Shield className={iconClass} />;
+      case 'control.return': return <CornerDownRight className={iconClass} />;
+      case 'control.callWorkflow': return <Workflow className={iconClass} />;
+      case 'state.set': return <Database className={iconClass} />;
+      case 'transform.assign': return <Settings className={iconClass} />;
+      case 'event.wait': return <Clock className={iconClass} />;
+      case 'human.task': return <User className={iconClass} />;
+      case 'action.call': return <Zap className={iconClass} />;
+      default: return <Box className={iconClass} />;
+    }
+  };
+
   const designerContent = (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex flex-col h-full">
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-72 border-r bg-white flex flex-col">
-          <div className="p-4 border-b">
-            <Input
-              id="workflow-designer-search"
-              placeholder="Search nodes"
-              value={search}
-              disabled={registryError}
-              onChange={(event) => setSearch(event.target.value)}
-            />
+        {/* Dense Icon-Grid Palette */}
+        <aside className="w-56 border-r bg-white flex flex-col">
+          <div className="p-3 border-b">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                id="workflow-designer-search"
+                type="text"
+                placeholder="Search"
+                value={search}
+                disabled={registryError}
+                onChange={(event) => setSearch(event.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
           </div>
-          {/* PPD-012 - Remove "Insert into" dropdown, drag directly instead */}
           {draggingFromPalette && (
-            <div className="px-4 py-2 bg-primary-50 border-b text-xs text-primary-700">
-              Drop on the pipeline to add step
+            <div className="px-3 py-1.5 bg-primary-50 border-b text-xs text-primary-700">
+              Drop on pipeline to add
             </div>
           )}
           <Droppable droppableId="palette" isDropDisabled={true}>
@@ -1737,48 +1783,27 @@ const WorkflowDesigner: React.FC = () => {
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="flex-1 overflow-y-auto p-4 space-y-4"
+                className="flex-1 overflow-y-auto p-3 space-y-4"
               >
                 {Object.entries(groupedPaletteItems).map(([category, items]) => (
                   <div key={category}>
-                    <div className="text-xs font-semibold uppercase text-gray-500 mb-2">{category}</div>
-                    <div className="space-y-2">
+                    <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">{category}</div>
+                    <div className="grid grid-cols-4 gap-1">
                       {items.map((item, itemIndex) => (
                         <Draggable
                           key={item.id}
                           draggableId={getPaletteDraggableId(item)}
                           index={itemIndex}
                         >
-                          {(dragProvided, snapshot) => (
-                            <Card
-                              ref={dragProvided.innerRef}
-                              {...dragProvided.draggableProps}
-                              {...dragProvided.dragHandleProps}
-                              className={`border border-gray-200 p-3 flex items-start justify-between cursor-grab ${
-                                snapshot.isDragging ? 'shadow-lg ring-2 ring-primary-300 bg-white' : ''
-                              }`}
-                              data-testid={`palette-item-${item.id}`}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-gray-900">{item.label}</div>
-                                <div className="text-xs text-gray-500">{item.description}</div>
-                                {/* §16.6 - Show output summary */}
-                                {item.outputSummary && (
-                                  <div className="text-[10px] text-blue-600 mt-1 truncate" title={item.outputSummary}>
-                                    {item.outputSummary}
-                                  </div>
-                                )}
-                              </div>
-                              <Button
-                                id={`workflow-designer-add-${item.id}`}
-                                variant="outline"
-                                size="sm"
-                                className="ml-2 flex-shrink-0"
-                                disabled={registryError}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // §16.6 - Handle action items with pre-configured actionId
-                                  const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+                          {(dragProvided, snapshot) => {
+                            const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+                            return (
+                              <PaletteItemWithTooltip
+                                item={itemWithAction}
+                                icon={getPaletteIcon(item)}
+                                isDragging={snapshot.isDragging}
+                                provided={dragProvided}
+                                onClick={() => {
                                   if (itemWithAction.actionId) {
                                     handleAddStep('action.call', {
                                       actionId: itemWithAction.actionId,
@@ -1788,11 +1813,9 @@ const WorkflowDesigner: React.FC = () => {
                                     handleAddStep(item.type as Step['type']);
                                   }
                                 }}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </Card>
-                          )}
+                              />
+                            );
+                          }}
                         </Draggable>
                       ))}
                     </div>
@@ -2950,6 +2973,148 @@ const StepConfigPanel: React.FC<{
   );
 };
 
+// Portal-based tooltip for palette items (avoids overflow/stacking context issues)
+const PaletteTooltip: React.FC<{
+  label: string;
+  description: string;
+  triggerRef: React.RefObject<HTMLDivElement>;
+  isHovered: boolean;
+}> = ({ label, description, triggerRef, isHovered }) => {
+  const [visible, setVisible] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isHovered && triggerRef.current) {
+      // Start delay timer
+      timeoutRef.current = setTimeout(() => {
+        if (triggerRef.current) {
+          const rect = triggerRef.current.getBoundingClientRect();
+          setPosition({
+            top: rect.top + rect.height / 2,
+            left: rect.right + 8
+          });
+          setVisible(true);
+        }
+      }, 500);
+    } else {
+      // Clear timer and hide immediately
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      setVisible(false);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [isHovered, triggerRef]);
+
+  if (!visible || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed px-2.5 py-1.5 rounded-md shadow-lg bg-gray-900 text-white text-xs whitespace-nowrap pointer-events-none"
+      style={{
+        top: position.top,
+        left: position.left,
+        transform: 'translateY(-50%)',
+        zIndex: 99999
+      }}
+    >
+      <div className="font-medium">{label}</div>
+      <div className="text-gray-400 text-[10px]">{description}</div>
+      {/* Arrow */}
+      <div
+        className="absolute border-4 border-transparent border-r-gray-900"
+        style={{ right: '100%', top: '50%', transform: 'translateY(-50%)' }}
+      />
+    </div>,
+    document.body
+  );
+};
+
+// Wrapper component for palette item with tooltip
+const PaletteItemWithTooltip: React.FC<{
+  item: { id: string; label: string; description: string; type: string; actionId?: string; actionVersion?: number };
+  icon: React.ReactNode;
+  isDragging: boolean;
+  provided: any;
+  onClick: () => void;
+}> = ({ item, icon, isDragging, provided, onClick }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div
+      ref={(node) => {
+        provided.innerRef(node);
+        (triggerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }}
+      {...provided.draggableProps}
+      {...provided.dragHandleProps}
+      className={`
+        group relative flex items-center justify-center
+        w-10 h-10 rounded-lg border cursor-grab
+        transition-all duration-150
+        ${isDragging
+          ? 'shadow-lg ring-2 ring-primary-400 bg-primary-50 border-primary-300 z-50'
+          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+        }
+      `}
+      data-testid={`palette-item-${item.id}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <span className="text-gray-500 group-hover:text-gray-700">
+        {icon}
+      </span>
+      <PaletteTooltip
+        label={item.label}
+        description={item.description}
+        triggerRef={triggerRef}
+        isHovered={isHovered && !isDragging}
+      />
+    </div>
+  );
+};
+
+// Field metadata for friendly labels and descriptions
+const FIELD_METADATA: Record<string, { label: string; description?: string; advanced?: boolean }> = {
+  actionId: { label: 'Action', description: 'The action to invoke' },
+  version: { label: 'Version', description: 'Action version number' },
+  inputMapping: { label: 'Input Mapping', description: 'Map data to action inputs' },
+  saveAs: { label: 'Save Result As', description: 'Variable path to store the result (e.g., payload.result)' },
+  idempotencyKey: {
+    label: 'Idempotency Key',
+    description: 'Expression that produces a unique key to prevent duplicate executions. If the same key is seen twice, the cached result is returned.',
+    advanced: true
+  },
+  onError: { label: 'Error Handling', description: 'How to handle errors', advanced: true },
+  eventName: { label: 'Event Name', description: 'Name of the event to wait for' },
+  correlationKey: { label: 'Correlation Key', description: 'Expression to match incoming events' },
+  timeoutMs: { label: 'Timeout (ms)', description: 'Maximum time to wait in milliseconds', advanced: true },
+  state: { label: 'State Name', description: 'The state to transition to' },
+  assign: { label: 'Assignments', description: 'Variables to assign' },
+  taskType: { label: 'Task Type', description: 'Type of human task' },
+  title: { label: 'Title', description: 'Task title shown to assignee' },
+  contextData: { label: 'Context Data', description: 'Additional data to include with the task' },
+};
+
+const getFieldMeta = (key: string) => {
+  if (FIELD_METADATA[key]) return FIELD_METADATA[key];
+  // Convert camelCase to Title Case as fallback
+  const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+  return { label };
+};
+
 const SchemaForm: React.FC<{
   schema: JsonSchema;
   rootSchema: JsonSchema;
@@ -2963,6 +3128,7 @@ const SchemaForm: React.FC<{
   const configValue = value ?? {};
   const properties = resolved.properties ?? {};
   const required = resolved.required ?? [];
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const updateValue = (key: string, nextValue: unknown) => {
     onChange({
@@ -2982,148 +3148,191 @@ const SchemaForm: React.FC<{
     return false;
   });
 
+  // Separate regular and advanced fields
+  const fieldEntries = Object.entries(properties);
+  const regularFields = fieldEntries.filter(([key]) => !getFieldMeta(key).advanced);
+  const advancedFields = fieldEntries.filter(([key]) => getFieldMeta(key).advanced);
+
+  const renderField = (key: string, propSchema: JsonSchema) => {
+    const resolvedProp = resolveSchema(propSchema, rootSchema);
+    const meta = getFieldMeta(key);
+    const fieldDescription = meta.description || resolvedProp.description;
+
+    if (isExprSchema(resolvedProp, rootSchema)) {
+      return (
+        <ExpressionField
+          key={key}
+          idPrefix={`config-${stepId}-${key}`}
+          label={meta.label}
+          value={ensureExpr(configValue[key] as Expr | undefined)}
+          onChange={(expr) => updateValue(key, expr)}
+          fieldOptions={fieldOptions}
+          description={fieldDescription}
+        />
+      );
+    }
+
+    if (resolvedProp.enum) {
+      return (
+        <div key={key}>
+          <CustomSelect
+            id={`config-${stepId}-${key}`}
+            label={meta.label}
+            options={resolvedProp.enum.map((item) => ({ value: String(item ?? ''), label: String(item ?? '') }))}
+            value={configValue[key] === undefined || configValue[key] === null ? '' : String(configValue[key])}
+            onValueChange={(val) => updateValue(key, val)}
+          />
+          {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
+        </div>
+      );
+    }
+
+    const propType = normalizeSchemaType(resolvedProp);
+    if (propType === 'string') {
+      return (
+        <div key={key}>
+          <Input
+            id={`config-${stepId}-${key}`}
+            label={meta.label}
+            value={(configValue[key] as string) ?? ''}
+            onChange={(event) => updateValue(key, event.target.value)}
+          />
+          {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
+        </div>
+      );
+    }
+
+    if (propType === 'number' || propType === 'integer') {
+      return (
+        <div key={key}>
+          <Input
+            id={`config-${stepId}-${key}`}
+            label={meta.label}
+            type="number"
+            value={(configValue[key] as number) ?? 0}
+            onChange={(event) => updateValue(key, Number(event.target.value))}
+          />
+          {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
+        </div>
+      );
+    }
+
+    if (propType === 'boolean') {
+      return (
+        <div key={key} className="flex items-center justify-between">
+          <div>
+            <Label htmlFor={`config-${stepId}-${key}`}>{meta.label}</Label>
+            {fieldDescription && <div className="text-xs text-gray-500">{fieldDescription}</div>}
+          </div>
+          <Switch
+            id={`config-${stepId}-${key}`}
+            checked={Boolean(configValue[key])}
+            onCheckedChange={(checked) => updateValue(key, checked)}
+          />
+        </div>
+      );
+    }
+
+    if (propType === 'object') {
+      if (resolvedProp.additionalProperties && typeof resolvedProp.additionalProperties === 'object' && isExprSchema(resolvedProp.additionalProperties, rootSchema)) {
+        return (
+          <MappingExprEditor
+            key={key}
+            idPrefix={`config-${stepId}-${key}`}
+            label={meta.label}
+            value={(configValue[key] as Record<string, Expr>) ?? {}}
+            onChange={(mapping) => updateValue(key, mapping)}
+            fieldOptions={fieldOptions}
+          />
+        );
+      }
+
+      if (resolvedProp.additionalProperties) {
+        return (
+          <JsonField
+            key={key}
+            idPrefix={`config-${stepId}-${key}`}
+            label={meta.label}
+            value={configValue[key]}
+            onChange={(nextValue) => updateValue(key, nextValue)}
+          />
+        );
+      }
+
+      return (
+        <div key={key} className="border border-gray-200 rounded-md p-3 space-y-2">
+          <div className="text-xs font-semibold text-gray-500 uppercase">{meta.label}</div>
+          {fieldDescription && <div className="text-xs text-gray-500 mb-2">{fieldDescription}</div>}
+          <SchemaForm
+            schema={resolvedProp}
+            rootSchema={rootSchema}
+            value={(configValue[key] as Record<string, unknown>) ?? {}}
+            onChange={(next) => updateValue(key, next)}
+            fieldOptions={fieldOptions}
+            actionRegistry={actionRegistry}
+            stepId={`${stepId}-${key}`}
+          />
+        </div>
+      );
+    }
+
+    if (propType === 'array') {
+      return (
+        <div key={key}>
+          <JsonField
+            idPrefix={`config-${stepId}-${key}`}
+            label={meta.label}
+            value={configValue[key]}
+            onChange={(nextValue) => updateValue(key, nextValue)}
+          />
+          {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
+        </div>
+      );
+    }
+
+    return (
+      <div key={key}>
+        <JsonField
+          idPrefix={`config-${stepId}-${key}`}
+          label={meta.label}
+          value={configValue[key]}
+          onChange={(nextValue) => updateValue(key, nextValue)}
+        />
+        {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <div className="text-sm font-semibold text-gray-800">Node Configuration</div>
         {missingRequired.length > 0 && (
-          <div className="text-xs text-red-600">Missing required: {missingRequired.join(', ')}</div>
+          <div className="text-xs text-red-600">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
         )}
       </div>
 
-      {Object.entries(properties).map(([key, propSchema]) => {
-        const resolvedProp = resolveSchema(propSchema, rootSchema);
-        if (isExprSchema(resolvedProp, rootSchema)) {
-          return (
-            <ExpressionField
-              key={key}
-              idPrefix={`config-${stepId}-${key}`}
-              label={key}
-              value={ensureExpr(configValue[key] as Expr | undefined)}
-              onChange={(expr) => updateValue(key, expr)}
-              fieldOptions={fieldOptions}
-              description={resolvedProp.description}
-            />
-          );
-        }
+      {/* Regular fields */}
+      {regularFields.map(([key, propSchema]) => renderField(key, propSchema))}
 
-        if (resolvedProp.enum) {
-          return (
-            <CustomSelect
-              key={key}
-              id={`config-${stepId}-${key}`}
-              label={key}
-              options={resolvedProp.enum.map((item) => ({ value: String(item ?? ''), label: String(item ?? '') }))}
-              value={configValue[key] === undefined || configValue[key] === null ? '' : String(configValue[key])}
-              onValueChange={(val) => updateValue(key, val)}
-            />
-          );
-        }
-
-        const propType = normalizeSchemaType(resolvedProp);
-        if (propType === 'string') {
-          return (
-            <Input
-              key={key}
-              id={`config-${stepId}-${key}`}
-              label={key}
-              value={(configValue[key] as string) ?? ''}
-              onChange={(event) => updateValue(key, event.target.value)}
-            />
-          );
-        }
-
-        if (propType === 'number' || propType === 'integer') {
-          return (
-            <Input
-              key={key}
-              id={`config-${stepId}-${key}`}
-              label={key}
-              type="number"
-              value={(configValue[key] as number) ?? 0}
-              onChange={(event) => updateValue(key, Number(event.target.value))}
-            />
-          );
-        }
-
-        if (propType === 'boolean') {
-          return (
-            <div key={key} className="flex items-center justify-between">
-              <Label htmlFor={`config-${stepId}-${key}`}>{key}</Label>
-              <Switch
-                id={`config-${stepId}-${key}`}
-                checked={Boolean(configValue[key])}
-                onCheckedChange={(checked) => updateValue(key, checked)}
-              />
+      {/* Advanced fields (collapsible) */}
+      {advancedFields.length > 0 && (
+        <div className="border-t border-gray-200 pt-3">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700"
+          >
+            {showAdvanced ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            Advanced Options
+          </button>
+          {showAdvanced && (
+            <div className="mt-3 space-y-4">
+              {advancedFields.map(([key, propSchema]) => renderField(key, propSchema))}
             </div>
-          );
-        }
-
-        if (propType === 'object') {
-          if (resolvedProp.additionalProperties && typeof resolvedProp.additionalProperties === 'object' && isExprSchema(resolvedProp.additionalProperties, rootSchema)) {
-            return (
-              <MappingExprEditor
-                key={key}
-                idPrefix={`config-${stepId}-${key}`}
-                label={key}
-                value={(configValue[key] as Record<string, Expr>) ?? {}}
-                onChange={(mapping) => updateValue(key, mapping)}
-                fieldOptions={fieldOptions}
-              />
-            );
-          }
-
-          if (resolvedProp.additionalProperties) {
-            return (
-              <JsonField
-                key={key}
-                idPrefix={`config-${stepId}-${key}`}
-                label={key}
-                value={configValue[key]}
-                onChange={(nextValue) => updateValue(key, nextValue)}
-              />
-            );
-          }
-
-          return (
-            <div key={key} className="border border-gray-200 rounded-md p-3 space-y-2">
-              <div className="text-xs font-semibold text-gray-500 uppercase">{key}</div>
-              <SchemaForm
-                schema={resolvedProp}
-                rootSchema={rootSchema}
-                value={(configValue[key] as Record<string, unknown>) ?? {}}
-                onChange={(next) => updateValue(key, next)}
-                fieldOptions={fieldOptions}
-                actionRegistry={actionRegistry}
-                stepId={`${stepId}-${key}`}
-              />
-            </div>
-          );
-        }
-
-        if (propType === 'array') {
-          return (
-            <JsonField
-              key={key}
-              idPrefix={`config-${stepId}-${key}`}
-              label={key}
-              value={configValue[key]}
-              onChange={(nextValue) => updateValue(key, nextValue)}
-            />
-          );
-        }
-
-        return (
-          <JsonField
-            key={key}
-            idPrefix={`config-${stepId}-${key}`}
-            label={key}
-            value={configValue[key]}
-            onChange={(nextValue) => updateValue(key, nextValue)}
-          />
-        );
-      })}
-
+          )}
+        </div>
+      )}
     </div>
   );
 };
