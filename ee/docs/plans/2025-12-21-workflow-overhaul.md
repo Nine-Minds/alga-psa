@@ -1484,3 +1484,281 @@ type ActionDef<I, O> = {
 | `create_ticket_from_email` | `tenantId + email.messageId` |
 | `create_comment_from_email` | `tenantId + ticketId + email.messageId` |
 | `process_email_attachment` | `tenantId + ticketId + attachmentId` |
+
+---
+
+## 19. Mapping Editor UX Enhancements
+
+This section specifies enhancements to the InputMappingEditor to provide a polished, user-friendly, and visually appealing mapping experience.
+
+### 19.1 Type Compatibility System
+
+**Purpose:** Provide visual feedback about type compatibility between source and target fields.
+
+#### 19.1.1 Compatibility Matrix
+
+| Source Type | Target Type | Compatibility | Color |
+|-------------|-------------|---------------|-------|
+| string | string | EXACT | Green (#22c55e) |
+| number | number | EXACT | Green (#22c55e) |
+| boolean | boolean | EXACT | Green (#22c55e) |
+| string | number | COERCIBLE | Yellow (#eab308) |
+| number | string | COERCIBLE | Yellow (#eab308) |
+| boolean | string | COERCIBLE | Yellow (#eab308) |
+| object | string | INCOMPATIBLE | Red (#ef4444) |
+| array | string | INCOMPATIBLE | Red (#ef4444) |
+| unknown | any | UNKNOWN | Gray (#9ca3af) |
+
+#### 19.1.2 Type Utilities Module
+
+```typescript
+// ee/server/src/components/workflow-designer/mapping/typeCompatibility.ts
+
+enum TypeCompatibility {
+  EXACT = 'exact',
+  COERCIBLE = 'coercible',
+  INCOMPATIBLE = 'incompatible',
+  UNKNOWN = 'unknown'
+}
+
+function getTypeCompatibility(
+  sourceType: string | undefined,
+  targetType: string | undefined
+): TypeCompatibility;
+
+function getCompatibilityColor(compatibility: TypeCompatibility): string;
+
+function getCompatibilityLabel(compatibility: TypeCompatibility): string;
+
+function inferTypeFromJsonSchema(schema: JsonSchema): string | undefined;
+```
+
+#### 19.1.3 Visual Indicators
+
+- **Source fields:** Type badge showing field type with color coding based on selected target
+- **Target fields:** Compatibility indicator when mapping is configured
+- **Connection lines:** Color-coded based on type compatibility
+
+### 19.2 Drag-and-Drop Source to Target
+
+**Purpose:** Enable intuitive mapping by dragging fields from the source tree to target fields.
+
+#### 19.2.1 Draggable Source Fields
+
+```typescript
+// ee/server/src/components/workflow-designer/mapping/useMappingDnd.ts
+
+interface MappingDndState {
+  isDragging: boolean;
+  draggedItem: { path: string; type?: string } | null;
+  dropTarget: string | null;
+}
+
+interface MappingDndHandlers {
+  handleDragStart: (path: string, type?: string) => void;
+  handleDragOver: (targetField: string) => void;
+  handleDrop: (targetField: string) => void;
+  handleDragEnd: () => void;
+}
+```
+
+#### 19.2.2 Drop Zones
+
+- Unmapped target fields serve as drop zones
+- Drop zone border color indicates type compatibility
+- Visual feedback icons: + (compatible), ⚠ (coercible), ⊘ (incompatible)
+- On successful drop, create `{ $expr: path }` mapping
+
+#### 19.2.3 Visual Feedback During Drag
+
+- Highlight all compatible target fields when drag starts
+- Dim incompatible target fields
+- Show connection preview line from source to cursor
+- Animate drop zone expansion on hover
+
+### 19.3 Visual Connection Lines (SVG Overlay)
+
+**Purpose:** Draw bezier curves between mapped source and target fields for visual clarity.
+
+#### 19.3.1 SVG Overlay Architecture
+
+```typescript
+// ee/server/src/components/workflow-designer/mapping/MappingConnectionsOverlay.tsx
+
+interface MappingConnection {
+  sourceField: string;
+  targetField: string;
+  sourceType?: string;
+  targetType?: string;
+  compatibility: TypeCompatibility;
+}
+
+// Positioned absolutely over the mapping editor container
+// pointer-events: none to allow interaction with elements below
+// z-index between source tree and target fields
+```
+
+#### 19.3.2 Position Tracking
+
+```typescript
+// ee/server/src/components/workflow-designer/mapping/useMappingPositions.ts
+
+interface PositionTracker {
+  sourceRefs: Map<string, RefObject<HTMLElement>>;
+  targetRefs: Map<string, RefObject<HTMLElement>>;
+  getFieldRect: (fieldId: string) => DOMRect | null;
+}
+
+// Handle scroll offset, window resize, container scroll
+// Debounce position updates for performance
+// Use ResizeObserver for element size changes
+```
+
+#### 19.3.3 Bezier Path Calculation
+
+```typescript
+function calculateBezierPath(
+  sourceRect: DOMRect,
+  targetRect: DOMRect
+): string {
+  // Calculate control points for smooth curves
+  // Handle left-to-right direction
+  // Adjust tension based on horizontal distance
+  // Avoid overlap when connections are close
+}
+```
+
+#### 19.3.4 Connection Interaction
+
+- Hover: increase stroke width (2px → 3px), show tooltip
+- Click: select connection, show delete button
+- Click-to-delete with optional confirmation
+- Animate connection removal with fade-out
+
+### 19.4 Filter Dropdown by Type Compatibility
+
+**Purpose:** Help users find compatible source fields quickly.
+
+#### 19.4.1 Grouped Options
+
+| Group | Order | Style |
+|-------|-------|-------|
+| Exact matches | 1st | Normal with ✓ icon |
+| Coercible matches | 2nd | Normal with ⚠ icon |
+| Incompatible | Last | Grayed out with ✗ icon |
+
+#### 19.4.2 Search Behavior
+
+- Prioritize compatible options in search results
+- Sort by compatibility first, then by relevance
+- Maintain grouping while filtering
+
+### 19.5 Keyboard Navigation
+
+**Purpose:** Provide full keyboard accessibility for the mapping editor.
+
+#### 19.5.1 Navigation Keys
+
+| Key | Action |
+|-----|--------|
+| Arrow Up/Down | Navigate between target fields |
+| Arrow Left | Collapse tree node / move to parent |
+| Arrow Right | Expand tree node / move to first child |
+| Home | Focus first field |
+| End | Focus last field |
+
+#### 19.5.2 Panel Navigation
+
+| Key | Action |
+|-----|--------|
+| Tab | Move focus between source and target panels |
+| Shift+Tab | Reverse panel navigation |
+
+#### 19.5.3 Action Keys
+
+| Key | Action |
+|-----|--------|
+| Enter | Open field picker / confirm selection |
+| Space | Toggle tree node expansion |
+| Delete/Backspace | Remove mapping from focused field |
+| Escape | Cancel operation / close dropdown |
+| Ctrl+A | Select all mappings |
+
+#### 19.5.4 Focus Indicators
+
+- Visible focus ring meeting WCAG 2.1 contrast
+- Auto-scroll focused element into view
+- ARIA live regions for screen reader announcements
+
+### 19.6 Loading and Error States
+
+**Purpose:** Provide appropriate feedback when fetching action schemas.
+
+#### 19.6.1 Loading Skeleton
+
+```typescript
+// ee/server/src/components/workflow-designer/mapping/MappingEditorSkeleton.tsx
+
+// Skeleton layout matching actual editor structure:
+// - Source tree panel skeleton
+// - Target fields panel skeleton
+// - Toolbar skeleton
+// - Shimmer animation
+```
+
+#### 19.6.2 Error State
+
+- Display error message explaining what went wrong
+- Show retry button with exponential backoff
+- Display retry count/limit
+- Provide contact support link for persistent errors
+
+#### 19.6.3 Client-Side Schema Caching
+
+- Cache by `actionId:version` key
+- TTL of 5 minutes
+- Invalidate on action version change
+- Cache-first fetching strategy
+- Manual refresh option in UI
+
+### 19.7 Accessibility Requirements
+
+- All interactive elements have accessibility labels
+- ARIA live regions for dynamic updates
+- Colors meet WCAG contrast requirements
+- Text alternatives for color-coded information
+- Screen reader tested
+
+### 19.8 Testing Requirements
+
+| Test Type | Coverage |
+|-----------|----------|
+| Unit | typeCompatibility.ts, useMappingDnd.ts, useMappingPositions.ts, useMappingKeyboard.ts, calculateBezierPath |
+| Integration | Drag-and-drop flow, keyboard navigation |
+| Playwright | Visual connections, type indicators, loading/error states |
+
+### 19.9 New File Structure
+
+```
+ee/server/src/components/workflow-designer/mapping/
+├── typeCompatibility.ts          # Type checking utilities
+├── useMappingDnd.ts              # Drag-drop state management
+├── useMappingPositions.ts        # Position calculation for connections
+├── useMappingKeyboard.ts         # Keyboard navigation hook
+├── MappingConnectionsOverlay.tsx # SVG bezier curves
+├── MappingEditorSkeleton.tsx     # Loading state component
+└── index.ts                      # Updated exports
+```
+
+### 19.10 Implementation Priority
+
+| Priority | Component | Description |
+|----------|-----------|-------------|
+| P0 | Type Compatibility | Core type checking utilities and color scheme |
+| P0 | Visual Connections | SVG overlay with bezier paths |
+| P0 | Drag-and-Drop | HTML5 drag API integration |
+| P1 | Filter by Type | Dropdown grouping and compatibility icons |
+| P1 | Keyboard Navigation | Arrow keys, Tab, Enter, Delete, Escape |
+| P2 | Loading States | Skeleton and error components |
+| P2 | Schema Caching | Client-side cache with TTL |
+| P3 | Accessibility | ARIA labels, live regions, screen reader testing |

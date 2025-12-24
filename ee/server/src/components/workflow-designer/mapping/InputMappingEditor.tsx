@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
@@ -12,6 +12,20 @@ import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
 import { listTenantSecrets } from 'server/src/lib/actions/tenant-secret-actions';
 import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime';
+import {
+  useMappingDnd,
+  getDragData,
+  getDropTargetClasses,
+  type DragItem
+} from './useMappingDnd';
+import { useMappingPositions } from './useMappingPositions';
+import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
+import {
+  TypeCompatibility,
+  getTypeCompatibility,
+  getCompatibilityColor,
+  getCompatibilityClasses
+} from './typeCompatibility';
 
 /**
  * Schema field definition for target action inputs
@@ -59,6 +73,11 @@ export interface InputMappingEditorProps {
    * Whether the editor is disabled
    */
   disabled?: boolean;
+
+  /**
+   * §19.3 - Source positions from external SourceDataTree for connection lines
+   */
+  sourcePositions?: Map<string, { centerY: number; right: number }>;
 }
 
 /**
@@ -485,10 +504,29 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   targetFields,
   fieldOptions,
   stepId,
-  disabled
+  disabled,
+  sourcePositions
 }) => {
   const [secrets, setSecrets] = useState<Array<{ name: string; description?: string }>>([]);
   const [showUnmapped, setShowUnmapped] = useState(true);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+
+  // §19.2 - Drag-and-drop state
+  const [dndState, dndHandlers] = useMappingDnd({
+    onCreateMapping: (targetFieldName, sourcePath) => {
+      // Create expression mapping from dropped item
+      onChange({ ...value, [targetFieldName]: { $expr: sourcePath } });
+    }
+  });
+
+  // §19.3 - Position tracking for connection lines
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [positionsState, positionsHandlers] = useMappingPositions();
+
+  // Set container ref for position tracking
+  useEffect(() => {
+    positionsHandlers.setContainerRef(containerRef.current);
+  }, [positionsHandlers]);
 
   // Fetch available secrets
   useEffect(() => {
@@ -530,6 +568,47 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     return map;
   }, [suggestions]);
 
+  // §19.3 - Build connection data for visual lines
+  const connections: ConnectionData[] = useMemo(() => {
+    const result: ConnectionData[] = [];
+
+    for (const [fieldName, mappingValue] of Object.entries(value)) {
+      // Only show connections for expression mappings
+      if (typeof mappingValue !== 'object' || !mappingValue || !('$expr' in mappingValue)) {
+        continue;
+      }
+
+      const expr = (mappingValue as Expr).$expr;
+      if (!expr) continue;
+
+      // Get the source path from the expression (simplified - just takes first path-like token)
+      const sourcePath = expr.trim().split(/[\s+\-*/()[\]{}]+/)[0];
+      if (!sourcePath) continue;
+
+      const field = targetFields.find(f => f.name === fieldName);
+      const sourceRect = sourcePositions?.get(sourcePath) || positionsState.sourcePositions.get(sourcePath) || null;
+      const targetRect = positionsState.targetPositions.get(fieldName) || null;
+
+      result.push({
+        id: `${sourcePath}->${fieldName}`,
+        sourceId: sourcePath,
+        targetId: fieldName,
+        sourceRect: sourceRect ? { ...sourceRect, left: sourceRect.right - 10, top: sourceRect.centerY - 5, bottom: sourceRect.centerY + 5, width: 10, height: 10, centerX: sourceRect.right - 5 } : null,
+        targetRect: targetRect ? { ...targetRect } : null,
+        sourceType: undefined, // Would need source field type info
+        targetType: field?.type,
+        compatibility: TypeCompatibility.UNKNOWN
+      });
+    }
+
+    return result;
+  }, [value, targetFields, sourcePositions, positionsState.sourcePositions, positionsState.targetPositions]);
+
+  // §19.3 - Handle connection click (select)
+  const handleConnectionClick = useCallback((connectionId: string) => {
+    setSelectedConnectionId(prev => prev === connectionId ? null : connectionId);
+  }, []);
+
   // Apply all auto-mapping suggestions
   const handleAutoMapAll = useCallback(() => {
     if (suggestions.length === 0) return;
@@ -568,6 +647,15 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     onChange(next);
   }, [value, onChange]);
 
+  // §19.3 - Handle connection delete
+  const handleConnectionDelete = useCallback((connectionId: string) => {
+    const targetField = connectionId.split('->')[1];
+    if (targetField) {
+      handleRemoveMapping(targetField);
+      setSelectedConnectionId(null);
+    }
+  }, [handleRemoveMapping]);
+
   // §17.3 - Bulk operation: Clear all mappings
   const handleClearAll = useCallback(() => {
     onChange({});
@@ -582,7 +670,21 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={containerRef} className="space-y-4 relative">
+      {/* §19.3 - Visual connection lines overlay */}
+      {positionsState.containerRect && (
+        <MappingConnectionsOverlay
+          connections={connections}
+          width={positionsState.containerRect.width}
+          height={positionsState.containerRect.height}
+          selectedConnectionId={selectedConnectionId}
+          onConnectionClick={handleConnectionClick}
+          onConnectionDelete={handleConnectionDelete}
+          interactive={!disabled}
+          disabled={disabled}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold">Input Mapping</Label>
         <div className="flex items-center gap-3">
@@ -624,7 +726,11 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
       {mappedFields.length > 0 && (
         <div className="space-y-2">
           {mappedFields.map(field => (
-            <div key={field.name} className="relative group">
+            <div
+              key={field.name}
+              className="relative group"
+              ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
+            >
               <MappingFieldEditor
                 field={field}
                 value={value[field.name]}
@@ -662,21 +768,58 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
             <div className="space-y-1 pl-5">
               {unmappedFields.map(field => {
                 const suggestion = suggestionMap.get(field.name);
+                const isDropTarget = dndState.isDragging;
+                const isActiveDropTarget = dndState.dropTarget === field.name;
+
+                // §19.2 - Calculate type compatibility for drop feedback
+                const dropCompatibility = dndState.draggedItem?.type && field.type
+                  ? getTypeCompatibility(dndState.draggedItem.type, field.type)
+                  : null;
+
+                const dropClasses = isActiveDropTarget && dropCompatibility
+                  ? getCompatibilityClasses(dropCompatibility)
+                  : null;
+
                 return (
                   <div
                     key={field.name}
-                    className={`flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 ${
+                    ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
+                    className={`flex items-center justify-between py-1.5 px-2 rounded transition-all ${
                       suggestion ? 'bg-primary-50 border border-primary-100' : ''
+                    } ${isDropTarget ? 'border-2 border-dashed border-gray-300' : ''} ${
+                      isActiveDropTarget && dropClasses
+                        ? `${dropClasses.bg} ${dropClasses.border} border-solid`
+                        : isActiveDropTarget
+                          ? 'bg-primary-50 border-primary-300 border-solid'
+                          : 'hover:bg-gray-50'
                     }`}
+                    onDragOver={(e) => {
+                      if (disabled) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'copy';
+                      dndHandlers.handleDragOver(field.name, field.type);
+                    }}
+                    onDragLeave={() => {
+                      dndHandlers.handleDragLeave();
+                    }}
+                    onDrop={(e) => {
+                      if (disabled) return;
+                      e.preventDefault();
+                      dndHandlers.handleDrop(field.name);
+                    }}
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {/* §19.2 - Drop zone indicator */}
+                      {isDropTarget && (
+                        <LinkIcon className={`w-3.5 h-3.5 ${isActiveDropTarget ? 'text-primary-500' : 'text-gray-400'}`} />
+                      )}
                       <span className="text-sm text-gray-700">{field.name}</span>
                       {field.required && (
                         <Badge className="text-xs bg-red-100 text-red-700">required</Badge>
                       )}
                       <span className="text-xs text-gray-400">{field.type}</span>
                       {/* §17.3.3 - Show suggestion indicator */}
-                      {suggestion && (
+                      {suggestion && !isDropTarget && (
                         <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
                           <Sparkles className="w-3 h-3" />
                           <span className="truncate">← {suggestion.sourcePath}</span>
@@ -685,9 +828,16 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                           )}
                         </span>
                       )}
+                      {/* §19.2 - Show dragged item info when hovering */}
+                      {isActiveDropTarget && dndState.draggedItem && (
+                        <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
+                          <LinkIcon className="w-3 h-3" />
+                          <span className="truncate">← {dndState.draggedItem.path}</span>
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      {suggestion && (
+                      {suggestion && !isDropTarget && (
                         <Button
                           id={`apply-suggestion-${stepId}-${field.name}`}
                           variant="ghost"
@@ -700,16 +850,18 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                           <Wand2 className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                      <Button
-                        id={`add-mapping-${stepId}-${field.name}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAddMapping(field.name)}
-                        disabled={disabled}
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-1" />
-                        Map
-                      </Button>
+                      {!isDropTarget && (
+                        <Button
+                          id={`add-mapping-${stepId}-${field.name}`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleAddMapping(field.name)}
+                          disabled={disabled}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          Map
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
