@@ -208,6 +208,7 @@ export function ActivityDetailViewerDrawer({
                 initialComments={ticketData.comments}
                 initialBoard={ticketData.board}
                 initialClient={ticketData.client}
+                initialContacts={ticketData.contacts}
                 initialContactInfo={ticketData.contactInfo}
                 initialCreatedByUser={ticketData.createdByUser}
                 initialAdditionalAgents={ticketData.additionalAgents}
@@ -608,6 +609,7 @@ export function ActivityDetailViewerDrawer({
                             initialComments={ticketData.comments}
                             initialBoard={ticketData.board}
                             initialClient={ticketData.client}
+                            initialContacts={ticketData.contacts}
                             initialContactInfo={ticketData.contactInfo}
                             initialCreatedByUser={ticketData.createdByUser}
                             initialAdditionalAgents={ticketData.additionalAgents}
