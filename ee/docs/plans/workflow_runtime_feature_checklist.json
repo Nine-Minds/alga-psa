@@ -1752,17 +1752,17 @@
   {
     "description": "Validate that saveAs does not conflict with existing variable names and show warning if it does.",
     "reference": "§16.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement context-aware autocomplete in expression fields showing previous steps with their saveAs names when typing ${vars.",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support drilling into output schemas in autocomplete (e.g., ${vars.createTicket. shows ticket_id, ticket_number).",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support nested path autocomplete for complex output structures (e.g., ${vars.parseEmail.parsed.headers.subject}).",
@@ -1797,7 +1797,7 @@
   {
     "description": "Show type mismatch warnings when passing incompatible types between steps (e.g., string where number expected).",
     "reference": "§16.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support optional edge labels/annotations showing data shape between nodes (toggle-able, collapsed shows '3 fields').",

@@ -89,6 +89,30 @@ export {
   type UseMappingKeyboardOptions
 } from './useMappingKeyboard';
 
+// §16.2 - Expression Autocomplete
+export {
+  ExpressionAutocomplete,
+  extractCurrentPath,
+  filterSuggestions,
+  buildSuggestionsFromContext,
+  calculateDropdownPosition,
+  type AutocompleteSuggestion,
+  type ExpressionAutocompleteProps
+} from './ExpressionAutocomplete';
+
+export {
+  useExpressionAutocomplete,
+  type UseExpressionAutocompleteOptions,
+  type ExpressionAutocompleteState,
+  type ExpressionAutocompleteHandlers
+} from './useExpressionAutocomplete';
+
+export {
+  ExpressionTextArea,
+  type ExpressionTextAreaProps,
+  type DataContextField
+} from './ExpressionTextArea';
+
 // §19 - Composite Mapping Panel
 export {
   MappingPanel,
