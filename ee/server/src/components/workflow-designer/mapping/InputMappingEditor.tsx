@@ -19,13 +19,239 @@ import {
   type DragItem
 } from './useMappingDnd';
 import { useMappingPositions } from './useMappingPositions';
+import { useMappingKeyboard } from './useMappingKeyboard';
 import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
 import {
   TypeCompatibility,
   getTypeCompatibility,
   getCompatibilityColor,
-  getCompatibilityClasses
+  getCompatibilityClasses,
+  getCompatibilityLabel,
+  getDisplayTypeName
 } from './typeCompatibility';
+
+/**
+ * Extended select option with type information for compatibility filtering
+ */
+export interface TypedSelectOption extends SelectOption {
+  /** The data type of this field (e.g., 'string', 'number', 'object') */
+  type?: string;
+}
+
+/**
+ * Compatibility group for dropdown options
+ */
+interface CompatibilityGroup {
+  compatibility: TypeCompatibility;
+  label: string;
+  options: TypedSelectOption[];
+}
+
+/**
+ * Build grouped field options sorted by type compatibility
+ *
+ * @param options - Available field options
+ * @param targetType - The target field type to compare against
+ * @returns Grouped and sorted options with compatibility indicators
+ */
+function buildCompatibilityGroupedOptions(
+  options: SelectOption[],
+  targetType: string | undefined
+): CompatibilityGroup[] {
+  if (!targetType) {
+    // No target type - just return all options as unknown
+    return [{
+      compatibility: TypeCompatibility.UNKNOWN,
+      label: 'Available Fields',
+      options: options.map(o => ({ ...o }))
+    }];
+  }
+
+  const groups: Record<TypeCompatibility, TypedSelectOption[]> = {
+    [TypeCompatibility.EXACT]: [],
+    [TypeCompatibility.COERCIBLE]: [],
+    [TypeCompatibility.UNKNOWN]: [],
+    [TypeCompatibility.INCOMPATIBLE]: []
+  };
+
+  // Infer types from field paths and group by compatibility
+  for (const option of options) {
+    const inferredType = inferTypeFromPath(option.value);
+    const compatibility = getTypeCompatibility(inferredType, targetType);
+
+    groups[compatibility].push({
+      ...option,
+      type: inferredType,
+      // Add visual indicator to label
+      label: typeof option.label === 'string'
+        ? option.label
+        : option.label
+    });
+  }
+
+  // Build result groups (only include non-empty groups)
+  const result: CompatibilityGroup[] = [];
+
+  if (groups[TypeCompatibility.EXACT].length > 0) {
+    result.push({
+      compatibility: TypeCompatibility.EXACT,
+      label: '✓ Exact Match',
+      options: groups[TypeCompatibility.EXACT]
+    });
+  }
+
+  if (groups[TypeCompatibility.COERCIBLE].length > 0) {
+    result.push({
+      compatibility: TypeCompatibility.COERCIBLE,
+      label: '~ Can Convert',
+      options: groups[TypeCompatibility.COERCIBLE]
+    });
+  }
+
+  if (groups[TypeCompatibility.UNKNOWN].length > 0) {
+    result.push({
+      compatibility: TypeCompatibility.UNKNOWN,
+      label: '? Unknown',
+      options: groups[TypeCompatibility.UNKNOWN]
+    });
+  }
+
+  if (groups[TypeCompatibility.INCOMPATIBLE].length > 0) {
+    result.push({
+      compatibility: TypeCompatibility.INCOMPATIBLE,
+      label: '✗ Incompatible',
+      options: groups[TypeCompatibility.INCOMPATIBLE]
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Infer type from a field path
+ * Uses heuristics based on common field naming patterns
+ */
+function inferTypeFromPath(path: string): string | undefined {
+  if (!path) return undefined;
+
+  const parts = path.split('.');
+  const fieldName = parts[parts.length - 1].toLowerCase();
+
+  // Remove array index notation
+  const cleanName = fieldName.replace(/\[\]$/, '').replace(/\[\d+\]$/, '');
+
+  // Common patterns for specific types
+  if (cleanName.endsWith('id') || cleanName.endsWith('_id') || cleanName === 'id') return 'string';
+  if (cleanName.endsWith('email') || cleanName === 'email') return 'string';
+  if (cleanName.endsWith('name') || cleanName === 'name') return 'string';
+  if (cleanName.endsWith('title') || cleanName === 'title') return 'string';
+  if (cleanName.endsWith('description') || cleanName === 'description') return 'string';
+  if (cleanName.endsWith('message') || cleanName === 'message') return 'string';
+  if (cleanName.endsWith('url') || cleanName === 'url') return 'string';
+  if (cleanName.endsWith('path') || cleanName === 'path') return 'string';
+  if (cleanName.endsWith('text') || cleanName === 'text') return 'string';
+  if (cleanName.endsWith('content') || cleanName === 'content') return 'string';
+  if (cleanName.endsWith('subject') || cleanName === 'subject') return 'string';
+
+  if (cleanName.endsWith('count') || cleanName.endsWith('_count')) return 'number';
+  if (cleanName.endsWith('amount') || cleanName.endsWith('_amount')) return 'number';
+  if (cleanName.endsWith('total') || cleanName.endsWith('_total')) return 'number';
+  if (cleanName.endsWith('number') && !cleanName.includes('phone')) return 'number';
+  if (cleanName === 'index' || cleanName === '$index') return 'number';
+  if (cleanName.endsWith('port')) return 'number';
+  if (cleanName.endsWith('version')) return 'number';
+
+  if (cleanName.startsWith('is_') || cleanName.startsWith('has_')) return 'boolean';
+  if (cleanName.endsWith('enabled') || cleanName.endsWith('_enabled')) return 'boolean';
+  if (cleanName.endsWith('active') || cleanName.endsWith('_active')) return 'boolean';
+  if (cleanName.endsWith('flag') || cleanName.endsWith('_flag')) return 'boolean';
+  if (cleanName === 'required' || cleanName === 'optional') return 'boolean';
+  if (cleanName === 'success' || cleanName === 'valid') return 'boolean';
+
+  if (cleanName.endsWith('date') || cleanName.endsWith('_at')) return 'date';
+  if (cleanName.endsWith('time') || cleanName.endsWith('timestamp')) return 'date';
+  if (cleanName === 'created' || cleanName === 'updated') return 'date';
+
+  if (cleanName.endsWith('list') || cleanName.endsWith('items')) return 'array';
+  if (cleanName.endsWith('[]')) return 'array';
+  if (cleanName === 'attachments' || cleanName === 'files') return 'array';
+  if (cleanName === 'tags' || cleanName === 'labels') return 'array';
+
+  // Root paths
+  if (path === 'payload' || path === 'vars' || path === 'meta' || path === 'error') return 'object';
+
+  // State is typically a string
+  if (path === 'meta.state') return 'string';
+  if (path === 'meta.traceId') return 'string';
+  if (path === 'error.message' || path === 'error.name' || path === 'error.stack') return 'string';
+
+  return undefined;
+}
+
+/**
+ * Flatten grouped options back to a sorted array with visual indicators
+ */
+function flattenGroupedOptions(groups: CompatibilityGroup[]): SelectOption[] {
+  const result: SelectOption[] = [];
+
+  for (const group of groups) {
+    // Add group header as a disabled option
+    if (groups.length > 1) {
+      result.push({
+        value: `__group_${group.compatibility}__`,
+        label: group.label,
+        is_inactive: true,
+        className: 'text-xs font-semibold text-gray-500 bg-gray-50 cursor-default'
+      });
+    }
+
+    // Add options with compatibility styling
+    for (const option of group.options) {
+      const classes = getCompatibilityClasses(group.compatibility);
+      result.push({
+        ...option,
+        className: `${option.className || ''} ${classes.text}`.trim()
+      });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * §17.3.2 - Type-filtered field picker component
+ * Groups and sorts options by type compatibility with target field
+ */
+const TypeFilteredFieldPicker: React.FC<{
+  id: string;
+  options: SelectOption[];
+  targetType: string | undefined;
+  onSelect: (path: string) => void;
+  disabled?: boolean;
+}> = ({ id, options, targetType, onSelect, disabled }) => {
+  // Build grouped options by type compatibility
+  const groupedOptions = useMemo(() => {
+    const groups = buildCompatibilityGroupedOptions(options, targetType);
+    return flattenGroupedOptions(groups);
+  }, [options, targetType]);
+
+  return (
+    <CustomSelect
+      id={id}
+      options={groupedOptions}
+      value=""
+      placeholder="Insert field"
+      onValueChange={(value) => {
+        // Skip group headers
+        if (value.startsWith('__group_')) return;
+        onSelect(value);
+      }}
+      allowClear
+      className="w-48"
+      disabled={disabled}
+    />
+  );
+};
 
 /**
  * Schema field definition for target action inputs
@@ -230,14 +456,12 @@ const MappingFieldEditor: React.FC<{
           {valueType === 'expr' && (
             <div className="space-y-2">
               <div className="flex items-center justify-end">
-                <CustomSelect
+                {/* §17.3.2 - Type-filtered field picker */}
+                <TypeFilteredFieldPicker
                   id={`${idPrefix}-picker`}
                   options={fieldOptions}
-                  value=""
-                  placeholder="Insert field"
-                  onValueChange={handleInsertField}
-                  allowClear
-                  className="w-44"
+                  targetType={field.type}
+                  onSelect={handleInsertField}
                   disabled={disabled}
                 />
               </div>
@@ -647,6 +871,30 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     onChange(next);
   }, [value, onChange]);
 
+  // §17.3 - Keyboard navigation
+  // Build ordered list of all field names (mapped first, then unmapped)
+  const allFieldNames = useMemo(() => {
+    const mappedNames = Object.keys(value);
+    const unmappedNames = targetFields
+      .filter(f => !mappedNames.includes(f.name))
+      .map(f => f.name);
+    return [...mappedNames, ...unmappedNames];
+  }, [value, targetFields]);
+
+  const [keyboardState, keyboardHandlers] = useMappingKeyboard({
+    fieldCount: targetFields.length,
+    fieldNames: allFieldNames,
+    onRemoveMapping: handleRemoveMapping,
+    onActivateField: (index) => {
+      // When Enter is pressed, add mapping if unmapped or expand if mapped
+      const fieldName = allFieldNames[index];
+      if (fieldName && !(fieldName in value)) {
+        handleAddMapping(fieldName);
+      }
+    },
+    disabled
+  });
+
   // §19.3 - Handle connection delete
   const handleConnectionDelete = useCallback((connectionId: string) => {
     const targetField = connectionId.split('->')[1];
@@ -670,7 +918,20 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="space-y-4 relative">
+    <div
+      ref={containerRef}
+      className="space-y-4 relative"
+      onKeyDown={keyboardHandlers.handleKeyDown}
+      onFocus={keyboardHandlers.activate}
+      onBlur={keyboardHandlers.deactivate}
+      role="listbox"
+      aria-label="Input mapping fields"
+      aria-activedescendant={
+        keyboardState.focusedIndex >= 0
+          ? `mapping-field-${stepId}-${allFieldNames[keyboardState.focusedIndex]}`
+          : undefined
+      }
+    >
       {/* §19.3 - Visual connection lines overlay */}
       {positionsState.containerRect && (
         <MappingConnectionsOverlay
@@ -724,32 +985,47 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
 
       {/* Mapped fields */}
       {mappedFields.length > 0 && (
-        <div className="space-y-2">
-          {mappedFields.map(field => (
-            <div
-              key={field.name}
-              className="relative group"
-              ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
-            >
-              <MappingFieldEditor
-                field={field}
-                value={value[field.name]}
-                onChange={(v) => handleFieldChange(field.name, v)}
-                fieldOptions={fieldOptions}
-                secrets={secrets}
-                stepId={stepId}
-                disabled={disabled}
-              />
-              <button
-                onClick={() => handleRemoveMapping(field.name)}
-                className="absolute -right-2 -top-2 p-1 bg-white border border-gray-200 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:border-red-200"
-                title="Remove mapping"
-                disabled={disabled}
+        <div className="space-y-2" role="group" aria-label="Mapped fields">
+          {mappedFields.map((field, idx) => {
+            const fieldIndex = allFieldNames.indexOf(field.name);
+            const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
+            const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
+
+            return (
+              <div
+                key={field.name}
+                id={`mapping-field-${stepId}-${field.name}`}
+                role="option"
+                className={`relative group transition-all ${fieldProps.className}`}
+                ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
+                tabIndex={fieldProps.tabIndex}
+                aria-selected={fieldProps['aria-selected']}
+                onFocus={fieldProps.onFocus}
+                onKeyDown={fieldProps.onKeyDown}
               >
-                <Trash2 className="w-3.5 h-3.5 text-gray-500 hover:text-red-600" />
-              </button>
-            </div>
-          ))}
+                <MappingFieldEditor
+                  field={field}
+                  value={value[field.name]}
+                  onChange={(v) => handleFieldChange(field.name, v)}
+                  fieldOptions={fieldOptions}
+                  secrets={secrets}
+                  stepId={stepId}
+                  disabled={disabled}
+                />
+                <button
+                  onClick={() => handleRemoveMapping(field.name)}
+                  className={`absolute -right-2 -top-2 p-1 bg-white border border-gray-200 rounded-full shadow-sm transition-opacity hover:bg-red-50 hover:border-red-200 ${
+                    isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                  title="Remove mapping (Delete/Backspace)"
+                  disabled={disabled}
+                  tabIndex={-1}
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-gray-500 hover:text-red-600" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -765,8 +1041,8 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
           </button>
 
           {showUnmapped && (
-            <div className="space-y-1 pl-5">
-              {unmappedFields.map(field => {
+            <div className="space-y-1 pl-5" role="group" aria-label="Unmapped fields">
+              {unmappedFields.map((field, idx) => {
                 const suggestion = suggestionMap.get(field.name);
                 const isDropTarget = dndState.isDragging;
                 const isActiveDropTarget = dndState.dropTarget === field.name;
@@ -780,10 +1056,21 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   ? getCompatibilityClasses(dropCompatibility)
                   : null;
 
+                // §17.3 - Keyboard navigation props
+                const fieldIndex = allFieldNames.indexOf(field.name);
+                const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
+                const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
+
                 return (
                   <div
                     key={field.name}
+                    id={`mapping-field-${stepId}-${field.name}`}
+                    role="option"
                     ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
+                    tabIndex={fieldProps.tabIndex}
+                    aria-selected={fieldProps['aria-selected']}
+                    onFocus={fieldProps.onFocus}
+                    onKeyDown={fieldProps.onKeyDown}
                     className={`flex items-center justify-between py-1.5 px-2 rounded transition-all ${
                       suggestion ? 'bg-primary-50 border border-primary-100' : ''
                     } ${isDropTarget ? 'border-2 border-dashed border-gray-300' : ''} ${
@@ -792,7 +1079,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                         : isActiveDropTarget
                           ? 'bg-primary-50 border-primary-300 border-solid'
                           : 'hover:bg-gray-50'
-                    }`}
+                    } ${isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
                     onDragOver={(e) => {
                       if (disabled) return;
                       e.preventDefault();
