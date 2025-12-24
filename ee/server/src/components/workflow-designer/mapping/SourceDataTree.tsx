@@ -108,6 +108,12 @@ export interface SourceDataTreeProps {
    * §19.3 - Callback to register element refs for connection lines
    */
   onRegisterRef?: (path: string, element: HTMLElement | null) => void;
+
+  /**
+   * §19.3 - Register/unregister scroll container for position tracking
+   */
+  onRegisterScrollContainer?: (element: HTMLElement | null) => void;
+  onUnregisterScrollContainer?: (element: HTMLElement | null) => void;
 }
 
 // Type icons by field type
@@ -395,7 +401,9 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
   maxHeight = '400px',
   targetType,
   dndHandlers,
-  onRegisterRef
+  onRegisterRef,
+  onRegisterScrollContainer,
+  onUnregisterScrollContainer
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState({
@@ -406,6 +414,16 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
     forEach: true
   });
   const [pinnedPaths, setPinnedPaths] = useState<Set<string>>(new Set());
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!onRegisterScrollContainer || !scrollContainerRef.current) return;
+    const element = scrollContainerRef.current;
+    onRegisterScrollContainer(element);
+    return () => {
+      onUnregisterScrollContainer?.(element);
+    };
+  }, [onRegisterScrollContainer, onUnregisterScrollContainer]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -466,7 +484,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
       </div>
 
       {/* Tree content */}
-      <div className="overflow-y-auto" style={{ maxHeight }}>
+      <div className="overflow-y-auto" style={{ maxHeight }} ref={scrollContainerRef}>
         {/* Pinned fields */}
         {pinnedFields.length > 0 && (
           <div className="p-2 border-b border-gray-200 bg-yellow-50">

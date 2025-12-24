@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,9 +19,8 @@ import {
   getDropTargetClasses,
   type DragItem
 } from './useMappingDnd';
-import { useMappingPositions } from './useMappingPositions';
+import type { MappingPositionsHandlers } from './useMappingPositions';
 import { useMappingKeyboard } from './useMappingKeyboard';
-import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
 import {
   TypeCompatibility,
   getTypeCompatibility,
@@ -189,6 +188,14 @@ function inferTypeFromPath(path: string): string | undefined {
   return undefined;
 }
 
+function extractPrimaryPath(expression: string | undefined): string | null {
+  if (!expression) return null;
+  const trimmed = expression.trim();
+  if (!trimmed) return null;
+  const token = trimmed.split(/[\s+\-*/%()[\]{},<>=!&|?:]+/)[0];
+  return token || null;
+}
+
 /**
  * Flatten grouped options back to a sorted array with visual indicators
  */
@@ -297,14 +304,19 @@ export interface InputMappingEditorProps {
   stepId: string;
 
   /**
+   * §19.3 - Shared position handlers from MappingPanel
+   */
+  positionsHandlers: MappingPositionsHandlers;
+
+  /**
+   * §19.1 - Source field type lookup for compatibility indicators
+   */
+  sourceTypeMap?: Map<string, string>;
+
+  /**
    * Whether the editor is disabled
    */
   disabled?: boolean;
-
-  /**
-   * §19.3 - Source positions from external SourceDataTree for connection lines
-   */
-  sourcePositions?: Map<string, { centerY: number; right: number }>;
 }
 
 /**
@@ -348,7 +360,8 @@ const MappingFieldEditor: React.FC<{
   secrets: Array<{ name: string; description?: string }>;
   stepId: string;
   disabled?: boolean;
-}> = ({ field, value, onChange, fieldOptions, secrets, stepId, disabled }) => {
+  sourceTypeMap?: Map<string, string>;
+}> = ({ field, value, onChange, fieldOptions, secrets, stepId, disabled, sourceTypeMap }) => {
   const [valueType, setValueType] = useState<ValueType>(() => getMappingValueType(value));
   const [expressionError, setExpressionError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
@@ -420,15 +433,10 @@ const MappingFieldEditor: React.FC<{
     }
 
     const expr = (value as Expr).$expr;
-    if (!expr?.trim()) return null;
-
-    // Extract the first path-like token from the expression
-    const sourcePath = expr.trim().split(/[\s+\-*/%()[\]{},<>=!&|?:]+/)[0];
+    const sourcePath = extractPrimaryPath(expr);
     if (!sourcePath) return null;
 
-    // Find the source type from field options
-    const sourceOption = fieldOptions.find(opt => opt.value === sourcePath);
-    const sourceType = inferTypeFromPath(sourcePath);
+    const sourceType = sourceTypeMap?.get(sourcePath) ?? inferTypeFromPath(sourcePath);
 
     // Get target type
     const targetType = field.type;
@@ -454,7 +462,30 @@ const MappingFieldEditor: React.FC<{
     }
 
     return null;
-  }, [valueType, value, fieldOptions, field.type]);
+  }, [valueType, value, fieldOptions, field.type, sourceTypeMap]);
+
+  const compatibilityBadge = useMemo(() => {
+    if (valueType !== 'expr' || !value || !('$expr' in (value as object))) {
+      return null;
+    }
+
+    const expr = (value as Expr).$expr;
+    const sourcePath = extractPrimaryPath(expr);
+    if (!sourcePath) return null;
+
+    const sourceType = sourceTypeMap?.get(sourcePath) ?? inferTypeFromPath(sourcePath);
+    if (!field.type) return null;
+
+    const compatibility = getTypeCompatibility(sourceType, field.type);
+    const classes = getCompatibilityClasses(compatibility);
+
+    return {
+      label: getCompatibilityLabel(compatibility),
+      classes,
+      sourceType,
+      targetType: field.type
+    };
+  }, [valueType, value, sourceTypeMap, field.type]);
 
   const secretOptions: SelectOption[] = secrets.map(s => ({
     value: s.name,
@@ -477,6 +508,14 @@ const MappingFieldEditor: React.FC<{
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           <span>{field.name}</span>
           {field.required && <Badge className="text-xs bg-red-100 text-red-700">required</Badge>}
+          {compatibilityBadge && (
+            <Badge
+              className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
+              title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
+            >
+              {compatibilityBadge.label}
+            </Badge>
+          )}
         </button>
         <div className="flex items-center gap-2">
           {typeIcon}
@@ -782,12 +821,12 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   targetFields,
   fieldOptions,
   stepId,
-  disabled,
-  sourcePositions
+  positionsHandlers,
+  sourceTypeMap,
+  disabled
 }) => {
   const [secrets, setSecrets] = useState<Array<{ name: string; description?: string }>>([]);
   const [showUnmapped, setShowUnmapped] = useState(true);
-  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
 
   // §19.2 - Drag-and-drop state
   const [dndState, dndHandlers] = useMappingDnd({
@@ -796,15 +835,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
       onChange({ ...value, [targetFieldName]: { $expr: sourcePath } });
     }
   });
-
-  // §19.3 - Position tracking for connection lines
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [positionsState, positionsHandlers] = useMappingPositions();
-
-  // Set container ref for position tracking
-  useEffect(() => {
-    positionsHandlers.setContainerRef(containerRef.current);
-  }, [positionsHandlers]);
 
   // Fetch available secrets
   useEffect(() => {
@@ -845,47 +875,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     suggestions.forEach(s => map.set(s.targetField, s));
     return map;
   }, [suggestions]);
-
-  // §19.3 - Build connection data for visual lines
-  const connections: ConnectionData[] = useMemo(() => {
-    const result: ConnectionData[] = [];
-
-    for (const [fieldName, mappingValue] of Object.entries(value)) {
-      // Only show connections for expression mappings
-      if (typeof mappingValue !== 'object' || !mappingValue || !('$expr' in mappingValue)) {
-        continue;
-      }
-
-      const expr = (mappingValue as Expr).$expr;
-      if (!expr) continue;
-
-      // Get the source path from the expression (simplified - just takes first path-like token)
-      const sourcePath = expr.trim().split(/[\s+\-*/()[\]{}]+/)[0];
-      if (!sourcePath) continue;
-
-      const field = targetFields.find(f => f.name === fieldName);
-      const sourceRect = sourcePositions?.get(sourcePath) || positionsState.sourcePositions.get(sourcePath) || null;
-      const targetRect = positionsState.targetPositions.get(fieldName) || null;
-
-      result.push({
-        id: `${sourcePath}->${fieldName}`,
-        sourceId: sourcePath,
-        targetId: fieldName,
-        sourceRect: sourceRect ? { ...sourceRect, left: sourceRect.right - 10, top: sourceRect.centerY - 5, bottom: sourceRect.centerY + 5, width: 10, height: 10, centerX: sourceRect.right - 5 } : null,
-        targetRect: targetRect ? { ...targetRect } : null,
-        sourceType: undefined, // Would need source field type info
-        targetType: field?.type,
-        compatibility: TypeCompatibility.UNKNOWN
-      });
-    }
-
-    return result;
-  }, [value, targetFields, sourcePositions, positionsState.sourcePositions, positionsState.targetPositions]);
-
-  // §19.3 - Handle connection click (select)
-  const handleConnectionClick = useCallback((connectionId: string) => {
-    setSelectedConnectionId(prev => prev === connectionId ? null : connectionId);
-  }, []);
 
   // Apply all auto-mapping suggestions
   const handleAutoMapAll = useCallback(() => {
@@ -949,15 +938,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     disabled
   });
 
-  // §19.3 - Handle connection delete
-  const handleConnectionDelete = useCallback((connectionId: string) => {
-    const targetField = connectionId.split('->')[1];
-    if (targetField) {
-      handleRemoveMapping(targetField);
-      setSelectedConnectionId(null);
-    }
-  }, [handleRemoveMapping]);
-
   // §17.3 - Bulk operation: Clear all mappings
   const handleClearAll = useCallback(() => {
     onChange({});
@@ -973,8 +953,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
 
   return (
     <div
-      ref={containerRef}
-      className="space-y-4 relative"
+      className="space-y-4"
       onKeyDown={keyboardHandlers.handleKeyDown}
       onFocus={keyboardHandlers.activate}
       onBlur={keyboardHandlers.deactivate}
@@ -986,20 +965,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
           : undefined
       }
     >
-      {/* §19.3 - Visual connection lines overlay */}
-      {positionsState.containerRect && (
-        <MappingConnectionsOverlay
-          connections={connections}
-          width={positionsState.containerRect.width}
-          height={positionsState.containerRect.height}
-          selectedConnectionId={selectedConnectionId}
-          onConnectionClick={handleConnectionClick}
-          onConnectionDelete={handleConnectionDelete}
-          interactive={!disabled}
-          disabled={disabled}
-        />
-      )}
-
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold">Input Mapping</Label>
         <div className="flex items-center gap-3">
@@ -1065,6 +1030,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   secrets={secrets}
                   stepId={stepId}
                   disabled={disabled}
+                  sourceTypeMap={sourceTypeMap}
                 />
                 <button
                   onClick={() => handleRemoveMapping(field.name)}

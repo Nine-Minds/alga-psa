@@ -63,14 +63,16 @@ function buildSuggestionsFromOptions(options: SelectOption[]): AutocompleteSugge
     // Infer type from path name patterns
     let type: string | undefined;
     const lowerLabel = label.toLowerCase();
+    const normalizedLabel = lowerLabel.endsWith('[]') ? lowerLabel.slice(0, -2) : lowerLabel;
 
-    if (lowerLabel.endsWith('id') || lowerLabel === 'id') type = 'string';
-    else if (lowerLabel.endsWith('email') || lowerLabel === 'email') type = 'string';
-    else if (lowerLabel.endsWith('name') || lowerLabel === 'name') type = 'string';
-    else if (lowerLabel.endsWith('count') || lowerLabel === 'total') type = 'number';
-    else if (lowerLabel.startsWith('is_') || lowerLabel.startsWith('has_')) type = 'boolean';
-    else if (lowerLabel.endsWith('date') || lowerLabel.endsWith('_at')) type = 'date';
-    else if (lowerLabel.endsWith('items') || lowerLabel.endsWith('list')) type = 'array';
+    if (lowerLabel.endsWith('[]')) type = 'array';
+    else if (normalizedLabel.endsWith('id') || normalizedLabel === 'id') type = 'string';
+    else if (normalizedLabel.endsWith('email') || normalizedLabel === 'email') type = 'string';
+    else if (normalizedLabel.endsWith('name') || normalizedLabel === 'name') type = 'string';
+    else if (normalizedLabel.endsWith('count') || normalizedLabel === 'total') type = 'number';
+    else if (normalizedLabel.startsWith('is_') || normalizedLabel.startsWith('has_')) type = 'boolean';
+    else if (normalizedLabel.endsWith('date') || normalizedLabel.endsWith('_at')) type = 'date';
+    else if (normalizedLabel.endsWith('items') || normalizedLabel.endsWith('list')) type = 'array';
 
     // Check for parent paths that indicate objects
     const hasChildren = options.some(o =>
@@ -152,6 +154,8 @@ export const ExpressionTextArea: React.FC<ExpressionTextAreaProps> = ({
         expression={value}
         cursorPosition={autocompleteState.cursorPosition}
         suggestions={autocompleteState.filteredSuggestions}
+        selectedIndex={autocompleteState.selectedIndex}
+        onHighlight={autocompleteHandlers.setSelectedIndex}
         onSelect={autocompleteHandlers.handleSelect}
         onClose={autocompleteHandlers.close}
         position={autocompleteState.position}

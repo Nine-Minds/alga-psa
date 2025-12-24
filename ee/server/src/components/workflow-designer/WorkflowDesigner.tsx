@@ -19,7 +19,7 @@ import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
-import { MappingPanel, type ActionInputField } from './mapping';
+import { MappingPanel, type ActionInputField, ExpressionTextArea } from './mapping';
 import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createWorkflowDefinitionAction,
@@ -874,16 +874,32 @@ const buildEnhancedFieldOptions = (
     { value: 'meta', label: '🏷️ meta' },
     { value: 'meta.state', label: 'meta.state' },
     { value: 'meta.traceId', label: 'meta.traceId' },
+    { value: 'meta.tags', label: 'meta.tags' },
     { value: 'error', label: '⚠️ error' },
-    { value: 'error.message', label: 'error.message' }
+    { value: 'error.message', label: 'error.message' },
+    { value: 'error.code', label: 'error.code' },
+    { value: 'error.stack', label: 'error.stack' }
   ];
 
-  // Add payload fields
+  // Add payload fields from schema
   if (payloadSchema) {
     collectSchemaPaths(payloadSchema, payloadSchema).forEach((path) => {
       if (!options.some((opt) => opt.value === path)) {
         options.push({ value: path, label: path });
       }
+    });
+  } else {
+    // §16.2 - Add common payload placeholders when no schema is available
+    // This allows autocomplete to work even for new workflows without a schema
+    const commonPayloadFields = [
+      'payload.id',
+      'payload.type',
+      'payload.data',
+      'payload.timestamp',
+      'payload.tenant'
+    ];
+    commonPayloadFields.forEach(path => {
+      options.push({ value: path, label: `${path} (placeholder)` });
     });
   }
 
@@ -2295,7 +2311,7 @@ const StepConfigPanel: React.FC<{
     }
 
     // Check for reserved names
-    const reservedNames = ['payload', 'vars', 'meta', 'error', 'env', 'secrets', '$item', '$index'];
+    const reservedNames = ['payload', 'vars', 'meta', 'error', 'env', 'secrets', 'item', '$index'];
     if (reservedNames.includes(saveAs)) {
       return {
         type: 'error' as const,
@@ -2799,10 +2815,11 @@ const ExpressionField: React.FC<{
           className="w-44"
         />
       </div>
-      <TextArea
+      <ExpressionTextArea
         id={`${idPrefix}-expr`}
         value={value.$expr ?? ''}
-        onChange={(event) => handleChange(event.target.value)}
+        onChange={handleChange}
+        fieldOptions={fieldOptions}
         rows={2}
         className={error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
       />

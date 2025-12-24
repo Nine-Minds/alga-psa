@@ -94,8 +94,8 @@ const ConnectionPath: React.FC<{
   if (!path) return null;
 
   const color = getCompatibilityColor(connection.compatibility);
-  const strokeWidth = isSelected ? 3 : isHovered ? 2.5 : 2;
-  const opacity = disabled ? 0.4 : isSelected || isHovered ? 1 : 0.7;
+  const strokeWidth = isSelected ? 3 : isHovered ? 2.5 : 2.25;
+  const opacity = disabled ? 0.45 : isSelected || isHovered ? 1 : 0.8;
 
   // Calculate position for delete button (midpoint of the curve)
   const midX = connection.sourceRect && connection.targetRect
@@ -105,22 +105,13 @@ const ConnectionPath: React.FC<{
     ? (connection.sourceRect.centerY + connection.targetRect.centerY) / 2
     : 0;
 
+  const startX = connection.sourceRect?.right ?? 0;
+  const startY = connection.sourceRect?.centerY ?? 0;
+  const endX = connection.targetRect?.left ?? 0;
+  const endY = connection.targetRect?.centerY ?? 0;
+
   return (
     <g className={interactive && !disabled ? 'cursor-pointer' : ''}>
-      {/* Invisible wider path for easier interaction */}
-      {interactive && !disabled && (
-        <path
-          d={path}
-          fill="none"
-          stroke="transparent"
-          strokeWidth={16}
-          onClick={onClick}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
-          style={{ pointerEvents: 'stroke' }}
-        />
-      )}
-
       {/* Drop shadow */}
       <path
         d={path}
@@ -153,6 +144,26 @@ const ConnectionPath: React.FC<{
           keySplines="0.4 0 0.2 1"
         />
       </path>
+
+      {/* Endpoint dots */}
+      <circle
+        cx={startX}
+        cy={startY}
+        r={4}
+        fill="white"
+        stroke={color}
+        strokeWidth={2}
+        style={{ pointerEvents: 'none' }}
+      />
+      <circle
+        cx={endX}
+        cy={endY}
+        r={5}
+        fill="white"
+        stroke={color}
+        strokeWidth={2}
+        style={{ pointerEvents: 'none' }}
+      />
 
       {/* Selection indicator */}
       {isSelected && (
@@ -279,8 +290,8 @@ export const MappingConnectionsOverlay: React.FC<MappingConnectionsOverlayProps>
     <svg
       width={width}
       height={height}
-      className="absolute inset-0 z-10"
-      style={{ pointerEvents: interactive && !disabled ? 'none' : 'none' }}
+      className="absolute inset-0 z-20"
+      style={{ pointerEvents: 'none' }}
     >
       <defs>
         {/* Glow filter for selected connections */}
@@ -294,7 +305,7 @@ export const MappingConnectionsOverlay: React.FC<MappingConnectionsOverlayProps>
       </defs>
 
       {/* Render connections */}
-      <g style={{ pointerEvents: interactive && !disabled ? 'all' : 'none' }}>
+      <g>
         {validConnections.map(connection => (
           <ConnectionPath
             key={connection.id}

@@ -92,13 +92,16 @@ export {
 // §16.2 - Expression Autocomplete
 export {
   ExpressionAutocomplete,
-  extractCurrentPath,
-  filterSuggestions,
   buildSuggestionsFromContext,
   calculateDropdownPosition,
-  type AutocompleteSuggestion,
   type ExpressionAutocompleteProps
 } from './ExpressionAutocomplete';
+
+export {
+  extractCurrentPath,
+  filterSuggestions,
+  type AutocompleteSuggestion
+} from './expressionAutocompleteUtils';
 
 export {
   useExpressionAutocomplete,
