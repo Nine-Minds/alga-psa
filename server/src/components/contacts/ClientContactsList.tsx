@@ -7,6 +7,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useDrawer } from "server/src/context/DrawerContext";
@@ -292,16 +293,16 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Show:</span>
-          <select
+          <CustomSelect
             id="contact-status-filter"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'active' | 'inactive' | 'all')}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="all">All</option>
-          </select>
+            onValueChange={(value) => setStatusFilter(value as 'active' | 'inactive' | 'all')}
+            options={[
+              { value: 'active', label: 'Active Contacts' },
+              { value: 'inactive', label: 'Inactive Contacts' },
+              { value: 'all', label: 'All Contacts' }
+            ]}
+          />
         </div>
         <Button
           id="add-new-contact-btn"
