@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.15.18",
+  "version": "0.15.19",
   "private": true,
   "type": "module",
   "engines": {
