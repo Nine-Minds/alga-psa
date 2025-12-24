@@ -25,7 +25,9 @@ const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
  * Verify the caller has access to platform reports.
  *
  * SECURITY: Platform reports provide cross-tenant data access, so we MUST verify
- * that the user belongs to the master billing tenant via session authentication.
+ * that the caller has appropriate access via either:
+ * 1. Runner service auth (x-runner-auth header) - for extension uiProxy calls
+ * 2. Session auth - for direct browser calls
  *
  * Returns the tenant ID to use for queries and user info.
  */
@@ -34,7 +36,35 @@ async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantI
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // Validate the user session
+  // ─────────────────────────────────────────────────────────────────
+  // RUNNER SERVICE AUTH: Check if this is a call from the extension runner
+  // ─────────────────────────────────────────────────────────────────
+  const runnerAuth = request.headers.get('x-runner-auth');
+  const runnerTenant = request.headers.get('x-alga-tenant');
+  const extensionId = request.headers.get('x-alga-extension');
+
+  if (runnerAuth && runnerTenant) {
+    // Validate the runner service token
+    const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
+    if (expectedToken && runnerAuth === expectedToken) {
+      // Verify the extension is calling on behalf of master tenant
+      if (runnerTenant === MASTER_BILLING_TENANT_ID) {
+        console.log('[platform-reports] Runner auth accepted:', { extensionId, tenant: runnerTenant });
+        return {
+          tenantId: MASTER_BILLING_TENANT_ID,
+          userId: extensionId ? `extension:${extensionId}` : 'runner',
+          userEmail: undefined,
+        };
+      }
+      throw new Error('Access denied: Extension not authorized for platform reports');
+    }
+    // Invalid token - fall through to session auth (or reject)
+    console.warn('[platform-reports] Invalid runner auth token');
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // SESSION AUTH: Fall back to browser session-based authentication
+  // ─────────────────────────────────────────────────────────────────
   const user = await getCurrentUser();
 
   if (!user) {
@@ -47,7 +77,6 @@ async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantI
   }
 
   // Log extension context if present (for debugging, but don't trust it for auth)
-  const extensionId = request.headers.get('x-alga-extension');
   if (extensionId) {
     console.log('[platform-reports] Extension call from master tenant:', {
       extensionId,

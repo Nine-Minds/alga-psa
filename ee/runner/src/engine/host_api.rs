@@ -893,7 +893,7 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
 
             // Build URL by joining base URL with the route directly
             // The route should be an absolute platform API path like /api/v1/platform-reports
-            // We call the platform API directly, NOT through ext-proxy
+            // The platform API will check for x-runner-auth header for service auth
             let mut url = base_url.clone();
             {
                 let mut segments = url.path_segments_mut().map_err(|_| ProxyError::Internal)?;
@@ -927,7 +927,12 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
             }
 
             let client: &Client = &HTTP_CLIENT;
-            let mut request = client.post(url.clone()).timeout(runtime.ui_proxy_timeout);
+            // Use GET if no payload, POST if payload is present
+            let mut request = if payload.is_some() {
+                client.post(url.clone())
+            } else {
+                client.get(url.clone())
+            }.timeout(runtime.ui_proxy_timeout);
             request = request
                 .header("x-request-id", &request_id)
                 .header("x-alga-tenant", &tenant)

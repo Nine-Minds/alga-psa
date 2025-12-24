@@ -28,13 +28,29 @@ interface TableSchema {
 
 /**
  * Verify the caller has access to platform reports schema.
+ * Supports both runner service auth and session auth.
  */
-async function assertMasterTenantAccess(): Promise<void> {
+async function assertMasterTenantAccess(request: NextRequest): Promise<void> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
   }
 
-  // Validate the user session
+  // RUNNER SERVICE AUTH
+  const runnerAuth = request.headers.get('x-runner-auth');
+  const runnerTenant = request.headers.get('x-alga-tenant');
+
+  if (runnerAuth && runnerTenant) {
+    const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
+    if (expectedToken && runnerAuth === expectedToken) {
+      if (runnerTenant === MASTER_BILLING_TENANT_ID) {
+        return; // Auth OK
+      }
+      throw new Error('Access denied: Extension not authorized for platform reports');
+    }
+    console.warn('[platform-reports/schema] Invalid runner auth token');
+  }
+
+  // SESSION AUTH
   const user = await getCurrentUser();
 
   if (!user) {
@@ -52,7 +68,7 @@ async function assertMasterTenantAccess(): Promise<void> {
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    await assertMasterTenantAccess();
+    await assertMasterTenantAccess(request);
 
     const knex = await getAdminConnection();
 

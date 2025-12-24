@@ -32,22 +32,48 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Validate the user session
-    const user = await getCurrentUser();
+    // RUNNER SERVICE AUTH
+    const runnerAuth = request.headers.get('x-runner-auth');
+    const runnerTenant = request.headers.get('x-alga-tenant');
+    const extensionId = request.headers.get('x-alga-extension');
+    let userId: string | undefined;
+    let userEmail: string | undefined;
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
+    if (runnerAuth && runnerTenant) {
+      const expectedToken = process.env.RUNNER_SERVICE_TOKEN || process.env.UI_PROXY_AUTH_KEY;
+      if (expectedToken && runnerAuth === expectedToken) {
+        if (runnerTenant !== MASTER_BILLING_TENANT_ID) {
+          return NextResponse.json(
+            { success: false, error: 'Access denied' },
+            { status: 403 }
+          );
+        }
+        userId = extensionId ? `extension:${extensionId}` : 'runner';
+      } else {
+        console.warn('[platform-reports/access] Invalid runner auth token');
+      }
     }
 
-    // Only allow users from master tenant
-    if (user.tenant !== MASTER_BILLING_TENANT_ID) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
+    // SESSION AUTH if runner auth didn't succeed
+    if (!userId) {
+      const user = await getCurrentUser();
+
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+
+      if (user.tenant !== MASTER_BILLING_TENANT_ID) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied' },
+          { status: 403 }
+        );
+      }
+
+      userId = user.user_id;
+      userEmail = user.email;
     }
 
     const auditService = new PlatformReportAuditService(MASTER_BILLING_TENANT_ID);
@@ -64,8 +90,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     await auditService.logEvent({
       eventType: 'extension.access',
-      userId: user.user_id,
-      userEmail: user.email,
+      userId,
+      userEmail,
       details: {
         ...details,
         accessedAt: new Date().toISOString(),
