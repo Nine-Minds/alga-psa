@@ -171,7 +171,7 @@ export function actionCallStep(params: {
   id: string;
   actionId: string;
   version?: number;
-  args: Record<string, unknown>;
+  inputMapping?: Record<string, unknown>;
   saveAs?: string;
   onError?: { policy: 'fail' | 'continue' };
   idempotencyKeyExpr?: { $expr: string };
@@ -184,7 +184,7 @@ export function actionCallStep(params: {
     config: {
       actionId: params.actionId,
       version: params.version ?? 1,
-      args: params.args,
+      inputMapping: params.inputMapping ?? {},
       saveAs: params.saveAs,
       onError: params.onError,
       idempotencyKey: params.idempotencyKeyExpr

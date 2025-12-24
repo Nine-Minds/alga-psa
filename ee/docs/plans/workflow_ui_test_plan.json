@@ -1033,5 +1033,40 @@
     "description": "E2E: Dead-letter run appears after retry threshold and opens details. Mocks: non-target dependencies.",
     "reference": "playwright e2e (mocks for non-target dependencies)",
     "implemented": true
+  },
+  {
+    "description": "UI: Adding action.call step auto-generates saveAs variable name from actionId. Mocks: non-target dependencies.",
+    "reference": "playwright integration (mocks for non-target dependencies)",
+    "implemented": false
+  },
+  {
+    "description": "UI: Save output toggle enables/disables saveAs field with auto-generated name. Mocks: non-target dependencies.",
+    "reference": "playwright integration (mocks for non-target dependencies)",
+    "implemented": false
+  },
+  {
+    "description": "UI: Save output toggle off clears saveAs value from step config. Mocks: non-target dependencies.",
+    "reference": "playwright integration (mocks for non-target dependencies)",
+    "implemented": false
+  },
+  {
+    "description": "UI: SaveAs field shows 'Accessible as: vars.{name}' preview when enabled. Mocks: non-target dependencies.",
+    "reference": "playwright integration (mocks for non-target dependencies)",
+    "implemented": false
+  },
+  {
+    "description": "UI: SaveAs copy button copies full path 'vars.{name}' to clipboard. Mocks: non-target dependencies.",
+    "reference": "playwright integration (mocks for non-target dependencies)",
+    "implemented": false
+  },
+  {
+    "description": "UI: SaveAs validation error shown for conflicting variable names. Mocks: non-target dependencies.",
+    "reference": "playwright integration (mocks for non-target dependencies)",
+    "implemented": false
+  },
+  {
+    "description": "UI: SaveAs validation warning shown for invalid variable name format. Mocks: non-target dependencies.",
+    "reference": "playwright integration (mocks for non-target dependencies)",
+    "implemented": false
   }
 ]

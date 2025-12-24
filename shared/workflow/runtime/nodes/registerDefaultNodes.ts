@@ -26,19 +26,13 @@ const transformAssignSchema = z.object({
 const actionCallSchema = z.object({
   actionId: z.string().min(1),
   version: z.number().int().positive(),
-  // Legacy: args uses expression resolution on all values
-  args: z.record(z.any()).optional(),
-  // New: inputMapping supports $expr, $secret, and literal values
-  inputMapping: inputMappingSchema.optional(),
+  inputMapping: inputMappingSchema.optional().default({}),
   saveAs: z.string().optional(),
   onError: z.object({
     policy: z.enum(['fail', 'continue'])
   }).optional(),
   idempotencyKey: exprSchema.optional()
-}).strict().refine(
-  (data) => data.args !== undefined || data.inputMapping !== undefined,
-  { message: 'Either "args" or "inputMapping" must be provided' }
-);
+}).strict();
 
 const emailParseBodySchema = z.object({
   text: exprSchema.optional(),
@@ -159,28 +153,20 @@ export function registerDefaultNodes(): void {
       const exprContext = ctxToExpr(env);
       let resolvedArgs: unknown;
 
-      // Prefer inputMapping if provided, fall back to legacy args
-      if (config.inputMapping) {
-        // Track secret paths for redaction
-        const redactionPaths: string[] = [];
-        resolvedArgs = await resolveInputMapping(config.inputMapping, {
-          expressionContext: exprContext,
-          secretResolver: ctx.secretResolver ?? noOpSecretResolver,
-          workflowRunId: ctx.runId,
-          redactionPaths
-        });
+      // Resolve inputMapping to action arguments
+      const redactionPaths: string[] = [];
+      resolvedArgs = await resolveInputMapping(config.inputMapping ?? {}, {
+        expressionContext: exprContext,
+        secretResolver: ctx.secretResolver ?? noOpSecretResolver,
+        workflowRunId: ctx.runId,
+        redactionPaths
+      });
 
-        // Add resolved secret paths to envelope meta for redaction
-        if (redactionPaths.length > 0 && env.meta.redactions) {
-          env.meta.redactions.push(...redactionPaths.map(p => `args${p}`));
-        } else if (redactionPaths.length > 0) {
-          env.meta.redactions = redactionPaths.map(p => `args${p}`);
-        }
-      } else if (config.args) {
-        // Legacy: resolve expressions in args
-        resolvedArgs = await resolveExpressions(config.args, exprContext);
-      } else {
-        resolvedArgs = {};
+      // Add resolved secret paths to envelope meta for redaction
+      if (redactionPaths.length > 0 && env.meta.redactions) {
+        env.meta.redactions.push(...redactionPaths.map(p => `args${p}`));
+      } else if (redactionPaths.length > 0) {
+        env.meta.redactions = redactionPaths.map(p => `args${p}`);
       }
 
       const idempotencyKey = config.idempotencyKey

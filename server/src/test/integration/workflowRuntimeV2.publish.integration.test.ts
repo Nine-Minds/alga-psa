@@ -154,7 +154,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
           config: {
             actionId: 'missing.action',
             version: 1,
-            args: {}
+            inputMapping: {}
           }
         }
       ]
@@ -348,7 +348,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const result = await publishWorkflow(workflowId, 1, {
       id: workflowId,
       version: 1,
-      name: 'Action args invalid',
+      name: 'Action inputMapping invalid',
       payloadSchemaRef: TEST_SCHEMA_REF,
       steps: [
         {
@@ -357,7 +357,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
           config: {
             actionId: 'test.echo',
             version: 1,
-            args: { value: { $expr: 'bad(' } }
+            inputMapping: { value: { $expr: 'bad(' } }
           }
         }
       ]
@@ -544,7 +544,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
 
   it('Run execution inserts workflow_run_steps STARTED before step handler executes. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })]
     });
     await publishWorkflow(workflowId, 1);
 
@@ -577,7 +577,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
 
   it('Unhandled error fails run with status FAILED. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'fail-1', actionId: 'test.fail', args: {} })]
+      steps: [actionCallStep({ id: 'fail-1', actionId: 'test.fail', inputMapping: {} })]
     });
     await publishWorkflow(workflowId, 1);
     const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -588,8 +588,8 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
   it('Interpreter resumes from persisted nodePath after simulated crash. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [
-        actionCallStep({ id: 'first', actionId: 'test.sideEffect', args: {} }),
-        actionCallStep({ id: 'second', actionId: 'test.sideEffect', args: {} })
+        actionCallStep({ id: 'first', actionId: 'test.sideEffect', inputMapping: {} }),
+        actionCallStep({ id: 'second', actionId: 'test.sideEffect', inputMapping: {} })
       ]
     });
     await publishWorkflow(workflowId, 1);
@@ -628,7 +628,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
 
   it('control.return terminates the run immediately and skips remaining steps. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [returnStep('return-1'), actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', args: {} })]
+      steps: [returnStep('return-1'), actionCallStep({ id: 'action-1', actionId: 'test.sideEffect', inputMapping: {} })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -657,7 +657,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
 
   it('action.call validates input schema before handler invocation. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'find_contact_by_email', args: { email: 'not-an-email' } })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'find_contact_by_email', inputMapping: { email: 'not-an-email' } })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -667,7 +667,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
 
   it('action.call validates output schema before storing in payload. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', args: { value: 'ok' }, saveAs: 'payload.output' })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'payload.output' })]
     });
     await publishWorkflow(workflowId, 1);
     stubAction('test.echo', 1, async () => 'invalid-output');
@@ -678,7 +678,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
 
   it('action.call saveAs stores output at specified payload path. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
-      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', args: { value: 'ok' }, saveAs: 'payload.output' })]
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' }, saveAs: 'payload.output' })]
     });
     await publishWorkflow(workflowId, 1);
     const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
@@ -690,7 +690,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
   it('onError=continue records error and continues to next step. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [
-        actionCallStep({ id: 'fail-1', actionId: 'test.fail', args: {}, onError: { policy: 'continue' } }),
+        actionCallStep({ id: 'fail-1', actionId: 'test.fail', inputMapping: {}, onError: { policy: 'continue' } }),
         stateSetStep('state-1', 'DONE')
       ]
     });
@@ -706,7 +706,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
         {
           id: 'try',
           type: 'control.tryCatch',
-          try: [actionCallStep({ id: 'fail-1', actionId: 'test.fail', args: {} })],
+          try: [actionCallStep({ id: 'fail-1', actionId: 'test.fail', inputMapping: {} })],
           catch: [stateSetStep('state-1', 'RECOVERED')]
         }
       ]
