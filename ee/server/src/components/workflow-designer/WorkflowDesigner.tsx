@@ -1442,10 +1442,34 @@ const WorkflowDesigner: React.FC = () => {
 
   const hoveredPipePathRef = useRef<string | null>(null);
   const isDraggingRef = useRef(false);
+  // PPD - Track if dragging from palette and what item type
+  const [draggingFromPalette, setDraggingFromPalette] = useState<{
+    type: Step['type'];
+    actionId?: string;
+    actionVersion?: number;
+  } | null>(null);
 
-  const handleDragStart = () => {
+  const handleDragStart = (start: { draggableId: string; source: { droppableId: string } }) => {
     isDraggingRef.current = true;
     hoveredPipePathRef.current = null;
+
+    // PPD - Detect if dragging from palette
+    if (start.source.droppableId === 'palette') {
+      // Parse the palette item info from draggableId
+      // Format: "palette:type" or "palette:action.call:actionId:version"
+      const parts = start.draggableId.replace('palette:', '').split(':');
+      if (parts[0] === 'action.call' && parts.length >= 3) {
+        setDraggingFromPalette({
+          type: 'action.call',
+          actionId: parts[1],
+          actionVersion: parts[2] ? Number(parts[2]) : undefined
+        });
+      } else {
+        setDraggingFromPalette({ type: parts[0] as Step['type'] });
+      }
+    } else {
+      setDraggingFromPalette(null);
+    }
   };
 
   const handlePipeHover = useCallback((pipePath: string) => {
@@ -1478,11 +1502,54 @@ const WorkflowDesigner: React.FC = () => {
   }, []);
 
   const handleDragEnd = (result: DropResult) => {
-    if (!activeDefinition) return;
-
     isDraggingRef.current = false;
     const hoverTarget = hoveredPipePathRef.current;
     hoveredPipePathRef.current = null;
+
+    // PPD - Handle palette-to-pipeline drops
+    if (draggingFromPalette) {
+      setDraggingFromPalette(null);
+
+      if (!activeDefinition) return;
+
+      // Get destination pipe from result or hover target
+      const destinationPipe = result.destination?.droppableId.replace('pipe:', '') ?? null;
+      const resolvedDestPipe = destinationPipe ?? hoverTarget;
+
+      if (!resolvedDestPipe) return;
+
+      // Create the new step
+      let newStep = createStepFromPalette(draggingFromPalette.type, nodeRegistryMap);
+
+      // Apply action config if it's an action.call from palette
+      if (draggingFromPalette.type === 'action.call' && draggingFromPalette.actionId) {
+        const existingConfig = (newStep as NodeStep).config as Record<string, unknown> | undefined;
+        const autoSaveAs = generateSaveAsName(draggingFromPalette.actionId);
+        newStep = {
+          ...newStep,
+          config: {
+            ...existingConfig,
+            actionId: draggingFromPalette.actionId,
+            version: draggingFromPalette.actionVersion ?? 1,
+            saveAs: autoSaveAs
+          }
+        };
+      }
+
+      // Insert at destination
+      const destSegments = parsePipePath(resolvedDestPipe);
+      const destSteps = [...getStepsAtPath(activeDefinition.steps as Step[], destSegments)];
+      const insertIndex = result.destination?.index ?? destSteps.length;
+      destSteps.splice(insertIndex, 0, newStep);
+
+      const updatedSteps = updateStepsAtPath(activeDefinition.steps as Step[], destSegments, destSteps);
+      setActiveDefinition({ ...activeDefinition, steps: updatedSteps });
+      setSelectedStepId(newStep.id);
+      return;
+    }
+
+    // Standard step reordering logic
+    if (!activeDefinition) return;
 
     const sourcePipe = result.source.droppableId.replace('pipe:', '');
     const destinationPipe = result.destination?.droppableId.replace('pipe:', '') ?? null;
@@ -1636,7 +1703,17 @@ const WorkflowDesigner: React.FC = () => {
     return findStep(activeDefinition.steps as Step[]);
   }, [activeDefinition, selectedStepId]);
 
+  // PPD - Generate draggableId for palette items
+  const getPaletteDraggableId = (item: typeof paletteItems[0]) => {
+    const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+    if (itemWithAction.actionId) {
+      return `palette:action.call:${itemWithAction.actionId}:${itemWithAction.actionVersion ?? 1}`;
+    }
+    return `palette:${item.type}`;
+  };
+
   const designerContent = (
+    <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex flex-col h-full">
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-72 border-r bg-white flex flex-col">
@@ -1649,64 +1726,82 @@ const WorkflowDesigner: React.FC = () => {
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          <div className="px-4 py-3 border-b">
-            <Label>Insert into</Label>
-            <CustomSelect
-              id="workflow-designer-pipe-select"
-              options={pipeOptions.map((pipe) => ({ value: pipe.pipePath, label: pipe.label }))}
-              value={selectedPipePath}
-              disabled={registryError}
-              onValueChange={setSelectedPipePath}
-              placeholder="Select pipe"
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {Object.entries(groupedPaletteItems).map(([category, items]) => (
-              <div key={category}>
-                <div className="text-xs font-semibold uppercase text-gray-500 mb-2">{category}</div>
-                <div className="space-y-2">
-                  {items.map((item) => (
-                    <Card
-                      key={item.id}
-                      className="border border-gray-200 p-3 flex items-start justify-between"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900">{item.label}</div>
-                        <div className="text-xs text-gray-500">{item.description}</div>
-                        {/* §16.6 - Show output summary */}
-                        {item.outputSummary && (
-                          <div className="text-[10px] text-blue-600 mt-1 truncate" title={item.outputSummary}>
-                            {item.outputSummary}
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        id={`workflow-designer-add-${item.id}`}
-                        variant="outline"
-                        size="sm"
-                        className="ml-2 flex-shrink-0"
-                        disabled={registryError}
-                        onClick={() => {
-                          // §16.6 - Handle action items with pre-configured actionId
-                          const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
-                          if (itemWithAction.actionId) {
-                            handleAddStep('action.call', {
-                              actionId: itemWithAction.actionId,
-                              version: itemWithAction.actionVersion
-                            });
-                          } else {
-                            handleAddStep(item.type as Step['type']);
-                          }
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
+          {/* PPD-012 - Remove "Insert into" dropdown, drag directly instead */}
+          {draggingFromPalette && (
+            <div className="px-4 py-2 bg-primary-50 border-b text-xs text-primary-700">
+              Drop on the pipeline to add step
+            </div>
+          )}
+          <Droppable droppableId="palette" isDropDisabled={true}>
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="flex-1 overflow-y-auto p-4 space-y-4"
+              >
+                {Object.entries(groupedPaletteItems).map(([category, items]) => (
+                  <div key={category}>
+                    <div className="text-xs font-semibold uppercase text-gray-500 mb-2">{category}</div>
+                    <div className="space-y-2">
+                      {items.map((item, itemIndex) => (
+                        <Draggable
+                          key={item.id}
+                          draggableId={getPaletteDraggableId(item)}
+                          index={itemIndex}
+                        >
+                          {(dragProvided, snapshot) => (
+                            <Card
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              {...dragProvided.dragHandleProps}
+                              className={`border border-gray-200 p-3 flex items-start justify-between cursor-grab ${
+                                snapshot.isDragging ? 'shadow-lg ring-2 ring-primary-300 bg-white' : ''
+                              }`}
+                              data-testid={`palette-item-${item.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900">{item.label}</div>
+                                <div className="text-xs text-gray-500">{item.description}</div>
+                                {/* §16.6 - Show output summary */}
+                                {item.outputSummary && (
+                                  <div className="text-[10px] text-blue-600 mt-1 truncate" title={item.outputSummary}>
+                                    {item.outputSummary}
+                                  </div>
+                                )}
+                              </div>
+                              <Button
+                                id={`workflow-designer-add-${item.id}`}
+                                variant="outline"
+                                size="sm"
+                                className="ml-2 flex-shrink-0"
+                                disabled={registryError}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // §16.6 - Handle action items with pre-configured actionId
+                                  const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+                                  if (itemWithAction.actionId) {
+                                    handleAddStep('action.call', {
+                                      actionId: itemWithAction.actionId,
+                                      version: itemWithAction.actionVersion
+                                    });
+                                  } else {
+                                    handleAddStep(item.type as Step['type']);
+                                  }
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </Card>
+                          )}
+                        </Draggable>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {provided.placeholder}
               </div>
-            ))}
-          </div>
+            )}
+          </Droppable>
         </aside>
 
         <main className="flex-1 overflow-hidden bg-gray-50">
@@ -1775,23 +1870,21 @@ const WorkflowDesigner: React.FC = () => {
                       <Badge className="bg-yellow-100 text-yellow-800">{publishWarnings.length} warnings</Badge>
                     )}
                   </div>
-                  <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                    <Pipe
-                      steps={activeDefinition?.steps ?? []}
-                      pipePath="root"
-                      stepPathPrefix="root"
-                      selectedStepId={selectedStepId}
-                      onSelectStep={setSelectedStepId}
-                      onDeleteStep={handleDeleteStep}
-                      onSelectPipe={handlePipeSelect}
-                      onPipeHover={handlePipeHover}
-                      onInsertStep={(index) => handleInsertStep('root', index)}
-                      onInsertAtPath={handleInsertStep}
-                      nodeRegistry={nodeRegistryMap}
-                      errorMap={errorsByStepId}
-                      isRoot={true}
-                    />
-                  </DragDropContext>
+                  <Pipe
+                    steps={activeDefinition?.steps ?? []}
+                    pipePath="root"
+                    stepPathPrefix="root"
+                    selectedStepId={selectedStepId}
+                    onSelectStep={setSelectedStepId}
+                    onDeleteStep={handleDeleteStep}
+                    onSelectPipe={handlePipeSelect}
+                    onPipeHover={handlePipeHover}
+                    onInsertStep={(index) => handleInsertStep('root', index)}
+                    onInsertAtPath={handleInsertStep}
+                    nodeRegistry={nodeRegistryMap}
+                    errorMap={errorsByStepId}
+                    isRoot={true}
+                  />
                 </div>
               </div>
             </div>
@@ -1937,6 +2030,7 @@ const WorkflowDesigner: React.FC = () => {
         </div>
       </div>
     </div>
+    </DragDropContext>
   );
 
   const runListContent = (

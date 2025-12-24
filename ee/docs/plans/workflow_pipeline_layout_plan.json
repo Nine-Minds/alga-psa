@@ -385,74 +385,74 @@
         "id": "PPD-001",
         "description": "Feature: Palette step items are draggable",
         "reference": "WorkflowDesigner.tsx - Palette item Draggable wrapper",
-        "implemented": false
+        "implemented": true
       },
       {
         "id": "PPD-002",
         "description": "Feature: Pipeline shows drop indicator zones when dragging from palette",
-        "reference": "WorkflowDesigner.tsx - PipelineDropZone component",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - Droppable pipe zones",
+        "implemented": true
       },
       {
         "id": "PPD-003",
         "description": "Feature: Drop zones appear between existing steps during palette drag",
-        "reference": "WorkflowDesigner.tsx - inter-step drop zones",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - Droppable accepts palette items",
+        "implemented": true
       },
       {
         "id": "PPD-004",
         "description": "Feature: Drop zone at top of pipeline (before first step) during palette drag",
-        "reference": "WorkflowDesigner.tsx - start drop zone",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - start drop zone via Droppable",
+        "implemented": true
       },
       {
         "id": "PPD-005",
         "description": "Feature: Drop zone at bottom of pipeline (after last step) during palette drag",
-        "reference": "WorkflowDesigner.tsx - end drop zone",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - end drop zone via Droppable",
+        "implemented": true
       },
       {
         "id": "PPD-006",
         "description": "Feature: Drop zones highlight/expand when drag hovers over them",
-        "reference": "WorkflowDesigner.tsx - drop zone hover state",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - onPipeHover tracking",
+        "implemented": true
       },
       {
         "id": "PPD-007",
         "description": "Feature: Dropping palette item on zone creates step at that position",
-        "reference": "WorkflowDesigner.tsx - handlePaletteDrop callback",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - handleDragEnd palette drop logic",
+        "implemented": true
       },
       {
         "id": "PPD-008",
         "description": "Feature: Dropping on empty pipeline creates first step",
-        "reference": "WorkflowDesigner.tsx - empty pipeline drop handling",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - empty pipeline Droppable",
+        "implemented": true
       },
       {
         "id": "PPD-009",
         "description": "Feature: Dropping on nested branch (THEN/ELSE/BODY) adds to that branch",
-        "reference": "WorkflowDesigner.tsx - branch-aware drop handling",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - parsePipePath handles nested paths",
+        "implemented": true
       },
       {
         "id": "PPD-010",
         "description": "Feature: Dragged palette item shows preview/ghost at cursor",
-        "reference": "WorkflowDesigner.tsx - DragOverlay for palette items",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - snapshot.isDragging styling",
+        "implemented": true
       },
       {
         "id": "PPD-011",
         "description": "Feature: Newly dropped step is auto-selected for configuration",
-        "reference": "WorkflowDesigner.tsx - auto-select after palette drop",
-        "implemented": false
+        "reference": "WorkflowDesigner.tsx - setSelectedStepId after palette drop",
+        "implemented": true
       },
       {
         "id": "PPD-012",
         "description": "Feature: Remove 'Insert into' dropdown when palette drag is enabled",
-        "reference": "WorkflowDesigner.tsx - remove pipe selector",
-        "implemented": false,
-        "notes": "The dropdown becomes unnecessary when users can drag directly to target"
+        "reference": "WorkflowDesigner.tsx - dropdown removed, drag hint shown",
+        "implemented": true,
+        "notes": "The dropdown was removed; users now drag directly to target pipe"
       }
     ]
   },
