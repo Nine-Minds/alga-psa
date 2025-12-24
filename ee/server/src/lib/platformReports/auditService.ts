@@ -260,8 +260,8 @@ export class ExtensionAuditService {
       totalEvents: Number(totalEvents),
       eventsByType,
       recentUsers: recentUsers.map(r => ({
-        user_id: r.user_id,
-        user_email: r.user_email || '',
+        user_id: String(r.user_id),
+        user_email: String(r.user_email || ''),
         event_count: Number(r.event_count),
       })),
     };

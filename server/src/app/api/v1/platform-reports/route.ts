@@ -26,7 +26,7 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
 
   if (!eeRouteModulePromise) {
     eeRouteModulePromise = import('@ee/app/api/v1/platform-reports/route')
-      .then((module) => module as EeRouteModule)
+      .then((module) => module as unknown as EeRouteModule)
       .catch((error) => {
         console.error('[v1/platform-reports] Failed to load EE route', error);
         return null;
