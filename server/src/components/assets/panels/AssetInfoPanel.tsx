@@ -7,13 +7,27 @@ import { Asset } from '../../../interfaces/asset.interfaces';
 import { formatDateOnly } from '../../../lib/utils/dateTimeUtils';
 import Link from 'next/link';
 import { cn } from 'server/src/lib/utils';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import { ClientQuickView } from '../../clients/ClientQuickView';
 
 interface AssetInfoPanelProps {
   asset: Asset;
   isLoading: boolean;
 }
 
-const InfoRow = ({ label, value, copyable = false, link = null }: { label: string, value: React.ReactNode, copyable?: boolean, link?: string | null }) => {
+const InfoRow = ({ 
+  label, 
+  value, 
+  copyable = false, 
+  link = null,
+  onClick = null
+}: { 
+  label: string, 
+  value: React.ReactNode, 
+  copyable?: boolean, 
+  link?: string | null,
+  onClick?: (() => void) | null
+}) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -24,11 +38,20 @@ const InfoRow = ({ label, value, copyable = false, link = null }: { label: strin
     }
   };
 
-  return (
+  const content = (
     <div className="flex items-start gap-2 min-h-[24px]">
       <span className="text-sm font-bold text-gray-700 w-32 shrink-0">{label}:</span>
       <div className="flex-1 flex items-center gap-2">
-        {link ? (
+        {onClick ? (
+          <button 
+            type="button"
+            onClick={onClick} 
+            className="text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 text-left"
+          >
+            <span className="text-sm">{value}</span>
+            <ExternalLink size={12} />
+          </button>
+        ) : link ? (
           <Link href={link} className="text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1">
             <span className="text-sm">{value}</span>
             <ExternalLink size={12} />
@@ -57,15 +80,25 @@ const InfoRow = ({ label, value, copyable = false, link = null }: { label: strin
       </div>
     </div>
   );
+
+  return content;
 };
 
 export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
   asset,
   isLoading
 }) => {
+  const { openDrawer } = useDrawer();
+
   if (isLoading) {
     return <Card className="h-64 animate-pulse bg-gray-50" />;
   }
+
+  const handleOpenClientDrawer = () => {
+    if (asset.client_id) {
+      openDrawer(<ClientQuickView clientId={asset.client_id} />);
+    }
+  };
 
   const getModelName = () => {
     // Try to get model from system_info if available
@@ -92,7 +125,7 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
           <InfoRow 
             label="Client" 
             value={asset.client?.client_name || 'Unknown Client'} 
-            link={asset.client ? `/clients/${asset.client.client_id}` : null}
+            onClick={handleOpenClientDrawer}
           />
           <InfoRow 
             label="Location" 
