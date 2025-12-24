@@ -80,6 +80,15 @@ export {
   type MappingEditorErrorProps
 } from './MappingEditorSkeleton';
 
+// §17.3 - Keyboard Navigation
+export {
+  useMappingKeyboard,
+  type MappingKeyboardState,
+  type MappingKeyboardHandlers,
+  type NavigableFieldProps,
+  type UseMappingKeyboardOptions
+} from './useMappingKeyboard';
+
 // §19 - Composite Mapping Panel
 export {
   MappingPanel,

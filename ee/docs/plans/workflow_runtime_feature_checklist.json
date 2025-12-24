@@ -1987,12 +1987,12 @@
   {
     "description": "Display visual connection lines between source and target in mapping editor.",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show color-coded type indicators in mapping editor (green=compatible, yellow=warning, red=error).",
     "reference": "§17.3.1",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support collapsing/expanding sections in mapping editor.",
@@ -2007,7 +2007,7 @@
   {
     "description": "Filter dropdown options by type compatibility with target field.",
     "reference": "§17.3.2",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show expression editor for complex mappings that can't use simple field selection.",
@@ -2087,7 +2087,7 @@
   {
     "description": "Support drag-and-drop from source tree to target field.",
     "reference": "§17.3.4",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Show nested field paths in human-readable format (e.g., ticketDefaults.priority).",
@@ -2592,7 +2592,7 @@
   {
     "description": "Support keyboard navigation in mapping editor (tab between fields, arrow keys in tree).",
     "reference": "§17.3",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Provide undo/redo for mapping changes.",
