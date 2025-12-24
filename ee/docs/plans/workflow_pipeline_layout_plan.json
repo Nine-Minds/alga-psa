@@ -1,0 +1,486 @@
+[
+  {
+    "section": "Pipeline Layout Foundation",
+    "features": [
+      {
+        "id": "PLF-001",
+        "description": "Feature: Render workflow steps as vertical pipeline with step cards",
+        "reference": "WorkflowDesigner.tsx - StepList component refactor",
+        "implemented": false
+      },
+      {
+        "id": "PLF-002",
+        "description": "Feature: Each step card displays step type icon, label, and brief summary",
+        "reference": "WorkflowDesigner.tsx - StepCard component",
+        "implemented": false
+      },
+      {
+        "id": "PLF-003",
+        "description": "Feature: Dashed line connectors between consecutive steps",
+        "reference": "WorkflowDesigner.tsx - PipelineConnector component",
+        "implemented": false
+      },
+      {
+        "id": "PLF-004",
+        "description": "Feature: Connector lines animate/highlight during drag operations",
+        "reference": "WorkflowDesigner.tsx - PipelineConnector hover states",
+        "implemented": false
+      },
+      {
+        "id": "PLF-005",
+        "description": "Feature: Start node indicator at top of pipeline",
+        "reference": "WorkflowDesigner.tsx - Pipeline start marker",
+        "implemented": false
+      },
+      {
+        "id": "PLF-006",
+        "description": "Feature: End node indicator at bottom of pipeline (or implicit)",
+        "reference": "WorkflowDesigner.tsx - Pipeline end marker",
+        "implemented": false
+      },
+      {
+        "id": "PLF-007",
+        "description": "Feature: Pipeline scrolls vertically when steps exceed viewport",
+        "reference": "WorkflowDesigner.tsx - Pipeline scroll container",
+        "implemented": false
+      },
+      {
+        "id": "PLF-008",
+        "description": "Feature: Empty pipeline shows placeholder with add first step prompt",
+        "reference": "WorkflowDesigner.tsx - EmptyPipeline component",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Node Type Visual Differentiation",
+    "features": [
+      {
+        "id": "NTV-001",
+        "description": "Feature: action.call steps have distinct accent color (e.g., blue)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-002",
+        "description": "Feature: control.if steps have distinct accent color (e.g., amber/yellow)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-003",
+        "description": "Feature: control.forEach steps have distinct accent color (e.g., purple)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-004",
+        "description": "Feature: control.tryCatch steps have distinct accent color (e.g., orange)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-005",
+        "description": "Feature: control.return steps have distinct accent color (e.g., red)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-006",
+        "description": "Feature: state.set steps have distinct accent color (e.g., green)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-007",
+        "description": "Feature: transform.assign steps have distinct accent color (e.g., teal)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-008",
+        "description": "Feature: event.wait steps have distinct accent color (e.g., indigo)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-009",
+        "description": "Feature: human.task steps have distinct accent color (e.g., pink)",
+        "reference": "WorkflowDesigner.tsx - getStepTypeColor utility",
+        "implemented": false
+      },
+      {
+        "id": "NTV-010",
+        "description": "Feature: Color applied as subtle left border or background tint on step cards",
+        "reference": "WorkflowDesigner.tsx - StepCard styling",
+        "implemented": false
+      },
+      {
+        "id": "NTV-011",
+        "description": "Feature: Step type icon matches the accent color theme",
+        "reference": "WorkflowDesigner.tsx - StepCard icon styling",
+        "implemented": false
+      },
+      {
+        "id": "NTV-012",
+        "description": "Feature: Color legend/key available in UI (optional, collapsible)",
+        "reference": "WorkflowDesigner.tsx - PipelineLegend component",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Insert-Between Functionality",
+    "features": [
+      {
+        "id": "IBF-001",
+        "description": "Feature: Plus button appears on connector line hover between steps",
+        "reference": "WorkflowDesigner.tsx - InsertStepButton component",
+        "implemented": false
+      },
+      {
+        "id": "IBF-002",
+        "description": "Feature: Plus button at top of pipeline to insert before first step",
+        "reference": "WorkflowDesigner.tsx - InsertStepButton position=start",
+        "implemented": false
+      },
+      {
+        "id": "IBF-003",
+        "description": "Feature: Plus button at bottom of pipeline to append after last step",
+        "reference": "WorkflowDesigner.tsx - InsertStepButton position=end",
+        "implemented": false
+      },
+      {
+        "id": "IBF-004",
+        "description": "Feature: Clicking plus button opens step type selector popover",
+        "reference": "WorkflowDesigner.tsx - StepTypePopover component",
+        "implemented": false
+      },
+      {
+        "id": "IBF-005",
+        "description": "Feature: Step type selector shows categories (Control, Action, Transform, etc.)",
+        "reference": "WorkflowDesigner.tsx - StepTypePopover categories",
+        "implemented": false
+      },
+      {
+        "id": "IBF-006",
+        "description": "Feature: Selecting step type inserts new step at that position",
+        "reference": "WorkflowDesigner.tsx - handleInsertStep callback",
+        "implemented": false
+      },
+      {
+        "id": "IBF-007",
+        "description": "Feature: Newly inserted step is auto-selected for configuration",
+        "reference": "WorkflowDesigner.tsx - auto-select after insert",
+        "implemented": false
+      },
+      {
+        "id": "IBF-008",
+        "description": "Feature: Insert animates smoothly (other steps shift down)",
+        "reference": "WorkflowDesigner.tsx - CSS transitions on insert",
+        "implemented": false
+      },
+      {
+        "id": "IBF-009",
+        "description": "Feature: Keyboard shortcut to insert step after selected (e.g., Enter or +)",
+        "reference": "WorkflowDesigner.tsx - keyboard handlers",
+        "implemented": false
+      },
+      {
+        "id": "IBF-010",
+        "description": "Feature: Insert respects current pipe path (root vs nested branch)",
+        "reference": "WorkflowDesigner.tsx - insertAtPath logic",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Step Selection & Interaction",
+    "features": [
+      {
+        "id": "SSI-001",
+        "description": "Feature: Clicking step card selects it and opens config panel",
+        "reference": "WorkflowDesigner.tsx - step click handler",
+        "implemented": false
+      },
+      {
+        "id": "SSI-002",
+        "description": "Feature: Selected step card has prominent visual indicator (border/shadow)",
+        "reference": "WorkflowDesigner.tsx - StepCard selected state",
+        "implemented": false
+      },
+      {
+        "id": "SSI-003",
+        "description": "Feature: Hovering step card shows subtle highlight",
+        "reference": "WorkflowDesigner.tsx - StepCard hover state",
+        "implemented": false
+      },
+      {
+        "id": "SSI-004",
+        "description": "Feature: Step card shows error indicator when validation fails",
+        "reference": "WorkflowDesigner.tsx - StepCard error badge",
+        "implemented": false
+      },
+      {
+        "id": "SSI-005",
+        "description": "Feature: Step card shows warning indicator for non-critical issues",
+        "reference": "WorkflowDesigner.tsx - StepCard warning badge",
+        "implemented": false
+      },
+      {
+        "id": "SSI-006",
+        "description": "Feature: Delete step button visible on hover or selection",
+        "reference": "WorkflowDesigner.tsx - StepCard delete action",
+        "implemented": false
+      },
+      {
+        "id": "SSI-007",
+        "description": "Feature: Duplicate step button visible on hover or selection",
+        "reference": "WorkflowDesigner.tsx - StepCard duplicate action",
+        "implemented": false
+      },
+      {
+        "id": "SSI-008",
+        "description": "Feature: Arrow keys navigate between steps in pipeline",
+        "reference": "WorkflowDesigner.tsx - keyboard navigation",
+        "implemented": false
+      },
+      {
+        "id": "SSI-009",
+        "description": "Feature: Delete key removes selected step (with confirmation)",
+        "reference": "WorkflowDesigner.tsx - keyboard delete handler",
+        "implemented": false
+      },
+      {
+        "id": "SSI-010",
+        "description": "Feature: Escape key deselects current step",
+        "reference": "WorkflowDesigner.tsx - keyboard escape handler",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Control Flow Branching Visualization",
+    "features": [
+      {
+        "id": "CFB-001",
+        "description": "Feature: If block shows then/else branches as indented sub-pipelines",
+        "reference": "WorkflowDesigner.tsx - IfBlockRenderer component",
+        "implemented": false
+      },
+      {
+        "id": "CFB-002",
+        "description": "Feature: Branch connectors show diverge/converge pattern",
+        "reference": "WorkflowDesigner.tsx - BranchConnector component",
+        "implemented": false
+      },
+      {
+        "id": "CFB-003",
+        "description": "Feature: Branch labels (THEN/ELSE) visible on branch entry",
+        "reference": "WorkflowDesigner.tsx - BranchLabel component",
+        "implemented": false
+      },
+      {
+        "id": "CFB-004",
+        "description": "Feature: ForEach block shows body as indented sub-pipeline with loop indicator",
+        "reference": "WorkflowDesigner.tsx - ForEachBlockRenderer component",
+        "implemented": false
+      },
+      {
+        "id": "CFB-005",
+        "description": "Feature: Loop indicator shows item variable name (e.g., 'item')",
+        "reference": "WorkflowDesigner.tsx - ForEachBlockRenderer loop badge",
+        "implemented": false
+      },
+      {
+        "id": "CFB-006",
+        "description": "Feature: TryCatch block shows try/catch branches as indented sub-pipelines",
+        "reference": "WorkflowDesigner.tsx - TryCatchBlockRenderer component",
+        "implemented": false
+      },
+      {
+        "id": "CFB-007",
+        "description": "Feature: Catch branch shows error capture variable if configured",
+        "reference": "WorkflowDesigner.tsx - TryCatchBlockRenderer error badge",
+        "implemented": false
+      },
+      {
+        "id": "CFB-008",
+        "description": "Feature: Nested control blocks indent further (visual hierarchy)",
+        "reference": "WorkflowDesigner.tsx - nested indentation logic",
+        "implemented": false
+      },
+      {
+        "id": "CFB-009",
+        "description": "Feature: Collapse/expand control blocks to hide nested content",
+        "reference": "WorkflowDesigner.tsx - block collapse toggle",
+        "implemented": false
+      },
+      {
+        "id": "CFB-010",
+        "description": "Feature: Collapsed block shows step count badge",
+        "reference": "WorkflowDesigner.tsx - collapsed block summary",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Drag & Drop Reordering",
+    "features": [
+      {
+        "id": "DDR-001",
+        "description": "Feature: Steps can be dragged to reorder within pipeline",
+        "reference": "WorkflowDesigner.tsx - DnD context provider",
+        "implemented": false
+      },
+      {
+        "id": "DDR-002",
+        "description": "Feature: Drag handle visible on step card (grip icon)",
+        "reference": "WorkflowDesigner.tsx - StepCard drag handle",
+        "implemented": false
+      },
+      {
+        "id": "DDR-003",
+        "description": "Feature: Drop zones highlight during drag",
+        "reference": "WorkflowDesigner.tsx - DropZone component",
+        "implemented": false
+      },
+      {
+        "id": "DDR-004",
+        "description": "Feature: Dragged step shows ghost/preview at cursor",
+        "reference": "WorkflowDesigner.tsx - DragOverlay component",
+        "implemented": false
+      },
+      {
+        "id": "DDR-005",
+        "description": "Feature: Cannot drop step inside itself (for control blocks)",
+        "reference": "WorkflowDesigner.tsx - drop validation logic",
+        "implemented": false
+      },
+      {
+        "id": "DDR-006",
+        "description": "Feature: Dropping step updates definition and saves draft",
+        "reference": "WorkflowDesigner.tsx - handleDropStep callback",
+        "implemented": false
+      },
+      {
+        "id": "DDR-007",
+        "description": "Feature: Drag between branches (e.g., from then to else)",
+        "reference": "WorkflowDesigner.tsx - cross-branch drop support",
+        "implemented": false
+      },
+      {
+        "id": "DDR-008",
+        "description": "Feature: Drag from palette directly into pipeline position",
+        "reference": "WorkflowDesigner.tsx - palette-to-pipeline DnD",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Step Card Content Display",
+    "features": [
+      {
+        "id": "SCC-001",
+        "description": "Feature: action.call card shows action name and version",
+        "reference": "WorkflowDesigner.tsx - ActionCallCardContent",
+        "implemented": false
+      },
+      {
+        "id": "SCC-002",
+        "description": "Feature: action.call card shows saveAs variable if configured",
+        "reference": "WorkflowDesigner.tsx - ActionCallCardContent saveAs badge",
+        "implemented": false
+      },
+      {
+        "id": "SCC-003",
+        "description": "Feature: control.if card shows condition expression preview",
+        "reference": "WorkflowDesigner.tsx - IfCardContent condition preview",
+        "implemented": false
+      },
+      {
+        "id": "SCC-004",
+        "description": "Feature: control.forEach card shows items expression preview",
+        "reference": "WorkflowDesigner.tsx - ForEachCardContent items preview",
+        "implemented": false
+      },
+      {
+        "id": "SCC-005",
+        "description": "Feature: state.set card shows target state name",
+        "reference": "WorkflowDesigner.tsx - StateSetCardContent",
+        "implemented": false
+      },
+      {
+        "id": "SCC-006",
+        "description": "Feature: transform.assign card shows assigned variable count",
+        "reference": "WorkflowDesigner.tsx - AssignCardContent summary",
+        "implemented": false
+      },
+      {
+        "id": "SCC-007",
+        "description": "Feature: event.wait card shows event name",
+        "reference": "WorkflowDesigner.tsx - EventWaitCardContent",
+        "implemented": false
+      },
+      {
+        "id": "SCC-008",
+        "description": "Feature: human.task card shows task type",
+        "reference": "WorkflowDesigner.tsx - HumanTaskCardContent",
+        "implemented": false
+      },
+      {
+        "id": "SCC-009",
+        "description": "Feature: Long content truncates with ellipsis",
+        "reference": "WorkflowDesigner.tsx - card content truncation",
+        "implemented": false
+      },
+      {
+        "id": "SCC-010",
+        "description": "Feature: Custom step name overrides default label when set",
+        "reference": "WorkflowDesigner.tsx - StepCard name override",
+        "implemented": false
+      }
+    ]
+  },
+  {
+    "section": "Accessibility & Polish",
+    "features": [
+      {
+        "id": "AAP-001",
+        "description": "Feature: Pipeline is keyboard navigable (tab through steps)",
+        "reference": "WorkflowDesigner.tsx - focus management",
+        "implemented": false
+      },
+      {
+        "id": "AAP-002",
+        "description": "Feature: Screen reader announces step type and position",
+        "reference": "WorkflowDesigner.tsx - aria-labels",
+        "implemented": false
+      },
+      {
+        "id": "AAP-003",
+        "description": "Feature: Reduced motion preference disables animations",
+        "reference": "WorkflowDesigner.tsx - prefers-reduced-motion",
+        "implemented": false
+      },
+      {
+        "id": "AAP-004",
+        "description": "Feature: High contrast mode support for step colors",
+        "reference": "WorkflowDesigner.tsx - high contrast CSS",
+        "implemented": false
+      },
+      {
+        "id": "AAP-005",
+        "description": "Feature: Focus ring visible on focused step card",
+        "reference": "WorkflowDesigner.tsx - focus-visible styling",
+        "implemented": false
+      },
+      {
+        "id": "AAP-006",
+        "description": "Feature: Touch-friendly tap targets on mobile",
+        "reference": "WorkflowDesigner.tsx - min-height/padding",
+        "implemented": false
+      }
+    ]
+  }
+]

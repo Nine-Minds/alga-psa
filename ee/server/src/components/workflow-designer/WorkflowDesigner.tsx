@@ -5,7 +5,17 @@ import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
-import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle, FileJson, Code, Check, Eye, EyeOff } from 'lucide-react';
+import { Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle, FileJson, Code, Check, Eye, EyeOff, Play } from 'lucide-react';
+import {
+  getStepTypeColor,
+  getStepTypeIcon,
+  PipelineStart,
+  PipelineConnector,
+  EmptyPipeline,
+  StepCardSummary,
+  BranchLabel,
+  CollapsibleBlock
+} from './pipeline/PipelineComponents';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -2001,8 +2011,11 @@ const Pipe: React.FC<{
   onDeleteStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
+  onInsertStep?: (index: number) => void;
   nodeRegistry: Record<string, NodeRegistryItem>;
   errorMap: Map<string, PublishError[]>;
+  isRoot?: boolean;
+  disabled?: boolean;
 }> = ({
   steps,
   pipePath,
@@ -2012,8 +2025,11 @@ const Pipe: React.FC<{
   onDeleteStep,
   onSelectPipe,
   onPipeHover,
+  onInsertStep,
   nodeRegistry,
-  errorMap
+  errorMap,
+  isRoot = false,
+  disabled = false
 }) => {
   const pipeId = `workflow-designer-pipe-${pipePath.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
@@ -2023,6 +2039,7 @@ const Pipe: React.FC<{
         <div
           id={pipeId}
           data-pipe-path={pipePath}
+          data-testid={isRoot ? 'pipeline-container' : `pipeline-branch-${pipePath}`}
           ref={provided.innerRef}
           {...provided.droppableProps}
           onClick={(event) => {
@@ -2031,38 +2048,85 @@ const Pipe: React.FC<{
           }}
           onMouseEnter={() => onPipeHover(pipePath)}
           onMouseMove={() => onPipeHover(pipePath)}
-          className="space-y-3 rounded-lg border border-dashed border-gray-300 bg-white p-4"
+          className="flex flex-col items-stretch"
         >
+          {/* Pipeline Start (only for root) */}
+          {isRoot && steps.length > 0 && (
+            <div className="flex flex-col items-center mb-2">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 border-2 border-green-500" data-testid="pipeline-start">
+                <Play className="h-4 w-4 text-green-600 ml-0.5" />
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Start</div>
+              {onInsertStep && !disabled && (
+                <PipelineConnector onInsert={() => onInsertStep(0)} position="start" disabled={disabled} />
+              )}
+            </div>
+          )}
+
+          {/* Empty Pipeline State */}
+          {steps.length === 0 && (
+            <EmptyPipeline
+              onAddStep={onInsertStep ? () => onInsertStep(0) : undefined}
+              disabled={disabled}
+            />
+          )}
+
+          {/* Steps with Connectors */}
           {steps.map((step, index) => (
-            <Draggable key={step.id} draggableId={step.id} index={index}>
-              {(dragProvided) => (
-                <div
-                  ref={dragProvided.innerRef}
-                  {...dragProvided.draggableProps}
-                  data-step-id={step.id}
-                >
-                  <StepCard
-                    step={step}
-                    stepPath={`${stepPathPrefix}.steps[${index}]`}
-                    selected={selectedStepId === step.id}
-                    selectedStepId={selectedStepId}
-                    onSelectStep={onSelectStep}
-                    onDeleteStep={onDeleteStep}
-                    onSelectPipe={onSelectPipe}
-                    onPipeHover={onPipeHover}
-                    dragHandleProps={dragProvided.dragHandleProps}
-                    nodeRegistry={nodeRegistry}
-                    errorCount={errorMap.get(step.id)?.length ?? 0}
-                    errorMap={errorMap}
+            <React.Fragment key={step.id}>
+              <Draggable draggableId={step.id} index={index}>
+                {(dragProvided) => (
+                  <div
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                    data-step-id={step.id}
+                    data-testid={`pipeline-step-${step.id}`}
+                  >
+                    <StepCard
+                      step={step}
+                      stepPath={`${stepPathPrefix}.steps[${index}]`}
+                      selected={selectedStepId === step.id}
+                      selectedStepId={selectedStepId}
+                      onSelectStep={onSelectStep}
+                      onDeleteStep={onDeleteStep}
+                      onSelectPipe={onSelectPipe}
+                      onPipeHover={onPipeHover}
+                      onInsertStep={onInsertStep}
+                      dragHandleProps={dragProvided.dragHandleProps}
+                      nodeRegistry={nodeRegistry}
+                      errorCount={errorMap.get(step.id)?.length ?? 0}
+                      errorMap={errorMap}
+                      disabled={disabled}
+                    />
+                  </div>
+                )}
+              </Draggable>
+
+              {/* Connector after each step (except last) */}
+              {index < steps.length - 1 && (
+                <div className="flex justify-center">
+                  <PipelineConnector
+                    onInsert={onInsertStep ? () => onInsertStep(index + 1) : undefined}
+                    position="middle"
+                    disabled={disabled}
                   />
                 </div>
               )}
-            </Draggable>
+            </React.Fragment>
           ))}
-          {provided.placeholder}
-          {steps.length === 0 && (
-            <div className="text-sm text-gray-400">Drop steps here</div>
+
+          {/* Add step at end connector */}
+          {steps.length > 0 && onInsertStep && !disabled && (
+            <div className="flex justify-center">
+              <PipelineConnector
+                onInsert={() => onInsertStep(steps.length)}
+                position="end"
+                disabled={disabled}
+              />
+            </div>
           )}
+
+          {provided.placeholder}
         </div>
       )}
     </Droppable>
@@ -2078,10 +2142,12 @@ const StepCard: React.FC<{
   onDeleteStep: (id: string) => void;
   onSelectPipe: (pipePath: string) => void;
   onPipeHover: (pipePath: string) => void;
+  onInsertStep?: (index: number) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   nodeRegistry: Record<string, NodeRegistryItem>;
   errorCount: number;
   errorMap: Map<string, PublishError[]>;
+  disabled?: boolean;
 }> = ({
   step,
   stepPath,
@@ -2091,50 +2157,85 @@ const StepCard: React.FC<{
   onDeleteStep,
   onSelectPipe,
   onPipeHover,
+  onInsertStep,
   dragHandleProps,
   nodeRegistry,
   errorCount,
-  errorMap
+  errorMap,
+  disabled = false
 }) => {
   const label = getStepLabel(step, nodeRegistry);
   const isBlock = step.type.startsWith('control.');
+  const colors = getStepTypeColor(step.type);
+  const icon = getStepTypeIcon(step.type);
 
   return (
     <Card
-      className={`p-4 border ${selected ? 'border-primary-400 ring-2 ring-primary-200' : 'border-gray-200'} ${
-        errorCount > 0 ? 'border-red-400' : ''
-      }`}
+      className={`p-3 border-l-4 ${colors.border} ${
+        selected ? 'ring-2 ring-primary-300 border-r border-t border-b border-primary-200' : 'border-r border-t border-b border-gray-200'
+      } ${errorCount > 0 ? 'ring-2 ring-red-200' : ''} ${
+        !selected ? 'hover:bg-gray-50' : ''
+      } transition-all`}
+      data-testid={`step-card-${step.id}`}
     >
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         <button
           id={`workflow-step-select-${step.id}`}
-          className="text-left flex-1"
+          className="text-left flex-1 min-w-0"
           type="button"
           onClick={() => onSelectStep(step.id)}
+          aria-label={`Select ${label} step`}
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-900">{label}</span>
-            {isBlock && <Badge className="bg-blue-100 text-blue-800">Block</Badge>}
-            {errorCount > 0 && <Badge className="bg-red-100 text-red-700">{errorCount} errors</Badge>}
+            {/* Step type icon */}
+            <div className={`flex-shrink-0 ${colors.icon}`}>
+              {icon}
+            </div>
+            {/* Step label */}
+            <span className="text-sm font-medium text-gray-900 truncate">{label}</span>
+            {/* Block badge */}
+            {isBlock && (
+              <Badge className={`text-xs ${colors.badge}`}>
+                {step.type === 'control.if' ? 'If' : step.type === 'control.forEach' ? 'Loop' : step.type === 'control.tryCatch' ? 'Try' : 'Block'}
+              </Badge>
+            )}
+            {/* Error badge */}
+            {errorCount > 0 && (
+              <Badge className="bg-red-100 text-red-700 text-xs">
+                {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+              </Badge>
+            )}
           </div>
-          <div className="text-xs text-gray-500">{step.id}</div>
+          {/* Step summary content */}
+          <div className="mt-1">
+            <StepCardSummary step={step} />
+          </div>
         </button>
-        <div className="flex items-center gap-2">
-          <div
-            id={`workflow-step-drag-${step.id}`}
-            {...dragHandleProps}
-            className="cursor-grab text-gray-400 hover:text-gray-600"
-          >
-            <GripVertical className="h-4 w-4" />
-          </div>
-          <Button
-            id={`workflow-step-delete-${step.id}`}
-            variant="ghost"
-            size="sm"
-            onClick={() => onDeleteStep(step.id)}
-          >
-            Delete
-          </Button>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {!disabled && (
+            <>
+              <div
+                id={`workflow-step-drag-${step.id}`}
+                {...dragHandleProps}
+                className="cursor-grab text-gray-400 hover:text-gray-600 p-1"
+                data-testid={`step-drag-handle-${step.id}`}
+              >
+                <GripVertical className="h-4 w-4" />
+              </div>
+              <Button
+                id={`workflow-step-delete-${step.id}`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onDeleteStep(step.id)}
+                className="text-gray-400 hover:text-red-500 p-1 h-auto"
+                data-testid={`step-delete-${step.id}`}
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
