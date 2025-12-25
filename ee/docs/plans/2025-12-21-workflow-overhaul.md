@@ -1762,3 +1762,341 @@ ee/server/src/components/workflow-designer/mapping/
 | P2 | Loading States | Skeleton and error components |
 | P2 | Schema Caching | Client-side cache with TTL |
 | P3 | Accessibility | ARIA labels, live regions, screen reader testing |
+
+---
+
+## 20. Monaco Expression Editor
+
+### 20.1 Overview
+
+The workflow designer uses JSONata-style expressions throughout for conditions, transformations, and mappings. Currently these are edited in plain text fields without syntax highlighting, autocomplete, or validation feedback. This section describes integrating Monaco Editor to provide a rich editing experience.
+
+### 20.2 Goals
+
+1. **Syntax Highlighting**: Color-code operators, strings, numbers, paths, and functions
+2. **Autocomplete**: Context-aware suggestions for payload fields, vars, meta, and built-in functions
+3. **Inline Validation**: Real-time syntax and reference checking with error squiggles
+4. **Hover Information**: Show types and documentation on hover
+5. **Signature Help**: Parameter hints for function calls
+6. **Keyboard Navigation**: Standard editor shortcuts (Ctrl+Space, Tab, Escape)
+
+### 20.3 Expression Language
+
+The expression language is a subset of JSONata with the following constructs:
+
+```
+// Context roots
+payload.field           // Access payload data
+vars.varName            // Access workflow variables
+meta.state              // Access workflow metadata
+error.message           // Access error info (in catch blocks)
+
+// Operators
+a + b, a - b, a * b, a / b   // Arithmetic
+a = b, a != b, a < b, a > b  // Comparison
+a and b, a or b, not a       // Logical
+a & b                        // String concatenation
+
+// Navigation
+object.property         // Dot notation
+array[0]                // Array index
+array[filter]           // Array filter
+
+// Built-in functions
+$count(array)           // Array length
+$sum(array)             // Sum numbers
+$string(value)          // Convert to string
+$number(value)          // Convert to number
+$now()                  // Current timestamp
+$exists(path)           // Check if path exists
+$type(value)            // Get value type
+$lowercase(str)         // Lowercase string
+$uppercase(str)         // Uppercase string
+$trim(str)              // Trim whitespace
+$split(str, sep)        // Split string
+$join(array, sep)       // Join array
+$substring(str, start, len)  // Substring
+$replace(str, pattern, replacement)  // Replace
+```
+
+### 20.4 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ExpressionEditor                          │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                  Monaco Editor                           ││
+│  │  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐  ││
+│  │  │ Tokenizer   │  │ Autocomplete │  │ Diagnostics    │  ││
+│  │  │ (Monarch)   │  │ Provider     │  │ Provider       │  ││
+│  │  └─────────────┘  └──────────────┘  └────────────────┘  ││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+│                              ▼                               │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              ExpressionContext Provider                  ││
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   ││
+│  │  │ Payload      │  │ Vars         │  │ Available    │   ││
+│  │  │ Schema       │  │ Schema       │  │ Functions    │   ││
+│  │  └──────────────┘  └──────────────┘  └──────────────┘   ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 20.5 Component API
+
+```typescript
+interface ExpressionEditorProps {
+  // Value binding
+  value: string;
+  onChange: (value: string) => void;
+
+  // Context for autocomplete
+  context: ExpressionContext;
+
+  // Display options
+  height?: number | string;
+  singleLine?: boolean;
+  placeholder?: string;
+
+  // Validation
+  onValidationChange?: (errors: ValidationError[]) => void;
+
+  // Accessibility
+  ariaLabel?: string;
+}
+
+interface ExpressionContext {
+  // Schema for each context root
+  payloadSchema?: JsonSchema;
+  varsSchema?: JsonSchema;
+  metaSchema?: JsonSchema;
+  errorSchema?: JsonSchema;
+
+  // ForEach context
+  forEachItemVar?: string;
+  forEachItemSchema?: JsonSchema;
+  forEachIndexVar?: string;
+
+  // Available functions
+  functions?: FunctionDefinition[];
+}
+
+interface FunctionDefinition {
+  name: string;
+  signature: string;
+  description: string;
+  parameters: ParameterInfo[];
+  returnType: string;
+}
+```
+
+### 20.6 Monaco Language Registration
+
+```typescript
+// Register custom language
+monaco.languages.register({ id: 'workflow-expression' });
+
+// Configure tokenizer (Monarch syntax)
+monaco.languages.setMonarchTokensProvider('workflow-expression', {
+  tokenizer: {
+    root: [
+      // Context roots
+      [/\b(payload|vars|meta|error)\b/, 'variable.predefined'],
+
+      // Functions
+      [/\$[a-zA-Z_][a-zA-Z0-9_]*/, 'function'],
+
+      // Operators
+      [/\b(and|or|not|in)\b/, 'keyword.operator'],
+      [/[+\-*\/=<>!&|]+/, 'operator'],
+
+      // Strings
+      [/"([^"\\]|\\.)*"/, 'string'],
+      [/'([^'\\]|\\.)*'/, 'string'],
+
+      // Numbers
+      [/\b\d+(\.\d+)?\b/, 'number'],
+
+      // Booleans
+      [/\b(true|false|null)\b/, 'keyword'],
+
+      // Identifiers
+      [/[a-zA-Z_][a-zA-Z0-9_]*/, 'identifier'],
+
+      // Brackets
+      [/[\[\](){}]/, 'bracket'],
+
+      // Dot notation
+      [/\./, 'delimiter'],
+    ]
+  }
+});
+```
+
+### 20.7 Autocomplete Provider
+
+```typescript
+monaco.languages.registerCompletionItemProvider('workflow-expression', {
+  triggerCharacters: ['.', '$', '('],
+
+  provideCompletionItems: (model, position, context) => {
+    const textUntilPosition = model.getValueInRange({
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: position.lineNumber,
+      endColumn: position.column
+    });
+
+    // Determine what to suggest based on cursor context
+    const suggestions = [];
+
+    // After a dot - suggest object properties
+    if (textUntilPosition.endsWith('.')) {
+      const path = extractPathBeforeDot(textUntilPosition);
+      const schema = resolveSchemaAtPath(path, expressionContext);
+      suggestions.push(...getPropertySuggestions(schema));
+    }
+
+    // After $ - suggest functions
+    else if (textUntilPosition.endsWith('$')) {
+      suggestions.push(...getFunctionSuggestions());
+    }
+
+    // Default - suggest context roots and keywords
+    else {
+      suggestions.push(
+        { label: 'payload', kind: CompletionItemKind.Variable },
+        { label: 'vars', kind: CompletionItemKind.Variable },
+        { label: 'meta', kind: CompletionItemKind.Variable },
+        ...getKeywordSuggestions()
+      );
+    }
+
+    return { suggestions };
+  }
+});
+```
+
+### 20.8 Validation Provider
+
+```typescript
+// Real-time validation as user types
+function validateExpression(
+  expression: string,
+  context: ExpressionContext
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  // 1. Syntax validation
+  try {
+    parseExpression(expression);
+  } catch (e) {
+    errors.push({
+      message: e.message,
+      startColumn: e.position,
+      endColumn: e.position + 1,
+      severity: 'error'
+    });
+    return errors; // Stop on syntax errors
+  }
+
+  // 2. Reference validation
+  const paths = extractPaths(expression);
+  for (const path of paths) {
+    const schema = resolveSchemaAtPath(path, context);
+    if (!schema) {
+      errors.push({
+        message: `Unknown path: ${path}`,
+        range: path.range,
+        severity: 'warning'
+      });
+    }
+  }
+
+  // 3. Function validation
+  const calls = extractFunctionCalls(expression);
+  for (const call of calls) {
+    const fn = findFunction(call.name, context.functions);
+    if (!fn) {
+      errors.push({
+        message: `Unknown function: ${call.name}`,
+        range: call.range,
+        severity: 'error'
+      });
+    } else if (call.args.length !== fn.parameters.length) {
+      errors.push({
+        message: `${call.name} expects ${fn.parameters.length} arguments`,
+        range: call.range,
+        severity: 'error'
+      });
+    }
+  }
+
+  return errors;
+}
+```
+
+### 20.9 Integration Points
+
+The expression editor replaces plain text inputs in these locations:
+
+| Location | Current Field | New Component |
+|----------|--------------|---------------|
+| If Block | condition expr textarea | `<ExpressionEditor singleLine />` |
+| ForEach | collection expr input | `<ExpressionEditor singleLine />` |
+| Event Wait | correlationKey input | `<ExpressionEditor singleLine />` |
+| Transform Assign | value expr inputs | `<ExpressionEditor singleLine />` |
+| Action Call | idempotencyKey input | `<ExpressionEditor singleLine />` |
+| Mapping Panel | Expression values | `<ExpressionEditor height={60} />` |
+
+### 20.10 Single-Line Mode
+
+For inline expressions (conditions, single values), the editor runs in single-line mode:
+
+- Fixed height (~24px)
+- Enter key accepts value (doesn't add newline)
+- Horizontal scrolling for long expressions
+- No line numbers
+- Compact suggestions dropdown
+
+### 20.11 Performance Considerations
+
+1. **Lazy Loading**: Load Monaco only when an expression field is focused
+2. **Shared Worker**: Use Monaco's web worker for parsing/validation
+3. **Debounced Validation**: Validate 300ms after typing stops
+4. **Schema Caching**: Cache resolved schemas to avoid repeated lookups
+5. **Virtual Scrolling**: For long suggestion lists
+
+### 20.12 Implementation Priority
+
+| Priority | Feature | Description |
+|----------|---------|-------------|
+| P0 | Language Registration | Register custom language with Monaco |
+| P0 | Syntax Highlighting | Monarch tokenizer for expression syntax |
+| P0 | Basic Autocomplete | Context roots (payload, vars, meta, error) |
+| P1 | Path Autocomplete | Property suggestions after dot notation |
+| P1 | Function Autocomplete | Built-in function suggestions after $ |
+| P1 | Syntax Validation | Real-time parse error highlighting |
+| P2 | Reference Validation | Unknown path warnings |
+| P2 | Hover Information | Type info and documentation |
+| P2 | Signature Help | Function parameter hints |
+| P3 | Go to Definition | Jump to variable declaration |
+| P3 | Quick Fixes | Auto-fix suggestions for common errors |
+
+### 20.13 Feature Tracking
+
+See `workflow_expression_editor_features.json` for the complete implementation checklist with 100 tasks across categories:
+
+- Language Definition (8 tasks)
+- Syntax Highlighting (8 tasks)
+- Autocomplete (28 tasks)
+- Signature Help (5 tasks)
+- Hover Information (6 tasks)
+- Validation (12 tasks)
+- Editor Component (8 tasks)
+- Context Provider (6 tasks)
+- Integration (6 tasks)
+- Keyboard Shortcuts (5 tasks)
+- Quick Fixes (4 tasks)
+- Accessibility (4 tasks)
