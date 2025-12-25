@@ -11,8 +11,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
-import { TenantWorkflowClient } from '@ee/temporal-workflows/client';
-import type { TenantCreationInput, TenantCreationResult } from '@ee/temporal-workflows/types/workflow-types';
+import {
+  startTenantCreationWorkflow,
+  type TenantCreationInput,
+  type TenantCreationResult,
+} from '@ee/lib/tenant-management/workflowClient';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -127,8 +130,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .returning('log_id');
 
     // Trigger existing Temporal workflow
-    const client = await TenantWorkflowClient.create();
-
     const workflowInput: TenantCreationInput = {
       tenantName: companyName,
       adminUser: {
@@ -142,7 +143,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // No checkout session - this is manual creation
     };
 
-    const { workflowId, runId, result } = await client.startTenantCreation(workflowInput);
+    const workflowResult = await startTenantCreationWorkflow(workflowInput);
+
+    if (!workflowResult.available || !workflowResult.result) {
+      return NextResponse.json({
+        success: false,
+        error: workflowResult.error || 'Temporal workflow client not available',
+      }, { status: 503 });
+    }
+
+    const { workflowId, runId, result } = workflowResult;
 
     // LOG: Workflow started
     observabilityLogger.info('Tenant creation workflow started', {
@@ -175,20 +185,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
 
     try {
-      const workflowResult = await Promise.race([result, timeoutPromise]) as TenantCreationResult;
+      const tenantResult = await Promise.race([result, timeoutPromise]) as TenantCreationResult;
 
       // Update audit with final result
       await knex('extension_audit_logs')
         .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
         .update({
-          resource_id: workflowResult.tenantId || 'unknown',
-          status: workflowResult.success !== false ? 'completed' : 'failed',
-          error_message: workflowResult.success === false ? 'Workflow execution failed' : undefined,
+          resource_id: tenantResult.tenantId || 'unknown',
+          status: tenantResult.success !== false ? 'completed' : 'failed',
+          error_message: tenantResult.success === false ? 'Workflow execution failed' : undefined,
           details: JSON.stringify({
             source: 'ninemindsreporting_extension',
             company_name: companyName,
             admin_email: email,
-            result: workflowResult,
+            result: tenantResult,
             duration_ms: Date.now() - startTime,
           }),
         });
@@ -198,20 +208,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         event_type: 'tenant_management_action_completed',
         action: 'create_tenant',
         workflow_id: workflowId,
-        tenant_id: workflowResult.tenantId,
-        success: workflowResult.success !== false,
+        tenant_id: tenantResult.tenantId,
+        success: tenantResult.success !== false,
         duration_ms: Date.now() - startTime,
       });
 
-      // Close the client connection
-      await client.close();
-
-      if (workflowResult.success !== false) {
+      if (tenantResult.success !== false) {
         return NextResponse.json({
           success: true,
           workflowId,
-          tenantId: workflowResult.tenantId,
-          adminUserId: workflowResult.adminUserId,
+          tenantId: tenantResult.tenantId,
+          adminUserId: tenantResult.adminUserId,
           message: `Tenant "${companyName}" created successfully. Welcome email sent to ${email}.`,
         });
       } else {
@@ -244,9 +251,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             note: 'Workflow still running after 2 minute timeout',
           }),
         });
-
-      // Close the client connection
-      await client.close();
 
       return NextResponse.json({
         success: true,

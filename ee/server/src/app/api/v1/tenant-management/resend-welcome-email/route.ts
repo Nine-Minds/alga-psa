@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { TenantWorkflowClient } from '@ee/temporal-workflows/client';
+import { startResendWelcomeEmailWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { observabilityLogger } from '@/lib/observability/logging';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
@@ -92,16 +92,24 @@ export async function POST(req: NextRequest) {
       .returning('log_id');
 
     // Trigger Temporal workflow
-    const client = await TenantWorkflowClient.create();
-    const { workflowId, result } = await client.startResendWelcomeEmail({
+    const clientResult = await startResendWelcomeEmailWorkflow({
       tenantId,
       userId: targetUserId,
       triggeredBy: userId,
       triggeredByEmail: userEmail || '',
     });
 
+    if (!clientResult.available || !clientResult.result) {
+      return NextResponse.json({
+        success: false,
+        error: clientResult.error || 'Temporal workflow client not available',
+      }, { status: 503 });
+    }
+
+    const { workflowId } = clientResult;
+
     // Wait for result (short workflow, should complete quickly)
-    const workflowResult = await result;
+    const workflowResult = await clientResult.result;
 
     // Update audit record with result
     await knex('extension_audit_logs')
@@ -127,9 +135,6 @@ export async function POST(req: NextRequest) {
       success: workflowResult.success,
       duration_ms: Date.now() - startTime,
     });
-
-    // Close the client connection
-    await client.close();
 
     if (workflowResult.success) {
       return NextResponse.json({

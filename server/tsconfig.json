@@ -83,12 +83,6 @@
       "@ee/*": [
         "../ee/server/src/*"
       ],
-      "@ee/temporal-workflows": [
-        "../ee/temporal-workflows/src"
-      ],
-      "@ee/temporal-workflows/*": [
-        "../ee/temporal-workflows/src/*"
-      ],
       "@product/chat/entry": [
         "../packages/product-chat/oss/entry"
       ],
