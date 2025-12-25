@@ -94,6 +94,11 @@ export interface SourceDataTreeProps {
   maxHeight?: string;
 
   /**
+   * Fixed height for the full tree container (enables aligned column heights)
+   */
+  height?: string;
+
+  /**
    * §19.1 - Target field type for compatibility highlighting
    * When set, source fields will be color-coded by compatibility
    */
@@ -399,6 +404,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
   selectedPath,
   disabled,
   maxHeight = '400px',
+  height,
   targetType,
   dndHandlers,
   onRegisterRef,
@@ -467,7 +473,10 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white">
+    <div
+      className="border border-gray-200 rounded-lg bg-white flex flex-col"
+      style={height ? { height } : undefined}
+    >
       {/* Search input */}
       <div className="p-2 border-b border-gray-200">
         <div className="relative">
@@ -484,7 +493,11 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
       </div>
 
       {/* Tree content */}
-      <div className="overflow-y-auto" style={{ maxHeight }} ref={scrollContainerRef}>
+      <div
+        className="overflow-y-auto flex-1"
+        style={height ? undefined : { maxHeight }}
+        ref={scrollContainerRef}
+      >
         {/* Pinned fields */}
         {pinnedFields.length > 0 && (
           <div className="p-2 border-b border-gray-200 bg-yellow-50">

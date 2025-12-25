@@ -253,6 +253,8 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
   sourceTreeMaxHeight = '400px'
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const targetPanelRef = useRef<HTMLDivElement>(null);
+  const [sourceTreeHeight, setSourceTreeHeight] = useState<string | undefined>(sourceTreeMaxHeight);
 
   // Convert WorkflowDataContext to DataTreeContext
   const treeContext = useMemo(
@@ -292,6 +294,21 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
   useEffect(() => {
     positionsHandlers.recalculatePositions();
   }, [value, positionsHandlers.recalculatePositions]);
+
+  useEffect(() => {
+    if (!targetPanelRef.current) return;
+    const element = targetPanelRef.current;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const nextHeight = Math.max(0, Math.round(entry.contentRect.height));
+      if (nextHeight > 0) {
+        setSourceTreeHeight(`${nextHeight}px`);
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   // Handle field selection from source tree (click to insert)
   const handleSelectField = useCallback((path: string) => {
@@ -374,14 +391,15 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
           disabled={disabled}
         />
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         {/* Left panel: Source Data Tree */}
-        <div className="min-w-0">
+        <div className="min-w-0 h-full">
           <SourceDataTree
             context={treeContext}
             onSelectField={handleSelectField}
             disabled={disabled}
             maxHeight={sourceTreeMaxHeight}
+            height={sourceTreeHeight}
             targetType={activeTargetType}
             dndHandlers={dndHandlers}
             onRegisterRef={positionsHandlers.registerSourceRef}
@@ -391,7 +409,7 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
         </div>
 
         {/* Right panel: Input Mapping Editor */}
-        <div className="min-w-0">
+        <div className="min-w-0 h-full" ref={targetPanelRef}>
           <InputMappingEditor
             value={value}
             onChange={onChange}
