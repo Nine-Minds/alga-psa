@@ -13,6 +13,55 @@ import { findFunction } from './functionDefinitions';
 import { LANGUAGE_ID } from './jsonataLanguage';
 import type { ExpressionContext, JsonSchema } from './completionProvider';
 
+const helperFunctionDocs: Record<string, { signature: string; description: string; parameters: Array<{ name: string; type: string; description: string; optional?: boolean }>; returnType: string; examples?: string[] }> = {
+  coalesce: {
+    signature: 'coalesce(value1, value2, ...)',
+    description: 'Returns the first non-null, non-undefined value.',
+    parameters: [
+      { name: 'value1', type: 'any', description: 'First candidate value' },
+      { name: 'value2', type: 'any', description: 'Fallback value' },
+      { name: '...', type: 'any', description: 'Additional fallbacks', optional: true },
+    ],
+    returnType: 'any',
+    examples: ['coalesce(payload.name, "Unknown")'],
+  },
+  nowIso: {
+    signature: 'nowIso()',
+    description: 'Returns the current timestamp as an ISO string.',
+    parameters: [],
+    returnType: 'string',
+    examples: ['nowIso()'],
+  },
+  len: {
+    signature: 'len(value)',
+    description: 'Returns the length of a string or array.',
+    parameters: [
+      { name: 'value', type: 'string | array', description: 'Value to measure' },
+    ],
+    returnType: 'number',
+    examples: ['len(payload.items)'],
+  },
+  toString: {
+    signature: 'toString(value)',
+    description: 'Converts a value to its string representation.',
+    parameters: [
+      { name: 'value', type: 'any', description: 'Value to convert' },
+    ],
+    returnType: 'string',
+    examples: ['toString(payload.count)'],
+  },
+  append: {
+    signature: 'append(array, items)',
+    description: 'Returns a new array with items appended to the end.',
+    parameters: [
+      { name: 'array', type: 'array', description: 'Base array' },
+      { name: 'items', type: 'array', description: 'Items to append' },
+    ],
+    returnType: 'array',
+    examples: ['append(coalesce(vars.items, []), [payload.item])'],
+  },
+};
+
 /**
  * Extract the word/path at a given position
  */
@@ -241,6 +290,32 @@ export function createHoverProvider(
             contents: [{ value: content }],
           };
         }
+      }
+
+      // Check for helper functions (non-$)
+      const helperDoc = helperFunctionDocs[word];
+      if (helperDoc) {
+        const examples = helperDoc.examples?.map(e => `  ${e}`).join('\n') || '';
+        const content = [
+          `**${word}**`,
+          '',
+          '```',
+          helperDoc.signature,
+          '```',
+          '',
+          helperDoc.description,
+          '',
+          helperDoc.parameters.length > 0 ? '**Parameters:**' : '',
+          ...helperDoc.parameters.map(p => `- \`${p.name}\`: ${p.type}${p.optional ? ' *(optional)*' : ''} - ${p.description}`),
+          '',
+          `**Returns:** \`${helperDoc.returnType}\``,
+          examples ? `\n**Examples:**\n\`\`\`\n${examples}\n\`\`\`` : '',
+        ].filter(Boolean).join('\n');
+
+        return {
+          range,
+          contents: [{ value: content }],
+        };
       }
 
       // Check for context root
