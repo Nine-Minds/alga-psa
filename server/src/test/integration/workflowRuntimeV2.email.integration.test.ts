@@ -173,19 +173,19 @@ describe('workflow runtime v2 email workflow integration tests', () => {
       expect(payload.tenantId).toBe(tenantId);
     });
 
-    it('Email workflow stores emailData, providerId, tenantId, and processedAt. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.processedAt).toBeDefined();
+    it('Email workflow stores processedAt in vars. Mocks: non-target dependencies.', () => {
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.processedAt).toBeDefined();
     });
 
     it('email.parseBody node parses body and stores parsedEmail with confidence. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.parsedEmail.confidence).toBe('high');
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.parsedEmail.confidence).toBe('high');
     });
 
     it('email.parseBody sanitizes HTML and strips unsafe content. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.parsedEmail.sanitizedHtml).toBe('<p>Sanitized</p>');
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.parsedEmail.sanitizedHtml).toBe('<p>Sanitized</p>');
     });
 
     it('When reply token present, find_ticket_by_reply_token is invoked. Mocks: non-target dependencies.', () => {
@@ -226,8 +226,8 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     });
 
     it('Existing ticket path does not overwrite ticketDefaults. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.ticketDefaults).toBeUndefined();
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.ticketDefaults).toBeUndefined();
     });
   });
 
@@ -292,9 +292,9 @@ describe('workflow runtime v2 email workflow integration tests', () => {
       expect(contactSpy).toHaveBeenCalledWith(expect.objectContaining({ email: 'sender@example.com' }), expect.anything());
     });
 
-    it('Matched contact stored as matchedClient in payload. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.matchedClient).toBeDefined();
+    it('Matched contact stored as matchedClient in vars. Mocks: non-target dependencies.', () => {
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.matchedClient).toBeDefined();
     });
 
     it('Resolve inbound ticket defaults by tenantId+providerId. Mocks: non-target dependencies.', () => {
@@ -305,8 +305,8 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     });
 
     it('Ticket defaults override logic matches legacy behavior. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.targetLocationId).toBe('loc-1');
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.targetLocationId).toBe('loc-1');
     });
 
     it('create_ticket_from_email is called with computed defaults. Mocks: non-target dependencies.', () => {
@@ -315,9 +315,9 @@ describe('workflow runtime v2 email workflow integration tests', () => {
       expect(call.status_id).toBe('status-1');
     });
 
-    it('create_ticket_from_email stores ticket_id into payload.targetTicketId. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.targetTicketId).toBe('ticket-999');
+    it('create_ticket_from_email stores ticket_id into vars.targetTicketId. Mocks: non-target dependencies.', () => {
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.targetTicketId).toBe('ticket-999');
     });
 
     it('New ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.', async () => {
@@ -371,9 +371,9 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     });
 
     it('New ticket path persists ticketDefaults and targetTicketId together. Mocks: non-target dependencies.', () => {
-      const payload = snapshots[snapshots.length - 1].envelope_json.payload;
-      expect(payload.ticketDefaults).toBeDefined();
-      expect(payload.targetTicketId).toBe('ticket-999');
+      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
+      expect(vars.ticketDefaults).toBeDefined();
+      expect(vars.targetTicketId).toBe('ticket-999');
     });
   });
 

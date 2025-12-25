@@ -20,10 +20,7 @@
           "type": "transform.assign",
           "config": {
             "assign": {
-              "payload.emailData": { "$expr": "payload.emailData" },
-              "payload.providerId": { "$expr": "payload.providerId" },
-              "payload.tenantId": { "$expr": "payload.tenantId" },
-              "payload.processedAt": { "$expr": "nowIso()" }
+              "vars.processedAt": { "$expr": "nowIso()" }
             }
           }
         },
@@ -33,7 +30,7 @@
           "config": {
             "text": { "$expr": "payload.emailData.body.text" },
             "html": { "$expr": "payload.emailData.body.html" },
-            "saveAs": "payload.parsedEmail"
+            "saveAs": "vars.parsedEmail"
           }
         },
         {
@@ -44,7 +41,7 @@
         {
           "id": "check-reply-token",
           "type": "control.if",
-          "condition": { "$expr": "coalesce(payload.parsedEmail.metadata.parser.tokens.conversationToken, '') != ''" },
+          "condition": { "$expr": "coalesce(vars.parsedEmail.metadata.parser.tokens.conversationToken, '') != ''" },
           "then": [
             {
               "id": "lookup-reply-token",
@@ -53,7 +50,7 @@
                 "actionId": "find_ticket_by_reply_token",
                 "version": 1,
                 "inputMapping": {
-                  "token": { "$expr": "payload.parsedEmail.metadata.parser.tokens.conversationToken" }
+                  "token": { "$expr": "vars.parsedEmail.metadata.parser.tokens.conversationToken" }
                 },
                 "saveAs": "vars.replyTokenResult",
                 "onError": { "policy": "continue" }
@@ -71,7 +68,7 @@
               "type": "transform.assign",
               "config": {
                 "assign": {
-                  "payload.existingTicket": { "$expr": "vars.replyTokenResult.match" }
+                  "vars.existingTicket": { "$expr": "vars.replyTokenResult.match" }
                 }
               }
             }
@@ -103,7 +100,7 @@
                   "type": "transform.assign",
                   "config": {
                     "assign": {
-                      "payload.existingTicket": { "$expr": "vars.threadResult.ticket" }
+                      "vars.existingTicket": { "$expr": "vars.threadResult.ticket" }
                     }
                   }
                 }
@@ -114,7 +111,7 @@
         {
           "id": "branch-existing-ticket",
           "type": "control.if",
-          "condition": { "$expr": "payload.existingTicket != null" },
+          "condition": { "$expr": "vars.existingTicket != null" },
           "then": [
             {
               "id": "comment-existing-ticket",
@@ -123,14 +120,14 @@
                 "actionId": "create_comment_from_email",
                 "version": 1,
                 "inputMapping": {
-                  "ticket_id": { "$expr": "payload.existingTicket.ticketId" },
-                  "content": { "$expr": "payload.parsedEmail.sanitizedHtml ? payload.parsedEmail.sanitizedHtml : payload.parsedEmail.sanitizedText" },
-                  "format": { "$expr": "payload.parsedEmail.sanitizedHtml ? 'html' : 'text'" },
+                  "ticket_id": { "$expr": "vars.existingTicket.ticketId" },
+                  "content": { "$expr": "vars.parsedEmail.sanitizedHtml ? vars.parsedEmail.sanitizedHtml : vars.parsedEmail.sanitizedText" },
+                  "format": { "$expr": "vars.parsedEmail.sanitizedHtml ? 'html' : 'text'" },
                   "source": "email",
                   "author_type": "contact",
-                  "metadata": { "$expr": "payload.parsedEmail.metadata" }
+                  "metadata": { "$expr": "vars.parsedEmail.metadata" }
                 },
-                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & payload.existingTicket.ticketId" },
+                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.existingTicket.ticketId" },
                 "saveAs": "vars.commentResult"
               }
             },
@@ -150,7 +147,7 @@
                     "inputMapping": {
                       "emailId": { "$expr": "payload.emailData.id" },
                       "attachmentId": { "$expr": "vars.attachment.id" },
-                      "ticketId": { "$expr": "payload.existingTicket.ticketId" },
+                      "ticketId": { "$expr": "vars.existingTicket.ticketId" },
                       "tenant": { "$expr": "payload.tenantId" },
                       "providerId": { "$expr": "payload.providerId" },
                       "attachmentData": { "$expr": "vars.attachment" }
@@ -192,7 +189,7 @@
                   "type": "transform.assign",
                   "config": {
                     "assign": {
-                      "payload.matchedClient": { "$expr": "vars.matchedContact.contact" }
+                      "vars.matchedClient": { "$expr": "vars.matchedContact.contact" }
                     }
                   }
                 }
@@ -213,13 +210,13 @@
                   "tenant": { "$expr": "payload.tenantId" },
                   "providerId": { "$expr": "payload.providerId" }
                 },
-                "saveAs": "payload.ticketDefaults"
+                "saveAs": "vars.ticketDefaults"
               }
             },
             {
               "id": "check-ticket-defaults",
               "type": "control.if",
-              "condition": { "$expr": "payload.ticketDefaults != null" },
+              "condition": { "$expr": "vars.ticketDefaults != null" },
               "then": [],
               "else": [
                 {
@@ -240,9 +237,9 @@
               "type": "transform.assign",
               "config": {
                 "assign": {
-                  "payload.targetClientId": { "$expr": "coalesce(vars.matchedContact.contact.client_id, payload.ticketDefaults.client_id)" },
-                  "payload.targetContactId": { "$expr": "coalesce(vars.matchedContact.contact.contact_id, null)" },
-                  "payload.targetLocationId": { "$expr": "(vars.matchedContact.contact.client_id and payload.ticketDefaults.client_id and vars.matchedContact.contact.client_id != payload.ticketDefaults.client_id) ? null : payload.ticketDefaults.location_id" }
+                  "vars.targetClientId": { "$expr": "coalesce(vars.matchedContact.contact.client_id, vars.ticketDefaults.client_id)" },
+                  "vars.targetContactId": { "$expr": "coalesce(vars.matchedContact.contact.contact_id, null)" },
+                  "vars.targetLocationId": { "$expr": "(vars.matchedContact.contact.client_id and vars.ticketDefaults.client_id and vars.matchedContact.contact.client_id != vars.ticketDefaults.client_id) ? null : vars.ticketDefaults.location_id" }
                 }
               }
             },
@@ -254,21 +251,29 @@
                 "version": 1,
                 "inputMapping": {
                   "title": { "$expr": "payload.emailData.subject" },
-                  "description": { "$expr": "payload.parsedEmail.sanitizedText" },
-                  "client_id": { "$expr": "payload.targetClientId" },
-                  "contact_id": { "$expr": "payload.targetContactId" },
+                  "description": { "$expr": "vars.parsedEmail.sanitizedText" },
+                  "client_id": { "$expr": "vars.targetClientId" },
+                  "contact_id": { "$expr": "vars.targetContactId" },
                   "source": "email",
-                  "board_id": { "$expr": "payload.ticketDefaults.board_id" },
-                  "status_id": { "$expr": "payload.ticketDefaults.status_id" },
-                  "priority_id": { "$expr": "payload.ticketDefaults.priority_id" },
-                  "category_id": { "$expr": "payload.ticketDefaults.category_id" },
-                  "subcategory_id": { "$expr": "payload.ticketDefaults.subcategory_id" },
-                  "location_id": { "$expr": "payload.targetLocationId" },
-                  "entered_by": { "$expr": "payload.ticketDefaults.entered_by" },
-                  "email_metadata": { "$expr": "payload.emailData" }
+                  "board_id": { "$expr": "vars.ticketDefaults.board_id" },
+                  "status_id": { "$expr": "vars.ticketDefaults.status_id" },
+                  "priority_id": { "$expr": "vars.ticketDefaults.priority_id" },
+                  "category_id": { "$expr": "vars.ticketDefaults.category_id" },
+                  "subcategory_id": { "$expr": "vars.ticketDefaults.subcategory_id" },
+                  "location_id": { "$expr": "vars.targetLocationId" },
+                  "entered_by": { "$expr": "vars.ticketDefaults.entered_by" },
+                  "email_metadata": {
+                    "messageId": { "$expr": "payload.emailData.id" },
+                    "mailhogId": { "$expr": "payload.emailData.mailhogId" },
+                    "threadId": { "$expr": "payload.emailData.threadId" },
+                    "from": { "$expr": "payload.emailData.from" },
+                    "inReplyTo": { "$expr": "payload.emailData.inReplyTo" },
+                    "references": { "$expr": "payload.emailData.references" },
+                    "providerId": { "$expr": "payload.providerId" }
+                  }
                 },
                 "idempotencyKey": { "$expr": "payload.providerId & ':' & payload.emailData.id" },
-                "saveAs": "payload.createdTicket"
+                "saveAs": "vars.createdTicket"
               }
             },
             {
@@ -276,7 +281,7 @@
               "type": "transform.assign",
               "config": {
                 "assign": {
-                  "payload.targetTicketId": { "$expr": "payload.createdTicket.ticket_id" }
+                  "vars.targetTicketId": { "$expr": "vars.createdTicket.ticket_id" }
                 }
               }
             },
@@ -301,7 +306,7 @@
                     "inputMapping": {
                       "emailId": { "$expr": "payload.emailData.id" },
                       "attachmentId": { "$expr": "vars.attachment.id" },
-                      "ticketId": { "$expr": "payload.targetTicketId" },
+                      "ticketId": { "$expr": "vars.targetTicketId" },
                       "tenant": { "$expr": "payload.tenantId" },
                       "providerId": { "$expr": "payload.providerId" },
                       "attachmentData": { "$expr": "vars.attachment" }
@@ -319,14 +324,14 @@
                 "actionId": "create_comment_from_email",
                 "version": 1,
                 "inputMapping": {
-                  "ticket_id": { "$expr": "payload.targetTicketId" },
-                  "content": { "$expr": "payload.parsedEmail.sanitizedHtml ? payload.parsedEmail.sanitizedHtml : payload.parsedEmail.sanitizedText" },
-                  "format": { "$expr": "payload.parsedEmail.sanitizedHtml ? 'html' : 'text'" },
+                  "ticket_id": { "$expr": "vars.targetTicketId" },
+                  "content": { "$expr": "vars.parsedEmail.sanitizedHtml ? vars.parsedEmail.sanitizedHtml : vars.parsedEmail.sanitizedText" },
+                  "format": { "$expr": "vars.parsedEmail.sanitizedHtml ? 'html' : 'text'" },
                   "source": "email",
                   "author_type": "internal",
-                  "metadata": { "$expr": "payload.parsedEmail.metadata" }
+                  "metadata": { "$expr": "vars.parsedEmail.metadata" }
                 },
-                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & payload.targetTicketId" }
+                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.targetTicketId" }
               }
             },
             {
@@ -337,7 +342,7 @@
             {
               "id": "send-ack-email",
               "type": "control.if",
-              "condition": { "$expr": "payload.matchedClient != null" },
+              "condition": { "$expr": "vars.matchedClient != null" },
               "then": [
                 {
                   "id": "ack-email-action",
@@ -346,8 +351,8 @@
                     "actionId": "send_ticket_acknowledgement_email",
                     "version": 1,
                     "inputMapping": {
-                      "ticketId": { "$expr": "payload.targetTicketId" },
-                      "contactEmail": { "$expr": "payload.matchedClient.email" }
+                      "ticketId": { "$expr": "vars.targetTicketId" },
+                      "contactEmail": { "$expr": "vars.matchedClient.email" }
                     },
                     "onError": { "policy": "continue" }
                   }
@@ -374,8 +379,11 @@
               "title": "Email Processing Failure",
               "description": { "$expr": "payload.emailData.subject" },
               "contextData": {
-                "subject": { "$expr": "payload.emailData.subject" },
-                "from": { "$expr": "payload.emailData.from.email" }
+                "emailSubject": { "$expr": "payload.emailData.subject" },
+                "senderEmail": { "$expr": "payload.emailData.from.email" },
+                "emailId": { "$expr": "payload.emailData.id" },
+                "providerId": { "$expr": "payload.providerId" },
+                "errorMessage": { "$expr": "error.message" }
               }
             }
           }
