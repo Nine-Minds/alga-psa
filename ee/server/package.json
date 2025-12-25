@@ -18,11 +18,12 @@
   },
   "dependencies": {
     "@huggingface/inference": "^3.3.3",
-    "openai": "^4.59.0",
+    "@monaco-editor/react": "^4.7.0",
     "@temporalio/client": "^1.12.3",
     "gm": "^1.25.0",
     "lucide-react": "^0.475.0",
     "next": "^15.5.3",
+    "openai": "^4.59.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "sharp": "^0.34.3",

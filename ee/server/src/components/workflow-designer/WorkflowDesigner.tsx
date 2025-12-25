@@ -38,7 +38,8 @@ import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
-import { MappingPanel, type ActionInputField, ExpressionTextArea } from './mapping';
+import { MappingPanel, type ActionInputField } from './mapping';
+import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
   createWorkflowDefinitionAction,
@@ -987,6 +988,58 @@ const getStepLabel = (step: Step, nodeRegistry: Record<string, NodeRegistryItem>
   return name || registryItem?.ui?.label || step.type;
 };
 
+/**
+ * Build ExpressionContext for the Monaco expression editor from DataContext
+ * This converts the workflow designer's DataContext to the format expected by the expression editor
+ */
+const buildExpressionContext = (
+  payloadSchema: JsonSchema | null,
+  dataContext: DataContext | null
+): ExpressionContext => {
+  // Build vars schema from step outputs
+  const varsProperties: Record<string, ExprJsonSchema> = {};
+  if (dataContext?.steps) {
+    for (const stepOutput of dataContext.steps) {
+      varsProperties[stepOutput.saveAs] = stepOutput.outputSchema as ExprJsonSchema;
+    }
+  }
+
+  const varsSchema: ExprJsonSchema | undefined = Object.keys(varsProperties).length > 0
+    ? { type: 'object', properties: varsProperties }
+    : undefined;
+
+  // Meta schema
+  const metaSchema: ExprJsonSchema = {
+    type: 'object',
+    properties: {
+      state: { type: 'string', description: 'Workflow state' },
+      traceId: { type: 'string', description: 'Trace ID' },
+      tags: { type: 'object', description: 'Workflow tags' },
+    },
+  };
+
+  // Error schema (only relevant in catch blocks)
+  const errorSchema: ExprJsonSchema | undefined = dataContext?.inCatchBlock ? {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Error name' },
+      message: { type: 'string', description: 'Error message' },
+      stack: { type: 'string', description: 'Stack trace' },
+      nodePath: { type: 'string', description: 'Error location in workflow' },
+    },
+  } : undefined;
+
+  return {
+    payloadSchema: payloadSchema as ExprJsonSchema | undefined,
+    varsSchema,
+    metaSchema,
+    errorSchema,
+    inCatchBlock: dataContext?.inCatchBlock,
+    forEachItemVar: dataContext?.forEach?.itemVar,
+    forEachIndexVar: dataContext?.forEach?.indexVar,
+  };
+};
+
 const ensureExpr = (value: Expr | undefined): Expr => ({ $expr: value?.$expr ?? '' });
 
 /**
@@ -1237,6 +1290,7 @@ const WorkflowDesigner: React.FC = () => {
       const result = await getWorkflowSchemaAction({ schemaRef });
       setPayloadSchema(result.schema ?? null);
     } catch (error) {
+      console.error('[WorkflowDesigner] Error loading schema:', error);
       setPayloadSchema(null);
     }
   }, []);
@@ -1279,6 +1333,9 @@ const WorkflowDesigner: React.FC = () => {
   useEffect(() => {
     if (activeDefinition?.payloadSchemaRef) {
       loadPayloadSchema(activeDefinition.payloadSchemaRef);
+    } else {
+      // Clear schema when no ref
+      setPayloadSchema(null);
     }
   }, [activeDefinition?.payloadSchemaRef, loadPayloadSchema]);
 
@@ -2624,6 +2681,12 @@ const StepConfigPanel: React.FC<{
     [payloadSchema, dataContext]
   );
 
+  // §20 - Expression context for Monaco editor autocomplete
+  const expressionContext = useMemo(() =>
+    buildExpressionContext(payloadSchema, dataContext),
+    [payloadSchema, dataContext]
+  );
+
   // §16.5 - Expression validation for this step
   const expressionValidations = useMemo(() => {
     if (!step.type.startsWith('control.') && 'config' in step) {
@@ -2840,6 +2903,7 @@ const StepConfigPanel: React.FC<{
             value={ensureExpr(ifStep.condition)}
             onChange={(expr) => onChange({ ...ifStep, condition: expr })}
             fieldOptions={enhancedFieldOptions}
+            context={expressionContext}
           />
         );
       })()}
@@ -2854,6 +2918,7 @@ const StepConfigPanel: React.FC<{
               value={ensureExpr(feStep.items)}
               onChange={(expr) => onChange({ ...feStep, items: expr })}
               fieldOptions={enhancedFieldOptions}
+              context={expressionContext}
             />
             <Input
               id={`foreach-itemvar-${step.id}`}
@@ -2920,6 +2985,7 @@ const StepConfigPanel: React.FC<{
               value={cwStep.inputMapping ?? {}}
               onChange={(mapping) => onChange({ ...cwStep, inputMapping: mapping })}
               fieldOptions={enhancedFieldOptions}
+              context={expressionContext}
             />
             <MappingExprEditor
               idPrefix={`call-workflow-output-${step.id}`}
@@ -2927,6 +2993,7 @@ const StepConfigPanel: React.FC<{
               value={cwStep.outputMapping ?? {}}
               onChange={(mapping) => onChange({ ...cwStep, outputMapping: mapping })}
               fieldOptions={enhancedFieldOptions}
+              context={expressionContext}
             />
           </div>
         );
@@ -2946,6 +3013,7 @@ const StepConfigPanel: React.FC<{
           actionRegistry={actionRegistry}
           stepId={step.id}
           excludeFields={step.type === 'action.call' ? ['inputMapping'] : []}
+          expressionContext={expressionContext}
         />
       )}
 
@@ -3149,7 +3217,8 @@ const SchemaForm: React.FC<{
   actionRegistry: ActionRegistryItem[];
   stepId: string;
   excludeFields?: string[];
-}> = ({ schema, rootSchema, value, onChange, fieldOptions, actionRegistry, stepId, excludeFields = [] }) => {
+  expressionContext?: ExpressionContext;
+}> = ({ schema, rootSchema, value, onChange, fieldOptions, actionRegistry, stepId, excludeFields = [], expressionContext }) => {
   const resolved = resolveSchema(schema, rootSchema);
   const configValue = value ?? {};
   const allProperties = resolved.properties ?? {};
@@ -3198,6 +3267,7 @@ const SchemaForm: React.FC<{
           onChange={(expr) => updateValue(key, expr)}
           fieldOptions={fieldOptions}
           description={fieldDescription}
+          context={expressionContext}
         />
       );
     }
@@ -3273,6 +3343,7 @@ const SchemaForm: React.FC<{
             value={(configValue[key] as Record<string, Expr>) ?? {}}
             onChange={(mapping) => updateValue(key, mapping)}
             fieldOptions={fieldOptions}
+            context={expressionContext}
           />
         );
       }
@@ -3301,6 +3372,7 @@ const SchemaForm: React.FC<{
             fieldOptions={fieldOptions}
             actionRegistry={actionRegistry}
             stepId={`${stepId}-${key}`}
+            expressionContext={expressionContext}
           />
         </div>
       );
@@ -3374,10 +3446,12 @@ const ExpressionField: React.FC<{
   onChange: (expr: Expr) => void;
   fieldOptions: SelectOption[];
   description?: string;
-}> = ({ idPrefix, label, value, onChange, fieldOptions, description }) => {
+  context?: ExpressionContext;
+}> = ({ idPrefix, label, value, onChange, fieldOptions, description, context }) => {
   const [error, setError] = useState<string | null>(null);
+  const editorRef = useRef<ExpressionEditorHandle>(null);
 
-  const handleChange = (nextValue: string) => {
+  const handleChange = useCallback((nextValue: string) => {
     const expr = { $expr: nextValue };
     try {
       if (nextValue.trim().length > 0) {
@@ -3388,14 +3462,12 @@ const ExpressionField: React.FC<{
       setError(err instanceof Error ? err.message : 'Invalid expression');
     }
     onChange(expr);
-  };
+  }, [onChange]);
 
-  const handleInsert = (path: string) => {
+  const handleInsert = useCallback((path: string) => {
     if (!path) return;
-    const current = value.$expr ?? '';
-    const next = current ? `${current} ${path}` : path;
-    handleChange(next);
-  };
+    editorRef.current?.insertAtCursor(path);
+  }, []);
 
   return (
     <div className="space-y-2">
@@ -3411,16 +3483,19 @@ const ExpressionField: React.FC<{
           className="w-44"
         />
       </div>
-      <ExpressionTextArea
-        id={`${idPrefix}-expr`}
+      <ExpressionEditor
+        ref={editorRef}
         value={value.$expr ?? ''}
         onChange={handleChange}
-        fieldOptions={fieldOptions}
-        rows={2}
-        className={error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
+        context={context}
+        singleLine={false}
+        height={60}
+        placeholder="Enter expression..."
+        hasError={!!error}
+        ariaLabel={label}
       />
       {error && <div className="text-xs text-red-600">{error}</div>}
-      {description && <div className="text-xs text-gray-500">{description}</div>}
+      {description && !error && <div className="text-xs text-gray-500">{description}</div>}
     </div>
   );
 };
@@ -3431,7 +3506,8 @@ const MappingExprEditor: React.FC<{
   value: Record<string, Expr>;
   onChange: (value: Record<string, Expr>) => void;
   fieldOptions: SelectOption[];
-}> = ({ idPrefix, label, value, onChange, fieldOptions }) => {
+  context?: ExpressionContext;
+}> = ({ idPrefix, label, value, onChange, fieldOptions, context }) => {
   const entries = Object.entries(value);
 
   const handleUpdate = (key: string, expr: Expr) => {
@@ -3491,6 +3567,7 @@ const MappingExprEditor: React.FC<{
               value={expr}
               onChange={(nextExpr) => handleUpdate(key, nextExpr)}
               fieldOptions={fieldOptions}
+              context={context}
             />
           </Card>
         ))}

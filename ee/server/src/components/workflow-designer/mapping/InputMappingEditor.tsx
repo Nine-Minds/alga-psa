@@ -1,18 +1,23 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Card } from '@/components/ui/Card';
-import { ExpressionTextArea } from './ExpressionTextArea';
 import { Badge } from '@/components/ui/Badge';
 import { Label } from '@/components/ui/Label';
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
 import { listTenantSecrets } from 'server/src/lib/actions/tenant-secret-actions';
 import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime';
+import {
+  ExpressionEditor,
+  type ExpressionEditorHandle,
+  type ExpressionContext,
+  type JsonSchema
+} from '../expression-editor';
 import {
   useMappingDnd,
   getDragData,
@@ -197,6 +202,88 @@ function extractPrimaryPath(expression: string | undefined): string | null {
 }
 
 /**
+ * Build ExpressionContext from SelectOption[] for the Monaco expression editor
+ *
+ * @param fieldOptions - Available field options from data context
+ * @returns ExpressionContext for the expression editor
+ */
+function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): ExpressionContext {
+  // Group fields by their root (payload, vars, meta, error)
+  const payloadFields: Record<string, JsonSchema> = {};
+  const varsFields: Record<string, JsonSchema> = {};
+  const metaFields: Record<string, JsonSchema> = {};
+  const errorFields: Record<string, JsonSchema> = {};
+
+  for (const option of fieldOptions) {
+    const path = option.value;
+    const parts = path.split('.');
+    if (parts.length < 2) continue;
+
+    const root = parts[0];
+    const restPath = parts.slice(1);
+    const fieldName = restPath[restPath.length - 1];
+
+    // Infer type from path
+    const inferredType = inferTypeFromPath(path);
+    const fieldSchema: JsonSchema = {
+      type: inferredType || 'string',
+      description: typeof option.label === 'string' ? option.label : undefined
+    };
+
+    // Build nested schema structure
+    const buildNestedSchema = (
+      target: Record<string, JsonSchema>,
+      pathParts: string[],
+      schema: JsonSchema
+    ) => {
+      if (pathParts.length === 1) {
+        target[pathParts[0]] = schema;
+        return;
+      }
+
+      const [head, ...rest] = pathParts;
+      if (!target[head]) {
+        target[head] = { type: 'object', properties: {} };
+      }
+      if (!target[head].properties) {
+        target[head].properties = {};
+      }
+      buildNestedSchema(target[head].properties!, rest, schema);
+    };
+
+    switch (root) {
+      case 'payload':
+        buildNestedSchema(payloadFields, restPath, fieldSchema);
+        break;
+      case 'vars':
+        buildNestedSchema(varsFields, restPath, fieldSchema);
+        break;
+      case 'meta':
+        buildNestedSchema(metaFields, restPath, fieldSchema);
+        break;
+      case 'error':
+        buildNestedSchema(errorFields, restPath, fieldSchema);
+        break;
+    }
+  }
+
+  return {
+    payloadSchema: Object.keys(payloadFields).length > 0
+      ? { type: 'object', properties: payloadFields }
+      : undefined,
+    varsSchema: Object.keys(varsFields).length > 0
+      ? { type: 'object', properties: varsFields }
+      : undefined,
+    metaSchema: Object.keys(metaFields).length > 0
+      ? { type: 'object', properties: metaFields }
+      : undefined,
+    errorSchema: Object.keys(errorFields).length > 0
+      ? { type: 'object', properties: errorFields }
+      : undefined
+  };
+}
+
+/**
  * Flatten grouped options back to a sorted array with visual indicators
  */
 function flattenGroupedOptions(groups: CompatibilityGroup[]): SelectOption[] {
@@ -314,6 +401,12 @@ export interface InputMappingEditorProps {
   sourceTypeMap?: Map<string, string>;
 
   /**
+   * §20 - Expression context for Monaco editor autocomplete
+   * If not provided, falls back to building context from fieldOptions
+   */
+  expressionContext?: ExpressionContext;
+
+  /**
    * Whether the editor is disabled
    */
   disabled?: boolean;
@@ -361,10 +454,13 @@ const MappingFieldEditor: React.FC<{
   stepId: string;
   disabled?: boolean;
   sourceTypeMap?: Map<string, string>;
-}> = ({ field, value, onChange, fieldOptions, secrets, stepId, disabled, sourceTypeMap }) => {
+  expressionContext?: ExpressionContext;
+}> = ({ field, value, onChange, fieldOptions, secrets, stepId, disabled, sourceTypeMap, expressionContext }) => {
   const [valueType, setValueType] = useState<ValueType>(() => getMappingValueType(value));
   const [expressionError, setExpressionError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(true);
+  const editorRef = useRef<ExpressionEditorHandle>(null);
 
   const idPrefix = `mapping-${stepId}-${field.name}`;
 
@@ -415,10 +511,20 @@ const MappingFieldEditor: React.FC<{
 
   const handleInsertField = useCallback((path: string) => {
     if (!path) return;
-    const current = value && '$expr' in (value as object) ? (value as Expr).$expr ?? '' : '';
-    const next = current ? `${current} ${path}` : path;
-    handleExpressionChange(next);
+    // Use Monaco editor's insertAtCursor if available
+    if (editorRef.current) {
+      editorRef.current.insertAtCursor(path);
+    } else {
+      // Fallback for non-Monaco case
+      const current = value && '$expr' in (value as object) ? (value as Expr).$expr ?? '' : '';
+      const next = current ? `${current} ${path}` : path;
+      handleExpressionChange(next);
+    }
   }, [value, handleExpressionChange]);
+
+  const handleValidationChange = useCallback((errors: string[]) => {
+    setValidationErrors(errors);
+  }, []);
 
   const typeOptions: SelectOption[] = [
     { value: 'expr', label: 'Expression' },
@@ -548,20 +654,23 @@ const MappingFieldEditor: React.FC<{
                   disabled={disabled}
                 />
               </div>
-              {/* §16.2 - Expression textarea with context-aware autocomplete */}
-              <ExpressionTextArea
-                id={`${idPrefix}-expr`}
+              {/* §20 - Monaco expression editor with syntax highlighting and autocomplete */}
+              <ExpressionEditor
+                ref={editorRef}
                 value={getDisplayValue(value)}
                 onChange={handleExpressionChange}
-                fieldOptions={fieldOptions}
-                rows={2}
-                className={expressionError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
+                context={expressionContext}
+                singleLine={false}
+                height={60}
+                hasError={!!expressionError || validationErrors.length > 0}
                 disabled={disabled}
+                onValidationChange={handleValidationChange}
+                ariaLabel={`Expression for ${field.name}`}
               />
-              {expressionError && (
+              {(expressionError || validationErrors.length > 0) && (
                 <div className="flex items-center gap-1 text-xs text-red-600">
                   <AlertTriangle className="w-3 h-3" />
-                  {expressionError}
+                  {expressionError || validationErrors[0]}
                 </div>
               )}
               {/* §16.2 - Type mismatch warning */}
@@ -823,7 +932,8 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   stepId,
   positionsHandlers,
   sourceTypeMap,
-  disabled
+  disabled,
+  expressionContext: providedExpressionContext
 }) => {
   const [secrets, setSecrets] = useState<Array<{ name: string; description?: string }>>([]);
   const [showUnmapped, setShowUnmapped] = useState(true);
@@ -875,6 +985,15 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     suggestions.forEach(s => map.set(s.targetField, s));
     return map;
   }, [suggestions]);
+
+  // §20 - Build expression context for Monaco editor
+  // Use provided context if available, otherwise fall back to building from fieldOptions
+  const expressionContext = useMemo(() => {
+    if (providedExpressionContext) {
+      return providedExpressionContext;
+    }
+    return buildExpressionContextFromOptions(fieldOptions);
+  }, [providedExpressionContext, fieldOptions]);
 
   // Apply all auto-mapping suggestions
   const handleAutoMapAll = useCallback(() => {
@@ -1031,6 +1150,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   stepId={stepId}
                   disabled={disabled}
                   sourceTypeMap={sourceTypeMap}
+                  expressionContext={expressionContext}
                 />
                 <button
                   onClick={() => handleRemoveMapping(field.name)}
