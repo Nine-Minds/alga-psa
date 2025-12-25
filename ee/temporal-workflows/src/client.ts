@@ -323,7 +323,12 @@ export class TenantWorkflowClient {
         pageSize: limit,
       });
 
-      const results = [];
+      const results: Array<{
+        workflowId: string;
+        status: string;
+        startTime: string;
+        endTime?: string;
+      }> = [];
       for await (const workflow of workflows) {
         results.push({
           workflowId: workflow.workflowId,
