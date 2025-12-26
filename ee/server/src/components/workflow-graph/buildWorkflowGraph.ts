@@ -2,7 +2,7 @@ import ELK from 'elkjs/lib/elk.bundled';
 import type { Step, IfBlock, ForEachBlock, TryCatchBlock } from '@shared/workflow/runtime';
 import type { Edge, Node } from 'reactflow';
 
-export type WorkflowGraphNodeKind = 'start' | 'step' | 'join';
+export type WorkflowGraphNodeKind = 'start' | 'step' | 'join' | 'insert';
 
 export type WorkflowGraphNodeData = {
   kind: WorkflowGraphNodeKind;
@@ -12,17 +12,23 @@ export type WorkflowGraphNodeData = {
   subtitle?: string | null;
   branchLabel?: string | null;
   status?: string | null;
+  pipePath?: string | null;
+  insertIndex?: number | null;
+  onRequestInsert?: ((pipePath: string, index: number) => void) | null;
 };
 
 export type WorkflowGraphBuildOptions = {
   getLabel: (step: Step) => string;
   getSubtitle?: (step: Step) => string | null;
+  includeInsertions?: boolean;
+  getPipePathForRoot?: () => string;
 };
 
 const STEP_WIDTH = 260;
 const STEP_HEIGHT = 72;
 const JOIN_SIZE = 34;
 const START_SIZE = 52;
+const INSERT_SIZE = 30;
 const EDGE_TYPE: Edge['type'] = 'step';
 const EXCLUDE_FROM_LAYOUT = { excludeFromLayout: true } as const;
 
@@ -41,6 +47,7 @@ const buildSequence = (
     options: WorkflowGraphBuildOptions;
     idPrefix: string;
     counter: { n: number };
+    pipePath: string;
   }
 ): { entry: string | null; exits: string[] } => {
   let entry: string | null = null;
@@ -68,7 +75,36 @@ const buildSequence = (
     });
   };
 
-  const buildStep = (step: Step): { entry: string; exits: string[] } => {
+  const buildInsertionNode = (insertIndex: number): string => {
+    const insertNodeId = `${ctx.idPrefix}::insert:${insertIndex}`;
+
+    // Avoid duplicates if a caller reuses the same index.
+    if (!ctx.nodes.find((n) => n.id === insertNodeId)) {
+      ctx.nodes.push({
+        id: insertNodeId,
+        type: 'workflowInsert',
+        position: { x: 0, y: 0 },
+        data: {
+          kind: 'insert',
+          label: '+',
+          pipePath: ctx.pipePath,
+          insertIndex
+        },
+        width: INSERT_SIZE,
+        height: INSERT_SIZE
+      });
+    }
+
+    return insertNodeId;
+  };
+
+  const shouldIncludeTrailingInsertion = (sequenceSteps: Step[]) => {
+    if (!ctx.options.includeInsertions) return false;
+    if (sequenceSteps.length === 0) return true;
+    return sequenceSteps[sequenceSteps.length - 1]?.type !== 'control.return';
+  };
+
+  const buildStep = (step: Step, stepIndex: number): { entry: string; exits: string[] } => {
     const label = ctx.options.getLabel(step);
     const subtitle = ctx.options.getSubtitle ? ctx.options.getSubtitle(step) : step.type;
 
@@ -85,11 +121,21 @@ const buildSequence = (
 	        height: STEP_HEIGHT
 	      });
 
-	      const thenSeq = buildSequence(ifStep.then ?? [], { ...ctx, idPrefix: `${ctx.idPrefix}${ifStep.id}:then:` });
-	      const elseSeq = buildSequence(ifStep.else ?? [], { ...ctx, idPrefix: `${ctx.idPrefix}${ifStep.id}:else:` });
+	      const thenSeq = buildSequence(ifStep.then ?? [], {
+	        ...ctx,
+	        idPrefix: `${ctx.idPrefix}${ifStep.id}:then:`,
+	        pipePath: `${ctx.pipePath}.steps[${stepIndex}].then`
+	      });
+	      const elseSeq = buildSequence(ifStep.else ?? [], {
+	        ...ctx,
+	        idPrefix: `${ctx.idPrefix}${ifStep.id}:else:`,
+	        pipePath: `${ctx.pipePath}.steps[${stepIndex}].else`
+	      });
 
+	      const thenHasSteps = (ifStep.then ?? []).length > 0;
+	      const elseHasSteps = (ifStep.else ?? []).length > 0;
 	      const needsJoin = Boolean(
-	        thenSeq.entry && thenSeq.exits.length > 0 && elseSeq.entry && elseSeq.exits.length > 0
+	        thenHasSteps && elseHasSteps && thenSeq.exits.length > 0 && elseSeq.exits.length > 0
 	      );
 
 	      if (needsJoin) {
@@ -141,11 +187,21 @@ const buildSequence = (
 	        height: STEP_HEIGHT
 	      });
 
-	      const trySeq = buildSequence(tc.try ?? [], { ...ctx, idPrefix: `${ctx.idPrefix}${tc.id}:try:` });
-	      const catchSeq = buildSequence(tc.catch ?? [], { ...ctx, idPrefix: `${ctx.idPrefix}${tc.id}:catch:` });
+	      const trySeq = buildSequence(tc.try ?? [], {
+	        ...ctx,
+	        idPrefix: `${ctx.idPrefix}${tc.id}:try:`,
+	        pipePath: `${ctx.pipePath}.steps[${stepIndex}].try`
+	      });
+	      const catchSeq = buildSequence(tc.catch ?? [], {
+	        ...ctx,
+	        idPrefix: `${ctx.idPrefix}${tc.id}:catch:`,
+	        pipePath: `${ctx.pipePath}.steps[${stepIndex}].catch`
+	      });
 
+	      const tryHasSteps = (tc.try ?? []).length > 0;
+	      const catchHasSteps = (tc.catch ?? []).length > 0;
 	      const needsJoin = Boolean(
-	        trySeq.entry && trySeq.exits.length > 0 && catchSeq.entry && catchSeq.exits.length > 0
+	        tryHasSteps && catchHasSteps && trySeq.exits.length > 0 && catchSeq.exits.length > 0
 	      );
 
 	      if (needsJoin) {
@@ -206,7 +262,11 @@ const buildSequence = (
         height: JOIN_SIZE
       });
 
-      const bodySeq = buildSequence(loop.body ?? [], { ...ctx, idPrefix: `${ctx.idPrefix}${loop.id}:body:` });
+      const bodySeq = buildSequence(loop.body ?? [], {
+        ...ctx,
+        idPrefix: `${ctx.idPrefix}${loop.id}:body:`,
+        pipePath: `${ctx.pipePath}.steps[${stepIndex}].body`
+      });
 
       if (bodySeq.entry) {
         connect([loopNodeId], bodySeq.entry, 'each');
@@ -246,14 +306,51 @@ const buildSequence = (
     return step.type === 'control.return' ? { entry: nodeId, exits: [] } : { entry: nodeId, exits: [nodeId] };
   };
 
-  steps.forEach((step) => {
-    const built = buildStep(step);
-    if (!entry) entry = built.entry;
-    if (exits.length) {
+  if (ctx.options.includeInsertions) {
+    const firstInsertId = buildInsertionNode(0);
+    entry = firstInsertId;
+    exits = [firstInsertId];
+
+    for (let index = 0; index < steps.length; index++) {
+      const insertBeforeStep = buildInsertionNode(index);
+      if (exits.length && exits[0] !== insertBeforeStep) connect(exits, insertBeforeStep);
+      exits = [insertBeforeStep];
+
+      const built = buildStep(steps[index], index);
       connect(exits, built.entry);
+      exits = built.exits;
+      if (exits.length === 0) break;
+
+      const hasNext = index < steps.length - 1;
+      if (hasNext) {
+        const insertAfterStep = buildInsertionNode(index + 1);
+        connect(exits, insertAfterStep);
+        exits = [insertAfterStep];
+      }
     }
-    exits = built.exits;
-  });
+
+    if (exits.length > 0 && shouldIncludeTrailingInsertion(steps)) {
+      const insertAtEndId = buildInsertionNode(steps.length);
+      if (exits.length && exits[0] !== insertAtEndId) connect(exits, insertAtEndId);
+      exits = [insertAtEndId];
+    }
+
+    if (steps.length === 0) {
+      // Empty sequence: entry == exits (single insertion node).
+      exits = [firstInsertId];
+    }
+
+    // If a return occurred, the loop exited early and exits is already empty.
+  } else {
+    steps.forEach((step, idx) => {
+      const built = buildStep(step, idx);
+      if (!entry) entry = built.entry;
+      if (exits.length) {
+        connect(exits, built.entry);
+      }
+      exits = built.exits;
+    });
+  }
 
   return { entry, exits };
 };
@@ -276,7 +373,8 @@ export async function buildWorkflowGraph(
     height: START_SIZE
   });
 
-  const seq = buildSequence(steps ?? [], { nodes, edges, options, idPrefix: 's:', counter });
+  const rootPipePath = options.getPipePathForRoot ? options.getPipePathForRoot() : 'root';
+  const seq = buildSequence(steps ?? [], { nodes, edges, options, idPrefix: 's:', counter, pipePath: rootPipePath });
   if (seq.entry) {
     edges.push({
       id: `e:${startId}->${seq.entry}:start`,
