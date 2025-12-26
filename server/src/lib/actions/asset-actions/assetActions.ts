@@ -859,7 +859,7 @@ export async function createMaintenanceSchedule(data: CreateMaintenanceScheduleR
                 tenant,
                 asset_id: validatedData.asset_id,
                 schedule_name: validatedData.schedule_name,
-                description: validatedData.description,
+                description: validatedData.description || null,
                 maintenance_type: validatedData.maintenance_type,
                 frequency: validatedData.frequency,
                 frequency_interval: validatedData.frequency_interval,
@@ -886,7 +886,25 @@ export async function createMaintenanceSchedule(data: CreateMaintenanceScheduleR
         revalidatePath('/assets');
         revalidatePath(`/assets/${data.asset_id}`);
 
-        return validateData(assetMaintenanceScheduleSchema, schedule);
+        // Transform the returned schedule to match the schema (convert Date objects to ISO strings)
+        const transformedSchedule = {
+            ...schedule,
+            next_maintenance: schedule.next_maintenance instanceof Date 
+                ? schedule.next_maintenance.toISOString() 
+                : schedule.next_maintenance,
+            last_maintenance: schedule.last_maintenance instanceof Date 
+                ? schedule.last_maintenance.toISOString() 
+                : schedule.last_maintenance || undefined,
+            created_at: schedule.created_at instanceof Date 
+                ? schedule.created_at.toISOString() 
+                : schedule.created_at,
+            updated_at: schedule.updated_at instanceof Date 
+                ? schedule.updated_at.toISOString() 
+                : schedule.updated_at,
+            description: schedule.description || undefined
+        };
+
+        return validateData(assetMaintenanceScheduleSchema, transformedSchedule);
     } catch (error) {
         console.error('Error creating maintenance schedule:', error);
         throw new Error('Failed to create maintenance schedule');
@@ -948,7 +966,25 @@ export async function updateMaintenanceSchedule(
         revalidatePath('/assets');
         revalidatePath(`/assets/${schedule.asset_id}`);
 
-        return validateData(assetMaintenanceScheduleSchema, schedule);
+        // Transform the returned schedule to match the schema (convert Date objects to ISO strings)
+        const transformedSchedule = {
+            ...schedule,
+            next_maintenance: schedule.next_maintenance instanceof Date 
+                ? schedule.next_maintenance.toISOString() 
+                : schedule.next_maintenance,
+            last_maintenance: schedule.last_maintenance instanceof Date 
+                ? schedule.last_maintenance.toISOString() 
+                : schedule.last_maintenance || undefined,
+            created_at: schedule.created_at instanceof Date 
+                ? schedule.created_at.toISOString() 
+                : schedule.created_at,
+            updated_at: schedule.updated_at instanceof Date 
+                ? schedule.updated_at.toISOString() 
+                : schedule.updated_at,
+            description: schedule.description || undefined
+        };
+
+        return validateData(assetMaintenanceScheduleSchema, transformedSchedule);
     } catch (error) {
         console.error('Error updating maintenance schedule:', error);
         throw new Error('Failed to update maintenance schedule');
@@ -1060,6 +1096,51 @@ export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryReq
     } catch (error) {
         console.error('Error recording maintenance history:', error);
         throw new Error('Failed to record maintenance history');
+    }
+}
+
+// Maintenance Schedule Listing
+export async function getAssetMaintenanceSchedules(asset_id: string): Promise<AssetMaintenanceSchedule[]> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error('No authenticated user found');
+        }
+
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error('No tenant found');
+        }
+
+        if (!await hasPermission(currentUser, 'asset', 'read', knex)) {
+            throw new Error('Permission denied: Cannot read asset maintenance schedules');
+        }
+
+        const schedules = await knex('asset_maintenance_schedules')
+            .where({ tenant, asset_id })
+            .orderBy('next_maintenance', 'asc')
+            .select('*');
+
+        // Transform Date objects to ISO strings
+        return schedules.map(schedule => ({
+            ...schedule,
+            next_maintenance: schedule.next_maintenance instanceof Date 
+                ? schedule.next_maintenance.toISOString() 
+                : schedule.next_maintenance,
+            last_maintenance: schedule.last_maintenance instanceof Date 
+                ? schedule.last_maintenance.toISOString() 
+                : schedule.last_maintenance || undefined,
+            created_at: schedule.created_at instanceof Date 
+                ? schedule.created_at.toISOString() 
+                : schedule.created_at,
+            updated_at: schedule.updated_at instanceof Date 
+                ? schedule.updated_at.toISOString() 
+                : schedule.updated_at,
+            description: schedule.description || undefined
+        })) as AssetMaintenanceSchedule[];
+    } catch (error) {
+        console.error('Error getting asset maintenance schedules:', error);
+        throw new Error('Failed to get asset maintenance schedules');
     }
 }
 

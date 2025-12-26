@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { RefreshCw, WifiOff } from 'lucide-react';
-import Spinner from 'server/src/components/ui/Spinner';
 import { RmmCachedData } from '../../../interfaces/asset.interfaces';
 import { StatusBadge } from '../shared/StatusBadge';
 import { formatRelativeDateTime } from '../../../lib/utils/dateTimeUtils';
@@ -71,7 +70,11 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
             onClick={onRefresh}
             disabled={isRefreshing}
           >
-            {isRefreshing ? <Spinner size="sm" className="h-3 w-3" /> : <RefreshCw size={14} />}
+            {isRefreshing ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
             Refresh
           </Button>
         </div>

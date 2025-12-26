@@ -17,21 +17,31 @@ export const SoftwareInventoryTab: React.FC<SoftwareInventoryTabProps> = ({ asse
   // In a real implementation, this would query the normalized asset_software table
   const softwareList = React.useMemo(() => {
     const rawList = asset.workstation?.installed_software || asset.server?.installed_software || [];
+    
+    // Ensure rawList is an array
+    if (!Array.isArray(rawList)) {
+      return [];
+    }
+    
     // NinjaOne typically returns array of objects with name, version, installDate, etc.
     // or just strings depending on mapping. Assuming objects based on plan.
-    return rawList.map((item: any, index) => ({
-      id: index,
-      name: item.name || item.softwareName || 'Unknown',
-      version: item.version || 'Unknown',
-      publisher: item.publisher || 'Unknown',
-      installDate: item.installDate || null,
-    }));
+    return rawList
+      .map((item: any, index) => ({
+        id: index,
+        name: item?.name || item?.softwareName || item?.displayName || item?.productName || 'Unknown',
+        version: item?.version || item?.displayVersion || 'Unknown',
+        publisher: item?.publisher || item?.vendor || 'Unknown',
+        installDate: item?.installDate || item?.installedOn || null,
+      }))
+      .filter(item => item.name && item.name !== 'Unknown');
   }, [asset]);
 
-  const filteredSoftware = softwareList.filter(sw => 
-    sw.name.toLowerCase().includes(search.toLowerCase()) || 
-    sw.publisher.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSoftware = softwareList.filter(sw => {
+    const searchLower = search.toLowerCase();
+    const nameLower = (sw.name || '').toLowerCase();
+    const publisherLower = (sw.publisher || '').toLowerCase();
+    return nameLower.includes(searchLower) || publisherLower.includes(searchLower);
+  });
 
   return (
     <Card>
