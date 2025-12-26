@@ -17,6 +17,7 @@ import { getTenantBrandingByDomain } from "../lib/actions/tenant-actions/getTena
 import { generateBrandingStyles } from "../lib/branding/generateBrandingStyles";
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
+import 'reactflow/dist/style.css';
 
 // Removed Google Fonts to avoid network fetch during build
 const inter = { className: "" } as const;
