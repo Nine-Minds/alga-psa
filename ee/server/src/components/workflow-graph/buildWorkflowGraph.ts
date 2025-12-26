@@ -15,6 +15,7 @@ export type WorkflowGraphNodeData = {
   pipePath?: string | null;
   insertIndex?: number | null;
   onRequestInsert?: ((pipePath: string, index: number) => void) | null;
+  onRequestDelete?: ((stepId: string) => void) | null;
 };
 
 export type WorkflowGraphBuildOptions = {
