@@ -130,6 +130,8 @@ const buildSourceTypeLookup = (ctx: WorkflowDataContext): Map<string, string> =>
   ctx.payload.forEach(field => addField(field, 'payload'));
   ctx.steps.forEach(stepOutput => {
     const basePath = `vars.${stepOutput.saveAs}`;
+    // Ensure the step output root is treated as an object even when schema is missing
+    map.set(basePath, 'object');
     stepOutput.fields.forEach(field => addField(field, basePath));
   });
   ctx.globals.meta.forEach(field => addField(field, 'meta'));

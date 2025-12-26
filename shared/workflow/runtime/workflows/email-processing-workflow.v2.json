@@ -39,124 +39,55 @@
           "config": { "state": "CHECKING_EMAIL_THREADING" }
         },
         {
-          "id": "check-reply-token",
-          "type": "control.if",
-          "condition": { "$expr": "coalesce(vars.parsedEmail.metadata.parser.tokens.conversationToken, '') != ''" },
-          "then": [
-            {
-              "id": "lookup-reply-token",
-              "type": "action.call",
-              "config": {
-                "actionId": "find_ticket_by_reply_token",
-                "version": 1,
-                "inputMapping": {
-                  "token": { "$expr": "vars.parsedEmail.metadata.parser.tokens.conversationToken" }
-                },
-                "saveAs": "vars.replyTokenResult",
-                "onError": { "policy": "continue" }
-              }
-            }
-          ]
-        },
-        {
-          "id": "resolve-threading",
-          "type": "control.if",
-          "condition": { "$expr": "coalesce(vars.replyTokenResult.success, false) and coalesce(vars.replyTokenResult.match.ticketId, null) != null" },
-          "then": [
-            {
-              "id": "assign-existing-ticket-token",
-              "type": "transform.assign",
-              "config": {
-                "assign": {
-                  "vars.existingTicket": { "$expr": "vars.replyTokenResult.match" }
-                }
-              }
-            }
-          ],
-          "else": [
-            {
-              "id": "lookup-threading-headers",
-              "type": "action.call",
-              "config": {
-                "actionId": "find_ticket_by_email_thread",
-                "version": 1,
-                "inputMapping": {
-                  "threadId": { "$expr": "payload.emailData.threadId" },
-                  "inReplyTo": { "$expr": "payload.emailData.inReplyTo" },
-                  "references": { "$expr": "payload.emailData.references" },
-                  "originalMessageId": { "$expr": "payload.emailData.inReplyTo" }
-                },
-                "saveAs": "vars.threadResult",
-                "onError": { "policy": "continue" }
-              }
+          "id": "resolve-existing-ticket",
+          "type": "action.call",
+          "config": {
+            "actionId": "resolve_existing_ticket_from_email",
+            "version": 1,
+            "inputMapping": {
+              "emailData": { "$expr": "payload.emailData" },
+              "parsedEmail": { "$expr": "vars.parsedEmail" }
             },
-            {
-              "id": "assign-existing-ticket-thread",
-              "type": "control.if",
-              "condition": { "$expr": "coalesce(vars.threadResult.success, false) and coalesce(vars.threadResult.ticket, null) != null" },
-              "then": [
-                {
-                  "id": "assign-existing-ticket-thread-value",
-                  "type": "transform.assign",
-                  "config": {
-                    "assign": {
-                      "vars.existingTicket": { "$expr": "vars.threadResult.ticket" }
-                    }
-                  }
-                }
-              ]
-            }
-          ]
+            "saveAs": "vars.existingTicketResolution"
+          }
         },
         {
           "id": "branch-existing-ticket",
           "type": "control.if",
-          "condition": { "$expr": "vars.existingTicket != null" },
+          "condition": { "$expr": "vars.existingTicketResolution.ticket != null" },
           "then": [
             {
               "id": "comment-existing-ticket",
               "type": "action.call",
               "config": {
-                "actionId": "create_comment_from_email",
+                "actionId": "create_comment_from_parsed_email",
                 "version": 1,
                 "inputMapping": {
-                  "ticket_id": { "$expr": "vars.existingTicket.ticketId" },
-                  "content": { "$expr": "vars.parsedEmail.sanitizedHtml ? vars.parsedEmail.sanitizedHtml : vars.parsedEmail.sanitizedText" },
-                  "format": { "$expr": "vars.parsedEmail.sanitizedHtml ? 'html' : 'text'" },
-                  "source": "email",
+                  "ticketId": { "$expr": "vars.existingTicketResolution.ticket.ticketId" },
+                  "emailData": { "$expr": "payload.emailData" },
+                  "parsedEmail": { "$expr": "vars.parsedEmail" },
                   "author_type": "contact",
-                  "metadata": { "$expr": "vars.parsedEmail.metadata" }
+                  "source": "email"
                 },
-                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.existingTicket.ticketId" },
-                "saveAs": "vars.commentResult"
+                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.existingTicketResolution.ticket.ticketId" }
               }
             },
             {
               "id": "attachments-existing-ticket",
-              "type": "control.forEach",
-              "items": { "$expr": "coalesce(payload.emailData.attachments, [])" },
-              "itemVar": "attachment",
-              "onItemError": "continue",
-              "body": [
-                {
-                  "id": "process-existing-attachment",
-                  "type": "action.call",
-                  "config": {
-                    "actionId": "process_email_attachment",
-                    "version": 1,
-                    "inputMapping": {
-                      "emailId": { "$expr": "payload.emailData.id" },
-                      "attachmentId": { "$expr": "vars.attachment.id" },
-                      "ticketId": { "$expr": "vars.existingTicket.ticketId" },
-                      "tenant": { "$expr": "payload.tenantId" },
-                      "providerId": { "$expr": "payload.providerId" },
-                      "attachmentData": { "$expr": "vars.attachment" }
-                    },
-                    "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.attachment.id" },
-                    "onError": { "policy": "continue" }
-                  }
-                }
-              ]
+              "type": "action.call",
+              "config": {
+                "actionId": "process_email_attachments_batch",
+                "version": 1,
+                "inputMapping": {
+                  "emailId": { "$expr": "payload.emailData.id" },
+                  "attachments": { "$expr": "coalesce(payload.emailData.attachments, [])" },
+                  "ticketId": { "$expr": "vars.existingTicketResolution.ticket.ticketId" },
+                  "tenant": { "$expr": "payload.tenantId" },
+                  "providerId": { "$expr": "payload.providerId" }
+                },
+                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.existingTicketResolution.ticket.ticketId & ':attachments'" },
+                "onError": { "policy": "continue" }
+              }
             },
             { "id": "return-after-reply", "type": "control.return" }
           ],
@@ -167,56 +98,28 @@
               "config": { "state": "MATCHING_EMAIL_CLIENT" }
             },
             {
-              "id": "match-contact",
-              "type": "action.call",
-              "config": {
-                "actionId": "find_contact_by_email",
-                "version": 1,
-                "inputMapping": {
-                  "email": { "$expr": "payload.emailData.from.email" }
-                },
-                "saveAs": "vars.matchedContact",
-                "onError": { "policy": "continue" }
-              }
-            },
-            {
-              "id": "assign-matched-client",
-              "type": "control.if",
-              "condition": { "$expr": "coalesce(vars.matchedContact.success, false) and coalesce(vars.matchedContact.contact, null) != null" },
-              "then": [
-                {
-                  "id": "assign-matched-client-value",
-                  "type": "transform.assign",
-                  "config": {
-                    "assign": {
-                      "vars.matchedClient": { "$expr": "vars.matchedContact.contact" }
-                    }
-                  }
-                }
-              ]
-            },
-            {
               "id": "state-resolve-defaults",
               "type": "state.set",
               "config": { "state": "RESOLVING_TICKET_DEFAULTS" }
             },
             {
-              "id": "resolve-ticket-defaults",
+              "id": "resolve-ticket-context",
               "type": "action.call",
               "config": {
-                "actionId": "resolve_inbound_ticket_defaults",
+                "actionId": "resolve_inbound_ticket_context",
                 "version": 1,
                 "inputMapping": {
-                  "tenant": { "$expr": "payload.tenantId" },
-                  "providerId": { "$expr": "payload.providerId" }
+                  "tenantId": { "$expr": "payload.tenantId" },
+                  "providerId": { "$expr": "payload.providerId" },
+                  "senderEmail": { "$expr": "payload.emailData.from.email" }
                 },
-                "saveAs": "vars.ticketDefaults"
+                "saveAs": "vars.ticketContext"
               }
             },
             {
               "id": "check-ticket-defaults",
               "type": "control.if",
-              "condition": { "$expr": "vars.ticketDefaults != null" },
+              "condition": { "$expr": "vars.ticketContext.ticketDefaults != null" },
               "then": [],
               "else": [
                 {
@@ -233,56 +136,21 @@
               "config": { "state": "CREATING_TICKET" }
             },
             {
-              "id": "compute-targets",
-              "type": "transform.assign",
-              "config": {
-                "assign": {
-                  "vars.targetClientId": { "$expr": "coalesce(vars.matchedContact.contact.client_id, vars.ticketDefaults.client_id)" },
-                  "vars.targetContactId": { "$expr": "coalesce(vars.matchedContact.contact.contact_id, null)" },
-                  "vars.targetLocationId": { "$expr": "(vars.matchedContact.contact.client_id and vars.ticketDefaults.client_id and vars.matchedContact.contact.client_id != vars.ticketDefaults.client_id) ? null : vars.ticketDefaults.location_id" }
-                }
-              }
-            },
-            {
-              "id": "create-ticket",
+              "id": "create-ticket-with-comment",
               "type": "action.call",
               "config": {
-                "actionId": "create_ticket_from_email",
+                "actionId": "create_ticket_with_initial_comment",
                 "version": 1,
                 "inputMapping": {
-                  "title": { "$expr": "payload.emailData.subject" },
-                  "description": { "$expr": "vars.parsedEmail.sanitizedText" },
-                  "client_id": { "$expr": "vars.targetClientId" },
-                  "contact_id": { "$expr": "vars.targetContactId" },
-                  "source": "email",
-                  "board_id": { "$expr": "vars.ticketDefaults.board_id" },
-                  "status_id": { "$expr": "vars.ticketDefaults.status_id" },
-                  "priority_id": { "$expr": "vars.ticketDefaults.priority_id" },
-                  "category_id": { "$expr": "vars.ticketDefaults.category_id" },
-                  "subcategory_id": { "$expr": "vars.ticketDefaults.subcategory_id" },
-                  "location_id": { "$expr": "vars.targetLocationId" },
-                  "entered_by": { "$expr": "vars.ticketDefaults.entered_by" },
-                  "email_metadata": {
-                    "messageId": { "$expr": "payload.emailData.id" },
-                    "mailhogId": { "$expr": "payload.emailData.mailhogId" },
-                    "threadId": { "$expr": "payload.emailData.threadId" },
-                    "from": { "$expr": "payload.emailData.from" },
-                    "inReplyTo": { "$expr": "payload.emailData.inReplyTo" },
-                    "references": { "$expr": "payload.emailData.references" },
-                    "providerId": { "$expr": "payload.providerId" }
-                  }
+                  "emailData": { "$expr": "payload.emailData" },
+                  "parsedEmail": { "$expr": "vars.parsedEmail" },
+                  "ticketDefaults": { "$expr": "vars.ticketContext.ticketDefaults" },
+                  "targetClientId": { "$expr": "vars.ticketContext.targetClientId" },
+                  "targetContactId": { "$expr": "vars.ticketContext.targetContactId" },
+                  "targetLocationId": { "$expr": "vars.ticketContext.targetLocationId" }
                 },
                 "idempotencyKey": { "$expr": "payload.providerId & ':' & payload.emailData.id" },
                 "saveAs": "vars.createdTicket"
-              }
-            },
-            {
-              "id": "assign-target-ticket-id",
-              "type": "transform.assign",
-              "config": {
-                "assign": {
-                  "vars.targetTicketId": { "$expr": "vars.createdTicket.ticket_id" }
-                }
               }
             },
             {
@@ -292,46 +160,19 @@
             },
             {
               "id": "attachments-new-ticket",
-              "type": "control.forEach",
-              "items": { "$expr": "coalesce(payload.emailData.attachments, [])" },
-              "itemVar": "attachment",
-              "onItemError": "continue",
-              "body": [
-                {
-                  "id": "process-new-attachment",
-                  "type": "action.call",
-                  "config": {
-                    "actionId": "process_email_attachment",
-                    "version": 1,
-                    "inputMapping": {
-                      "emailId": { "$expr": "payload.emailData.id" },
-                      "attachmentId": { "$expr": "vars.attachment.id" },
-                      "ticketId": { "$expr": "vars.targetTicketId" },
-                      "tenant": { "$expr": "payload.tenantId" },
-                      "providerId": { "$expr": "payload.providerId" },
-                      "attachmentData": { "$expr": "vars.attachment" }
-                    },
-                    "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.attachment.id" },
-                    "onError": { "policy": "continue" }
-                  }
-                }
-              ]
-            },
-            {
-              "id": "create-initial-comment",
               "type": "action.call",
               "config": {
-                "actionId": "create_comment_from_email",
+                "actionId": "process_email_attachments_batch",
                 "version": 1,
                 "inputMapping": {
-                  "ticket_id": { "$expr": "vars.targetTicketId" },
-                  "content": { "$expr": "vars.parsedEmail.sanitizedHtml ? vars.parsedEmail.sanitizedHtml : vars.parsedEmail.sanitizedText" },
-                  "format": { "$expr": "vars.parsedEmail.sanitizedHtml ? 'html' : 'text'" },
-                  "source": "email",
-                  "author_type": "internal",
-                  "metadata": { "$expr": "vars.parsedEmail.metadata" }
+                  "emailId": { "$expr": "payload.emailData.id" },
+                  "attachments": { "$expr": "coalesce(payload.emailData.attachments, [])" },
+                  "ticketId": { "$expr": "vars.createdTicket.ticket_id" },
+                  "tenant": { "$expr": "payload.tenantId" },
+                  "providerId": { "$expr": "payload.providerId" }
                 },
-                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.targetTicketId" }
+                "idempotencyKey": { "$expr": "payload.emailData.id & ':' & vars.createdTicket.ticket_id & ':attachments'" },
+                "onError": { "policy": "continue" }
               }
             },
             {
@@ -342,7 +183,7 @@
             {
               "id": "send-ack-email",
               "type": "control.if",
-              "condition": { "$expr": "vars.matchedClient != null" },
+              "condition": { "$expr": "vars.ticketContext.matchedClient != null" },
               "then": [
                 {
                   "id": "ack-email-action",
@@ -351,8 +192,8 @@
                     "actionId": "send_ticket_acknowledgement_email",
                     "version": 1,
                     "inputMapping": {
-                      "ticketId": { "$expr": "vars.targetTicketId" },
-                      "contactEmail": { "$expr": "vars.matchedClient.email" }
+                      "ticketId": { "$expr": "vars.createdTicket.ticket_id" },
+                      "contactEmail": { "$expr": "vars.ticketContext.matchedClient.email" }
                     },
                     "onError": { "policy": "continue" }
                   }

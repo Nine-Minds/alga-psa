@@ -63,6 +63,45 @@ const parsedEmailReplySchema = z.object({
   }).optional().describe('Extracted tokens from email')
 });
 
+const parsedEmailSchema = z.object({
+  sanitizedText: z.string().describe('Cleaned text content without quoted replies'),
+  sanitizedHtml: z.string().optional().describe('Cleaned HTML content'),
+  confidence: z.string().optional().describe('Parsing confidence'),
+  metadata: z.record(z.unknown()).optional().describe('Parser metadata')
+});
+
+const emailAddressSchema = z.object({
+  email: z.string().email().describe('Email address'),
+  name: z.string().optional().describe('Display name')
+});
+
+const emailDataSchema = z.object({
+  id: z.string().describe('Email message ID'),
+  mailhogId: z.string().optional().describe('Mailhog ID (for testing)'),
+  threadId: z.string().optional().describe('Email thread ID'),
+  from: emailAddressSchema.describe('Sender address'),
+  to: z.array(emailAddressSchema).optional().describe('Recipients'),
+  cc: z.array(emailAddressSchema).optional().describe('CC recipients'),
+  bcc: z.array(emailAddressSchema).optional().describe('BCC recipients'),
+  subject: z.string().describe('Email subject line'),
+  body: z.object({
+    text: z.string().optional().describe('Plain text content'),
+    html: z.string().optional().describe('HTML content')
+  }).describe('Email body content'),
+  inReplyTo: z.string().optional().describe('In-Reply-To header (for threading)'),
+  references: z.array(z.string()).optional().describe('References header values'),
+  attachments: z.array(z.object({
+    id: z.string().describe('Attachment ID'),
+    name: z.string().describe('Filename'),
+    contentType: z.string().describe('MIME content type'),
+    size: z.number().int().positive().describe('Size in bytes'),
+    contentId: z.string().optional().describe('Content-ID for inline attachments')
+  })).optional().describe('Email attachments'),
+  receivedAt: z.string().optional().describe('When the email was received (ISO 8601)'),
+  tenant: z.string().optional().describe('Tenant ID'),
+  providerId: z.string().optional().describe('Email provider ID')
+});
+
 /** Schema for inbound ticket defaults */
 const inboundTicketDefaultsSchema = z.object({
   board_id: z.string().optional().describe('Default board ID'),
@@ -74,6 +113,21 @@ const inboundTicketDefaultsSchema = z.object({
   subcategory_id: z.string().optional().describe('Default subcategory ID'),
   location_id: z.string().optional().describe('Default location ID')
 });
+
+function buildCommentPayload(parsedEmail: any, emailData: any) {
+  const sanitizedHtml = parsedEmail?.sanitizedHtml;
+  const sanitizedText = parsedEmail?.sanitizedText;
+  const content = sanitizedHtml || sanitizedText || emailData?.body?.html || emailData?.body?.text || '';
+  const format = sanitizedHtml
+    ? 'html'
+    : sanitizedText
+      ? 'text'
+      : emailData?.body?.html
+        ? 'html'
+        : 'text';
+  const metadata = parsedEmail?.metadata;
+  return { content, format, metadata };
+}
 
 /** Schema for client data */
 const clientOutputSchema = z.object({
@@ -182,6 +236,73 @@ export function registerEmailWorkflowActionsV2(): void {
   });
 
   registry.register({
+    id: 'resolve_existing_ticket_from_email',
+    version: 1,
+    inputSchema: z.object({
+      emailData: emailDataSchema.describe('Inbound email data'),
+      parsedEmail: parsedEmailSchema.optional().describe('Parsed email body result')
+    }),
+    outputSchema: z.object({
+      success: z.boolean().describe('Whether a matching ticket was found'),
+      ticket: z.object({
+        ticketId: z.string().describe('Ticket ID'),
+        ticketNumber: z.string().optional().describe('Ticket number'),
+        subject: z.string().optional().describe('Ticket subject'),
+        status: z.string().optional().describe('Ticket status')
+      }).nullable().optional().describe('Matched ticket info'),
+      source: z.enum(['replyToken', 'threadHeaders']).nullable().optional().describe('Match source'),
+      message: z.string().optional().describe('Error message if lookup failed')
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Resolve Existing Ticket', category: 'Email' },
+    handler: async (input, ctx) => {
+      try {
+        const token = (input.parsedEmail as any)?.metadata?.parser?.tokens?.conversationToken;
+        if (token) {
+          const match = await findTicketByReplyToken(String(token), ctx.tenantId ?? '');
+          if (match?.ticketId) {
+            return {
+              success: true,
+              ticket: { ticketId: match.ticketId },
+              source: 'replyToken'
+            };
+          }
+        }
+
+        const ticket = await findTicketByEmailThread({
+          threadId: input.emailData.threadId,
+          inReplyTo: input.emailData.inReplyTo,
+          references: input.emailData.references,
+          originalMessageId: input.emailData.inReplyTo
+        }, ctx.tenantId ?? '');
+
+        if (ticket) {
+          return {
+            success: true,
+            ticket: {
+              ticketId: ticket.ticketId,
+              ticketNumber: ticket.ticketNumber,
+              subject: ticket.subject,
+              status: ticket.status
+            },
+            source: 'threadHeaders'
+          };
+        }
+
+        return { success: false, ticket: null, source: null };
+      } catch (error) {
+        return {
+          success: false,
+          ticket: null,
+          source: null,
+          message: error instanceof Error ? error.message : String(error)
+        };
+      }
+    }
+  });
+
+  registry.register({
     id: 'find_contact_by_email',
     version: 1,
     inputSchema: z.object({
@@ -218,6 +339,63 @@ export function registerEmailWorkflowActionsV2(): void {
     ui: { label: 'Resolve Ticket Defaults', category: 'Email' },
     handler: async (input) => {
       return resolveInboundTicketDefaults(input.tenant, input.providerId);
+    }
+  });
+
+  registry.register({
+    id: 'resolve_inbound_ticket_context',
+    version: 1,
+    inputSchema: z.object({
+      tenantId: z.string().describe('Tenant ID'),
+      providerId: z.string().describe('Email provider ID'),
+      senderEmail: z.string().email().describe('Sender email address')
+    }),
+    outputSchema: z.object({
+      ticketDefaults: inboundTicketDefaultsSchema.nullable().describe('Resolved inbound ticket defaults'),
+      matchedClient: contactOutputSchema.nullable().optional().describe('Matched contact for sender email'),
+      targetClientId: z.string().nullable().describe('Resolved target client ID'),
+      targetContactId: z.string().nullable().describe('Resolved target contact ID'),
+      targetLocationId: z.string().nullable().describe('Resolved target location ID')
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Resolve Ticket Context', category: 'Email' },
+    handler: async (input, ctx) => {
+      const tenant = input.tenantId || ctx.tenantId || '';
+      const providerId = input.providerId;
+
+      const ticketDefaults = await resolveInboundTicketDefaults(tenant, providerId);
+
+      let matchedClient: any = null;
+      try {
+        matchedClient = await findContactByEmail(input.senderEmail, tenant);
+      } catch (error) {
+        matchedClient = null;
+      }
+
+      if (!ticketDefaults) {
+        return {
+          ticketDefaults: null,
+          matchedClient,
+          targetClientId: null,
+          targetContactId: null,
+          targetLocationId: null
+        };
+      }
+
+      const targetClientId = matchedClient?.client_id ?? ticketDefaults.client_id ?? null;
+      const targetContactId = matchedClient?.contact_id ?? null;
+      const targetLocationId = (matchedClient?.client_id && ticketDefaults.client_id && matchedClient.client_id !== ticketDefaults.client_id)
+        ? null
+        : ticketDefaults.location_id ?? null;
+
+      return {
+        ticketDefaults,
+        matchedClient,
+        targetClientId,
+        targetContactId,
+        targetLocationId
+      };
     }
   });
 
@@ -277,6 +455,71 @@ export function registerEmailWorkflowActionsV2(): void {
   });
 
   registry.register({
+    id: 'create_ticket_with_initial_comment',
+    version: 1,
+    inputSchema: z.object({
+      emailData: emailDataSchema.describe('Inbound email data'),
+      parsedEmail: parsedEmailSchema.describe('Parsed email body result'),
+      ticketDefaults: inboundTicketDefaultsSchema.describe('Resolved ticket defaults'),
+      targetClientId: z.string().nullable().describe('Resolved client ID'),
+      targetContactId: z.string().nullable().describe('Resolved contact ID'),
+      targetLocationId: z.string().nullable().describe('Resolved location ID')
+    }),
+    outputSchema: z.object({
+      ticket_id: z.string().describe('Created ticket unique identifier'),
+      ticket_number: z.string().optional().describe('Human-readable ticket number'),
+      comment_id: z.string().describe('Created comment unique identifier')
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Create Ticket + Initial Comment', category: 'Email' },
+    handler: async (input, ctx) => {
+      const tenant = ctx.tenantId ?? '';
+      const emailData = input.emailData;
+
+      const ticketResult = await createTicketFromEmail({
+        title: emailData.subject,
+        description: input.parsedEmail?.sanitizedText || emailData.body?.text || '',
+        client_id: input.targetClientId ?? undefined,
+        contact_id: input.targetContactId ?? undefined,
+        source: 'email',
+        board_id: input.ticketDefaults.board_id,
+        status_id: input.ticketDefaults.status_id,
+        priority_id: input.ticketDefaults.priority_id,
+        category_id: input.ticketDefaults.category_id,
+        subcategory_id: input.ticketDefaults.subcategory_id,
+        location_id: input.targetLocationId ?? undefined,
+        entered_by: input.ticketDefaults.entered_by ?? undefined,
+        email_metadata: {
+          messageId: emailData.id,
+          mailhogId: emailData.mailhogId,
+          threadId: emailData.threadId,
+          from: emailData.from,
+          inReplyTo: emailData.inReplyTo,
+          references: emailData.references,
+          providerId: emailData.providerId
+        }
+      }, tenant, ctx.userId ?? undefined);
+
+      const commentPayload = buildCommentPayload(input.parsedEmail, emailData);
+      const commentId = await createCommentFromEmail({
+        ticket_id: ticketResult.ticket_id,
+        content: commentPayload.content,
+        format: commentPayload.format,
+        source: 'email',
+        author_type: 'internal',
+        metadata: commentPayload.metadata
+      }, tenant, ctx.userId ?? undefined);
+
+      return {
+        ticket_id: ticketResult.ticket_id,
+        ticket_number: ticketResult.ticket_number,
+        comment_id: commentId
+      };
+    }
+  });
+
+  registry.register({
     id: 'create_comment_from_email',
     version: 1,
     inputSchema: z.object({
@@ -311,6 +554,37 @@ export function registerEmailWorkflowActionsV2(): void {
         author_id: input.author_id,
         metadata: input.metadata
       }, ctx.tenantId ?? '');
+      return { comment_id: commentId };
+    }
+  });
+
+  registry.register({
+    id: 'create_comment_from_parsed_email',
+    version: 1,
+    inputSchema: z.object({
+      ticketId: z.string().describe('Ticket ID to add comment to'),
+      emailData: emailDataSchema.describe('Inbound email data'),
+      parsedEmail: parsedEmailSchema.describe('Parsed email body result'),
+      author_type: z.enum(['contact', 'internal', 'system']).optional().describe('Type of author'),
+      source: z.string().optional().describe('Source of the comment (e.g., "email")')
+    }),
+    outputSchema: z.object({
+      comment_id: z.string().describe('Created comment unique identifier')
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Create Comment from Parsed Email', category: 'Email' },
+    handler: async (input, ctx) => {
+      const tenant = ctx.tenantId ?? '';
+      const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
+      const commentId = await createCommentFromEmail({
+        ticket_id: input.ticketId,
+        content: commentPayload.content,
+        format: commentPayload.format,
+        source: input.source ?? 'email',
+        author_type: input.author_type ?? 'system',
+        metadata: commentPayload.metadata
+      }, tenant, ctx.userId ?? undefined);
       return { comment_id: commentId };
     }
   });
@@ -357,6 +631,67 @@ export function registerEmailWorkflowActionsV2(): void {
           contentId: input.attachmentData.contentId
         }
       }, ctx.tenantId ?? '');
+    }
+  });
+
+  registry.register({
+    id: 'process_email_attachments_batch',
+    version: 1,
+    inputSchema: z.object({
+      emailId: z.string().describe('Email message ID'),
+      attachments: z.array(z.object({
+        id: z.string().describe('Attachment identifier'),
+        name: z.string().describe('Original filename'),
+        contentType: z.string().describe('MIME content type'),
+        size: z.number().int().positive().describe('File size in bytes'),
+        contentId: z.string().optional().describe('Content-ID for inline attachments')
+      })).optional().describe('Attachment list'),
+      ticketId: z.string().describe('Ticket ID to associate attachments with'),
+      tenant: z.string().describe('Tenant ID'),
+      providerId: z.string().describe('Email provider ID')
+    }),
+    outputSchema: z.object({
+      processed: z.number().int().describe('Number of attachments processed'),
+      failed: z.number().int().describe('Number of attachments that failed'),
+      failures: z.array(z.object({
+        attachmentId: z.string(),
+        message: z.string()
+      })).optional()
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Process Email Attachments (Batch)', category: 'Email' },
+    handler: async (input, ctx) => {
+      const attachments = input.attachments ?? [];
+      let processed = 0;
+      let failed = 0;
+      const failures: Array<{ attachmentId: string; message: string }> = [];
+
+      for (const attachment of attachments) {
+        try {
+          await processEmailAttachment({
+            emailId: input.emailId,
+            attachmentId: attachment.id,
+            ticketId: input.ticketId,
+            tenant: input.tenant,
+            providerId: input.providerId,
+            attachmentData: attachment
+          }, ctx.tenantId ?? '');
+          processed += 1;
+        } catch (error) {
+          failed += 1;
+          failures.push({
+            attachmentId: attachment.id,
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+
+      return {
+        processed,
+        failed,
+        failures: failures.length > 0 ? failures : undefined
+      };
     }
   });
 

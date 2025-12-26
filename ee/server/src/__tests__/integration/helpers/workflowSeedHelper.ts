@@ -12,7 +12,7 @@ const SYSTEM_WORKFLOW_PATH = path.resolve(
   'workflow',
   'runtime',
   'workflows',
-  'email-processing-workflow.v1.json'
+  'email-processing-workflow.v2.json'
 );
 
 type SystemWorkflowDefinition = {

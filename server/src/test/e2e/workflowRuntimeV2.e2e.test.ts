@@ -88,7 +88,7 @@ async function publishWorkflow(workflowId: string, version: number, definition?:
 }
 
 async function seedEmailWorkflow() {
-  const filePath = path.resolve(__dirname, '../../../../shared/workflow/runtime/workflows/email-processing-workflow.v1.json');
+  const filePath = path.resolve(__dirname, '../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json');
   const definition = { ...JSON.parse(fs.readFileSync(filePath, 'utf8')), id: EMAIL_WORKFLOW_ID };
   await WorkflowDefinitionModelV2.create(db, {
     workflow_id: definition.id,
@@ -272,16 +272,18 @@ describe('workflow runtime v2 E2E tests', () => {
     const workflowId = await seedEmailWorkflow();
 
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
-    stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: false, match: null }));
-    stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
-    stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: true, contact: { contact_id: 'contact-1', client_id: 'client-1', email: 'sender@example.com' } }));
-    stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue({ client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' }));
-    const ticketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-999', ticket_number: 'T-999' });
-    stubAction('create_ticket_from_email', 1, ticketSpy);
-    const commentSpy = vi.fn().mockResolvedValue({ comment_id: 'comment-9' });
-    stubAction('create_comment_from_email', 1, commentSpy);
-    const attachmentSpy = vi.fn().mockResolvedValue({ success: true, documentId: 'doc-2', fileName: 'file', fileSize: 10, contentType: 'text/plain' });
-    stubAction('process_email_attachment', 1, attachmentSpy);
+    stubAction('resolve_existing_ticket_from_email', 1, vi.fn().mockResolvedValue({ success: false, ticket: null, source: null }));
+    stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({
+      ticketDefaults: { client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' },
+      matchedClient: { contact_id: 'contact-1', client_id: 'client-1', email: 'sender@example.com' },
+      targetClientId: 'client-1',
+      targetContactId: 'contact-1',
+      targetLocationId: 'loc-1'
+    }));
+    const ticketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-999', ticket_number: 'T-999', comment_id: 'comment-9' });
+    stubAction('create_ticket_with_initial_comment', 1, ticketSpy);
+    const attachmentSpy = vi.fn().mockResolvedValue({ processed: 2, failed: 0 });
+    stubAction('process_email_attachments_batch', 1, attachmentSpy);
     stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockResolvedValue({ success: true }));
     stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
 
@@ -290,7 +292,6 @@ describe('workflow runtime v2 E2E tests', () => {
 
     expect(record?.status).toBe('SUCCEEDED');
     expect(ticketSpy).toHaveBeenCalled();
-    expect(commentSpy).toHaveBeenCalled();
     expect(attachmentSpy).toHaveBeenCalled();
   });
 
@@ -298,16 +299,15 @@ describe('workflow runtime v2 E2E tests', () => {
     const workflowId = await seedEmailWorkflow();
 
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Sanitized', confidence: 'high', tokens: { conversationToken: 'reply-token' } } }));
-    stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: true, match: { ticketId: 'ticket-123' } }));
-    stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
-    stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: false, contact: null }));
-    stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue({}));
-    const ticketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-new', ticket_number: 'T-1' });
-    stubAction('create_ticket_from_email', 1, ticketSpy);
+    const resolveExistingSpy = vi.fn().mockResolvedValue({ success: true, ticket: { ticketId: 'ticket-123' }, source: 'replyToken' });
+    stubAction('resolve_existing_ticket_from_email', 1, resolveExistingSpy);
+    stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({ ticketDefaults: {}, matchedClient: null, targetClientId: null, targetContactId: null, targetLocationId: null }));
+    const ticketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-new', ticket_number: 'T-1', comment_id: 'comment-1' });
+    stubAction('create_ticket_with_initial_comment', 1, ticketSpy);
     const commentSpy = vi.fn().mockResolvedValue({ comment_id: 'comment-1' });
-    stubAction('create_comment_from_email', 1, commentSpy);
-    const attachmentSpy = vi.fn().mockResolvedValue({ success: true, documentId: 'doc-1', fileName: 'file', fileSize: 10, contentType: 'text/plain' });
-    stubAction('process_email_attachment', 1, attachmentSpy);
+    stubAction('create_comment_from_parsed_email', 1, commentSpy);
+    const attachmentSpy = vi.fn().mockResolvedValue({ processed: 1, failed: 0 });
+    stubAction('process_email_attachments_batch', 1, attachmentSpy);
     stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockResolvedValue({ success: true }));
     stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
 
@@ -325,11 +325,15 @@ describe('workflow runtime v2 E2E tests', () => {
 
     const humanSpy = vi.fn().mockResolvedValue({ task_id: 'task-1' });
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
-    stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: false, match: null }));
-    stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
-    stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: false, contact: null }));
-    stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue({ client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' }));
-    stubAction('create_ticket_from_email', 1, vi.fn().mockRejectedValue(new Error('boom')));
+    stubAction('resolve_existing_ticket_from_email', 1, vi.fn().mockResolvedValue({ success: false, ticket: null, source: null }));
+    stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({
+      ticketDefaults: { client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' },
+      matchedClient: null,
+      targetClientId: 'client-1',
+      targetContactId: null,
+      targetLocationId: 'loc-1'
+    }));
+    stubAction('create_ticket_with_initial_comment', 1, vi.fn().mockRejectedValue(new Error('boom')));
     stubAction('create_human_task_for_email_processing_failure', 1, humanSpy);
 
     const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: baseEmailPayload() });

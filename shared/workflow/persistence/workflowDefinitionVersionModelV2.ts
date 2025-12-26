@@ -6,6 +6,10 @@ export type WorkflowDefinitionVersionRecord = {
   version: number;
   definition_json: Record<string, unknown>;
   payload_schema_json?: Record<string, unknown> | null;
+  validation_status?: string | null;
+  validation_errors?: Record<string, unknown>[] | null;
+  validation_warnings?: Record<string, unknown>[] | null;
+  validated_at?: string | null;
   published_by?: string | null;
   published_at?: string | null;
   created_at: string;
@@ -18,6 +22,22 @@ const WorkflowDefinitionVersionModelV2 = {
       .insert({
         ...data,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .returning('*');
+    return record;
+  },
+
+  update: async (
+    knex: Knex,
+    workflowId: string,
+    version: number,
+    data: Partial<WorkflowDefinitionVersionRecord>
+  ): Promise<WorkflowDefinitionVersionRecord> => {
+    const [record] = await knex<WorkflowDefinitionVersionRecord>('workflow_definition_versions')
+      .where({ workflow_id: workflowId, version })
+      .update({
+        ...data,
         updated_at: new Date().toISOString()
       })
       .returning('*');

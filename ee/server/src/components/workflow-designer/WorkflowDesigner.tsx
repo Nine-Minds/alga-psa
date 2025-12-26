@@ -76,6 +76,10 @@ type WorkflowDefinitionRecord = {
   draft_definition: WorkflowDefinition;
   draft_version: number;
   status: string;
+  validation_status?: string | null;
+  validation_errors?: PublishError[] | null;
+  validation_warnings?: PublishError[] | null;
+  validated_at?: string | null;
   is_system?: boolean;
   is_visible?: boolean;
   is_paused?: boolean;
@@ -1200,9 +1204,27 @@ const WorkflowDesigner: React.FC = () => {
     return locations;
   }, [activeDefinition, nodeRegistryMap]);
 
+  const activeWorkflowRecord = useMemo(
+    () => definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null,
+    [definitions, activeWorkflowId]
+  );
+
+  const draftValidationErrors = useMemo(
+    () => (Array.isArray(activeWorkflowRecord?.validation_errors) ? activeWorkflowRecord?.validation_errors : []) as PublishError[],
+    [activeWorkflowRecord?.validation_errors]
+  );
+
+  const draftValidationWarnings = useMemo(
+    () => (Array.isArray(activeWorkflowRecord?.validation_warnings) ? activeWorkflowRecord?.validation_warnings : []) as PublishError[],
+    [activeWorkflowRecord?.validation_warnings]
+  );
+
+  const currentValidationErrors = publishErrors.length > 0 ? publishErrors : draftValidationErrors;
+  const currentValidationWarnings = publishWarnings.length > 0 ? publishWarnings : draftValidationWarnings;
+
   const errorsByStepId = useMemo(() => {
     const map = new Map<string, PublishError[]>();
-    publishErrors.forEach((error) => {
+    currentValidationErrors.forEach((error) => {
       const entry = Object.entries(stepPathMap).find(([, path]) => path === error.stepPath);
       const stepId = error.stepId ?? entry?.[0];
       if (stepId) {
@@ -1212,12 +1234,27 @@ const WorkflowDesigner: React.FC = () => {
       }
     });
     return map;
-  }, [publishErrors, stepPathMap]);
+  }, [currentValidationErrors, stepPathMap]);
 
-  const activeWorkflowRecord = useMemo(
-    () => definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null,
-    [definitions, activeWorkflowId]
-  );
+  const workflowValidationStatus = useMemo(() => {
+    if (!activeWorkflowRecord) return 'unknown';
+    if (currentValidationErrors.length > 0) return 'error';
+    if (currentValidationWarnings.length > 0) return 'warning';
+    return 'valid';
+  }, [activeWorkflowRecord, currentValidationErrors.length, currentValidationWarnings.length]);
+
+  const workflowValidationBadge = useMemo(() => {
+    switch (workflowValidationStatus) {
+      case 'error':
+        return { label: 'Invalid', className: 'bg-red-100 text-red-700 border-red-200' };
+      case 'warning':
+        return { label: 'Warnings', className: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+      case 'valid':
+        return { label: 'Valid', className: 'bg-green-100 text-green-700 border-green-200' };
+      default:
+        return { label: 'Unknown', className: 'bg-gray-100 text-gray-600 border-gray-200' };
+    }
+  }, [workflowValidationStatus]);
 
   const canAdmin = useMemo(
     () => userPermissions.includes('workflow:admin'),
@@ -2089,18 +2126,36 @@ const WorkflowDesigner: React.FC = () => {
                 <div className="text-sm text-gray-500">Select a step to edit its configuration.</div>
               )}
 
-              {publishErrors.length > 0 && activeDefinition && (
+              {currentValidationErrors.length > 0 && activeDefinition && (
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4" /> Publish Errors
+                    <AlertTriangle className="h-4 w-4" /> Validation Errors
                   </h3>
                   <div className="space-y-3">
-                    {publishErrors.map((error, index) => (
+                    {currentValidationErrors.map((error, index) => (
                       <Card key={`${error.stepPath}-${index}`} className="p-3 border border-red-200">
                         <div className="text-xs font-semibold text-red-700">{error.code}</div>
                         <div className="text-sm text-gray-800">{error.message}</div>
                         <div className="text-xs text-gray-500 mt-1">
                           {buildPathBreadcrumbs(activeDefinition.steps as Step[], error.stepPath).join(' > ') || error.stepPath}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {currentValidationWarnings.length > 0 && activeDefinition && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-yellow-700 flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4" /> Validation Warnings
+                  </h3>
+                  <div className="space-y-3">
+                    {currentValidationWarnings.map((warning, index) => (
+                      <Card key={`${warning.stepPath}-${index}`} className="p-3 border border-yellow-200">
+                        <div className="text-xs font-semibold text-yellow-700">{warning.code}</div>
+                        <div className="text-sm text-gray-800">{warning.message}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {buildPathBreadcrumbs(activeDefinition.steps as Step[], warning.stepPath).join(' > ') || warning.stepPath}
                         </div>
                       </Card>
                     ))}
@@ -2124,7 +2179,20 @@ const WorkflowDesigner: React.FC = () => {
                 variant={definition.workflow_id === activeWorkflowId ? 'default' : 'outline'}
                 onClick={() => handleSelectDefinition(definition)}
               >
-                {definition.name}
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      definition.validation_errors?.length
+                        ? 'bg-red-500'
+                        : definition.validation_warnings?.length
+                          ? 'bg-yellow-500'
+                          : definition.validation_status === 'valid'
+                            ? 'bg-green-500'
+                            : 'bg-gray-400'
+                    }`}
+                  />
+                  {definition.name}
+                </span>
               </Button>
             ))}
           </div>
@@ -2178,6 +2246,15 @@ const WorkflowDesigner: React.FC = () => {
           </div>
           {activeTab === 'Designer' && (
             <div className="flex items-center gap-2">
+              {activeWorkflowRecord && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium ${workflowValidationBadge.className}`}
+                  title={activeWorkflowRecord.validated_at ? `Last validated: ${activeWorkflowRecord.validated_at}` : 'Validation status unknown'}
+                >
+                  {workflowValidationBadge.label}
+                  {currentValidationErrors.length > 0 && <span>({currentValidationErrors.length})</span>}
+                </span>
+              )}
               {canManage && (
                 <Button id="workflow-designer-create" variant="outline" onClick={handleCreateDefinition}>
                   New Workflow

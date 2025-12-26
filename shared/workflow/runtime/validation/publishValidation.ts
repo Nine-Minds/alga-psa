@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } from '../types';
-import { workflowDefinitionSchema, isSecretRef } from '../types';
+import { workflowDefinitionSchema } from '../types';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource } from '../expressionEngine';
-import { validateInputMapping, collectSecretRefsFromConfig } from './mappingValidator';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
 
 export type PublishValidationResult = {
   ok: boolean;
@@ -225,6 +226,15 @@ function validateNodeStep(
             warnings.push(...mappingResult.warnings);
             mappingResult.secretRefs.forEach((ref) => secretRefs.add(ref));
           }
+
+          const actionSchemaJson = zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }) as Record<string, unknown>;
+          const requiredErrors = validateInputMappingSchema(config.inputMapping, actionSchemaJson, {
+            stepPath,
+            stepId: step.id,
+            fieldName: 'inputMapping',
+            knownSecrets
+          });
+          errors.push(...requiredErrors);
         }
       }
 

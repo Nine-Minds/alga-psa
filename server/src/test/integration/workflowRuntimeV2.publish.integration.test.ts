@@ -366,6 +366,29 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(result.errors?.some((err: any) => err.code === 'INVALID_EXPR')).toBe(true);
   });
 
+  it('Publish fails when required action inputs are not mapped. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, {
+      id: workflowId,
+      version: 1,
+      name: 'Action inputMapping required',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'action-1',
+          type: 'action.call',
+          config: {
+            actionId: 'test.echo',
+            version: 1,
+            inputMapping: {}
+          }
+        }
+      ]
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors?.some((err: any) => err.code === 'MISSING_REQUIRED_MAPPING')).toBe(true);
+  });
+
   it('Publish fails when required workflow fields (id/name/steps) are missing. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     const result = await publishWorkflow(workflowId, 1, { payloadSchemaRef: TEST_SCHEMA_REF });
@@ -540,6 +563,42 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')], payloadSchemaRef: strictRef });
     await publishWorkflow(workflowId, 1);
     await expect(startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { bar: 123 } })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('Start run blocks execution when published workflow fails validation. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [actionCallStep({ id: 'action-1', actionId: 'test.echo', inputMapping: { value: 'ok' } })]
+    });
+    await publishWorkflow(workflowId, 1);
+
+    const invalidDefinition = {
+      id: workflowId,
+      version: 1,
+      name: 'Invalid',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'action-1',
+          type: 'action.call',
+          config: {
+            actionId: 'test.echo',
+            version: 1,
+            inputMapping: {}
+          }
+        }
+      ]
+    };
+
+    await WorkflowDefinitionVersionModelV2.update(db, workflowId, 1, {
+      definition_json: invalidDefinition as any,
+      validation_status: null,
+      validation_errors: null,
+      validation_warnings: null,
+      validated_at: null
+    });
+
+    await expect(startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} }))
+      .rejects.toMatchObject({ status: 409 });
   });
 
   it('Run execution inserts workflow_run_steps STARTED before step handler executes. Mocks: non-target dependencies.', async () => {

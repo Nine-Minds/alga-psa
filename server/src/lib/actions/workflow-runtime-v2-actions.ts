@@ -12,8 +12,11 @@ import {
   getNodeTypeRegistry,
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
-  validateWorkflowDefinition
+  validateWorkflowDefinition,
+  type PublishError
 } from '@shared/workflow/runtime';
+import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
+import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2, { type WorkflowDefinitionVersionRecord } from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
@@ -79,6 +82,65 @@ const hashDefinition = (definition: Record<string, unknown>) => {
   } catch {
     return null;
   }
+};
+
+type ValidationStatus = 'valid' | 'warning' | 'error';
+
+const deriveValidationStatus = (errors: PublishError[], warnings: PublishError[]): ValidationStatus => {
+  if (errors.length > 0) return 'error';
+  if (warnings.length > 0) return 'warning';
+  return 'valid';
+};
+
+const buildUnknownSchemaError = (schemaRef: string): PublishError => ({
+  severity: 'error',
+  stepPath: 'root',
+  code: 'UNKNOWN_SCHEMA',
+  message: `Unknown schema ref ${schemaRef}`
+});
+
+const listSecretNames = async (knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'], tenant?: string | null) => {
+  if (!tenant) return null;
+  const provider = createTenantSecretProvider(knex, tenant);
+  const secrets = await provider.list();
+  return new Set(secrets.map((secret) => secret.name));
+};
+
+const computeValidation = async (params: {
+  definition: Record<string, unknown>;
+  payloadSchemaRef?: string | null;
+  payloadSchemaJson?: Record<string, unknown> | null;
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'];
+  tenant?: string | null;
+}) => {
+  const { definition, payloadSchemaRef, payloadSchemaJson, knex, tenant } = params;
+  const validation = validateWorkflowDefinition(
+    definition as any,
+    payloadSchemaJson ?? undefined
+  );
+
+  const errors = [...validation.errors];
+  const warnings = [...validation.warnings];
+
+  if (!payloadSchemaJson && payloadSchemaRef) {
+    errors.push(buildUnknownSchemaError(payloadSchemaRef));
+  }
+
+  if (validation.secretRefs.size > 0) {
+    const knownSecrets = await listSecretNames(knex, tenant);
+    if (knownSecrets) {
+      const secretErrors = verifySecretsExist(validation.secretRefs, knownSecrets);
+      errors.push(...secretErrors);
+    }
+  }
+
+  const status = deriveValidationStatus(errors, warnings);
+  return {
+    ...validation,
+    errors,
+    warnings,
+    status
+  };
 };
 
 const SENSITIVE_KEY_PATTERN = /(secret|token|password|api[_-]?key|authorization)/i;
@@ -221,10 +283,22 @@ export async function createWorkflowDefinitionAction(input: unknown) {
   initializeWorkflowRuntimeV2();
   const parsed = CreateWorkflowDefinitionInput.parse(input);
 
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   const workflowId = uuidv4();
   const definition = { ...parsed.definition, id: workflowId };
+
+  const schemaRegistry = getSchemaRegistry();
+  const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
+    ? schemaRegistry.toJsonSchema(definition.payloadSchemaRef)
+    : null;
+  const validation = await computeValidation({
+    definition,
+    payloadSchemaRef: definition.payloadSchemaRef,
+    payloadSchemaJson,
+    knex,
+    tenant
+  });
 
   const record = await WorkflowDefinitionModelV2.create(knex, {
     workflow_id: workflowId,
@@ -235,6 +309,10 @@ export async function createWorkflowDefinitionAction(input: unknown) {
     draft_definition: definition,
     draft_version: definition.version,
     status: 'draft',
+    validation_status: validation.status,
+    validation_errors: validation.errors,
+    validation_warnings: validation.warnings,
+    validated_at: new Date().toISOString(),
     created_by: user.user_id,
     updated_by: user.user_id
   });
@@ -280,13 +358,25 @@ export async function updateWorkflowDefinitionDraftAction(input: unknown) {
   initializeWorkflowRuntimeV2();
   const parsed = UpdateWorkflowDefinitionInput.parse(input);
 
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (current?.is_system) {
     await requireWorkflowPermission(user, 'admin', knex);
   }
   const definition = { ...parsed.definition, id: parsed.workflowId };
+
+  const schemaRegistry = getSchemaRegistry();
+  const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
+    ? schemaRegistry.toJsonSchema(definition.payloadSchemaRef)
+    : null;
+  const validation = await computeValidation({
+    definition,
+    payloadSchemaRef: definition.payloadSchemaRef,
+    payloadSchemaJson,
+    knex,
+    tenant
+  });
 
   const updated = await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
     draft_definition: definition,
@@ -295,7 +385,11 @@ export async function updateWorkflowDefinitionDraftAction(input: unknown) {
     name: definition.name,
     description: definition.description ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
-    trigger: definition.trigger ?? null
+    trigger: definition.trigger ?? null,
+    validation_status: validation.status,
+    validation_errors: validation.errors,
+    validation_warnings: validation.warnings,
+    validated_at: new Date().toISOString()
   });
 
   if (!updated) {
@@ -440,7 +534,7 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
   initializeWorkflowRuntimeV2();
   const parsed = PublishWorkflowDefinitionInput.parse(input);
 
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'publish', knex);
   const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (!workflow) {
@@ -456,23 +550,17 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
   }
 
   const schemaRegistry = getSchemaRegistry();
-  if (!schemaRegistry.has(definition.payloadSchemaRef)) {
-    return {
-      ok: false,
-      errors: [
-        {
-          severity: 'error',
-          stepPath: 'root',
-          code: 'UNKNOWN_SCHEMA',
-          message: `Unknown schema ref ${definition.payloadSchemaRef}`
-        }
-      ]
-    };
-  }
-
-  const payloadSchemaJson = schemaRegistry.toJsonSchema(definition.payloadSchemaRef);
-  const validation = validateWorkflowDefinition(definition, payloadSchemaJson as Record<string, unknown>);
-  if (!validation.ok) {
+  const payloadSchemaJson = schemaRegistry.has(definition.payloadSchemaRef)
+    ? schemaRegistry.toJsonSchema(definition.payloadSchemaRef)
+    : null;
+  const validation = await computeValidation({
+    definition,
+    payloadSchemaRef: definition.payloadSchemaRef,
+    payloadSchemaJson,
+    knex,
+    tenant
+  });
+  if (validation.errors.length > 0) {
     return { ok: false, errors: validation.errors, warnings: validation.warnings };
   }
 
@@ -480,7 +568,11 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
     workflow_id: parsed.workflowId,
     version: parsed.version,
     definition_json: definition,
-    payload_schema_json: payloadSchemaJson as Record<string, unknown>,
+    payload_schema_json: payloadSchemaJson as Record<string, unknown> | null,
+    validation_status: validation.status,
+    validation_errors: validation.errors,
+    validation_warnings: validation.warnings,
+    validated_at: new Date().toISOString(),
     published_by: user.user_id,
     published_at: new Date().toISOString()
   });
@@ -570,8 +662,30 @@ export async function startWorkflowRunAction(input: unknown) {
   }
 
   const schemaRegistry = getSchemaRegistry();
-  const definition = versionRecord.definition_json as { payloadSchemaRef?: string } | null;
+  const definition = versionRecord.definition_json as Record<string, unknown> | null;
   const schemaRef = definition?.payloadSchemaRef ?? workflow.payload_schema_ref ?? null;
+
+  if (!versionRecord.validation_status || versionRecord.validation_status === 'error') {
+    const payloadSchemaJson = versionRecord.payload_schema_json
+      ?? (schemaRef && schemaRegistry.has(schemaRef) ? schemaRegistry.toJsonSchema(schemaRef) : null);
+    const validation = await computeValidation({
+      definition: definition ?? {},
+      payloadSchemaRef: schemaRef ?? undefined,
+      payloadSchemaJson,
+      knex,
+      tenant
+    });
+    await WorkflowDefinitionVersionModelV2.update(knex, parsed.workflowId, versionRecord.version, {
+      validation_status: validation.status,
+      validation_errors: validation.errors,
+      validation_warnings: validation.warnings,
+      validated_at: new Date().toISOString()
+    });
+    if (validation.errors.length > 0) {
+      return throwHttpError(409, 'Workflow validation failed', { errors: validation.errors, warnings: validation.warnings });
+    }
+  }
+
   if (schemaRef && schemaRegistry.has(schemaRef)) {
     const validation = schemaRegistry.get(schemaRef).safeParse(parsed.payload);
     if (!validation.success) {

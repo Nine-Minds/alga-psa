@@ -54,7 +54,7 @@ function stubAction(actionId: string, version: number, handler: any) {
 }
 
 async function seedEmailWorkflow() {
-  const filePath = path.resolve(__dirname, '../../../../shared/workflow/runtime/workflows/email-processing-workflow.v1.json');
+  const filePath = path.resolve(__dirname, '../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json');
   const definition = { ...JSON.parse(fs.readFileSync(filePath, 'utf8')), id: EMAIL_WORKFLOW_ID };
   await WorkflowDefinitionModelV2.create(db, {
     workflow_id: definition.id,
@@ -128,9 +128,8 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     let snapshots: any[];
     let createTicketSpy: any;
     let createCommentSpy: any;
-    let processAttachmentSpy: any;
-    let findReplyTokenSpy: any;
-    let parsedEmailMetadata: any;
+    let processAttachmentsSpy: any;
+    let resolveExistingSpy: any;
 
     beforeEach(async () => {
       await seedEmailWorkflow();
@@ -141,22 +140,16 @@ describe('workflow runtime v2 email workflow integration tests', () => {
         confidence: 'high',
         tokens: { conversationToken: 'reply-token' }
       };
-      parsedEmailMetadata = { parser: { confidence: 'high', tokens: { conversationToken: 'reply-token' } } };
-
       stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed }));
-      findReplyTokenSpy = vi.fn().mockResolvedValue({ success: true, match: { ticketId: 'ticket-123' } });
-      stubAction('find_ticket_by_reply_token', 1, findReplyTokenSpy);
-      stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
-      stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: false, contact: null }));
-      stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue({}));
-      createTicketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-new', ticket_number: 'T-1' });
-      stubAction('create_ticket_from_email', 1, createTicketSpy);
+      resolveExistingSpy = vi.fn().mockResolvedValue({ success: true, ticket: { ticketId: 'ticket-123' }, source: 'replyToken' });
+      stubAction('resolve_existing_ticket_from_email', 1, resolveExistingSpy);
+      stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({ ticketDefaults: {}, matchedClient: null, targetClientId: null, targetContactId: null, targetLocationId: null }));
+      createTicketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-new', ticket_number: 'T-1', comment_id: 'comment-0' });
+      stubAction('create_ticket_with_initial_comment', 1, createTicketSpy);
       createCommentSpy = vi.fn().mockResolvedValue({ comment_id: 'comment-1' });
-      stubAction('create_comment_from_email', 1, createCommentSpy);
-      processAttachmentSpy = vi.fn()
-        .mockRejectedValueOnce(new Error('fail'))
-        .mockResolvedValue({ success: true, documentId: 'doc-1', fileName: 'file', fileSize: 10, contentType: 'text/plain' });
-      stubAction('process_email_attachment', 1, processAttachmentSpy);
+      stubAction('create_comment_from_parsed_email', 1, createCommentSpy);
+      processAttachmentsSpy = vi.fn().mockResolvedValue({ processed: 2, failed: 0 });
+      stubAction('process_email_attachments_batch', 1, processAttachmentsSpy);
       stubAction('convert_html_to_blocks', 1, vi.fn().mockResolvedValue({ success: true, blocks: [{ type: 'paragraph', content: [] }] }));
       stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
       stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockResolvedValue({ success: true }));
@@ -188,8 +181,8 @@ describe('workflow runtime v2 email workflow integration tests', () => {
       expect(vars.parsedEmail.sanitizedHtml).toBe('<p>Sanitized</p>');
     });
 
-    it('When reply token present, find_ticket_by_reply_token is invoked. Mocks: non-target dependencies.', () => {
-      expect(findReplyTokenSpy).toHaveBeenCalled();
+    it('Existing ticket resolution runs before branching. Mocks: non-target dependencies.', () => {
+      expect(resolveExistingSpy).toHaveBeenCalled();
     });
 
     it('Existing ticket path creates comment with author_type=contact. Mocks: non-target dependencies.', () => {
@@ -200,7 +193,7 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     it('Existing ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.', async () => {
       const run = await WorkflowRunModelV2.getById(db, runId);
       expect(run?.status).toBe('SUCCEEDED');
-      expect(processAttachmentSpy).toHaveBeenCalled();
+      expect(processAttachmentsSpy).toHaveBeenCalled();
     });
 
     it('Existing ticket path returns early without creating new ticket. Mocks: non-target dependencies.', () => {
@@ -208,56 +201,51 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     });
 
     it('Attachment processing uses idempotency keys derived from message id and attachment id. Mocks: non-target dependencies.', async () => {
-      const invocations = await db('workflow_action_invocations').where({ action_id: 'process_email_attachment', run_id: runId });
-      const keys = invocations.map((invocation) => invocation.idempotency_key);
-      expect(keys.some((key) => key.includes('email-1') && key.includes('att-1'))).toBe(true);
-      expect(keys.some((key) => key.includes('email-1') && key.includes('att-2'))).toBe(true);
+      const invocation = await db('workflow_action_invocations').where({ action_id: 'process_email_attachments_batch', run_id: runId }).first();
+      expect(invocation?.idempotency_key).toContain('email-1');
+      expect(invocation?.idempotency_key).toContain('attachments');
     });
 
     it('Comment creation uses idempotency key derived from message id and ticket id. Mocks: non-target dependencies.', async () => {
-      const invocation = await db('workflow_action_invocations').where({ action_id: 'create_comment_from_email', run_id: runId }).first();
+      const invocation = await db('workflow_action_invocations').where({ action_id: 'create_comment_from_parsed_email', run_id: runId }).first();
       expect(invocation.idempotency_key).toContain('email-1');
       expect(invocation.idempotency_key).toContain('ticket-123');
     });
 
     it('Workflow preserves parsedEmail metadata for downstream actions. Mocks: non-target dependencies.', () => {
       const call = createCommentSpy.mock.calls[0]?.[0];
-      expect(call.metadata).toBeDefined();
+      expect(call.parsedEmail?.metadata).toBeDefined();
     });
 
-    it('Existing ticket path does not overwrite ticketDefaults. Mocks: non-target dependencies.', () => {
+    it('Existing ticket path does not populate ticket context. Mocks: non-target dependencies.', () => {
       const vars = snapshots[snapshots.length - 1].envelope_json.vars;
-      expect(vars.ticketDefaults).toBeUndefined();
+      expect(vars.ticketContext).toBeUndefined();
     });
   });
 
-  it('When reply token missing or not matched, fallback to find_ticket_by_email_thread. Mocks: non-target dependencies.', async () => {
+  it('When reply token missing or not matched, resolve existing ticket via threading. Mocks: non-target dependencies.', async () => {
     await resetWorkflowRuntimeTables(db);
     await seedEmailWorkflow();
 
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'x', confidence: 'high', tokens: {} } }));
-    stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: false, match: null }));
-    const threadSpy = vi.fn().mockResolvedValue({ success: true, ticket: { ticketId: 'ticket-456' } });
-    stubAction('find_ticket_by_email_thread', 1, threadSpy);
-    stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: false, contact: null }));
-    stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue({}));
-    stubAction('create_comment_from_email', 1, vi.fn().mockResolvedValue({ comment_id: 'comment-2' }));
-    stubAction('process_email_attachment', 1, vi.fn().mockResolvedValue({ success: true, documentId: 'doc-1', fileName: 'file', fileSize: 10, contentType: 'text/plain' }));
-    stubAction('create_ticket_from_email', 1, vi.fn().mockResolvedValue({ ticket_id: 'ticket-new', ticket_number: 'T-1' }));
+    const resolveExistingSpy = vi.fn().mockResolvedValue({ success: true, ticket: { ticketId: 'ticket-456' }, source: 'threadHeaders' });
+    stubAction('resolve_existing_ticket_from_email', 1, resolveExistingSpy);
+    stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({ ticketDefaults: {}, matchedClient: null, targetClientId: null, targetContactId: null, targetLocationId: null }));
+    stubAction('create_comment_from_parsed_email', 1, vi.fn().mockResolvedValue({ comment_id: 'comment-2' }));
+    stubAction('process_email_attachments_batch', 1, vi.fn().mockResolvedValue({ processed: 0, failed: 0 }));
+    stubAction('create_ticket_with_initial_comment', 1, vi.fn().mockResolvedValue({ ticket_id: 'ticket-new', ticket_number: 'T-1', comment_id: 'comment-0' }));
     stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockResolvedValue({ success: true }));
     stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
 
     await startWorkflowRunAction({ workflowId: EMAIL_WORKFLOW_ID, workflowVersion: 1, payload: baseEmailPayload() });
-    expect(threadSpy).toHaveBeenCalled();
+    expect(resolveExistingSpy).toHaveBeenCalled();
   });
 
   describe('new ticket path with defaults', () => {
     let runId: string;
     let snapshots: any[];
-    let contactSpy: any;
-    let defaultsSpy: any;
+    let resolveContextSpy: any;
     let ticketSpy: any;
-    let commentSpy: any;
     let attachmentSpy: any;
     let ackSpy: any;
 
@@ -265,20 +253,23 @@ describe('workflow runtime v2 email workflow integration tests', () => {
       await seedEmailWorkflow();
 
       stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
-      stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: false, match: null }));
-      stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
-      contactSpy = vi.fn().mockResolvedValue({ success: true, contact: { contact_id: 'contact-1', client_id: 'client-1', email: 'sender@example.com' } });
-      stubAction('find_contact_by_email', 1, contactSpy);
-      defaultsSpy = vi.fn().mockResolvedValue({ client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' });
-      stubAction('resolve_inbound_ticket_defaults', 1, defaultsSpy);
-      ticketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-999', ticket_number: 'T-999' });
-      stubAction('create_ticket_from_email', 1, ticketSpy);
-      commentSpy = vi.fn().mockResolvedValue({ comment_id: 'comment-9' });
-      stubAction('create_comment_from_email', 1, commentSpy);
-      attachmentSpy = vi.fn()
-        .mockRejectedValueOnce(new Error('fail'))
-        .mockResolvedValue({ success: true, documentId: 'doc-2', fileName: 'file', fileSize: 10, contentType: 'text/plain' });
-      stubAction('process_email_attachment', 1, attachmentSpy);
+      stubAction('resolve_existing_ticket_from_email', 1, vi.fn().mockResolvedValue({ success: false, ticket: null, source: null }));
+      const matchedClient = { contact_id: 'contact-1', client_id: 'client-1', email: 'sender@example.com' };
+      const defaults = { client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' };
+      const ticketContext = {
+        ticketDefaults: defaults,
+        matchedClient,
+        targetClientId: 'client-1',
+        targetContactId: 'contact-1',
+        targetLocationId: 'loc-1'
+      };
+      resolveContextSpy = vi.fn().mockResolvedValue(ticketContext);
+      stubAction('resolve_inbound_ticket_context', 1, resolveContextSpy);
+      ticketSpy = vi.fn().mockResolvedValue({ ticket_id: 'ticket-999', ticket_number: 'T-999', comment_id: 'comment-9' });
+      stubAction('create_ticket_with_initial_comment', 1, ticketSpy);
+      stubAction('create_comment_from_parsed_email', 1, vi.fn().mockResolvedValue({ comment_id: 'comment-9' }));
+      attachmentSpy = vi.fn().mockResolvedValue({ processed: 2, failed: 0 });
+      stubAction('process_email_attachments_batch', 1, attachmentSpy);
       ackSpy = vi.fn().mockResolvedValue({ success: true, message: 'sent' });
       stubAction('send_ticket_acknowledgement_email', 1, ackSpy);
       stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
@@ -288,47 +279,38 @@ describe('workflow runtime v2 email workflow integration tests', () => {
       snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, runId);
     });
 
-    it('New ticket path attempts exact contact match by sender email. Mocks: non-target dependencies.', () => {
-      expect(contactSpy).toHaveBeenCalledWith(expect.objectContaining({ email: 'sender@example.com' }), expect.anything());
-    });
-
-    it('Matched contact stored as matchedClient in vars. Mocks: non-target dependencies.', () => {
+    it('Matched contact stored as matchedClient in vars.ticketContext. Mocks: non-target dependencies.', () => {
       const vars = snapshots[snapshots.length - 1].envelope_json.vars;
-      expect(vars.matchedClient).toBeDefined();
+      expect(vars.ticketContext.matchedClient).toBeDefined();
     });
 
-    it('Resolve inbound ticket defaults by tenantId+providerId. Mocks: non-target dependencies.', () => {
-      expect(defaultsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ tenant: tenantId, providerId: 'provider-1' }),
+    it('Resolve inbound ticket context by tenantId+providerId+senderEmail. Mocks: non-target dependencies.', () => {
+      expect(resolveContextSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: tenantId, providerId: 'provider-1', senderEmail: 'sender@example.com' }),
         expect.anything()
       );
     });
 
     it('Ticket defaults override logic matches legacy behavior. Mocks: non-target dependencies.', () => {
       const vars = snapshots[snapshots.length - 1].envelope_json.vars;
-      expect(vars.targetLocationId).toBe('loc-1');
+      expect(vars.ticketContext.targetLocationId).toBe('loc-1');
     });
 
-    it('create_ticket_from_email is called with computed defaults. Mocks: non-target dependencies.', () => {
+    it('create_ticket_with_initial_comment is called with computed defaults. Mocks: non-target dependencies.', () => {
       const call = ticketSpy.mock.calls[0]?.[0];
-      expect(call.board_id).toBe('board-1');
-      expect(call.status_id).toBe('status-1');
+      expect(call.ticketDefaults.board_id).toBe('board-1');
+      expect(call.ticketDefaults.status_id).toBe('status-1');
     });
 
-    it('create_ticket_from_email stores ticket_id into vars.targetTicketId. Mocks: non-target dependencies.', () => {
+    it('create_ticket_with_initial_comment stores ticket_id into vars.createdTicket. Mocks: non-target dependencies.', () => {
       const vars = snapshots[snapshots.length - 1].envelope_json.vars;
-      expect(vars.targetTicketId).toBe('ticket-999');
+      expect(vars.createdTicket.ticket_id).toBe('ticket-999');
     });
 
     it('New ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.', async () => {
       const run = await WorkflowRunModelV2.getById(db, runId);
       expect(run?.status).toBe('SUCCEEDED');
       expect(attachmentSpy).toHaveBeenCalled();
-    });
-
-    it('New ticket path creates initial comment with author_type=internal. Mocks: non-target dependencies.', () => {
-      const call = commentSpy.mock.calls[0]?.[0];
-      expect(call.author_type).toBe('internal');
     });
 
     it('send_ticket_acknowledgement_email runs only when matchedClient exists. Mocks: non-target dependencies.', () => {
@@ -339,13 +321,16 @@ describe('workflow runtime v2 email workflow integration tests', () => {
       await resetWorkflowRuntimeTables(db);
       await seedEmailWorkflow();
       stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
-      stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: false, match: null }));
-      stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
-      stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: true, contact: { contact_id: 'contact-1', client_id: 'client-1', email: 'sender@example.com' } }));
-      stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue({ client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-1', location_id: 'loc-1', entered_by: 'user-1' }));
-      stubAction('create_ticket_from_email', 1, vi.fn().mockResolvedValue({ ticket_id: 'ticket-999', ticket_number: 'T-999' }));
-      stubAction('create_comment_from_email', 1, vi.fn().mockResolvedValue({ comment_id: 'comment-9' }));
-      stubAction('process_email_attachment', 1, vi.fn().mockResolvedValue({ success: true, documentId: 'doc-2', fileName: 'file', fileSize: 10, contentType: 'text/plain' }));
+      stubAction('resolve_existing_ticket_from_email', 1, vi.fn().mockResolvedValue({ success: false, ticket: null, source: null }));
+      stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({
+        ticketDefaults: { client_id: 'client-1', board_id: 'board-1', status_id: 'status-1', priority_id: 'priority-1', category_id: 'cat-1', subcategory_id: 'sub-cat-1', location_id: 'loc-1', entered_by: 'user-1' },
+        matchedClient: { contact_id: 'contact-1', client_id: 'client-1', email: 'sender@example.com' },
+        targetClientId: 'client-1',
+        targetContactId: 'contact-1',
+        targetLocationId: 'loc-1'
+      }));
+      stubAction('create_ticket_with_initial_comment', 1, vi.fn().mockResolvedValue({ ticket_id: 'ticket-999', ticket_number: 'T-999', comment_id: 'comment-9' }));
+      stubAction('process_email_attachments_batch', 1, vi.fn().mockResolvedValue({ processed: 1, failed: 0 }));
       stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockRejectedValue(new Error('fail')));
       stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
 
@@ -360,20 +345,20 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     });
 
     it('Ticket creation uses idempotency key derived from provider id and message id. Mocks: non-target dependencies.', async () => {
-      const invocation = await db('workflow_action_invocations').where({ action_id: 'create_ticket_from_email', run_id: runId }).first();
+      const invocation = await db('workflow_action_invocations').where({ action_id: 'create_ticket_with_initial_comment', run_id: runId }).first();
       expect(invocation.idempotency_key).toContain('provider-1');
       expect(invocation.idempotency_key).toContain('email-1');
     });
 
-    it('Workflow preserves parsedEmail metadata for downstream actions. Mocks: non-target dependencies.', () => {
-      const call = commentSpy.mock.calls[0]?.[0];
-      expect(call.metadata).toBeDefined();
+    it('Workflow preserves parsedEmail metadata for ticket creation. Mocks: non-target dependencies.', () => {
+      const call = ticketSpy.mock.calls[0]?.[0];
+      expect(call.parsedEmail).toBeDefined();
     });
 
-    it('New ticket path persists ticketDefaults and targetTicketId together. Mocks: non-target dependencies.', () => {
+    it('New ticket path persists ticketDefaults and createdTicket together. Mocks: non-target dependencies.', () => {
       const vars = snapshots[snapshots.length - 1].envelope_json.vars;
-      expect(vars.ticketDefaults).toBeDefined();
-      expect(vars.targetTicketId).toBe('ticket-999');
+      expect(vars.ticketContext.ticketDefaults).toBeDefined();
+      expect(vars.createdTicket.ticket_id).toBe('ticket-999');
     });
   });
 
@@ -382,10 +367,14 @@ describe('workflow runtime v2 email workflow integration tests', () => {
     await seedEmailWorkflow();
 
     stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'Body', confidence: 'high', tokens: {} } }));
-    stubAction('find_ticket_by_reply_token', 1, vi.fn().mockResolvedValue({ success: false, match: null }));
-    stubAction('find_ticket_by_email_thread', 1, vi.fn().mockResolvedValue({ success: false, ticket: null }));
-    stubAction('find_contact_by_email', 1, vi.fn().mockResolvedValue({ success: false, contact: null }));
-    stubAction('resolve_inbound_ticket_defaults', 1, vi.fn().mockResolvedValue(null));
+    stubAction('resolve_existing_ticket_from_email', 1, vi.fn().mockResolvedValue({ success: false, ticket: null, source: null }));
+    stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({
+      ticketDefaults: null,
+      matchedClient: null,
+      targetClientId: null,
+      targetContactId: null,
+      targetLocationId: null
+    }));
     stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
 
     const result = await startWorkflowRunAction({ workflowId: EMAIL_WORKFLOW_ID, workflowVersion: 1, payload: baseEmailPayload() });

@@ -6,7 +6,7 @@
  */
 
 import type { PublishError, MappingValue, InputMapping } from '../types';
-import { isExpr, isSecretRef, isLiteralValue } from '../types';
+import { isExpr, isSecretRef } from '../types';
 import { validateExpressionSource } from '../expressionEngine';
 import { secretNameSchema } from '../../secrets/types';
 
@@ -53,6 +53,11 @@ export interface MappingValidationResult {
    */
   secretRefs: Set<string>;
 }
+
+type JsonSchema = Record<string, unknown>;
+
+const isObjectLike = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
  * Validate a single MappingValue.
@@ -157,6 +162,108 @@ function validateMappingValue(
   // Primitive literals (string, number, boolean, null) are always valid
 }
 
+function resolveSchemaRef(schema: JsonSchema, root: JsonSchema): JsonSchema {
+  if (!schema || typeof schema !== 'object') return schema;
+  const ref = (schema as { $ref?: string }).$ref;
+  if (!ref || !root || typeof root !== 'object') return schema;
+  if (!ref.startsWith('#/definitions/')) return schema;
+  const key = ref.split('/').pop() ?? '';
+  const definitions = (root as { definitions?: Record<string, JsonSchema> }).definitions;
+  const resolved = definitions?.[key];
+  if (!resolved) return schema;
+  return resolveSchemaRef(resolved, root);
+}
+
+function mergeAllOf(schema: JsonSchema, root: JsonSchema): JsonSchema {
+  const allOf = (schema as { allOf?: JsonSchema[] }).allOf;
+  if (!Array.isArray(allOf) || allOf.length === 0) return schema;
+  const base: JsonSchema = { ...schema };
+  delete (base as { allOf?: JsonSchema[] }).allOf;
+
+  const merged: JsonSchema = { ...base };
+  for (const part of allOf) {
+    const resolved = resolveSchemaRef(part, root);
+    const mergedResolved = mergeAllOf(resolved, root);
+    const props = (mergedResolved as { properties?: Record<string, JsonSchema> }).properties;
+    if (props) {
+      merged.properties = {
+        ...(merged as { properties?: Record<string, JsonSchema> }).properties,
+        ...props
+      };
+    }
+    const required = (mergedResolved as { required?: string[] }).required;
+    if (required) {
+      merged.required = Array.from(new Set([
+        ...((merged as { required?: string[] }).required ?? []),
+        ...required
+      ]));
+    }
+  }
+  return merged;
+}
+
+function normalizeSchema(schema: JsonSchema, root: JsonSchema): JsonSchema {
+  const resolved = resolveSchemaRef(schema, root);
+  const merged = mergeAllOf(resolved, root);
+  return merged;
+}
+
+function isObjectSchema(schema: JsonSchema): boolean {
+  const type = (schema as { type?: string | string[] }).type;
+  if (type === 'object') return true;
+  if (Array.isArray(type) && type.includes('object')) return true;
+  return !!(schema as { properties?: Record<string, JsonSchema> }).properties;
+}
+
+function shouldRecurseIntoValue(value: unknown): value is Record<string, unknown> {
+  if (!isObjectLike(value)) return false;
+  if (isExpr(value) || isSecretRef(value)) return false;
+  if (Array.isArray(value)) return false;
+  return true;
+}
+
+function validateRequiredAgainstSchema(
+  mapping: InputMapping | undefined,
+  schema: JsonSchema | undefined,
+  options: MappingValidationOptions
+): PublishError[] {
+  const errors: PublishError[] = [];
+  if (!schema) return errors;
+  const rootSchema = schema;
+  const rootMapping = mapping ?? {};
+
+  const validateObject = (currentSchema: JsonSchema, currentMapping: Record<string, unknown>, pathPrefix: string) => {
+    const normalized = normalizeSchema(currentSchema, rootSchema);
+    if (!isObjectSchema(normalized)) return;
+
+    const properties = (normalized as { properties?: Record<string, JsonSchema> }).properties ?? {};
+    const required = (normalized as { required?: string[] }).required ?? [];
+
+    for (const key of required) {
+      if (!Object.prototype.hasOwnProperty.call(currentMapping, key)) {
+        errors.push({
+          severity: 'error',
+          stepPath: options.stepPath,
+          stepId: options.stepId,
+          code: 'MISSING_REQUIRED_MAPPING',
+          message: `Required field "${pathPrefix}.${key}" is not mapped in ${options.fieldName}`
+        });
+      }
+    }
+
+    for (const [key, propSchema] of Object.entries(properties)) {
+      if (!Object.prototype.hasOwnProperty.call(currentMapping, key)) continue;
+      const value = currentMapping[key];
+      if (!shouldRecurseIntoValue(value)) continue;
+      validateObject(propSchema, value, `${pathPrefix}.${key}`);
+    }
+  };
+
+  validateObject(rootSchema, rootMapping as Record<string, unknown>, options.fieldName);
+
+  return errors;
+}
+
 /**
  * Validate an InputMapping.
  *
@@ -213,6 +320,18 @@ export function validateInputMapping(
   }
 
   return result;
+}
+
+/**
+ * Validate required mappings against a JSON schema (deep required fields).
+ * Only enforces nested required fields when the parent is mapped as an object literal.
+ */
+export function validateInputMappingSchema(
+  mapping: InputMapping | undefined,
+  schema: JsonSchema | undefined,
+  options: MappingValidationOptions
+): PublishError[] {
+  return validateRequiredAgainstSchema(mapping, schema, options);
 }
 
 /**
