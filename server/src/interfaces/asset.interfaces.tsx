@@ -4,6 +4,7 @@ export interface AssetHistory {
   history_id: string;
   asset_id: string;
   changed_by: string;
+  changed_by_name?: string; // User's full name (first_name + last_name)
   change_type: string;
   changes: Record<string, unknown>;
   changed_at: string;
@@ -373,6 +374,12 @@ export interface CreateAssetAssociationRequest {
   asset_id: string;
   entity_id: string;
   entity_type: 'ticket' | 'project';
+  relationship_type: string;
+}
+
+export interface CreateAssetRelationshipRequest {
+  parent_asset_id: string;
+  child_asset_id: string;
   relationship_type: string;
 }
 

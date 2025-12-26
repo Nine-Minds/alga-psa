@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/Table';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
@@ -10,6 +10,11 @@ import { formatDateTime } from '../../../lib/utils/dateTimeUtils';
 import { Asset } from '../../../interfaces/asset.interfaces';
 import { QuickAddTicket } from '../../tickets/QuickAddTicket';
 import { cn } from 'server/src/lib/utils';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
+import { toast } from 'react-hot-toast';
 
 interface ServiceHistoryTabProps {
   asset: Asset;
@@ -18,6 +23,7 @@ interface ServiceHistoryTabProps {
 export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) => {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
+  const { openDrawer } = useDrawer();
   
   const { data: tickets, isLoading } = useSWR(
     asset.asset_id ? ['asset', asset.asset_id, 'tickets'] : null,
@@ -27,6 +33,52 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
   const handleTicketAdded = () => {
     mutate(['asset', asset.asset_id, 'tickets']);
   };
+
+  const handleTicketClick = useCallback(async (ticketId: string) => {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('User not authenticated');
+        return;
+      }
+
+      const ticketData = await getConsolidatedTicketData(ticketId, currentUser);
+      
+      if (!ticketData) {
+        toast.error('Failed to load ticket');
+        return;
+      }
+
+      openDrawer(
+        <TicketDetails
+          isInDrawer={true}
+          initialTicket={ticketData.ticket}
+          initialComments={ticketData.comments}
+          initialBoard={ticketData.board}
+          initialClient={ticketData.client}
+          initialContactInfo={ticketData.contactInfo}
+          initialCreatedByUser={ticketData.createdByUser}
+          initialAdditionalAgents={ticketData.additionalAgents}
+          initialAvailableAgents={ticketData.availableAgents}
+          initialUserMap={ticketData.userMap}
+          statusOptions={ticketData.options.status}
+          agentOptions={ticketData.options.agent}
+          boardOptions={ticketData.options.board}
+          priorityOptions={ticketData.options.priority}
+          initialCategories={ticketData.categories}
+          initialClients={ticketData.clients}
+          initialLocations={ticketData.locations}
+          currentUser={currentUser}
+        />,
+        undefined,
+        undefined,
+        '50vw'
+      );
+    } catch (error) {
+      console.error('Error opening ticket:', error);
+      toast.error('Failed to open ticket');
+    }
+  }, [openDrawer]);
 
   if (isLoading) {
     return <Card className="h-64 animate-pulse bg-gray-50" />;
@@ -63,7 +115,10 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
                 {tickets && tickets.length > 0 ? (
                   tickets.map((ticket) => (
                     <TableRow key={ticket.ticket_id}>
-                      <TableCell className="font-medium text-primary-600">
+                      <TableCell 
+                        className="font-medium text-primary-600 cursor-pointer hover:text-primary-700 hover:underline"
+                        onClick={() => handleTicketClick(ticket.ticket_id)}
+                      >
                         #{ticket.ticket_id.substring(0, 8)}
                       </TableCell>
                       <TableCell className="text-gray-900">{ticket.title}</TableCell>

@@ -33,7 +33,7 @@ export const AuditLogTab: React.FC<AuditLogTabProps> = ({ assetId }) => {
                   {record.change_type.charAt(0).toUpperCase() + record.change_type.slice(1)}
                 </h4>
                 <p className="text-sm text-gray-500">
-                  Changed by user {record.changed_by}
+                  Changed by {record.changed_by_name || `user ${record.changed_by}`}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {formatDateTime(new Date(record.changed_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}

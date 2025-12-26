@@ -19,6 +19,8 @@ export interface DrawerProps {
   reflectionChildren?: UIComponent[];
   hideCloseButton?: boolean;
   drawerVariant?: string;
+  /** Width of the drawer (e.g., '50vw', '50%', '600px'). Defaults to responsive fixed widths */
+  width?: string;
 }
 
 const Drawer: React.FC<DrawerProps & AutomationProps> = ({
@@ -29,14 +31,24 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
   id,
   reflectionChildren,
   hideCloseButton = false,
-  drawerVariant
+  drawerVariant,
+  width
 }) => {
+  // Determine width classes and styles based on width prop or default behavior
+  const widthClasses = width 
+    ? '' // Use inline style when width is specified
+    : `w-[90vw] sm:w-[520px] lg:w-[560px] max-w-[90vw] sm:max-w-[60vw]`;
+  
+  const widthStyle = width 
+    ? { width: width, maxWidth: width }
+    : undefined;
+
   // Always register drawer when mounted, but track open state
   const updateMetadata = useRegisterUIComponent<DrawerComponent>({
     type: 'drawer',
     id: id || '__skip_registration_drawer',
     open: isOpen,
-    width: isInDrawer ? '40%' : '50%',
+    width: width || (isInDrawer ? '40%' : '50%'),
     children: reflectionChildren
   });
   return (
@@ -49,7 +61,8 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
           onClick={() => onClose()} // Explicitly handle overlay clicks
         />
         <Dialog.Content 
-          className={`fixed inset-y-0 right-0 w-[90vw] sm:w-[520px] lg:w-[560px] max-w-[90vw] sm:max-w-[60vw] bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
+          className={`fixed inset-y-0 right-0 ${widthClasses} bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
+          style={widthStyle}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {/* Visually hidden title for accessibility */}

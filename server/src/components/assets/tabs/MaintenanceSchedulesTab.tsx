@@ -137,20 +137,22 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button
+                              id={`edit-maintenance-schedule-${schedule.schedule_id}`}
+                              variant="ghost"
                               size="xs"
-                              variant="secondary"
                               onClick={() => setEditingSchedule(schedule)}
-                              className="h-7 w-7 p-0"
+                              className="h-8 w-8 p-0"
                             >
-                              <Pencil size={14} />
+                              <Pencil size={16} />
                             </Button>
                             <Button
+                              id={`delete-maintenance-schedule-${schedule.schedule_id}`}
+                              variant="ghost"
                               size="xs"
-                              variant="secondary"
                               onClick={() => setDeletingSchedule(schedule)}
-                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={16} />
                             </Button>
                           </div>
                         </TableCell>

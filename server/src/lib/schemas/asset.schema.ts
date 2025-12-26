@@ -6,7 +6,7 @@ const assetClientInfoSchema = z.object({
   client_name: z.string()
 });
 
-const assetRelationshipSchema = z.object({
+export const assetRelationshipSchema = z.object({
   tenant: z.string().uuid(),
   parent_asset_id: z.string().uuid(),
   child_asset_id: z.string().uuid(),
@@ -14,6 +14,12 @@ const assetRelationshipSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   name: z.string()
+});
+
+export const createAssetRelationshipSchema = z.object({
+  parent_asset_id: z.string().uuid(),
+  child_asset_id: z.string().uuid(),
+  relationship_type: z.string().min(1)
 });
 
 // Extension table schemas

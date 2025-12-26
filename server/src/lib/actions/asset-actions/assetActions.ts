@@ -9,6 +9,7 @@ import {
     CreateMaintenanceScheduleRequest,
     UpdateMaintenanceScheduleRequest,
     CreateMaintenanceHistoryRequest,
+    CreateAssetRelationshipRequest,
     Asset,
     AssetListResponse,
     AssetAssociation,
@@ -18,6 +19,7 @@ import {
     AssetMaintenanceHistory,
     AssetMaintenanceReport,
     ClientMaintenanceSummary,
+    AssetRelationship,
     WorkstationAsset,
     NetworkDeviceAsset,
     ServerAsset,
@@ -48,7 +50,9 @@ import {
     assetMaintenanceHistorySchema,
     createMaintenanceHistorySchema,
     assetMaintenanceReportSchema,
-    clientMaintenanceSummarySchema
+    clientMaintenanceSummarySchema,
+    assetRelationshipSchema,
+    createAssetRelationshipSchema
 } from '../../schemas/asset.schema';
 import { getCurrentUser } from '../user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -504,12 +508,7 @@ export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
                 await upsertExtensionData(trx, tenant, asset.asset_id, data.asset_type, extensionData);
             }
 
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-                throw new Error('No user session found');
-            }
-
-            // Create history record
+            // Create history record using the currentUser from outer scope
             await trx('asset_history').insert({
                 tenant,
                 asset_id: asset.asset_id,
@@ -635,12 +634,7 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
                 await upsertExtensionData(trx, tenant, asset_id, nextAssetType, extensionData);
             }
 
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-                throw new Error('No user session found');
-            }
-
-            // Create history record
+            // Create history record using the currentUser from outer scope
             await trx('asset_history').insert({
                 tenant,
                 asset_id,
@@ -757,13 +751,42 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     // Get extension table data if applicable
     const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);
 
-    // Get relationships
-    const relationships = await knex('asset_relationships')
-        .where(function(this: Knex.QueryBuilder) {
-            this.where('parent_asset_id', asset_id)
-                .orWhere('child_asset_id', asset_id);
+    // Get relationships (include related asset name)
+    const rawRelationships = await knex('asset_relationships as ar')
+        .select(
+            'ar.*',
+            'parent.name as parent_name',
+            'child.name as child_name'
+        )
+        .leftJoin('assets as parent', function(this: Knex.JoinClause) {
+            this.on('ar.parent_asset_id', '=', 'parent.asset_id')
+                .andOn('ar.tenant', '=', 'parent.tenant');
         })
-        .andWhere({ tenant });
+        .leftJoin('assets as child', function(this: Knex.JoinClause) {
+            this.on('ar.child_asset_id', '=', 'child.asset_id')
+                .andOn('ar.tenant', '=', 'child.tenant');
+        })
+        .where('ar.tenant', tenant)
+        .andWhere(function(this: Knex.QueryBuilder) {
+            this.where('ar.parent_asset_id', asset_id)
+                .orWhere('ar.child_asset_id', asset_id);
+        });
+
+    const relationships = rawRelationships.map((rel: any): AssetRelationship => {
+        const created_at = rel.created_at instanceof Date ? rel.created_at.toISOString() : rel.created_at;
+        const updated_at = rel.updated_at instanceof Date ? rel.updated_at.toISOString() : rel.updated_at;
+        const name = asset_id === rel.parent_asset_id ? (rel.child_name ?? '') : (rel.parent_name ?? '');
+
+        return validateData(assetRelationshipSchema, {
+            tenant: rel.tenant,
+            parent_asset_id: rel.parent_asset_id,
+            child_asset_id: rel.child_asset_id,
+            relationship_type: rel.relationship_type,
+            created_at,
+            updated_at,
+            name
+        });
+    });
 
     // Transform the data
     const transformedAsset: Asset = {
@@ -780,6 +803,210 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     };
 
     return transformedAsset;
+}
+
+export async function getAssetRelationships(asset_id: string): Promise<AssetRelationship[]> {
+    // Get current user FIRST to ensure we have the user's tenant
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
+    }
+
+    // Check permission for asset reading
+    if (!await hasPermission(currentUser, 'asset', 'read')) {
+        throw new Error('Permission denied: Cannot read asset relationships');
+    }
+
+    // Get tenant context from DB (should match user's tenant)
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
+    }
+
+    const rawRelationships = await knex('asset_relationships as ar')
+        .select(
+            'ar.*',
+            'parent.name as parent_name',
+            'child.name as child_name'
+        )
+        .leftJoin('assets as parent', function(this: Knex.JoinClause) {
+            this.on('ar.parent_asset_id', '=', 'parent.asset_id')
+                .andOn('ar.tenant', '=', 'parent.tenant');
+        })
+        .leftJoin('assets as child', function(this: Knex.JoinClause) {
+            this.on('ar.child_asset_id', '=', 'child.asset_id')
+                .andOn('ar.tenant', '=', 'child.tenant');
+        })
+        .where('ar.tenant', tenant)
+        .andWhere(function(this: Knex.QueryBuilder) {
+            this.where('ar.parent_asset_id', asset_id)
+                .orWhere('ar.child_asset_id', asset_id);
+        })
+        .orderBy('ar.created_at', 'desc');
+
+    return rawRelationships.map((rel: any): AssetRelationship => {
+        const created_at = rel.created_at instanceof Date ? rel.created_at.toISOString() : rel.created_at;
+        const updated_at = rel.updated_at instanceof Date ? rel.updated_at.toISOString() : rel.updated_at;
+        const name = asset_id === rel.parent_asset_id ? (rel.child_name ?? '') : (rel.parent_name ?? '');
+
+        return validateData(assetRelationshipSchema, {
+            tenant: rel.tenant,
+            parent_asset_id: rel.parent_asset_id,
+            child_asset_id: rel.child_asset_id,
+            relationship_type: rel.relationship_type,
+            created_at,
+            updated_at,
+            name
+        });
+    });
+}
+
+export async function createAssetRelationship(data: CreateAssetRelationshipRequest): Promise<AssetRelationship> {
+    // Get current user FIRST to ensure we have the user's tenant
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
+    }
+
+    // Check permission for asset updating (relationships are an update operation)
+    if (!await hasPermission(currentUser, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot create asset relationships');
+    }
+
+    // Get tenant context from DB (should match user's tenant)
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
+    }
+
+    const validated = validateData(createAssetRelationshipSchema, data);
+
+    // Prevent self-link
+    if (validated.parent_asset_id === validated.child_asset_id) {
+        throw new Error('An asset cannot be related to itself');
+    }
+
+    const [row] = await knex('asset_relationships')
+        .insert({
+            tenant,
+            parent_asset_id: validated.parent_asset_id,
+            child_asset_id: validated.child_asset_id,
+            relationship_type: validated.relationship_type,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+        })
+        .returning('*');
+
+    // Hydrate name for response
+    const rel = await knex('asset_relationships as ar')
+        .select(
+            'ar.*',
+            'parent.name as parent_name',
+            'child.name as child_name'
+        )
+        .leftJoin('assets as parent', function(this: Knex.JoinClause) {
+            this.on('ar.parent_asset_id', '=', 'parent.asset_id')
+                .andOn('ar.tenant', '=', 'parent.tenant');
+        })
+        .leftJoin('assets as child', function(this: Knex.JoinClause) {
+            this.on('ar.child_asset_id', '=', 'child.asset_id')
+                .andOn('ar.tenant', '=', 'child.tenant');
+        })
+        .where({
+            'ar.tenant': tenant,
+            'ar.parent_asset_id': validated.parent_asset_id,
+            'ar.child_asset_id': validated.child_asset_id
+        })
+        .first();
+
+    if (!rel) {
+        throw new Error('Failed to create asset relationship');
+    }
+
+    const created_at = rel.created_at instanceof Date ? rel.created_at.toISOString() : rel.created_at;
+    const updated_at = rel.updated_at instanceof Date ? rel.updated_at.toISOString() : rel.updated_at;
+    const name = validated.parent_asset_id === rel.parent_asset_id ? (rel.child_name ?? '') : (rel.parent_name ?? '');
+
+    revalidatePath('/assets');
+    revalidatePath(`/assets/${validated.parent_asset_id}`);
+    revalidatePath(`/assets/${validated.child_asset_id}`);
+    revalidatePath('/msp/assets');
+    revalidatePath(`/msp/assets/${validated.parent_asset_id}`);
+    revalidatePath(`/msp/assets/${validated.child_asset_id}`);
+
+    return validateData(assetRelationshipSchema, {
+        tenant: rel.tenant,
+        parent_asset_id: rel.parent_asset_id,
+        child_asset_id: rel.child_asset_id,
+        relationship_type: rel.relationship_type,
+        created_at,
+        updated_at,
+        name
+    });
+}
+
+export async function deleteAssetRelationship(parent_asset_id: string, child_asset_id: string): Promise<void> {
+    // Get current user FIRST to ensure we have the user's tenant
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+        throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
+    }
+
+    // Check permission for asset updating (relationships are an update operation)
+    if (!await hasPermission(currentUser, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot delete asset relationships');
+    }
+
+    // Get tenant context from DB (should match user's tenant)
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
+    }
+
+    await knex('asset_relationships')
+        .where({
+            tenant,
+            parent_asset_id,
+            child_asset_id
+        })
+        .delete();
+
+    revalidatePath('/assets');
+    revalidatePath(`/assets/${parent_asset_id}`);
+    revalidatePath(`/assets/${child_asset_id}`);
+    revalidatePath('/msp/assets');
+    revalidatePath(`/msp/assets/${parent_asset_id}`);
+    revalidatePath(`/msp/assets/${child_asset_id}`);
 }
 
 export async function listAssets(params: AssetQueryParams): Promise<AssetListResponse> {
@@ -1532,12 +1759,26 @@ async function fetchAssetHistory(
     tenant: string,
     asset_id: string
 ): Promise<AssetHistory[]> {
-    const history = await db('asset_history')
-        .where({ tenant, asset_id })
-        .orderBy('changed_at', 'desc');
+    const history = await db('asset_history as ah')
+        .leftJoin('users as u', function() {
+            this.on('ah.changed_by', '=', 'u.user_id')
+                .andOn('ah.tenant', '=', 'u.tenant');
+        })
+        .where({ 'ah.tenant': tenant, 'ah.asset_id': asset_id })
+        .select(
+            'ah.*',
+            db.raw("CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as changed_by_name")
+        )
+        .orderBy('ah.changed_at', 'desc');
 
     return history.map((record): AssetHistory => ({
-        ...record,
+        tenant: record.tenant,
+        history_id: record.history_id,
+        asset_id: record.asset_id,
+        changed_by: record.changed_by,
+        changed_by_name: record.changed_by_name?.trim() || undefined,
+        change_type: record.change_type,
+        changes: record.changes,
         changed_at: typeof record.changed_at === 'string'
             ? record.changed_at
             : new Date(record.changed_at).toISOString()
