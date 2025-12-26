@@ -38,9 +38,41 @@ check_tag_exists() {
   fi
 }
 
+# Function to find the latest release tag with a valid image
+find_release_tag() {
+  echo -e "${BLUE}→${NC} Searching for release tags..." >&2
+
+  cd "${ROOT_DIR}"
+
+  # Get release tags sorted by version (newest first)
+  local release_tags=($(git tag -l 'release/*' --sort=-v:refname 2>/dev/null))
+
+  if [[ ${#release_tags[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}⚠${NC}  No release tags found" >&2
+    return 1
+  fi
+
+  # Check each release tag for a valid image (limit to first 5)
+  local count=0
+  for tag in "${release_tags[@]}"; do
+    if [[ $count -ge 5 ]]; then
+      break
+    fi
+    echo -e "${BLUE}→${NC} Trying release tag ${tag}..." >&2
+    if check_tag_exists "${tag}"; then
+      echo -e "${GREEN}✓${NC} Found valid release tag: ${tag}" >&2
+      echo "${tag}"
+      return 0
+    fi
+    ((count++))
+  done
+
+  return 1
+}
+
 # Function to find a valid tag from recent commits
-find_valid_tag() {
-  echo -e "${YELLOW}⚠${NC}  Tag not found in registry. Searching recent commits for a valid tag..." >&2
+find_valid_commit_tag() {
+  echo -e "${YELLOW}⚠${NC}  No release tags available. Searching recent commits for a valid tag..." >&2
 
   cd "${ROOT_DIR}"
   local commits=($(git rev-list HEAD -n ${MAX_FALLBACK_ATTEMPTS} --abbrev-commit --abbrev=8))
@@ -58,47 +90,60 @@ find_valid_tag() {
 }
 
 # Determine the image tag to use.
-# Priority: existing ALGA_IMAGE_TAG env var > short SHA > release tag fallback
+# Priority: ALGA_IMAGE_TAG env var > release tag > current commit SHA > recent commit fallback
+
+tag=""
 
 if [[ -n "${ALGA_IMAGE_TAG:-}" ]]; then
   tag="${ALGA_IMAGE_TAG}"
   echo -e "${BLUE}→${NC} Using ALGA_IMAGE_TAG from environment: ${tag}" >&2
-else
-  cd "${ROOT_DIR}"
-  if git describe --exact-match --tags >/tmp/git_tag 2>/dev/null; then
-    tag="$(cat /tmp/git_tag)"
-    echo -e "${BLUE}→${NC} Using release tag: ${tag}" >&2
-  else
-    tag="$(git rev-parse --short=8 HEAD)"
-    echo -e "${BLUE}→${NC} Using short commit SHA: ${tag}" >&2
-  fi
-fi
 
-# Validate that the tag exists in the registry
-if ! check_tag_exists "${tag}"; then
-  echo -e "${RED}✗${NC} Tag '${tag}' not found in registry: ${REGISTRY}" >&2
-
-  if [[ -n "${LAST_CHECK_ERROR}" ]]; then
-    echo -e "${YELLOW}ℹ${NC}  docker manifest inspect failed with:" >&2
-    while IFS= read -r line; do
-      echo -e "      ${line}" >&2
-    done <<<"${LAST_CHECK_ERROR}"
-  fi
-
-  if valid_tag=$(find_valid_tag); then
-    tag="${valid_tag}"
-    echo -e "${GREEN}✓${NC} Falling back to valid tag: ${tag}" >&2
-  else
-    echo -e "${RED}✗${NC} Could not find any valid tags in the last ${MAX_FALLBACK_ATTEMPTS} commits" >&2
-    echo -e "${YELLOW}ℹ${NC}  Possible solutions:" >&2
-    echo -e "   1. Wait for CI/CD to build and publish the image" >&2
-    echo -e "   2. Build the image locally with: nu main.nu build-ai-web --local --push" >&2
-    echo -e "   3. Checkout a commit with a published image" >&2
-    echo -e "   4. Set ALGA_IMAGE_TAG environment variable to a known good tag" >&2
+  # Validate the explicitly set tag
+  if ! check_tag_exists "${tag}"; then
+    echo -e "${RED}✗${NC} Specified tag '${tag}' not found in registry: ${REGISTRY}" >&2
+    if [[ -n "${LAST_CHECK_ERROR}" ]]; then
+      echo -e "${YELLOW}ℹ${NC}  docker manifest inspect failed with:" >&2
+      while IFS= read -r line; do
+        echo -e "      ${line}" >&2
+      done <<<"${LAST_CHECK_ERROR}"
+    fi
     exit 1
   fi
-else
   echo -e "${GREEN}✓${NC} Tag '${tag}' exists in registry" >&2
+else
+  cd "${ROOT_DIR}"
+
+  # First, try to find a release tag with a valid image
+  echo -e "${BLUE}→${NC} Looking for release tags with published images..." >&2
+  if release_tag=$(find_release_tag); then
+    tag="${release_tag}"
+    echo -e "${GREEN}✓${NC} Using release tag: ${tag}" >&2
+  else
+    # Fall back to current commit SHA
+    current_sha="$(git rev-parse --short=8 HEAD)"
+    echo -e "${BLUE}→${NC} Trying current commit SHA: ${current_sha}" >&2
+
+    if check_tag_exists "${current_sha}"; then
+      tag="${current_sha}"
+      echo -e "${GREEN}✓${NC} Using current commit SHA: ${tag}" >&2
+    else
+      echo -e "${YELLOW}⚠${NC}  Current commit SHA not found in registry" >&2
+
+      # Last resort: search recent commits
+      if valid_tag=$(find_valid_commit_tag); then
+        tag="${valid_tag}"
+        echo -e "${GREEN}✓${NC} Falling back to recent commit tag: ${tag}" >&2
+      else
+        echo -e "${RED}✗${NC} Could not find any valid image tags" >&2
+        echo -e "${YELLOW}ℹ${NC}  Possible solutions:" >&2
+        echo -e "   1. Wait for CI/CD to build and publish the image" >&2
+        echo -e "   2. Build the image locally with: nu main.nu build-ai-web --local --push" >&2
+        echo -e "   3. Checkout a commit with a published image" >&2
+        echo -e "   4. Set ALGA_IMAGE_TAG environment variable to a known good tag" >&2
+        exit 1
+      fi
+    fi
+  fi
 fi
 
 cat >"${TAG_FILE}" <<EOF
