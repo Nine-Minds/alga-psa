@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Droppable } from '@hello-pangea/dnd';
 import ReactFlow, {
   Background,
   Controls,
@@ -16,6 +17,7 @@ import 'reactflow/dist/style.css';
 
 import { buildWorkflowGraph, type WorkflowGraphNodeData } from './buildWorkflowGraph';
 import { getStepTypeColor, getStepTypeIcon } from '../workflow-designer/pipeline/PipelineComponents';
+import { Plus } from 'lucide-react';
 
 type WorkflowGraphProps<TStep> = {
   steps: TStep[];
@@ -24,6 +26,9 @@ type WorkflowGraphProps<TStep> = {
   statusByStepId?: Map<string, string>;
   selectedStepId?: string | null;
   onSelectStepId?: (stepId: string) => void;
+  editable?: boolean;
+  rootPipePath?: string;
+  onRequestInsertAt?: (pipePath: string, index: number) => void;
   className?: string;
 };
 
@@ -124,10 +129,56 @@ const StepNode: React.FC<{ data: WorkflowGraphNodeData; selected?: boolean }> = 
   );
 };
 
+const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
+  const pipePath = data.pipePath ?? 'root';
+  const insertIndex = data.insertIndex ?? 0;
+  const droppableId = `insert:${pipePath}:${insertIndex}`;
+
+  return (
+    <Droppable droppableId={droppableId}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          data-pipe-path={pipePath}
+          onClick={(event) => {
+            event.stopPropagation();
+            data.onRequestInsert?.(pipePath, insertIndex);
+          }}
+          className={[
+            'flex items-center justify-center',
+            'rounded-md border shadow-sm bg-white',
+            snapshot.isDraggingOver ? 'border-primary-400 ring-2 ring-primary-200' : 'border-gray-200',
+            'cursor-copy'
+          ].join(' ')}
+          style={{ width: 30, height: 30 }}
+          title="Drop a step here to insert"
+        >
+          <Handle
+            id="in"
+            type="target"
+            position={Position.Top}
+            style={{ opacity: 0, pointerEvents: 'none' }}
+          />
+          <Handle
+            id="out"
+            type="source"
+            position={Position.Bottom}
+            style={{ opacity: 0, pointerEvents: 'none' }}
+          />
+          <Plus className="h-4 w-4 text-gray-500" />
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
+  );
+};
+
 const nodeTypes: NodeTypes = {
   workflowStart: StartNode,
   workflowJoin: JoinNode,
-  workflowStep: StepNode
+  workflowStep: StepNode,
+  workflowInsert: InsertNode
 };
 
 export default function WorkflowGraph<TStep extends { id: string; type: string }>(props: WorkflowGraphProps<TStep>) {
@@ -138,6 +189,9 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     statusByStepId,
     selectedStepId,
     onSelectStepId,
+    editable = false,
+    rootPipePath = 'root',
+    onRequestInsertAt,
     className
   } = props;
 
@@ -192,7 +246,9 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
       try {
         const graph = await buildWorkflowGraph(steps as any, {
           getLabel: (step) => getLabelRef.current(step as any),
-          getSubtitle: getSubtitleRef.current ? (step) => getSubtitleRef.current?.(step as any) : undefined
+          getSubtitle: getSubtitleRef.current ? (step) => getSubtitleRef.current?.(step as any) : undefined,
+          includeInsertions: editable,
+          getPipePathForRoot: () => rootPipePath
         });
         if (cancelled) return;
         setNodes(graph.nodes);
@@ -212,7 +268,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     return () => {
       cancelled = true;
     };
-  }, [steps]);
+  }, [editable, rootPipePath, steps]);
 
   useEffect(() => {
     if (loading) return;
@@ -230,11 +286,15 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
       const status = stepId ? statusMap.get(stepId) ?? null : null;
       return {
         ...node,
-        data: { ...(node.data as WorkflowGraphNodeData), status },
+        data: {
+          ...(node.data as WorkflowGraphNodeData),
+          status,
+          onRequestInsert: (node.data as WorkflowGraphNodeData).kind === 'insert' ? onRequestInsertAt ?? null : null
+        },
         selected: Boolean(stepId && selectedStepId && stepId === selectedStepId)
       };
     });
-  }, [nodes, selectedStepId, statusMap]);
+  }, [nodes, onRequestInsertAt, selectedStepId, statusMap]);
 
   if (loading) {
     return (

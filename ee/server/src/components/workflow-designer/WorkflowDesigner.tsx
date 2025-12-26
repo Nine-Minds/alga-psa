@@ -1078,14 +1078,15 @@ const createStepFromPalette = (
   nodeRegistry: Record<string, NodeRegistryItem>
 ): Step => {
   const id = uuidv4();
+  const createReturnStep = (): ReturnStep => ({ id: uuidv4(), type: 'control.return' });
 
   if (type === 'control.if') {
     return {
       id,
       type: 'control.if',
       condition: { $expr: '' },
-      then: [],
-      else: []
+      then: [createReturnStep()],
+      else: [createReturnStep()]
     } satisfies IfBlock;
   }
 
@@ -1104,8 +1105,8 @@ const createStepFromPalette = (
     return {
       id,
       type: 'control.tryCatch',
-      try: [],
-      catch: []
+      try: [createReturnStep()],
+      catch: [createReturnStep()]
     } satisfies TryCatchBlock;
   }
 
@@ -1683,6 +1684,19 @@ const WorkflowDesigner: React.FC = () => {
     const hoverTarget = hoveredPipePathRef.current;
     hoveredPipePathRef.current = null;
 
+    const parseInsertDroppableId = (droppableId: string): { pipePath: string; index: number } | null => {
+      if (!droppableId.startsWith('insert:')) return null;
+      // Format: insert:<pipePath>:<index>
+      const rest = droppableId.slice('insert:'.length);
+      const lastColon = rest.lastIndexOf(':');
+      if (lastColon <= 0) return null;
+      const pipePath = rest.slice(0, lastColon);
+      const indexStr = rest.slice(lastColon + 1);
+      const index = Number(indexStr);
+      if (!Number.isFinite(index)) return null;
+      return { pipePath, index };
+    };
+
     // PPD - Handle palette-to-pipeline drops
     if (draggingFromPalette) {
       setDraggingFromPalette(null);
@@ -1690,8 +1704,10 @@ const WorkflowDesigner: React.FC = () => {
       if (!activeDefinition) return;
 
       // Get destination pipe from result or hover target
-      const destinationPipe = result.destination?.droppableId.replace('pipe:', '') ?? null;
-      const resolvedDestPipe = destinationPipe ?? hoverTarget;
+      const destinationId = result.destination?.droppableId ?? null;
+      const insertTarget = destinationId ? parseInsertDroppableId(destinationId) : null;
+      const destinationPipe = destinationId?.startsWith('pipe:') ? destinationId.replace('pipe:', '') : null;
+      const resolvedDestPipe = insertTarget?.pipePath ?? destinationPipe ?? hoverTarget;
 
       if (!resolvedDestPipe) return;
 
@@ -1716,7 +1732,7 @@ const WorkflowDesigner: React.FC = () => {
       // Insert at destination
       const destSegments = parsePipePath(resolvedDestPipe);
       const destSteps = [...getStepsAtPath(activeDefinition.steps as Step[], destSegments)];
-      const insertIndex = result.destination?.index ?? destSteps.length;
+      const insertIndex = insertTarget?.index ?? result.destination?.index ?? destSteps.length;
       destSteps.splice(insertIndex, 0, newStep);
 
       const updatedSteps = updateStepsAtPath(activeDefinition.steps as Step[], destSegments, destSteps);
@@ -1729,13 +1745,19 @@ const WorkflowDesigner: React.FC = () => {
     if (!activeDefinition) return;
 
     const sourcePipe = result.source.droppableId.replace('pipe:', '');
-    const destinationPipe = result.destination?.droppableId.replace('pipe:', '') ?? null;
+    const destinationId = result.destination?.droppableId ?? null;
+    const insertTarget = destinationId ? parseInsertDroppableId(destinationId) : null;
+    const destinationPipe = destinationId?.startsWith('pipe:') ? destinationId.replace('pipe:', '') : null;
 
     let resolvedDestPipe = destinationPipe;
     if (!resolvedDestPipe || resolvedDestPipe === sourcePipe) {
       if (hoverTarget && hoverTarget !== sourcePipe) {
         resolvedDestPipe = hoverTarget;
       }
+    }
+
+    if (insertTarget) {
+      resolvedDestPipe = insertTarget.pipePath;
     }
 
     if (!resolvedDestPipe) return;
@@ -1760,10 +1782,11 @@ const WorkflowDesigner: React.FC = () => {
     const [moved] = sourceSteps.splice(result.source.index, 1);
     let updated = updateStepsAtPath(activeDefinition.steps as Step[], sourceSegments, sourceSteps);
     const destSteps = [...getStepsAtPath(updated, destSegments)];
-    const insertIndex =
+    const insertIndex = insertTarget?.index ?? (
       destinationPipe && destinationPipe === resolvedDestPipe && result.destination
         ? result.destination.index
-        : destSteps.length;
+        : destSteps.length
+    );
     destSteps.splice(insertIndex, 0, moved);
     updated = updateStepsAtPath(updated, destSegments, destSteps);
     setActiveDefinition({ ...activeDefinition, steps: updated });
@@ -2092,6 +2115,9 @@ const WorkflowDesigner: React.FC = () => {
                         getSubtitle={(step) => (step as Step).type}
                         selectedStepId={selectedStepId}
                         onSelectStepId={setSelectedStepId}
+                        editable
+                        rootPipePath="root"
+                        onRequestInsertAt={handleInsertStep}
                         className="h-full"
                       />
                     </div>
