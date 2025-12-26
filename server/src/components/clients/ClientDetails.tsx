@@ -59,6 +59,7 @@ import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import ClientSurveySummaryCard from 'server/src/components/surveys/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from 'server/src/interfaces/survey.interface';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 
 const SwitchDetailItem: React.FC<{
@@ -1443,16 +1444,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                     )}
                   </ul>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                  <p className="text-blue-800">
-                    <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
-                  </p>
-                  {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                    <p className="text-blue-800 mt-2">
-                      Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
-                    </p>
-                  )}
-                </div>
+                <Alert variant="info">
+                  <AlertDescription>
+                    <strong>Alternative Option:</strong> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <p className="mt-2">
+                        Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
               </div>
             ) : deleteError ? (
               deleteError
