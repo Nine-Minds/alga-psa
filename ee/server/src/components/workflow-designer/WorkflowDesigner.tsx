@@ -39,6 +39,7 @@ import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
 import WorkflowRunDialog from './WorkflowRunDialog';
+import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
@@ -1166,9 +1167,25 @@ const WorkflowDesigner: React.FC = () => {
     failureRateMinRuns: string;
   } | null>(null);
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+  const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
 
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
   const router = useRouter();
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('workflow-designer:steps-view');
+      if (stored === 'list' || stored === 'graph') {
+        setStepsViewMode(stored);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('workflow-designer:steps-view', stepsViewMode);
+    } catch {}
+  }, [stepsViewMode]);
 
   const stepPathMap = useMemo(() => {
     return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
@@ -1284,20 +1301,20 @@ const WorkflowDesigner: React.FC = () => {
     [canManage, canAdmin, activeWorkflowRecord]
   );
 
-  const loadDefinitions = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await listWorkflowDefinitionsAction();
-      const nextDefinitions = data ?? [];
-      setDefinitions(nextDefinitions);
-      if (nextDefinitions.length > 0) {
-        const record = nextDefinitions[0] as WorkflowDefinitionRecord;
-        setActiveDefinition((current) => current ?? record.draft_definition);
-        setActiveWorkflowId((current) => current ?? record.workflow_id);
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
-    } finally {
+	  const loadDefinitions = useCallback(async () => {
+	    setIsLoading(true);
+	    try {
+	      const data = await listWorkflowDefinitionsAction();
+	      const nextDefinitions = (data ?? []) as unknown as WorkflowDefinitionRecord[];
+	      setDefinitions(nextDefinitions);
+	      if (nextDefinitions.length > 0) {
+	        const record = nextDefinitions[0];
+	        setActiveDefinition((current) => current ?? record.draft_definition);
+	        setActiveWorkflowId((current) => current ?? record.workflow_id);
+	      }
+	    } catch (error) {
+	      toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
+	    } finally {
       setIsLoading(false);
     }
   }, []);
@@ -2039,27 +2056,62 @@ const WorkflowDesigner: React.FC = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h2 className="text-lg font-semibold text-gray-900">Workflow Steps</h2>
-                      <p className="text-sm text-gray-500">Drag steps to reorder or move between pipes.</p>
+                      <p className="text-sm text-gray-500">
+                        {stepsViewMode === 'list'
+                          ? 'Drag steps to reorder or move between pipes.'
+                          : 'Pan/zoom the graph. Branches render as separate lanes.'}
+                      </p>
                     </div>
-                    {publishWarnings.length > 0 && (
-                      <Badge className="bg-yellow-100 text-yellow-800">{publishWarnings.length} warnings</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        id="workflow-steps-view-list"
+                        variant={stepsViewMode === 'list' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setStepsViewMode('list')}
+                      >
+                        List
+                      </Button>
+                      <Button
+                        id="workflow-steps-view-graph"
+                        variant={stepsViewMode === 'graph' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setStepsViewMode('graph')}
+                      >
+                        Graph
+                      </Button>
+                      {publishWarnings.length > 0 && (
+                        <Badge className="bg-yellow-100 text-yellow-800">{publishWarnings.length} warnings</Badge>
+                      )}
+                    </div>
                   </div>
-                  <Pipe
-                    steps={activeDefinition?.steps ?? []}
-                    pipePath="root"
-                    stepPathPrefix="root"
-                    selectedStepId={selectedStepId}
-                    onSelectStep={setSelectedStepId}
-                    onDeleteStep={handleDeleteStep}
-                    onSelectPipe={handlePipeSelect}
-                    onPipeHover={handlePipeHover}
-                    onInsertStep={(index) => handleInsertStep('root', index)}
-                    onInsertAtPath={handleInsertStep}
-                    nodeRegistry={nodeRegistryMap}
-                    errorMap={errorsByStepId}
-                    isRoot={true}
-                  />
+                  {stepsViewMode === 'graph' ? (
+                    <div className="h-[650px] rounded border border-gray-200 bg-white overflow-hidden">
+                      <WorkflowGraph
+                        steps={(activeDefinition?.steps ?? []) as Step[]}
+                        getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap)}
+                        getSubtitle={(step) => (step as Step).type}
+                        selectedStepId={selectedStepId}
+                        onSelectStepId={setSelectedStepId}
+                        className="h-full"
+                      />
+                    </div>
+                  ) : (
+                    <Pipe
+                      steps={activeDefinition?.steps ?? []}
+                      pipePath="root"
+                      stepPathPrefix="root"
+                      selectedStepId={selectedStepId}
+                      onSelectStep={setSelectedStepId}
+                      onDeleteStep={handleDeleteStep}
+                      onSelectPipe={handlePipeSelect}
+                      onPipeHover={handlePipeHover}
+                      onInsertStep={(index) => handleInsertStep('root', index)}
+                      onInsertAtPath={handleInsertStep}
+                      nodeRegistry={nodeRegistryMap}
+                      errorMap={errorsByStepId}
+                      isRoot={true}
+                    />
+                  )}
                 </div>
               </div>
             </div>

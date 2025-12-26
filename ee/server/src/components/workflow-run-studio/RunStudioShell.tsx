@@ -22,6 +22,7 @@ import {
   replayWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import type { WorkflowDefinition, Step } from '@shared/workflow/runtime';
 import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime';
 import {
@@ -39,6 +40,7 @@ type WorkflowRunRecord = {
   status: string;
   node_path?: string | null;
   event_type?: string | null;
+  input_json?: Record<string, unknown> | null;
   resume_event_name?: string | null;
   started_at: string;
   updated_at: string;
@@ -171,6 +173,22 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const [polling, setPolling] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [now, setNow] = useState<Date>(new Date());
+  const [pipelineViewMode, setPipelineViewMode] = useState<'graph' | 'list'>('graph');
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('workflow-run-studio:pipeline-view');
+      if (stored === 'graph' || stored === 'list') {
+        setPipelineViewMode(stored);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('workflow-run-studio:pipeline-view', pipelineViewMode);
+    } catch {}
+  }, [pipelineViewMode]);
 
   const fetchRun = async () => {
     setLoading(true);
@@ -268,6 +286,14 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     }
     return map;
   }, [steps]);
+
+  const stepStatusById = useMemo(() => {
+    const map = new Map<string, string>();
+    stepStatusMap.forEach((record, stepId) => {
+      map.set(stepId, record.status);
+    });
+    return map;
+  }, [stepStatusMap]);
 
   const orderedSteps = useMemo(() => {
     if (!definition?.steps) return [] as Step[];
@@ -744,19 +770,25 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             </Link>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className={badgeClass}>{status}</Badge>
-          <Button variant="outline" size="sm" onClick={openReplay} disabled={!canReplay}>
-            Replay
-          </Button>
-          <Button variant="outline" size="sm" onClick={openCancel} disabled={!canCancel}>
-            Cancel
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => { fetchRun(); fetchStepsAndLogs(); }} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading || polling ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </div>
+	        <div className="flex items-center gap-2">
+	          <Badge className={badgeClass}>{status}</Badge>
+	          <Button id="workflow-run-replay" variant="outline" size="sm" onClick={openReplay} disabled={!canReplay}>
+	            Replay
+	          </Button>
+	          <Button id="workflow-run-cancel" variant="outline" size="sm" onClick={openCancel} disabled={!canCancel}>
+	            Cancel
+	          </Button>
+	          <Button
+	            id="workflow-run-refresh"
+	            variant="outline"
+	            size="sm"
+	            onClick={() => { fetchRun(); fetchStepsAndLogs(); }}
+	            disabled={loading}
+	          >
+	            <RefreshCw className={`h-4 w-4 ${loading || polling ? 'animate-spin' : ''}`} />
+	          </Button>
+	        </div>
+	      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
         <Card className="lg:col-span-2 p-4 flex flex-col min-h-[420px]">
@@ -772,22 +804,62 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           )}
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-semibold text-gray-800">Execution Pipeline</div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-cyan-500" />Running</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />Succeeded</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-500" />Retrying</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Failed</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-500" />Pending</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-cyan-500" />Running</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />Succeeded</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-500" />Retrying</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Failed</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-500" />Pending</span>
+              </div>
+	              <div className="flex items-center gap-2">
+	                <Button
+	                  id="workflow-run-pipeline-view-graph"
+	                  variant={pipelineViewMode === 'graph' ? 'default' : 'outline'}
+	                  size="sm"
+	                  onClick={() => setPipelineViewMode('graph')}
+	                >
+	                  Graph
+	                </Button>
+	                <Button
+	                  id="workflow-run-pipeline-view-list"
+	                  variant={pipelineViewMode === 'list' ? 'default' : 'outline'}
+	                  size="sm"
+	                  onClick={() => setPipelineViewMode('list')}
+	                >
+	                  List
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="flex-1 overflow-auto space-y-2">
-            {orderedSteps.length === 0 && (
-              <div className="rounded border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
-                {loading ? 'Loading workflow definition...' : 'No steps to display.'}
-              </div>
-            )}
-            {orderedSteps.length > 0 && renderPipe(orderedSteps, 'root', true)}
-          </div>
+          {pipelineViewMode === 'graph' ? (
+            <div className="flex-1 overflow-hidden rounded border border-gray-200 bg-white">
+              {orderedSteps.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-gray-500">
+                  {loading ? 'Loading workflow definition…' : 'No steps to display.'}
+                </div>
+              ) : (
+                <WorkflowGraph
+                  steps={orderedSteps}
+                  getLabel={(step) => getStepLabel(step as Step)}
+                  getSubtitle={(step) => (step as Step).type}
+                  statusByStepId={stepStatusById}
+                  selectedStepId={selectedStepId}
+                  onSelectStepId={setSelectedStepId}
+                  className="h-full"
+                />
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto space-y-2">
+              {orderedSteps.length === 0 && (
+                <div className="rounded border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
+                  {loading ? 'Loading workflow definition...' : 'No steps to display.'}
+                </div>
+              )}
+              {orderedSteps.length > 0 && renderPipe(orderedSteps, 'root', true)}
+            </div>
+          )}
         </Card>
         <Card className="p-4 flex flex-col min-h-[420px]">
           <div className="text-sm font-semibold text-gray-800 mb-2">Run Details</div>
@@ -899,11 +971,16 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                         <div className="font-medium text-gray-800">{entry.label}</div>
                         <div className="font-mono text-[10px] text-gray-400">{entry.stepPath}</div>
                       </div>
-                      {entry.stepId && (
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedStepId(entry.stepId!)}>
-                          Jump
-                        </Button>
-                      )}
+	                      {entry.stepId && (
+	                        <Button
+	                          id={`workflow-run-timeline-jump-${entry.stepId ?? index}`}
+	                          variant="ghost"
+	                          size="sm"
+	                          onClick={() => setSelectedStepId(entry.stepId!)}
+	                        >
+	                          Jump
+	                        </Button>
+	                      )}
                     </div>
                     {entry.attempts.map((attempt) => {
                       const duration = attempt.completed_at
@@ -924,11 +1001,16 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                         <div className="font-medium text-gray-800">Wait · {entry.waitType}</div>
                         <div className="font-mono text-[10px] text-gray-400">{entry.stepPath}</div>
                       </div>
-                      {entry.stepId && (
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedStepId(entry.stepId!)}>
-                          Jump
-                        </Button>
-                      )}
+	                      {entry.stepId && (
+	                        <Button
+	                          id={`workflow-run-timeline-jump-${entry.stepId ?? index}`}
+	                          variant="ghost"
+	                          size="sm"
+	                          onClick={() => setSelectedStepId(entry.stepId!)}
+	                        >
+	                          Jump
+	                        </Button>
+	                      )}
                     </div>
                     <div className="text-[11px] text-gray-500">
                       Status: {entry.status}
@@ -955,21 +1037,27 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               placeholder="Search message or step path"
             />
             <div className="flex flex-wrap gap-2">
-              {['ERROR', 'WARN', 'INFO', 'DEBUG'].map((level) => (
-                <Button
-                  key={level}
-                  variant={logLevelFilters.includes(level) ? 'primary' : 'outline'}
-                  size="sm"
-                  onClick={() => toggleLogLevel(level)}
-                >
-                  {level}
-                </Button>
-              ))}
-              {logLevelFilters.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setLogLevelFilters([])}>
-                  Clear
-                </Button>
-              )}
+	              {['ERROR', 'WARN', 'INFO', 'DEBUG'].map((level) => (
+	                <Button
+	                  key={level}
+	                  id={`workflow-run-log-level-${level}`}
+	                  variant={logLevelFilters.includes(level) ? 'default' : 'outline'}
+	                  size="sm"
+	                  onClick={() => toggleLogLevel(level)}
+	                >
+	                  {level}
+	                </Button>
+	              ))}
+	              {logLevelFilters.length > 0 && (
+	                <Button
+	                  id="workflow-run-log-level-clear"
+	                  variant="ghost"
+	                  size="sm"
+	                  onClick={() => setLogLevelFilters([])}
+	                >
+	                  Clear
+	                </Button>
+	              )}
             </div>
           </div>
           <div className="flex-1 overflow-auto rounded border border-gray-200 bg-white">
@@ -1036,15 +1124,16 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             )}
           </div>
 
-          <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setRunActionMode(null)}>
-              Close
-            </Button>
-            <Button
-              onClick={handleRunActionConfirm}
-              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
-            >
-              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
+	          <div className="mt-6 flex justify-end gap-2">
+	            <Button id="workflow-run-action-close" variant="outline" onClick={() => setRunActionMode(null)}>
+	              Close
+	            </Button>
+	            <Button
+	              id="workflow-run-action-confirm"
+	              onClick={handleRunActionConfirm}
+	              disabled={!actionReasonValid || isSubmittingAction || (runActionMode === 'replay' && !!replayPayloadError)}
+	            >
+	              {isSubmittingAction ? 'Working...' : runActionMode === 'cancel' ? 'Confirm Cancel' : 'Start Replay'}
             </Button>
           </div>
         </DialogContent>
