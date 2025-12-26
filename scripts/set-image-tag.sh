@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 # Registry configuration
 REGISTRY="ghcr.io/nine-minds/alga-psa-ce"
 MAX_FALLBACK_ATTEMPTS=10
+MAX_RELEASE_BRANCH_ATTEMPTS=30
 
 LAST_CHECK_ERROR=""
 
@@ -70,12 +71,19 @@ find_release_tag() {
   return 1
 }
 
-# Function to find a valid tag from recent commits
-find_valid_commit_tag() {
-  echo -e "${YELLOW}⚠${NC}  No release tags available. Searching recent commits for a valid tag..." >&2
+# Function to find a valid tag from recent commits on a given branch
+find_valid_commit_tag_on_branch() {
+  local branch="$1"
+  local description="$2"
+  local max_attempts="${3:-$MAX_FALLBACK_ATTEMPTS}"
+  echo -e "${BLUE}→${NC} Searching ${description} for a valid image tag..." >&2
 
   cd "${ROOT_DIR}"
-  local commits=($(git rev-list HEAD -n ${MAX_FALLBACK_ATTEMPTS} --abbrev-commit --abbrev=8))
+  local commits=($(git rev-list "${branch}" -n ${max_attempts} --abbrev-commit --abbrev=8 2>/dev/null))
+
+  if [[ ${#commits[@]} -eq 0 ]]; then
+    return 1
+  fi
 
   for commit in "${commits[@]}"; do
     echo -e "${BLUE}→${NC} Trying commit ${commit}..." >&2
@@ -89,8 +97,49 @@ find_valid_commit_tag() {
   return 1
 }
 
+# Function to find a valid tag from recent commits (current branch)
+find_valid_commit_tag() {
+  find_valid_commit_tag_on_branch "HEAD" "recent commits"
+}
+
+# Function to find the latest release branch and search for valid images
+find_release_branch_tag() {
+  echo -e "${BLUE}→${NC} Looking for latest release branch..." >&2
+
+  cd "${ROOT_DIR}"
+
+  # Get release branches sorted by version (newest first)
+  # Format: release/0.15.0, release/0.14.0, etc.
+  local release_branches=($(git branch -r --list 'origin/release/*' | sed 's|origin/||' | sort -t. -k1,1rn -k2,2rn -k3,3rn 2>/dev/null))
+
+  if [[ ${#release_branches[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}⚠${NC}  No release branches found" >&2
+    return 1
+  fi
+
+  # Try each release branch (limit to first 3)
+  local count=0
+  for branch in "${release_branches[@]}"; do
+    if [[ $count -ge 3 ]]; then
+      break
+    fi
+
+    # Trim whitespace
+    branch=$(echo "${branch}" | xargs)
+
+    echo -e "${BLUE}→${NC} Checking release branch: ${branch}" >&2
+    if valid_tag=$(find_valid_commit_tag_on_branch "origin/${branch}" "release branch ${branch}" "${MAX_RELEASE_BRANCH_ATTEMPTS}"); then
+      echo "${valid_tag}"
+      return 0
+    fi
+    ((count++))
+  done
+
+  return 1
+}
+
 # Determine the image tag to use.
-# Priority: ALGA_IMAGE_TAG env var > release tag > current commit SHA > recent commit fallback
+# Priority: ALGA_IMAGE_TAG env var > release tag > current commit SHA > release branch > recent commits > latest
 
 tag=""
 
@@ -129,10 +178,19 @@ else
     else
       echo -e "${YELLOW}⚠${NC}  Current commit SHA not found in registry" >&2
 
-      # Last resort: search recent commits
-      if valid_tag=$(find_valid_commit_tag); then
+      # Try to find an image from the latest release branch (e.g., release/0.15.0)
+      # This ensures users get the same version running in production
+      if valid_tag=$(find_release_branch_tag); then
+        tag="${valid_tag}"
+        echo -e "${GREEN}✓${NC} Using image from release branch: ${tag}" >&2
+      # Fall back to searching recent commits on current branch
+      elif valid_tag=$(find_valid_commit_tag); then
         tag="${valid_tag}"
         echo -e "${GREEN}✓${NC} Falling back to recent commit tag: ${tag}" >&2
+      # Last resort: try 'latest' tag
+      elif check_tag_exists "latest"; then
+        tag="latest"
+        echo -e "${GREEN}✓${NC} Falling back to 'latest' tag" >&2
       else
         echo -e "${RED}✗${NC} Could not find any valid image tags" >&2
         echo -e "${YELLOW}ℹ${NC}  Possible solutions:" >&2
