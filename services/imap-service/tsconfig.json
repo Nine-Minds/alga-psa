@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "./src",
+    "module": "ESNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@alga-psa/shared/*": ["../../shared/src/*"],
+      "@shared/*": ["../../shared/src/*"],
+      "@root/*": ["../../*"],
+      "@services/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

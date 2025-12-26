@@ -5,6 +5,8 @@ import { getCurrentUser } from '../user-actions/userActions';
 import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
 import { getSecretProviderInstance } from '@shared/core';
 import { setupPubSub } from './setupPubSub';
+import { ImapFlow } from 'imapflow';
+import axios from 'axios';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
 import { configureGmailProvider } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
@@ -567,6 +569,7 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
             'token_expires_at',
             'uid_validity',
             'last_uid',
+            'folder_state',
             'last_seen_at',
             'last_sync_at',
             'last_error',
@@ -776,8 +779,79 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
       throw new Error('Provider not found');
     }
 
-    // TODO: Implement actual connection testing logic based on provider type
-    // For now, we'll simulate a successful test
+    if (provider.provider_type === 'imap') {
+      const config = await knex('imap_email_provider_config')
+        .where({ email_provider_id: providerId, tenant })
+        .first();
+
+      if (!config) {
+        throw new Error('IMAP provider config not found');
+      }
+
+      const secretProvider = await getSecretProviderInstance();
+      let accessToken = config.access_token;
+
+      if (config.auth_type === 'oauth2') {
+        if (!accessToken || (config.token_expires_at && new Date(config.token_expires_at).getTime() < Date.now() + 5 * 60 * 1000)) {
+          if (!config.oauth_token_url || !config.oauth_client_id) {
+            throw new Error('IMAP OAuth token configuration missing');
+          }
+          const refreshToken = await secretProvider.getTenantSecret(tenant, `imap_refresh_token_${providerId}`) || config.refresh_token;
+          if (!refreshToken) {
+            throw new Error('IMAP OAuth refresh token missing');
+          }
+
+          const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${providerId}`);
+          const params = new URLSearchParams();
+          params.append('grant_type', 'refresh_token');
+          params.append('refresh_token', refreshToken);
+          params.append('client_id', config.oauth_client_id);
+          if (clientSecret) {
+            params.append('client_secret', clientSecret);
+          }
+
+          const response = await axios.post(config.oauth_token_url, params, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+          });
+
+          accessToken = response.data.access_token;
+          const expiresIn = Number(response.data.expires_in || 3600);
+          const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+
+          await knex('imap_email_provider_config')
+            .where({ email_provider_id: providerId, tenant })
+            .update({
+              access_token: accessToken,
+              token_expires_at: expiresAt,
+              updated_at: knex.fn.now(),
+            });
+        }
+      }
+
+      const auth: any = { user: config.username };
+      if (config.auth_type === 'oauth2') {
+        auth.accessToken = accessToken;
+      } else {
+        auth.pass = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}`);
+      }
+
+      if (!auth.pass && !auth.accessToken) {
+        throw new Error('IMAP credentials missing');
+      }
+
+      const client = new ImapFlow({
+        host: config.host,
+        port: Number(config.port),
+        secure: config.secure,
+        auth,
+        disableAutoIdle: true,
+        logger: false,
+      });
+
+      await client.connect();
+      await client.logout();
+    }
+
     await knex('email_providers')
       .where({ id: providerId })
       .update({

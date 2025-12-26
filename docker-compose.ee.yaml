@@ -236,6 +236,61 @@ services:
     deploy:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
+  imap-service:
+    build:
+      context: .
+      dockerfile: services/imap-service/Dockerfile
+    environment:
+      EDITION: enterprise
+      DB_NAME: server
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      HOST: ${HOST}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_PORT: ${PGBOUNCER_PORT:-6432}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
+      LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+      IMAP_PROVIDER_REFRESH_MS: ${IMAP_PROVIDER_REFRESH_MS:-60000}
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+      - type: bind
+        source: ./services/imap-service/entrypoint.sh
+        target: /app/entrypoint.sh
+        read_only: true
+    entrypoint: ["/app/entrypoint.sh"]
+    secrets:
+      - postgres_password
+      - db_password_server
+      - redis_password
+      - crypto_key
+      - token_secret_key
+      - nextauth_secret
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+      server:
+        condition: service_started
+
   hocuspocus:
     extends:
       file: ./hocuspocus/docker-compose.yaml

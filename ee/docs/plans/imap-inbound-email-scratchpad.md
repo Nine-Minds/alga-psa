@@ -55,6 +55,7 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
 - IMAP will need `imap_email_provider_config` (new migration + Citus distribution).
   - Implemented migration: `server/migrations/20251226121000_create_imap_email_provider_config.cjs`
   - Includes host/port/TLS/auth_type/username/folder_filters + OAuth fields + state tracking.
+  - Added folder state jsonb for per-folder UID tracking: `server/migrations/20251226124500_add_imap_folder_state.cjs`.
 
 ---
 
@@ -72,6 +73,7 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
 - Determine if we must support generic OAuth2 endpoints per provider config (authorize/token URLs).
 - Decide how to store IMAP OAuth client secrets + refresh tokens (tenant secrets provider preferred).
   - Secret keys used by actions: `imap_password_<providerId>`, `imap_oauth_client_secret_<providerId>`, `imap_refresh_token_<providerId>`
+  - New OAuth endpoints:\n+    - `POST /api/email/oauth/imap/initiate`\n+    - `GET /api/email/oauth/imap/callback`
 
 ---
 
@@ -79,6 +81,9 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
 - Service location proposal: `services/imap-service` (standalone worker like `services/workflow-worker`).
 - IMAP service should publish `INBOUND_EMAIL_RECEIVED` via `shared/events/publisher.ts`.
 - Read-only IMAP fetch should use `BODY.PEEK[]` to avoid marking as read.
+  - IMAP service uses `imapflow` + `mailparser` to fetch/parse messages and publish events.
+  - Per-folder listeners are created for each configured folder (fallback to INBOX).
+  - Folder state (UIDVALIDITY/last UID) persisted in `imap_email_provider_config.folder_state`.
 
 ---
 

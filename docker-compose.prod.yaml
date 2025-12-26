@@ -28,3 +28,14 @@ services:
       # Production secret provider configuration for hocuspocus
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+
+  imap-service:
+    build:
+      context: .
+      dockerfile: services/imap-service/Dockerfile
+    environment:
+      NODE_ENV: production
+      APP_ENV: production
+      SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
+      SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+      IMAP_PROVIDER_REFRESH_MS: ${IMAP_PROVIDER_REFRESH_MS:-60000}

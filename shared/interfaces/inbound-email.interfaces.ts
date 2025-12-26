@@ -65,6 +65,7 @@ export interface EmailProviderConfig {
     token_expires_at?: string;
     uid_validity?: string;
     last_uid?: string;
+    folder_state?: Record<string, { uid_validity?: string; last_uid?: string; last_seen_at?: string }>;
     last_seen_at?: string;
     last_sync_at?: string;
     last_error?: string;
