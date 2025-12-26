@@ -276,6 +276,20 @@ services:
       server:
         condition: service_started
 
+  imap-test-server:
+    image: greenmail/standalone:latest
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.users=imap_user:imap_pass
+    ports:
+      - "${EXPOSE_IMAP_TEST_SMTP_PORT:-3025}:3025"
+      - "${EXPOSE_IMAP_TEST_IMAP_PORT:-3143}:3143"
+      - "${EXPOSE_IMAP_TEST_IMAPS_PORT:-3993}:3993"
+    networks:
+      - app-network
+
   hocuspocus:
     extends:
       file: ./hocuspocus/docker-compose.yaml

@@ -87,6 +87,10 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
   - Folder state (UIDVALIDITY/last UID) persisted in `imap_email_provider_config.folder_state`.
   - IMAP service acquires DB leases per provider (`lease_owner`, `lease_expires_at`) to avoid double-processing.
   - IMAP OAuth re-connect flow is available in the IMAP provider form + card action.
+  - Local test IMAP server: GreenMail (`greenmail/standalone:latest`) added to dev compose.
+    - SMTP: host port `${EXPOSE_IMAP_TEST_SMTP_PORT:-3025}` → container 3025
+    - IMAP: host port `${EXPOSE_IMAP_TEST_IMAP_PORT:-3143}` → container 3143
+    - IMAPS: host port `${EXPOSE_IMAP_TEST_IMAPS_PORT:-3993}` → container 3993
 
 ---
 
