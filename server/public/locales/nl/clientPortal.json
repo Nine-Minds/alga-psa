@@ -303,8 +303,30 @@
     "onHold": "Gepauzeerd",
     "timeline": "Tijdlijn",
     "milestones": "Mijlpalen",
-    "tasks": "Taken",
-    "documents": "Documenten",
+    "tasks": {
+      "title": "Taken",
+      "noTasks": "Geen taken om weer te geven",
+      "dueDate": "Vervaldatum",
+      "status": "Status",
+      "assignedTo": "Toegewezen aan",
+      "estimatedHours": "Geschatte uren",
+      "priority": "Prioriteit",
+      "services": "Diensten"
+    },
+    "phases": {
+      "title": "Projectfasen",
+      "completion": "Voltooid",
+      "noPhases": "Geen fasen om weer te geven"
+    },
+    "documents": {
+      "title": "Documenten",
+      "upload": "Document uploaden",
+      "noDocuments": "Geen documenten bijgevoegd",
+      "uploadSuccess": "Document succesvol geüpload",
+      "uploadError": "Kan document niet uploaden",
+      "dragDrop": "Sleep een bestand hierheen of klik om te selecteren",
+      "maxSize": "Maximale bestandsgrootte: {{size}}MB"
+    },
     "team": "Teamleden",
     "budget": "Budget",
     "fields": {

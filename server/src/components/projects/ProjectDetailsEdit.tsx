@@ -24,6 +24,8 @@ import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 import { Dialog } from 'server/src/components/ui/Dialog';
+import ClientPortalConfigEditor from './ClientPortalConfigEditor';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -147,6 +149,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         is_inactive: project.is_inactive,
         status: project.status,
         budgeted_hours: budgetedHours,
+        client_portal_config: project.client_portal_config,
       });
       
       // Log for debugging
@@ -399,6 +402,17 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             <ProjectTaskStatusEditor
               projectId={project.project_id}
               onChange={() => setHasChanges(true)}
+            />
+          </div>
+
+          <div className="border-t pt-4 mt-4">
+            <ClientPortalConfigEditor
+              config={project.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG}
+              onChange={(config) => {
+                setProject(prev => ({ ...prev, client_portal_config: config }));
+                setHasChanges(true);
+              }}
+              disabled={isSubmitting}
             />
           </div>
         </div>

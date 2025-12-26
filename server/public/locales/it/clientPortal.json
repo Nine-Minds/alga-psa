@@ -303,8 +303,30 @@
     "onHold": "In attesa",
     "timeline": "Cronologia",
     "milestones": "Milestone",
-    "tasks": "Attività",
-    "documents": "Documenti",
+    "tasks": {
+      "title": "Attività",
+      "noTasks": "Nessuna attività da visualizzare",
+      "dueDate": "Data di scadenza",
+      "status": "Stato",
+      "assignedTo": "Assegnato a",
+      "estimatedHours": "Ore stimate",
+      "priority": "Priorità",
+      "services": "Servizi"
+    },
+    "phases": {
+      "title": "Fasi del progetto",
+      "completion": "Completato",
+      "noPhases": "Nessuna fase da visualizzare"
+    },
+    "documents": {
+      "title": "Documenti",
+      "upload": "Carica documento",
+      "noDocuments": "Nessun documento allegato",
+      "uploadSuccess": "Documento caricato con successo",
+      "uploadError": "Impossibile caricare il documento",
+      "dragDrop": "Trascina e rilascia un file qui, o fai clic per selezionare",
+      "maxSize": "Dimensione massima del file: {{size}}MB"
+    },
     "team": "Membri del team",
     "budget": "Budget",
     "fields": {

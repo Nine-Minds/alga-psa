@@ -8,6 +8,9 @@ import { calculateProjectCompletion, ProjectCompletionMetrics } from 'server/src
 import { formatDistanceToNow } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import ProjectPhasesSection from './ProjectPhasesSection';
+import ProjectTasksSection from './ProjectTasksSection';
 
 interface ProjectDetailViewProps {
   project: IProject;
@@ -18,6 +21,9 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const dateLocale = getDateFnsLocale(i18n.language);
   const [metrics, setMetrics] = useState<ProjectCompletionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Get client portal config with default fallback
+  const config = project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -144,7 +150,23 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
         </div>
       </div>
 
-      {/* Additional sections can be added here as needed */}
+      {/* Conditionally show phases based on config */}
+      {config.show_phases && (
+        <ProjectPhasesSection
+          projectId={project.project_id}
+          showCompletion={config.show_phase_completion ?? false}
+        />
+      )}
+
+      {/* Conditionally show tasks based on config */}
+      {config.show_tasks && config.show_phases && (
+        <ProjectTasksSection
+          projectId={project.project_id}
+          visibleFields={config.visible_task_fields ?? ['task_name', 'due_date', 'status']}
+          showServices={config.show_task_services ?? false}
+          allowUploads={config.allow_document_uploads ?? false}
+        />
+      )}
     </div>
   );
 }

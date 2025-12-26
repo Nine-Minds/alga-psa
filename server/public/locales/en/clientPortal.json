@@ -309,8 +309,30 @@
     "onHold": "On Hold",
     "timeline": "Timeline",
     "milestones": "Milestones",
-    "tasks": "Tasks",
-    "documents": "Documents",
+    "tasks": {
+      "title": "Tasks",
+      "noTasks": "No tasks to display",
+      "dueDate": "Due Date",
+      "status": "Status",
+      "assignedTo": "Assigned To",
+      "estimatedHours": "Estimated Hours",
+      "priority": "Priority",
+      "services": "Services"
+    },
+    "phases": {
+      "title": "Project Phases",
+      "completion": "Complete",
+      "noPhases": "No phases to display"
+    },
+    "documents": {
+      "title": "Documents",
+      "upload": "Upload Document",
+      "noDocuments": "No documents attached",
+      "uploadSuccess": "Document uploaded successfully",
+      "uploadError": "Failed to upload document",
+      "dragDrop": "Drag and drop a file here, or click to select",
+      "maxSize": "Maximum file size: {{size}}MB"
+    },
     "team": "Team Members",
     "budget": "Budget",
     "fields": {

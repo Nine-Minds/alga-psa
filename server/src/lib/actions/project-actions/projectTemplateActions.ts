@@ -11,6 +11,7 @@ import {
   IProjectTemplateTask,
   IProjectTemplateChecklistItem
 } from 'server/src/interfaces/projectTemplate.interfaces';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 import { addDays } from 'date-fns';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
@@ -95,7 +96,10 @@ export async function createTemplateFromProject(
         description: templateData.description,
         category: templateData.category,
         created_by: currentUser.user_id,
-        use_count: 0
+        use_count: 0,
+        client_portal_config: JSON.stringify(
+          project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG
+        )
       })
       .returning('*');
 
@@ -391,6 +395,13 @@ export async function applyTemplate(
 
     const newProjectId = newProject.project_id;
     console.log(`[applyTemplate] Created project ${newProjectId}`);
+
+    // Apply client_portal_config from template
+    if (template.client_portal_config) {
+      await trx('projects')
+        .where({ project_id: newProjectId, tenant })
+        .update({ client_portal_config: template.client_portal_config });
+    }
 
     // 3. Load template phases (only if copyPhases is enabled)
     const templatePhases = options.copyPhases

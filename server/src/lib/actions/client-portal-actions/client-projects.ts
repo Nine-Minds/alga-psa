@@ -51,7 +51,8 @@ export async function getClientProjects(options: {
       'statuses.name as status_name',
       'statuses.is_closed',
       'projects.created_at',
-      'projects.updated_at'
+      'projects.updated_at',
+      'projects.client_portal_config'
     ])
     .leftJoin('statuses', function() {
       this.on('projects.status', '=', 'statuses.status_id')

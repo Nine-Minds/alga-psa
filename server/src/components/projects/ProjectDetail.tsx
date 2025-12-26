@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
@@ -17,8 +18,10 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
+import TaskListView from './TaskListView';
+import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from 'server/src/lib/actions/project-actions/projectActions';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getAllProjectTasksForListView } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -33,6 +36,9 @@ import { HelpCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from 'server/src/components/ui/skeletons/KanbanBoardSkeleton';
+import { useUserPreference } from 'server/src/hooks/useUserPreference';
+
+const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 
 interface ProjectDetailProps {
   project: IProject;
@@ -58,12 +64,41 @@ export default function ProjectDetail({
   initialTaskId
 }: ProjectDetailProps) {
   useTagPermissions(['project', 'project_task']);
-  
+
+  // View mode state with persistence
+  type ProjectViewMode = 'kanban' | 'list';
+  const {
+    value: viewMode,
+    setValue: setViewMode,
+    isLoading: isViewModeLoading
+  } = useUserPreference<ProjectViewMode>(
+    PROJECT_VIEW_MODE_SETTING,
+    {
+      defaultValue: 'kanban',
+      localStorageKey: PROJECT_VIEW_MODE_SETTING,
+      debounceMs: 300
+    }
+  );
+
+  // Kanban view state (existing - phase-scoped)
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPhaseQuickAdd, setShowPhaseQuickAdd] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase | null>(null);
+
+  // List view state (separate - project-scoped)
+  const [listViewData, setListViewData] = useState<{
+    phases: IProjectPhase[];
+    tasks: IProjectTask[];
+    statuses: ProjectStatus[];
+    ticketLinks: Record<string, IProjectTicketLinkWithDetails[]>;
+    taskResources: Record<string, ITaskResource[]>;
+    checklistItems: Record<string, any[]>;
+    taskTags: Record<string, ITag[]>;
+    taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
+  } | null>(null);
+  const [listViewLoading, setListViewLoading] = useState(false);
   const { openDrawer: _openDrawer, closeDrawer: _closeDrawer } = useDrawer();
   const [projectTasks, setProjectTasks] = useState<IProjectTask[]>([]);
   const [phaseTicketLinks, setPhaseTicketLinks] = useState<{ [taskId: string]: IProjectTicketLinkWithDetails[] }>({});
@@ -215,6 +250,32 @@ export default function ProjectDetail({
       }
     };
   }, [scrollInterval]);
+
+  // Lazy load list view data when switching to list mode
+  const loadListViewData = useCallback(async () => {
+    if (listViewLoading || listViewData) return;
+    setListViewLoading(true);
+    try {
+      const data = await getAllProjectTasksForListView(project.project_id);
+      setListViewData(data);
+    } catch (error) {
+      console.error('Error loading list view data:', error);
+      toast.error('Failed to load list view data');
+    } finally {
+      setListViewLoading(false);
+    }
+  }, [project.project_id, listViewData, listViewLoading]);
+
+  useEffect(() => {
+    if (viewMode === 'list') {
+      loadListViewData();
+    }
+  }, [viewMode, loadListViewData]);
+
+  // Refresh list view after task mutations
+  const refreshListView = useCallback(() => {
+    setListViewData(null); // Force reload on next render
+  }, []);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -848,12 +909,12 @@ export default function ProjectDetail({
       try {
         const checklistItems = await getTaskChecklistItems(updatedTask.task_id);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
-        
+
         setProjectTasks((prevTasks) => {
           const taskExists = prevTasks.some(task => task.task_id === updatedTask.task_id);
-          
+
           if (taskExists) {
-            return prevTasks.map((task): IProjectTask => 
+            return prevTasks.map((task): IProjectTask =>
               task.task_id === updatedTask.task_id ? taskWithChecklist : task
             );
           } else {
@@ -874,7 +935,12 @@ export default function ProjectDetail({
     setShowQuickAdd(false);
     setSelectedTask(null);
     setIsAddingTask(false);
-  }, [selectedTask]);
+
+    // Refresh list view data if in list mode
+    if (viewMode === 'list') {
+      refreshListView();
+    }
+  }, [selectedTask, viewMode, refreshListView]);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
@@ -1126,6 +1192,97 @@ export default function ProjectDetail({
   };
 
   const renderContent = () => {
+    // List view rendering
+    if (viewMode === 'list') {
+      if (listViewLoading) {
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Loading list view...</div>
+          </div>
+        );
+      }
+
+      if (!listViewData) {
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">No data available</div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex flex-col h-full">
+          <div className="mb-4">
+            <div className="flex justify-between items-center gap-4">
+              <h2 className="text-xl font-bold">Project Tasks - List View</h2>
+              <div className="flex items-center gap-4">
+                {/* Tag Filter */}
+                <TagFilter
+                  allTags={allTaskTags}
+                  selectedTags={selectedTaskTags}
+                  onTagSelect={(tag) => {
+                    setSelectedTaskTags(prev =>
+                      prev.includes(tag)
+                        ? prev.filter(t => t !== tag)
+                        : [...prev, tag]
+                    );
+                  }}
+                />
+
+                {/* Priority Filter */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
+                  <CustomSelect
+                    value={selectedPriorityFilter}
+                    onValueChange={setSelectedPriorityFilter}
+                    options={[
+                      { value: 'all', label: 'All Priorities' },
+                      ...priorities.map(p => ({
+                        value: p.priority_id,
+                        label: p.priority_name,
+                        color: p.color
+                      }))
+                    ]}
+                    className="w-48"
+                    placeholder="Select priority"
+                  />
+                </div>
+
+                {/* View Switcher - rightmost */}
+                <ViewSwitcher
+                  currentView={viewMode}
+                  onChange={setViewMode}
+                  options={[
+                    { value: 'kanban', label: 'Kanban' },
+                    { value: 'list', label: 'List' }
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+          <TaskListView
+            projectId={project.project_id}
+            phases={listViewData.phases}
+            tasks={listViewData.tasks}
+            statuses={listViewData.statuses}
+            ticketLinks={listViewData.ticketLinks}
+            taskResources={listViewData.taskResources}
+            checklistItems={listViewData.checklistItems}
+            taskTags={listViewData.taskTags}
+            taskDependencies={listViewData.taskDependencies}
+            onTaskUpdate={refreshListView}
+            onTaskClick={handleTaskSelected}
+            onTaskDelete={handleDeleteTaskClick}
+            onTaskDuplicate={handleDuplicateTaskClick}
+            users={users}
+            selectedPriorityFilter={selectedPriorityFilter}
+            selectedTaskTags={selectedTaskTags}
+          />
+        </div>
+      );
+    }
+
+    // Kanban view rendering (existing)
     if (!selectedPhase) {
       return (
         <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
@@ -1155,21 +1312,21 @@ export default function ProjectDetail({
               )}
             </div>
             
-            {/* Section 2: Tag Filter, Priority Filter and Donut Chart */}
+            {/* Section 2: Tag Filter, Priority Filter, Donut Chart and ViewSwitcher (rightmost) */}
             <div className="flex items-center gap-4">
               {/* Tag Filter */}
               <TagFilter
                 allTags={allTaskTags}
                 selectedTags={selectedTaskTags}
                 onTagSelect={(tag) => {
-                  setSelectedTaskTags(prev => 
-                    prev.includes(tag) 
+                  setSelectedTaskTags(prev =>
+                    prev.includes(tag)
                       ? prev.filter(t => t !== tag)
                       : [...prev, tag]
                   );
                 }}
               />
-              
+
               {/* Priority Filter */}
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-gray-700">Filter by Priority:</label>
@@ -1188,17 +1345,27 @@ export default function ProjectDetail({
                   placeholder="Select priority"
                 />
               </div>
-              
+
               {/* Donut Chart */}
               <div className="flex items-center justify-end space-x-2">
-                <DonutChart 
-                  percentage={completionPercentage} 
+                <DonutChart
+                  percentage={completionPercentage}
                   tooltipContent={`Shows the percentage of completed tasks for the selected phase "${selectedPhase.phase_name}" only`}
                 />
                 <span className="text-sm font-semibold text-gray-600">
                   {completedTasksCount} / {filteredTasks.length} Done
                 </span>
               </div>
+
+              {/* View Switcher - rightmost */}
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={setViewMode}
+                options={[
+                  { value: 'kanban', label: 'Kanban' },
+                  { value: 'list', label: 'List' }
+                ]}
+              />
             </div>
           </div>
         </div>
@@ -1253,8 +1420,10 @@ export default function ProjectDetail({
         onDragOver={handleDragOver}
       >
         <div className={styles.contentWrapper}>
-          <div className={styles.phasesList}>
-            <ProjectPhases
+          {/* Hide phase panel when in list view */}
+          {viewMode === 'kanban' && (
+            <div className={styles.phasesList}>
+              <ProjectPhases
               phases={projectPhases}
               selectedPhase={selectedPhase}
               isAddingTask={isAddingTask}
@@ -1291,6 +1460,7 @@ export default function ProjectDetail({
               onDragEnd={handlePhaseDragEnd}
             />
           </div>
+          )}
           <div className={styles.kanbanContainer}>
             {renderContent()}
           </div>

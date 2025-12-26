@@ -303,8 +303,30 @@
     "onHold": "Ausgesetzt",
     "timeline": "Zeitplan",
     "milestones": "Meilensteine",
-    "tasks": "Aufgaben",
-    "documents": "Dokumente",
+    "tasks": {
+      "title": "Aufgaben",
+      "noTasks": "Keine Aufgaben anzuzeigen",
+      "dueDate": "Fälligkeitsdatum",
+      "status": "Status",
+      "assignedTo": "Zugewiesen an",
+      "estimatedHours": "Geschätzte Stunden",
+      "priority": "Priorität",
+      "services": "Dienstleistungen"
+    },
+    "phases": {
+      "title": "Projektphasen",
+      "completion": "Abgeschlossen",
+      "noPhases": "Keine Phasen anzuzeigen"
+    },
+    "documents": {
+      "title": "Dokumente",
+      "upload": "Dokument hochladen",
+      "noDocuments": "Keine Dokumente angehängt",
+      "uploadSuccess": "Dokument erfolgreich hochgeladen",
+      "uploadError": "Fehler beim Hochladen des Dokuments",
+      "dragDrop": "Datei hier ablegen oder klicken zum Auswählen",
+      "maxSize": "Maximale Dateigröße: {{size}}MB"
+    },
     "team": "Teammitglieder",
     "budget": "Budget",
     "fields": {
