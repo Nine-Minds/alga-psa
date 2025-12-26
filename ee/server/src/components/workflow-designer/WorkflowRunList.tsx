@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -10,14 +11,17 @@ import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { TextArea } from '@/components/ui/TextArea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { toast } from 'react-hot-toast';
 import {
   cancelWorkflowRunAction,
   exportWorkflowRunsAction,
+  getWorkflowSchemaAction,
   listWorkflowRunSummaryAction,
   listWorkflowRunsAction,
-  resumeWorkflowRunAction
+  resumeWorkflowRunAction,
+  startWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
@@ -25,6 +29,10 @@ type WorkflowDefinitionSummary = {
   workflow_id: string;
   name: string;
   trigger?: Record<string, unknown> | null;
+  payload_schema_ref?: string | null;
+  published_version?: number | null;
+  validation_status?: string | null;
+  is_paused?: boolean;
 };
 
 type WorkflowRunListItem = {
@@ -57,6 +65,22 @@ type WorkflowRunFilters = {
   from: string;
   to: string;
   sort: string;
+};
+
+type JsonSchema = {
+  type?: string | string[];
+  title?: string;
+  description?: string;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  enum?: Array<string | number | boolean | null>;
+  items?: JsonSchema;
+  additionalProperties?: boolean | JsonSchema;
+  anyOf?: JsonSchema[];
+  oneOf?: JsonSchema[];
+  default?: unknown;
+  $ref?: string;
+  definitions?: Record<string, JsonSchema>;
 };
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -120,6 +144,46 @@ const buildWorkflowOptions = (definitions: WorkflowDefinitionSummary[]): SelectO
   }))
 ];
 
+const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
+  if (schema.$ref && root.definitions) {
+    const refKey = schema.$ref.replace('#/definitions/', '');
+    return root.definitions?.[refKey] ?? schema;
+  }
+  return schema;
+};
+
+const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
+  const resolved = resolveSchemaRef(schema, root);
+  if (resolved.default !== undefined) {
+    return resolved.default;
+  }
+  if (resolved.anyOf?.length) {
+    return buildDefaultValueFromSchema(resolved.anyOf[0], root);
+  }
+  if (resolved.oneOf?.length) {
+    return buildDefaultValueFromSchema(resolved.oneOf[0], root);
+  }
+  const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
+  switch (type) {
+    case 'object':
+      return Object.keys(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, key) => {
+        acc[key] = buildDefaultValueFromSchema(resolved.properties?.[key] ?? {}, root);
+        return acc;
+      }, {});
+    case 'array':
+      return [];
+    case 'string':
+      return '';
+    case 'number':
+    case 'integer':
+      return 0;
+    case 'boolean':
+      return false;
+    default:
+      return null;
+  }
+};
+
 interface WorkflowRunListProps {
   definitions: WorkflowDefinitionSummary[];
   isActive: boolean;
@@ -135,6 +199,10 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<'resume' | 'cancel' | null>(null);
   const [bulkReason, setBulkReason] = useState('');
+  const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+  const [runPayloadText, setRunPayloadText] = useState('');
+  const [runPayloadError, setRunPayloadError] = useState<string | null>(null);
+  const [isStartingRun, setIsStartingRun] = useState(false);
   const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
   const [summary, setSummary] = useState<WorkflowRunSummaryResponse | null>(null);
   const limit = 25;
@@ -161,6 +229,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
     });
     return map;
   }, [definitions]);
+
+  const activeDefinition = useMemo(
+    () => definitions.find((definition) => definition.workflow_id === filters.workflowId) ?? null,
+    [definitions, filters.workflowId]
+  );
 
   const selectedRuns = useMemo(
     () => runs.filter((run) => selectedRunIds.has(run.run_id)),
@@ -232,9 +305,102 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
     setBulkReason('');
   }, [bulkAction]);
 
+  useEffect(() => {
+    if (!isRunDialogOpen || !activeDefinition?.payload_schema_ref) return;
+    getWorkflowSchemaAction({ schemaRef: activeDefinition.payload_schema_ref })
+      .then((result) => {
+        const schema = (result?.schema ?? null) as JsonSchema | null;
+        if (!schema) {
+          setRunPayloadText('{}');
+          return;
+        }
+        const defaults = buildDefaultValueFromSchema(schema, schema);
+        setRunPayloadText(JSON.stringify(defaults ?? {}, null, 2));
+      })
+      .catch(() => {
+        setRunPayloadText('{}');
+      });
+  }, [activeDefinition?.payload_schema_ref, isRunDialogOpen]);
+
   const handleApplyFilters = () => {
     fetchRuns(0, false);
     fetchSummary();
+  };
+
+  const handleViewLatestRun = async () => {
+    if (!activeDefinition) {
+      toast.error('Select a workflow to view its latest run.');
+      return;
+    }
+    try {
+      const result = (await listWorkflowRunsAction({
+        workflowId: activeDefinition.workflow_id,
+        limit: 1,
+        cursor: 0,
+        sort: 'started_at:desc'
+      })) as WorkflowRunListResponse;
+      const latest = result.runs?.[0];
+      if (!latest) {
+        toast.error('No runs found for that workflow.');
+        return;
+      }
+      window.location.assign(`/msp/workflows/runs/${latest.run_id}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load latest run');
+    }
+  };
+
+  const openRunDialog = () => {
+    if (!activeDefinition) {
+      toast.error('Select a workflow to run.');
+      return;
+    }
+    setRunPayloadError(null);
+    setIsRunDialogOpen(true);
+  };
+
+  const handleRunPayloadChange = (value: string) => {
+    setRunPayloadText(value);
+    try {
+      JSON.parse(value);
+      setRunPayloadError(null);
+    } catch (err) {
+      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
+    }
+  };
+
+  const handleStartRun = async () => {
+    if (!activeDefinition?.workflow_id) return;
+    if (!activeDefinition.published_version) {
+      toast.error('Workflow has no published version.');
+      return;
+    }
+    let payload: Record<string, unknown> = {};
+    try {
+      payload = JSON.parse(runPayloadText || '{}');
+    } catch (err) {
+      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
+      return;
+    }
+    setIsStartingRun(true);
+    try {
+      const result = await startWorkflowRunAction({
+        workflowId: activeDefinition.workflow_id,
+        workflowVersion: activeDefinition.published_version,
+        payload
+      });
+      const runId = (result as { runId?: string } | undefined)?.runId;
+      setIsRunDialogOpen(false);
+      if (runId) {
+        window.location.assign(`/msp/workflows/runs/${runId}`);
+      } else {
+        toast.success('Run started.');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to start run');
+    } finally {
+      setIsStartingRun(false);
+    }
   };
 
   const handleResetFilters = () => {
@@ -356,6 +522,10 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
   const allSelected = runs.length > 0 && selectedRunIds.size === runs.length;
   const someSelected = selectedRunIds.size > 0 && selectedRunIds.size < runs.length;
   const columnCount = (showSelection ? 9 : 8) + (showTenantColumn ? 1 : 0);
+  const canRunSelected = !!activeDefinition?.workflow_id
+    && !!activeDefinition.published_version
+    && activeDefinition.validation_status !== 'error'
+    && !activeDefinition.is_paused;
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
@@ -437,6 +607,22 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
             </Button>
             <Button id="workflow-runs-reset" variant="outline" onClick={handleResetFilters} disabled={isLoading}>
               Reset
+            </Button>
+            <Button
+              id="workflow-runs-view-latest"
+              variant="outline"
+              onClick={handleViewLatestRun}
+              disabled={!activeDefinition}
+            >
+              View latest run
+            </Button>
+            <Button
+              id="workflow-runs-run-now"
+              variant="outline"
+              onClick={openRunDialog}
+              disabled={!canRunSelected}
+            >
+              Run now
             </Button>
             <Button id="workflow-runs-export" variant="outline" onClick={handleExport}>
               Export CSV
@@ -520,7 +706,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
                       />
                     </TableCell>
                   )}
-                  <TableCell className="font-mono text-xs">{run.run_id}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    <Link className="text-primary-600 hover:text-primary-700" href={`/msp/workflows/runs/${run.run_id}`}>
+                      {run.run_id}
+                    </Link>
+                  </TableCell>
                   <TableCell>{run.workflow_name ?? run.workflow_id}</TableCell>
                   <TableCell>{run.workflow_version}</TableCell>
                   {showTenantColumn && <TableCell className="text-xs text-gray-500">{run.tenant_id ?? '—'}</TableCell>}
@@ -539,7 +729,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
                       size="sm"
                       onClick={() => setSelectedRunId(run.run_id)}
                     >
-                      View
+                      Details
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -633,6 +823,68 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
           />
         </>
       )}
+
+      <Dialog
+        isOpen={isRunDialogOpen}
+        onClose={() => setIsRunDialogOpen(false)}
+        title="Run Workflow"
+        className="max-w-2xl"
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Run Workflow</DialogTitle>
+            <DialogDescription>
+              Provide a synthetic payload for the published workflow version.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                id="workflow-run-list-name"
+                label="Workflow"
+                value={activeDefinition?.name ?? ''}
+                disabled
+              />
+              <Input
+                id="workflow-run-list-version"
+                label="Published version"
+                value={activeDefinition?.published_version ?? ''}
+                disabled
+              />
+            </div>
+            {activeDefinition?.trigger && (
+              <Input
+                id="workflow-run-list-trigger"
+                label="Trigger"
+                value={workflowTriggerMap.get(activeDefinition.workflow_id) ?? 'Manual'}
+                disabled
+              />
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payload (JSON)</label>
+              <TextArea
+                id="workflow-run-list-payload"
+                value={runPayloadText}
+                onChange={(event) => handleRunPayloadChange(event.target.value)}
+                rows={10}
+                className={runPayloadError ? 'border-red-500' : ''}
+              />
+              {runPayloadError && (
+                <div className="text-xs text-red-600 mt-1">{runPayloadError}</div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsRunDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={handleStartRun} disabled={isStartingRun || !!runPayloadError}>
+              {isStartingRun ? 'Starting...' : 'Start Run'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

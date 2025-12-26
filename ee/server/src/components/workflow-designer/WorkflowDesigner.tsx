@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import CustomTabs from '@/components/ui/CustomTabs';
 import { Switch } from '@/components/ui/Switch';
@@ -47,7 +48,9 @@ import {
   listWorkflowDefinitionsAction,
   listWorkflowRegistryActionsAction,
   listWorkflowRegistryNodesAction,
+  listWorkflowRunsAction,
   publishWorkflowDefinitionAction,
+  startWorkflowRunAction,
   updateWorkflowDefinitionDraftAction,
   updateWorkflowDefinitionMetadataAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
@@ -66,6 +69,7 @@ import type {
   InputMapping
 } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
+import { useRouter } from 'next/navigation';
 
 type WorkflowDefinitionRecord = {
   workflow_id: string;
@@ -1136,6 +1140,8 @@ const WorkflowDesigner: React.FC = () => {
   const [definitions, setDefinitions] = useState<WorkflowDefinitionRecord[]>([]);
   const [activeDefinition, setActiveDefinition] = useState<WorkflowDefinition | null>(null);
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
+  const [runStatusByWorkflow, setRunStatusByWorkflow] = useState<Map<string, string>>(new Map());
+  const [runCountByWorkflow, setRunCountByWorkflow] = useState<Map<string, number>>(new Map());
   const [nodeRegistry, setNodeRegistry] = useState<NodeRegistryItem[]>([]);
   const [actionRegistry, setActionRegistry] = useState<ActionRegistryItem[]>([]);
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
@@ -1151,6 +1157,10 @@ const WorkflowDesigner: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [registryError, setRegistryError] = useState(false);
+  const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+  const [runPayloadText, setRunPayloadText] = useState('');
+  const [runPayloadError, setRunPayloadError] = useState<string | null>(null);
+  const [isStartingRun, setIsStartingRun] = useState(false);
   const [metadataDraft, setMetadataDraft] = useState<{
     isVisible: boolean;
     isPaused: boolean;
@@ -1162,6 +1172,7 @@ const WorkflowDesigner: React.FC = () => {
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
 
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
+  const router = useRouter();
 
   const stepPathMap = useMemo(() => {
     return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
@@ -1268,6 +1279,10 @@ const WorkflowDesigner: React.FC = () => {
     () => userPermissions.includes('workflow:publish') || canAdmin,
     [userPermissions, canAdmin]
   );
+  const canRun = useMemo(
+    () => userPermissions.includes('workflow:manage') || canAdmin,
+    [userPermissions, canAdmin]
+  );
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
@@ -1288,6 +1303,27 @@ const WorkflowDesigner: React.FC = () => {
       toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  const loadRunSummary = useCallback(async () => {
+    try {
+      const result = await listWorkflowRunsAction({ limit: 200, cursor: 0, sort: 'started_at:desc' });
+      const latestByWorkflow = new Map<string, { status: string; started_at: string }>();
+      const counts = new Map<string, number>();
+      (result?.runs ?? []).forEach((run: any) => {
+        const currentCount = counts.get(run.workflow_id) ?? 0;
+        counts.set(run.workflow_id, currentCount + 1);
+        const existing = latestByWorkflow.get(run.workflow_id);
+        if (!existing || new Date(run.started_at).getTime() > new Date(existing.started_at).getTime()) {
+          latestByWorkflow.set(run.workflow_id, { status: run.status, started_at: run.started_at });
+        }
+      });
+      setRunCountByWorkflow(counts);
+      setRunStatusByWorkflow(new Map(Array.from(latestByWorkflow.entries()).map(([id, entry]) => [id, entry.status])));
+    } catch {
+      setRunCountByWorkflow(new Map());
+      setRunStatusByWorkflow(new Map());
     }
   }, []);
 
@@ -1335,6 +1371,7 @@ const WorkflowDesigner: React.FC = () => {
   useEffect(() => {
     loadDefinitions();
     loadRegistries();
+    loadRunSummary();
   }, [loadDefinitions, loadRegistries]);
 
   useEffect(() => {
@@ -1426,6 +1463,57 @@ const WorkflowDesigner: React.FC = () => {
       toast.error(error instanceof Error ? error.message : 'Failed to save workflow');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const buildDefaultPayload = useCallback(() => {
+    if (!payloadSchema) return {};
+    return buildDefaultValueFromSchema(payloadSchema, payloadSchema);
+  }, [payloadSchema]);
+
+  const openRunDialog = () => {
+    const defaults = buildDefaultPayload();
+    setRunPayloadText(JSON.stringify(defaults ?? {}, null, 2));
+    setRunPayloadError(null);
+    setIsRunDialogOpen(true);
+  };
+
+  const handleRunPayloadChange = (value: string) => {
+    setRunPayloadText(value);
+    try {
+      JSON.parse(value || '{}');
+      setRunPayloadError(null);
+    } catch (err) {
+      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
+    }
+  };
+
+  const handleStartRun = async () => {
+    if (!activeWorkflowId || !activeWorkflowRecord?.published_version) {
+      toast.error('Publish the workflow before running');
+      return;
+    }
+    let payload: Record<string, unknown> = {};
+    try {
+      payload = runPayloadText.trim() ? JSON.parse(runPayloadText) : {};
+      setRunPayloadError(null);
+    } catch (err) {
+      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
+      return;
+    }
+    setIsStartingRun(true);
+    try {
+      const result = await startWorkflowRunAction({
+        workflowId: activeWorkflowId,
+        workflowVersion: activeWorkflowRecord.published_version,
+        payload
+      });
+      setIsRunDialogOpen(false);
+      router.push(`/msp/workflows/runs/${result.runId}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start run');
+    } finally {
+      setIsStartingRun(false);
     }
   };
 
@@ -2192,6 +2280,16 @@ const WorkflowDesigner: React.FC = () => {
                     }`}
                   />
                   {definition.name}
+                  {runStatusByWorkflow.get(definition.workflow_id) && (
+                    <Badge className="bg-gray-100 text-gray-600 text-[10px]">
+                      {runStatusByWorkflow.get(definition.workflow_id)}
+                    </Badge>
+                  )}
+                  {runCountByWorkflow.get(definition.workflow_id) != null && (
+                    <Badge className="bg-blue-50 text-blue-700 text-[10px]">
+                      {runCountByWorkflow.get(definition.workflow_id)} runs
+                    </Badge>
+                  )}
                 </span>
               </Button>
             ))}
@@ -2207,7 +2305,11 @@ const WorkflowDesigner: React.FC = () => {
       definitions={definitions.map((definition) => ({
         workflow_id: definition.workflow_id,
         name: definition.name,
-        trigger: definition.trigger ?? null
+        trigger: definition.trigger ?? null,
+        payload_schema_ref: definition.payload_schema_ref,
+        published_version: definition.published_version ?? null,
+        validation_status: definition.validation_status ?? null,
+        is_paused: definition.is_paused ?? false
       }))}
       isActive={activeTab === 'Runs'}
       canAdmin={canAdmin}
@@ -2278,10 +2380,91 @@ const WorkflowDesigner: React.FC = () => {
                   {isPublishing ? 'Publishing...' : 'Publish'}
                 </Button>
               )}
+              {canRun && (
+                <Button
+                  id="workflow-designer-run"
+                  onClick={openRunDialog}
+                  disabled={
+                    !activeDefinition
+                    || !activeWorkflowRecord?.published_version
+                    || activeWorkflowRecord?.validation_status === 'error'
+                    || activeWorkflowRecord?.is_paused
+                  }
+                >
+                  Run
+                </Button>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      <Dialog
+        isOpen={isRunDialogOpen}
+        onClose={() => setIsRunDialogOpen(false)}
+        title="Run Workflow"
+        className="max-w-2xl"
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Run Workflow</DialogTitle>
+            <DialogDescription>
+              Provide a synthetic payload for the published workflow version.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                id="workflow-run-version"
+                label="Published version"
+                value={activeWorkflowRecord?.published_version ?? ''}
+                disabled
+              />
+              <Input
+                id="workflow-run-status"
+                label="Workflow status"
+                value={activeWorkflowRecord?.status ?? 'draft'}
+                disabled
+              />
+              <Input
+                id="workflow-run-trigger"
+                label="Trigger"
+                value={activeDefinition?.trigger?.eventName ? `Event: ${activeDefinition.trigger.eventName}` : 'Manual'}
+                disabled
+              />
+            </div>
+
+            {activeWorkflowRecord?.published_version && activeDefinition?.version
+              && activeDefinition.version !== activeWorkflowRecord.published_version && (
+                <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">
+                  Draft version differs from published. Running published version {activeWorkflowRecord.published_version}.
+                </div>
+              )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payload (JSON)</label>
+              <TextArea
+                id="workflow-run-payload"
+                value={runPayloadText}
+                onChange={(event) => handleRunPayloadChange(event.target.value)}
+                rows={10}
+                className={runPayloadError ? 'border-red-500' : ''}
+              />
+              {runPayloadError && (
+                <div className="mt-1 text-xs text-red-600">{runPayloadError}</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter className="flex items-center justify-between">
+          <Button variant="outline" onClick={() => setIsRunDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleStartRun} disabled={isStartingRun || !!runPayloadError}>
+            {isStartingRun ? 'Starting...' : 'Start Run'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
 
       <div className="flex-1 overflow-hidden">
         <CustomTabs

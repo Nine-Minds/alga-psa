@@ -2100,3 +2100,59 @@ See `workflow_expression_editor_features.json` for the complete implementation c
 - Keyboard Shortcuts (5 tasks)
 - Quick Fixes (4 tasks)
 - Accessibility (4 tasks)
+
+---
+
+## 21. Workflow Run Studio (Execution UI)
+
+This section defines the UX and backend requirements for running workflows directly from the designer, supplying synthetic event payloads, and observing live execution with step status, logs, and history.
+
+### 21.1 Goals
+
+- Allow operators to run a workflow on-demand from the designer.
+- Provide a test payload editor that uses payload schema types.
+- Show live execution status with per-node highlighting.
+- Make logs, snapshots, and step history easily accessible.
+- Allow cancel/resume/replay actions with audit logging.
+
+### 21.2 Run Trigger & Test Payload
+
+**Required capabilities:**
+- Run button in the designer toolbar (enabled only for published, valid workflows).
+- Modal/side panel to select workflow version and supply event payload.
+- Schema-driven form with JSON editor toggle, defaults, and validation.
+- Save and reuse test payload presets per workflow.
+- Warn when draft != published version.
+
+### 21.3 Execution Visualization
+
+**Required capabilities:**
+- Dedicated Run Studio view with the workflow graph on the left.
+- Nodes highlight by status:
+  - Running: cyan/blue with subtle pulse
+  - Succeeded: green
+  - Waiting: yellow
+  - Failed: red
+  - Canceled: gray
+- Status legend visible in the UI.
+- Timeline/history panel for step execution and retries.
+
+### 21.4 Logs & Snapshots
+
+**Required capabilities:**
+- Live log stream with level filters and search.
+- Step-level inputs/outputs surfaced via snapshots.
+- Snapshot diff view and redaction of secrets.
+- Export logs and snapshots for offline debugging.
+
+### 21.5 Run Controls
+
+**Required capabilities:**
+- Cancel run (with reason)
+- Resume run (admin only)
+- Replay run with payload override
+- Audit log entries for run control actions
+
+### 21.6 Feature Tracking
+
+See `workflow_run_studio_features.json` for the complete implementation checklist (200 tasks across UX, backend, performance, security, and testing categories).
