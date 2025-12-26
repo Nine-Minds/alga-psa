@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getSession } from 'server/src/lib/auth/getSession';
-import { getAdminConnection } from 'server/src/lib/db/admin';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 export interface ExtProxyUserInfo {
   user_id: string;
@@ -15,7 +15,7 @@ export interface ExtProxyUserInfo {
  */
 async function getTenantClientName(tenantId: string): Promise<string> {
   try {
-    const knex = getAdminConnection();
+    const knex = await getAdminConnection();
     const row = await knex('tenants')
       .select('client_name')
       .where('tenant', tenantId)
