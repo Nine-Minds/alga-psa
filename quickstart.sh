@@ -2,8 +2,21 @@
 
 # Alga PSA Quick Start Script
 # This script automates the setup process for new installations
+#
+# Usage: ./quickstart.sh [--auto]
+#   --auto    Skip interactive prompts and auto-generate all secrets
 
 set -e
+
+# Parse arguments
+AUTO_MODE=false
+for arg in "$@"; do
+    case $arg in
+        --auto)
+            AUTO_MODE=true
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -79,7 +92,11 @@ print_step "Generating secrets..."
 
 # Generate secrets using the dedicated script
 if [ -f "./scripts/generate-secrets.sh" ]; then
-    ./scripts/generate-secrets.sh
+    if [ "$AUTO_MODE" = true ]; then
+        ./scripts/generate-secrets.sh --auto
+    else
+        ./scripts/generate-secrets.sh
+    fi
     print_success "Secrets generated in ./secrets/"
 else
     print_error "scripts/generate-secrets.sh not found"
@@ -142,7 +159,7 @@ echo ""
 echo "   Application URL: ${GREEN}http://localhost:3000${NC}"
 echo ""
 echo "   To view your login credentials (first-time only):"
-echo "   ${YELLOW}docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image logs | grep -A3 'User Email'${NC}"
+echo "   ${YELLOW}docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image logs | grep -A5 'User Email'${NC}"
 echo ""
 echo "   Or use the shorthand:"
 echo "   ${YELLOW}make logs${NC}"

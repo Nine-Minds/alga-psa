@@ -36,6 +36,27 @@ This guide provides step-by-step instructions for setting up the PSA system usin
 
 ## Secrets Configuration
 
+### Option A: Interactive Setup (Recommended)
+
+Use the interactive secrets generator:
+
+```bash
+./scripts/generate-secrets.sh
+```
+
+This script will:
+1. Ask whether you want to auto-generate secrets or enter them manually
+2. For manual mode: prompt for each secret with validation and confirmation
+3. Automatically set proper file permissions (600)
+
+**Flags:**
+- `--auto` - Skip prompts and auto-generate all secrets
+- `--force` - Overwrite existing secrets (use with caution)
+
+### Option B: Manual Setup
+
+If you prefer to create secrets manually:
+
 1. Create secret files in the `secrets/` directory:
 
 Database secrets (replace placeholders with strong values):

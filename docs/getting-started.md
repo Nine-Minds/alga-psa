@@ -32,15 +32,20 @@ The fastest way to get started:
 git clone https://github.com/nine-minds/alga-psa.git
 cd alga-psa
 
-# Run the quick start script
+# Run the quick start script (interactive)
 ./quickstart.sh
+
+# Or run fully automated with auto-generated secrets
+./quickstart.sh --auto
 ```
 
-The script automatically:
-1. Verifies prerequisites
-2. Generates secure secrets
-3. Configures environment variables
-4. Starts all services
+The script will:
+1. Verify prerequisites
+2. Ask how you'd like to set up secrets (auto-generate or enter manually)
+3. Configure environment variables
+4. Start all services
+
+> **Tip:** Use `./quickstart.sh --auto` to skip prompts and auto-generate all secrets.
 
 ## Quick Start (Manual)
 
@@ -56,8 +61,11 @@ cd alga-psa
 # Set the image tag
 ./scripts/set-image-tag.sh
 
-# Generate secrets
+# Generate secrets (interactive - choose auto-generate or enter your own)
 ./scripts/generate-secrets.sh
+
+# Or auto-generate all secrets without prompts
+./scripts/generate-secrets.sh --auto
 
 # Create environment file
 cp .env.example server/.env
