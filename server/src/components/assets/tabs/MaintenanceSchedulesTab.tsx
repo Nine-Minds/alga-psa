@@ -214,7 +214,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
       isOpen={showDialog}
       onClose={() => setShowDialog(false)}
       assetId={assetId}
-      schedule={null}
+      schedule={undefined}
       onSuccess={() => {
         mutate(); // Refresh the maintenance report
         mutateSchedules(); // Refresh the schedules list

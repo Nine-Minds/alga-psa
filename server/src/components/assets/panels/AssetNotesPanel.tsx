@@ -86,7 +86,13 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
           <TextEditor
             // Remount when the backing document changes (or first loads) so saved notes show up on open.
             key={`${assetId}-${noteDocument?.document_id ?? 'new'}-${noteContent ? 'loaded' : 'empty'}`}
-            initialContent={noteContent ?? DEFAULT_BLOCK}
+            initialContent={
+              noteContent && Array.isArray(noteContent) && noteContent.length > 0
+                ? noteContent
+                : typeof noteContent === 'string'
+                ? noteContent
+                : DEFAULT_BLOCK
+            }
             onContentChange={setEditorContent}
           />
         </div>

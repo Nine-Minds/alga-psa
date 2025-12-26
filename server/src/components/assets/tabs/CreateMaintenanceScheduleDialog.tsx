@@ -272,6 +272,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
 
           <DialogFooter>
             <Button
+              id="cancel-maintenance-schedule-btn"
               type="button"
               variant="secondary"
               onClick={handleClose}
@@ -280,6 +281,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
               Cancel
             </Button>
             <Button
+              id="submit-maintenance-schedule-btn"
               type="submit"
               disabled={isSubmitting}
             >
