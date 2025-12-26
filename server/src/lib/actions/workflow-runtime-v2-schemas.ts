@@ -77,6 +77,10 @@ export const RunIdInput = z.object({
   runId: z.string().min(1)
 });
 
+export const WorkflowIdInput = z.object({
+  workflowId: z.string().min(1)
+});
+
 export const RunActionInput = z.object({
   runId: z.string().min(1),
   reason: z.string().min(3),

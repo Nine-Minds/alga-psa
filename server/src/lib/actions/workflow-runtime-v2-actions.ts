@@ -47,7 +47,8 @@ import {
   StartWorkflowRunInput,
   SubmitWorkflowEventInput,
   UpdateWorkflowDefinitionInput,
-  UpdateWorkflowDefinitionMetadataInput
+  UpdateWorkflowDefinitionMetadataInput,
+  WorkflowIdInput
 } from './workflow-runtime-v2-schemas';
 
 const throwHttpError = (status: number, message: string, details?: unknown): never => {
@@ -276,6 +277,20 @@ export async function listWorkflowDefinitionsAction() {
     return enrichedRecords;
   }
   return enrichedRecords.filter((record) => record.is_visible !== false);
+}
+
+export async function listWorkflowDefinitionVersionsAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = WorkflowIdInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const rows = await knex('workflow_definition_versions')
+    .select('version', 'published_at', 'created_at')
+    .where({ workflow_id: parsed.workflowId })
+    .orderBy('version', 'desc');
+
+  return { versions: rows };
 }
 
 export async function createWorkflowDefinitionAction(input: unknown) {
@@ -914,6 +929,64 @@ export async function listWorkflowRunSummaryAction(input: unknown) {
   return { total, byStatus: summary };
 }
 
+export async function getWorkflowRunSummaryMetadataAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = RunIdInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
+  if (!run) {
+    return throwHttpError(404, 'Run not found');
+  }
+
+  const [stepsCount, logsCount, waitsCount] = await Promise.all([
+    knex('workflow_run_steps').where({ run_id: parsed.runId }).count<{ count: string }>('step_id as count').first(),
+    knex('workflow_run_logs').where({ run_id: parsed.runId }).count<{ count: string }>('log_id as count').first(),
+    knex('workflow_run_waits').where({ run_id: parsed.runId }).count<{ count: string }>('wait_id as count').first()
+  ]);
+
+  const durationMs = run.completed_at
+    ? new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()
+    : null;
+
+  return {
+    runId: run.run_id,
+    status: run.status,
+    workflowId: run.workflow_id,
+    workflowVersion: run.workflow_version,
+    startedAt: run.started_at,
+    completedAt: run.completed_at,
+    durationMs: durationMs != null && durationMs >= 0 ? durationMs : null,
+    stepsCount: Number(stepsCount?.count ?? 0),
+    logsCount: Number(logsCount?.count ?? 0),
+    waitsCount: Number(waitsCount?.count ?? 0)
+  };
+}
+
+export async function getLatestWorkflowRunAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = WorkflowIdInput.parse(input);
+  const { knex, tenant } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const query = knex('workflow_runs')
+    .where({ workflow_id: parsed.workflowId })
+    .orderBy('started_at', 'desc')
+    .limit(1);
+
+  if (tenant) {
+    query.where('tenant_id', tenant);
+  }
+
+  const latest = await query.first();
+  if (!latest) {
+    return { run: null };
+  }
+
+  return { run: latest };
+}
+
 export async function listWorkflowRunLogsAction(input: unknown) {
   const user = await requireUser();
   const parsed = ListWorkflowRunLogsInput.parse(input);
@@ -926,6 +999,49 @@ export async function listWorkflowRunLogsAction(input: unknown) {
     limit: parsed.limit,
     cursor: parsed.cursor
   });
+}
+
+export async function listWorkflowRunTimelineEventsAction(input: unknown) {
+  const user = await requireUser();
+  const parsed = RunIdInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId);
+  const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
+
+  const stepEvents = steps.map((step) => ({
+    type: 'step',
+    step_id: step.step_id,
+    step_path: step.step_path,
+    definition_step_id: step.definition_step_id,
+    status: step.status,
+    attempt: step.attempt,
+    duration_ms: step.duration_ms ?? null,
+    started_at: step.started_at,
+    completed_at: step.completed_at ?? null,
+    timestamp: step.started_at
+  }));
+
+  const waitEvents = waits.map((wait) => ({
+    type: 'wait',
+    wait_id: wait.wait_id,
+    step_path: wait.step_path,
+    wait_type: wait.wait_type,
+    status: wait.status,
+    event_name: wait.event_name ?? null,
+    key: wait.key ?? null,
+    timeout_at: wait.timeout_at ?? null,
+    created_at: wait.created_at,
+    resolved_at: wait.resolved_at ?? null,
+    timestamp: wait.created_at
+  }));
+
+  const events = [...stepEvents, ...waitEvents].sort((a, b) => (
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  ));
+
+  return { events };
 }
 
 export async function exportWorkflowRunLogsAction(input: unknown) {

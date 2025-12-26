@@ -13,9 +13,11 @@ import toast from 'react-hot-toast';
 import {
   getWorkflowRunAction,
   getWorkflowDefinitionVersionAction,
+  getWorkflowRunSummaryMetadataAction,
   listWorkflowRunsAction,
   listWorkflowRunLogsAction,
   listWorkflowRunStepsAction,
+  listWorkflowRunTimelineEventsAction,
   cancelWorkflowRunAction,
   replayWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
@@ -75,20 +77,6 @@ type WorkflowRunSnapshotRecord = {
   created_at: string;
 };
 
-type WorkflowRunWaitRecord = {
-  wait_id: string;
-  run_id: string;
-  step_path: string;
-  wait_type: string;
-  key?: string | null;
-  event_name?: string | null;
-  timeout_at?: string | null;
-  status: string;
-  payload?: unknown | null;
-  created_at: string;
-  resolved_at?: string | null;
-};
-
 type WorkflowActionInvocationRecord = {
   invocation_id: string;
   run_id: string;
@@ -106,6 +94,46 @@ type WorkflowActionInvocationRecord = {
   completed_at?: string | null;
 };
 
+type WorkflowRunSummaryMetadata = {
+  runId: string;
+  status: string;
+  workflowId: string;
+  workflowVersion: number;
+  startedAt: string;
+  completedAt?: string | null;
+  durationMs?: number | null;
+  stepsCount: number;
+  logsCount: number;
+  waitsCount: number;
+};
+
+type WorkflowRunTimelineEvent =
+  | {
+      type: 'step';
+      step_id: string;
+      step_path: string;
+      definition_step_id: string;
+      status: string;
+      attempt: number;
+      duration_ms?: number | null;
+      started_at: string;
+      completed_at?: string | null;
+      timestamp: string;
+    }
+  | {
+      type: 'wait';
+      wait_id: string;
+      step_path: string;
+      wait_type: string;
+      status: string;
+      event_name?: string | null;
+      key?: string | null;
+      timeout_at?: string | null;
+      created_at: string;
+      resolved_at?: string | null;
+      timestamp: string;
+    };
+
 type RunStudioShellProps = {
   runId: string;
 };
@@ -122,11 +150,12 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null);
   const [runSummary, setRunSummary] = useState<WorkflowRunSummary | null>(null);
+  const [summaryMetadata, setSummaryMetadata] = useState<WorkflowRunSummaryMetadata | null>(null);
   const [steps, setSteps] = useState<WorkflowRunStepRecord[]>([]);
   const [logs, setLogs] = useState<WorkflowRunLogRecord[]>([]);
   const [snapshots, setSnapshots] = useState<WorkflowRunSnapshotRecord[]>([]);
   const [invocations, setInvocations] = useState<WorkflowActionInvocationRecord[]>([]);
-  const [waits, setWaits] = useState<WorkflowRunWaitRecord[]>([]);
+  const [timelineEvents, setTimelineEvents] = useState<WorkflowRunTimelineEvent[]>([]);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [runActionMode, setRunActionMode] = useState<'cancel' | 'replay' | null>(null);
@@ -160,6 +189,12 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         });
         setDefinition((version?.definition_json ?? null) as WorkflowDefinition | null);
       }
+      try {
+        const summary = await getWorkflowRunSummaryMetadataAction({ runId });
+        setSummaryMetadata(summary as WorkflowRunSummaryMetadata);
+      } catch {
+        setSummaryMetadata(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -171,7 +206,8 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       setSteps(stepResult.steps ?? []);
       setSnapshots(stepResult.snapshots ?? []);
       setInvocations(stepResult.invocations ?? []);
-      setWaits(stepResult.waits ?? []);
+      const timelineResult = await listWorkflowRunTimelineEventsAction({ runId });
+      setTimelineEvents((timelineResult as { events?: WorkflowRunTimelineEvent[] } | null)?.events ?? []);
       const logResult = await listWorkflowRunLogsAction({ runId, limit: 200, cursor: 0 });
       setLogs(logResult.logs ?? []);
       setLastUpdatedAt(new Date());
@@ -311,19 +347,45 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 
   const timelineEntries = useMemo(() => {
     const search = timelineSearch.trim().toLowerCase();
-    const stepGroups = new Map<string, WorkflowRunStepRecord[]>();
-    for (const step of steps) {
-      if (!stepGroups.has(step.step_path)) {
-        stepGroups.set(step.step_path, []);
+    const stepGroups = new Map<string, WorkflowRunTimelineEvent[]>();
+    const waitEntries = [] as Array<{
+      kind: 'wait';
+      stepPath: string;
+      stepId: string | null;
+      waitType: string;
+      status: string;
+      createdAt: string;
+      resolvedAt?: string | null;
+      eventName?: string | null;
+      key?: string | null;
+    }>;
+
+    timelineEvents.forEach((event) => {
+      if (event.type === 'wait') {
+        waitEntries.push({
+          kind: 'wait',
+          stepPath: event.step_path,
+          stepId: stepPathToDefinitionId.get(event.step_path) ?? null,
+          waitType: event.wait_type,
+          status: event.status,
+          createdAt: event.created_at,
+          resolvedAt: event.resolved_at ?? null,
+          eventName: event.event_name ?? null,
+          key: event.key ?? null
+        });
+        return;
       }
-      stepGroups.get(step.step_path)!.push(step);
-    }
+      if (!stepGroups.has(event.step_path)) {
+        stepGroups.set(event.step_path, []);
+      }
+      stepGroups.get(event.step_path)!.push(event);
+    });
 
     const stepEntries = Array.from(stepGroups.entries()).map(([stepPath, attempts]) => {
-      const sorted = [...attempts].sort((a, b) => a.attempt - b.attempt);
-      const first = sorted[0];
-      const last = sorted[sorted.length - 1];
-      const stepId = stepPathToDefinitionId.get(stepPath) ?? null;
+      const sorted = [...attempts].sort((a, b) => (a as any).attempt - (b as any).attempt);
+      const first = sorted[0] as Extract<WorkflowRunTimelineEvent, { type: 'step' }>;
+      const last = sorted[sorted.length - 1] as Extract<WorkflowRunTimelineEvent, { type: 'step' }>;
+      const stepId = first.definition_step_id ?? stepPathToDefinitionId.get(stepPath) ?? null;
       const label = stepId && definitionStepMap.get(stepId)
         ? getStepLabel(definitionStepMap.get(stepId) as Step)
         : stepPath;
@@ -334,21 +396,9 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         label,
         status: last.status,
         startedAt: first.started_at,
-        attempts: sorted
+        attempts: sorted as Extract<WorkflowRunTimelineEvent, { type: 'step' }>[]
       };
     });
-
-    const waitEntries = waits.map((wait) => ({
-      kind: 'wait' as const,
-      stepPath: wait.step_path,
-      stepId: stepPathToDefinitionId.get(wait.step_path) ?? null,
-      waitType: wait.wait_type,
-      status: wait.status,
-      createdAt: wait.created_at,
-      resolvedAt: wait.resolved_at,
-      eventName: wait.event_name ?? null,
-      key: wait.key ?? null
-    }));
 
     const combined = [...stepEntries, ...waitEntries].sort((a, b) => {
       const aTime = a.kind === 'step' ? new Date(a.startedAt).getTime() : new Date(a.createdAt).getTime();
@@ -365,7 +415,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       const haystack = `${entry.stepPath} ${entry.waitType} ${entry.status} ${entry.eventName ?? ''} ${entry.key ?? ''}`.toLowerCase();
       return haystack.includes(search);
     });
-  }, [definitionStepMap, stepPathToDefinitionId, steps, timelineSearch, waits]);
+  }, [definitionStepMap, stepPathToDefinitionId, timelineEvents, timelineSearch]);
 
   const getStepStatusStyle = (record?: WorkflowRunStepRecord) => {
     if (!record) {
@@ -766,6 +816,12 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                 <div>
                   <div className="text-[11px] uppercase text-gray-400">Waiting For</div>
                   <div>{runError.resume_event_name ?? 'Resume event'}</div>
+                </div>
+              )}
+              {summaryMetadata && (
+                <div>
+                  <div className="text-[11px] uppercase text-gray-400">Counts</div>
+                  <div>{summaryMetadata.stepsCount} steps · {summaryMetadata.logsCount} logs · {summaryMetadata.waitsCount} waits</div>
                 </div>
               )}
             </div>

@@ -24,7 +24,7 @@
       "category": "Run Trigger",
       "description": "Show published version selector in Run dialog",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-004",
@@ -52,28 +52,28 @@
       "category": "Run Trigger",
       "description": "Offer quick link to publish before running",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-008",
       "category": "Run Trigger",
       "description": "Add confirmation when running system workflows",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-009",
       "category": "Run Trigger",
       "description": "Surface concurrency limit notice in Run dialog",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-010",
       "category": "Run Trigger",
       "description": "Remember last used run options per workflow",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-011",
@@ -87,7 +87,7 @@
       "category": "Test Event Builder",
       "description": "Support JSON editor + structured form toggle",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-013",
@@ -101,119 +101,119 @@
       "category": "Test Event Builder",
       "description": "Provide schema-driven required field indicators",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-015",
       "category": "Test Event Builder",
       "description": "Offer example payload snippets from schema examples",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-016",
       "category": "Test Event Builder",
       "description": "Allow saving named payload presets per workflow",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-017",
       "category": "Test Event Builder",
       "description": "Allow cloning prior run payload into editor",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-018",
       "category": "Test Event Builder",
       "description": "Add \"Reset to defaults\" action",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-019",
       "category": "Test Event Builder",
       "description": "Support quick-fill from sample templates (email, webhook, etc.)",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-020",
       "category": "Test Event Builder",
       "description": "Show payload size estimate and limit warnings",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-021",
       "category": "Schema-Based Form",
       "description": "Auto-generate form fields from payload schema",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-022",
       "category": "Schema-Based Form",
       "description": "Support nested objects with collapsible sections",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-023",
       "category": "Schema-Based Form",
       "description": "Support arrays with add/remove row controls",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-024",
       "category": "Schema-Based Form",
       "description": "Render enums as select dropdowns",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-025",
       "category": "Schema-Based Form",
       "description": "Render booleans as toggles",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-026",
       "category": "Schema-Based Form",
       "description": "Render date/time with datetime picker",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-027",
       "category": "Schema-Based Form",
       "description": "Show field descriptions as helper text",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-028",
       "category": "Schema-Based Form",
       "description": "Surface default values with reset per field",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-029",
       "category": "Schema-Based Form",
       "description": "Show validation errors from Zod schema",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-030",
       "category": "Schema-Based Form",
       "description": "Allow copy JSON from form view",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-031",
@@ -990,140 +990,140 @@
       "category": "Backend API",
       "description": "Add server action to create synthetic run with payload",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-142",
       "category": "Backend API",
       "description": "Add server action to list steps + snapshots for run",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-143",
       "category": "Backend API",
       "description": "Add server action to list logs for run",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-144",
       "category": "Backend API",
       "description": "Add server action to export logs",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-145",
       "category": "Backend API",
       "description": "Add server action to fetch run summary metadata",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-146",
       "category": "Backend API",
       "description": "Add server action to fetch latest run by workflow",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-147",
       "category": "Backend API",
       "description": "Add server action to replay run",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-148",
       "category": "Backend API",
       "description": "Add server action to cancel run",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-149",
       "category": "Backend API",
       "description": "Add server action to resume run",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-150",
       "category": "Backend API",
       "description": "Add server action to list run timeline events",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-151",
       "category": "Backend Runtime",
       "description": "Emit step status updates with timestamps",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-152",
       "category": "Backend Runtime",
       "description": "Persist node_path on each step transition",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-153",
       "category": "Backend Runtime",
       "description": "Record attempt counts per step",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-154",
       "category": "Backend Runtime",
       "description": "Write action invocation records for idempotency",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-155",
       "category": "Backend Runtime",
       "description": "Store snapshot size and enforce limits",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-156",
       "category": "Backend Runtime",
       "description": "Write logs for state transitions",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-157",
       "category": "Backend Runtime",
       "description": "Capture error context for run",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-158",
       "category": "Backend Runtime",
       "description": "Expose wait metadata for event/human/timeouts",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-159",
       "category": "Backend Runtime",
       "description": "Provide run summary aggregation",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-160",
       "category": "Backend Runtime",
       "description": "Support resume from persisted node_path",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-161",
