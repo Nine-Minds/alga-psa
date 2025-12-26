@@ -11,17 +11,15 @@ import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { TextArea } from '@/components/ui/TextArea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
+import WorkflowRunDialog from './WorkflowRunDialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { toast } from 'react-hot-toast';
 import {
   cancelWorkflowRunAction,
   exportWorkflowRunsAction,
-  getWorkflowSchemaAction,
   listWorkflowRunSummaryAction,
   listWorkflowRunsAction,
-  resumeWorkflowRunAction,
-  startWorkflowRunAction
+  resumeWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
@@ -33,6 +31,8 @@ type WorkflowDefinitionSummary = {
   published_version?: number | null;
   validation_status?: string | null;
   is_paused?: boolean;
+  concurrency_limit?: number | null;
+  is_system?: boolean;
 };
 
 type WorkflowRunListItem = {
@@ -65,22 +65,6 @@ type WorkflowRunFilters = {
   from: string;
   to: string;
   sort: string;
-};
-
-type JsonSchema = {
-  type?: string | string[];
-  title?: string;
-  description?: string;
-  properties?: Record<string, JsonSchema>;
-  required?: string[];
-  enum?: Array<string | number | boolean | null>;
-  items?: JsonSchema;
-  additionalProperties?: boolean | JsonSchema;
-  anyOf?: JsonSchema[];
-  oneOf?: JsonSchema[];
-  default?: unknown;
-  $ref?: string;
-  definitions?: Record<string, JsonSchema>;
 };
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -144,45 +128,6 @@ const buildWorkflowOptions = (definitions: WorkflowDefinitionSummary[]): SelectO
   }))
 ];
 
-const resolveSchemaRef = (schema: JsonSchema, root: JsonSchema): JsonSchema => {
-  if (schema.$ref && root.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    return root.definitions?.[refKey] ?? schema;
-  }
-  return schema;
-};
-
-const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
-  const resolved = resolveSchemaRef(schema, root);
-  if (resolved.default !== undefined) {
-    return resolved.default;
-  }
-  if (resolved.anyOf?.length) {
-    return buildDefaultValueFromSchema(resolved.anyOf[0], root);
-  }
-  if (resolved.oneOf?.length) {
-    return buildDefaultValueFromSchema(resolved.oneOf[0], root);
-  }
-  const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
-  switch (type) {
-    case 'object':
-      return Object.keys(resolved.properties ?? {}).reduce<Record<string, unknown>>((acc, key) => {
-        acc[key] = buildDefaultValueFromSchema(resolved.properties?.[key] ?? {}, root);
-        return acc;
-      }, {});
-    case 'array':
-      return [];
-    case 'string':
-      return '';
-    case 'number':
-    case 'integer':
-      return 0;
-    case 'boolean':
-      return false;
-    default:
-      return null;
-  }
-};
 
 interface WorkflowRunListProps {
   definitions: WorkflowDefinitionSummary[];
@@ -200,9 +145,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
   const [bulkAction, setBulkAction] = useState<'resume' | 'cancel' | null>(null);
   const [bulkReason, setBulkReason] = useState('');
   const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
-  const [runPayloadText, setRunPayloadText] = useState('');
-  const [runPayloadError, setRunPayloadError] = useState<string | null>(null);
-  const [isStartingRun, setIsStartingRun] = useState(false);
   const handleRunDetailsClose = useCallback(() => setSelectedRunId(null), []);
   const [summary, setSummary] = useState<WorkflowRunSummaryResponse | null>(null);
   const limit = 25;
@@ -305,22 +247,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
     setBulkReason('');
   }, [bulkAction]);
 
-  useEffect(() => {
-    if (!isRunDialogOpen || !activeDefinition?.payload_schema_ref) return;
-    getWorkflowSchemaAction({ schemaRef: activeDefinition.payload_schema_ref })
-      .then((result) => {
-        const schema = (result?.schema ?? null) as JsonSchema | null;
-        if (!schema) {
-          setRunPayloadText('{}');
-          return;
-        }
-        const defaults = buildDefaultValueFromSchema(schema, schema);
-        setRunPayloadText(JSON.stringify(defaults ?? {}, null, 2));
-      })
-      .catch(() => {
-        setRunPayloadText('{}');
-      });
-  }, [activeDefinition?.payload_schema_ref, isRunDialogOpen]);
 
   const handleApplyFilters = () => {
     fetchRuns(0, false);
@@ -355,52 +281,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
       toast.error('Select a workflow to run.');
       return;
     }
-    setRunPayloadError(null);
     setIsRunDialogOpen(true);
-  };
-
-  const handleRunPayloadChange = (value: string) => {
-    setRunPayloadText(value);
-    try {
-      JSON.parse(value);
-      setRunPayloadError(null);
-    } catch (err) {
-      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
-    }
-  };
-
-  const handleStartRun = async () => {
-    if (!activeDefinition?.workflow_id) return;
-    if (!activeDefinition.published_version) {
-      toast.error('Workflow has no published version.');
-      return;
-    }
-    let payload: Record<string, unknown> = {};
-    try {
-      payload = JSON.parse(runPayloadText || '{}');
-    } catch (err) {
-      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
-      return;
-    }
-    setIsStartingRun(true);
-    try {
-      const result = await startWorkflowRunAction({
-        workflowId: activeDefinition.workflow_id,
-        workflowVersion: activeDefinition.published_version,
-        payload
-      });
-      const runId = (result as { runId?: string } | undefined)?.runId;
-      setIsRunDialogOpen(false);
-      if (runId) {
-        window.location.assign(`/msp/workflows/runs/${runId}`);
-      } else {
-        toast.success('Run started.');
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to start run');
-    } finally {
-      setIsStartingRun(false);
-    }
   };
 
   const handleResetFilters = () => {
@@ -824,67 +705,21 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
         </>
       )}
 
-      <Dialog
+      <WorkflowRunDialog
         isOpen={isRunDialogOpen}
         onClose={() => setIsRunDialogOpen(false)}
-        title="Run Workflow"
-        className="max-w-2xl"
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Run Workflow</DialogTitle>
-            <DialogDescription>
-              Provide a synthetic payload for the published workflow version.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                id="workflow-run-list-name"
-                label="Workflow"
-                value={activeDefinition?.name ?? ''}
-                disabled
-              />
-              <Input
-                id="workflow-run-list-version"
-                label="Published version"
-                value={activeDefinition?.published_version ?? ''}
-                disabled
-              />
-            </div>
-            {activeDefinition?.trigger && (
-              <Input
-                id="workflow-run-list-trigger"
-                label="Trigger"
-                value={workflowTriggerMap.get(activeDefinition.workflow_id) ?? 'Manual'}
-                disabled
-              />
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payload (JSON)</label>
-              <TextArea
-                id="workflow-run-list-payload"
-                value={runPayloadText}
-                onChange={(event) => handleRunPayloadChange(event.target.value)}
-                rows={10}
-                className={runPayloadError ? 'border-red-500' : ''}
-              />
-              {runPayloadError && (
-                <div className="text-xs text-red-600 mt-1">{runPayloadError}</div>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsRunDialogOpen(false)}>
-              Close
-            </Button>
-            <Button onClick={handleStartRun} disabled={isStartingRun || !!runPayloadError}>
-              {isStartingRun ? 'Starting...' : 'Start Run'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        workflowId={activeDefinition?.workflow_id ?? null}
+        workflowName={activeDefinition?.name ?? ''}
+        triggerLabel={activeDefinition ? workflowTriggerMap.get(activeDefinition.workflow_id) ?? 'Manual' : 'Manual'}
+        payloadSchemaRef={activeDefinition?.payload_schema_ref ?? null}
+        publishedVersion={activeDefinition?.published_version ?? null}
+        draftVersion={null}
+        isSystem={activeDefinition?.is_system ?? false}
+        isPaused={activeDefinition?.is_paused ?? false}
+        validationStatus={activeDefinition?.validation_status ?? null}
+        concurrencyLimit={activeDefinition?.concurrency_limit ?? null}
+        canPublish={false}
+      />
     </div>
   );
 };

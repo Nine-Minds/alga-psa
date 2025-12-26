@@ -30,7 +30,6 @@ import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import CustomTabs from '@/components/ui/CustomTabs';
 import { Switch } from '@/components/ui/Switch';
@@ -39,6 +38,7 @@ import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowDefinitionAudit from './WorkflowDefinitionAudit';
+import WorkflowRunDialog from './WorkflowRunDialog';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
@@ -50,7 +50,6 @@ import {
   listWorkflowRegistryNodesAction,
   listWorkflowRunsAction,
   publishWorkflowDefinitionAction,
-  startWorkflowRunAction,
   updateWorkflowDefinitionDraftAction,
   updateWorkflowDefinitionMetadataAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
@@ -1157,10 +1156,7 @@ const WorkflowDesigner: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [registryError, setRegistryError] = useState(false);
-  const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
-  const [runPayloadText, setRunPayloadText] = useState('');
-  const [runPayloadError, setRunPayloadError] = useState<string | null>(null);
-  const [isStartingRun, setIsStartingRun] = useState(false);
+  const [showRunDialog, setShowRunDialog] = useState(false);
   const [metadataDraft, setMetadataDraft] = useState<{
     isVisible: boolean;
     isPaused: boolean;
@@ -1466,55 +1462,8 @@ const WorkflowDesigner: React.FC = () => {
     }
   };
 
-  const buildDefaultPayload = useCallback(() => {
-    if (!payloadSchema) return {};
-    return buildDefaultValueFromSchema(payloadSchema, payloadSchema);
-  }, [payloadSchema]);
-
   const openRunDialog = () => {
-    const defaults = buildDefaultPayload();
-    setRunPayloadText(JSON.stringify(defaults ?? {}, null, 2));
-    setRunPayloadError(null);
-    setIsRunDialogOpen(true);
-  };
-
-  const handleRunPayloadChange = (value: string) => {
-    setRunPayloadText(value);
-    try {
-      JSON.parse(value || '{}');
-      setRunPayloadError(null);
-    } catch (err) {
-      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
-    }
-  };
-
-  const handleStartRun = async () => {
-    if (!activeWorkflowId || !activeWorkflowRecord?.published_version) {
-      toast.error('Publish the workflow before running');
-      return;
-    }
-    let payload: Record<string, unknown> = {};
-    try {
-      payload = runPayloadText.trim() ? JSON.parse(runPayloadText) : {};
-      setRunPayloadError(null);
-    } catch (err) {
-      setRunPayloadError(err instanceof Error ? err.message : 'Invalid JSON');
-      return;
-    }
-    setIsStartingRun(true);
-    try {
-      const result = await startWorkflowRunAction({
-        workflowId: activeWorkflowId,
-        workflowVersion: activeWorkflowRecord.published_version,
-        payload
-      });
-      setIsRunDialogOpen(false);
-      router.push(`/msp/workflows/runs/${result.runId}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to start run');
-    } finally {
-      setIsStartingRun(false);
-    }
+    setShowRunDialog(true);
   };
 
   const handleSaveMetadata = async () => {
@@ -2309,7 +2258,9 @@ const WorkflowDesigner: React.FC = () => {
         payload_schema_ref: definition.payload_schema_ref,
         published_version: definition.published_version ?? null,
         validation_status: definition.validation_status ?? null,
-        is_paused: definition.is_paused ?? false
+        is_paused: definition.is_paused ?? false,
+        concurrency_limit: definition.concurrency_limit ?? null,
+        is_system: definition.is_system ?? false
       }))}
       isActive={activeTab === 'Runs'}
       canAdmin={canAdmin}
@@ -2399,72 +2350,22 @@ const WorkflowDesigner: React.FC = () => {
         </div>
       </div>
 
-      <Dialog
-        isOpen={isRunDialogOpen}
-        onClose={() => setIsRunDialogOpen(false)}
-        title="Run Workflow"
-        className="max-w-2xl"
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Run Workflow</DialogTitle>
-            <DialogDescription>
-              Provide a synthetic payload for the published workflow version.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input
-                id="workflow-run-version"
-                label="Published version"
-                value={activeWorkflowRecord?.published_version ?? ''}
-                disabled
-              />
-              <Input
-                id="workflow-run-status"
-                label="Workflow status"
-                value={activeWorkflowRecord?.status ?? 'draft'}
-                disabled
-              />
-              <Input
-                id="workflow-run-trigger"
-                label="Trigger"
-                value={activeDefinition?.trigger?.eventName ? `Event: ${activeDefinition.trigger.eventName}` : 'Manual'}
-                disabled
-              />
-            </div>
-
-            {activeWorkflowRecord?.published_version && activeDefinition?.version
-              && activeDefinition.version !== activeWorkflowRecord.published_version && (
-                <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">
-                  Draft version differs from published. Running published version {activeWorkflowRecord.published_version}.
-                </div>
-              )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payload (JSON)</label>
-              <TextArea
-                id="workflow-run-payload"
-                value={runPayloadText}
-                onChange={(event) => handleRunPayloadChange(event.target.value)}
-                rows={10}
-                className={runPayloadError ? 'border-red-500' : ''}
-              />
-              {runPayloadError && (
-                <div className="mt-1 text-xs text-red-600">{runPayloadError}</div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-        <DialogFooter className="flex items-center justify-between">
-          <Button variant="outline" onClick={() => setIsRunDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleStartRun} disabled={isStartingRun || !!runPayloadError}>
-            {isStartingRun ? 'Starting...' : 'Start Run'}
-          </Button>
-        </DialogFooter>
-      </Dialog>
+      <WorkflowRunDialog
+        isOpen={showRunDialog}
+        onClose={() => setShowRunDialog(false)}
+        workflowId={activeWorkflowId}
+        workflowName={activeWorkflowRecord?.name ?? activeDefinition?.name ?? ''}
+        triggerLabel={activeDefinition?.trigger?.eventName ? `Event: ${activeDefinition.trigger.eventName}` : 'Manual'}
+        payloadSchemaRef={activeDefinition?.payloadSchemaRef ?? activeWorkflowRecord?.payload_schema_ref ?? null}
+        publishedVersion={activeWorkflowRecord?.published_version ?? null}
+        draftVersion={activeDefinition?.version ?? null}
+        isSystem={activeWorkflowRecord?.is_system ?? false}
+        isPaused={activeWorkflowRecord?.is_paused ?? false}
+        validationStatus={activeWorkflowRecord?.validation_status ?? null}
+        concurrencyLimit={activeWorkflowRecord?.concurrency_limit ?? null}
+        canPublish={canPublish}
+        onPublishDraft={handlePublish}
+      />
 
       <div className="flex-1 overflow-hidden">
         <CustomTabs
