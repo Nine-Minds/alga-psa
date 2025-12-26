@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateInputMapping,
+  validateInputMappingSchema,
   collectSecretRefs,
   collectSecretRefsFromConfig
 } from '../validation/mappingValidator';
@@ -163,6 +164,50 @@ describe('mappingValidator', () => {
         requiredFields: ['requiredField1', 'requiredField2']
       });
       expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('validateInputMappingSchema', () => {
+    const baseOptions = {
+      stepPath: 'root.steps[0]',
+      stepId: 'step-1',
+      fieldName: 'inputMapping'
+    };
+
+    const schema = {
+      type: 'object',
+      required: ['foo'],
+      properties: {
+        foo: {
+          type: 'object',
+          required: ['bar'],
+          properties: {
+            bar: { type: 'string' }
+          }
+        }
+      }
+    };
+
+    it('reports missing top-level required field', () => {
+      const result = validateInputMappingSchema({}, schema, baseOptions);
+      expect(result).toHaveLength(1);
+      expect(result[0].code).toBe('MISSING_REQUIRED_MAPPING');
+    });
+
+    it('reports missing nested required field when parent is object literal', () => {
+      const result = validateInputMappingSchema({ foo: {} }, schema, baseOptions);
+      expect(result).toHaveLength(1);
+      expect(result[0].message).toContain('inputMapping.foo.bar');
+    });
+
+    it('does not report nested required when parent is mapped via expression', () => {
+      const result = validateInputMappingSchema({ foo: { $expr: 'payload.foo' } }, schema, baseOptions);
+      expect(result).toHaveLength(0);
+    });
+
+    it('passes when required fields are fully mapped', () => {
+      const result = validateInputMappingSchema({ foo: { bar: { $expr: 'payload.bar' } } }, schema, baseOptions);
+      expect(result).toHaveLength(0);
     });
   });
 
