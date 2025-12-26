@@ -243,9 +243,14 @@ async function deleteExtensionData(
 
 // Export getAsset for external use
 export async function getAsset(asset_id: string): Promise<Asset> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     // Check permission for asset reading
@@ -253,22 +258,44 @@ export async function getAsset(asset_id: string): Promise<Asset> {
         throw new Error('Permission denied: Cannot read assets');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
     }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
+    }
+
     return getAssetWithExtensions(knex, tenant, asset_id);
 }
 
 export async function getAssetDetailBundle(asset_id: string): Promise<AssetDetailBundle> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
     }
 
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
+    }
+
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     if (!await hasPermission(currentUser, 'asset', 'read', knex)) {
@@ -401,9 +428,14 @@ function formatAssetForOutput(asset: any): Asset {
 }
 
 export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     // Check permission for asset creation
@@ -411,9 +443,17 @@ export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
         throw new Error('Permission denied: Cannot create assets');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {
@@ -504,9 +544,14 @@ export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
 }
 
 export async function updateAsset(asset_id: string, data: UpdateAssetRequest): Promise<Asset> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     // Check permission for asset updating
@@ -514,9 +559,17 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
         throw new Error('Permission denied: Cannot update assets');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {
@@ -614,18 +667,31 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
 }
 
 export async function deleteAsset(asset_id: string): Promise<void> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     if (!await hasPermission(currentUser, 'asset', 'delete')) {
         throw new Error('Permission denied: Cannot delete assets');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {
@@ -717,9 +783,14 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
 }
 
 export async function listAssets(params: AssetQueryParams): Promise<AssetListResponse> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     // Check permission for asset reading
@@ -727,9 +798,17 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
         throw new Error('Permission denied: Cannot read assets');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {
@@ -835,9 +914,14 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
 // Maintenance Schedule Management
 export async function createMaintenanceSchedule(data: CreateMaintenanceScheduleRequest): Promise<AssetMaintenanceSchedule> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No user session found');
+        }
+
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
         }
 
         // Check permission for asset updating (maintenance is considered an update operation)
@@ -845,9 +929,17 @@ export async function createMaintenanceSchedule(data: CreateMaintenanceScheduleR
             throw new Error('Permission denied: Cannot create maintenance schedules');
         }
 
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         // Validate the input data
@@ -916,9 +1008,14 @@ export async function updateMaintenanceSchedule(
     data: UpdateMaintenanceScheduleRequest
 ): Promise<AssetMaintenanceSchedule> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
+        }
+
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
         }
 
         // Check permission for asset updating (maintenance is considered an update operation)
@@ -926,9 +1023,17 @@ export async function updateMaintenanceSchedule(
             throw new Error('Permission denied: Cannot update maintenance schedules');
         }
 
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         // Validate the update data
@@ -993,9 +1098,14 @@ export async function updateMaintenanceSchedule(
 
 export async function deleteMaintenanceSchedule(schedule_id: string): Promise<void> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
+        }
+
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
         }
 
         // Check permission for asset deletion
@@ -1003,9 +1113,17 @@ export async function deleteMaintenanceSchedule(schedule_id: string): Promise<vo
             throw new Error('Permission denied: Cannot delete maintenance schedules');
         }
 
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         const [schedule] = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1027,9 +1145,14 @@ export async function deleteMaintenanceSchedule(schedule_id: string): Promise<vo
 
 export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryRequest): Promise<AssetMaintenanceHistory> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No user session found');
+        }
+
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
         }
 
         // Check permission for asset updating (maintenance recording is considered an update operation)
@@ -1037,9 +1160,17 @@ export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryReq
             throw new Error('Permission denied: Cannot record maintenance history');
         }
 
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         // Validate the input data
@@ -1102,14 +1233,27 @@ export async function recordMaintenanceHistory(data: CreateMaintenanceHistoryReq
 // Maintenance Schedule Listing
 export async function getAssetMaintenanceSchedules(asset_id: string): Promise<AssetMaintenanceSchedule[]> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
+        }
+
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         if (!await hasPermission(currentUser, 'asset', 'read', knex)) {
@@ -1147,14 +1291,27 @@ export async function getAssetMaintenanceSchedules(asset_id: string): Promise<As
 // Reporting Functions
 export async function getAssetMaintenanceReport(asset_id: string): Promise<AssetMaintenanceReport> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
+        }
+
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         if (!await hasPermission(currentUser, 'asset', 'read', knex)) {
@@ -1170,14 +1327,27 @@ export async function getAssetMaintenanceReport(asset_id: string): Promise<Asset
 
 export async function getAssetHistory(asset_id: string): Promise<AssetHistory[]> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
+        }
+
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetHistory[]> => {
@@ -1211,14 +1381,27 @@ type RawLinkedTicket = {
 
 export async function getAssetLinkedTickets(asset_id: string): Promise<AssetTicketSummary[]> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
         }
 
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
+        }
+
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetTicketSummary[]> => {
@@ -1236,9 +1419,14 @@ export async function getAssetLinkedTickets(asset_id: string): Promise<AssetTick
 
 export async function getClientMaintenanceSummary(client_id: string): Promise<ClientMaintenanceSummary> {
     try {
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
+        }
+
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
         }
 
         // Check permission for asset reading
@@ -1246,9 +1434,17 @@ export async function getClientMaintenanceSummary(client_id: string): Promise<Cl
             throw new Error('Permission denied: Cannot read client maintenance summaries');
         }
 
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         return await getClientMaintenanceSummaryForTenant(knex, tenant, client_id);
@@ -1571,18 +1767,31 @@ export async function getClientMaintenanceSummaries(client_ids: string[]): Promi
             return {};
         }
 
+        // Get current user FIRST to ensure we have the user's tenant
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error('No authenticated user found');
+        }
+
+        if (!currentUser.tenant) {
+            throw new Error('User tenant not found in session');
         }
 
         if (!await hasPermission(currentUser, 'asset', 'read')) {
             throw new Error('Permission denied: Cannot read client maintenance summaries');
         }
 
+        // Get tenant context from DB (should match user's tenant)
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('No tenant found');
+            throw new Error('No tenant found in database context');
+        }
+
+        // CRITICAL: Verify tenant from DB context matches user's tenant
+        // This ensures we're always using the tenant from the authenticated user
+        if (tenant !== currentUser.tenant) {
+            console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+            throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
         }
 
         const entries = await Promise.all(
@@ -1612,9 +1821,14 @@ export async function getClientMaintenanceSummaries(client_ids: string[]): Promi
 // Asset Association Functions
 // Update only the map callback in listEntityAssets function
 export async function listEntityAssets(entity_id: string, entity_type: 'ticket' | 'project'): Promise<Asset[]> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     // Check permission for asset reading
@@ -1622,9 +1836,17 @@ export async function listEntityAssets(entity_id: string, entity_type: 'ticket' 
         throw new Error('Permission denied: Cannot read asset associations');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {
@@ -1651,9 +1873,14 @@ export async function listEntityAssets(entity_id: string, entity_type: 'ticket' 
 }
 
 export async function createAssetAssociation(data: CreateAssetAssociationRequest): Promise<AssetAssociation> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No user session found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     // Check permission for asset updating (associations are considered update operations)
@@ -1661,9 +1888,17 @@ export async function createAssetAssociation(data: CreateAssetAssociationRequest
         throw new Error('Permission denied: Cannot create asset associations');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {
@@ -1710,9 +1945,14 @@ export async function removeAssetAssociation(
     entity_id: string,
     entity_type: 'ticket' | 'project'
 ): Promise<void> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
+    }
+
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
     }
 
     // Check permission for asset deletion
@@ -1720,9 +1960,17 @@ export async function removeAssetAssociation(
         throw new Error('Permission denied: Cannot remove asset associations');
     }
 
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {
@@ -1750,14 +1998,27 @@ export async function removeAssetAssociation(
 }
 
 export async function getAssetSummaryMetrics(asset_id: string): Promise<AssetSummaryMetrics> {
+    // Get current user FIRST to ensure we have the user's tenant
     const currentUser = await getCurrentUser();
     if (!currentUser) {
         throw new Error('No authenticated user found');
     }
 
+    if (!currentUser.tenant) {
+        throw new Error('User tenant not found in session');
+    }
+
+    // Get tenant context from DB (should match user's tenant)
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-        throw new Error('No tenant found');
+        throw new Error('No tenant found in database context');
+    }
+
+    // CRITICAL: Verify tenant from DB context matches user's tenant
+    // This ensures we're always using the tenant from the authenticated user
+    if (tenant !== currentUser.tenant) {
+        console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+        throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
     }
 
     try {

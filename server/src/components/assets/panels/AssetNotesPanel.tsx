@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { useAssetNotes } from '../../../hooks/useAssetNotes';
 import TextEditor from '../../editor/TextEditor';
-import { Save } from 'lucide-react';
-import Spinner from 'server/src/components/ui/Spinner';
+import { Save, Loader2 } from 'lucide-react';
+import { DEFAULT_BLOCK } from '../../editor/TextEditor';
+import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 
 interface AssetNotesPanelProps {
   assetId: string;
@@ -15,26 +16,21 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
 }) => {
   const { 
     noteContent, 
+    noteDocument,
     lastUpdated, 
     isLoading, 
+    error,
     saveNote, 
+    refresh,
     isSaving 
   } = useAssetNotes(assetId);
 
-  // We manage local state for the editor content to avoid jitter
-  // but we initialize it from the fetched data
+  // Track local edits for saving (avoid jitter from revalidation).
   const [editorContent, setEditorContent] = useState<any>(null);
 
-  useEffect(() => {
-    if (noteContent) {
-      setEditorContent(noteContent);
-    }
-  }, [noteContent]);
-
   const handleSave = async () => {
-    if (editorContent) {
-      await saveNote(editorContent);
-    }
+    const contentToSave = editorContent ?? noteContent ?? DEFAULT_BLOCK;
+    await saveNote(contentToSave);
   };
 
   if (isLoading) {
@@ -52,18 +48,45 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
             size="sm" 
             className="h-8 gap-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !!error}
           >
-            {isSaving ? <Spinner size="sm" className="h-3 w-3" /> : <Save size={14} />}
+            {isSaving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} />
+            )}
             Save
           </Button>
         </div>
       </CardHeader>
       <CardContent>
+        {error && (
+          <div className="mb-3">
+            <Alert variant="destructive">
+              <AlertTitle>Notes failed to load</AlertTitle>
+              <AlertDescription>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm">
+                    {error instanceof Error ? error.message : 'Unknown error'}
+                  </span>
+                  <Button
+                    id="retry-asset-notes-btn"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void refresh()}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
         <div className="min-h-[200px]">
           <TextEditor
-            key={assetId}
-            initialContent={editorContent}
+            // Remount when the backing document changes (or first loads) so saved notes show up on open.
+            key={`${assetId}-${noteDocument?.document_id ?? 'new'}-${noteContent ? 'loaded' : 'empty'}`}
+            initialContent={noteContent ?? DEFAULT_BLOCK}
             onContentChange={setEditorContent}
           />
         </div>

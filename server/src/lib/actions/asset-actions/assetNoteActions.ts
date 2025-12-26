@@ -31,9 +31,27 @@ export interface AssetNoteContent {
  * Returns the BlockNote content if the asset has a linked notes document
  */
 export async function getAssetNoteContent(assetId: string): Promise<AssetNoteContent> {
+  // Get current user FIRST to ensure we have the user's tenant
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!currentUser.tenant) {
+    throw new Error('User tenant not found in session');
+  }
+
+  // Get tenant context from DB (should match user's tenant)
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
-    throw new Error('No tenant found');
+    throw new Error('No tenant found in database context');
+  }
+
+  // CRITICAL: Verify tenant from DB context matches user's tenant
+  // This ensures we're always using the tenant from the authenticated user
+  if (tenant !== currentUser.tenant) {
+    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
   }
 
   try {
@@ -72,13 +90,24 @@ export async function getAssetNoteContent(assetId: string): Promise<AssetNoteCon
     // Get the block content
     const blockContent = await getBlockContent(asset.notes_document_id);
 
+    let parsedBlockData: unknown | null = null;
+    if (blockContent?.block_data) {
+      if (typeof blockContent.block_data === 'string') {
+        try {
+          parsedBlockData = JSON.parse(blockContent.block_data);
+        } catch (parseError) {
+          // If parsing fails, don't fail the entire notes load.
+          // Return the raw string so the editor can still display something.
+          parsedBlockData = blockContent.block_data;
+        }
+      } else {
+        parsedBlockData = blockContent.block_data;
+      }
+    }
+
     return {
       document,
-      blockData: blockContent?.block_data
-        ? typeof blockContent.block_data === 'string'
-          ? JSON.parse(blockContent.block_data)
-          : blockContent.block_data
-        : null,
+      blockData: parsedBlockData,
       lastUpdated: blockContent?.updated_at || document.updated_at || null,
     };
   } catch (error) {
@@ -95,15 +124,27 @@ export async function saveAssetNote(
   assetId: string,
   blockData: unknown
 ): Promise<{ document_id: string }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
-  // Get current user for audit trail
+  // Get current user FIRST to ensure we have the user's tenant
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
+  }
+
+  if (!currentUser.tenant) {
+    throw new Error('User tenant not found in session');
+  }
+
+  // Get tenant context from DB (should match user's tenant)
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found in database context');
+  }
+
+  // CRITICAL: Verify tenant from DB context matches user's tenant
+  // This ensures we're always using the tenant from the authenticated user
+  if (tenant !== currentUser.tenant) {
+    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
   }
 
   try {
@@ -159,9 +200,27 @@ export async function deleteAssetNote(
   assetId: string,
   deleteDocument: boolean = false
 ): Promise<void> {
+  // Get current user FIRST to ensure we have the user's tenant
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
+  }
+
+  if (!currentUser.tenant) {
+    throw new Error('User tenant not found in session');
+  }
+
+  // Get tenant context from DB (should match user's tenant)
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
-    throw new Error('No tenant found');
+    throw new Error('No tenant found in database context');
+  }
+
+  // CRITICAL: Verify tenant from DB context matches user's tenant
+  // This ensures we're always using the tenant from the authenticated user
+  if (tenant !== currentUser.tenant) {
+    console.error(`Tenant mismatch detected: DB context has ${tenant}, but user has ${currentUser.tenant}`);
+    throw new Error(`Tenant mismatch: Database context tenant (${tenant}) does not match user tenant (${currentUser.tenant})`);
   }
 
   try {
