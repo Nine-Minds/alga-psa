@@ -10,14 +10,16 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
 import { TaskTypeSelector } from 'server/src/components/projects/TaskTypeSelector';
-import { ListChecks } from 'lucide-react';
+import { ListChecks, Link2, Plus, Trash2, Ban, GitBranch } from 'lucide-react';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import {
   IProjectTemplateTask,
   IProjectTemplateStatusMapping,
   IProjectTemplateTaskAssignment,
   IProjectTemplateChecklistItem,
+  IProjectTemplateDependency,
 } from 'server/src/interfaces/projectTemplate.interfaces';
+import { DependencyType } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITaskType } from 'server/src/interfaces/project.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -43,13 +45,26 @@ export interface LocalChecklistItem {
   isNew?: boolean;
 }
 
+/** Local dependency for tracking changes before save */
+interface LocalDependency {
+  id: string;
+  predecessorTaskId: string;
+  predecessorTaskName: string;
+  dependencyType: DependencyType;
+  isNew: boolean;
+}
+
 interface TemplateTaskFormProps {
   open: boolean;
   onClose: () => void;
   onSave: (
     taskData: Partial<IProjectTemplateTask>,
     additionalAgents?: string[],
-    checklistItems?: LocalChecklistItem[]
+    checklistItems?: LocalChecklistItem[],
+    dependencyChanges?: {
+      added: Array<{ predecessorTaskId: string; dependencyType: DependencyType }>;
+      removed: string[];
+    }
   ) => void;
   task: IProjectTemplateTask | null;
   taskAssignments?: IProjectTemplateTaskAssignment[];
@@ -61,6 +76,10 @@ interface TemplateTaskFormProps {
   initialStatusMappingId?: string | null;
   /** Checklist items for the task being edited */
   checklistItems?: IProjectTemplateChecklistItem[];
+  /** All tasks in the template (for dependency selection) */
+  allTasks?: IProjectTemplateTask[];
+  /** Current dependencies where this task is the successor */
+  dependencies?: IProjectTemplateDependency[];
 }
 
 export function TemplateTaskForm({
@@ -75,6 +94,8 @@ export function TemplateTaskForm({
   taskTypes,
   initialStatusMappingId,
   checklistItems = [],
+  allTasks = [],
+  dependencies = [],
 }: TemplateTaskFormProps) {
   const [taskName, setTaskName] = useState('');
   const [description, setDescription] = useState('');
@@ -93,6 +114,12 @@ export function TemplateTaskForm({
   // Checklist state - unified approach like projects
   const [localChecklistItems, setLocalChecklistItems] = useState<LocalChecklistItem[]>([]);
   const [isEditingChecklist, setIsEditingChecklist] = useState(false);
+
+  // Dependency state
+  const [localDependencies, setLocalDependencies] = useState<LocalDependency[]>([]);
+  const [removedDependencyIds, setRemovedDependencyIds] = useState<string[]>([]);
+  const [newDependencyTask, setNewDependencyTask] = useState('');
+  const [newDependencyType, setNewDependencyType] = useState<DependencyType>('blocked_by');
 
   // Fetch services on mount
   useEffect(() => {
@@ -137,6 +164,20 @@ export function TemplateTaskForm({
             isNew: false,
           }))
         );
+        // Initialize dependencies from props
+        setLocalDependencies(
+          dependencies.map(dep => {
+            const predTask = allTasks.find(t => t.template_task_id === dep.predecessor_task_id);
+            return {
+              id: dep.template_dependency_id,
+              predecessorTaskId: dep.predecessor_task_id,
+              predecessorTaskName: predTask?.task_name || 'Unknown task',
+              dependencyType: dep.dependency_type,
+              isNew: false,
+            };
+          })
+        );
+        setRemovedDependencyIds([]);
       } else {
         // New task
         setTaskName('');
@@ -150,11 +191,15 @@ export function TemplateTaskForm({
         setStatusMappingId(initialStatusMappingId || statusMappings[0]?.template_status_mapping_id || '');
         setServiceId('');
         setLocalChecklistItems([]);
+        setLocalDependencies([]);
+        setRemovedDependencyIds([]);
       }
       setError(null);
       setIsEditingChecklist(false);
+      setNewDependencyTask('');
+      setNewDependencyType('blocked_by');
     }
-  }, [open, task, taskAssignments, statusMappings, initialStatusMappingId, checklistItems]);
+  }, [open, task, taskAssignments, statusMappings, initialStatusMappingId, checklistItems, dependencies, allTasks]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +216,14 @@ export function TemplateTaskForm({
       // Filter out empty items before saving
       const validChecklistItems = localChecklistItems.filter(item => item.item_name.trim());
 
+      // Build dependency changes
+      const addedDependencies = localDependencies
+        .filter(d => d.isNew)
+        .map(d => ({
+          predecessorTaskId: d.predecessorTaskId,
+          dependencyType: d.dependencyType,
+        }));
+
       await onSave(
         {
           task_name: taskName.trim(),
@@ -185,7 +238,11 @@ export function TemplateTaskForm({
           service_id: serviceId || null,
         },
         additionalAgents,
-        validChecklistItems
+        validChecklistItems,
+        {
+          added: addedDependencies,
+          removed: removedDependencyIds,
+        }
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save task');
@@ -218,6 +275,58 @@ export function TemplateTaskForm({
   const removeChecklistItem = (id: string) => {
     setLocalChecklistItems(prev => prev.filter(item => item.id !== id));
   };
+
+  // Dependency handlers
+  const addDependency = () => {
+    if (!newDependencyTask) return;
+
+    // Check for duplicates
+    if (localDependencies.some(d => d.predecessorTaskId === newDependencyTask)) {
+      return;
+    }
+
+    const predTask = allTasks.find(t => t.template_task_id === newDependencyTask);
+    if (!predTask) return;
+
+    const newDep: LocalDependency = {
+      id: `temp_${Date.now()}`,
+      predecessorTaskId: newDependencyTask,
+      predecessorTaskName: predTask.task_name,
+      dependencyType: newDependencyType,
+      isNew: true,
+    };
+
+    setLocalDependencies(prev => [...prev, newDep]);
+    setNewDependencyTask('');
+    setNewDependencyType('blocked_by');
+  };
+
+  const removeDependency = (dep: LocalDependency) => {
+    setLocalDependencies(prev => prev.filter(d => d.id !== dep.id));
+    if (!dep.isNew) {
+      setRemovedDependencyIds(prev => [...prev, dep.id]);
+    }
+  };
+
+  // Get dependency type icon and label
+  const getDependencyTypeInfo = (type: DependencyType) => {
+    switch (type) {
+      case 'blocks':
+        return { icon: <Ban className="h-4 w-4 text-red-500" />, label: 'Blocks' };
+      case 'blocked_by':
+        return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: 'Blocked by' };
+      case 'related_to':
+        return { icon: <GitBranch className="h-4 w-4 text-blue-500" />, label: 'Related to' };
+      default:
+        return { icon: <Link2 className="h-4 w-4 text-gray-500" />, label: type };
+    }
+  };
+
+  // Filter available tasks (exclude current task and already selected)
+  const availableTasksForDependency = allTasks.filter(
+    t => t.template_task_id !== task?.template_task_id &&
+         !localDependencies.some(d => d.predecessorTaskId === t.template_task_id)
+  );
 
   return (
     <Dialog
@@ -510,6 +619,99 @@ export function TemplateTaskForm({
                 </Button>
               )}
             </div>
+
+            {/* Dependencies Section - Only show when editing existing task */}
+            {task && (
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Link2 className="h-5 w-5 text-gray-500" />
+                  <h3 className="font-semibold">Dependencies</h3>
+                </div>
+
+                {/* Existing dependencies list */}
+                {localDependencies.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {localDependencies.map(dep => {
+                      const typeInfo = getDependencyTypeInfo(dep.dependencyType);
+                      return (
+                        <div
+                          key={dep.id}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-2">
+                            {typeInfo.icon}
+                            <span className="text-sm text-gray-600">{typeInfo.label}</span>
+                            <span className="text-sm font-medium">{dep.predecessorTaskName}</span>
+                            {dep.isNew && (
+                              <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                                New
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeDependency(dep)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            title="Remove dependency"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Add new dependency */}
+                {availableTasksForDependency.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <CustomSelect
+                      value={newDependencyType}
+                      onValueChange={(v) => setNewDependencyType(v as DependencyType)}
+                      options={[
+                        { value: 'blocked_by', label: 'Blocked by' },
+                        { value: 'blocks', label: 'Blocks' },
+                        { value: 'related_to', label: 'Related to' },
+                      ]}
+                      className="w-32"
+                    />
+                    <CustomSelect
+                      value={newDependencyTask}
+                      onValueChange={setNewDependencyTask}
+                      options={[
+                        { value: '', label: 'Select task...' },
+                        ...availableTasksForDependency.map(t => ({
+                          value: t.template_task_id,
+                          label: t.task_name,
+                        })),
+                      ]}
+                      className="flex-1"
+                      placeholder="Select task..."
+                    />
+                    <Button
+                      id="add-dependency"
+                      type="button"
+                      variant="soft"
+                      size="sm"
+                      onClick={addDependency}
+                      disabled={!newDependencyTask}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {availableTasksForDependency.length === 0 && localDependencies.length === 0 && (
+                  <p className="text-sm text-gray-500 italic">
+                    No other tasks available for dependencies
+                  </p>
+                )}
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Define task dependencies to control execution order when project is created
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-6">

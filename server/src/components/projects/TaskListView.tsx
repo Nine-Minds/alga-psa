@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskChecklistItem, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
-import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, ArrowRight, Ban, GitBranch, Calendar, GripVertical } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
 import { format } from 'date-fns';
@@ -24,6 +24,7 @@ interface TaskListViewProps {
   onTaskClick: (task: IProjectTask) => void;
   onTaskDelete: (task: IProjectTask) => void;
   onTaskDuplicate: (task: IProjectTask) => void;
+  onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
   users: any[];
   // Filter props
   selectedPriorityFilter?: string;
@@ -50,12 +51,19 @@ export default function TaskListView({
   onTaskClick,
   onTaskDelete,
   onTaskDuplicate,
+  onTaskMove,
   users,
   selectedPriorityFilter = 'all',
   selectedTaskTags = []
 }: TaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
+
+  // Drag and drop state
+  const [draggedTask, setDraggedTask] = useState<IProjectTask | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
+  const [dragOverPhase, setDragOverPhase] = useState<string | null>(null);
+  const [dropIndicatorIndex, setDropIndicatorIndex] = useState<number | null>(null);
 
   // Filter tasks based on priority and tags
   const filteredTasks = useMemo(() => {
@@ -78,28 +86,27 @@ export default function TaskListView({
     return filtered;
   }, [tasks, selectedPriorityFilter, selectedTaskTags, taskTags]);
 
-  // Group tasks by phase and status
+  // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
     const groups: PhaseGroup[] = [];
 
     phases.forEach(phase => {
       const phaseTasks = filteredTasks.filter(task => task.phase_id === phase.phase_id);
 
-      const statusGroups: { status: ProjectStatus; tasks: IProjectTask[] }[] = [];
-      statuses.forEach(status => {
-        const statusTasks = phaseTasks.filter(task => task.project_status_mapping_id === status.project_status_mapping_id);
-        if (statusTasks.length > 0) {
-          statusGroups.push({ status, tasks: statusTasks });
-        }
+      // Include ALL statuses for each phase (even empty ones) to enable drag-and-drop
+      const statusGroups: { status: ProjectStatus; tasks: IProjectTask[] }[] = statuses.map(status => {
+        const statusTasks = phaseTasks
+          .filter(task => task.project_status_mapping_id === status.project_status_mapping_id)
+          // Sort by order_key to match the reordering system (not wbs_code)
+          .sort((a, b) => (a.order_key || '').localeCompare(b.order_key || ''));
+        return { status, tasks: statusTasks };
       });
 
-      if (phaseTasks.length > 0) {
-        groups.push({
-          phase,
-          statusGroups,
-          totalTasks: phaseTasks.length
-        });
-      }
+      groups.push({
+        phase,
+        statusGroups,
+        totalTasks: phaseTasks.length
+      });
     });
 
     return groups;
@@ -155,53 +162,188 @@ export default function TaskListView({
     return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
   };
 
-  // Helper to get dependency type label
-  const getDependencyTypeLabel = (type: string): string => {
+  // Helper to get dependency type info (label and icon)
+  const getDependencyTypeInfo = (type: string): { label: string; icon: React.ReactNode; color: string } => {
     switch (type) {
-      case 'blocks': return 'Blocks';
-      case 'blocked_by': return 'Blocked by';
-      case 'related_to': return 'Related to';
-      default: return type;
+      case 'blocks':
+        return { label: 'Blocks', icon: <Ban className="h-3 w-3" />, color: 'text-red-500' };
+      case 'blocked_by':
+        return { label: 'Blocked by', icon: <Ban className="h-3 w-3" />, color: 'text-orange-500' };
+      case 'related_to':
+        return { label: 'Related to', icon: <GitBranch className="h-3 w-3" />, color: 'text-blue-500' };
+      default:
+        return { label: type, icon: <Link2 className="h-3 w-3" />, color: 'text-gray-500' };
     }
   };
 
-  // Render dependencies tooltip content
-  const renderDependenciesTooltip = (taskId: string): string | null => {
+  // Render dependencies tooltip content as JSX
+  const renderDependenciesTooltipContent = (taskId: string): React.ReactNode | null => {
     const deps = taskDependencies[taskId];
     if (!deps || (deps.predecessors.length === 0 && deps.successors.length === 0)) {
       return null;
     }
 
-    const lines: string[] = [];
-
-    if (deps.predecessors.length > 0) {
-      lines.push('Depends on:');
-      deps.predecessors.forEach(d => {
-        const taskName = d.predecessor_task?.task_name || 'Unknown task';
-        lines.push(`  • ${taskName} (${getDependencyTypeLabel(d.dependency_type)})`);
-      });
-    }
-
-    if (deps.successors.length > 0) {
-      if (lines.length > 0) lines.push('');
-      lines.push('Blocks:');
-      deps.successors.forEach(d => {
-        const taskName = d.successor_task?.task_name || 'Unknown task';
-        lines.push(`  • ${taskName} (${getDependencyTypeLabel(d.dependency_type)})`);
-      });
-    }
-
-    return lines.join('\n');
+    return (
+      <div className="text-xs space-y-2">
+        {deps.predecessors.length > 0 && (
+          <div>
+            <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+            {deps.predecessors.map((d, i) => {
+              const info = getDependencyTypeInfo(d.dependency_type);
+              return (
+                <div key={i} className="flex items-center gap-1.5 ml-2">
+                  <span className={info.color}>{info.icon}</span>
+                  <span>{d.predecessor_task?.task_name || 'Unknown task'}</span>
+                  <span className="text-gray-400">({info.label})</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {deps.successors.length > 0 && (
+          <div>
+            <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+            {deps.successors.map((d, i) => {
+              const info = getDependencyTypeInfo(d.dependency_type);
+              return (
+                <div key={i} className="flex items-center gap-1.5 ml-2">
+                  <span className={info.color}>{info.icon}</span>
+                  <span>{d.successor_task?.task_name || 'Unknown task'}</span>
+                  <span className="text-gray-400">({info.label})</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
+  // Get main dependency icon based on dependency types
+  const getDependencyIcon = (taskId: string): React.ReactNode => {
+    const deps = taskDependencies[taskId];
+    if (!deps) return <Link2 className="h-3.5 w-3.5 text-gray-500" />;
+
+    // Check if there are any blocking dependencies
+    const hasBlocking = deps.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                       deps.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by');
+
+    if (hasBlocking) {
+      return <Ban className="h-3.5 w-3.5 text-red-500" />;
+    }
+
+    return <GitBranch className="h-3.5 w-3.5 text-blue-500" />;
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent<HTMLTableRowElement>, task: IProjectTask) => {
+    setDraggedTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.task_id);
+    // Add a visual cue that we're dragging
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  }, []);
+
+  const handleDragEnd = useCallback((e: React.DragEvent<HTMLTableRowElement>) => {
+    setDraggedTask(null);
+    setDragOverStatus(null);
+    setDragOverPhase(null);
+    setDropIndicatorIndex(null);
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = '1';
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string, taskIndex: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    if (draggedTask) {
+      setDragOverStatus(statusId);
+      setDragOverPhase(phaseId);
+      setDropIndicatorIndex(taskIndex);
+    }
+  }, [draggedTask]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLTableRowElement>) => {
+    // Only clear if we're leaving the current target (not entering a child)
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!e.currentTarget.contains(relatedTarget)) {
+      setDropIndicatorIndex(null);
+    }
+  }, []);
+
+  const handleStatusDragOver = useCallback((e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    if (draggedTask) {
+      setDragOverStatus(statusId);
+      setDragOverPhase(phaseId);
+      setDropIndicatorIndex(-1); // -1 means drop at end
+    }
+  }, [draggedTask]);
+
+  const handleDrop = useCallback(async (e: React.DragEvent<HTMLTableRowElement>, statusId: string, phaseId: string, tasksInStatus: IProjectTask[], dropIndex: number) => {
+    e.preventDefault();
+
+    if (!draggedTask || !onTaskMove) {
+      setDraggedTask(null);
+      setDragOverStatus(null);
+      setDragOverPhase(null);
+      setDropIndicatorIndex(null);
+      return;
+    }
+
+    // Determine beforeTaskId and afterTaskId based on drop position
+    // beforeTaskId = task that should come BEFORE the moved task (lower order_key)
+    // afterTaskId = task that should come AFTER the moved task (higher order_key)
+    let beforeTaskId: string | null = null;
+    let afterTaskId: string | null = null;
+
+    if (dropIndex === -1 || dropIndex >= tasksInStatus.length) {
+      // Dropping at the end - moved task should come after the last task
+      beforeTaskId = tasksInStatus.length > 0 ? tasksInStatus[tasksInStatus.length - 1].task_id : null;
+      afterTaskId = null;
+    } else {
+      // Dropping at a specific position (inserting before the task at dropIndex)
+      // The task at dropIndex-1 should be BEFORE the moved task
+      // The task at dropIndex should be AFTER the moved task
+      beforeTaskId = dropIndex > 0 ? tasksInStatus[dropIndex - 1].task_id : null;
+      afterTaskId = tasksInStatus[dropIndex].task_id;
+    }
+
+    // Don't move if dropping on itself
+    if (draggedTask.task_id === beforeTaskId || draggedTask.task_id === afterTaskId) {
+      setDraggedTask(null);
+      setDragOverStatus(null);
+      setDragOverPhase(null);
+      setDropIndicatorIndex(null);
+      return;
+    }
+
+    try {
+      await onTaskMove(draggedTask.task_id, statusId, phaseId, beforeTaskId, afterTaskId);
+    } catch (error) {
+      console.error('Failed to move task:', error);
+    }
+
+    setDraggedTask(null);
+    setDragOverStatus(null);
+    setDragOverPhase(null);
+    setDropIndicatorIndex(null);
+  }, [draggedTask, onTaskMove]);
+
   return (
-    <div className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md">
-      {/* Column headers */}
-      <div className="bg-gray-50 border-b border-gray-200">
+    <div className="flex flex-col bg-white border border-gray-200 rounded-lg shadow-md h-[calc(100vh-220px)] min-h-[400px]">
+      {/* Column headers - sticky */}
+      <div className="bg-gray-50 border-b border-gray-200 flex-shrink-0 rounded-t-lg">
         <table className="w-full table-fixed">
           <colgroup>
-            <col style={{ width: '3%' }} />
-            <col style={{ width: '25%' }} />
+            <col style={{ width: '40px' }} />
+            <col style={{ width: '24%' }} />
             <col style={{ width: '6%' }} />
             <col style={{ width: '14%' }} />
             <col style={{ width: '12%' }} />
@@ -212,7 +354,7 @@ export default function TaskListView({
           </colgroup>
           <thead>
             <tr>
-              <th className="pl-3" />
+              <th className="w-10" />
               <th className="py-2 pr-3 text-left text-xs font-medium text-gray-500 tracking-wider">
                 Task Name
               </th>
@@ -242,8 +384,8 @@ export default function TaskListView({
         </table>
       </div>
 
-      {/* Hierarchical rows */}
-      <div className="divide-y divide-gray-200">
+      {/* Hierarchical rows - scrollable */}
+      <div className="divide-y divide-gray-200 overflow-y-auto flex-1">
         {phaseGroups.map(phaseGroup => {
           const isPhaseExpanded = expandedPhases.has(phaseGroup.phase.phase_id);
 
@@ -251,8 +393,8 @@ export default function TaskListView({
             <div key={phaseGroup.phase.phase_id}>
               <table className="w-full table-fixed">
                 <colgroup>
-                  <col style={{ width: '3%' }} />
-                  <col style={{ width: '25%' }} />
+                  <col style={{ width: '40px' }} />
+                  <col style={{ width: '24%' }} />
                   <col style={{ width: '6%' }} />
                   <col style={{ width: '14%' }} />
                   <col style={{ width: '12%' }} />
@@ -268,20 +410,41 @@ export default function TaskListView({
                     className="bg-gray-50 hover:bg-gray-100 cursor-pointer"
                     onClick={() => togglePhase(phaseGroup.phase.phase_id)}
                   >
-                    <td className="py-2 pl-3">
-                      {isPhaseExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                      )}
-                    </td>
-                    <td className="py-2 pr-3" colSpan={8}>
-                      <span className="text-base font-semibold text-gray-900">
-                        {phaseGroup.phase.phase_name}
-                      </span>
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                        {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
-                      </span>
+                    <td className="py-2" colSpan={9}>
+                      <div className="flex items-start gap-2 pl-3">
+                        <div className="pt-0.5">
+                          {isPhaseExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-semibold text-gray-900">
+                              {phaseGroup.phase.phase_name}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                              {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
+                            </span>
+                            {/* Phase dates */}
+                            {(phaseGroup.phase.start_date || phaseGroup.phase.end_date) && (
+                              <span className="flex items-center gap-1 text-xs text-gray-500 ml-2">
+                                <Calendar className="h-3 w-3" />
+                                {phaseGroup.phase.start_date && format(new Date(phaseGroup.phase.start_date), 'MMM d')}
+                                {phaseGroup.phase.start_date && phaseGroup.phase.end_date && ' - '}
+                                {phaseGroup.phase.end_date && format(new Date(phaseGroup.phase.end_date), 'MMM d, yyyy')}
+                              </span>
+                            )}
+                          </div>
+                          {/* Phase description */}
+                          {phaseGroup.phase.description && (
+                            <span className="text-sm text-gray-500">
+                              {phaseGroup.phase.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 </thead>
@@ -292,23 +455,36 @@ export default function TaskListView({
                     {phaseGroup.statusGroups.map(statusGroup => {
                       const statusKey = `${phaseGroup.phase.phase_id}:${statusGroup.status.project_status_mapping_id}`;
                       const isStatusExpanded = expandedStatuses.has(statusKey);
+                      const isDropTarget = draggedTask &&
+                        dragOverStatus === statusGroup.status.project_status_mapping_id &&
+                        dragOverPhase === phaseGroup.phase.phase_id;
 
                       return (
                         <React.Fragment key={statusKey}>
-                          {/* Status header row */}
+                          {/* Status header row - also serves as drop zone for empty statuses */}
                           <tr
-                            className="bg-gray-50/50 hover:bg-gray-100/50 cursor-pointer"
+                            className={`bg-gray-50/50 hover:bg-gray-100/50 cursor-pointer transition-colors ${
+                              isDropTarget && statusGroup.tasks.length === 0 ? 'ring-2 ring-primary-400 ring-inset bg-primary-50' : ''
+                            }`}
                             onClick={() => toggleStatus(phaseGroup.phase.phase_id, statusGroup.status.project_status_mapping_id)}
+                            onDragOver={(e) => {
+                              if (statusGroup.tasks.length === 0) {
+                                handleStatusDragOver(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id);
+                              }
+                            }}
+                            onDrop={(e) => {
+                              if (draggedTask && statusGroup.tasks.length === 0) {
+                                handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, [], -1);
+                              }
+                            }}
                           >
-                            <td className="py-1.5 pl-8">
-                              {isStatusExpanded ? (
-                                <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-                              ) : (
-                                <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
-                              )}
-                            </td>
-                            <td className="py-1.5 pr-3" colSpan={8}>
-                              <div className="flex items-center gap-2">
+                            <td className="py-1.5" colSpan={9}>
+                              <div className="flex items-center gap-2 pl-8">
+                                {isStatusExpanded ? (
+                                  <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                                ) : (
+                                  <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                                )}
                                 <span
                                   className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
                                   style={{
@@ -331,21 +507,43 @@ export default function TaskListView({
                           </tr>
 
                           {/* Task rows */}
-                          {isStatusExpanded && statusGroup.tasks.map(task => {
+                          {isStatusExpanded && statusGroup.tasks.map((task, taskIndex) => {
                             const tags = taskTags[task.task_id] || [];
                             const resources = taskResources[task.task_id] || [];
                             const additionalCount = resources.length;
                             const deps = taskDependencies[task.task_id];
                             const hasDependencies = deps && (deps.predecessors.length > 0 || deps.successors.length > 0);
-                            const dependencyTooltip = renderDependenciesTooltip(task.task_id);
+                            const dependencyTooltipContent = renderDependenciesTooltipContent(task.task_id);
+                            const isDragging = draggedTask?.task_id === task.task_id;
+                            const showDropIndicator = isDropTarget && dropIndicatorIndex === taskIndex;
 
                             return (
-                              <tr
-                                key={task.task_id}
-                                className="bg-white hover:bg-gray-50 group"
+                              <React.Fragment key={task.task_id}>
+                                {/* Drop indicator line above task */}
+                                {showDropIndicator && (
+                                  <tr className="h-0">
+                                    <td colSpan={9} className="p-0">
+                                      <div className="h-0.5 bg-primary-500 mx-2" />
+                                    </td>
+                                  </tr>
+                                )}
+                                <tr
+                                className={`bg-white hover:bg-gray-50 group transition-all ${
+                                  isDragging ? 'opacity-50' : ''
+                                } ${showDropIndicator ? 'bg-primary-50' : ''}`}
+                                draggable={!!onTaskMove}
+                                onDragStart={(e) => handleDragStart(e, task)}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={(e) => handleDragOver(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, taskIndex)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, statusGroup.tasks, taskIndex)}
                               >
-                                {/* Indent spacer */}
-                                <td className="py-2 pl-12" />
+                                {/* Drag handle and indent spacer */}
+                                <td className="py-2 pl-3 w-10">
+                                  {onTaskMove && (
+                                    <GripVertical className="h-4 w-4 text-gray-400 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  )}
+                                </td>
 
                                 {/* Task Name */}
                                 <td className="py-2 pr-3">
@@ -361,10 +559,10 @@ export default function TaskListView({
 
                                 {/* Dependencies */}
                                 <td className="py-2 px-3">
-                                  {hasDependencies && dependencyTooltip && (
-                                    <Tooltip content={<pre className="text-xs whitespace-pre-wrap">{dependencyTooltip}</pre>}>
+                                  {hasDependencies && dependencyTooltipContent && (
+                                    <Tooltip content={dependencyTooltipContent}>
                                       <div className="flex items-center gap-1 cursor-help">
-                                        <Link2 className="h-3.5 w-3.5 text-gray-500" />
+                                        {getDependencyIcon(task.task_id)}
                                         <span className="text-xs text-gray-500">
                                           {(deps?.predecessors.length || 0) + (deps?.successors.length || 0)}
                                         </span>
@@ -461,9 +659,27 @@ export default function TaskListView({
                                     </Button>
                                   </div>
                                 </td>
-                              </tr>
+                                </tr>
+                              </React.Fragment>
                             );
                           })}
+
+                          {/* End drop zone for dropping at the end of status */}
+                          {isStatusExpanded && draggedTask && statusGroup.tasks.length > 0 && (
+                            <tr
+                              className={`transition-colors ${
+                                isDropTarget && dropIndicatorIndex === -1 ? 'bg-primary-50' : ''
+                              }`}
+                              onDragOver={(e) => handleStatusDragOver(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id)}
+                              onDrop={(e) => handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, statusGroup.tasks, -1)}
+                            >
+                              <td colSpan={9} className="h-2">
+                                {isDropTarget && dropIndicatorIndex === -1 && (
+                                  <div className="h-0.5 bg-primary-400 ml-10" />
+                                )}
+                              </td>
+                            </tr>
+                          )}
                         </React.Fragment>
                       );
                     })}

@@ -36,6 +36,7 @@ import {
   IProjectTemplateStatusMapping,
   IProjectTemplateTaskAssignment,
   IProjectTemplateChecklistItem,
+  IProjectTemplateDependency,
 } from 'server/src/interfaces/projectTemplate.interfaces';
 import {
   deleteTemplate,
@@ -53,7 +54,10 @@ import {
   reorderTemplateStatusMappings,
   setTaskAdditionalAgents,
   saveTemplateChecklistItems,
+  addTemplateDependency,
+  removeTemplateDependency,
 } from 'server/src/lib/actions/project-actions/projectTemplateActions';
+import { DependencyType } from 'server/src/interfaces/project.interfaces';
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
@@ -106,6 +110,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   );
   const [checklistItems, setChecklistItems] = useState<IProjectTemplateChecklistItem[]>(
     initialTemplate.checklist_items || []
+  );
+  const [dependencies, setDependencies] = useState<IProjectTemplateDependency[]>(
+    initialTemplate.dependencies || []
   );
 
   // Selection state
@@ -401,7 +408,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const handleSaveTask = async (
     taskData: Partial<IProjectTemplateTask>,
     additionalAgents?: string[],
-    localChecklistItems?: Array<{ id: string; item_name: string; description?: string; completed: boolean; order_number: number; isNew?: boolean }>
+    localChecklistItems?: Array<{ id: string; item_name: string; description?: string; completed: boolean; order_number: number; isNew?: boolean }>,
+    dependencyChanges?: {
+      added: Array<{ predecessorTaskId: string; dependencyType: DependencyType }>;
+      removed: string[];
+    }
   ) => {
     try {
       let taskId: string;
@@ -464,6 +475,26 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           const otherTaskItems = prev.filter(c => c.template_task_id !== taskId);
           return [...otherTaskItems, ...savedItems];
         });
+      }
+
+      // Handle dependency changes
+      if (dependencyChanges) {
+        // Remove dependencies
+        for (const depId of dependencyChanges.removed) {
+          await removeTemplateDependency(depId);
+          setDependencies((prev) => prev.filter((d) => d.template_dependency_id !== depId));
+        }
+
+        // Add new dependencies (current task is the successor)
+        for (const dep of dependencyChanges.added) {
+          const newDep = await addTemplateDependency(
+            template.template_id,
+            dep.predecessorTaskId,
+            taskId,
+            dep.dependencyType
+          );
+          setDependencies((prev) => [...prev, newDep]);
+        }
       }
 
       setShowTaskForm(false);
@@ -614,6 +645,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           taskTypes={taskTypes}
           initialStatusMappingId={newTaskStatusMappingId}
           checklistItems={editingTask ? checklistItems.filter(c => c.template_task_id === editingTask.template_task_id) : []}
+          allTasks={tasks}
+          dependencies={editingTask ? dependencies.filter(d => d.successor_task_id === editingTask.template_task_id) : []}
         />
       )}
 

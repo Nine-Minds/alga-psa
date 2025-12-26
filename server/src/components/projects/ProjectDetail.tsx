@@ -276,6 +276,44 @@ export default function ProjectDetail({
   const refreshListView = useCallback(() => {
     setListViewData(null); // Force reload on next render
   }, []);
+
+  // Handle task move in list view (drag-and-drop)
+  const handleListViewTaskMove = useCallback(async (
+    taskId: string,
+    newStatusMappingId: string,
+    newPhaseId: string,
+    beforeTaskId: string | null,
+    afterTaskId: string | null
+  ) => {
+    try {
+      const task = listViewData?.tasks.find(t => t.task_id === taskId);
+      if (!task) {
+        console.error('Task not found');
+        return;
+      }
+
+      // Check if we're moving to a different phase
+      if (task.phase_id !== newPhaseId) {
+        // Move to different phase with new status
+        await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        toast.success('Task moved to new phase');
+      } else if (task.project_status_mapping_id !== newStatusMappingId) {
+        // Same phase, different status
+        await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        toast.success('Task status updated');
+      } else {
+        // Same phase and status - just reorder
+        await reorderTask(taskId, beforeTaskId, afterTaskId);
+        toast.success('Task reordered');
+      }
+
+      // Refresh list view to show updated data
+      refreshListView();
+    } catch (error) {
+      console.error('Error moving task:', error);
+      toast.error('Failed to move task');
+    }
+  }, [listViewData, refreshListView]);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -1274,6 +1312,7 @@ export default function ProjectDetail({
             onTaskClick={handleTaskSelected}
             onTaskDelete={handleDeleteTaskClick}
             onTaskDuplicate={handleDuplicateTaskClick}
+            onTaskMove={handleListViewTaskMove}
             users={users}
             selectedPriorityFilter={selectedPriorityFilter}
             selectedTaskTags={selectedTaskTags}
