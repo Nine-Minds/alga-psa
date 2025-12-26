@@ -77,40 +77,15 @@ fi
 echo ""
 print_step "Generating secrets..."
 
-# Generate secrets
+# Generate secrets using the dedicated script
 if [ -f "./scripts/generate-secrets.sh" ]; then
     ./scripts/generate-secrets.sh
+    print_success "Secrets generated in ./secrets/"
 else
-    # Inline secret generation if script doesn't exist
-    mkdir -p secrets
-
-    generate_secret() {
-        local length=${1:-32}
-        if command -v openssl &> /dev/null; then
-            openssl rand -base64 $length | tr -d '/+=' | head -c $length
-        else
-            head -c 100 /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | head -c $length
-        fi
-    }
-
-    # Only generate if files don't exist
-    [ ! -f secrets/postgres_password ] && generate_secret 24 > secrets/postgres_password
-    [ ! -f secrets/db_password_server ] && generate_secret 24 > secrets/db_password_server
-    [ ! -f secrets/db_password_hocuspocus ] && generate_secret 24 > secrets/db_password_hocuspocus
-    [ ! -f secrets/redis_password ] && generate_secret 24 > secrets/redis_password
-    [ ! -f secrets/alga_auth_key ] && generate_secret 32 > secrets/alga_auth_key
-    [ ! -f secrets/crypto_key ] && generate_secret 32 > secrets/crypto_key
-    [ ! -f secrets/token_secret_key ] && generate_secret 32 > secrets/token_secret_key
-    [ ! -f secrets/nextauth_secret ] && generate_secret 32 > secrets/nextauth_secret
-
-    # Create placeholder files for optional secrets
-    [ ! -f secrets/email_password ] && echo "placeholder" > secrets/email_password
-    [ ! -f secrets/google_oauth_client_id ] && echo "placeholder" > secrets/google_oauth_client_id
-    [ ! -f secrets/google_oauth_client_secret ] && echo "placeholder" > secrets/google_oauth_client_secret
-
-    chmod 600 secrets/*
+    print_error "scripts/generate-secrets.sh not found"
+    echo "   Please ensure you're running this from the repository root."
+    exit 1
 fi
-print_success "Secrets generated in ./secrets/"
 
 echo ""
 print_step "Setting up environment configuration..."
@@ -142,8 +117,9 @@ print_step "Waiting for services to initialize..."
 TIMEOUT=120
 ELAPSED=0
 while [ $ELAPSED -lt $TIMEOUT ]; do
+    # Specifically check for the server container's health status
     if docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
-        --env-file server/.env --env-file .env.image ps 2>/dev/null | grep -q "healthy\|running"; then
+        --env-file server/.env --env-file .env.image ps server 2>/dev/null | grep -q "healthy"; then
         break
     fi
     sleep 5

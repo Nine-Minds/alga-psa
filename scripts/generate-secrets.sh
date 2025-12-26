@@ -27,7 +27,19 @@ fi
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
+
+# Check for recommended prerequisites
+if ! command -v openssl &> /dev/null; then
+    echo -e "${YELLOW}WARNING${NC}: openssl is not installed."
+    echo "  Secret generation will use fallback methods which may be less secure."
+    echo "  For best security, install openssl:"
+    echo "    - macOS: brew install openssl"
+    echo "    - Ubuntu/Debian: sudo apt-get install openssl"
+    echo "    - RHEL/CentOS: sudo yum install openssl"
+    echo ""
+fi
 
 echo "Generating secrets for Alga PSA..."
 echo ""
@@ -43,8 +55,18 @@ generate_secret() {
     elif [ -f /dev/urandom ]; then
         head -c 100 /dev/urandom | LC_ALL=C tr -dc 'a-zA-Z0-9' | head -c "$length"
     else
-        # Fallback for systems without /dev/urandom
-        date +%s%N | sha256sum | head -c "$length"
+        # Fallback for systems without /dev/urandom (rare edge case)
+        # Use multiple sources of entropy combined
+        local seed="$(date +%s)$$$(hostname 2>/dev/null || echo 'host')"
+        if command -v shasum &> /dev/null; then
+            echo "$seed$RANDOM" | shasum -a 256 | head -c "$length"
+        elif command -v sha256sum &> /dev/null; then
+            echo "$seed$RANDOM" | sha256sum | head -c "$length"
+        else
+            # Last resort - warn user this is not cryptographically secure
+            echo "WARNING: No secure random source available. Please install openssl." >&2
+            echo "$seed$RANDOM" | md5sum 2>/dev/null | head -c "$length" || echo "$seed" | head -c "$length"
+        fi
     fi
 }
 

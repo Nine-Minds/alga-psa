@@ -65,7 +65,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-For detailed setup instructions, see the [Getting Started Guide](../docs/getting-started.md).
+For detailed setup instructions, see the [Getting Started Guide](../../../docs/getting-started.md).
 
 First, run the development server:
 

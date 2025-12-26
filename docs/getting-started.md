@@ -136,11 +136,20 @@ make validate-secrets
 If you see `password authentication failed`:
 
 ```bash
-# Reset everything (WARNING: deletes all data)
+# Reset the Alga PSA database (WARNING: deletes all Alga data)
 make down
-docker volume rm $(docker volume ls -q | grep postgres_data)
+
+# List Alga-specific volumes to verify before deletion
+docker volume ls | grep alga
+
+# Remove ONLY the Alga postgres volume (replace with actual volume name)
+docker volume rm alga-psa_postgres_data
+
+# Restart services
 make up
 ```
+
+> **Caution**: Always verify the volume name before deletion. Use `docker volume ls | grep alga` to see the exact volume names for your installation.
 
 ### Forgot login credentials
 

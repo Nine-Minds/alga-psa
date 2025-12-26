@@ -19,6 +19,7 @@ REQUIRED_SECRETS=(
     "db_password_server"
     "db_password_hocuspocus"
     "redis_password"
+    "alga_auth_key"
     "crypto_key"
     "token_secret_key"
     "nextauth_secret"
