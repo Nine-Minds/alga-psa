@@ -1,11 +1,30 @@
 import { NextRequest } from 'next/server';
 import { getSession } from 'server/src/lib/auth/getSession';
+import { getAdminConnection } from 'server/src/lib/db/admin';
 
 export interface ExtProxyUserInfo {
   user_id: string;
   user_email: string;
   user_name: string;
   user_type: string;
+  client_name: string;
+}
+
+/**
+ * Look up tenant's client_name from the database.
+ */
+async function getTenantClientName(tenantId: string): Promise<string> {
+  try {
+    const knex = getAdminConnection();
+    const row = await knex('tenants')
+      .select('client_name')
+      .where('tenant', tenantId)
+      .first();
+    return row?.client_name || '';
+  } catch (error) {
+    console.error('[auth] Failed to look up tenant client_name:', error);
+    return '';
+  }
 }
 
 /**
@@ -27,11 +46,16 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     return null;
   }
 
+  // Look up tenant's client_name from database
+  const tenantId = user.tenant || '';
+  const clientName = tenantId ? await getTenantClientName(tenantId) : '';
+
   return {
     user_id: user.user_id || user.id || '',
     user_email: user.email || '',
     user_name: user.name || user.username || '',
     user_type: user.user_type || 'internal',
+    client_name: clientName,
   };
 }
 

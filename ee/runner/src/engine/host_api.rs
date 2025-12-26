@@ -1827,10 +1827,11 @@ impl user::HostWithStore for HasSelf<HostState> {
                     );
                     Ok(UserData {
                         tenant_id: tenant,
-                        company_name: user_info.company_name.clone(),
+                        client_name: user_info.client_name.clone(),
                         user_id: user_info.user_id.clone(),
                         user_email: user_info.user_email.clone(),
                         user_name: user_info.user_name.clone(),
+                        user_type: user_info.user_type.clone(),
                     })
                 }
                 None => {

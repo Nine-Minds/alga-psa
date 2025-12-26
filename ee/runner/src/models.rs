@@ -39,6 +39,8 @@ pub struct UserInfo {
     pub user_email: String,
     pub user_name: String,
     pub user_type: String,
+    #[serde(default)]
+    pub client_name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

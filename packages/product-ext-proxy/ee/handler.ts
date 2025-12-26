@@ -203,6 +203,7 @@ async function handle(
         user_email: userInfo.user_email,
         user_name: userInfo.user_name,
         user_type: userInfo.user_type,
+        client_name: userInfo.client_name,
       } : undefined,
     };
 
