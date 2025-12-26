@@ -38,6 +38,7 @@ type WorkflowRunRecord = {
   tenant_id?: string | null;
   status: string;
   node_path?: string | null;
+  event_type?: string | null;
   resume_event_name?: string | null;
   started_at: string;
   updated_at: string;
@@ -811,6 +812,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               <div>
                 <div className="text-[11px] uppercase text-gray-400">Trigger</div>
                 <div>{definition?.trigger?.eventName ?? 'Manual'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase text-gray-400">Event Type</div>
+                <div className="font-mono">{run?.event_type ?? '-'}</div>
               </div>
               {run?.status === 'WAITING' && (
                 <div>

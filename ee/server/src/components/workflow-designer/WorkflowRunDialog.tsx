@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TextArea } from '@/components/ui/TextArea';
@@ -15,6 +16,13 @@ import {
   listWorkflowDefinitionVersionsAction,
   startWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { getEventCatalogEntries, getEventCatalogEntryByEventType } from 'server/src/lib/actions/event-catalog-actions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import {
+  filterEventCatalogEntries,
+  getSchemaDiffSummary,
+  pickEventTemplates
+} from './workflowRunDialogUtils';
 
 type JsonSchema = {
   type?: string | string[];
@@ -41,6 +49,7 @@ type WorkflowRunDialogProps = {
   workflowId: string | null;
   workflowName?: string | null;
   triggerLabel?: string | null;
+  triggerEventName?: string | null;
   payloadSchemaRef?: string | null;
   publishedVersion?: number | null;
   draftVersion?: number | null;
@@ -53,9 +62,19 @@ type WorkflowRunDialogProps = {
 };
 
 type Preset = { name: string; payload: string };
+type EventCatalogEntry = {
+  event_id: string;
+  event_type: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  payload_schema?: Record<string, any> | null;
+  tenant?: string | null;
+};
 
 const RUN_OPTIONS_KEY = (workflowId: string) => `workflow-run-options:${workflowId}`;
 const RUN_PRESETS_KEY = (workflowId: string) => `workflow-run-presets:${workflowId}`;
+const RUN_EVENT_KEY = (workflowId: string) => `workflow-run-event:${workflowId}`;
 
 const SAMPLE_TEMPLATES: Array<{ id: string; label: string; payload: Record<string, unknown> }> = [
   {
@@ -69,7 +88,9 @@ const SAMPLE_TEMPLATES: Array<{ id: string; label: string; payload: Record<strin
         to: [{ name: 'Support', email: 'support@example.com' }],
         body: { text: 'Sample email body', html: '<p>Sample email body</p>' },
         attachments: []
-      }
+      },
+      providerId: 'provider_123',
+      tenantId: 'tenant_123'
     }
   },
   {
@@ -194,6 +215,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   workflowId,
   workflowName,
   triggerLabel,
+  triggerEventName,
   payloadSchemaRef,
   publishedVersion,
   draftVersion,
@@ -205,9 +227,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   onPublishDraft
 }) => {
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
+  const [eventSchema, setEventSchema] = useState<JsonSchema | null>(null);
+  const [schemaSource, setSchemaSource] = useState<'payload' | 'event'>('payload');
   const [runPayloadText, setRunPayloadText] = useState('');
   const [runPayloadError, setRunPayloadError] = useState<string | null>(null);
   const [formValue, setFormValue] = useState<unknown>({});
+  const [payloadTouched, setPayloadTouched] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string>('');
   const [isStartingRun, setIsStartingRun] = useState(false);
   const [mode, setMode] = useState<'json' | 'form'>('json');
@@ -218,10 +243,62 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const [versionOptions, setVersionOptions] = useState<SelectOption[]>([]);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [hasLoadedOptions, setHasLoadedOptions] = useState(false);
+  const [eventCatalogEntries, setEventCatalogEntries] = useState<EventCatalogEntry[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [eventSearch, setEventSearch] = useState('');
+  const [selectedEventType, setSelectedEventType] = useState<string>('');
+  const [schemaWarning, setSchemaWarning] = useState<string | null>(null);
+  const [showSchemaDiff, setShowSchemaDiff] = useState(false);
 
+  const activeSchema = schemaSource === 'event' && eventSchema ? eventSchema : payloadSchema;
   const defaults = useMemo(() => (
-    payloadSchema ? buildDefaultValueFromSchema(payloadSchema, payloadSchema) : {}
-  ), [payloadSchema]);
+    activeSchema ? buildDefaultValueFromSchema(activeSchema, activeSchema) : {}
+  ), [activeSchema]);
+
+  const selectedEventEntry = useMemo(
+    () => eventCatalogEntries.find((entry) => entry.event_type === selectedEventType) ?? null,
+    [eventCatalogEntries, selectedEventType]
+  );
+
+  const filteredEventEntries = useMemo(() => {
+    const filtered = filterEventCatalogEntries(eventCatalogEntries, eventSearch);
+    if (!selectedEventType) return filtered;
+    if (filtered.some((entry) => entry.event_type === selectedEventType)) return filtered;
+    const selected = eventCatalogEntries.find((entry) => entry.event_type === selectedEventType);
+    return selected ? [selected, ...filtered] : filtered;
+  }, [eventCatalogEntries, eventSearch, selectedEventType]);
+
+  const eventOptions = useMemo<SelectOption[]>(() => (
+    filteredEventEntries.map((entry) => {
+      const isSystemEntry = !entry.tenant;
+      return {
+        value: entry.event_type,
+        label: (
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-gray-900">{entry.name}</span>
+              <span className="text-[11px] text-gray-400">{entry.event_type}</span>
+              <Badge className={`text-[10px] ${isSystemEntry ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                {isSystemEntry ? 'System' : 'Tenant'}
+              </Badge>
+            </div>
+            {(entry.category || entry.description) && (
+              <div className="text-[11px] text-gray-500">
+                {entry.category ?? 'Uncategorized'}
+                {entry.description ? ` · ${entry.description}` : ''}
+              </div>
+            )}
+          </div>
+        ),
+        className: 'items-start whitespace-normal'
+      };
+    })
+  ), [filteredEventEntries]);
+
+  const schemaDiffSummary = useMemo(
+    () => getSchemaDiffSummary(payloadSchema ?? null, eventSchema ?? null),
+    [eventSchema, payloadSchema]
+  );
 
   const payloadSize = useMemo(() => {
     const text = mode === 'json' ? runPayloadText : JSON.stringify(formValue ?? {}, null, 2);
@@ -245,6 +322,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!isOpen || !workflowId) return;
     setHasLoadedOptions(false);
+    setPayloadTouched(false);
     const storedOptions = window.localStorage.getItem(RUN_OPTIONS_KEY(workflowId));
     if (storedOptions) {
       try {
@@ -252,7 +330,19 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         if (parsed?.payloadText) setRunPayloadText(parsed.payloadText);
         if (parsed?.mode) setMode(parsed.mode);
         if (parsed?.selectedVersion) setSelectedVersion(String(parsed.selectedVersion));
+        if (parsed?.schemaSource) setSchemaSource(parsed.schemaSource);
+        if (parsed?.eventType) setSelectedEventType(parsed.eventType);
       } catch {}
+    } else if (triggerEventName) {
+      setSchemaSource('event');
+    } else {
+      setSchemaSource('payload');
+    }
+    const storedEvent = window.localStorage.getItem(RUN_EVENT_KEY(workflowId));
+    if (storedEvent) {
+      setSelectedEventType(storedEvent);
+    } else if (triggerEventName) {
+      setSelectedEventType(triggerEventName);
     }
     const storedPresets = window.localStorage.getItem(RUN_PRESETS_KEY(workflowId));
     if (storedPresets) {
@@ -263,7 +353,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       }
     }
     setHasLoadedOptions(true);
-  }, [isOpen, workflowId]);
+  }, [isOpen, triggerEventName, workflowId]);
 
   useEffect(() => {
     if (!isOpen || !workflowId || !payloadSchemaRef) return;
@@ -271,6 +361,49 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       .then((result) => setPayloadSchema((result?.schema ?? null) as JsonSchema | null))
       .catch(() => setPayloadSchema(null));
   }, [isOpen, payloadSchemaRef, workflowId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const loadEvents = async () => {
+      setIsLoadingEvents(true);
+      try {
+        const user = await getCurrentUser();
+        if (!user?.tenant) return;
+        const entries = await getEventCatalogEntries({ tenant: user.tenant });
+        setEventCatalogEntries(entries as EventCatalogEntry[]);
+      } catch {
+        setEventCatalogEntries([]);
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+    loadEvents();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !selectedEventType) {
+      setEventSchema(null);
+      return;
+    }
+    const entry = eventCatalogEntries.find((item) => item.event_type === selectedEventType);
+    if (entry?.payload_schema) {
+      setEventSchema(entry.payload_schema as JsonSchema);
+      return;
+    }
+    const loadEntry = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user?.tenant) return;
+        const fetched = await getEventCatalogEntryByEventType({ eventType: selectedEventType, tenant: user.tenant });
+        if (fetched?.payload_schema) {
+          setEventSchema(fetched.payload_schema as JsonSchema);
+        }
+      } catch {
+        setEventSchema(null);
+      }
+    };
+    loadEntry();
+  }, [eventCatalogEntries, isOpen, selectedEventType]);
 
   useEffect(() => {
     if (!isOpen || !workflowId) return;
@@ -292,16 +425,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   useEffect(() => {
     if (!isOpen || !hasLoadedOptions) return;
-    if (runPayloadText) return;
+    if (payloadTouched) return;
     const text = JSON.stringify(defaults ?? {}, null, 2);
     setRunPayloadText(text);
-    try {
-      setFormValue(JSON.parse(text));
-      setRunPayloadError(null);
-    } catch (error) {
-      setRunPayloadError(error instanceof Error ? error.message : 'Invalid JSON');
-    }
-  }, [defaults, hasLoadedOptions, isOpen, runPayloadText]);
+    setFormValue(defaults ?? {});
+    setRunPayloadError(null);
+  }, [defaults, hasLoadedOptions, isOpen, payloadTouched]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -319,12 +448,15 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!workflowId || !isOpen) return;
     const payload = mode === 'json' ? runPayloadText : JSON.stringify(formValue ?? {}, null, 2);
-    const options = { payloadText: payload, mode, selectedVersion };
+    const options = { payloadText: payload, mode, selectedVersion, schemaSource, eventType: selectedEventType };
     window.localStorage.setItem(RUN_OPTIONS_KEY(workflowId), JSON.stringify(options));
-  }, [formValue, isOpen, mode, runPayloadText, selectedVersion, workflowId]);
+    if (selectedEventType) {
+      window.localStorage.setItem(RUN_EVENT_KEY(workflowId), selectedEventType);
+    }
+  }, [formValue, isOpen, mode, runPayloadText, selectedVersion, workflowId, schemaSource, selectedEventType]);
 
   useEffect(() => {
-    if (!payloadSchema) return;
+    if (!activeSchema) return;
     const value = mode === 'json' ? (() => {
       try {
         return JSON.parse(runPayloadText || '{}');
@@ -332,12 +464,27 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         return null;
       }
     })() : formValue;
-    const errors = validateAgainstSchema(payloadSchema, value ?? {}, payloadSchema);
+    const errors = validateAgainstSchema(activeSchema, value ?? {}, activeSchema);
     setSchemaErrors(errors);
-  }, [formValue, mode, payloadSchema, runPayloadText]);
+  }, [activeSchema, formValue, mode, runPayloadText]);
+
+  useEffect(() => {
+    if (!payloadSchema || !eventSchema) {
+      setSchemaWarning(null);
+      return;
+    }
+    const payloadJson = JSON.stringify(payloadSchema);
+    const eventJson = JSON.stringify(eventSchema);
+    if (payloadJson !== eventJson) {
+      setSchemaWarning('Selected event schema differs from workflow payload schema.');
+    } else {
+      setSchemaWarning(null);
+    }
+  }, [eventSchema, payloadSchema]);
 
   const handleRunPayloadChange = (value: string) => {
     setRunPayloadText(value);
+    setPayloadTouched(true);
     try {
       const parsed = JSON.parse(value);
       setFormValue(parsed);
@@ -347,27 +494,32 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
   };
 
-  const applyTemplate = (payload: Record<string, unknown>) => {
+  const applyTemplate = (payload: Record<string, unknown>, options: { markTouched?: boolean } = {}) => {
+    const markTouched = options.markTouched ?? true;
     const next = JSON.stringify(payload, null, 2);
     setRunPayloadText(next);
     setFormValue(payload);
     setRunPayloadError(null);
+    setPayloadTouched(markTouched);
   };
 
   const handleResetDefaults = () => {
-    applyTemplate((defaults ?? {}) as Record<string, unknown>);
+    applyTemplate((defaults ?? {}) as Record<string, unknown>, { markTouched: true });
   };
 
   const handleCloneLatest = async () => {
     if (!workflowId) return;
     try {
-      const result = await getLatestWorkflowRunAction({ workflowId });
+      const result = await getLatestWorkflowRunAction({
+        workflowId,
+        eventType: selectedEventType || undefined
+      });
       const run = (result as { run?: { input_json?: Record<string, unknown> | null } | null } | null)?.run;
       if (!run?.input_json) {
         toast.error('No prior run payload found.');
         return;
       }
-      applyTemplate(run.input_json ?? {});
+      applyTemplate(run.input_json ?? {}, { markTouched: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load latest run');
     }
@@ -427,7 +579,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       const result = await startWorkflowRunAction({
         workflowId,
         workflowVersion: selectedVersion ? Number(selectedVersion) : publishedVersion,
-        payload
+        payload,
+        eventType: selectedEventType || undefined
       });
       const runId = (result as { runId?: string } | undefined)?.runId;
       onClose();
@@ -441,13 +594,19 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
   };
 
+  const updateFormValue = (updater: (prev: unknown) => unknown) => {
+    setPayloadTouched(true);
+    setFormValue((prev) => updater(prev));
+  };
+
   const renderField = (
     schema: JsonSchema,
     value: unknown,
     path: Array<string | number>,
     requiredSet: Set<string>
   ) => {
-    const resolved = resolveSchemaRef(schema, payloadSchema ?? schema);
+    const rootSchema = activeSchema ?? schema;
+    const resolved = resolveSchemaRef(schema, rootSchema);
     const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
     const fieldKey = path[path.length - 1];
     const label = resolved.title ?? (typeof fieldKey === 'string' ? fieldKey : 'Payload');
@@ -464,7 +623,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setFormValue((prev) => setValueAtPath(prev, path, resolved.default))}
+            onClick={() => updateFormValue((prev) => setValueAtPath(prev, path, resolved.default))}
           >
             Reset
           </Button>
@@ -531,7 +690,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                 size="sm"
                 onClick={() => {
                   const next = items.filter((_, idx) => idx !== index);
-                  setFormValue((prev) => setValueAtPath(prev, path, next));
+                  updateFormValue((prev) => setValueAtPath(prev, path, next));
                 }}
               >
                 Remove
@@ -542,8 +701,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             variant="outline"
             size="sm"
             onClick={() => {
-              const next = [...items, buildDefaultValueFromSchema(resolved.items ?? {}, payloadSchema ?? resolved)];
-              setFormValue((prev) => setValueAtPath(prev, path, next));
+              const next = [...items, buildDefaultValueFromSchema(resolved.items ?? {}, rootSchema)];
+              updateFormValue((prev) => setValueAtPath(prev, path, next));
             }}
           >
             Add item
@@ -570,7 +729,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             value={value == null ? '' : String(value)}
             onValueChange={(val) => {
               const actual = resolved.enum?.find((entry) => String(entry) === val);
-              setFormValue((prev) => setValueAtPath(prev, path, actual ?? val));
+              updateFormValue((prev) => setValueAtPath(prev, path, actual ?? val));
             }}
           />
           {description}
@@ -588,7 +747,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           <div className="flex items-center gap-2">
             <Switch
               checked={Boolean(value)}
-              onCheckedChange={(checked) => setFormValue((prev) => setValueAtPath(prev, path, checked))}
+              onCheckedChange={(checked) => updateFormValue((prev) => setValueAtPath(prev, path, checked))}
             />
             <span className="text-xs text-gray-500">{Boolean(value) ? 'True' : 'False'}</span>
           </div>
@@ -611,7 +770,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           onChange={(event) => {
             const raw = event.target.value;
             const parsed = raw === '' ? null : (type === 'number' || type === 'integer' ? Number(raw) : raw);
-            setFormValue((prev) => setValueAtPath(prev, path, parsed));
+            updateFormValue((prev) => setValueAtPath(prev, path, parsed));
           }}
         />
         {description}
@@ -623,20 +782,37 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   };
 
   const exampleOptions = useMemo(() => {
-    const examples = payloadSchema?.examples ?? (payloadSchema?.example ? [payloadSchema.example] : []);
+    const schema = schemaSource === 'event' ? eventSchema : payloadSchema;
+    const examples = schema?.examples ?? (schema?.example ? [schema.example] : []);
     return (examples ?? []).map((entry, index) => ({
       label: `Example ${index + 1}`,
       payload: entry as Record<string, unknown>
     }));
-  }, [payloadSchema]);
+  }, [eventSchema, payloadSchema, schemaSource]);
+
+  const eventTemplateIds = useMemo(
+    () => pickEventTemplates({ eventType: selectedEventType, category: selectedEventEntry?.category ?? null }),
+    [selectedEventEntry?.category, selectedEventType]
+  );
+  const eventTemplates = useMemo(
+    () => SAMPLE_TEMPLATES.filter((template) => eventTemplateIds.includes(template.id)),
+    [eventTemplateIds]
+  );
+  const generalTemplates = useMemo(
+    () => SAMPLE_TEMPLATES.filter((template) => !eventTemplateIds.includes(template.id)),
+    [eventTemplateIds]
+  );
 
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title="Run Workflow" className="max-w-4xl">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Run Workflow</DialogTitle>
+          <DialogTitle>
+            Run Workflow{selectedEventType ? ` · ${selectedEventType}` : ''}
+          </DialogTitle>
           <DialogDescription>
             Provide a synthetic payload for a published workflow version.
+            {selectedEventEntry?.name ? ` Event: ${selectedEventEntry.name}.` : ''}
           </DialogDescription>
         </DialogHeader>
 
@@ -652,6 +828,140 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             />
             <Input id="run-dialog-trigger" label="Trigger" value={triggerLabel ?? 'Manual'} disabled />
             <Input id="run-dialog-status" label="Workflow status" value={isPaused ? 'paused' : 'active'} disabled />
+          </div>
+
+          <div className="rounded border border-gray-200 bg-white p-3 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-medium text-gray-800">Event catalog</div>
+                <div className="text-xs text-gray-500">Pick an event type to seed payload schemas.</div>
+              </div>
+              {selectedEventType && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href={`/msp/automation-hub?tab=events&eventType=${encodeURIComponent(selectedEventType)}`}>
+                    Open event catalog
+                  </Link>
+                </Button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                id="run-dialog-event-search"
+                label="Search events"
+                value={eventSearch}
+                onChange={(event) => setEventSearch(event.target.value)}
+                placeholder="Search by name, type, or category"
+              />
+              <CustomSelect
+                id="run-dialog-event-type"
+                label="Event type"
+                options={eventOptions}
+                value={selectedEventType}
+                onValueChange={(value) => setSelectedEventType(value)}
+                placeholder={isLoadingEvents ? 'Loading events...' : 'Select event type'}
+                allowClear
+                customStyles={{ item: 'whitespace-normal items-start py-2' }}
+              />
+            </div>
+
+            {selectedEventEntry && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                <Badge className={`text-[10px] ${selectedEventEntry.tenant ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                  {selectedEventEntry.tenant ? 'Tenant event' : 'System event'}
+                </Badge>
+                <span>{selectedEventEntry.category ?? 'Uncategorized'}</span>
+                {selectedEventEntry.description && <span>· {selectedEventEntry.description}</span>}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500">Schema source</span>
+              <Button
+                variant={schemaSource === 'payload' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSchemaSource('payload')}
+              >
+                Workflow schema
+              </Button>
+              <Button
+                variant={schemaSource === 'event' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSchemaSource('event')}
+                disabled={!eventSchema}
+              >
+                Event schema
+              </Button>
+              {schemaSource === 'event' && !eventSchema && (
+                <span className="text-xs text-yellow-700">
+                  Event schema not available; using workflow schema instead.
+                </span>
+              )}
+            </div>
+
+            {schemaWarning && (
+              <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-800 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{schemaWarning}</span>
+                  {eventSchema && schemaSource !== 'event' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSchemaSource('event');
+                        if (eventSchema) {
+                          applyTemplate(
+                            (buildDefaultValueFromSchema(eventSchema, eventSchema) as Record<string, unknown>) ?? {},
+                            { markTouched: false }
+                          );
+                        }
+                      }}
+                    >
+                      Use event schema
+                    </Button>
+                  )}
+                </div>
+                {schemaDiffSummary && (
+                  <div className="space-y-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowSchemaDiff((prev) => !prev)}
+                    >
+                      {showSchemaDiff ? 'Hide schema diff' : 'View schema diff'}
+                    </Button>
+                    {showSchemaDiff && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-gray-600">
+                        <div>
+                          <div className="font-semibold text-gray-700">Only in event schema</div>
+                          <div>{schemaDiffSummary.onlyInEvent.length ? schemaDiffSummary.onlyInEvent.join(', ') : '—'}</div>
+                          <div className="mt-2 font-semibold text-gray-700">Required only in event</div>
+                          <div>{schemaDiffSummary.requiredOnlyInEvent.length ? schemaDiffSummary.requiredOnlyInEvent.join(', ') : '—'}</div>
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-700">Only in workflow schema</div>
+                          <div>{schemaDiffSummary.onlyInPayload.length ? schemaDiffSummary.onlyInPayload.join(', ') : '—'}</div>
+                          <div className="mt-2 font-semibold text-gray-700">Required only in workflow</div>
+                          <div>{schemaDiffSummary.requiredOnlyInPayload.length ? schemaDiffSummary.requiredOnlyInPayload.join(', ') : '—'}</div>
+                        </div>
+                        {schemaDiffSummary.typeMismatches.length > 0 && (
+                          <div className="md:col-span-2">
+                            <div className="font-semibold text-gray-700">Type mismatches</div>
+                            <div>
+                              {schemaDiffSummary.typeMismatches.map((item) => (
+                                <div key={item.field}>
+                                  {item.field}: event {item.eventType ?? 'unknown'} vs workflow {item.payloadType ?? 'unknown'}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {draftVersion && publishedVersion && draftVersion !== publishedVersion && (
@@ -705,22 +1015,44 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                 key={example.label}
                 variant="outline"
                 size="sm"
-                onClick={() => applyTemplate(example.payload)}
+                onClick={() => applyTemplate(example.payload, { markTouched: true })}
               >
                 {example.label}
               </Button>
             ))}
-            {SAMPLE_TEMPLATES.map((template) => (
-              <Button
-                key={template.id}
-                variant="outline"
-                size="sm"
-                onClick={() => applyTemplate(template.payload)}
-              >
-                {template.label}
-              </Button>
-            ))}
           </div>
+
+          {eventTemplates.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-full text-xs text-gray-500">Event templates</div>
+              {eventTemplates.map((template) => (
+                <Button
+                  key={template.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyTemplate(template.payload, { markTouched: true })}
+                >
+                  {template.label}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {generalTemplates.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-full text-xs text-gray-500">Sample templates</div>
+              {generalTemplates.map((template) => (
+                <Button
+                  key={template.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyTemplate(template.payload, { markTouched: true })}
+                >
+                  {template.label}
+                </Button>
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input
@@ -780,8 +1112,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {payloadSchema ? (
-                renderField(payloadSchema, formValue, [], new Set(payloadSchema.required ?? []))
+              {activeSchema ? (
+                renderField(activeSchema, formValue, [], new Set(activeSchema.required ?? []))
               ) : (
                 <div className="text-xs text-gray-500">No schema available to render a form.</div>
               )}

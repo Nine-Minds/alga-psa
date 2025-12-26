@@ -12,6 +12,7 @@ import {
   getNodeTypeRegistry,
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
+  applyRedactions,
   validateWorkflowDefinition,
   type PublishError
 } from '@shared/workflow/runtime';
@@ -37,6 +38,7 @@ import {
   RunActionInput,
   ReplayWorkflowRunInput,
   EventIdInput,
+  GetLatestWorkflowRunInput,
   SchemaRefInput,
   ListWorkflowRunsInput,
   ListWorkflowRunSummaryInput,
@@ -190,6 +192,100 @@ const requireUser = async () => {
     throwHttpError(401, 'Unauthorized');
   }
   return user!;
+};
+
+type TenantRedactionConfig = {
+  pointerRedactions: string[];
+  keyPatterns: RegExp[];
+};
+
+const REDACTED_VALUE = '[REDACTED]';
+
+const compileKeyPatterns = (patterns: string[]): RegExp[] => {
+  const compiled: RegExp[] = [];
+  patterns.forEach((pattern) => {
+    if (!pattern) return;
+    try {
+      if (pattern.startsWith('/') && pattern.endsWith('/') && pattern.length > 2) {
+        compiled.push(new RegExp(pattern.slice(1, -1), 'i'));
+      } else {
+        compiled.push(new RegExp(pattern, 'i'));
+      }
+    } catch {
+      // ignore invalid patterns
+    }
+  });
+  return compiled;
+};
+
+const loadTenantRedactionConfig = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant?: string | null
+): Promise<TenantRedactionConfig> => {
+  if (!tenant) {
+    return { pointerRedactions: [], keyPatterns: [] };
+  }
+  try {
+    const row = await knex('tenant_settings').select('settings').where({ tenant }).first();
+    const settings = (row?.settings ?? {}) as any;
+    const cfg = settings?.workflowRunStudio ?? {};
+    const pointerRedactions = Array.isArray(cfg?.redactionPointers) ? cfg.redactionPointers.filter((v: any) => typeof v === 'string') : [];
+    const keyPatternStrings = Array.isArray(cfg?.redactionKeyPatterns) ? cfg.redactionKeyPatterns.filter((v: any) => typeof v === 'string') : [];
+    return {
+      pointerRedactions,
+      keyPatterns: compileKeyPatterns(keyPatternStrings)
+    };
+  } catch {
+    return { pointerRedactions: [], keyPatterns: [] };
+  }
+};
+
+const maskSensitiveKeysByPattern = (value: unknown, patterns: RegExp[]): unknown => {
+  if (!value) return value;
+  if (Array.isArray(value)) {
+    return value.map((entry) => maskSensitiveKeysByPattern(entry, patterns));
+  }
+  if (typeof value !== 'object') return value;
+  const obj = value as Record<string, unknown>;
+  if ('$secret' in obj && typeof (obj as any).$secret === 'string') {
+    return value;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (key === 'secretRef') {
+      result[key] = val;
+      continue;
+    }
+    if (SENSITIVE_KEY_PATTERN.test(key) || patterns.some((pattern) => pattern.test(key))) {
+      result[key] = REDACTED_VALUE;
+      continue;
+    }
+    result[key] = maskSensitiveKeysByPattern(val, patterns);
+  }
+  return result;
+};
+
+const applyRunStudioRedactions = (value: unknown, cfg: TenantRedactionConfig): unknown => {
+  const withKeyMask = maskSensitiveKeysByPattern(value, cfg.keyPatterns);
+  if (!cfg.pointerRedactions.length) return withKeyMask;
+  return applyRedactions(withKeyMask, cfg.pointerRedactions);
+};
+
+const requireRunTenantAccess = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  runId: string,
+  tenant?: string | null
+) => {
+  const run = await WorkflowRunModelV2.getById(knex, runId);
+  if (!run) {
+    return throwHttpError(404, 'Not found');
+  }
+  if (tenant) {
+    if (!run.tenant_id || run.tenant_id !== tenant) {
+      return throwHttpError(404, 'Not found');
+    }
+  }
+  return run;
 };
 
 const requireWorkflowPermission = async (
@@ -643,6 +739,12 @@ export async function startWorkflowRunAction(input: unknown) {
   if (!workflow) {
     return throwHttpError(404, 'Workflow not found');
   }
+  if (workflow.is_system) {
+    const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
+    if (!canAdmin) {
+      return throwHttpError(403, 'Forbidden');
+    }
+  }
   if (workflow.is_paused) {
     return throwHttpError(409, 'Workflow is paused');
   }
@@ -712,25 +814,42 @@ export async function startWorkflowRunAction(input: unknown) {
     workflowId: parsed.workflowId,
     version: versionRecord.version,
     payload: parsed.payload,
-    tenantId: tenant
+    tenantId: tenant,
+    eventType: parsed.eventType ?? null
   });
 
   await runtime.executeRun(knex, runId, `action-${user.user_id}`);
 
   const run = await WorkflowRunModelV2.getById(knex, runId);
+  await auditWorkflowEvent(knex, user, {
+    operation: 'workflow_run_start',
+    tableName: 'workflow_runs',
+    recordId: runId,
+    changedData: { status: run?.status ?? 'RUNNING' },
+    details: {
+      workflowId: parsed.workflowId,
+      workflowVersion: versionRecord.version,
+      eventType: parsed.eventType ?? null
+    },
+    source: 'ui'
+  });
   return { runId, status: run?.status };
 }
 
 export async function getWorkflowRunAction(input: unknown) {
   const user = await requireUser();
   const parsed = RunIdInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
-  if (!run) {
-    return throwHttpError(404, 'Not found');
-  }
-  return run;
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
+  const cfg = await loadTenantRedactionConfig(knex, tenant);
+  return {
+    ...run,
+    input_json: applyRunStudioRedactions(run.input_json ?? null, cfg) as any,
+    resume_event_payload: applyRunStudioRedactions(run.resume_event_payload ?? null, cfg) as any,
+    resume_error: applyRunStudioRedactions(run.resume_error ?? null, cfg) as any,
+    error_json: applyRunStudioRedactions(run.error_json ?? null, cfg) as any
+  };
 }
 
 export async function listWorkflowRunsAction(input: unknown) {
@@ -932,13 +1051,10 @@ export async function listWorkflowRunSummaryAction(input: unknown) {
 export async function getWorkflowRunSummaryMetadataAction(input: unknown) {
   const user = await requireUser();
   const parsed = RunIdInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
-  if (!run) {
-    return throwHttpError(404, 'Run not found');
-  }
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   const [stepsCount, logsCount, waitsCount] = await Promise.all([
     knex('workflow_run_steps').where({ run_id: parsed.runId }).count<{ count: string }>('step_id as count').first(),
@@ -955,6 +1071,7 @@ export async function getWorkflowRunSummaryMetadataAction(input: unknown) {
     status: run.status,
     workflowId: run.workflow_id,
     workflowVersion: run.workflow_version,
+    eventType: run.event_type ?? null,
     startedAt: run.started_at,
     completedAt: run.completed_at,
     durationMs: durationMs != null && durationMs >= 0 ? durationMs : null,
@@ -966,7 +1083,7 @@ export async function getWorkflowRunSummaryMetadataAction(input: unknown) {
 
 export async function getLatestWorkflowRunAction(input: unknown) {
   const user = await requireUser();
-  const parsed = WorkflowIdInput.parse(input);
+  const parsed = GetLatestWorkflowRunInput.parse(input);
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
@@ -977,6 +1094,9 @@ export async function getLatestWorkflowRunAction(input: unknown) {
 
   if (tenant) {
     query.where('tenant_id', tenant);
+  }
+  if (parsed.eventType) {
+    query.where('event_type', parsed.eventType);
   }
 
   const latest = await query.first();
@@ -990,22 +1110,32 @@ export async function getLatestWorkflowRunAction(input: unknown) {
 export async function listWorkflowRunLogsAction(input: unknown) {
   const user = await requireUser();
   const parsed = ListWorkflowRunLogsInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
+  await requireRunTenantAccess(knex, parsed.runId, tenant);
 
-  return WorkflowRunLogModelV2.listByRun(knex, parsed.runId, {
+  const cfg = await loadTenantRedactionConfig(knex, tenant);
+  const result = await WorkflowRunLogModelV2.listByRun(knex, parsed.runId, {
     level: parsed.level,
     search: parsed.search,
     limit: parsed.limit,
     cursor: parsed.cursor
   });
+  return {
+    ...result,
+    logs: result.logs.map((log) => ({
+      ...log,
+      context_json: log.context_json ? (applyRunStudioRedactions(log.context_json, cfg) as any) : null
+    }))
+  };
 }
 
 export async function listWorkflowRunTimelineEventsAction(input: unknown) {
   const user = await requireUser();
   const parsed = RunIdInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
+  await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId);
   const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
@@ -1136,8 +1266,9 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
 export async function listWorkflowRunStepsAction(input: unknown) {
   const user = await requireUser();
   const parsed = RunIdInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
+  await requireRunTenantAccess(knex, parsed.runId, tenant);
   const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId);
   const snapshots = await WorkflowRunSnapshotModelV2.listByRun(knex, parsed.runId);
   const invocations = await WorkflowActionInvocationModelV2.listByRun(knex, parsed.runId);
@@ -1145,16 +1276,26 @@ export async function listWorkflowRunStepsAction(input: unknown) {
   const canManage = await hasPermission(user, 'workflow', 'manage', knex);
   const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
   const canViewSensitive = canManage || canAdmin;
+  const cfg = await loadTenantRedactionConfig(knex, tenant);
 
   const redactedInvocations = canViewSensitive
-    ? invocations
+    ? invocations.map((invocation) => ({
+        ...invocation,
+        input_json: invocation.input_json ? (applyRunStudioRedactions(invocation.input_json, cfg) as any) : null,
+        output_json: invocation.output_json ? (applyRunStudioRedactions(invocation.output_json, cfg) as any) : null
+      }))
     : invocations.map((invocation) => ({
         ...invocation,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null
       }));
 
-  return { steps, snapshots, invocations: redactedInvocations, waits };
+  const sanitizedSnapshots = snapshots.map((snapshot) => ({
+    ...snapshot,
+    envelope_json: applyRunStudioRedactions(snapshot.envelope_json, cfg) as any
+  }));
+
+  return { steps, snapshots: sanitizedSnapshots, invocations: redactedInvocations, waits };
 }
 
 export async function exportWorkflowRunDetailAction(input: unknown) {
@@ -1212,8 +1353,10 @@ export async function exportWorkflowRunDetailAction(input: unknown) {
 export async function cancelWorkflowRunAction(input: unknown) {
   const user = await requireUser();
   const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
+
+  const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
     status: 'CANCELED',
@@ -1221,7 +1364,6 @@ export async function cancelWorkflowRunAction(input: unknown) {
     completed_at: new Date().toISOString()
   });
 
-  const runRecord = await WorkflowRunModelV2.getById(knex, parsed.runId);
   const waits = await knex('workflow_run_waits').where({ run_id: parsed.runId, status: 'WAITING' });
   for (const wait of waits) {
     await WorkflowRunWaitModelV2.update(knex, wait.wait_id, {
@@ -1255,8 +1397,9 @@ export async function resumeWorkflowRunAction(input: unknown) {
   const user = await requireUser();
   initializeWorkflowRuntimeV2();
   const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
+  const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   const waits = await WorkflowRunWaitModelV2.listByRun(knex, parsed.runId);
   const waiting = waits.filter((wait) => wait.status === 'WAITING');
@@ -1286,7 +1429,6 @@ export async function resumeWorkflowRunAction(input: unknown) {
   });
 
   const processedAt = new Date().toISOString();
-  const runRecord = await WorkflowRunModelV2.getById(knex, parsed.runId);
   await WorkflowRuntimeEventModelV2.create(knex, {
     tenant_id: runRecord?.tenant_id ?? null,
     event_name: 'ADMIN_RESUME',
@@ -1335,13 +1477,10 @@ export async function retryWorkflowRunAction(input: unknown) {
   const user = await requireUser();
   initializeWorkflowRuntimeV2();
   const parsed = RunActionInput.parse(input);
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
-  if (!run) {
-    return throwHttpError(404, 'Run not found');
-  }
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
   if (run.status !== 'FAILED') {
     return throwHttpError(409, 'Run is not failed');
   }
@@ -1397,17 +1536,15 @@ export async function replayWorkflowRunAction(input: unknown) {
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
 
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId);
-  if (!run) {
-    return throwHttpError(404, 'Run not found');
-  }
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   const runtime = new WorkflowRuntimeV2();
   const newRunId = await runtime.startRun(knex, {
     workflowId: run.workflow_id,
     version: run.workflow_version,
     payload: parsed.payload,
-    tenantId: run.tenant_id ?? tenant
+    tenantId: run.tenant_id ?? tenant,
+    eventType: run.event_type ?? null
   });
 
   await WorkflowRunLogModelV2.create(knex, {
@@ -1657,7 +1794,8 @@ export async function submitWorkflowEventAction(input: unknown) {
       workflowId: workflow.workflow_id,
       version: latest.version,
       payload: parsed.payload,
-      tenantId: tenant
+      tenantId: tenant,
+      eventType: parsed.eventName
     });
     startedRuns.push(newRunId);
     await runtime.executeRun(knex, newRunId, `event-${Date.now()}`);

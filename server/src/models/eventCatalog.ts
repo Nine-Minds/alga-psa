@@ -338,6 +338,98 @@ export class EventCatalogModel extends BaseModel {
           required: ['tenantId', 'ticketId', 'trigger']
         },
         tenant: tenantId
+      },
+      {
+        event_type: 'INBOUND_EMAIL_RECEIVED',
+        name: 'Inbound Email Received',
+        description: 'Triggered when an inbound email is received and normalized for workflow processing',
+        category: 'Email Processing',
+        payload_schema: {
+          type: 'object',
+          properties: {
+            emailData: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                mailhogId: { type: 'string' },
+                threadId: { type: 'string' },
+                from: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string', format: 'email' },
+                    name: { type: 'string' }
+                  },
+                  required: ['email']
+                },
+                to: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', format: 'email' },
+                      name: { type: 'string' }
+                    },
+                    required: ['email']
+                  }
+                },
+                cc: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', format: 'email' },
+                      name: { type: 'string' }
+                    },
+                    required: ['email']
+                  }
+                },
+                bcc: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      email: { type: 'string', format: 'email' },
+                      name: { type: 'string' }
+                    },
+                    required: ['email']
+                  }
+                },
+                subject: { type: 'string' },
+                body: {
+                  type: 'object',
+                  properties: {
+                    text: { type: 'string' },
+                    html: { type: 'string' }
+                  }
+                },
+                inReplyTo: { type: 'string' },
+                references: { type: 'array', items: { type: 'string' } },
+                attachments: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      contentType: { type: 'string' },
+                      size: { type: 'number' },
+                      contentId: { type: 'string' }
+                    },
+                    required: ['id', 'name', 'contentType', 'size']
+                  }
+                },
+                receivedAt: { type: 'string' },
+                tenant: { type: 'string' },
+                providerId: { type: 'string' }
+              },
+              required: ['id', 'from', 'subject', 'body']
+            },
+            providerId: { type: 'string' },
+            tenantId: { type: 'string' }
+          },
+          required: ['emailData', 'providerId', 'tenantId']
+        },
+        tenant: tenantId
       }
     ];
 

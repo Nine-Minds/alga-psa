@@ -49,6 +49,7 @@ export type StartRunParams = {
   payload: Record<string, unknown>;
   tenantId?: string | null;
   triggerEvent?: { name: string; payload: Record<string, unknown> };
+  eventType?: string | null;
   secretResolver?: SecretResolver;
 };
 
@@ -106,6 +107,7 @@ export class WorkflowRuntimeV2 {
       status: 'RUNNING',
       node_path: nodePath,
       input_json: params.payload,
+      event_type: params.eventType ?? null,
       resume_event_name: params.triggerEvent?.name ?? null,
       resume_event_payload: params.triggerEvent?.payload ?? null
     });
@@ -117,7 +119,8 @@ export class WorkflowRuntimeV2 {
         workflowId: params.workflowId,
         workflowVersion: params.version,
         payloadSizeBytes: jsonSize(params.payload),
-        triggerEventName: params.triggerEvent?.name ?? null
+        triggerEventName: params.triggerEvent?.name ?? null,
+        eventType: params.eventType ?? null
       },
       source: 'runtime'
     });
