@@ -920,70 +920,70 @@
       "category": "Permissions & Security",
       "description": "Require workflow:manage permission to run",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-132",
       "category": "Permissions & Security",
       "description": "Require workflow:admin for system workflow runs",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-133",
       "category": "Permissions & Security",
       "description": "Hide secrets in logs and snapshots",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-134",
       "category": "Permissions & Security",
       "description": "Restrict log access to workflow:read",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-135",
       "category": "Permissions & Security",
       "description": "Enforce tenant isolation for run data",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-136",
       "category": "Permissions & Security",
       "description": "Check secrets.view for secret metadata in UI",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-137",
       "category": "Permissions & Security",
       "description": "Block run controls for read-only users",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-138",
       "category": "Permissions & Security",
       "description": "Audit user actions for run controls",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-139",
       "category": "Permissions & Security",
       "description": "Mask sensitive payload fields by pattern",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-140",
       "category": "Permissions & Security",
       "description": "Support per-tenant redaction overrides",
       "file": "",
-      "done": false
+      "done": true
     },
     {
       "id": "WRX-141",
@@ -1404,6 +1404,202 @@
       "description": "Playwright test for snapshot viewer",
       "file": "",
       "done": false
+    },
+    {
+      "id": "WRX-201",
+      "category": "Event Registry Payloads",
+      "description": "Add event registry selector to Run dialog (choose event type)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-202",
+      "category": "Event Registry Payloads",
+      "description": "Preselect event based on workflow trigger eventName when available",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-203",
+      "category": "Event Registry Payloads",
+      "description": "Display event category + description in selector row",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-204",
+      "category": "Event Registry Payloads",
+      "description": "Load event catalog entries for current tenant",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-205",
+      "category": "Event Registry Payloads",
+      "description": "Allow searching/filtering event catalog list",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-206",
+      "category": "Event Registry Payloads",
+      "description": "Show system vs tenant event badge in selector",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-207",
+      "category": "Event Registry Payloads",
+      "description": "On event selection, load payload_schema from event registry",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-208",
+      "category": "Event Registry Payloads",
+      "description": "Seed payload builder from selected event schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-209",
+      "category": "Event Registry Payloads",
+      "description": "Allow switching back to workflow payload schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-210",
+      "category": "Event Registry Payloads",
+      "description": "Warn when selected event schema differs from workflow payload schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-211",
+      "category": "Event Registry Payloads",
+      "description": "Allow manual override of schema source (event vs payloadSchemaRef)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-212",
+      "category": "Event Registry Payloads",
+      "description": "Persist last selected event per workflow (localStorage)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-213",
+      "category": "Event Registry Payloads",
+      "description": "Support example payloads from event schema examples",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-214",
+      "category": "Event Registry Payloads",
+      "description": "Support event-specific sample templates (email/webhook)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-215",
+      "category": "Event Registry Payloads",
+      "description": "Show event name/slug in Run dialog header",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-216",
+      "category": "Event Registry Payloads",
+      "description": "Add quick link to open Events Catalog entry",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-217",
+      "category": "Event Registry Payloads",
+      "description": "Handle missing event schema gracefully (fallback to payloadSchemaRef)",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-218",
+      "category": "Event Registry Payloads",
+      "description": "Validate event payload against event schema when selected",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-219",
+      "category": "Event Registry Payloads",
+      "description": "Display event schema required field indicators in form mode",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-220",
+      "category": "Event Registry Payloads",
+      "description": "Include event schema descriptions as helper text",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-221",
+      "category": "Event Registry Payloads",
+      "description": "Allow cloning latest run for the selected event",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-222",
+      "category": "Event Registry Payloads",
+      "description": "Remember schema source + event selection across sessions",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-223",
+      "category": "Event Registry Payloads",
+      "description": "Expose event selection in Run options persistence",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-224",
+      "category": "Event Registry Payloads",
+      "description": "Include eventType in run metadata for synthetic runs",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-225",
+      "category": "Event Registry Payloads",
+      "description": "Provide inline diff between event schema and payload schema",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-226",
+      "category": "Event Registry Payloads",
+      "description": "Add \"Use event schema\" action in Run dialog warnings",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-227",
+      "category": "Event Registry Payloads",
+      "description": "Add telemetry: track event selection usage in Run dialog",
+      "file": "",
+      "done": true
+    },
+    {
+      "id": "WRX-228",
+      "category": "Event Registry Payloads",
+      "description": "Add tests for event selector + schema seeding",
+      "file": "",
+      "done": true
     }
   ]
 }

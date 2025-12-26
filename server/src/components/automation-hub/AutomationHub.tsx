@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { DnDFlow as WorkflowDesigner } from '@product/workflows/entry';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from 'server/src/components/ui/Tabs';
@@ -18,6 +19,15 @@ export default function AutomationHub() {
     name: string;
     triggerType: WorkflowTriggerType;
   } | null>(null);
+  const searchParams = useSearchParams();
+  const eventTypeFromQuery = searchParams.get('eventType');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab') as TabValue | null;
+    if (tab && ['workflows', 'designer', 'runs', 'events'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const handleSelectWorkflow = useCallback((workflowId: string) => {
     setSelectedWorkflowId(workflowId);
@@ -96,6 +106,11 @@ export default function AutomationHub() {
               <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md">
                 Monitor events that trigger workflows. This feature is coming soon.
               </p>
+              {eventTypeFromQuery && (
+                <div className="mt-3 text-xs text-[rgb(var(--color-text-500))]">
+                  Selected event: <span className="font-semibold text-[rgb(var(--color-text-700))]">{eventTypeFromQuery}</span>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

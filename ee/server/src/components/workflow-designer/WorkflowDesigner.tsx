@@ -1276,8 +1276,8 @@ const WorkflowDesigner: React.FC = () => {
     [userPermissions, canAdmin]
   );
   const canRun = useMemo(
-    () => userPermissions.includes('workflow:manage') || canAdmin,
-    [userPermissions, canAdmin]
+    () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
+    [activeWorkflowRecord?.is_system, canAdmin, canManage]
   );
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
@@ -2264,6 +2264,7 @@ const WorkflowDesigner: React.FC = () => {
       }))}
       isActive={activeTab === 'Runs'}
       canAdmin={canAdmin}
+      canManage={canManage}
     />
   );
 
@@ -2356,6 +2357,7 @@ const WorkflowDesigner: React.FC = () => {
         workflowId={activeWorkflowId}
         workflowName={activeWorkflowRecord?.name ?? activeDefinition?.name ?? ''}
         triggerLabel={activeDefinition?.trigger?.eventName ? `Event: ${activeDefinition.trigger.eventName}` : 'Manual'}
+        triggerEventName={activeDefinition?.trigger?.eventName ?? null}
         payloadSchemaRef={activeDefinition?.payloadSchemaRef ?? activeWorkflowRecord?.payload_schema_ref ?? null}
         publishedVersion={activeWorkflowRecord?.published_version ?? null}
         draftVersion={activeDefinition?.version ?? null}

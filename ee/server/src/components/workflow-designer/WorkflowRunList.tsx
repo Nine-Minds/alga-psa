@@ -133,9 +133,10 @@ interface WorkflowRunListProps {
   definitions: WorkflowDefinitionSummary[];
   isActive: boolean;
   canAdmin?: boolean;
+  canManage?: boolean;
 }
 
-const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive, canAdmin = false }) => {
+const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive, canAdmin = false, canManage = false }) => {
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
   const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
@@ -404,9 +405,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
   const someSelected = selectedRunIds.size > 0 && selectedRunIds.size < runs.length;
   const columnCount = (showSelection ? 9 : 8) + (showTenantColumn ? 1 : 0);
   const canRunSelected = !!activeDefinition?.workflow_id
+    && canManage
     && !!activeDefinition.published_version
     && activeDefinition.validation_status !== 'error'
-    && !activeDefinition.is_paused;
+    && !activeDefinition.is_paused
+    && (!activeDefinition.is_system || canAdmin);
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
@@ -711,6 +714,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
         workflowId={activeDefinition?.workflow_id ?? null}
         workflowName={activeDefinition?.name ?? ''}
         triggerLabel={activeDefinition ? workflowTriggerMap.get(activeDefinition.workflow_id) ?? 'Manual' : 'Manual'}
+        triggerEventName={activeDefinition ? (activeDefinition.trigger as any)?.eventName ?? null : null}
         payloadSchemaRef={activeDefinition?.payload_schema_ref ?? null}
         publishedVersion={activeDefinition?.published_version ?? null}
         draftVersion={null}

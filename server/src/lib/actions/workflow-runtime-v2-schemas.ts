@@ -57,7 +57,8 @@ export const PublishWorkflowDefinitionInput = z.object({
 export const StartWorkflowRunInput = z.object({
   workflowId: z.string().min(1),
   workflowVersion: versionNumber.optional(),
-  payload: z.record(z.any()).default({})
+  payload: z.record(z.any()).default({}),
+  eventType: z.string().min(1).optional()
 });
 
 export const ListWorkflowRunsInput = z.object({
@@ -79,6 +80,11 @@ export const RunIdInput = z.object({
 
 export const WorkflowIdInput = z.object({
   workflowId: z.string().min(1)
+});
+
+export const GetLatestWorkflowRunInput = z.object({
+  workflowId: z.string().min(1),
+  eventType: z.string().min(1).optional()
 });
 
 export const RunActionInput = z.object({

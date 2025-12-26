@@ -7,6 +7,7 @@ export type WorkflowRunRecord = {
   tenant_id?: string | null;
   status: string;
   node_path?: string | null;
+  event_type?: string | null;
   input_json?: Record<string, unknown> | null;
   resume_event_payload?: Record<string, unknown> | null;
   resume_event_name?: string | null;
