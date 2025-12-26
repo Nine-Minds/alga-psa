@@ -44,8 +44,8 @@ find_release_tag() {
 
   cd "${ROOT_DIR}"
 
-  # Get release tags sorted by version (newest first)
-  local release_tags=($(git tag -l 'release/*' --sort=-v:refname 2>/dev/null))
+  # Get version tags sorted by version (newest first)
+  local release_tags=($(git tag -l 'v*' --sort=-v:refname 2>/dev/null))
 
   if [[ ${#release_tags[@]} -eq 0 ]]; then
     echo -e "${YELLOW}⚠${NC}  No release tags found" >&2
