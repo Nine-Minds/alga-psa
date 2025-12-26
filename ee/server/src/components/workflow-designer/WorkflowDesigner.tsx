@@ -2115,9 +2115,10 @@ const WorkflowDesigner: React.FC = () => {
                         getSubtitle={(step) => (step as Step).type}
                         selectedStepId={selectedStepId}
                         onSelectStepId={setSelectedStepId}
-                        editable
+                        editable={canManage}
                         rootPipePath="root"
-                        onRequestInsertAt={handleInsertStep}
+                        onRequestInsertAt={canManage ? handleInsertStep : undefined}
+                        onDeleteStepId={canManage ? handleDeleteStep : undefined}
                         className="h-full"
                       />
                     </div>

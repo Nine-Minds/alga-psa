@@ -17,7 +17,7 @@ import 'reactflow/dist/style.css';
 
 import { buildWorkflowGraph, type WorkflowGraphNodeData } from './buildWorkflowGraph';
 import { getStepTypeColor, getStepTypeIcon } from '../workflow-designer/pipeline/PipelineComponents';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 type WorkflowGraphProps<TStep> = {
   steps: TStep[];
@@ -29,6 +29,7 @@ type WorkflowGraphProps<TStep> = {
   editable?: boolean;
   rootPipePath?: string;
   onRequestInsertAt?: (pipePath: string, index: number) => void;
+  onDeleteStepId?: (stepId: string) => void;
   className?: string;
 };
 
@@ -96,7 +97,7 @@ const StepNode: React.FC<{ data: WorkflowGraphNodeData; selected?: boolean }> = 
   const statusClass = statusStyles(data.status);
   return (
     <div
-      className={`bg-white border rounded-md ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
+      className={`relative bg-white border rounded-md ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
       style={{ width: 260, height: 72, borderLeftWidth: 4 }}
     >
       <Handle
@@ -125,6 +126,21 @@ const StepNode: React.FC<{ data: WorkflowGraphNodeData; selected?: boolean }> = 
           </div>
         )}
       </div>
+
+      {selected && data.stepId && data.onRequestDelete && (
+        <button
+          type="button"
+          className="absolute -right-2 -top-2 rounded-full border border-gray-200 bg-white shadow-sm p-1 text-gray-500 hover:text-red-600 hover:border-red-200"
+          aria-label="Delete step"
+          title="Delete step"
+          onClick={(event) => {
+            event.stopPropagation();
+            data.onRequestDelete?.(data.stepId!);
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 };
@@ -192,6 +208,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     editable = false,
     rootPipePath = 'root',
     onRequestInsertAt,
+    onDeleteStepId,
     className
   } = props;
 
@@ -284,17 +301,19 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     return nodes.map((node) => {
       const stepId = (node.data as WorkflowGraphNodeData | undefined)?.stepId;
       const status = stepId ? statusMap.get(stepId) ?? null : null;
+      const kind = (node.data as WorkflowGraphNodeData).kind;
       return {
         ...node,
         data: {
           ...(node.data as WorkflowGraphNodeData),
           status,
-          onRequestInsert: (node.data as WorkflowGraphNodeData).kind === 'insert' ? onRequestInsertAt ?? null : null
+          onRequestInsert: (node.data as WorkflowGraphNodeData).kind === 'insert' ? onRequestInsertAt ?? null : null,
+          onRequestDelete: kind === 'step' ? onDeleteStepId ?? null : null
         },
         selected: Boolean(stepId && selectedStepId && stepId === selectedStepId)
       };
     });
-  }, [nodes, onRequestInsertAt, selectedStepId, statusMap]);
+  }, [nodes, onDeleteStepId, onRequestInsertAt, selectedStepId, statusMap]);
 
   if (loading) {
     return (
@@ -321,8 +340,18 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full ${className ?? ''}`}
+      className={`w-full h-full focus:outline-none ${className ?? ''}`}
       style={{ width: '100%', height: '100%', minHeight: 320 }}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (!editable) return;
+        if (!selectedStepId) return;
+        if (!onDeleteStepId) return;
+        if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+        event.preventDefault();
+        event.stopPropagation();
+        onDeleteStepId(selectedStepId);
+      }}
     >
       <ReactFlow
         nodes={displayNodes}
@@ -348,6 +377,9 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
           const stepId = (node.data as WorkflowGraphNodeData | undefined)?.stepId;
           if (!stepId || !onSelectStepId) return;
           onSelectStepId(stepId);
+        }}
+        onPaneClick={() => {
+          containerRef.current?.focus();
         }}
         defaultEdgeOptions={{
           animated: false
