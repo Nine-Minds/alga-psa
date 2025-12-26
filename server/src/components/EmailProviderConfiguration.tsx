@@ -106,6 +106,12 @@ export interface ImapEmailProviderConfig {
   uid_validity?: string;
   last_uid?: string;
   folder_state?: Record<string, { uid_validity?: string; last_uid?: string; last_seen_at?: string }>;
+  last_processed_message_id?: string;
+  server_capabilities?: string | null;
+  lease_owner?: string | null;
+  lease_expires_at?: string | null;
+  connection_timeout_ms?: number | null;
+  socket_keepalive?: boolean | null;
   last_seen_at?: string;
   last_sync_at?: string;
   last_error?: string;
@@ -254,6 +260,42 @@ function EmailProviderConfigurationContent({
     }
   };
 
+  const handleReconnectOAuth = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      const response = await fetch('/api/email/oauth/imap/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId: provider.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.authUrl) {
+        throw new Error(result.error || 'Failed to initiate IMAP OAuth');
+      }
+      window.open(result.authUrl, '_blank', 'width=600,height=700');
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleResyncProvider = async (provider: EmailProvider) => {
+    try {
+      setError(null);
+      const response = await fetch('/api/email/imap/resync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId: provider.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to resync IMAP provider');
+      }
+      await loadProviders();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
@@ -311,6 +353,13 @@ function EmailProviderConfigurationContent({
 
   // Build right-hand content for Providers section
   const renderProvidersContent = () => {
+    const providerCounts = providers.reduce(
+      (acc, provider) => {
+        acc[provider.providerType] = (acc[provider.providerType] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
     // Standard providers view with wizard-based add flow
     return (
       <div className="space-y-6">
@@ -318,7 +367,10 @@ function EmailProviderConfigurationContent({
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
             <p className="text-muted-foreground">
-              Configure email providers to receive and process inbound emails as tickets
+              Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Gmail: {providerCounts.google || 0} · Microsoft: {providerCounts.microsoft || 0} · IMAP: {providerCounts.imap || 0}
             </p>
           </div>
           <Button
@@ -344,6 +396,8 @@ function EmailProviderConfigurationContent({
           onRefresh={loadProviders}
           onRefreshWatchSubscription={handleRefreshWatchSubscription}
           onRetryRenewal={handleRetryRenewal}
+          onReconnectOAuth={handleReconnectOAuth}
+          onResyncProvider={handleResyncProvider}
           onAddClick={() => setWizardOpen(true)}
         />
 

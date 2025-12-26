@@ -7,6 +7,7 @@ import { getSecretProviderInstance } from '@shared/core';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
 import axios from 'axios';
+import { auditLog } from 'server/src/lib/logging/auditLog';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
 import { configureGmailProvider } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
@@ -408,8 +409,9 @@ async function persistImapConfig(
       oauth_authorize_url, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scopes,
       access_token, refresh_token, token_expires_at,
       uid_validity, last_uid, last_seen_at, last_sync_at, last_error,
+      connection_timeout_ms, socket_keepalive,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
       host = EXCLUDED.host,
       port = EXCLUDED.port,
@@ -425,6 +427,8 @@ async function persistImapConfig(
       oauth_client_id = EXCLUDED.oauth_client_id,
       oauth_client_secret = EXCLUDED.oauth_client_secret,
       oauth_scopes = EXCLUDED.oauth_scopes,
+      connection_timeout_ms = COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms),
+      socket_keepalive = COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive),
       -- Preserve existing sensitive values if the new value is NULL
       access_token = COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token),
       refresh_token = COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token),
@@ -460,7 +464,9 @@ async function persistImapConfig(
     config.last_uid || null,
     config.last_seen_at || null,
     config.last_sync_at || null,
-    config.last_error || null
+    config.last_error || null,
+    config.connection_timeout_ms || null,
+    config.socket_keepalive ?? null
   ]).then((result: any) => result.rows[0]);
 
   if (imapConfig) {
@@ -570,6 +576,12 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
             'uid_validity',
             'last_uid',
             'folder_state',
+            'last_processed_message_id',
+            'server_capabilities',
+            'lease_owner',
+            'lease_expires_at',
+            'connection_timeout_ms',
+            'socket_keepalive',
             'last_seen_at',
             'last_sync_at',
             'last_error',
@@ -606,7 +618,7 @@ export async function upsertEmailProvider(data: {
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
-  await assertAuthenticated();
+  const user = await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant is required');
   
@@ -620,6 +632,21 @@ export async function upsertEmailProvider(data: {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       } else if (data.providerType === 'imap') {
         base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
+        await auditLog(trx, {
+          userId: user.user_id,
+          operation: 'upsert',
+          tableName: 'imap_email_provider_config',
+          recordId: base.id,
+          changedData: {
+            auth_type: data.imapConfig?.auth_type,
+            username: data.imapConfig?.username,
+            folder_filters: data.imapConfig?.folder_filters,
+          },
+          details: {
+            providerId: base.id,
+            tenant,
+          }
+        });
       }
       
       return base;
@@ -692,7 +719,7 @@ export async function updateEmailProvider(
   },
   skipAutomation?: boolean
 ): Promise<{ provider: EmailProvider }> {
-  await assertAuthenticated();
+  const user = await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant is required');
   
@@ -706,6 +733,21 @@ export async function updateEmailProvider(
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
       } else if (data.providerType === 'imap') {
         base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
+        await auditLog(trx, {
+          userId: user.user_id,
+          operation: 'update',
+          tableName: 'imap_email_provider_config',
+          recordId: base.id,
+          changedData: {
+            auth_type: data.imapConfig?.auth_type,
+            username: data.imapConfig?.username,
+            folder_filters: data.imapConfig?.folder_filters,
+          },
+          details: {
+            providerId: base.id,
+            tenant,
+          }
+        });
       }
       
       return base;

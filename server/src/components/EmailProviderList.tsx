@@ -7,6 +7,8 @@
 
 import React from 'react';
 import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import CustomSelect from './ui/CustomSelect';
 import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 import { updateEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
 import type { EmailProvider } from './EmailProviderConfiguration';
@@ -21,6 +23,8 @@ interface EmailProviderListProps {
   onRefresh: () => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
   onRetryRenewal: (provider: EmailProvider) => void;
+  onReconnectOAuth?: (provider: EmailProvider) => void;
+  onResyncProvider?: (provider: EmailProvider) => void;
   onAddClick?: () => void;
 }
 
@@ -32,10 +36,14 @@ export function EmailProviderList({
   onRefresh,
   onRefreshWatchSubscription,
   onRetryRenewal,
+  onReconnectOAuth,
+  onResyncProvider,
   onAddClick
 }: EmailProviderListProps) {
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
   const [updatingProviderId, setUpdatingProviderId] = React.useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [providerFilter, setProviderFilter] = React.useState<'all' | 'google' | 'microsoft' | 'imap'>('all');
 
   React.useEffect(() => {
     const loadDefaults = async () => {
@@ -70,24 +78,51 @@ export function EmailProviderList({
     }
   };
 
-  if (providers.length === 0) {
+  const filteredProviders = providers.filter((provider) => {
+    const matchesFilter = providerFilter === 'all' || provider.providerType === providerFilter;
+    const matchesSearch = !searchTerm
+      || provider.providerName.toLowerCase().includes(searchTerm.toLowerCase())
+      || provider.mailbox.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  if (filteredProviders.length === 0) {
     return <EmptyProviderPlaceholder onAddClick={onAddClick} />;
   }
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Email Providers ({providers.length})</h3>
-        <Button id="refresh-providers" variant="outline" size="sm" onClick={onRefresh}>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h3 className="text-lg font-medium">Email Providers ({filteredProviders.length})</h3>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <Input
+            id="provider-search"
+            placeholder="Search providers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <CustomSelect
+            id="provider-filter"
+            value={providerFilter}
+            onValueChange={(v) => setProviderFilter(v as any)}
+            options={[
+              { value: 'all', label: 'All Providers' },
+              { value: 'google', label: 'Gmail' },
+              { value: 'microsoft', label: 'Microsoft 365' },
+              { value: 'imap', label: 'IMAP' },
+            ]}
+          />
+          <Button id="refresh-providers" variant="outline" size="sm" onClick={onRefresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
+        </div>
       </div>
 
       {/* Provider Cards */}
       <div className="grid gap-4">
-        {providers.map((provider) => (
+        {filteredProviders.map((provider) => (
           <EmailProviderCard
             key={provider.id}
             provider={provider}
@@ -98,6 +133,8 @@ export function EmailProviderList({
             onTestConnection={onTestConnection}
             onRefreshWatchSubscription={onRefreshWatchSubscription}
             onRetryRenewal={onRetryRenewal}
+            onReconnectOAuth={onReconnectOAuth}
+            onResyncProvider={onResyncProvider}
             onChangeDefaults={handleChangeDefaults}
           />
         ))}

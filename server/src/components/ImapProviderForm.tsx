@@ -36,6 +36,8 @@ const imapProviderSchema = z.object({
   oauthClientId: z.string().optional(),
   oauthClientSecret: z.string().optional(),
   oauthScopes: z.string().optional(),
+  connectionTimeoutMs: z.number().min(1000).max(120000).optional(),
+  socketKeepalive: z.boolean().optional(),
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
@@ -64,6 +66,7 @@ export function ImapProviderForm({
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
+  const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'error'>('idle');
 
   const isEditing = !!provider;
 
@@ -84,6 +87,8 @@ export function ImapProviderForm({
       oauthClientId: provider.imapConfig.oauth_client_id || '',
       oauthClientSecret: provider.imapConfig.oauth_client_secret || '',
       oauthScopes: provider.imapConfig.oauth_scopes || '',
+      connectionTimeoutMs: provider.imapConfig.connection_timeout_ms || undefined,
+      socketKeepalive: provider.imapConfig.socket_keepalive ?? false,
       isActive: provider.isActive,
       autoProcessEmails: provider.imapConfig.auto_process_emails ?? true,
       folderFilters: provider.imapConfig.folder_filters?.join(', ') || '',
@@ -98,6 +103,8 @@ export function ImapProviderForm({
       autoProcessEmails: true,
       folderFilters: '',
       maxEmailsPerSync: 50,
+      connectionTimeoutMs: undefined,
+      socketKeepalive: false,
       inboundTicketDefaultsId: undefined
     }
   });
@@ -150,7 +157,9 @@ export function ImapProviderForm({
           oauth_scopes: data.oauthScopes || undefined,
           auto_process_emails: data.autoProcessEmails,
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()).filter(Boolean) : [],
-          max_emails_per_sync: data.maxEmailsPerSync
+          max_emails_per_sync: data.maxEmailsPerSync,
+          connection_timeout_ms: data.connectionTimeoutMs,
+          socket_keepalive: data.socketKeepalive
         }
       };
 
@@ -167,6 +176,28 @@ export function ImapProviderForm({
   };
 
   const authType = form.watch('authType');
+  const oauthConnected = !!provider?.imapConfig?.refresh_token || !!provider?.imapConfig?.access_token;
+
+  const handleOauthConnect = async () => {
+    if (!provider?.id) return;
+    try {
+      setOauthStatus('authorizing');
+      const response = await fetch('/api/email/oauth/imap/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId: provider.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.authUrl) {
+        throw new Error(result.error || 'Failed to initiate IMAP OAuth');
+      }
+      window.open(result.authUrl, '_blank', 'width=600,height=700');
+      setOauthStatus('idle');
+    } catch (err) {
+      console.error(err);
+      setOauthStatus('error');
+    }
+  };
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -260,6 +291,17 @@ export function ImapProviderForm({
 
           {authType === 'oauth2' && (
             <div className="space-y-4">
+              {provider && (
+                <div className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm">
+                  <div>
+                    <p className="font-medium">OAuth Status</p>
+                    <p className="text-muted-foreground">{oauthConnected ? 'Connected' : 'Not connected'}</p>
+                  </div>
+                  <Button type="button" variant="outline" onClick={handleOauthConnect} disabled={oauthStatus === 'authorizing'}>
+                    {oauthStatus === 'authorizing' ? 'Authorizing...' : 'Reconnect OAuth'}
+                  </Button>
+                </div>
+              )}
               <div>
                 <Label htmlFor="oauthAuthorizeUrl">Authorize URL</Label>
                 <Input id="oauthAuthorizeUrl" {...form.register('oauthAuthorizeUrl')} />
@@ -315,6 +357,14 @@ export function ImapProviderForm({
           <div>
             <Label htmlFor="maxEmailsPerSync">Max Emails Per Sync</Label>
             <Input id="maxEmailsPerSync" type="number" {...form.register('maxEmailsPerSync', { valueAsNumber: true })} />
+          </div>
+          <div>
+            <Label htmlFor="connectionTimeoutMs">Connection Timeout (ms)</Label>
+            <Input id="connectionTimeoutMs" type="number" {...form.register('connectionTimeoutMs', { valueAsNumber: true })} />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="socketKeepalive">Socket Keepalive</Label>
+            <Switch id="socketKeepalive" checked={form.watch('socketKeepalive')} onCheckedChange={(v) => form.setValue('socketKeepalive', v)} />
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="isActive">Active</Label>

@@ -56,6 +56,7 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
   - Implemented migration: `server/migrations/20251226121000_create_imap_email_provider_config.cjs`
   - Includes host/port/TLS/auth_type/username/folder_filters + OAuth fields + state tracking.
   - Added folder state jsonb for per-folder UID tracking: `server/migrations/20251226124500_add_imap_folder_state.cjs`.
+  - Added runtime metadata columns (leases, capabilities, timeouts): `server/migrations/20251226140000_add_imap_runtime_columns.cjs`.
 
 ---
 
@@ -84,6 +85,8 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
   - IMAP service uses `imapflow` + `mailparser` to fetch/parse messages and publish events.
   - Per-folder listeners are created for each configured folder (fallback to INBOX).
   - Folder state (UIDVALIDITY/last UID) persisted in `imap_email_provider_config.folder_state`.
+  - IMAP service acquires DB leases per provider (`lease_owner`, `lease_expires_at`) to avoid double-processing.
+  - IMAP OAuth re-connect flow is available in the IMAP provider form + card action.
 
 ---
 

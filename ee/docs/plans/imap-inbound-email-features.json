@@ -369,7 +369,7 @@
   },
   {
     "description": "Resolve folder names against IMAP mailbox hierarchy",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Fallback to INBOX when folder_filters empty",
@@ -433,7 +433,7 @@
   },
   {
     "description": "Support IMAP SEARCH to find unseen/new messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support IMAP FETCH of full message body without marking seen",
@@ -501,7 +501,7 @@
   },
   {
     "description": "Set provider field to 'imap' in EmailMessageDetails",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Set providerId and tenant in EmailMessageDetails",
@@ -541,27 +541,27 @@
   },
   {
     "description": "Support manual resync trigger for IMAP providers",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Throttle IMAP fetch rate per provider to avoid overload",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Handle IMAP servers without IDLE by falling back to polling",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Configurable polling interval for non-IDLE servers",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Graceful shutdown of IMAP service with logout per connection",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Health check endpoint or log heartbeat for IMAP service",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Update email_providers.last_sync_at after IMAP event publish",
@@ -597,11 +597,11 @@
   },
   {
     "description": "Surface IMAP OAuth connection status in provider form",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support OAuth re-auth flow from provider edit screen",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Use IMAP OAuth2 SASL XOAUTH2 for authentication",
@@ -617,7 +617,7 @@
   },
   {
     "description": "Provide IMAP provider card action to retry OAuth",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support multiple IMAP providers per tenant",
@@ -625,11 +625,11 @@
   },
   {
     "description": "Isolate IMAP event publishing by tenant channel if configured",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Respect inbound ticket defaults on IMAP events",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support custom folder names with hierarchy delimiters",
@@ -637,47 +637,47 @@
   },
   {
     "description": "Normalize folder names to server-reported case",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support IMAP servers with separate Sent/Trash folders (ignore by default)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Skip processing messages with empty From header",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Skip processing messages lacking Message-ID but with duplicate hash",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Compute hash-based fallback dedupe for IMAP messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Limit attachment size fetched by IMAP service (configurable)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expose IMAP attachment size limit in server env config",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Log structured IMAP events per provider (connect, idle, fetch, publish)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add IMAP provider to any admin reporting of inbound email status",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add IMAP provider to inbound email settings page copy",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add IMAP provider to provider list filtering and search",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Display IMAP provider folder filters in provider detail view",
@@ -685,19 +685,19 @@
   },
   {
     "description": "Support per-folder UID tracking for IMAP providers",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Persist per-folder UID tracking state in vendor config",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Handle IMAP EXPUNGE events gracefully without resync",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Handle IMAP server unsolicited BYE with reconnect",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Ensure IMAP service uses shared DB connection helpers",
@@ -713,51 +713,51 @@
   },
   {
     "description": "Add IMAP provider to any server-side provider-type enums",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add IMAP provider to any client-side provider-type enums",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add IMAP provider to inbound email docs list in settings help",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Allow specifying IMAP connection timeout per provider",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Allow specifying IMAP socket keepalive per provider",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support IMAP servers requiring LOGIN or PLAIN auth",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support IMAP servers requiring OAUTHBEARER auth (optional)",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Support IMAP servers requiring STARTTLS upgrade",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Fallback to polling when IDLE fails repeatedly",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Expose IMAP service instance metrics per provider in logs",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Record IMAP last_processed_message_id in vendor config",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Store IMAP server greeting/capabilities for diagnostics",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Handle RFC822 headers encoding (UTF-8/quoted-printable)",
@@ -781,34 +781,34 @@
   },
   {
     "description": "Maintain per-tenant concurrency limits for IMAP connections",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Prevent multiple IMAP service instances from double-processing same provider",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Implement IMAP provider lease/lock using Redis or DB",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Release IMAP provider lease on graceful shutdown",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add admin-only endpoint to force IMAP provider reconnect",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add admin-only endpoint to force IMAP provider resync",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add IMAP provider audit log entries for auth changes",
-    "implemented": false
+    "implemented": true
   },
   {
     "description": "Add IMAP provider audit log entries for folder changes",
-    "implemented": false
+    "implemented": true
   }
 ]

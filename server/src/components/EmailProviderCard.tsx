@@ -36,6 +36,8 @@ interface EmailProviderCardProps {
   onTestConnection: (provider: EmailProvider) => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
   onRetryRenewal: (provider: EmailProvider) => void;
+  onReconnectOAuth?: (provider: EmailProvider) => void;
+  onResyncProvider?: (provider: EmailProvider) => void;
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
 }
 
@@ -128,6 +130,8 @@ export function EmailProviderCard({
   onRefreshWatchSubscription,
   onRetryRenewal,
   onChangeDefaults,
+  onReconnectOAuth,
+  onResyncProvider,
 }: EmailProviderCardProps) {
   const expirationStatus = getExpirationStatus(provider);
 
@@ -175,6 +179,18 @@ export function EmailProviderCard({
                   <DropdownMenuItem onClick={() => onRetryRenewal(provider)}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Retry Renewal
+                  </DropdownMenuItem>
+                )}
+                {provider.providerType === 'imap' && onReconnectOAuth && (
+                  <DropdownMenuItem onClick={() => onReconnectOAuth(provider)}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Reconnect OAuth
+                  </DropdownMenuItem>
+                )}
+                {provider.providerType === 'imap' && onResyncProvider && (
+                  <DropdownMenuItem onClick={() => onResyncProvider(provider)}>
+                    <Repeat className="h-4 w-4 mr-2" />
+                    Resync Mailbox
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
