@@ -44,6 +44,7 @@ export async function getClientProjects(options: {
     .select([
       'projects.project_id',
       'projects.project_name',
+      'projects.project_number',
       'projects.wbs_code',
       'projects.description',
       'projects.start_date',

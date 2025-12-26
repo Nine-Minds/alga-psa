@@ -7,6 +7,8 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription, AlertTitle } from 'server/src/components/ui/Alert';
 import { FileText, Tag, FolderTree } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateCreationWizard';
+import ClientPortalConfigEditor from 'server/src/components/projects/ClientPortalConfigEditor';
+import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 
 interface TemplateBasicsStepProps {
   data: TemplateWizardData;
@@ -67,6 +69,13 @@ export function TemplateBasicsStep({
         <p className="text-sm text-gray-500">
           Organize templates by category for easier filtering
         </p>
+      </div>
+
+      <div className="border-t pt-4 mt-4">
+        <ClientPortalConfigEditor
+          config={data.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG}
+          onChange={(config) => updateData({ client_portal_config: config })}
+        />
       </div>
 
       <Alert variant="info">

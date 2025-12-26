@@ -303,6 +303,8 @@
     "onHold": "En espera",
     "timeline": "Cronograma",
     "milestones": "Hitos",
+    "phasesAndTasks": "Fases y Tareas",
+    "task": "tarea",
     "tasks": {
       "title": "Tareas",
       "noTasks": "No hay tareas para mostrar",
@@ -330,6 +332,7 @@
     "team": "Miembros del equipo",
     "budget": "Presupuesto",
     "fields": {
+      "projectNumber": "Proyecto #",
       "projectName": "Nombre del proyecto",
       "reference": "Referencia",
       "name": "Nombre del proyecto",
@@ -352,7 +355,9 @@
     "messages": {
       "noProjects": "No se encontraron proyectos",
       "loadingProjects": "Cargando proyectos...",
-      "noDescription": "No se proporcionó descripción"
+      "noDescription": "No se proporcionó descripción",
+      "noPhasesOrTasks": "No hay fases o tareas para mostrar",
+      "loadError": "Error al cargar los detalles del proyecto"
     },
     "viewDetails": "Ver detalles →",
     "details": "Detalles",

@@ -1313,6 +1313,14 @@ export default function ProjectDetail({
             onTaskDelete={handleDeleteTaskClick}
             onTaskDuplicate={handleDuplicateTaskClick}
             onTaskMove={handleListViewTaskMove}
+            onAddPhase={() => setShowPhaseQuickAdd(true)}
+            onAddTask={(phaseId) => {
+              const phase = listViewData.phases.find(p => p.phase_id === phaseId);
+              if (phase) {
+                setCurrentPhase(phase);
+                setShowQuickAdd(true);
+              }
+            }}
             users={users}
             selectedPriorityFilter={selectedPriorityFilter}
             selectedTaskTags={selectedTaskTags}

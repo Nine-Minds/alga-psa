@@ -57,7 +57,8 @@ import {
   addTemplateDependency,
   removeTemplateDependency,
 } from 'server/src/lib/actions/project-actions/projectTemplateActions';
-import { DependencyType } from 'server/src/interfaces/project.interfaces';
+import { DependencyType, IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
+import ClientPortalConfigEditor from 'server/src/components/projects/ClientPortalConfigEditor';
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
 import { getTaskTypes } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
@@ -124,6 +125,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [isDeleting, setIsDeleting] = useState(false);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [showStatusManager, setShowStatusManager] = useState(false);
+  const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
+  const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(
+    initialTemplate.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG
+  );
 
   // Phase editing state
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
@@ -214,6 +219,17 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setIsDeleting(false);
     }
   }
+
+  const handleClientPortalConfigChange = async (config: IClientPortalConfig) => {
+    try {
+      setClientPortalConfig(config);
+      await updateTemplate(template.template_id, { client_portal_config: config });
+      toast.success('Client portal settings saved');
+    } catch (error) {
+      toast.error('Failed to save client portal settings');
+      console.error('Error saving client portal config:', error);
+    }
+  };
 
   // ============================================================
   // PHASE ACTIONS
@@ -693,6 +709,14 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 <Settings className="h-4 w-4 mr-2" />
                 Status Columns
               </Button>
+              <Button
+                id="client-portal-settings"
+                variant="outline"
+                onClick={() => setShowClientPortalConfig(!showClientPortalConfig)}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Client Portal
+              </Button>
               <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
                 <Rocket className="h-4 w-4 mr-2" />
                 Use Template
@@ -725,6 +749,16 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
               <span className="font-medium">Used:</span> {template.use_count} times
             </div>
           </div>
+
+          {/* Client Portal Settings (collapsible) */}
+          {showClientPortalConfig && (
+            <div className="mt-4 border rounded-lg p-4 bg-gray-50">
+              <ClientPortalConfigEditor
+                config={clientPortalConfig}
+                onChange={handleClientPortalConfigChange}
+              />
+            </div>
+          )}
         </div>
 
         <div className={styles.mainContent}>

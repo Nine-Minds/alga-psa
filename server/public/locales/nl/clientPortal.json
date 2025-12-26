@@ -303,6 +303,8 @@
     "onHold": "Gepauzeerd",
     "timeline": "Tijdlijn",
     "milestones": "Mijlpalen",
+    "phasesAndTasks": "Fasen & Taken",
+    "task": "taak",
     "tasks": {
       "title": "Taken",
       "noTasks": "Geen taken om weer te geven",
@@ -330,6 +332,7 @@
     "team": "Teamleden",
     "budget": "Budget",
     "fields": {
+      "projectNumber": "Project #",
       "projectName": "Projectnaam",
       "reference": "Referentie",
       "name": "Projectnaam",
@@ -352,7 +355,9 @@
     "messages": {
       "noProjects": "Geen projecten gevonden",
       "loadingProjects": "Projecten worden geladen...",
-      "noDescription": "Geen beschrijving opgegeven"
+      "noDescription": "Geen beschrijving opgegeven",
+      "noPhasesOrTasks": "Geen fasen of taken om weer te geven",
+      "loadError": "Kan projectdetails niet laden"
     },
     "viewDetails": "Details bekijken →",
     "details": "Details",

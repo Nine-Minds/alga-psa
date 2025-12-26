@@ -9,8 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
-import ProjectPhasesSection from './ProjectPhasesSection';
-import ProjectTasksSection from './ProjectTasksSection';
+import ProjectPhaseTasksView from './ProjectPhaseTasksView';
 
 interface ProjectDetailViewProps {
   project: IProject;
@@ -150,21 +149,11 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
         </div>
       </div>
 
-      {/* Conditionally show phases based on config */}
-      {config.show_phases && (
-        <ProjectPhasesSection
+      {/* Unified Phases & Tasks View - respects all config settings */}
+      {(config.show_phases || config.show_tasks) && (
+        <ProjectPhaseTasksView
           projectId={project.project_id}
-          showCompletion={config.show_phase_completion ?? false}
-        />
-      )}
-
-      {/* Conditionally show tasks based on config */}
-      {config.show_tasks && config.show_phases && (
-        <ProjectTasksSection
-          projectId={project.project_id}
-          visibleFields={config.visible_task_fields ?? ['task_name', 'due_date', 'status']}
-          showServices={config.show_task_services ?? false}
-          allowUploads={config.allow_document_uploads ?? false}
+          config={config}
         />
       )}
     </div>

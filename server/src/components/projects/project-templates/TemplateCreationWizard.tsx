@@ -18,6 +18,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IStatus } from 'server/src/interfaces/status.interface';
 import { IService } from 'server/src/interfaces/billing.interfaces';
+import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 
 const STEPS = [
   'Template Basics',
@@ -79,6 +80,7 @@ export interface TemplateWizardData {
   phases: TemplatePhase[];
   tasks: TemplateTask[];
   checklist_items: TemplateChecklistItem[];
+  client_portal_config?: IClientPortalConfig;
 }
 
 interface TemplateCreationWizardProps {
@@ -119,6 +121,7 @@ export function TemplateCreationWizard({
     phases: [],
     tasks: [],
     checklist_items: [],
+    client_portal_config: DEFAULT_CLIENT_PORTAL_CONFIG,
   });
 
   useEffect(() => {
@@ -182,6 +185,7 @@ export function TemplateCreationWizard({
       phases: [],
       tasks: [],
       checklist_items: [],
+      client_portal_config: DEFAULT_CLIENT_PORTAL_CONFIG,
     });
     setErrors({});
     setCompletedSteps(new Set());

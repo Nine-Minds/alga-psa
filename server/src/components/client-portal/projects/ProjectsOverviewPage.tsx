@@ -29,17 +29,20 @@ export function ProjectsOverviewPage() {
   // Define columns for the DataTable
   const columns: ColumnDefinition<IProject>[] = [
     {
-      title: t('projects.fields.projectName'),
-      dataIndex: 'project_name',
-      width: '30%',
-      render: (value, record) => (
-        <div className="font-medium">{value}</div>
+      title: t('projects.fields.projectNumber'),
+      dataIndex: 'project_number',
+      width: '10%',
+      render: (value) => (
+        <span className="font-mono text-sm">{value || '-'}</span>
       )
     },
     {
-      title: t('projects.fields.reference'),
-      dataIndex: 'wbs_code',
-      width: '15%'
+      title: t('projects.fields.projectName'),
+      dataIndex: 'project_name',
+      width: '35%',
+      render: (value, record) => (
+        <div className="font-medium">{value}</div>
+      )
     },
     {
       title: t('projects.fields.status'),

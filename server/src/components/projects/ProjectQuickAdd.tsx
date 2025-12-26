@@ -7,6 +7,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { IProject, IClient, IStatus } from 'server/src/interfaces';
+import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 import { toast } from 'react-hot-toast';
 import { createProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { getTenantProjectStatuses } from 'server/src/lib/actions/project-actions/projectTaskStatusActions';
@@ -17,11 +18,12 @@ import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
-import { getCurrentUser, getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllUsersBasic } from 'server/src/lib/actions/user-actions/userActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
 import { QuickAddTagPicker, PendingTag } from 'server/src/components/tags';
 import { createTagsForEntity } from 'server/src/lib/actions/tagActions';
+import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -50,6 +52,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
+  const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(DEFAULT_CLIENT_PORTAL_CONFIG);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -128,7 +131,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         status: selectedStatusId,
         assigned_to: selectedUserId || null,
         contact_name_id: selectedContactId || null,
-        budgeted_hours: budgetedHours ? Math.round(Number(budgetedHours) * 60) : null
+        budgeted_hours: budgetedHours ? Math.round(Number(budgetedHours) * 60) : null,
+        client_portal_config: clientPortalConfig
       };
 
       // Create the project with selected task statuses in specified order
@@ -322,6 +326,13 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 onPendingTagsChange={setPendingTags}
                 disabled={isSubmitting}
               />
+              <div className="border-t pt-4 mt-2">
+                <ClientPortalConfigEditor
+                  config={clientPortalConfig}
+                  onChange={setClientPortalConfig}
+                  disabled={isSubmitting}
+                />
+              </div>
               <div className="flex justify-between mt-6">
                 <Button id='cancel-button' variant="ghost" onClick={() => {
                   setHasAttemptedSubmit(false);

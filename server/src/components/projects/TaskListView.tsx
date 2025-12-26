@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskChecklistItem, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
-import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, ArrowRight, Ban, GitBranch, Calendar, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, ArrowRight, Ban, GitBranch, Calendar, GripVertical, Plus } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
 import { format } from 'date-fns';
@@ -25,6 +25,8 @@ interface TaskListViewProps {
   onTaskDelete: (task: IProjectTask) => void;
   onTaskDuplicate: (task: IProjectTask) => void;
   onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
+  onAddPhase?: () => void;
+  onAddTask?: (phaseId: string) => void;
   users: any[];
   // Filter props
   selectedPriorityFilter?: string;
@@ -38,24 +40,31 @@ interface PhaseGroup {
 }
 
 export default function TaskListView({
-  projectId,
+  projectId: _projectId,
   phases,
   tasks,
   statuses,
-  ticketLinks,
+  ticketLinks: _ticketLinks,
   taskResources,
-  checklistItems,
+  checklistItems: _checklistItems,
   taskTags,
   taskDependencies = {},
-  onTaskUpdate,
+  onTaskUpdate: _onTaskUpdate,
   onTaskClick,
   onTaskDelete,
   onTaskDuplicate,
   onTaskMove,
+  onAddPhase,
+  onAddTask,
   users,
   selectedPriorityFilter = 'all',
   selectedTaskTags = []
 }: TaskListViewProps) {
+  // Suppress unused variable warnings
+  void _projectId;
+  void _ticketLinks;
+  void _checklistItems;
+  void _onTaskUpdate;
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
 
@@ -419,7 +428,7 @@ export default function TaskListView({
                             <ChevronRight className="h-4 w-4 text-gray-400" />
                           )}
                         </div>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-base font-semibold text-gray-900">
                               {phaseGroup.phase.phase_name}
@@ -435,6 +444,22 @@ export default function TaskListView({
                                 {phaseGroup.phase.start_date && phaseGroup.phase.end_date && ' - '}
                                 {phaseGroup.phase.end_date && format(new Date(phaseGroup.phase.end_date), 'MMM d, yyyy')}
                               </span>
+                            )}
+                            {/* Add Task button */}
+                            {onAddTask && (
+                              <Button
+                                id={`add-task-${phaseGroup.phase.phase_id}`}
+                                variant="ghost"
+                                size="sm"
+                                className="ml-auto mr-4"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAddTask(phaseGroup.phase.phase_id);
+                                }}
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Task
+                              </Button>
                             )}
                           </div>
                           {/* Phase description */}
@@ -689,14 +714,42 @@ export default function TaskListView({
             </div>
           );
         })}
+
+        {/* Add Phase button */}
+        {onAddPhase && (
+          <div className="border-t border-gray-200 p-3">
+            <Button
+              id="add-phase-list-view"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-gray-600 hover:text-gray-900"
+              onClick={onAddPhase}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Phase
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Empty state */}
       {phaseGroups.length === 0 && (
         <div className="flex items-center justify-center h-48 text-gray-500">
           <div className="text-center">
-            <p className="text-base font-medium">No tasks found</p>
+            <p className="text-base font-medium">No phases found</p>
             <p className="text-sm mt-1">Create phases and add tasks to see them here</p>
+            {onAddPhase && (
+              <Button
+                id="add-phase-empty-state"
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={onAddPhase}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Phase
+              </Button>
+            )}
           </div>
         </div>
       )}

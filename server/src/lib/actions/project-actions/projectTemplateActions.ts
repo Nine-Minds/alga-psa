@@ -966,6 +966,7 @@ export async function updateTemplate(
     template_name?: string;
     description?: string;
     category?: string;
+    client_portal_config?: import('server/src/interfaces/project.interfaces').IClientPortalConfig;
   }
 ): Promise<IProjectTemplate> {
   const currentUser = await getCurrentUser();
@@ -979,12 +980,19 @@ export async function updateTemplate(
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(currentUser, 'project', 'update', trx);
 
+    // Handle client_portal_config JSON serialization
+    const { client_portal_config, ...restData } = validatedData;
+    const updateData: Record<string, unknown> = {
+      ...restData,
+      updated_at: trx.fn.now()
+    };
+    if (client_portal_config !== undefined) {
+      updateData.client_portal_config = JSON.stringify(client_portal_config);
+    }
+
     const [updated] = await trx('project_templates')
       .where({ template_id: templateId, tenant })
-      .update({
-        ...validatedData,
-        updated_at: trx.fn.now()
-      })
+      .update(updateData)
       .returning('*');
 
     if (!updated) {

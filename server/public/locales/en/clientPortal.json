@@ -309,6 +309,8 @@
     "onHold": "On Hold",
     "timeline": "Timeline",
     "milestones": "Milestones",
+    "phasesAndTasks": "Phases & Tasks",
+    "task": "task",
     "tasks": {
       "title": "Tasks",
       "noTasks": "No tasks to display",
@@ -336,6 +338,7 @@
     "team": "Team Members",
     "budget": "Budget",
     "fields": {
+      "projectNumber": "Project #",
       "projectName": "Project Name",
       "reference": "Reference",
       "name": "Project Name",
@@ -358,7 +361,9 @@
     "messages": {
       "noProjects": "No projects found",
       "loadingProjects": "Loading projects...",
-      "noDescription": "No description provided"
+      "noDescription": "No description provided",
+      "noPhasesOrTasks": "No phases or tasks to display",
+      "loadError": "Failed to load project details"
     },
     "viewDetails": "View Details →",
     "details": "Details",

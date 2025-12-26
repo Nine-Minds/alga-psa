@@ -19,10 +19,11 @@ async function getProjectWithConfig(projectId: string): Promise<{
   const { knex, tenant } = await createTenantKnex();
   const user = await getCurrentUser();
   if (!user || user.user_type !== 'client') return null;
+  if (!user.contact_id) return null;
 
   // Get client_id from user's contact -> client relationship
   const contact = await knex('contacts')
-    .where({ user_id: user.user_id, tenant })
+    .where({ contact_name_id: user.contact_id, tenant })
     .first();
   if (!contact?.client_id) return null;
 
@@ -94,20 +95,20 @@ export async function getClientProjectTasks(projectId: string) {
     .join('project_phases as pp', function() {
       this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
     })
+    // Always join status mappings for ordering (has display_order)
+    .leftJoin('project_status_mappings as psm', function() {
+      this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
+          .andOn('pt.tenant', 'psm.tenant');
+    })
+    .leftJoin('statuses as s', function() {
+      this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
+    })
     .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
     .select(selectColumns);
 
-  // Join status if requested
+  // Add status name to select if requested
   if (visibleFields.includes('status')) {
-    query = query
-      .leftJoin('project_status_mappings as psm', function() {
-        this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
-            .andOn('pt.tenant', 'psm.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
-      })
-      .select('s.name as status_name');
+    query = query.select('s.name as status_name');
   }
 
   // Join assigned_to if requested
@@ -145,13 +146,55 @@ export async function getClientProjectTasks(projectId: string) {
       );
   }
 
-  const tasks = await query.orderBy('pp.order_key').orderBy('pt.order_key');
+  // Order by phase, then by status display_order (same as MSP side), then by task order
+  const tasks = await query
+    .orderBy('pp.order_key')
+    .orderBy(knex.raw('COALESCE(psm.display_order, 999)'))
+    .orderBy('pt.order_key');
+
+  // Fetch additional agents if assigned_to is visible
+  let tasksWithResources = tasks;
+  if (visibleFields.includes('assigned_to') && tasks.length > 0) {
+    const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
+
+    // Get all additional resources for these tasks
+    const additionalResources = await knex('task_resources as tr')
+      .join('users as u', function() {
+        this.on('tr.additional_user_id', 'u.user_id').andOn('tr.tenant', 'u.tenant');
+      })
+      .whereIn('tr.task_id', taskIds)
+      .where('tr.tenant', tenant)
+      .select(
+        'tr.task_id',
+        'tr.additional_user_id',
+        'tr.role',
+        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as user_name")
+      );
+
+    // Group resources by task_id
+    const resourcesByTask = additionalResources.reduce((acc: Record<string, Array<{ user_id: string; user_name: string; role: string | null }>>, r: { task_id: string; additional_user_id: string; user_name: string; role: string | null }) => {
+      if (!acc[r.task_id]) acc[r.task_id] = [];
+      acc[r.task_id].push({
+        user_id: r.additional_user_id,
+        user_name: r.user_name,
+        role: r.role
+      });
+      return acc;
+    }, {});
+
+    // Attach to tasks
+    tasksWithResources = tasks.map((task: { task_id: string }) => ({
+      ...task,
+      additional_agents: resourcesByTask[task.task_id] || []
+    }));
+  }
+
   const phases = await knex('project_phases')
     .select('phase_id', 'phase_name')
     .where({ project_id: projectId, tenant })
     .orderBy('order_key');
 
-  return { tasks, phases, config: result.config };
+  return { tasks: tasksWithResources, phases, config: result.config };
 }
 
 /**
@@ -168,9 +211,12 @@ export async function uploadClientTaskDocument(taskId: string, formData: FormDat
     return { success: false, error: 'Not authorized' };
   }
 
-  // Get client_id from user
+  // Get client_id from user's contact
+  if (!user.contact_id) {
+    return { success: false, error: 'User not associated with a contact' };
+  }
   const contact = await knex('contacts')
-    .where({ user_id: user.user_id, tenant })
+    .where({ contact_name_id: user.contact_id, tenant })
     .first();
   if (!contact?.client_id) {
     return { success: false, error: 'Client not found' };
@@ -259,9 +305,12 @@ export async function getClientTaskDocuments(taskId: string) {
     return { success: false, error: 'Not authorized' };
   }
 
-  // Get client_id from user
+  // Get client_id from user's contact
+  if (!user.contact_id) {
+    return { success: false, error: 'User not associated with a contact' };
+  }
   const contact = await knex('contacts')
-    .where({ user_id: user.user_id, tenant })
+    .where({ contact_name_id: user.contact_id, tenant })
     .first();
   if (!contact?.client_id) {
     return { success: false, error: 'Client not found' };
@@ -301,7 +350,6 @@ export async function getClientTaskDocuments(taskId: string) {
       'da.entity_id': taskId,
       'd.tenant': tenant
     })
-    .whereNull('d.deleted_at')
     .select(
       'd.document_id',
       'd.document_name',

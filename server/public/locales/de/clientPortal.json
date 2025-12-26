@@ -303,6 +303,8 @@
     "onHold": "Ausgesetzt",
     "timeline": "Zeitplan",
     "milestones": "Meilensteine",
+    "phasesAndTasks": "Phasen & Aufgaben",
+    "task": "Aufgabe",
     "tasks": {
       "title": "Aufgaben",
       "noTasks": "Keine Aufgaben anzuzeigen",
@@ -330,6 +332,7 @@
     "team": "Teammitglieder",
     "budget": "Budget",
     "fields": {
+      "projectNumber": "Projekt #",
       "projectName": "Projektname",
       "reference": "Referenz",
       "name": "Projektname",
@@ -352,7 +355,9 @@
     "messages": {
       "noProjects": "Keine Projekte gefunden",
       "loadingProjects": "Projekte werden geladen...",
-      "noDescription": "Keine Beschreibung vorhanden"
+      "noDescription": "Keine Beschreibung vorhanden",
+      "noPhasesOrTasks": "Keine Phasen oder Aufgaben anzuzeigen",
+      "loadError": "Projektdetails konnten nicht geladen werden"
     },
     "viewDetails": "Details anzeigen →",
     "details": "Details",

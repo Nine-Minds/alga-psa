@@ -303,6 +303,8 @@
     "onHold": "In attesa",
     "timeline": "Cronologia",
     "milestones": "Milestone",
+    "phasesAndTasks": "Fasi e Attività",
+    "task": "attività",
     "tasks": {
       "title": "Attività",
       "noTasks": "Nessuna attività da visualizzare",
@@ -330,6 +332,7 @@
     "team": "Membri del team",
     "budget": "Budget",
     "fields": {
+      "projectNumber": "Progetto #",
       "projectName": "Nome progetto",
       "reference": "Riferimento",
       "name": "Nome progetto",
@@ -352,7 +355,9 @@
     "messages": {
       "noProjects": "Nessun progetto trovato",
       "loadingProjects": "Caricamento progetti...",
-      "noDescription": "Nessuna descrizione fornita"
+      "noDescription": "Nessuna descrizione fornita",
+      "noPhasesOrTasks": "Nessuna fase o attività da visualizzare",
+      "loadError": "Impossibile caricare i dettagli del progetto"
     },
     "viewDetails": "Visualizza dettagli →",
     "details": "Dettagli",
