@@ -97,6 +97,8 @@ const getProviderIcon = (providerType: string) => {
       return '🟦';
     case 'google':
       return '🟩';
+    case 'imap':
+      return '🟪';
     default:
       return '📧';
   }
@@ -254,6 +256,13 @@ export function EmailProviderCard({
               <>
                 {provider.googleConfig.label_filters && provider.googleConfig.label_filters.length > 0 && (
                   <span>Labels: {provider.googleConfig.label_filters.join(', ')}</span>
+                )}
+              </>
+            )}
+            {provider.providerType === 'imap' && provider.imapConfig && (
+              <>
+                {provider.imapConfig.folder_filters && provider.imapConfig.folder_filters.length > 0 && (
+                  <span>Folders: {provider.imapConfig.folder_filters.join(', ')}</span>
                 )}
               </>
             )}

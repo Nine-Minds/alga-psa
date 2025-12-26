@@ -12,7 +12,7 @@ import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
 
 export interface CreateProviderData {
   tenant: string;
-  providerType: 'microsoft' | 'google';
+  providerType: 'microsoft' | 'google' | 'imap';
   providerName: string;
   mailbox: string;
   isActive: boolean;
@@ -28,7 +28,7 @@ export interface UpdateProviderData {
 
 export interface GetProvidersFilter {
   tenant: string;
-  providerType?: 'microsoft' | 'google';
+  providerType?: 'microsoft' | 'google' | 'imap';
   isActive?: boolean;
   mailbox?: string;
 }
@@ -81,17 +81,21 @@ export class EmailProviderService {
       // Load vendor configs for each provider
       const providersWithConfig = await Promise.all(providers.map(async (provider) => {
         let vendorConfig = null;
-        if (provider.provider_type === 'google') {
-          vendorConfig = await db('google_email_provider_config')
-            .where('email_provider_id', provider.id)
-            .first();
-        } else if (provider.provider_type === 'microsoft') {
-          vendorConfig = await db('microsoft_email_provider_config')
-            .where('email_provider_id', provider.id)
-            .first();
-        }
-        return this.mapCurrentDbRowToProvider(provider, vendorConfig);
-      }));
+      if (provider.provider_type === 'google') {
+        vendorConfig = await db('google_email_provider_config')
+          .where('email_provider_id', provider.id)
+          .first();
+      } else if (provider.provider_type === 'microsoft') {
+        vendorConfig = await db('microsoft_email_provider_config')
+          .where('email_provider_id', provider.id)
+          .first();
+      } else if (provider.provider_type === 'imap') {
+        vendorConfig = await db('imap_email_provider_config')
+          .where('email_provider_id', provider.id)
+          .first();
+      }
+      return this.mapCurrentDbRowToProvider(provider, vendorConfig);
+    }));
 
       return providersWithConfig;
     } catch (error: any) {
@@ -122,6 +126,10 @@ export class EmailProviderService {
           .first();
       } else if (provider.provider_type === 'microsoft') {
         vendorConfig = await db('microsoft_email_provider_config')
+          .where('email_provider_id', providerId)
+          .first();
+      } else if (provider.provider_type === 'imap') {
+        vendorConfig = await db('imap_email_provider_config')
           .where('email_provider_id', providerId)
           .first();
       }
@@ -176,6 +184,18 @@ export class EmailProviderService {
           .insert({
             email_provider_id: provider.id,
             ...data.vendorConfig,
+            created_at: db.fn.now(),
+            updated_at: db.fn.now()
+          });
+      } else if (data.providerType === 'imap') {
+        const insertPayload = { ...data.vendorConfig };
+        if (insertPayload.folder_filters && Array.isArray(insertPayload.folder_filters)) {
+          insertPayload.folder_filters = JSON.stringify(insertPayload.folder_filters);
+        }
+        await db('imap_email_provider_config')
+          .insert({
+            email_provider_id: provider.id,
+            ...insertPayload,
             created_at: db.fn.now(),
             updated_at: db.fn.now()
           });
@@ -261,6 +281,17 @@ export class EmailProviderService {
               ...mergedConfig,
               updated_at: db.fn.now()
             });
+        } else if (existingProvider.provider_type === 'imap') {
+          const updatePayload = { ...mergedConfig };
+          if (updatePayload.folder_filters && Array.isArray(updatePayload.folder_filters)) {
+            updatePayload.folder_filters = JSON.stringify(updatePayload.folder_filters);
+          }
+          await db('imap_email_provider_config')
+            .where('email_provider_id', providerId)
+            .update({
+              ...updatePayload,
+              updated_at: db.fn.now()
+            });
         }
       }
 
@@ -332,6 +363,10 @@ export class EmailProviderService {
           .del();
       } else if (provider.provider_type === 'microsoft') {
         await db('microsoft_email_provider_config')
+          .where('email_provider_id', providerId)
+          .del();
+      } else if (provider.provider_type === 'imap') {
+        await db('imap_email_provider_config')
           .where('email_provider_id', providerId)
           .del();
       }
@@ -481,7 +516,9 @@ export class EmailProviderService {
   private mapCurrentDbRowToProvider(row: any, vendorConfig: any): EmailProviderConfig {
     const webhookPath = row.provider_type === 'microsoft' 
       ? '/api/email/webhooks/microsoft' 
-      : '/api/email/webhooks/google';
+      : row.provider_type === 'google'
+      ? '/api/email/webhooks/google'
+      : '/api/email/webhooks/imap';
 
     return {
       id: row.id,

@@ -2,7 +2,7 @@
 
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
-import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
+import type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from '../../../components/EmailProviderConfiguration';
 import { getSecretProviderInstance } from '@shared/core';
 import { setupPubSub } from './setupPubSub';
 import { EmailProviderService } from '../../../services/email/EmailProviderService';
@@ -372,6 +372,103 @@ async function persistGoogleConfig(
 }
 
 /**
+ * Persist IMAP email provider configuration
+ */
+async function persistImapConfig(
+  trx: any,
+  tenant: string,
+  providerId: string,
+  config?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>
+) {
+  if (!config) return null;
+  if (!tenant) throw new Error('Tenant is required');
+
+  const secretProvider = await getSecretProviderInstance();
+
+  if (config.password && typeof config.password === 'string') {
+    await secretProvider.setTenantSecret(tenant, `imap_password_${providerId}`, config.password);
+  }
+
+  if (config.oauth_client_secret && typeof config.oauth_client_secret === 'string') {
+    await secretProvider.setTenantSecret(tenant, `imap_oauth_client_secret_${providerId}`, config.oauth_client_secret);
+  }
+
+  if (config.refresh_token && typeof config.refresh_token === 'string') {
+    await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${providerId}`, config.refresh_token);
+  }
+
+  const folderFiltersArray = config.folder_filters || [];
+
+  const imapConfig = await trx.raw(`
+    INSERT INTO imap_email_provider_config (
+      email_provider_id, tenant, host, port, secure, allow_starttls, auth_type, username,
+      auto_process_emails, max_emails_per_sync, folder_filters,
+      oauth_authorize_url, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scopes,
+      access_token, refresh_token, token_expires_at,
+      uid_validity, last_uid, last_seen_at, last_sync_at, last_error,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
+      host = EXCLUDED.host,
+      port = EXCLUDED.port,
+      secure = EXCLUDED.secure,
+      allow_starttls = EXCLUDED.allow_starttls,
+      auth_type = EXCLUDED.auth_type,
+      username = EXCLUDED.username,
+      auto_process_emails = EXCLUDED.auto_process_emails,
+      max_emails_per_sync = EXCLUDED.max_emails_per_sync,
+      folder_filters = EXCLUDED.folder_filters,
+      oauth_authorize_url = EXCLUDED.oauth_authorize_url,
+      oauth_token_url = EXCLUDED.oauth_token_url,
+      oauth_client_id = EXCLUDED.oauth_client_id,
+      oauth_client_secret = EXCLUDED.oauth_client_secret,
+      oauth_scopes = EXCLUDED.oauth_scopes,
+      -- Preserve existing sensitive values if the new value is NULL
+      access_token = COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token),
+      refresh_token = COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token),
+      token_expires_at = COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at),
+      uid_validity = COALESCE(EXCLUDED.uid_validity, imap_email_provider_config.uid_validity),
+      last_uid = COALESCE(EXCLUDED.last_uid, imap_email_provider_config.last_uid),
+      last_seen_at = COALESCE(EXCLUDED.last_seen_at, imap_email_provider_config.last_seen_at),
+      last_sync_at = COALESCE(EXCLUDED.last_sync_at, imap_email_provider_config.last_sync_at),
+      last_error = COALESCE(EXCLUDED.last_error, imap_email_provider_config.last_error),
+      updated_at = CURRENT_TIMESTAMP
+    RETURNING *
+  `, [
+    providerId,
+    tenant,
+    config.host,
+    config.port,
+    config.secure ?? true,
+    config.allow_starttls ?? false,
+    config.auth_type,
+    config.username,
+    config.auto_process_emails ?? true,
+    config.max_emails_per_sync ?? 50,
+    JSON.stringify(folderFiltersArray),
+    config.oauth_authorize_url || null,
+    config.oauth_token_url || null,
+    config.oauth_client_id || null,
+    config.oauth_client_secret || null,
+    config.oauth_scopes || null,
+    config.access_token || null,
+    config.refresh_token || null,
+    config.token_expires_at || null,
+    config.uid_validity || null,
+    config.last_uid || null,
+    config.last_seen_at || null,
+    config.last_sync_at || null,
+    config.last_error || null
+  ]).then((result: any) => result.rows[0]);
+
+  if (imapConfig) {
+    imapConfig.folder_filters = imapConfig.folder_filters || [];
+  }
+
+  return imapConfig;
+}
+
+/**
  * Finalize Google provider setup with Pub/Sub and Gmail watch
  */
 
@@ -445,6 +542,43 @@ export async function getEmailProviders(): Promise<{ providers: EmailProvider[] 
           googleConfig.label_filters = googleConfig.label_filters || [];
           provider.googleConfig = googleConfig;
         }
+      } else if (provider.providerType === 'imap') {
+        const imapConfig = await knex('imap_email_provider_config')
+          .where({ email_provider_id: provider.id, tenant })
+          .select(
+            'email_provider_id',
+            'tenant',
+            'host',
+            'port',
+            'secure',
+            'allow_starttls',
+            'auth_type',
+            'username',
+            'auto_process_emails',
+            'max_emails_per_sync',
+            'folder_filters',
+            'oauth_authorize_url',
+            'oauth_token_url',
+            'oauth_client_id',
+            'oauth_client_secret',
+            'oauth_scopes',
+            'access_token',
+            'refresh_token',
+            'token_expires_at',
+            'uid_validity',
+            'last_uid',
+            'last_seen_at',
+            'last_sync_at',
+            'last_error',
+            'created_at',
+            'updated_at'
+          )
+          .first();
+
+        if (imapConfig) {
+          imapConfig.folder_filters = imapConfig.folder_filters || [];
+          provider.imapConfig = imapConfig;
+        }
       }
       
       return provider;
@@ -467,6 +601,7 @@ export async function upsertEmailProvider(data: {
   inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+  imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
   await assertAuthenticated();
   const { knex, tenant } = await createTenantKnex();
@@ -480,6 +615,8 @@ export async function upsertEmailProvider(data: {
         base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
+      } else if (data.providerType === 'imap') {
+        base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
       }
       
       return base;
@@ -531,6 +668,7 @@ export async function createEmailProvider(data: {
   inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+  imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
   // Delegate to upsertEmailProvider since they have identical logic
   return upsertEmailProvider(data, skipAutomation);
@@ -547,6 +685,7 @@ export async function updateEmailProvider(
     inboundTicketDefaultsId?: string;
     microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
+    imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
   skipAutomation?: boolean
 ): Promise<{ provider: EmailProvider }> {
@@ -562,6 +701,8 @@ export async function updateEmailProvider(
         base.microsoftConfig = await persistMicrosoftConfig(trx, tenant, base.id, data.microsoftConfig);
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
+      } else if (data.providerType === 'imap') {
+        base.imapConfig = await persistImapConfig(trx, tenant, base.id, data.imapConfig);
       }
       
       return base;

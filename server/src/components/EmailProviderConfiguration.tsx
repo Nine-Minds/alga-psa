@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
-import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-providers/entry';
+import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@product/email-providers/entry';
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
@@ -27,7 +27,7 @@ import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 export interface EmailProvider {
   id: string;
   tenant: string;
-  providerType: 'microsoft' | 'google';
+  providerType: 'microsoft' | 'google' | 'imap';
   providerName: string;
   mailbox: string;
   isActive: boolean;
@@ -40,6 +40,7 @@ export interface EmailProvider {
   // Vendor-specific config will be loaded separately
   microsoftConfig?: MicrosoftEmailProviderConfig;
   googleConfig?: GoogleEmailProviderConfig;
+  imapConfig?: ImapEmailProviderConfig;
 }
 
 export interface MicrosoftEmailProviderConfig {
@@ -79,6 +80,34 @@ export interface GoogleEmailProviderConfig {
   history_id?: string;
   watch_expiration?: string;
   pubsub_initialised_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImapEmailProviderConfig {
+  email_provider_id: string;
+  tenant: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  allow_starttls: boolean;
+  auth_type: 'password' | 'oauth2';
+  username: string;
+  folder_filters: string[];
+  auto_process_emails: boolean;
+  max_emails_per_sync: number;
+  oauth_authorize_url?: string | null;
+  oauth_token_url?: string | null;
+  oauth_client_id?: string | null;
+  oauth_scopes?: string | null;
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  uid_validity?: string;
+  last_uid?: string;
+  last_seen_at?: string;
+  last_sync_at?: string;
+  last_error?: string;
   created_at: string;
   updated_at: string;
 }
@@ -238,15 +267,24 @@ function EmailProviderConfigurationContent({
             <h2 className="text-xl font-semibold">Edit Email Provider</h2>
             <p className="text-sm text-muted-foreground">Update configuration for {provider.providerName}</p>
           </div>
-          {provider.providerType === 'microsoft' ? (
+          {provider.providerType === 'microsoft' && (
             <MicrosoftProviderForm
               tenant={tenant}
               provider={provider}
               onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
               onCancel={handleEditCancel}
             />
-          ) : (
+          )}
+          {provider.providerType === 'google' && (
             <GmailProviderForm
+              tenant={tenant}
+              provider={provider}
+              onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
+              onCancel={handleEditCancel}
+            />
+          )}
+          {provider.providerType === 'imap' && (
+            <ImapProviderForm
               tenant={tenant}
               provider={provider}
               onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}

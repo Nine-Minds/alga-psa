@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { EmailProviderSelector } from './EmailProviderSelector';
-import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-providers/entry';
+import { MicrosoftProviderForm, GmailProviderForm, ImapProviderForm } from '@product/email-providers/entry';
 import type { EmailProvider } from './EmailProviderConfiguration';
 
 interface ProviderSetupWizardDialogProps {
@@ -18,7 +18,7 @@ type Step = 'select' | 'setup';
 
 export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant }: ProviderSetupWizardDialogProps) {
   const [step, setStep] = useState<Step>('select');
-  const [providerType, setProviderType] = useState<'microsoft' | 'google' | null>(null);
+  const [providerType, setProviderType] = useState<'microsoft' | 'google' | 'imap' | null>(null);
 
   const reset = () => {
     setStep('select');
@@ -30,7 +30,7 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
     onClose();
   };
 
-  const handleProviderSelected = (type: 'microsoft' | 'google') => {
+  const handleProviderSelected = (type: 'microsoft' | 'google' | 'imap') => {
     setProviderType(type);
     setStep('setup');
   };
@@ -47,7 +47,7 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={handleClose} title={step === 'select' ? 'Choose Email Provider' : `${providerType === 'google' ? 'Gmail' : 'Microsoft 365'} Configuration`}>
+    <Dialog isOpen={isOpen} onClose={handleClose} title={step === 'select' ? 'Choose Email Provider' : `${providerType === 'google' ? 'Gmail' : providerType === 'microsoft' ? 'Microsoft 365' : 'IMAP'} Configuration`}>
       <DialogContent>
         {step === 'select' && (
           <EmailProviderSelector onProviderSelected={handleProviderSelected} hideHeader />
@@ -59,6 +59,10 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
 
         {step === 'setup' && providerType === 'google' && (
           <GmailProviderForm tenant={tenant} onSuccess={handleSetupSuccess} onCancel={handleSetupCancel} />
+        )}
+
+        {step === 'setup' && providerType === 'imap' && (
+          <ImapProviderForm tenant={tenant} onSuccess={handleSetupSuccess} onCancel={handleSetupCancel} />
         )}
       </DialogContent>
       <DialogFooter>
