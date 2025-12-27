@@ -1032,6 +1032,63 @@ const getGraphSubtitle = (step: Step): string | null => {
   return null;
 };
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+const syntaxHighlightJson = (json: string) => {
+  const COLOR_KEY = '#6d28d9'; // violet-700
+  const COLOR_STRING = '#047857'; // emerald-700
+  const COLOR_NUMBER = '#0369a1'; // sky-700
+  const COLOR_BOOL = '#b45309'; // amber-700
+  const COLOR_NULL = '#64748b'; // slate-500
+  const COLOR_PUNCT = '#94a3b8'; // slate-400
+
+  // Tokenize on the raw JSON (then escape per-token). Use separate alternatives so keys always include `:`.
+  const tokenRegex =
+    /"(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"\s*:|"(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"|\btrue\b|\bfalse\b|\bnull\b|-?\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d+)?/g;
+
+  return json.replace(tokenRegex, (match) => {
+    if (match.startsWith('"')) {
+      const trimmed = match.trimEnd();
+      const isKey = trimmed.endsWith(':');
+
+      if (isKey) {
+        const withoutColon = trimmed.slice(0, -1);
+        const lastQuote = withoutColon.lastIndexOf('"');
+        const innerRaw = lastQuote > 0 ? withoutColon.slice(1, lastQuote) : withoutColon.slice(1);
+        const afterQuoteRaw = lastQuote > 0 ? withoutColon.slice(lastQuote + 1) : '';
+        return [
+          `<span style="color:${COLOR_PUNCT} !important">"</span>`,
+          `<span style="color:${COLOR_KEY} !important;font-weight:600">${escapeHtml(innerRaw)}</span>`,
+          `<span style="color:${COLOR_PUNCT} !important">"</span>`,
+          afterQuoteRaw ? `<span style="color:${COLOR_PUNCT} !important">${escapeHtml(afterQuoteRaw)}</span>` : '',
+          `<span style="color:${COLOR_PUNCT} !important">:</span>`,
+        ].join('');
+      }
+
+      const innerRaw = match.length >= 2 ? match.slice(1, -1) : '';
+      return [
+        `<span style="color:${COLOR_PUNCT} !important">"</span>`,
+        `<span style="color:${COLOR_STRING} !important">${escapeHtml(innerRaw)}</span>`,
+        `<span style="color:${COLOR_PUNCT} !important">"</span>`,
+      ].join('');
+    }
+
+    if (match === 'true' || match === 'false') {
+      return `<span style="color:${COLOR_BOOL} !important;font-weight:600">${escapeHtml(match)}</span>`;
+    }
+    if (match === 'null') {
+      return `<span style="color:${COLOR_NULL} !important">${escapeHtml(match)}</span>`;
+    }
+    return `<span style="color:${COLOR_NUMBER} !important">${escapeHtml(match)}</span>`;
+  });
+};
+
 /**
  * Build ExpressionContext for the Monaco expression editor from DataContext
  * This converts the workflow designer's DataContext to the format expected by the expression editor
@@ -2448,9 +2505,12 @@ const WorkflowDesigner: React.FC = () => {
                           <div className="text-xs text-red-600">Failed to load schema.</div>
                         )}
                         {payloadSchemaStatus === 'loaded' && payloadSchema && (
-                          <pre className="text-[11px] leading-relaxed text-gray-800 whitespace-pre-wrap break-words">
-                            {JSON.stringify(payloadSchema, null, 2)}
-                          </pre>
+                          <pre
+                            className="text-[11px] leading-relaxed font-mono whitespace-pre break-words rounded border border-gray-200 bg-gray-50 p-3"
+                            dangerouslySetInnerHTML={{
+                              __html: syntaxHighlightJson(JSON.stringify(payloadSchema, null, 2))
+                            }}
+                          />
                         )}
                         {payloadSchemaStatus === 'idle' && (
                           <div className="text-xs text-gray-500">Schema not loaded yet.</div>
