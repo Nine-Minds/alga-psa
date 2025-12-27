@@ -1,6 +1,7 @@
 'use server';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
@@ -95,11 +96,13 @@ const deriveValidationStatus = (errors: PublishError[], warnings: PublishError[]
   return 'valid';
 };
 
-const buildUnknownSchemaError = (schemaRef: string): PublishError => ({
+const buildUnknownPayloadSchemaRefError = (schemaRef: string, suggestions: string[]): PublishError => ({
   severity: 'error',
   stepPath: 'root',
-  code: 'UNKNOWN_SCHEMA',
-  message: `Unknown schema ref ${schemaRef}`
+  code: 'UNKNOWN_PAYLOAD_SCHEMA_REF',
+  message: suggestions.length
+    ? `Unknown payload schema ref "${schemaRef}". Did you mean: ${suggestions.join(', ')}?`
+    : `Unknown payload schema ref "${schemaRef}".`
 });
 
 const listSecretNames = async (knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'], tenant?: string | null) => {
@@ -126,7 +129,13 @@ const computeValidation = async (params: {
   const warnings = [...validation.warnings];
 
   if (!payloadSchemaJson && payloadSchemaRef) {
-    errors.push(buildUnknownSchemaError(payloadSchemaRef));
+    const registry = getSchemaRegistry();
+    const refs = registry.listRefs();
+    const queryLower = payloadSchemaRef.toLowerCase();
+    const suggestions = refs
+      .filter((ref) => ref.toLowerCase().includes(queryLower) || ref.toLowerCase().endsWith(queryLower))
+      .slice(0, 5);
+    errors.push(buildUnknownPayloadSchemaRefError(payloadSchemaRef, suggestions));
   }
 
   if (validation.secretRefs.size > 0) {
@@ -780,7 +789,11 @@ export async function startWorkflowRunAction(input: unknown) {
 
   const schemaRegistry = getSchemaRegistry();
   const definition = versionRecord.definition_json as Record<string, unknown> | null;
-  const schemaRef = definition?.payloadSchemaRef ?? workflow.payload_schema_ref ?? null;
+  const schemaRefFromDefinition = (definition as Record<string, unknown> | null)?.payloadSchemaRef;
+  const schemaRef =
+    typeof schemaRefFromDefinition === 'string'
+      ? schemaRefFromDefinition
+      : (typeof workflow.payload_schema_ref === 'string' ? workflow.payload_schema_ref : null);
 
   if (!versionRecord.validation_status || versionRecord.validation_status === 'error') {
     const payloadSchemaJson = versionRecord.payload_schema_json
@@ -1680,6 +1693,50 @@ export async function getWorkflowSchemaAction(input: unknown) {
     return throwHttpError(404, 'Not found');
   }
   return { ref: parsed.schemaRef, schema: registry.toJsonSchema(parsed.schemaRef) };
+}
+
+export async function listWorkflowSchemaRefsAction() {
+  const user = await requireUser();
+  initializeWorkflowRuntimeV2();
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  const registry = getSchemaRegistry();
+  return { refs: registry.listRefs() };
+}
+
+export async function searchWorkflowSchemaRefsAction(input: unknown) {
+  const user = await requireUser();
+  initializeWorkflowRuntimeV2();
+  const parsed = z
+    .object({ query: z.string().trim().min(1), limit: z.number().int().min(1).max(500).optional() })
+    .parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  const registry = getSchemaRegistry();
+  const queryLower = parsed.query.toLowerCase();
+  const matches = registry
+    .listRefs()
+    .filter((ref) => ref.toLowerCase().includes(queryLower))
+    .slice(0, parsed.limit ?? 100);
+  return { refs: matches };
+}
+
+export async function listWorkflowSchemasMetaAction() {
+  const user = await requireUser();
+  initializeWorkflowRuntimeV2();
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  const registry = getSchemaRegistry();
+  const refs = registry.listRefs();
+  const items = refs.map((ref) => {
+    const schema = registry.toJsonSchema(ref) as any;
+    return {
+      ref,
+      title: typeof schema?.title === 'string' ? schema.title : null,
+      description: typeof schema?.description === 'string' ? schema.description : null
+    };
+  });
+  return { schemas: items };
 }
 
 export async function submitWorkflowEventAction(input: unknown) {

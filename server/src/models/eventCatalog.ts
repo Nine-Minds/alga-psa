@@ -325,6 +325,7 @@ export class EventCatalogModel extends BaseModel {
         name: 'Inbound Email Received',
         description: 'Triggered when an inbound email is received and normalized for workflow processing',
         category: 'Email Processing',
+        payload_schema_ref: 'payload.EmailWorkflowPayload.v1',
         payload_schema: {
           type: 'object',
           properties: {

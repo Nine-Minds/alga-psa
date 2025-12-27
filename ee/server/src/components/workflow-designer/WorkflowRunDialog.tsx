@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { Switch } from '@/components/ui/Switch';
 import toast from 'react-hot-toast';
+import SearchableSelect from 'server/src/components/ui/SearchableSelect';
 import {
   getWorkflowSchemaAction,
   getLatestWorkflowRunAction,
+  listWorkflowSchemaRefsAction,
   listWorkflowDefinitionVersionsAction,
   startWorkflowRunAction
 } from 'server/src/lib/actions/workflow-runtime-v2-actions';
@@ -154,8 +156,11 @@ const setValueAtPath = (root: unknown, path: Array<string | number>, value: unkn
   return next;
 };
 
-const pathToString = (path: Array<string | number>) =>
-  path.reduce((acc, part) => (typeof part === 'number' ? `${acc}[${part}]` : acc ? `${acc}.${part}` : part), '');
+const pathToString = (path: Array<string | number>): string =>
+  path.reduce<string>(
+    (acc, part) => (typeof part === 'number' ? `${acc}[${part}]` : acc ? `${acc}.${part}` : String(part)),
+    ''
+  );
 
 type ValidationError = { path: string; message: string };
 
@@ -228,7 +233,11 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 }) => {
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
   const [eventSchema, setEventSchema] = useState<JsonSchema | null>(null);
-  const [schemaSource, setSchemaSource] = useState<'payload' | 'event'>('payload');
+  const [eventSchemaRef, setEventSchemaRef] = useState<string | null>(null);
+  const [schemaSource, setSchemaSource] = useState<'payload' | 'event' | 'schemaRef'>('payload');
+  const [schemaRefs, setSchemaRefs] = useState<string[]>([]);
+  const [customSchemaRef, setCustomSchemaRef] = useState<string>('');
+  const [customSchema, setCustomSchema] = useState<JsonSchema | null>(null);
   const [runPayloadText, setRunPayloadText] = useState('');
   const [runPayloadError, setRunPayloadError] = useState<string | null>(null);
   const [formValue, setFormValue] = useState<unknown>({});
@@ -250,7 +259,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const [schemaWarning, setSchemaWarning] = useState<string | null>(null);
   const [showSchemaDiff, setShowSchemaDiff] = useState(false);
 
-  const activeSchema = schemaSource === 'event' && eventSchema ? eventSchema : payloadSchema;
+  const activeSchema =
+    schemaSource === 'event' && eventSchema
+      ? eventSchema
+      : schemaSource === 'schemaRef'
+        ? customSchema
+        : payloadSchema;
   const defaults = useMemo(() => (
     activeSchema ? buildDefaultValueFromSchema(activeSchema, activeSchema) : {}
   ), [activeSchema]);
@@ -331,6 +345,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         if (parsed?.mode) setMode(parsed.mode);
         if (parsed?.selectedVersion) setSelectedVersion(String(parsed.selectedVersion));
         if (parsed?.schemaSource) setSchemaSource(parsed.schemaSource);
+        if (parsed?.customSchemaRef) setCustomSchemaRef(String(parsed.customSchemaRef));
         if (parsed?.eventType) setSelectedEventType(parsed.eventType);
       } catch {}
     } else if (triggerEventName) {
@@ -354,6 +369,25 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     }
     setHasLoadedOptions(true);
   }, [isOpen, triggerEventName, workflowId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    listWorkflowSchemaRefsAction()
+      .then((result) => setSchemaRefs(((result as { refs?: string[] } | null)?.refs ?? []) as string[]))
+      .catch(() => setSchemaRefs([]));
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (schemaSource !== 'schemaRef') return;
+    if (!customSchemaRef) {
+      setCustomSchema(null);
+      return;
+    }
+    getWorkflowSchemaAction({ schemaRef: customSchemaRef })
+      .then((result) => setCustomSchema((result?.schema ?? null) as JsonSchema | null))
+      .catch(() => setCustomSchema(null));
+  }, [customSchemaRef, isOpen, schemaSource]);
 
   useEffect(() => {
     if (!isOpen || !workflowId || !payloadSchemaRef) return;
@@ -383,10 +417,20 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!isOpen || !selectedEventType) {
       setEventSchema(null);
+      setEventSchemaRef(null);
       return;
     }
     const entry = eventCatalogEntries.find((item) => item.event_type === selectedEventType);
+    const entryRef = (entry as any)?.payload_schema_ref;
+    if (typeof entryRef === 'string' && entryRef) {
+      setEventSchemaRef(entryRef);
+      getWorkflowSchemaAction({ schemaRef: entryRef })
+        .then((result) => setEventSchema((result?.schema ?? null) as JsonSchema | null))
+        .catch(() => setEventSchema(null));
+      return;
+    }
     if (entry?.payload_schema) {
+      setEventSchemaRef(null);
       setEventSchema(entry.payload_schema as JsonSchema);
       return;
     }
@@ -395,10 +439,19 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         const user = await getCurrentUser();
         if (!user?.tenant) return;
         const fetched = await getEventCatalogEntryByEventType({ eventType: selectedEventType, tenant: user.tenant });
-        if (fetched?.payload_schema) {
-          setEventSchema(fetched.payload_schema as JsonSchema);
+        const fetchedRef = (fetched as any)?.payload_schema_ref;
+        if (typeof fetchedRef === 'string' && fetchedRef) {
+          setEventSchemaRef(fetchedRef);
+          const result = await getWorkflowSchemaAction({ schemaRef: fetchedRef });
+          setEventSchema((result?.schema ?? null) as JsonSchema | null);
+          return;
+        }
+        if ((fetched as any)?.payload_schema) {
+          setEventSchemaRef(null);
+          setEventSchema((fetched as any).payload_schema as JsonSchema);
         }
       } catch {
+        setEventSchemaRef(null);
         setEventSchema(null);
       }
     };
@@ -448,12 +501,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   useEffect(() => {
     if (!workflowId || !isOpen) return;
     const payload = mode === 'json' ? runPayloadText : JSON.stringify(formValue ?? {}, null, 2);
-    const options = { payloadText: payload, mode, selectedVersion, schemaSource, eventType: selectedEventType };
+    const options = { payloadText: payload, mode, selectedVersion, schemaSource, eventType: selectedEventType, customSchemaRef };
     window.localStorage.setItem(RUN_OPTIONS_KEY(workflowId), JSON.stringify(options));
     if (selectedEventType) {
       window.localStorage.setItem(RUN_EVENT_KEY(workflowId), selectedEventType);
     }
-  }, [formValue, isOpen, mode, runPayloadText, selectedVersion, workflowId, schemaSource, selectedEventType]);
+  }, [customSchemaRef, formValue, isOpen, mode, runPayloadText, selectedVersion, workflowId, schemaSource, selectedEventType]);
 
   useEffect(() => {
     if (!activeSchema) return;
@@ -621,6 +674,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         </label>
         {resolved.default !== undefined && (
           <Button
+            id={`run-form-reset-${fieldPath || 'root'}`}
             variant="ghost"
             size="sm"
             onClick={() => updateFormValue((prev) => setValueAtPath(prev, path, resolved.default))}
@@ -686,6 +740,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                 {renderField(resolved.items ?? {}, item, [...path, index], new Set())}
               </div>
               <Button
+                id={`run-form-array-remove-${fieldPath || 'root'}-${index}`}
                 variant="outline"
                 size="sm"
                 onClick={() => {
@@ -698,6 +753,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             </div>
           ))}
           <Button
+            id={`run-form-array-add-${fieldPath || 'root'}`}
             variant="outline"
             size="sm"
             onClick={() => {
@@ -837,7 +893,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                 <div className="text-xs text-gray-500">Pick an event type to seed payload schemas.</div>
               </div>
               {selectedEventType && (
-                <Button asChild variant="ghost" size="sm">
+                <Button id="run-dialog-open-event-catalog" asChild variant="ghost" size="sm">
                   <Link href={`/msp/automation-hub?tab=events&eventType=${encodeURIComponent(selectedEventType)}`}>
                     Open event catalog
                   </Link>
@@ -878,6 +934,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-500">Schema source</span>
               <Button
+                id="run-dialog-schema-source-workflow"
                 variant={schemaSource === 'payload' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSchemaSource('payload')}
@@ -885,12 +942,21 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                 Workflow schema
               </Button>
               <Button
+                id="run-dialog-schema-source-event"
                 variant={schemaSource === 'event' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSchemaSource('event')}
                 disabled={!eventSchema}
               >
                 Event schema
+              </Button>
+              <Button
+                id="run-dialog-schema-source-schema-ref"
+                variant={schemaSource === 'schemaRef' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSchemaSource('schemaRef')}
+              >
+                Schema ref
               </Button>
               {schemaSource === 'event' && !eventSchema && (
                 <span className="text-xs text-yellow-700">
@@ -899,12 +965,31 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               )}
             </div>
 
+            {schemaSource === 'schemaRef' && (
+              <div className="mt-2">
+                <SearchableSelect
+                  id="run-dialog-schema-ref"
+                  label="Schema ref"
+                  dropdownMode="overlay"
+                  placeholder="Select schema…"
+                  value={customSchemaRef}
+                  onChange={(value) => setCustomSchemaRef(value)}
+                  options={schemaRefs.map((ref) => ({ value: ref, label: ref }))}
+                  emptyMessage="No schemas found"
+                />
+                {customSchemaRef && !customSchema && (
+                  <div className="mt-2 text-xs text-red-600">Unknown schema ref.</div>
+                )}
+              </div>
+            )}
+
             {schemaWarning && (
               <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-800 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{schemaWarning}</span>
                   {eventSchema && schemaSource !== 'event' && (
                     <Button
+                      id="run-dialog-use-event-schema"
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -924,6 +1009,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                 {schemaDiffSummary && (
                   <div className="space-y-1">
                     <Button
+                      id="run-dialog-toggle-schema-diff"
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowSchemaDiff((prev) => !prev)}
@@ -968,7 +1054,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-700 flex items-center justify-between">
               <span>Draft version differs from published (v{publishedVersion}).</span>
               {canPublish && onPublishDraft && (
-                <Button size="sm" onClick={() => onPublishDraft()}>
+                <Button id="run-dialog-publish-latest" size="sm" onClick={() => onPublishDraft()}>
                   Publish latest
                 </Button>
               )}
@@ -992,19 +1078,19 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           )}
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant={mode === 'json' ? 'default' : 'outline'} size="sm" onClick={() => setMode('json')}>
+            <Button id="run-dialog-mode-json" variant={mode === 'json' ? 'default' : 'outline'} size="sm" onClick={() => setMode('json')}>
               JSON Editor
             </Button>
-            <Button variant={mode === 'form' ? 'default' : 'outline'} size="sm" onClick={() => setMode('form')}>
+            <Button id="run-dialog-mode-form" variant={mode === 'form' ? 'default' : 'outline'} size="sm" onClick={() => setMode('form')}>
               Form Builder
             </Button>
-            <Button variant="outline" size="sm" onClick={handleResetDefaults}>
+            <Button id="run-dialog-reset-defaults" variant="outline" size="sm" onClick={handleResetDefaults}>
               Reset to defaults
             </Button>
-            <Button variant="outline" size="sm" onClick={copyPayload}>
+            <Button id="run-dialog-copy-payload" variant="outline" size="sm" onClick={copyPayload}>
               Copy payload
             </Button>
-            <Button variant="outline" size="sm" onClick={handleCloneLatest}>
+            <Button id="run-dialog-clone-latest" variant="outline" size="sm" onClick={handleCloneLatest}>
               Clone latest run
             </Button>
           </div>
@@ -1013,6 +1099,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             {exampleOptions.map((example) => (
               <Button
                 key={example.label}
+                id={`run-dialog-example-${example.label.replace(/\s+/g, '-').toLowerCase()}`}
                 variant="outline"
                 size="sm"
                 onClick={() => applyTemplate(example.payload, { markTouched: true })}
@@ -1028,6 +1115,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               {eventTemplates.map((template) => (
                 <Button
                   key={template.id}
+                  id={`run-dialog-template-event-${template.id}`}
                   variant="outline"
                   size="sm"
                   onClick={() => applyTemplate(template.payload, { markTouched: true })}
@@ -1044,6 +1132,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               {generalTemplates.map((template) => (
                 <Button
                   key={template.id}
+                  id={`run-dialog-template-sample-${template.id}`}
                   variant="outline"
                   size="sm"
                   onClick={() => applyTemplate(template.payload, { markTouched: true })}
@@ -1062,7 +1151,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               onChange={(event) => setPresetName(event.target.value)}
               placeholder="e.g. Regression payload"
             />
-            <Button variant="outline" onClick={handleSavePreset} className="self-end">
+            <Button id="run-dialog-save-preset" variant="outline" onClick={handleSavePreset} className="self-end">
               Save preset
             </Button>
           </div>
@@ -1122,10 +1211,11 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button id="run-dialog-close" variant="outline" onClick={onClose}>
             Close
           </Button>
           <Button
+            id="run-dialog-start-run"
             onClick={handleStartRun}
             disabled={!canRun || isStartingRun || !!runPayloadError || (isSystem && !confirmSystemRun)}
           >

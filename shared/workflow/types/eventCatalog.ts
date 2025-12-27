@@ -66,6 +66,7 @@ export interface IEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema: Record<string, any>;
+  payload_schema_ref?: string;
   tenant: string;
   created_at: string;
   updated_at: string;
@@ -80,6 +81,7 @@ export interface ICreateEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema: Record<string, any>;
+  payload_schema_ref?: string;
   tenant: string;
 }
 
@@ -91,6 +93,7 @@ export interface IUpdateEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema?: Record<string, any>;
+  payload_schema_ref?: string;
 }
 
 /**
@@ -200,6 +203,7 @@ export const EventCatalogEntrySchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   payload_schema: z.record(z.any()),
+  payload_schema_ref: z.string().optional(),
   tenant: z.string(),
   created_at: z.string(),
   updated_at: z.string(),

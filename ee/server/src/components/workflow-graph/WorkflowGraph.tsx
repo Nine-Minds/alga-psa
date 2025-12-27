@@ -95,6 +95,7 @@ const StepNode: React.FC<{ data: WorkflowGraphNodeData; selected?: boolean }> = 
   const colors = getStepTypeColor(stepType);
   const icon = getStepTypeIcon(stepType);
   const statusClass = statusStyles(data.status);
+  const subtitleMono = stepType === 'action.call' || stepType === 'control.if' || stepType === 'state.set';
   return (
     <div
       className={`relative bg-white border rounded-md ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
@@ -118,7 +119,9 @@ const StepNode: React.FC<{ data: WorkflowGraphNodeData; selected?: boolean }> = 
             <div className={`flex-shrink-0 ${colors.icon}`}>{icon}</div>
             <div className="text-sm font-medium text-gray-900 truncate">{data.label}</div>
           </div>
-          <div className="text-xs text-gray-500 truncate mt-1">{data.subtitle ?? stepType}</div>
+          <div className={`text-xs text-gray-500 truncate mt-1 ${subtitleMono ? 'font-mono' : ''}`}>
+            {data.subtitle ?? stepType}
+          </div>
         </div>
         {data.status && (
           <div className="text-[10px] text-gray-600 whitespace-nowrap">
