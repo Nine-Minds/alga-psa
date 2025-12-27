@@ -140,12 +140,12 @@ export async function GET(
 }
 
 /**
- * PUT /api/v1/platform-reports/:reportId
- * Update a platform report
+ * Internal handler for PUT logic - can be called from PUT or POST with __method override
  */
-export async function PUT(
+async function handlePut(
   request: NextRequest,
-  context: RouteContext
+  context: RouteContext,
+  body?: UpdateReportInput
 ): Promise<NextResponse> {
   try {
     const { tenantId: masterTenantId, userId, userEmail } = await assertMasterTenantAccess(request);
@@ -153,9 +153,9 @@ export async function PUT(
 
     const service = new PlatformReportService(masterTenantId);
     const auditService = new PlatformReportAuditService(masterTenantId);
-    const body = await request.json() as UpdateReportInput;
+    const updateData = body ?? await request.json() as UpdateReportInput;
 
-    const report = await service.updateReport(reportId, body);
+    const report = await service.updateReport(reportId, updateData);
 
     if (!report) {
       return NextResponse.json(
@@ -173,7 +173,7 @@ export async function PUT(
       resourceType: 'report',
       resourceId: report.report_id,
       resourceName: report.name,
-      details: { updatedFields: Object.keys(body) },
+      details: { updatedFields: Object.keys(updateData) },
       ...clientInfo,
     });
 
@@ -209,10 +209,61 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/v1/platform-reports/:reportId
- * Delete a platform report (soft delete)
+ * PUT /api/v1/platform-reports/:reportId
+ * Update a platform report
  */
-export async function DELETE(
+export async function PUT(
+  request: NextRequest,
+  context: RouteContext
+): Promise<NextResponse> {
+  return handlePut(request, context);
+}
+
+/**
+ * POST /api/v1/platform-reports/:reportId
+ * Handle method override for uiProxy calls (which only support GET/POST)
+ *
+ * The extension's uiProxy can only send GET (no body) or POST (with body).
+ * To support PUT/DELETE operations, we check for __method in the body:
+ * - { __method: 'PUT', ...data } -> routes to PUT handler
+ * - { __method: 'DELETE' } -> routes to DELETE handler
+ */
+export async function POST(
+  request: NextRequest,
+  context: RouteContext
+): Promise<NextResponse> {
+  try {
+    const body = await request.json();
+    const method = body.__method?.toUpperCase();
+
+    if (method === 'PUT') {
+      // Remove __method from body before passing to update logic
+      const { __method, ...updateData } = body;
+      return handlePut(request, context, updateData);
+    }
+
+    if (method === 'DELETE') {
+      return handleDelete(request, context);
+    }
+
+    // No __method specified - treat as invalid request
+    return NextResponse.json(
+      { success: false, error: 'POST not supported. Use __method: "PUT" or __method: "DELETE"' },
+      { status: 405 }
+    );
+  } catch (error) {
+    console.error('[platform-reports/:id] POST error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Invalid request body' },
+      { status: 400 }
+    );
+  }
+}
+
+/**
+ * Internal handler for DELETE logic - can be called from DELETE or POST with __method override
+ */
+async function handleDelete(
   request: NextRequest,
   context: RouteContext
 ): Promise<NextResponse> {
@@ -268,4 +319,15 @@ export async function DELETE(
       { status: 500 }
     );
   }
+}
+
+/**
+ * DELETE /api/v1/platform-reports/:reportId
+ * Delete a platform report (soft delete)
+ */
+export async function DELETE(
+  request: NextRequest,
+  context: RouteContext
+): Promise<NextResponse> {
+  return handleDelete(request, context);
 }

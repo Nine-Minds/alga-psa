@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth/getSession';
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { startResendWelcomeEmailWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { observabilityLogger } from '@/lib/observability/logging';
+import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   try {
+    if (!MASTER_BILLING_TENANT_ID) {
+      return NextResponse.json({ success: false, error: 'MASTER_BILLING_TENANT_ID not configured' }, { status: 500 });
+    }
+
     // Check for internal ext-proxy request first
     const internalUser = getInternalUserInfo(req);
     let userTenant: string;
@@ -41,16 +46,39 @@ export async function POST(req: NextRequest) {
       userId = internalUser.user_id;
       userEmail = internalUser.email;
     } else {
-      const session = await getSession();
+      // Check for API key auth (used by extension uiProxy)
+      const apiKey = req.headers.get('x-api-key');
+      if (apiKey) {
+        const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+        if (keyRecord) {
+          if (keyRecord.tenant === MASTER_BILLING_TENANT_ID) {
+            const headerUserId = req.headers.get('x-user-id');
+            const headerUserEmail = req.headers.get('x-user-email');
+            const extensionId = req.headers.get('x-alga-extension');
 
-      if (!session?.user) {
-        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            userTenant = MASTER_BILLING_TENANT_ID;
+            userId = headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id);
+            userEmail = headerUserEmail || undefined;
+          } else {
+            return NextResponse.json({ success: false, error: 'API key not authorized for tenant management' }, { status: 403 });
+          }
+        } else {
+          console.warn('[tenant-management/resend-welcome-email] Invalid API key');
+          return NextResponse.json({ success: false, error: 'Invalid API key' }, { status: 401 });
+        }
+      } else {
+        // Fall back to session auth
+        const session = await getSession();
+
+        if (!session?.user) {
+          return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const user = session.user as any;
+        userTenant = user.tenant;
+        userId = user.user_id;
+        userEmail = user.email;
       }
-
-      const user = session.user as any;
-      userTenant = user.tenant;
-      userId = user.user_id;
-      userEmail = user.email;
     }
 
     // Verify user is from master tenant

@@ -354,6 +354,43 @@ export class PlatformReportService {
   private validateQueryDefinition(query: QueryDefinition): void {
     const table = query.table;
 
+    // Handle raw SQL mode - validate the SQL for blocked tables
+    if (table === 'raw_sql') {
+      const rawSql = query.fields?.[0];
+      if (!rawSql || typeof rawSql !== 'string') {
+        throw new ReportPermissionError('Raw SQL mode requires SQL query in fields[0]');
+      }
+
+      // Only allow SELECT statements
+      const trimmedSql = rawSql.trim().toLowerCase();
+      if (!trimmedSql.startsWith('select')) {
+        throw new ReportPermissionError('Raw SQL mode only allows SELECT statements');
+      }
+
+      // Extract table names from SQL and validate them
+      // Match: FROM table_name, JOIN table_name, table_name.column
+      const tableMatches = rawSql.matchAll(/(?:from|join)\s+([a-z_][a-z0-9_]*)/gi);
+      for (const match of tableMatches) {
+        const tableName = match[1].toLowerCase();
+        if (!isTableAllowed(tableName)) {
+          throw new ReportPermissionError(
+            `Table '${tableName}' is blocked for platform reports`
+          );
+        }
+      }
+
+      // Check for blocked columns in SELECT clause and WHERE conditions
+      for (const blockedTable of BLOCKED_TABLES) {
+        if (rawSql.toLowerCase().includes(blockedTable.toLowerCase())) {
+          throw new ReportPermissionError(
+            `Reference to blocked table '${blockedTable}' detected in SQL`
+          );
+        }
+      }
+
+      return; // Skip normal validation for raw SQL
+    }
+
     // Check table is not blocked
     if (!isTableAllowed(table)) {
       throw new ReportPermissionError(
