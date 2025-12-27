@@ -140,9 +140,9 @@ class NinjaOneSyncWorker {
 
       for (const mapping of mappings) {
         try {
-          const devices = await this.client!.getDevices({
-            org: parseInt(mapping.external_organization_id, 10),
-          });
+          const devices = await this.client!.getDevicesByOrganization(
+            parseInt(mapping.external_organization_id, 10)
+          );
 
           totalDevices += devices.length;
 
@@ -300,9 +300,9 @@ class NinjaOneSyncWorker {
 
       for (const mapping of mappings) {
         try {
-          const devices = await this.client!.getDevices({
-            org: parseInt(mapping.external_organization_id, 10),
-          });
+          const devices = await this.client!.getDevicesByOrganization(
+            parseInt(mapping.external_organization_id, 10)
+          );
 
           const changedDevices = devices.filter((device) => {
             if (!device.lastContact) return true;
@@ -710,9 +710,9 @@ class NinjaOneSyncWorker {
     let deletedCount = 0;
 
     for (const mapping of mappings) {
-      const devices = await this.client!.getDevices({
-        org: parseInt(mapping.external_organization_id, 10),
-      });
+      const devices = await this.client!.getDevicesByOrganization(
+        parseInt(mapping.external_organization_id, 10)
+      );
       const ninjaDeviceIds = new Set(devices.map((d) => String(d.id)));
 
       const existingMappings = await this.knex!('tenant_external_entity_mappings')
