@@ -451,13 +451,76 @@ export class NinjaOneClient {
   }
 
   /**
-   * Get devices for a specific organization
+   * Get devices for a specific organization with pagination support.
+   * Uses the organization-specific endpoint which may have better pagination
+   * behavior than the global /devices endpoint with org filter.
    */
-  async getDevicesByOrganization(orgId: number): Promise<NinjaOneDevice[]> {
-    const response = await this.axiosInstance.get<NinjaOneDevice[]>(
-      `/organization/${orgId}/devices`
-    );
-    return response.data;
+  async getDevicesByOrganization(
+    orgId: number,
+    params?: { pageSize?: number }
+  ): Promise<NinjaOneDevice[]> {
+    const devices: NinjaOneDevice[] = [];
+    let cursor: string | undefined;
+    let pageNumber = 0;
+    const pageSize = params?.pageSize || 100;
+
+    do {
+      pageNumber++;
+      const queryParams: Record<string, string | number> = { pageSize };
+      if (cursor) queryParams.after = cursor;
+
+      logger.debug('[NinjaOneClient] Fetching org devices page', {
+        tenantId: this.tenantId,
+        orgId,
+        page: pageNumber,
+        cursor: cursor || '(none)',
+        pageSize,
+      });
+
+      const response = await this.axiosInstance.get<NinjaOneDevice[]>(
+        `/organization/${orgId}/devices`,
+        { params: queryParams }
+      );
+
+      const pageDevices = response.data || [];
+      devices.push(...pageDevices);
+
+      // Check for pagination cursor in response headers (Link header)
+      const linkHeader = response.headers['link'];
+
+      logger.debug('[NinjaOneClient] Org devices page response', {
+        tenantId: this.tenantId,
+        orgId,
+        page: pageNumber,
+        devicesInPage: pageDevices.length,
+        totalDevicesSoFar: devices.length,
+        hasLinkHeader: !!linkHeader,
+      });
+
+      // Extract cursor from Link header
+      cursor = this.extractCursorFromLink(linkHeader);
+
+      // Safety check: if we got a full page but no cursor, log a warning
+      if (pageDevices.length === pageSize && !cursor) {
+        logger.warn('[NinjaOneClient] Full page received but no pagination cursor - possible data truncation', {
+          tenantId: this.tenantId,
+          orgId,
+          page: pageNumber,
+          devicesInPage: pageDevices.length,
+          totalDevices: devices.length,
+          linkHeader: linkHeader || '(none)',
+        });
+      }
+    } while (cursor);
+
+    logger.info('[NinjaOneClient] Finished fetching devices for organization', {
+      tenantId: this.tenantId,
+      orgId,
+      totalPages: pageNumber,
+      totalDevices: devices.length,
+    });
+
+    return devices;
   }
 
   /**

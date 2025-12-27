@@ -243,9 +243,9 @@ export class NinjaOneSyncEngine {
 
         try {
           // Get all devices for this organization
-          const devices = await this.client!.getDevices({
-            org: parseInt(mapping.external_organization_id, 10),
-          });
+          const devices = await this.client!.getDevicesByOrganization(
+            parseInt(mapping.external_organization_id, 10)
+          );
 
           totalDevices += devices.length;
 
@@ -411,9 +411,9 @@ export class NinjaOneSyncEngine {
         if (this.abortController?.signal.aborted) break;
 
         try {
-          const devices = await this.client!.getDevices({
-            org: parseInt(mapping.external_organization_id, 10),
-          });
+          const devices = await this.client!.getDevicesByOrganization(
+            parseInt(mapping.external_organization_id, 10)
+          );
 
           // Filter devices that have been contacted since the last sync
           const changedDevices = devices.filter(d => {
@@ -860,9 +860,9 @@ export class NinjaOneSyncEngine {
 
     for (const mapping of mappings) {
       // Get all NinjaOne device IDs for this org
-      const devices = await this.client!.getDevices({
-        org: parseInt(mapping.external_organization_id, 10),
-      });
+      const devices = await this.client!.getDevicesByOrganization(
+        parseInt(mapping.external_organization_id, 10)
+      );
       const ninjaDeviceIds = new Set(devices.map(d => String(d.id)));
 
       // Find Alga assets that no longer exist in NinjaOne
