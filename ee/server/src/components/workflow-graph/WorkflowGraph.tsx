@@ -37,7 +37,7 @@ const StartNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
   return (
     <div
       className="rounded-full bg-green-100 border-2 border-green-500 flex items-center justify-center text-xs font-semibold text-green-700 shadow-sm"
-      style={{ width: 52, height: 52 }}
+      style={{ width: 52, height: 52, boxSizing: 'border-box' }}
     >
       <Handle
         id="out"
@@ -54,7 +54,7 @@ const JoinNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
   return (
     <div
       className="rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center text-gray-600 shadow-sm"
-      style={{ width: 34, height: 34, fontSize: 10 }}
+      style={{ width: 34, height: 34, fontSize: 10, boxSizing: 'border-box' }}
     >
       <Handle
         id="in"
@@ -98,7 +98,7 @@ const StepNode: React.FC<{ data: WorkflowGraphNodeData; selected?: boolean }> = 
   return (
     <div
       className={`relative bg-white border rounded-md ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
-      style={{ width: 260, height: 72, borderLeftWidth: 4 }}
+      style={{ width: 260, height: 72, borderLeftWidth: 4, boxSizing: 'border-box' }}
     >
       <Handle
         id="in"
@@ -167,7 +167,7 @@ const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
             snapshot.isDraggingOver ? 'border-primary-400 ring-2 ring-primary-200' : 'border-gray-200',
             'cursor-copy'
           ].join(' ')}
-          style={{ width: 30, height: 30 }}
+          style={{ width: 30, height: 30, boxSizing: 'border-box' }}
           title="Drop a step here to insert"
         >
           <Handle
