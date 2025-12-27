@@ -104,7 +104,23 @@ type WorkflowDefinition = {
   description?: string;
   
   payloadSchemaRef: string;          // SchemaRegistry key for payload Zod schema
-  trigger?: { type: "event"; eventName: string };
+  trigger?: {
+    type: "event";
+    eventName: string;
+
+    /**
+     * SchemaRegistry key for the incoming event payload (event.payload).
+     * Inferred from the Event Catalog when available; can be overridden for advanced cases.
+     */
+    sourcePayloadSchemaRef?: string;
+
+    /**
+     * Optional mapping from event.payload -> workflow payload.
+     * - If sourcePayloadSchemaRef === payloadSchemaRef, mapping is optional (identity mapping is valid).
+     * - If they differ, mapping is required for the workflow to be valid/publishable.
+     */
+    payloadMapping?: Record<string, Expr>;
+  };
   
   steps: Step[];
 };
@@ -207,6 +223,9 @@ type Expr = {
 2. **At publish time:** Load `payloadSchemaRef` Zod schema; convert it to JSON Schema (`zod-to-json-schema`) and store alongside the published plan.
 3. **At publish time:** Validate workflow JSON (shape, step uniqueness, registry references, config schemas, expression compilation).
 4. **At run start / event trigger:** Validate initial payload against the registered payload schema; reject invalid payloads before creating a run.
+   - **Stable payload invariant:** A workflow’s `payloadSchemaRef` is treated as stable across trigger schema changes.
+   - **Trigger mapping:** When the trigger’s source schema differs from `payloadSchemaRef`, the trigger must define a mapping (`trigger.payloadMapping`) that builds the workflow payload from `event.payload`.
+     - If the schema refs match, “no mapping” is valid (identity mapping), but a mapping may still be provided and will be applied.
 5. **At runtime:** Validate node configs (once, using published compiled config), validate action inputs/outputs on every `action.call`.
 6. **Before persisting snapshots:** Apply redaction rules to payload and action invocation logs.
 

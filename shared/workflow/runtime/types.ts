@@ -266,7 +266,9 @@ export const workflowDefinitionSchema = z.object({
   payloadSchemaRef: z.string().min(1),
   trigger: z.object({
     type: z.literal('event'),
-    eventName: z.string().min(1)
+    eventName: z.string().min(1),
+    sourcePayloadSchemaRef: z.string().min(1).optional(),
+    payloadMapping: inputMappingSchema.optional()
   }).optional(),
   steps: z.array(stepSchema)
 }).strict();
@@ -295,7 +297,9 @@ export const envelopeSchema = z.object({
     state: z.string().optional(),
     traceId: z.string().optional(),
     tags: z.record(z.string()).optional(),
-    redactions: z.array(z.string()).optional()
+    redactions: z.array(z.string()).optional(),
+    sourcePayloadSchemaRef: z.string().optional(),
+    triggerMappingApplied: z.boolean().optional()
   }).strict(),
   vars: z.record(z.unknown()),
   error: envelopeErrorSchema.optional()
@@ -306,6 +310,8 @@ export type Envelope = z.infer<typeof envelopeSchema>;
 export type WorkflowTrigger = {
   type: 'event';
   eventName: string;
+  sourcePayloadSchemaRef?: string;
+  payloadMapping?: InputMapping;
 };
 
 export type WorkflowRunStatus = 'RUNNING' | 'WAITING' | 'SUCCEEDED' | 'FAILED' | 'CANCELED';

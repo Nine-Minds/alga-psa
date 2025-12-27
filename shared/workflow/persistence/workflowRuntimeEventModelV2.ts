@@ -6,6 +6,8 @@ export type WorkflowRuntimeEventRecord = {
   event_name: string;
   correlation_key?: string | null;
   payload?: Record<string, unknown> | null;
+  payload_schema_ref?: string | null;
+  schema_ref_conflict?: { submission: string; catalog: string } | null;
   created_at: string;
   processed_at?: string | null;
   matched_run_id?: string | null;

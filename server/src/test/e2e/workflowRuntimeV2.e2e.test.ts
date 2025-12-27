@@ -25,6 +25,9 @@ import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
+  TEST_SCHEMA_REF,
+  TEST_SOURCE_SCHEMA_REF,
+  TEST_REQUIRED_SCHEMA_REF,
   actionCallStep,
   stateSetStep,
   eventWaitStep,
@@ -173,13 +176,116 @@ describe('workflow runtime v2 E2E tests', () => {
   it('E2E: event trigger starts workflow run and completes without manual wait. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
-      trigger: { type: 'event', eventName: 'PING' }
+      trigger: { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: TEST_SCHEMA_REF }
     });
     await publishWorkflow(workflowId, 1);
 
     const result = await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'k1', payload: { foo: 'bar' } });
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
     expect(run?.status).toBe('SUCCEEDED');
+  });
+
+  it('Validation: schemaRef mismatch requires trigger mapping (publish blocked).', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      trigger: { type: 'event', eventName: 'PING_MISMATCH', sourcePayloadSchemaRef: TEST_SOURCE_SCHEMA_REF }
+    });
+
+    const publish = await publishWorkflow(workflowId, 1);
+    expect((publish as any)?.ok).toBe(false);
+    expect(((publish as any)?.errors ?? []).some((e: any) => e.code === 'TRIGGER_MAPPING_REQUIRED')).toBe(true);
+  });
+
+  it('Validation: trigger mapping expressions must use event.payload (payload.* is rejected).', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      trigger: {
+        type: 'event',
+        eventName: 'PING_BAD_ROOT',
+        sourcePayloadSchemaRef: TEST_SCHEMA_REF,
+        payloadMapping: { foo: { $expr: 'payload.foo' } }
+      }
+    });
+
+    const publish = await publishWorkflow(workflowId, 1);
+    expect((publish as any)?.ok).toBe(false);
+    expect(((publish as any)?.errors ?? []).some((e: any) => e.code === 'TRIGGER_MAPPING_INVALID_ROOT')).toBe(true);
+  });
+
+  it('Validation: trigger mapping must provide required payload fields (deep required validation).', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      payloadSchemaRef: TEST_REQUIRED_SCHEMA_REF,
+      trigger: {
+        type: 'event',
+        eventName: 'PING_REQUIRED',
+        sourcePayloadSchemaRef: TEST_SOURCE_SCHEMA_REF,
+        payloadMapping: { bar: { $expr: 'event.payload.bar' } }
+      }
+    });
+
+    const publish = await publishWorkflow(workflowId, 1);
+    expect((publish as any)?.ok).toBe(false);
+    expect(((publish as any)?.errors ?? []).some((e: any) => e.code === 'TRIGGER_MAPPING_MISSING_REQUIRED_FIELDS')).toBe(true);
+  });
+
+  it('Runtime: when trigger mapping exists, event payload is mapped into workflow payload and provenance is persisted.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      trigger: {
+        type: 'event',
+        eventName: 'PING_MAP',
+        sourcePayloadSchemaRef: TEST_SOURCE_SCHEMA_REF,
+        payloadMapping: { foo: { $expr: 'event.payload.foo' } }
+      }
+    });
+    const publish = await publishWorkflow(workflowId, 1);
+    expect((publish as any)?.ok).toBe(true);
+
+    const result = await submitWorkflowEventAction({
+      eventName: 'PING_MAP',
+      correlationKey: 'k-map',
+      payload: { foo: 'hello' },
+      payloadSchemaRef: TEST_SOURCE_SCHEMA_REF
+    });
+
+    const runId = result.startedRuns[0];
+    const run = await WorkflowRunModelV2.getById(db, runId);
+    expect((run as any)?.input_json?.foo).toBe('hello');
+    expect((run as any)?.source_payload_schema_ref).toBe(TEST_SOURCE_SCHEMA_REF);
+    expect((run as any)?.trigger_mapping_applied).toBe(true);
+  });
+
+  it('Ingestion: submission payloadSchemaRef takes precedence over catalog, with conflict persisted as warning data.', async () => {
+    await db('event_catalog').insert({
+      event_id: uuidv4(),
+      event_type: 'PING_CONFLICT',
+      name: 'Ping Conflict',
+      description: 'test',
+      category: 'Test',
+      payload_schema: {},
+      payload_schema_ref: TEST_SOURCE_SCHEMA_REF,
+      tenant: tenantId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    await submitWorkflowEventAction({
+      eventName: 'PING_CONFLICT',
+      correlationKey: 'k-conflict',
+      payload: { foo: 'bar' },
+      payloadSchemaRef: TEST_SCHEMA_REF
+    });
+
+    const row = await db('workflow_runtime_events')
+      .where({ tenant_id: tenantId, event_name: 'PING_CONFLICT', correlation_key: 'k-conflict' })
+      .first();
+
+    expect(row?.payload_schema_ref).toBe(TEST_SCHEMA_REF);
+    expect(row?.schema_ref_conflict).toEqual({ submission: TEST_SCHEMA_REF, catalog: TEST_SOURCE_SCHEMA_REF });
   });
 
   it('E2E: event.wait pauses run and submit workflow event (server action; API optional) resumes it to completion. Mocks: non-target dependencies.', async () => {
