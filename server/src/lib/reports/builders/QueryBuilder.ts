@@ -20,8 +20,37 @@ export class QueryBuilder {
     queryDef: QueryDefinition,
     parameters: ReportParameters
   ): Knex.QueryBuilder {
-    
+
     try {
+      // Handle raw SQL mode - when table is 'raw_sql', the SQL is in fields[0]
+      if (queryDef.table === 'raw_sql') {
+        const rawSql = queryDef.fields?.[0];
+        if (!rawSql || typeof rawSql !== 'string') {
+          throw new ReportExecutionError('Raw SQL mode requires SQL query in fields[0]');
+        }
+
+        // Basic security check - only allow SELECT statements
+        const trimmedSql = rawSql.trim().toLowerCase();
+        if (!trimmedSql.startsWith('select')) {
+          throw new ReportExecutionError('Raw SQL mode only allows SELECT statements');
+        }
+
+        // Substitute parameters in the SQL
+        let processedSql = rawSql;
+        for (const [key, value] of Object.entries(parameters)) {
+          const placeholder = `{{${key}}}`;
+          if (processedSql.includes(placeholder)) {
+            // Escape the value to prevent SQL injection
+            const escapedValue = typeof value === 'string'
+              ? `'${value.replace(/'/g, "''")}'`
+              : String(value);
+            processedSql = processedSql.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), escapedValue);
+          }
+        }
+
+        return trx.raw(processedSql) as unknown as Knex.QueryBuilder;
+      }
+
       let query = trx(queryDef.table);
       
       // Add joins
