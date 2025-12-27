@@ -308,7 +308,7 @@ test.describe('Workflow Designer UI - basic', () => {
       const workflowName = await workflowPage.nameInput.inputValue();
       await expect(workflowPage.nameInput).toHaveValue(/.+/);
       await expect(workflowPage.versionInput).toHaveValue('1');
-      await expect(workflowPage.payloadSchemaInput).toHaveValue(/.+/);
+      await expect(workflowPage.payloadSchemaSelectButton).toContainText(/payload\./);
       await expect(workflowPage.dropStepsHereText()).toBeVisible();
       await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
     } finally {
@@ -333,7 +333,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(page.getByRole('option', { name: 'payload.emailData' })).toBeVisible();
       await page.keyboard.press('Escape');
 
-      await workflowPage.payloadSchemaInput.fill('payload.UnknownPayload.v1');
+      await workflowPage.setPayloadSchemaRefAdvanced('payload.UnknownPayload.v1');
 
       await expect.poll(async () => {
         await picker.click();
@@ -357,7 +357,7 @@ test.describe('Workflow Designer UI - basic', () => {
 
       await workflowPage.nameInput.fill(workflowName);
       await workflowPage.descriptionInput.fill('Workflow for UI tests');
-      await workflowPage.payloadSchemaInput.fill('payload.EmailWorkflowPayload.v1');
+      await workflowPage.selectPayloadSchemaRef('payload.EmailWorkflowPayload.v1');
       await workflowPage.triggerInput.fill('workflow.event.test');
 
       await workflowPage.saveDraft();
@@ -425,7 +425,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await workflowPage.clickNewWorkflow();
       await workflowPage.nameInput.fill(workflowName);
       await workflowPage.descriptionInput.fill('Draft workflow metadata');
-      await workflowPage.payloadSchemaInput.fill('payload.CustomWorkflowPayload.v1');
+      await workflowPage.setPayloadSchemaRefAdvanced('payload.CustomWorkflowPayload.v1');
       await workflowPage.triggerInput.fill('workflow.event.persist');
 
       const addStateButton = workflowPage.addButtonFor('state.set');
@@ -443,7 +443,7 @@ test.describe('Workflow Designer UI - basic', () => {
 
       await expect(workflowPage.nameInput).toHaveValue(workflowName);
       await expect(workflowPage.descriptionInput).toHaveValue('Draft workflow metadata');
-      await expect(workflowPage.payloadSchemaInput).toHaveValue('payload.CustomWorkflowPayload.v1');
+      await expect(workflowPage.payloadSchemaSelectButton).toContainText('payload.CustomWorkflowPayload.v1');
       await expect(workflowPage.triggerInput).toHaveValue('workflow.event.persist');
 
       const stepButton = workflowPage.stepSelectButton(stepId);
@@ -467,7 +467,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await workflowPage.clickNewWorkflow();
       await workflowPage.nameInput.fill(workflowName);
       await workflowPage.descriptionInput.fill('Draft workflow metadata');
-      await workflowPage.payloadSchemaInput.fill('payload.CustomWorkflowPayload.v1');
+      await workflowPage.setPayloadSchemaRefAdvanced('payload.CustomWorkflowPayload.v1');
       await workflowPage.triggerInput.fill('workflow.event.custom');
       await workflowPage.saveDraft();
 
@@ -478,7 +478,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.nameInput).toHaveValue('Inbound Email Processing');
       await expect(workflowPage.versionInput).toHaveValue('1');
       await expect(workflowPage.descriptionInput).toHaveValue('Process inbound emails into tickets or comments.');
-      await expect(workflowPage.payloadSchemaInput).toHaveValue('payload.EmailWorkflowPayload.v1');
+      await expect(workflowPage.payloadSchemaSelectButton).toContainText('payload.EmailWorkflowPayload.v1');
       await expect(workflowPage.triggerInput).toHaveValue('INBOUND_EMAIL_RECEIVED');
     } finally {
       await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
@@ -864,7 +864,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.saveDraftButton).toBeDisabled();
       await expect(workflowPage.publishButton).toBeDisabled();
       await expect(workflowPage.nameInput).toHaveValue('');
-      await expect(workflowPage.payloadSchemaInput).toHaveValue('');
+      await expect(workflowPage.payloadSchemaSelectButton).toHaveCount(0);
       await expect(page.locator('#workflow-settings-save')).toHaveCount(0);
     } finally {
       await restoreWorkflowDefinitions(db, snapshot).catch(() => {});

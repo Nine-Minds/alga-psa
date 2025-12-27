@@ -10,6 +10,8 @@ export class WorkflowDesignerPage {
   readonly nameInput: Locator;
   readonly versionInput: Locator;
   readonly descriptionInput: Locator;
+  readonly payloadSchemaSelectButton: Locator;
+  readonly payloadSchemaAdvancedToggle: Locator;
   readonly payloadSchemaInput: Locator;
   readonly triggerInput: Locator;
   readonly paletteSearchInput: Locator;
@@ -23,6 +25,8 @@ export class WorkflowDesignerPage {
     this.nameInput = page.locator('#workflow-designer-name');
     this.versionInput = page.locator('#workflow-designer-version');
     this.descriptionInput = page.locator('#workflow-designer-description');
+    this.payloadSchemaSelectButton = page.locator('#workflow-designer-schema-ref-select');
+    this.payloadSchemaAdvancedToggle = page.locator('#workflow-designer-schema-advanced');
     this.payloadSchemaInput = page.locator('#workflow-designer-schema');
     this.triggerInput = page.locator('#workflow-designer-trigger');
     this.paletteSearchInput = page.locator('#workflow-designer-search');
@@ -58,6 +62,22 @@ export class WorkflowDesignerPage {
 
   async setName(value: string): Promise<void> {
     await this.nameInput.fill(value);
+  }
+
+  async selectPayloadSchemaRef(schemaRef: string): Promise<void> {
+    await this.payloadSchemaSelectButton.click();
+    const searchInput = this.page.locator('#workflow-designer-schema-ref-select-search');
+    await expect(searchInput).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill(schemaRef);
+    await this.page.getByRole('option', { name: new RegExp(schemaRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first().click();
+  }
+
+  async setPayloadSchemaRefAdvanced(schemaRef: string): Promise<void> {
+    if (!(await this.payloadSchemaInput.isVisible())) {
+      await this.payloadSchemaAdvancedToggle.click();
+    }
+    await expect(this.payloadSchemaInput).toBeVisible({ timeout: 10_000 });
+    await this.payloadSchemaInput.fill(schemaRef);
   }
 
   async searchPalette(value: string): Promise<void> {

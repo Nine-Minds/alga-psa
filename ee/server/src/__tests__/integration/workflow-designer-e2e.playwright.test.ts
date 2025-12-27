@@ -173,7 +173,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
       await workflowPage.clickNewWorkflow();
       await workflowPage.nameInput.fill(workflowName);
       await workflowPage.descriptionInput.fill('E2E draft workflow');
-      await workflowPage.payloadSchemaInput.fill('payload.EmailWorkflowPayload.v1');
+      await workflowPage.selectPayloadSchemaRef('payload.EmailWorkflowPayload.v1');
       await workflowPage.triggerInput.fill('workflow.e2e.draft');
 
       const addAssign = workflowPage.addButtonFor('transform.assign');
@@ -203,7 +203,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
     try {
       await workflowPage.clickNewWorkflow();
       await workflowPage.nameInput.fill(workflowName);
-      await workflowPage.payloadSchemaInput.fill('payload.EmailWorkflowPayload.v1');
+      await workflowPage.selectPayloadSchemaRef('payload.EmailWorkflowPayload.v1');
 
       const addAssign = workflowPage.addButtonFor('transform.assign');
       await addAssign.scrollIntoViewIfNeeded();

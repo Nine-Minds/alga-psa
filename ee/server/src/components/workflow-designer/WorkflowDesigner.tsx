@@ -34,6 +34,8 @@ import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import CustomTabs from '@/components/ui/CustomTabs';
 import { Switch } from '@/components/ui/Switch';
 import { Label } from '@/components/ui/Label';
+import SearchableSelect from 'server/src/components/ui/SearchableSelect';
+import { analytics } from 'server/src/lib/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
@@ -42,10 +44,13 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
-import { getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { getEventCatalogEntryByEventType } from 'server/src/lib/actions/event-catalog-actions';
 import {
   createWorkflowDefinitionAction,
   getWorkflowSchemaAction,
+  listWorkflowSchemaRefsAction,
+  listWorkflowSchemasMetaAction,
   listWorkflowDefinitionsAction,
   listWorkflowRegistryActionsAction,
   listWorkflowRegistryNodesAction,
@@ -996,6 +1001,37 @@ const getStepLabel = (step: Step, nodeRegistry: Record<string, NodeRegistryItem>
   return name || registryItem?.ui?.label || step.type;
 };
 
+const getGraphSubtitle = (step: Step): string | null => {
+  const truncate = (value: string, max = 40) => {
+    const trimmed = value.trim();
+    if (trimmed.length <= max) return trimmed;
+    return `${trimmed.slice(0, max)}…`;
+  };
+
+  if (step.type === 'action.call') {
+    const config = (step as NodeStep).config as { actionId?: string; saveAs?: string } | undefined;
+    const actionId = config?.actionId?.trim();
+    const saveAs = config?.saveAs?.trim();
+    if (actionId && saveAs) return `${actionId} → ${saveAs}`;
+    if (actionId) return actionId;
+    if (saveAs) return `→ ${saveAs}`;
+    return null;
+  }
+
+  if (step.type === 'state.set') {
+    const config = (step as NodeStep).config as { state?: string } | undefined;
+    const state = config?.state?.trim();
+    return state ? `→ ${state}` : null;
+  }
+
+  if (step.type === 'control.if') {
+    const condition = (step as IfBlock).condition?.$expr ?? '';
+    return condition ? truncate(condition, 50) : null;
+  }
+
+  return null;
+};
+
 /**
  * Build ExpressionContext for the Monaco expression editor from DataContext
  * This converts the workflow designer's DataContext to the format expected by the expression editor
@@ -1146,6 +1182,8 @@ const WorkflowDesigner: React.FC = () => {
   const [nodeRegistry, setNodeRegistry] = useState<NodeRegistryItem[]>([]);
   const [actionRegistry, setActionRegistry] = useState<ActionRegistryItem[]>([]);
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
+  const [payloadSchemaStatus, setPayloadSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [payloadSchemaLoadedRef, setPayloadSchemaLoadedRef] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [selectedPipePath, setSelectedPipePath] = useState<string>('root');
@@ -1158,7 +1196,18 @@ const WorkflowDesigner: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [registryError, setRegistryError] = useState(false);
+  const [schemaRefs, setSchemaRefs] = useState<string[]>([]);
+  const [schemaMeta, setSchemaMeta] = useState<Map<string, { title: string | null; description: string | null }>>(
+    new Map()
+  );
+  const [schemaRefAdvanced, setSchemaRefAdvanced] = useState(false);
   const [showRunDialog, setShowRunDialog] = useState(false);
+  const [showSchemaModal, setShowSchemaModal] = useState(false);
+  const [schemaPreviewExpanded, setSchemaPreviewExpanded] = useState(false);
+  const [schemaInferenceEnabled, setSchemaInferenceEnabled] = useState(true);
+  const [inferredSchemaRef, setInferredSchemaRef] = useState<string | null>(null);
+  const lastAppliedInferredRef = useRef<string | null>(null);
+  const lastCapturedUnknownSchemaRef = useRef<string | null>(null);
   const [metadataDraft, setMetadataDraft] = useState<{
     isVisible: boolean;
     isPaused: boolean;
@@ -1350,6 +1399,20 @@ const WorkflowDesigner: React.FC = () => {
       if (overrides?.registryNodes || overrides?.registryActions) {
         setNodeRegistry((overrides.registryNodes ?? []) as NodeRegistryItem[]);
         setActionRegistry((overrides.registryActions ?? []) as ActionRegistryItem[]);
+        try {
+          const schemaList = await listWorkflowSchemaRefsAction();
+          setSchemaRefs(((schemaList as { refs?: string[] } | null)?.refs ?? []) as string[]);
+          try {
+            const meta = await listWorkflowSchemasMetaAction();
+            const items = (meta as { schemas?: Array<{ ref: string; title: string | null; description: string | null }> } | null)?.schemas ?? [];
+            setSchemaMeta(new Map(items.map((s) => [s.ref, { title: s.title, description: s.description }])));
+          } catch {
+            setSchemaMeta(new Map());
+          }
+        } catch {
+          setSchemaRefs([]);
+          setSchemaMeta(new Map());
+        }
         setRegistryError(false);
         return;
       }
@@ -1359,10 +1422,26 @@ const WorkflowDesigner: React.FC = () => {
       ]);
       setNodeRegistry((nodes ?? []) as unknown as NodeRegistryItem[]);
       setActionRegistry((actions ?? []) as unknown as ActionRegistryItem[]);
+      try {
+        const schemaList = await listWorkflowSchemaRefsAction();
+        setSchemaRefs(((schemaList as { refs?: string[] } | null)?.refs ?? []) as string[]);
+        try {
+          const meta = await listWorkflowSchemasMetaAction();
+          const items = (meta as { schemas?: Array<{ ref: string; title: string | null; description: string | null }> } | null)?.schemas ?? [];
+          setSchemaMeta(new Map(items.map((s) => [s.ref, { title: s.title, description: s.description }])));
+        } catch {
+          setSchemaMeta(new Map());
+        }
+      } catch {
+        setSchemaRefs([]);
+        setSchemaMeta(new Map());
+      }
       setRegistryError(false);
     } catch (error) {
       setNodeRegistry([]);
       setActionRegistry([]);
+      setSchemaRefs([]);
+      setSchemaMeta(new Map());
       setRegistryError(true);
       toast.error('Failed to load workflow registries');
     }
@@ -1371,16 +1450,33 @@ const WorkflowDesigner: React.FC = () => {
   const loadPayloadSchema = useCallback(async (schemaRef: string | undefined) => {
     if (!schemaRef) {
       setPayloadSchema(null);
+      setPayloadSchemaStatus('idle');
+      setPayloadSchemaLoadedRef(null);
       return;
     }
+    if (payloadSchemaStatus === 'loading' && payloadSchemaLoadedRef === schemaRef) return;
     try {
+      setPayloadSchemaStatus('loading');
+      setPayloadSchemaLoadedRef(schemaRef);
       const result = await getWorkflowSchemaAction({ schemaRef });
-      setPayloadSchema(result.schema ?? null);
+      const schema = (result?.schema ?? null) as JsonSchema | null;
+      setPayloadSchema(schema);
+      setPayloadSchemaStatus(schema ? 'loaded' : 'error');
     } catch (error) {
       console.error('[WorkflowDesigner] Error loading schema:', error);
       setPayloadSchema(null);
+      setPayloadSchemaStatus('error');
+      setPayloadSchemaLoadedRef(schemaRef);
     }
-  }, []);
+  }, [payloadSchemaLoadedRef, payloadSchemaStatus]);
+
+  const ensurePayloadSchemaLoaded = useCallback(async () => {
+    const schemaRef = activeDefinition?.payloadSchemaRef ?? '';
+    if (!schemaRef) return;
+    if (payloadSchemaStatus === 'loading') return;
+    if (payloadSchemaLoadedRef === schemaRef && payloadSchemaStatus === 'loaded' && payloadSchema) return;
+    await loadPayloadSchema(schemaRef);
+  }, [activeDefinition?.payloadSchemaRef, loadPayloadSchema, payloadSchema, payloadSchemaLoadedRef, payloadSchemaStatus]);
 
   useEffect(() => {
     loadDefinitions();
@@ -1419,13 +1515,83 @@ const WorkflowDesigner: React.FC = () => {
   }, [activeWorkflowRecord]);
 
   useEffect(() => {
-    if (activeDefinition?.payloadSchemaRef) {
-      loadPayloadSchema(activeDefinition.payloadSchemaRef);
-    } else {
-      // Clear schema when no ref
-      setPayloadSchema(null);
+    const schemaRef = activeDefinition?.payloadSchemaRef ?? '';
+    setPayloadSchema(null);
+    setPayloadSchemaLoadedRef(schemaRef || null);
+    setPayloadSchemaStatus(schemaRef ? 'idle' : 'idle');
+    setShowSchemaModal(false);
+    setSchemaPreviewExpanded(false);
+  }, [activeDefinition?.payloadSchemaRef]);
+
+  useEffect(() => {
+    if (!activeDefinition?.payloadSchemaRef) return;
+    const needsSchema =
+      schemaPreviewExpanded ||
+      showSchemaModal ||
+      selectedStepId != null ||
+      selectedPipePath !== 'root';
+    if (!needsSchema) return;
+    ensurePayloadSchemaLoaded();
+  }, [
+    activeDefinition?.payloadSchemaRef,
+    ensurePayloadSchemaLoaded,
+    schemaPreviewExpanded,
+    selectedPipePath,
+    selectedStepId,
+    showSchemaModal
+  ]);
+
+  useEffect(() => {
+    const ref = activeDefinition?.payloadSchemaRef ?? '';
+    if (!ref) return;
+    if (schemaRefs.length === 0) return;
+    if (!schemaRefs.includes(ref)) {
+      setSchemaRefAdvanced(true);
+      if (lastCapturedUnknownSchemaRef.current !== ref) {
+        lastCapturedUnknownSchemaRef.current = ref;
+        analytics.capture('workflow.payload_schema_ref.unknown', {
+          schemaRef: ref,
+          workflowId: activeWorkflowId ?? activeDefinition?.id ?? null
+        });
+      }
     }
-  }, [activeDefinition?.payloadSchemaRef, loadPayloadSchema]);
+  }, [activeDefinition?.id, activeDefinition?.payloadSchemaRef, activeWorkflowId, schemaRefs]);
+
+  useEffect(() => {
+    if (!activeDefinition) return;
+    const eventName = activeDefinition.trigger?.type === 'event' ? activeDefinition.trigger.eventName : '';
+    if (!eventName) {
+      setInferredSchemaRef(null);
+      lastAppliedInferredRef.current = null;
+      return;
+    }
+    const load = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user?.tenant) return;
+        const entry = await getEventCatalogEntryByEventType({ eventType: eventName, tenant: user.tenant });
+        const ref = (entry as any)?.payload_schema_ref;
+        setInferredSchemaRef(typeof ref === 'string' ? ref : null);
+        if (!schemaInferenceEnabled) return;
+        if (!canManage) return;
+        if (typeof ref !== 'string' || !ref) return;
+        if (lastAppliedInferredRef.current === ref) return;
+        const current = activeDefinition.payloadSchemaRef ?? '';
+        if (!current || current === lastAppliedInferredRef.current) {
+          lastAppliedInferredRef.current = ref;
+          analytics.capture('workflow.payload_schema_ref.inferred_applied', {
+            schemaRef: ref,
+            workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+            eventType: eventName
+          });
+          handleDefinitionChange({ payloadSchemaRef: ref });
+        }
+      } catch {
+        setInferredSchemaRef(null);
+      }
+    };
+    load();
+  }, [activeDefinition?.id, activeDefinition?.trigger, activeWorkflowId, canManage, schemaInferenceEnabled]);
 
   const handleSelectDefinition = (record: WorkflowDefinitionRecord) => {
     setActiveDefinition(record.draft_definition);
@@ -2053,12 +2219,189 @@ const WorkflowDesigner: React.FC = () => {
                     onChange={(event) => handleDefinitionChange({ description: event.target.value })}
                     rows={2}
                   />
-                  <Input
-                    id="workflow-designer-schema"
-                    label="Payload schema ref"
-                    value={activeDefinition?.payloadSchemaRef ?? ''}
-                    onChange={(event) => handleDefinitionChange({ payloadSchemaRef: event.target.value })}
-                  />
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="workflow-designer-schema-ref-select">Payload schema</Label>
+                      <Button
+                        id="workflow-designer-schema-advanced"
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                        onClick={() => setSchemaRefAdvanced((prev) => !prev)}
+                      >
+                        {schemaRefAdvanced ? 'Hide advanced' : 'Advanced'}
+                      </Button>
+                    </div>
+
+                    <div className="mt-2">
+                      <SearchableSelect
+                        id="workflow-designer-schema-ref-select"
+                        options={(() => {
+                          const current = activeDefinition?.payloadSchemaRef ?? '';
+                          const base = schemaRefs.map((ref) => {
+                            const meta = schemaMeta.get(ref);
+                            const title = meta?.title ? ` — ${meta.title}` : '';
+                            return { value: ref, label: `${ref}${title}` };
+                          });
+                          if (current && !schemaRefs.includes(current)) {
+                            return [{ value: current, label: `${current} (unknown)` }, ...base];
+                          }
+                          return base;
+                        })()}
+                        value={activeDefinition?.payloadSchemaRef ?? ''}
+                        onChange={(value) => {
+                          if (schemaInferenceEnabled && inferredSchemaRef && value !== inferredSchemaRef) {
+                            setSchemaInferenceEnabled(false);
+                            lastAppliedInferredRef.current = null;
+                          }
+                          analytics.capture('workflow.payload_schema_ref.selected', {
+                            schemaRef: value || null,
+                            workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                            inferenceEnabled: schemaInferenceEnabled,
+                            triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null
+                          });
+                          handleDefinitionChange({ payloadSchemaRef: value });
+                        }}
+                        placeholder="Select schema…"
+                        emptyMessage="No schemas found"
+                        disabled={registryError || !canManage}
+                        required
+                        dropdownMode="overlay"
+                      />
+                    </div>
+
+                    {schemaRefAdvanced && (
+                      <div className="mt-2">
+                        <Input
+                          id="workflow-designer-schema"
+                          label="Payload schema ref (advanced)"
+                          value={activeDefinition?.payloadSchemaRef ?? ''}
+                          onChange={(event) => {
+                            if (schemaInferenceEnabled) {
+                              setSchemaInferenceEnabled(false);
+                              lastAppliedInferredRef.current = null;
+                            }
+                            handleDefinitionChange({ payloadSchemaRef: event.target.value });
+                          }}
+                          disabled={!canManage}
+                        />
+                      </div>
+                    )}
+
+                    {activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName && (
+                      <div className="mt-2 rounded border border-gray-200 bg-white px-3 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs text-gray-700">
+                            {inferredSchemaRef
+                              ? <>Inferred schema for <span className="font-mono text-[11px]">{activeDefinition.trigger.eventName}</span></>
+                              : <>No inferred schema for <span className="font-mono text-[11px]">{activeDefinition.trigger.eventName}</span></>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-gray-500">Infer</span>
+                            <Switch
+                              id="workflow-designer-schema-infer"
+                              checked={schemaInferenceEnabled}
+                              onCheckedChange={(value) => {
+                                setSchemaInferenceEnabled(Boolean(value));
+                                if (!value) lastAppliedInferredRef.current = null;
+                              }}
+                              disabled={!canManage}
+                            />
+                          </div>
+                        </div>
+                        {inferredSchemaRef && (
+                          <div className="mt-1 text-[11px] text-gray-500 font-mono break-all">{inferredSchemaRef}</div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeDefinition?.payloadSchemaRef &&
+                      schemaRefs.length > 0 &&
+                      !schemaRefs.includes(activeDefinition.payloadSchemaRef) && (
+                      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-red-600">
+                        <div>
+                          Unknown schema ref. Select a valid schema from the dropdown (or update the ref in Advanced).
+                        </div>
+                        {canManage && (
+                          <Button
+                            id="workflow-designer-schema-clear"
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            className="h-auto px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                            onClick={() => handleDefinitionChange({ payloadSchemaRef: '' })}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {activeDefinition?.payloadSchemaRef && (
+                      <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs font-semibold text-gray-700">Schema preview</div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              id="workflow-designer-schema-preview-toggle"
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              className="h-auto px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                              onClick={() => setSchemaPreviewExpanded((prev) => !prev)}
+                            >
+                              {schemaPreviewExpanded ? 'Hide preview' : 'Show preview'}
+                            </Button>
+                            <Button
+                              id="workflow-designer-schema-view"
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              className="h-auto px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                              onClick={() => {
+                                setShowSchemaModal(true);
+                              }}
+                              disabled={
+                                schemaRefs.length > 0 &&
+                                activeDefinition?.payloadSchemaRef
+                                  ? !schemaRefs.includes(activeDefinition.payloadSchemaRef)
+                                  : false
+                              }
+                            >
+                              View full schema
+                            </Button>
+                          </div>
+                        </div>
+                        {schemaPreviewExpanded && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            {payloadSchemaStatus === 'loading' && 'Loading schema…'}
+                            {payloadSchemaStatus === 'error' && 'Failed to load schema preview.'}
+                            {payloadSchemaStatus === 'idle' && 'Schema preview is available once loaded.'}
+                            {payloadSchemaStatus === 'loaded' && payloadSchema && (() => {
+                              const props = (payloadSchema as any)?.properties ?? null;
+                              if (!props || typeof props !== 'object') return 'No top-level properties.';
+                              const keys = Object.keys(props);
+                              if (keys.length === 0) return 'No top-level properties.';
+                              const shown = keys.slice(0, 8);
+                              return (
+                                <div className="flex flex-wrap gap-1">
+                                  {shown.map((k) => (
+                                    <span key={k} className="rounded bg-white px-2 py-0.5 border border-gray-200">
+                                      {k}
+                                    </span>
+                                  ))}
+                                  {keys.length > shown.length && (
+                                    <span className="text-gray-500">+{keys.length - shown.length} more</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   <Input
                     id="workflow-designer-trigger"
                     label="Trigger event name"
@@ -2074,6 +2417,49 @@ const WorkflowDesigner: React.FC = () => {
                     }}
                   />
                 </Card>
+
+                {showSchemaModal && activeDefinition?.payloadSchemaRef && createPortal(
+                  <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-6"
+                    role="dialog"
+                    aria-modal="true"
+                    onMouseDown={(e) => {
+                      if (e.target === e.currentTarget) setShowSchemaModal(false);
+                    }}
+                  >
+                    <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                        <div className="text-sm font-semibold text-gray-900">Payload schema</div>
+                        <Button
+                          id="workflow-designer-schema-modal-close"
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={() => setShowSchemaModal(false)}
+                        >
+                          Close
+                        </Button>
+                      </div>
+                      <div className="max-h-[70vh] overflow-auto p-4">
+                        {payloadSchemaStatus === 'loading' && (
+                          <div className="text-xs text-gray-500">Loading schema…</div>
+                        )}
+                        {payloadSchemaStatus === 'error' && (
+                          <div className="text-xs text-red-600">Failed to load schema.</div>
+                        )}
+                        {payloadSchemaStatus === 'loaded' && payloadSchema && (
+                          <pre className="text-[11px] leading-relaxed text-gray-800 whitespace-pre-wrap break-words">
+                            {JSON.stringify(payloadSchema, null, 2)}
+                          </pre>
+                        )}
+                        {payloadSchemaStatus === 'idle' && (
+                          <div className="text-xs text-gray-500">Schema not loaded yet.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>,
+                  document.body
+                )}
 
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -2112,7 +2498,7 @@ const WorkflowDesigner: React.FC = () => {
                       <WorkflowGraph
                         steps={(activeDefinition?.steps ?? []) as Step[]}
                         getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap)}
-                        getSubtitle={(step) => (step as Step).type}
+                        getSubtitle={(step) => getGraphSubtitle(step as Step) ?? (step as Step).type}
                         selectedStepId={selectedStepId}
                         onSelectStepId={setSelectedStepId}
                         editable={canManage}

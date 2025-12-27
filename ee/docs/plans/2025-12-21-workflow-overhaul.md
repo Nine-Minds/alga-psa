@@ -202,6 +202,8 @@ type Expr = {
 ### 4.2 Reflection and Validation Pipeline
 
 1. **At service startup:** Register Zod schemas in SchemaRegistry; register Node Types and Actions in their registries.
+   - **Designer UX:** `payloadSchemaRef` should be selected from a searchable schema registry picker (not typed), with an optional “advanced” raw ref input for power users.
+   - **Trigger inference:** When `trigger.eventName` matches an Event Catalog entry that provides `payload_schema_ref`, the designer can infer `payloadSchemaRef` automatically (with an override toggle).
 2. **At publish time:** Load `payloadSchemaRef` Zod schema; convert it to JSON Schema (`zod-to-json-schema`) and store alongside the published plan.
 3. **At publish time:** Validate workflow JSON (shape, step uniqueness, registry references, config schemas, expression compilation).
 4. **At run start / event trigger:** Validate initial payload against the registered payload schema; reject invalid payloads before creating a run.
