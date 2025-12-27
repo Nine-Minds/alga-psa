@@ -438,11 +438,98 @@ export async function buildWorkflowGraph(
     });
   }
 
+  // Post-process: align simple linear chains to a single x to reduce zig-zag edges.
+  // ELK's orthogonal routing can still place sequential nodes with slightly different x values,
+  // which makes "step" edges show small horizontal jogs.
+  const alignStraightChains = () => {
+    const widthById = new Map<string, number>();
+    nodes.forEach((node) => {
+      widthById.set(node.id, node.width ?? STEP_WIDTH);
+    });
+
+    const seqEdges = edges.filter((edge) => {
+      if ((edge.data as any)?.excludeFromLayout) return false;
+      // Only consider unlabeled sequential edges (branch edges have labels like 'then', 'else', ...).
+      return !edge.label;
+    });
+
+    const out = new Map<string, string[]>();
+    const inDeg = new Map<string, number>();
+    const outDeg = new Map<string, number>();
+
+    for (const edge of seqEdges) {
+      out.set(edge.source, [...(out.get(edge.source) ?? []), edge.target]);
+      inDeg.set(edge.target, (inDeg.get(edge.target) ?? 0) + 1);
+      outDeg.set(edge.source, (outDeg.get(edge.source) ?? 0) + 1);
+      // Ensure keys exist
+      if (!inDeg.has(edge.source)) inDeg.set(edge.source, inDeg.get(edge.source) ?? 0);
+      if (!outDeg.has(edge.target)) outDeg.set(edge.target, outDeg.get(edge.target) ?? 0);
+    }
+
+    const visited = new Set<string>();
+
+    const snap = (x: number) => Math.round(x / 2) * 2;
+    const centerX = (id: string) => {
+      const pos = positions.get(id) ?? { x: 0, y: 0 };
+      const w = widthById.get(id) ?? STEP_WIDTH;
+      return pos.x + w / 2;
+    };
+
+    const walkChainFrom = (startId: string) => {
+      const chain: string[] = [];
+      let current = startId;
+      while (!visited.has(current)) {
+        visited.add(current);
+        chain.push(current);
+
+        const nexts = out.get(current) ?? [];
+        if (nexts.length !== 1) break;
+        const next = nexts[0];
+        // Continue only through nodes that are part of a strict linear chain in this subgraph.
+        if ((inDeg.get(next) ?? 0) !== 1) break;
+        current = next;
+      }
+      return chain;
+    };
+
+    const nodeIds = Array.from(positions.keys());
+    for (const nodeId of nodeIds) {
+      if (visited.has(nodeId)) continue;
+      const inD = inDeg.get(nodeId) ?? 0;
+      const outD = outDeg.get(nodeId) ?? 0;
+
+      // Start chains at "starts" (not strictly linear from a predecessor),
+      // but allow single isolated nodes to be visited as well.
+      if (inD !== 1 || outD !== 1) {
+        const chain = walkChainFrom(nodeId);
+        if (chain.length >= 2) {
+          const xs = chain.map((id) => centerX(id)).sort((a, b) => a - b);
+          const median = xs[Math.floor(xs.length / 2)] ?? 0;
+          const alignedCenterX = snap(median);
+          chain.forEach((id) => {
+            const pos = positions.get(id);
+            if (!pos) return;
+            const w = widthById.get(id) ?? STEP_WIDTH;
+            positions.set(id, { x: alignedCenterX - w / 2, y: pos.y });
+          });
+        }
+      }
+    }
+
+    // Any remaining unvisited nodes: mark visited to avoid reprocessing.
+    nodeIds.forEach((id) => visited.add(id));
+  };
+
+  alignStraightChains();
+
   const laidOutNodes: Node<WorkflowGraphNodeData>[] = nodes.map((node) => {
     const pos = positions.get(node.id) ?? { x: 0, y: 0 };
     return {
       ...node,
-      position: { x: pos.x, y: pos.y }
+      position: {
+        x: node.type === 'workflowInsert' ? pos.x + 1 : pos.x,
+        y: pos.y
+      }
     };
   });
 
