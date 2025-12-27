@@ -381,7 +381,7 @@ export default function ConnectSsoClient({
         <CardHeader>
           <CardTitle>Linked accounts</CardTitle>
           <CardDescription>
-            We’ll refresh the link the next time you sign in through a connected provider.
+            We'll refresh the link the next time you sign in through a connected provider.
           </CardDescription>
         </CardHeader>
         <CardContent>
