@@ -58,7 +58,8 @@ export const StartWorkflowRunInput = z.object({
   workflowId: z.string().min(1),
   workflowVersion: versionNumber.optional(),
   payload: z.record(z.any()).default({}),
-  eventType: z.string().min(1).optional()
+  eventType: z.string().min(1).optional(),
+  sourcePayloadSchemaRef: z.string().min(1).optional()
 });
 
 export const ListWorkflowRunsInput = z.object({
@@ -149,5 +150,6 @@ export const SchemaRefInput = z.object({
 export const SubmitWorkflowEventInput = z.object({
   eventName: z.string().min(1),
   correlationKey: z.string().min(1),
+  payloadSchemaRef: z.string().min(1).optional(),
   payload: z.record(z.any()).default({})
 });

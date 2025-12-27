@@ -42,6 +42,8 @@ type WorkflowRunListItem = {
   workflow_version: number;
   tenant_id?: string | null;
   status: string;
+  source_payload_schema_ref?: string | null;
+  trigger_mapping_applied?: boolean | null;
   started_at: string;
   updated_at: string;
   completed_at?: string | null;
@@ -403,7 +405,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
 
   const allSelected = runs.length > 0 && selectedRunIds.size === runs.length;
   const someSelected = selectedRunIds.size > 0 && selectedRunIds.size < runs.length;
-  const columnCount = (showSelection ? 9 : 8) + (showTenantColumn ? 1 : 0);
+  const columnCount = (showSelection ? 10 : 9) + (showTenantColumn ? 1 : 0);
   const canRunSelected = !!activeDefinition?.workflow_id
     && canManage
     && !!activeDefinition.published_version
@@ -570,6 +572,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
                 <TableHead>Workflow</TableHead>
                 <TableHead>Version</TableHead>
                 {showTenantColumn && <TableHead>Tenant</TableHead>}
+                <TableHead>Trigger payload</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Started</TableHead>
                 <TableHead>Updated</TableHead>
@@ -598,6 +601,24 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
                   <TableCell>{run.workflow_name ?? run.workflow_id}</TableCell>
                   <TableCell>{run.workflow_version}</TableCell>
                   {showTenantColumn && <TableCell className="text-xs text-gray-500">{run.tenant_id ?? '—'}</TableCell>}
+                  <TableCell className="text-xs">
+                    {run.source_payload_schema_ref ? (
+                      <div className="flex flex-col gap-1">
+                        <div className="font-mono text-[11px] text-gray-700 break-all">
+                          {run.source_payload_schema_ref}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {run.trigger_mapping_applied ? (
+                            <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">Mapped</Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">Identity</Badge>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge className={STATUS_STYLES[run.status] ?? 'bg-gray-100 text-gray-600'}>
                       {run.status}

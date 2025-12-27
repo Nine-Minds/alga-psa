@@ -95,9 +95,9 @@ const convertSchemaFieldToDataField = (
 /**
  * Convert WorkflowDataContext to DataTreeContext for SourceDataTree
  */
-const convertToDataTreeContext = (ctx: WorkflowDataContext): DataTreeContext => ({
+const convertToDataTreeContext = (ctx: WorkflowDataContext, payloadRootPath: string): DataTreeContext => ({
   payload: ctx.payload.map(field =>
-    convertSchemaFieldToDataField(field, 'payload', 'payload')
+    convertSchemaFieldToDataField(field, payloadRootPath, 'payload')
   ),
   vars: ctx.steps.map(stepOutput => ({
     stepId: stepOutput.stepId,
@@ -116,7 +116,7 @@ const convertToDataTreeContext = (ctx: WorkflowDataContext): DataTreeContext => 
   forEach: ctx.forEach
 });
 
-const buildSourceTypeLookup = (ctx: WorkflowDataContext): Map<string, string> => {
+const buildSourceTypeLookup = (ctx: WorkflowDataContext, payloadRootPath: string): Map<string, string> => {
   const map = new Map<string, string>();
 
   const addField = (field: SchemaField, basePath: string) => {
@@ -127,7 +127,7 @@ const buildSourceTypeLookup = (ctx: WorkflowDataContext): Map<string, string> =>
     field.children?.forEach(child => addField(child, path));
   };
 
-  ctx.payload.forEach(field => addField(field, 'payload'));
+  ctx.payload.forEach(field => addField(field, payloadRootPath));
   ctx.steps.forEach(stepOutput => {
     const basePath = `vars.${stepOutput.saveAs}`;
     // Ensure the step output root is treated as an object even when schema is missing
@@ -232,6 +232,17 @@ export interface MappingPanelProps {
    * Maximum height for the source tree
    */
   sourceTreeMaxHeight?: string;
+
+  /**
+   * Base path for source payload fields (default: "payload").
+   * Useful for trigger mapping contexts like "event.payload".
+   */
+  payloadRootPath?: string;
+
+  /**
+   * Override Monaco expression context (e.g. provide `eventSchema`).
+   */
+  expressionContextOverride?: ExpressionContext;
 }
 
 /**
@@ -252,7 +263,9 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
   fieldOptions,
   stepId,
   disabled,
-  sourceTreeMaxHeight = '400px'
+  sourceTreeMaxHeight = '400px',
+  payloadRootPath = 'payload',
+  expressionContextOverride
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const targetPanelRef = useRef<HTMLDivElement>(null);
@@ -260,14 +273,14 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
 
   // Convert WorkflowDataContext to DataTreeContext
   const treeContext = useMemo(
-    () => convertToDataTreeContext(dataContext),
-    [dataContext]
+    () => convertToDataTreeContext(dataContext, payloadRootPath),
+    [dataContext, payloadRootPath]
   );
-  const sourceTypeMap = useMemo(() => buildSourceTypeLookup(dataContext), [dataContext]);
+  const sourceTypeMap = useMemo(() => buildSourceTypeLookup(dataContext, payloadRootPath), [dataContext, payloadRootPath]);
 
   // §20 - Build expression context for Monaco editor autocomplete
   const expressionContext = useMemo(() => {
-    const ctx = buildExpressionContext(dataContext);
+    const ctx = expressionContextOverride ?? buildExpressionContext(dataContext);
     console.log('[MappingPanel] Built expressionContext:', {
       hasPayloadSchema: !!ctx.payloadSchema,
       payloadSchemaType: ctx.payloadSchema?.type,
@@ -275,7 +288,7 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
       dataContextHasPayloadSchema: !!dataContext.payloadSchema,
     });
     return ctx;
-  }, [dataContext]);
+  }, [dataContext, expressionContextOverride]);
 
   // §19.2 - Shared drag-and-drop state
   const [dndState, dndHandlers] = useMappingDnd({

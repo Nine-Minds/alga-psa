@@ -8,6 +8,8 @@ export type WorkflowRunRecord = {
   status: string;
   node_path?: string | null;
   event_type?: string | null;
+  source_payload_schema_ref?: string | null;
+  trigger_mapping_applied?: boolean | null;
   input_json?: Record<string, unknown> | null;
   resume_event_payload?: Record<string, unknown> | null;
   resume_event_name?: string | null;

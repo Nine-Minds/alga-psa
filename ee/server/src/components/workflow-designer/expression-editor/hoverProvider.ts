@@ -215,7 +215,12 @@ function formatSchemaHover(path: string, schema: JsonSchema | undefined): string
 function getContextRootHover(root: string, ctx: ExpressionContext): string | null {
   switch (root) {
     case 'payload':
+      if (ctx.allowPayloadRoot === false) {
+        return `**payload** is not available in this context.\n\nUse \`event.payload\` instead.`;
+      }
       return `**payload**: \`object\`\n\nWorkflow input data (trigger payload).\n\nAccess fields with dot notation: \`payload.fieldName\``;
+    case 'event':
+      return `**event**: \`object\`\n\nIncoming trigger event.\n\nSource payload is at \`event.payload\`.`;
     case 'vars':
       return `**vars**: \`object\`\n\nWorkflow variables set by previous steps.\n\nEach step with \`saveAs\` creates a variable accessible here.`;
     case 'meta':
@@ -336,6 +341,7 @@ export function createHoverProvider(
       // Check for path into schema
       let schema: JsonSchema | undefined;
       if (root === 'payload') schema = ctx.payloadSchema;
+      else if (root === 'event') schema = ctx.eventSchema;
       else if (root === 'vars') schema = ctx.varsSchema;
       else if (root === 'meta') schema = ctx.metaSchema;
       else if (root === 'error') schema = ctx.errorSchema;

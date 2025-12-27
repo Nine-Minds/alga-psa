@@ -39,6 +39,8 @@ type WorkflowRunRecord = {
   workflow_version: number;
   status: string;
   node_path?: string | null;
+  source_payload_schema_ref?: string | null;
+  trigger_mapping_applied?: boolean | null;
   input_json?: Record<string, unknown> | null;
   started_at: string;
   updated_at: string;
@@ -808,6 +810,17 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
 
         {run?.node_path && (
           <div className="text-xs text-gray-500">Node path: {run.node_path}</div>
+        )}
+        {run?.source_payload_schema_ref && (
+          <div className="text-xs text-gray-500 flex flex-wrap items-center gap-2">
+            <span>Trigger payload schema:</span>
+            <span className="font-mono break-all">{run.source_payload_schema_ref}</span>
+            {run.trigger_mapping_applied ? (
+              <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">Mapped</Badge>
+            ) : (
+              <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">Identity</Badge>
+            )}
+          </div>
         )}
         {run?.error_json && (
           <div className="flex items-start gap-2 text-sm text-red-700">

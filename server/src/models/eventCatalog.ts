@@ -64,14 +64,29 @@ export class EventCatalogModel extends BaseModel {
     eventType: string,
     tenantId: string
   ): Promise<IEventCatalogEntry | null> {
-    const entry = await knexOrTrx('event_catalog')
+    const tenantEntry = await knexOrTrx('event_catalog')
       .where({
         event_type: eventType,
         tenant: tenantId
       })
       .first();
-    
-    return entry || null;
+
+    if (tenantEntry) {
+      return tenantEntry;
+    }
+
+    const systemEntry = await knexOrTrx('system_event_catalog')
+      .where({ event_type: eventType })
+      .first();
+
+    if (!systemEntry) {
+      return null;
+    }
+
+    return {
+      ...systemEntry,
+      tenant: tenantId
+    } as IEventCatalogEntry;
   }
 
   /**
@@ -119,7 +134,8 @@ export class EventCatalogModel extends BaseModel {
       const systemEvents = await systemEventsQuery.orderBy('name', 'asc').limit(limit).offset(offset);
 
       // Simple concatenation for now, pagination/ordering across combined results might need more complex logic
-      return [...tenantEvents, ...systemEvents];
+      const normalizedSystem = systemEvents.map((entry: any) => ({ ...entry, tenant: tenantId }));
+      return [...tenantEvents, ...normalizedSystem];
     }
 
     if (category !== undefined) {
@@ -130,7 +146,11 @@ export class EventCatalogModel extends BaseModel {
       .orderBy('name', 'asc')
       .limit(limit)
       .offset(offset);
-    
+
+    if (isSystemEvent === true) {
+      return entries.map((entry: any) => ({ ...entry, tenant: tenantId }));
+    }
+
     return entries;
   }
 
@@ -436,6 +456,11 @@ export class EventCatalogModel extends BaseModel {
 
     // Insert system events
     // Insert system events
-    await knexOrTrx('system_event_catalog').insert(systemEvents);
+    await knexOrTrx('system_event_catalog').insert(
+      systemEvents.map((entry) => {
+        const { tenant, ...rest } = entry as any;
+        return rest;
+      })
+    );
   }
 }

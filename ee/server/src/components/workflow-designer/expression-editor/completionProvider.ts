@@ -36,8 +36,12 @@ export interface JsonSchema {
  * Expression context for autocomplete
  */
 export interface ExpressionContext {
+  /** Whether the `payload` root should be offered (default: true). */
+  allowPayloadRoot?: boolean;
   /** Schema for payload fields */
   payloadSchema?: JsonSchema;
+  /** Schema for incoming event (trigger mapping contexts) */
+  eventSchema?: JsonSchema;
   /** Schema for workflow variables */
   varsSchema?: JsonSchema;
   /** Schema for metadata */
@@ -243,6 +247,7 @@ export function createCompletionProvider(
 
         let schema: JsonSchema | undefined;
         if (root === 'payload') schema = ctx.payloadSchema;
+        else if (root === 'event') schema = ctx.eventSchema;
         else if (root === 'vars') schema = ctx.varsSchema;
         else if (root === 'meta') schema = ctx.metaSchema;
         else if (root === 'error') schema = ctx.errorSchema;
@@ -307,15 +312,29 @@ function getContextRootCompletions(
 ): monaco.languages.CompletionItem[] {
   const items: monaco.languages.CompletionItem[] = [];
 
-  items.push({
-    label: 'payload',
-    kind: monaco.languages.CompletionItemKind.Variable,
-    detail: 'Workflow input data',
-    documentation: 'Access the workflow payload (trigger data)',
-    insertText: 'payload',
-    range,
-    sortText: '0payload',
-  });
+  if (ctx.allowPayloadRoot !== false) {
+    items.push({
+      label: 'payload',
+      kind: monaco.languages.CompletionItemKind.Variable,
+      detail: 'Workflow input data',
+      documentation: 'Access the workflow payload (trigger data)',
+      insertText: 'payload',
+      range,
+      sortText: '0payload',
+    });
+  }
+
+  if (ctx.eventSchema) {
+    items.push({
+      label: 'event',
+      kind: monaco.languages.CompletionItemKind.Variable,
+      detail: 'Incoming event',
+      documentation: 'Access the incoming trigger event (use event.payload for the source payload)',
+      insertText: 'event',
+      range,
+      sortText: '0event',
+    });
+  }
 
   items.push({
     label: 'vars',

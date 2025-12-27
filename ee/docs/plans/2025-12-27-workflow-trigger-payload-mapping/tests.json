@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Unit: schemaRef resolution uses submission payloadSchemaRef when provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F004"]
   },
   {
@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Validation: schemaRefs mismatch and trigger mapping omitted is error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F014"]
   },
   {
@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "Validation: trigger mapping missing required nested fields is an error (deep nested validation)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F014"]
   },
   {
@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "Runtime: when schemaRefs differ and mapping exists, mapped payload is used as workflow payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F031"]
   },
   {
@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Runtime: run/snapshot includes sourcePayloadSchemaRef and mapping-applied indicator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Validation: trigger mapping expressions that reference `payload.*` are rejected (must use `event.payload.*`)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033", "F012"]
   },
   {
@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "Ingestion: when submission schemaRef conflicts with event catalog schemaRef, event is accepted and a warning is recorded (submission wins)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034", "F004", "F027"]
   },
   {

@@ -7,10 +7,12 @@ const DEFAULT_TIMEOUT_MS = 25;
 const allowedFunctions = new Set(['nowIso', 'coalesce', 'len', 'toString', 'append']);
 
 export type ExpressionContext = {
-  payload: unknown;
-  vars: Record<string, unknown>;
-  meta: Record<string, unknown>;
+  payload?: unknown;
+  vars?: Record<string, unknown>;
+  meta?: Record<string, unknown>;
   error?: unknown;
+  event?: unknown;
+  [key: string]: unknown;
 };
 
 export type CompiledExpression = {

@@ -10,6 +10,8 @@ import {
 } from '@shared/workflow/runtime';
 
 export const TEST_SCHEMA_REF = 'payload.TestPayload.v1';
+export const TEST_SOURCE_SCHEMA_REF = 'payload.TestSourcePayload.v1';
+export const TEST_REQUIRED_SCHEMA_REF = 'payload.TestRequiredPayload.v1';
 
 export const TEST_SCHEMA = z.object({
   foo: z.string().optional(),
@@ -18,6 +20,15 @@ export const TEST_SCHEMA = z.object({
   email: z.record(z.any()).optional(),
   secretRef: z.string().optional(),
   nested: z.record(z.any()).optional()
+}).passthrough();
+
+export const TEST_SOURCE_SCHEMA = z.object({
+  foo: z.string().optional(),
+  bar: z.number().optional()
+}).passthrough();
+
+export const TEST_REQUIRED_SCHEMA = z.object({
+  foo: z.string()
 }).passthrough();
 
 let sideEffectCount = 0;
@@ -38,6 +49,12 @@ export function ensureWorkflowRuntimeV2TestRegistrations(): void {
   const schemaRegistry = getSchemaRegistry();
   if (!schemaRegistry.has(TEST_SCHEMA_REF)) {
     schemaRegistry.register(TEST_SCHEMA_REF, TEST_SCHEMA);
+  }
+  if (!schemaRegistry.has(TEST_SOURCE_SCHEMA_REF)) {
+    schemaRegistry.register(TEST_SOURCE_SCHEMA_REF, TEST_SOURCE_SCHEMA);
+  }
+  if (!schemaRegistry.has(TEST_REQUIRED_SCHEMA_REF)) {
+    schemaRegistry.register(TEST_REQUIRED_SCHEMA_REF, TEST_REQUIRED_SCHEMA);
   }
 
   const actionRegistry = getActionRegistryV2();

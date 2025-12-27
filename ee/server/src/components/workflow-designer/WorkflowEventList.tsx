@@ -21,6 +21,8 @@ type WorkflowEventRecord = {
   event_id: string;
   event_name: string;
   correlation_key?: string | null;
+  payload_schema_ref?: string | null;
+  schema_ref_conflict?: { submission: string; catalog: string } | null;
   created_at: string;
   processed_at?: string | null;
   matched_run_id?: string | null;
@@ -311,6 +313,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 <TableRow>
                   <TableHead>Event</TableHead>
                   <TableHead>Correlation</TableHead>
+                  <TableHead>Schema</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Matched Run</TableHead>
                   <TableHead>Payload</TableHead>
@@ -326,6 +329,14 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                   >
                     <TableCell>{event.event_name}</TableCell>
                     <TableCell className="font-mono text-xs">{event.correlation_key ?? '—'}</TableCell>
+                    <TableCell className="text-[11px] text-gray-600 max-w-[260px]">
+                      <div className="font-mono truncate">{event.payload_schema_ref ?? '—'}</div>
+                      {event.schema_ref_conflict && (
+                        <div className="text-[10px] text-amber-700">
+                          catalog ≠ submission
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge className={EVENT_STATUS_STYLES[event.status] ?? 'bg-gray-100 text-gray-600'}>
                         {event.status}
@@ -340,14 +351,14 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 ))}
                 {events.length === 0 && !isLoading && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-sm text-gray-500 py-6">
+                    <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-6">
                       No workflow events found.
                     </TableCell>
                   </TableRow>
                 )}
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-sm text-gray-500 py-6">
+                    <TableCell colSpan={7} className="text-center text-sm text-gray-500 py-6">
                       Loading events...
                     </TableCell>
                   </TableRow>
@@ -399,6 +410,15 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 <div id="workflow-event-detail-correlation" className="text-sm font-mono">
                   {eventDetail.event.correlation_key ?? '—'}
                 </div>
+                <div className="text-xs text-gray-500">Payload schema ref</div>
+                <div className="text-sm font-mono break-all">
+                  {eventDetail.event.payload_schema_ref ?? '—'}
+                </div>
+                {eventDetail.event.schema_ref_conflict && (
+                  <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">
+                    Schema ref conflict: catalog <code className="bg-amber-100 px-1 rounded">{eventDetail.event.schema_ref_conflict.catalog}</code> vs submission <code className="bg-amber-100 px-1 rounded">{eventDetail.event.schema_ref_conflict.submission}</code>
+                  </div>
+                )}
                 <div className="text-xs text-gray-500">Created</div>
                 <div className="text-sm">{formatDateTime(eventDetail.event.created_at)}</div>
                 <div className="text-xs text-gray-500">Processed</div>

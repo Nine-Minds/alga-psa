@@ -52,6 +52,9 @@ type WorkflowRunDialogProps = {
   workflowName?: string | null;
   triggerLabel?: string | null;
   triggerEventName?: string | null;
+  triggerSourcePayloadSchemaRef?: string | null;
+  triggerPayloadMappingProvided?: boolean;
+  triggerPayloadMappingRequired?: boolean;
   payloadSchemaRef?: string | null;
   publishedVersion?: number | null;
   draftVersion?: number | null;
@@ -71,6 +74,7 @@ type EventCatalogEntry = {
   description?: string | null;
   category?: string | null;
   payload_schema?: Record<string, any> | null;
+  payload_schema_ref?: string | null;
   tenant?: string | null;
 };
 
@@ -221,6 +225,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   workflowName,
   triggerLabel,
   triggerEventName,
+  triggerSourcePayloadSchemaRef,
+  triggerPayloadMappingProvided = false,
+  triggerPayloadMappingRequired = false,
   payloadSchemaRef,
   publishedVersion,
   draftVersion,
@@ -273,6 +280,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     () => eventCatalogEntries.find((entry) => entry.event_type === selectedEventType) ?? null,
     [eventCatalogEntries, selectedEventType]
   );
+
+  const usingWorkflowTriggerEvent = Boolean(triggerEventName && selectedEventType === triggerEventName);
 
   const filteredEventEntries = useMemo(() => {
     const filtered = filterEventCatalogEntries(eventCatalogEntries, eventSearch);
@@ -420,6 +429,17 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       setEventSchemaRef(null);
       return;
     }
+
+    // If we're running against the workflow's configured trigger event, prefer the workflow's
+    // effective trigger source schemaRef (catalog or override) over the catalog entry payload_schema.
+    if (usingWorkflowTriggerEvent && triggerSourcePayloadSchemaRef) {
+      setEventSchemaRef(triggerSourcePayloadSchemaRef);
+      getWorkflowSchemaAction({ schemaRef: triggerSourcePayloadSchemaRef })
+        .then((result) => setEventSchema((result?.schema ?? null) as JsonSchema | null))
+        .catch(() => setEventSchema(null));
+      return;
+    }
+
     const entry = eventCatalogEntries.find((item) => item.event_type === selectedEventType);
     const entryRef = (entry as any)?.payload_schema_ref;
     if (typeof entryRef === 'string' && entryRef) {
@@ -456,7 +476,22 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       }
     };
     loadEntry();
-  }, [eventCatalogEntries, isOpen, selectedEventType]);
+  }, [eventCatalogEntries, isOpen, selectedEventType, triggerSourcePayloadSchemaRef, usingWorkflowTriggerEvent]);
+
+  const mappingRequiredForSelectedEvent = useMemo(() => {
+    if (schemaSource !== 'event') return false;
+    if (!eventSchemaRef || !payloadSchemaRef) return false;
+    return eventSchemaRef !== payloadSchemaRef;
+  }, [eventSchemaRef, payloadSchemaRef, schemaSource]);
+
+  const mappingModeLabel = useMemo(() => {
+    if (schemaSource !== 'event') return null;
+    if (!eventSchemaRef) return null;
+    if (!payloadSchemaRef) return null;
+    if (!mappingRequiredForSelectedEvent && !triggerPayloadMappingProvided) return 'Identity mapping (no mapping required)';
+    if (triggerPayloadMappingProvided) return mappingRequiredForSelectedEvent ? 'Trigger mapping will be applied' : 'Trigger mapping will be applied (optional)';
+    return 'Trigger mapping is required but not configured';
+  }, [eventSchemaRef, mappingRequiredForSelectedEvent, payloadSchemaRef, schemaSource, triggerPayloadMappingProvided]);
 
   useEffect(() => {
     if (!isOpen || !workflowId) return;
@@ -522,18 +557,57 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   }, [activeSchema, formValue, mode, runPayloadText]);
 
   useEffect(() => {
-    if (!payloadSchema || !eventSchema) {
+    if (!isOpen) return;
+
+    if (!payloadSchemaRef) {
       setSchemaWarning(null);
       return;
     }
-    const payloadJson = JSON.stringify(payloadSchema);
-    const eventJson = JSON.stringify(eventSchema);
-    if (payloadJson !== eventJson) {
-      setSchemaWarning('Selected event schema differs from workflow payload schema.');
-    } else {
-      setSchemaWarning(null);
+
+    if (schemaSource === 'event') {
+      if (!eventSchemaRef) {
+        setSchemaWarning(null);
+        return;
+      }
+
+      const refMismatch = eventSchemaRef !== payloadSchemaRef;
+      const prefix = !usingWorkflowTriggerEvent && selectedEventType
+        ? `Selected event (${selectedEventType}) may not match this workflow's trigger (${triggerEventName ?? 'none'}). `
+        : '';
+
+      if (!refMismatch) {
+        setSchemaWarning(
+          prefix + (triggerPayloadMappingProvided
+            ? 'Schema refs match; trigger mapping will be applied (optional).'
+            : 'Schema refs match; identity mapping will be used (no mapping required).')
+        );
+        return;
+      }
+
+      setSchemaWarning(
+        prefix + (triggerPayloadMappingProvided
+          ? `Schema refs differ (${eventSchemaRef} → ${payloadSchemaRef}); trigger mapping will be applied.`
+          : `Schema refs differ (${eventSchemaRef} → ${payloadSchemaRef}); trigger mapping is required but not configured.`)
+      );
+      return;
     }
-  }, [eventSchema, payloadSchema]);
+
+    if (eventSchemaRef && eventSchemaRef !== payloadSchemaRef) {
+      setSchemaWarning('Trigger event schema differs from workflow payload schema. Switch to “Event schema” if you want to enter a trigger event payload.');
+      return;
+    }
+
+    setSchemaWarning(null);
+  }, [
+    eventSchemaRef,
+    isOpen,
+    payloadSchemaRef,
+    schemaSource,
+    selectedEventType,
+    triggerEventName,
+    triggerPayloadMappingProvided,
+    usingWorkflowTriggerEvent
+  ]);
 
   const handleRunPayloadChange = (value: string) => {
     setRunPayloadText(value);
@@ -620,6 +694,14 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       toast.error('Confirm you want to run this system workflow.');
       return;
     }
+    if (schemaSource === 'event' && !eventSchemaRef) {
+      toast.error('Selected event does not have a payload schema ref; cannot run with trigger mapping.');
+      return;
+    }
+    if (schemaSource === 'event' && mappingRequiredForSelectedEvent && !triggerPayloadMappingProvided) {
+      toast.error('Trigger mapping is required for this event schema but is not configured on the workflow.');
+      return;
+    }
     let payload: Record<string, unknown> = {};
     try {
       payload = mode === 'json' ? JSON.parse(runPayloadText || '{}') : (formValue as Record<string, unknown>);
@@ -633,7 +715,8 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         workflowId,
         workflowVersion: selectedVersion ? Number(selectedVersion) : publishedVersion,
         payload,
-        eventType: selectedEventType || undefined
+        eventType: selectedEventType || undefined,
+        sourcePayloadSchemaRef: schemaSource === 'event' ? eventSchemaRef ?? undefined : undefined
       });
       const runId = (result as { runId?: string } | undefined)?.runId;
       onClose();
@@ -1006,6 +1089,11 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                     </Button>
                   )}
                 </div>
+                {mappingModeLabel && (
+                  <div className="text-[11px] text-yellow-800">
+                    {mappingModeLabel}
+                  </div>
+                )}
                 {schemaDiffSummary && (
                   <div className="space-y-1">
                     <Button

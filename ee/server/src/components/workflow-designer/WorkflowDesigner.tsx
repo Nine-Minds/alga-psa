@@ -1241,6 +1241,9 @@ const WorkflowDesigner: React.FC = () => {
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
   const [payloadSchemaStatus, setPayloadSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [payloadSchemaLoadedRef, setPayloadSchemaLoadedRef] = useState<string | null>(null);
+  const [triggerSourceSchema, setTriggerSourceSchema] = useState<JsonSchema | null>(null);
+  const [triggerSourceSchemaStatus, setTriggerSourceSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [triggerSourceSchemaLoadedRef, setTriggerSourceSchemaLoadedRef] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [selectedPipePath, setSelectedPipePath] = useState<string>('root');
@@ -1258,6 +1261,7 @@ const WorkflowDesigner: React.FC = () => {
     new Map()
   );
   const [schemaRefAdvanced, setSchemaRefAdvanced] = useState(false);
+  const [triggerSourceSchemaAdvanced, setTriggerSourceSchemaAdvanced] = useState(false);
   const [showRunDialog, setShowRunDialog] = useState(false);
   const [showSchemaModal, setShowSchemaModal] = useState(false);
   const [schemaPreviewExpanded, setSchemaPreviewExpanded] = useState(false);
@@ -1265,6 +1269,7 @@ const WorkflowDesigner: React.FC = () => {
   const [inferredSchemaRef, setInferredSchemaRef] = useState<string | null>(null);
   const lastAppliedInferredRef = useRef<string | null>(null);
   const lastCapturedUnknownSchemaRef = useRef<string | null>(null);
+  const [showTriggerMapping, setShowTriggerMapping] = useState(false);
   const [metadataDraft, setMetadataDraft] = useState<{
     isVisible: boolean;
     isPaused: boolean;
@@ -1299,6 +1304,67 @@ const WorkflowDesigner: React.FC = () => {
   }, [activeDefinition]);
 
   const fieldOptions = useMemo(() => buildFieldOptions(payloadSchema), [payloadSchema]);
+
+  const triggerMappingTargetFields = useMemo(() => {
+    if (!payloadSchema) return [] as ActionInputField[];
+    return extractActionInputFields(payloadSchema, payloadSchema);
+  }, [payloadSchema]);
+
+  const triggerMappingDataContext = useMemo(() => {
+    const globals = {
+      env: [] as SchemaField[],
+      secrets: [] as SchemaField[],
+      meta: [
+        { name: 'state', type: 'string', required: false, nullable: true, description: 'Workflow state' },
+        { name: 'traceId', type: 'string', required: false, nullable: true, description: 'Trace ID' },
+        { name: 'tags', type: 'object', required: false, nullable: true, description: 'Workflow tags' }
+      ] as SchemaField[],
+      error: [
+        { name: 'name', type: 'string', required: false, nullable: true, description: 'Error name' },
+        { name: 'message', type: 'string', required: false, nullable: true, description: 'Error message' },
+        { name: 'stack', type: 'string', required: false, nullable: true, description: 'Stack trace' },
+        { name: 'nodePath', type: 'string', required: false, nullable: true, description: 'Error location' }
+      ] as SchemaField[]
+    };
+
+    return {
+      payload: triggerSourceSchema ? extractSchemaFields(triggerSourceSchema, triggerSourceSchema) : [],
+      payloadSchema: triggerSourceSchema ?? undefined,
+      steps: [],
+      globals
+    };
+  }, [triggerSourceSchema]);
+
+  const triggerMappingFieldOptions = useMemo(() => {
+    const base = buildFieldOptions(triggerSourceSchema);
+    return base.map((opt) => {
+      if (typeof opt.value === 'string' && opt.value.startsWith('payload')) {
+        return { ...opt, value: opt.value.replace(/^payload\b/, 'event.payload') };
+      }
+      return opt;
+    });
+  }, [triggerSourceSchema]);
+
+  const triggerMappingExpressionContext = useMemo(() => {
+    const sourceSchema = triggerSourceSchema ?? { type: 'object', properties: {} };
+    return {
+      allowPayloadRoot: false,
+      eventSchema: {
+        type: 'object',
+        properties: {
+          payload: sourceSchema
+        }
+      },
+      metaSchema: {
+        type: 'object',
+        properties: {
+          state: { type: 'string', description: 'Workflow state' },
+          traceId: { type: 'string', description: 'Trace ID' },
+          tags: { type: 'object', description: 'Workflow tags' }
+        }
+      }
+    } as ExpressionContext;
+  }, [triggerSourceSchema]);
 
   const pipeOptions = useMemo(() => {
     if (!activeDefinition) return [] as PipeLocation[];
@@ -1352,6 +1418,16 @@ const WorkflowDesigner: React.FC = () => {
 
   const currentValidationErrors = publishErrors.length > 0 ? publishErrors : draftValidationErrors;
   const currentValidationWarnings = publishWarnings.length > 0 ? publishWarnings : draftValidationWarnings;
+
+  const triggerValidationErrors = useMemo(
+    () => currentValidationErrors.filter((err) => typeof err?.stepPath === 'string' && err.stepPath.startsWith('root.trigger')),
+    [currentValidationErrors]
+  );
+
+  const triggerValidationWarnings = useMemo(
+    () => currentValidationWarnings.filter((warn) => typeof warn?.stepPath === 'string' && warn.stepPath.startsWith('root.trigger')),
+    [currentValidationWarnings]
+  );
 
   const errorsByStepId = useMemo(() => {
     const map = new Map<string, PublishError[]>();
@@ -1535,6 +1611,66 @@ const WorkflowDesigner: React.FC = () => {
     await loadPayloadSchema(schemaRef);
   }, [activeDefinition?.payloadSchemaRef, loadPayloadSchema, payloadSchema, payloadSchemaLoadedRef, payloadSchemaStatus]);
 
+  const triggerSourceSchemaRef = useMemo(() => {
+    const trigger = activeDefinition?.trigger;
+    if (trigger?.type !== 'event') return null;
+    const override = (trigger as any)?.sourcePayloadSchemaRef;
+    if (typeof override === 'string' && override.trim()) return override.trim();
+    return inferredSchemaRef;
+  }, [activeDefinition?.trigger, inferredSchemaRef]);
+
+  const triggerSourceSchemaOrigin = useMemo<'override' | 'catalog' | 'unknown'>(() => {
+    const trigger = activeDefinition?.trigger;
+    if (trigger?.type !== 'event') return 'unknown';
+    const override = (trigger as any)?.sourcePayloadSchemaRef;
+    if (typeof override === 'string' && override.trim()) return 'override';
+    if (typeof inferredSchemaRef === 'string' && inferredSchemaRef.trim()) return 'catalog';
+    return 'unknown';
+  }, [activeDefinition?.trigger, inferredSchemaRef]);
+
+  const triggerPayloadMappingInfo = useMemo(() => {
+    const trigger = activeDefinition?.trigger;
+    if (trigger?.type !== 'event') {
+      return { mappingProvided: false, mappingRequired: false, schemaRefsMatch: false };
+    }
+    const mapping = (trigger as any)?.payloadMapping ?? {};
+    const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+    const payloadRef = activeDefinition?.payloadSchemaRef ?? '';
+    const schemaRefsMatch = Boolean(triggerSourceSchemaRef && payloadRef && triggerSourceSchemaRef === payloadRef);
+    const mappingRequired = Boolean(triggerSourceSchemaRef && payloadRef && !schemaRefsMatch);
+    return { mappingProvided, mappingRequired, schemaRefsMatch };
+  }, [activeDefinition?.payloadSchemaRef, activeDefinition?.trigger, triggerSourceSchemaRef]);
+
+  const loadTriggerSourceSchema = useCallback(async (schemaRef: string | undefined) => {
+    if (!schemaRef) {
+      setTriggerSourceSchema(null);
+      setTriggerSourceSchemaStatus('idle');
+      setTriggerSourceSchemaLoadedRef(null);
+      return;
+    }
+    if (triggerSourceSchemaStatus === 'loading' && triggerSourceSchemaLoadedRef === schemaRef) return;
+    try {
+      setTriggerSourceSchemaStatus('loading');
+      setTriggerSourceSchemaLoadedRef(schemaRef);
+      const result = await getWorkflowSchemaAction({ schemaRef });
+      const schema = (result?.schema ?? null) as JsonSchema | null;
+      setTriggerSourceSchema(schema);
+      setTriggerSourceSchemaStatus(schema ? 'loaded' : 'error');
+    } catch (error) {
+      console.error('[WorkflowDesigner] Error loading trigger source schema:', error);
+      setTriggerSourceSchema(null);
+      setTriggerSourceSchemaStatus('error');
+      setTriggerSourceSchemaLoadedRef(schemaRef);
+    }
+  }, [triggerSourceSchemaLoadedRef, triggerSourceSchemaStatus]);
+
+  const ensureTriggerSourceSchemaLoaded = useCallback(async () => {
+    if (!triggerSourceSchemaRef) return;
+    if (triggerSourceSchemaStatus === 'loading') return;
+    if (triggerSourceSchemaLoadedRef === triggerSourceSchemaRef && triggerSourceSchemaStatus === 'loaded' && triggerSourceSchema) return;
+    await loadTriggerSourceSchema(triggerSourceSchemaRef);
+  }, [loadTriggerSourceSchema, triggerSourceSchema, triggerSourceSchemaLoadedRef, triggerSourceSchemaRef, triggerSourceSchemaStatus]);
+
   useEffect(() => {
     loadDefinitions();
     loadRegistries();
@@ -1586,7 +1722,15 @@ const WorkflowDesigner: React.FC = () => {
       schemaPreviewExpanded ||
       showSchemaModal ||
       selectedStepId != null ||
-      selectedPipePath !== 'root';
+      selectedPipePath !== 'root' ||
+      (() => {
+        const trigger = activeDefinition?.trigger;
+        if (trigger?.type !== 'event') return false;
+        const mapping = (trigger as any).payloadMapping;
+        const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+        const refsMatch = !!triggerSourceSchemaRef && triggerSourceSchemaRef === activeDefinition.payloadSchemaRef;
+        return showTriggerMapping || mappingProvided || !refsMatch;
+      })();
     if (!needsSchema) return;
     ensurePayloadSchemaLoaded();
   }, [
@@ -1595,8 +1739,22 @@ const WorkflowDesigner: React.FC = () => {
     schemaPreviewExpanded,
     selectedPipePath,
     selectedStepId,
-    showSchemaModal
+    showSchemaModal,
+    showTriggerMapping,
+    triggerSourceSchemaRef,
+    activeDefinition?.trigger
   ]);
+
+  useEffect(() => {
+    if (!triggerSourceSchemaRef) return;
+    const trigger = activeDefinition?.trigger;
+    const mapping = trigger?.type === 'event' ? (trigger as any).payloadMapping : null;
+    const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+    const refsMatch = !!activeDefinition?.payloadSchemaRef && triggerSourceSchemaRef === activeDefinition.payloadSchemaRef;
+    const needsSchema = showTriggerMapping || mappingProvided || !refsMatch;
+    if (!needsSchema) return;
+    ensureTriggerSourceSchemaLoaded();
+  }, [activeDefinition?.payloadSchemaRef, activeDefinition?.trigger, ensureTriggerSourceSchemaLoaded, showTriggerMapping, triggerSourceSchemaRef]);
 
   useEffect(() => {
     const ref = activeDefinition?.payloadSchemaRef ?? '';
@@ -1751,8 +1909,8 @@ const WorkflowDesigner: React.FC = () => {
         version: activeDefinition.version,
         definition: activeDefinition
       });
-      setPublishErrors(data.errors ?? []);
-      setPublishWarnings(data.warnings ?? []);
+      setPublishErrors(Array.isArray((data as any)?.errors) ? ((data as any).errors as PublishError[]) : []);
+      setPublishWarnings(Array.isArray((data as any)?.warnings) ? ((data as any).warnings as PublishError[]) : []);
       if (data.ok === false) {
         toast.error('Publish failed - fix validation errors');
         return;
@@ -2469,10 +2627,251 @@ const WorkflowDesigner: React.FC = () => {
                       if (!value) {
                         handleDefinitionChange({ trigger: undefined });
                       } else {
-                        handleDefinitionChange({ trigger: { type: 'event', eventName: value } });
+                        const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
+                        handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: value } });
                       }
                     }}
                   />
+
+                  {activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName && (
+                    <div className="mt-3 space-y-2">
+                      <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs font-semibold text-gray-800">Trigger source payload schema</div>
+                          <Button
+                            id="workflow-designer-trigger-schema-advanced"
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                            onClick={() => setTriggerSourceSchemaAdvanced((prev) => !prev)}
+                            disabled={!canManage}
+                          >
+                            {triggerSourceSchemaAdvanced ? 'Hide override' : 'Override'}
+                          </Button>
+                        </div>
+                        <div className="mt-1 text-[11px] text-gray-600">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-gray-500">Event:</span>
+                            <span className="font-mono break-all">{activeDefinition.trigger.eventName}</span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="text-gray-500">Source schema:</span>
+                            <span className="font-mono break-all">{triggerSourceSchemaRef ?? '—'}</span>
+                            {triggerSourceSchemaRef && (
+                              <Badge className={
+                                triggerSourceSchemaOrigin === 'override'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : triggerSourceSchemaOrigin === 'catalog'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                              }>
+                                {triggerSourceSchemaOrigin === 'override' ? 'Override' : triggerSourceSchemaOrigin === 'catalog' ? 'Catalog' : 'Unknown'}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="text-gray-500">Workflow payload schema:</span>
+                            <span className="font-mono break-all">{activeDefinition.payloadSchemaRef ?? '—'}</span>
+                            {triggerPayloadMappingInfo.schemaRefsMatch && (
+                              <Badge className="bg-green-50 text-green-700 border-green-200">Match</Badge>
+                            )}
+                            {!triggerPayloadMappingInfo.schemaRefsMatch && triggerSourceSchemaRef && activeDefinition.payloadSchemaRef && (
+                              <Badge className="bg-amber-50 text-amber-700 border-amber-200">Mismatch</Badge>
+                            )}
+                          </div>
+                          {inferredSchemaRef && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <span className="text-gray-500">From catalog:</span>
+                              <span className="font-mono break-all">{inferredSchemaRef}</span>
+                            </div>
+                          )}
+                          {typeof (activeDefinition.trigger as any).sourcePayloadSchemaRef === 'string' && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <span className="text-gray-500">Override:</span>
+                              <span className="font-mono break-all">{String((activeDefinition.trigger as any).sourcePayloadSchemaRef)}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {(triggerValidationErrors.length > 0 || triggerValidationWarnings.length > 0) && (
+                          <div className="mt-3 space-y-2">
+                            {triggerValidationErrors.length > 0 && (
+                              <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                                <div className="font-semibold mb-1">Trigger validation errors</div>
+                                <ul className="list-disc pl-4 space-y-1">
+                                  {triggerValidationErrors.slice(0, 5).map((err, idx) => (
+                                    <li key={`${err.code}-${idx}`}>{err.message}</li>
+                                  ))}
+                                </ul>
+                                {triggerValidationErrors.length > 5 && (
+                                  <div className="mt-1 text-[11px] text-red-700">+{triggerValidationErrors.length - 5} more</div>
+                                )}
+                              </div>
+                            )}
+                            {triggerValidationWarnings.length > 0 && (
+                              <div className="rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                                <div className="font-semibold mb-1">Trigger warnings</div>
+                                <ul className="list-disc pl-4 space-y-1">
+                                  {triggerValidationWarnings.slice(0, 5).map((warn, idx) => (
+                                    <li key={`${warn.code}-${idx}`}>{warn.message}</li>
+                                  ))}
+                                </ul>
+                                {triggerValidationWarnings.length > 5 && (
+                                  <div className="mt-1 text-[11px] text-yellow-700">+{triggerValidationWarnings.length - 5} more</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {triggerSourceSchemaAdvanced && (
+                          <div className="mt-2">
+                            <SearchableSelect
+                              id="workflow-designer-trigger-source-schema"
+                              options={(() => {
+                                const current = String((activeDefinition.trigger as any).sourcePayloadSchemaRef ?? '');
+                                const base = schemaRefs.map((ref) => {
+                                  const meta = schemaMeta.get(ref);
+                                  const title = meta?.title ? ` — ${meta.title}` : '';
+                                  return { value: ref, label: `${ref}${title}` };
+                                });
+                                if (current && !schemaRefs.includes(current)) {
+                                  return [{ value: current, label: `${current} (unknown)` }, ...base];
+                                }
+                                return [{ value: '', label: 'Use catalog schema (default)' }, ...base];
+                              })()}
+                              value={String((activeDefinition.trigger as any).sourcePayloadSchemaRef ?? '')}
+                              onChange={(value) => {
+                                const nextTrigger: any = { ...activeDefinition.trigger };
+                                if (!value) {
+                                  delete nextTrigger.sourcePayloadSchemaRef;
+                                } else {
+                                  nextTrigger.sourcePayloadSchemaRef = value;
+                                }
+                                handleDefinitionChange({ trigger: nextTrigger });
+                              }}
+                              placeholder="Use catalog schema…"
+                              emptyMessage="No schemas found"
+                              disabled={registryError || !canManage}
+                              dropdownMode="overlay"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {(() => {
+                        const mapping = (activeDefinition.trigger as any).payloadMapping ?? {};
+                        const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+                        const payloadRef = activeDefinition.payloadSchemaRef ?? '';
+                        const refsMatch = !!triggerSourceSchemaRef && !!payloadRef && triggerSourceSchemaRef === payloadRef;
+                        const mappingRequired = !!triggerSourceSchemaRef && !!payloadRef && !refsMatch;
+                        const showEditor = mappingRequired || showTriggerMapping || mappingProvided;
+                        const mappingErrors = triggerValidationErrors.filter((err) => err.stepPath.startsWith('root.trigger.payloadMapping'));
+                        const mappingWarnings = triggerValidationWarnings.filter((warn) => warn.stepPath.startsWith('root.trigger.payloadMapping'));
+
+                        return (
+                          <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs font-semibold text-gray-800">Trigger mapping</div>
+                                {mappingRequired ? (
+                                  <Badge className="bg-red-100 text-red-700 border-red-200">Required</Badge>
+                                ) : (
+                                  <Badge className="bg-green-100 text-green-700 border-green-200">Optional</Badge>
+                                )}
+                              </div>
+                              {!mappingRequired && (
+                                <Button
+                                  id="workflow-designer-trigger-mapping-toggle"
+                                  variant="ghost"
+                                  size="sm"
+                                  type="button"
+                                  className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                  onClick={() => setShowTriggerMapping((prev) => !prev)}
+                                  disabled={!canManage}
+                                >
+                                  {showEditor ? 'Hide' : 'Show'}
+                                </Button>
+                              )}
+                            </div>
+
+                            {!triggerSourceSchemaRef && (
+                              <div className="mt-2 text-xs text-red-600">
+                                No source schema available for this event yet. Add <code className="bg-red-50 px-1 rounded">payload_schema_ref</code> to the event catalog or set an override.
+                              </div>
+                            )}
+
+                            {mappingRequired && !mappingProvided && (
+                              <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                                A trigger mapping is required because the trigger source schema does not match the workflow payload schema.
+                              </div>
+                            )}
+
+                            {refsMatch && !mappingProvided && !showEditor && (
+                              <div className="mt-2 text-xs text-gray-600">
+                                Identity mapping (no mapping required).
+                              </div>
+                            )}
+
+                            {(mappingErrors.length > 0 || mappingWarnings.length > 0) && (
+                              <div className="mt-3 space-y-2">
+                                {mappingErrors.length > 0 && (
+                                  <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                                    <div className="font-semibold mb-1">Mapping errors</div>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                      {mappingErrors.slice(0, 5).map((err, idx) => (
+                                        <li key={`${err.code}-${idx}`}>{err.message}</li>
+                                      ))}
+                                    </ul>
+                                    {mappingErrors.length > 5 && (
+                                      <div className="mt-1 text-[11px] text-red-700">+{mappingErrors.length - 5} more</div>
+                                    )}
+                                  </div>
+                                )}
+                                {mappingWarnings.length > 0 && (
+                                  <div className="rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                                    <div className="font-semibold mb-1">Mapping warnings</div>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                      {mappingWarnings.slice(0, 5).map((warn, idx) => (
+                                        <li key={`${warn.code}-${idx}`}>{warn.message}</li>
+                                      ))}
+                                    </ul>
+                                    {mappingWarnings.length > 5 && (
+                                      <div className="mt-1 text-[11px] text-yellow-700">+{mappingWarnings.length - 5} more</div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {showEditor && (
+                              <div className="mt-3">
+                                <p className="text-xs text-gray-500 mb-3">
+                                  Map data from <code className="bg-gray-100 px-1 rounded">event.payload</code> to the workflow payload.
+                                </p>
+                                <MappingPanel
+                                  value={mapping}
+                                  onChange={(next) => {
+                                    const nextTrigger: any = { ...activeDefinition.trigger };
+                                    nextTrigger.payloadMapping = Object.keys(next).length > 0 ? next : undefined;
+                                    handleDefinitionChange({ trigger: nextTrigger });
+                                  }}
+                                  targetFields={triggerMappingTargetFields}
+                                  dataContext={triggerMappingDataContext as any}
+                                  fieldOptions={triggerMappingFieldOptions}
+                                  stepId={`trigger-${activeDefinition.id}`}
+                                  disabled={!canManage}
+                                  payloadRootPath="event.payload"
+                                  expressionContextOverride={triggerMappingExpressionContext}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </Card>
 
                 {showSchemaModal && activeDefinition?.payloadSchemaRef && createPortal(
@@ -2883,6 +3282,9 @@ const WorkflowDesigner: React.FC = () => {
         workflowName={activeWorkflowRecord?.name ?? activeDefinition?.name ?? ''}
         triggerLabel={activeDefinition?.trigger?.eventName ? `Event: ${activeDefinition.trigger.eventName}` : 'Manual'}
         triggerEventName={activeDefinition?.trigger?.eventName ?? null}
+        triggerSourcePayloadSchemaRef={triggerSourceSchemaRef}
+        triggerPayloadMappingProvided={triggerPayloadMappingInfo.mappingProvided}
+        triggerPayloadMappingRequired={triggerPayloadMappingInfo.mappingRequired}
         payloadSchemaRef={activeDefinition?.payloadSchemaRef ?? activeWorkflowRecord?.payload_schema_ref ?? null}
         publishedVersion={activeWorkflowRecord?.published_version ?? null}
         draftVersion={activeDefinition?.version ?? null}

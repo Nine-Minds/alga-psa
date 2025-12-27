@@ -50,6 +50,8 @@ export type StartRunParams = {
   tenantId?: string | null;
   triggerEvent?: { name: string; payload: Record<string, unknown> };
   eventType?: string | null;
+  sourcePayloadSchemaRef?: string | null;
+  triggerMappingApplied?: boolean;
   secretResolver?: SecretResolver;
 };
 
@@ -108,6 +110,8 @@ export class WorkflowRuntimeV2 {
       node_path: nodePath,
       input_json: params.payload,
       event_type: params.eventType ?? null,
+      source_payload_schema_ref: params.sourcePayloadSchemaRef ?? null,
+      trigger_mapping_applied: params.triggerMappingApplied ?? false,
       resume_event_name: params.triggerEvent?.name ?? null,
       resume_event_payload: params.triggerEvent?.payload ?? null
     });
@@ -120,7 +124,9 @@ export class WorkflowRuntimeV2 {
         workflowVersion: params.version,
         payloadSizeBytes: jsonSize(params.payload),
         triggerEventName: params.triggerEvent?.name ?? null,
-        eventType: params.eventType ?? null
+        eventType: params.eventType ?? null,
+        sourcePayloadSchemaRef: params.sourcePayloadSchemaRef ?? null,
+        triggerMappingApplied: params.triggerMappingApplied ?? false
       },
       source: 'runtime'
     });
@@ -529,7 +535,10 @@ export class WorkflowRuntimeV2 {
         startedAt: typeof run.started_at === 'string' ? run.started_at : run.started_at?.toISOString()
       },
       payload: run.input_json ?? {},
-      meta: {},
+      meta: {
+        sourcePayloadSchemaRef: (run as any).source_payload_schema_ref ?? undefined,
+        triggerMappingApplied: (run as any).trigger_mapping_applied ?? undefined
+      },
       vars: {},
       error: undefined
     };

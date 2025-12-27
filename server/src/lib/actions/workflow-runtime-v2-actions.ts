@@ -15,6 +15,9 @@ import {
   initializeWorkflowRuntimeV2,
   applyRedactions,
   validateWorkflowDefinition,
+  validateInputMapping,
+  resolveInputMapping,
+  createSecretResolverFromProvider,
   type PublishError
 } from '@shared/workflow/runtime';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
@@ -29,7 +32,9 @@ import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workfl
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
 import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
 import { auditLog } from 'server/src/lib/logging/auditLog';
+import { analytics } from 'server/src/lib/analytics/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { EventCatalogModel } from 'server/src/models/eventCatalog';
 import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
@@ -105,6 +110,136 @@ const buildUnknownPayloadSchemaRefError = (schemaRef: string, suggestions: strin
     : `Unknown payload schema ref "${schemaRef}".`
 });
 
+const buildUnknownTriggerSourceSchemaRefError = (eventName: string): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.trigger',
+  code: 'UNKNOWN_TRIGGER_SOURCE_SCHEMA_REF',
+  message: `Unknown trigger source schema ref for event "${eventName}". Set trigger.sourcePayloadSchemaRef or register payload_schema_ref in the event catalog.`
+});
+
+const buildTriggerMappingRequiredError = (eventName: string, sourceRef: string, payloadRef: string): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.trigger.payloadMapping',
+  code: 'TRIGGER_MAPPING_REQUIRED',
+  message: `Trigger mapping is required for "${eventName}" because source schema "${sourceRef}" differs from workflow payload schema "${payloadRef}".`
+});
+
+const buildTriggerMappingPayloadRootError = (expr: string, path: string): PublishError => ({
+  severity: 'error',
+  stepPath: `root.trigger.payloadMapping${path}`,
+  code: 'TRIGGER_MAPPING_INVALID_ROOT',
+  message: `Trigger mapping expressions must use "event.payload" (not "payload"): ${expr}`
+});
+
+const resolveJsonSchemaRef = (schema: any, root: any): any => {
+  if (!schema || typeof schema !== 'object') return schema;
+  if (schema.$ref && typeof schema.$ref === 'string' && schema.$ref.startsWith('#/')) {
+    const parts = schema.$ref.slice(2).split('/');
+    let cursor: any = root;
+    for (const part of parts) {
+      if (!cursor || typeof cursor !== 'object') return schema;
+      cursor = cursor[part];
+    }
+    return cursor ?? schema;
+  }
+  return schema;
+};
+
+const collectRequiredPathsFromJsonSchema = (schema: any, root: any, prefix = ''): string[] => {
+  const resolved = resolveJsonSchemaRef(schema, root);
+  if (!resolved || typeof resolved !== 'object') return [];
+
+  const list: string[] = [];
+
+  const maybeAllOf = Array.isArray(resolved.allOf) ? resolved.allOf : null;
+  if (maybeAllOf) {
+    for (const entry of maybeAllOf) {
+      list.push(...collectRequiredPathsFromJsonSchema(entry, root, prefix));
+    }
+    return Array.from(new Set(list));
+  }
+
+  const type = Array.isArray(resolved.type)
+    ? (resolved.type.includes('object') ? 'object' : resolved.type[0])
+    : resolved.type;
+
+  if (type !== 'object' || !resolved.properties || typeof resolved.properties !== 'object') {
+    return [];
+  }
+
+  const required = Array.isArray(resolved.required) ? resolved.required.filter((v: any) => typeof v === 'string') : [];
+  for (const prop of required) {
+    const nextPrefix = prefix ? `${prefix}.${prop}` : prop;
+    list.push(nextPrefix);
+    const propSchema = resolved.properties[prop];
+    list.push(...collectRequiredPathsFromJsonSchema(propSchema, root, nextPrefix));
+  }
+
+  return Array.from(new Set(list));
+};
+
+const collectTriggerMappingExprPaths = (value: any, jsonPointerPath = ''): Array<{ expr: string; path: string }> => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap((item, idx) => collectTriggerMappingExprPaths(item, `${jsonPointerPath}/${idx}`));
+  }
+  if (typeof value !== 'object') return [];
+
+  if ('$expr' in value && typeof (value as any).$expr === 'string') {
+    return [{ expr: String((value as any).$expr), path: jsonPointerPath }];
+  }
+
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    collectTriggerMappingExprPaths(child, `${jsonPointerPath}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`)
+  );
+};
+
+const mappingSatisfiesRequiredPaths = (mapping: any, requiredPaths: string[]): boolean => {
+  if (!mapping || typeof mapping !== 'object') return false;
+
+  const mappedPaths = new Set<string>();
+
+  const addPathWithPrefixes = (path: string) => {
+    if (!path) return;
+    const parts = path.split('.').filter(Boolean);
+    for (let i = 0; i < parts.length; i++) {
+      const prefix = parts.slice(0, i + 1).join('.');
+      mappedPaths.add(prefix);
+    }
+  };
+
+  const visit = (node: any, prefix = '') => {
+    if (node === null || node === undefined) return;
+    if (typeof node !== 'object' || Array.isArray(node)) {
+      if (prefix) addPathWithPrefixes(prefix);
+      return;
+    }
+
+    if ('$expr' in node || '$secret' in node) {
+      if (prefix) addPathWithPrefixes(prefix);
+      return;
+    }
+
+    const entries = Object.entries(node as Record<string, unknown>);
+    if (entries.length === 0) {
+      if (prefix) addPathWithPrefixes(prefix);
+      return;
+    }
+
+    for (const [key, child] of entries) {
+      const nextPrefix = prefix ? `${prefix}.${key}` : key;
+      visit(child, nextPrefix);
+    }
+  };
+
+  visit(mapping, '');
+
+  const mapped = Array.from(mappedPaths);
+  return requiredPaths.every((req) => {
+    return mapped.some((path) => path === req || (req.startsWith(path) && req.charAt(path.length) === '.'));
+  });
+};
+
 const listSecretNames = async (knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'], tenant?: string | null) => {
   if (!tenant) return null;
   const provider = createTenantSecretProvider(knex, tenant);
@@ -127,6 +262,67 @@ const computeValidation = async (params: {
 
   const errors = [...validation.errors];
   const warnings = [...validation.warnings];
+
+  const trigger = (definition as any)?.trigger;
+  const isEventTrigger = trigger?.type === 'event' && typeof trigger?.eventName === 'string' && trigger.eventName.length > 0;
+  if (isEventTrigger) {
+    const eventName = String(trigger.eventName);
+    const schemaRegistry = getSchemaRegistry();
+    const overrideSource = typeof trigger?.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()
+      ? String(trigger.sourcePayloadSchemaRef).trim()
+      : null;
+    const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
+    const catalogRef = typeof (catalog as any)?.payload_schema_ref === 'string' ? String((catalog as any).payload_schema_ref) : null;
+    const sourceRef = overrideSource ?? catalogRef;
+
+    if (!sourceRef || !schemaRegistry.has(sourceRef)) {
+      errors.push(buildUnknownTriggerSourceSchemaRefError(eventName));
+    }
+
+    const mapping = trigger?.payloadMapping;
+    const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+    const refsMatch = !!payloadSchemaRef && !!sourceRef && sourceRef === payloadSchemaRef;
+
+    if (!refsMatch && !mappingProvided && sourceRef) {
+      errors.push(buildTriggerMappingRequiredError(eventName, sourceRef, String(payloadSchemaRef ?? '')));
+    }
+
+    if (mappingProvided) {
+      // Validate mapping expressions + secret refs using existing mapping validator.
+      const mappingValidation = validateInputMapping(mapping as any, {
+        stepPath: 'root.trigger.payloadMapping',
+        stepId: 'trigger',
+        fieldName: 'payloadMapping'
+      });
+      errors.push(...mappingValidation.errors);
+      warnings.push(...mappingValidation.warnings);
+      mappingValidation.secretRefs.forEach((ref) => validation.secretRefs.add(ref));
+
+      // Enforce trigger mapping root: event.payload only (no payload alias).
+      for (const item of collectTriggerMappingExprPaths(mapping)) {
+        const expr = item.expr ?? '';
+        if (/(^|[^A-Za-z0-9_$.])payload\./.test(expr)) {
+          errors.push(buildTriggerMappingPayloadRootError(expr, item.path));
+        }
+      }
+
+      // Deep nested required field validation against workflow payload schema.
+      if (payloadSchemaJson) {
+        const requiredPaths = collectRequiredPathsFromJsonSchema(payloadSchemaJson, payloadSchemaJson);
+        if (requiredPaths.length > 0) {
+          const ok = mappingSatisfiesRequiredPaths(mapping, requiredPaths);
+          if (!ok) {
+            errors.push({
+              severity: 'error',
+              stepPath: 'root.trigger.payloadMapping',
+              code: 'TRIGGER_MAPPING_MISSING_REQUIRED_FIELDS',
+              message: 'Trigger mapping does not provide values for all required fields in the workflow payload schema.'
+            });
+          }
+        }
+      }
+    }
+  }
 
   if (!payloadSchemaJson && payloadSchemaRef) {
     const registry = getSchemaRegistry();
@@ -177,6 +373,36 @@ const measurePayloadBytes = (payload: unknown) => {
   } catch {
     return null;
   }
+};
+
+const expandDottedKeys = (input: Record<string, unknown>): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!key.includes('.')) {
+      result[key] = value;
+      continue;
+    }
+    const parts = key.split('.').filter(Boolean);
+    if (parts.length === 0) continue;
+    let cursor: Record<string, unknown> = result;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]!;
+      const isLeaf = i === parts.length - 1;
+      if (isLeaf) {
+        cursor[part] = value;
+        continue;
+      }
+      const existing = cursor[part];
+      if (existing && typeof existing === 'object' && !Array.isArray(existing)) {
+        cursor = existing as Record<string, unknown>;
+        continue;
+      }
+      const next: Record<string, unknown> = {};
+      cursor[part] = next;
+      cursor = next;
+    }
+  }
+  return result;
 };
 
 const redactSensitiveValues = (value: unknown): unknown => {
@@ -795,6 +1021,65 @@ export async function startWorkflowRunAction(input: unknown) {
       ? schemaRefFromDefinition
       : (typeof workflow.payload_schema_ref === 'string' ? workflow.payload_schema_ref : null);
 
+  const trigger = (definition as any)?.trigger ?? workflow.trigger ?? null;
+  const triggerMapping = trigger?.payloadMapping as any | undefined;
+  const triggerMappingProvided = triggerMapping && typeof triggerMapping === 'object' && Object.keys(triggerMapping).length > 0;
+  const inputIsSourcePayload = typeof (parsed as any).sourcePayloadSchemaRef === 'string' && String((parsed as any).sourcePayloadSchemaRef).trim().length > 0;
+
+  let effectiveSourceSchemaRef: string | null = null;
+  if (inputIsSourcePayload) {
+    effectiveSourceSchemaRef = String((parsed as any).sourcePayloadSchemaRef).trim();
+  } else if (typeof trigger?.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()) {
+    effectiveSourceSchemaRef = String(trigger.sourcePayloadSchemaRef).trim();
+  } else if (tenant && parsed.eventType) {
+    try {
+      const entry = await EventCatalogModel.getByEventType(knex, parsed.eventType, tenant);
+      const ref = (entry as any)?.payload_schema_ref;
+      effectiveSourceSchemaRef = typeof ref === 'string' && ref ? ref : null;
+    } catch {
+      effectiveSourceSchemaRef = null;
+    }
+  }
+
+  let finalPayload: Record<string, unknown> = parsed.payload ?? {};
+  let triggerMappingApplied = false;
+  if (inputIsSourcePayload) {
+    if (!schemaRef) {
+      return throwHttpError(409, 'Workflow has no payload schema ref');
+    }
+    if (!effectiveSourceSchemaRef) {
+      return throwHttpError(400, 'Missing sourcePayloadSchemaRef for event payload');
+    }
+    const refsMatch = effectiveSourceSchemaRef === schemaRef;
+    if (!refsMatch && !triggerMappingProvided) {
+      return throwHttpError(409, 'Trigger mapping is required for this run', {
+        sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+        payloadSchemaRef: schemaRef
+      });
+    }
+    if (triggerMappingProvided) {
+      const provider = tenant ? createTenantSecretProvider(knex, tenant) : null;
+      const secretResolver = provider
+        ? createSecretResolverFromProvider((name, workflowRunId) => provider.getValue(name, workflowRunId))
+        : undefined;
+      const resolved = await resolveInputMapping(triggerMapping, {
+        expressionContext: {
+          event: {
+            name: parsed.eventType ?? trigger?.eventName ?? null,
+            correlationKey: 'manual',
+            payload: parsed.payload ?? {},
+            payloadSchemaRef: effectiveSourceSchemaRef
+          }
+        },
+        secretResolver
+      });
+      finalPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
+      triggerMappingApplied = true;
+    } else {
+      finalPayload = parsed.payload ?? {};
+    }
+  }
+
   if (!versionRecord.validation_status || versionRecord.validation_status === 'error') {
     const payloadSchemaJson = versionRecord.payload_schema_json
       ?? (schemaRef && schemaRegistry.has(schemaRef) ? schemaRegistry.toJsonSchema(schemaRef) : null);
@@ -817,7 +1102,7 @@ export async function startWorkflowRunAction(input: unknown) {
   }
 
   if (schemaRef && schemaRegistry.has(schemaRef)) {
-    const validation = schemaRegistry.get(schemaRef).safeParse(parsed.payload);
+    const validation = schemaRegistry.get(schemaRef).safeParse(finalPayload);
     if (!validation.success) {
       return throwHttpError(400, 'Payload failed validation', { issues: validation.error.issues });
     }
@@ -826,10 +1111,28 @@ export async function startWorkflowRunAction(input: unknown) {
   const runId = await runtime.startRun(knex, {
     workflowId: parsed.workflowId,
     version: versionRecord.version,
-    payload: parsed.payload,
+    payload: finalPayload,
     tenantId: tenant,
-    eventType: parsed.eventType ?? null
+    eventType: parsed.eventType ?? null,
+    sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
+    triggerMappingApplied: triggerMappingApplied
   });
+
+  try {
+    void analytics.capture('workflow.trigger.mapping_applied', {
+      workflowId: parsed.workflowId,
+      workflowVersion: versionRecord.version,
+      eventType: parsed.eventType ?? null,
+      workflowPayloadSchemaRef: schemaRef ?? null,
+      sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
+      triggerMappingApplied,
+      triggerMappingProvided: triggerMappingProvided,
+      schemaRefsMatch: Boolean(inputIsSourcePayload && effectiveSourceSchemaRef && schemaRef && effectiveSourceSchemaRef === schemaRef),
+      startedFrom: inputIsSourcePayload ? 'run_dialog_event_payload' : 'run_dialog_payload'
+    }, user.user_id);
+  } catch {
+    // best-effort telemetry
+  }
 
   await runtime.executeRun(knex, runId, `action-${user.user_id}`);
 
@@ -882,6 +1185,8 @@ export async function listWorkflowRunsAction(input: unknown) {
       'workflow_runs.tenant_id',
       'workflow_runs.status',
       'workflow_runs.node_path',
+      'workflow_runs.source_payload_schema_ref',
+      'workflow_runs.trigger_mapping_applied',
       'workflow_runs.started_at',
       'workflow_runs.completed_at',
       'workflow_runs.updated_at',
@@ -1751,12 +2056,37 @@ export async function submitWorkflowEventAction(input: unknown) {
   let ingestionError: string | null = null;
   const processedAt = new Date().toISOString();
 
+  const catalogEntry = tenant ? await EventCatalogModel.getByEventType(knex, parsed.eventName, tenant) : null;
+  const catalogSchemaRef = typeof (catalogEntry as any)?.payload_schema_ref === 'string'
+    ? String((catalogEntry as any).payload_schema_ref)
+    : null;
+  const submissionSchemaRef = parsed.payloadSchemaRef ? String(parsed.payloadSchemaRef) : null;
+  const sourcePayloadSchemaRef = submissionSchemaRef ?? catalogSchemaRef;
+  const schemaRefConflict =
+    submissionSchemaRef && catalogSchemaRef && submissionSchemaRef !== catalogSchemaRef
+      ? { submission: submissionSchemaRef, catalog: catalogSchemaRef }
+      : null;
+
+  if (schemaRefConflict) {
+    try {
+      void analytics.capture('workflow.event.schema_ref_conflict', {
+        eventType: parsed.eventName,
+        submissionPayloadSchemaRef: schemaRefConflict.submission,
+        catalogPayloadSchemaRef: schemaRefConflict.catalog
+      }, user.user_id);
+    } catch {
+      // best-effort telemetry
+    }
+  }
+
   await knex.transaction(async (trx) => {
     eventRecord = await WorkflowRuntimeEventModelV2.create(trx, {
       tenant_id: tenant,
       event_name: parsed.eventName,
       correlation_key: parsed.correlationKey,
       payload: parsed.payload,
+      payload_schema_ref: sourcePayloadSchemaRef,
+      schema_ref_conflict: schemaRefConflict,
       processed_at: processedAt
     });
 
@@ -1838,23 +2168,88 @@ export async function submitWorkflowEventAction(input: unknown) {
     const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
     const latest = versions[0];
     if (!latest) continue;
-    const schemaRef =
-      (latest.definition_json as { payloadSchemaRef?: string } | null | undefined)?.payloadSchemaRef
-      ?? workflow.payload_schema_ref;
-    if (schemaRef && schemaRegistry.has(schemaRef)) {
-      const validation = schemaRegistry.get(schemaRef).safeParse(parsed.payload);
+
+    const latestDefinition = latest.definition_json as any;
+    const workflowPayloadSchemaRef: string | null =
+      (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null)
+      ?? (typeof workflow.payload_schema_ref === 'string' ? workflow.payload_schema_ref : null);
+
+    const trigger = latestDefinition?.trigger ?? workflow.trigger ?? null;
+    const overrideSourceSchemaRef = typeof trigger?.sourcePayloadSchemaRef === 'string' ? trigger.sourcePayloadSchemaRef : null;
+    const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? sourcePayloadSchemaRef;
+
+    if (!effectiveSourceSchemaRef) {
+      continue;
+    }
+
+    const payloadMapping = trigger?.payloadMapping as any | undefined;
+    const mappingProvided = payloadMapping && typeof payloadMapping === 'object' && Object.keys(payloadMapping).length > 0;
+    const refsMatch = !!workflowPayloadSchemaRef && effectiveSourceSchemaRef === workflowPayloadSchemaRef;
+    if (!mappingProvided && !refsMatch) {
+      continue;
+    }
+
+    let workflowPayload: Record<string, unknown> = parsed.payload ?? {};
+    let mappingApplied = false;
+    if (mappingProvided) {
+      try {
+        const provider = tenant ? createTenantSecretProvider(knex, tenant) : null;
+        const secretResolver = provider
+          ? createSecretResolverFromProvider((name, workflowRunId) => provider.getValue(name, workflowRunId))
+          : undefined;
+        const resolved = await resolveInputMapping(payloadMapping, {
+          expressionContext: {
+            event: {
+              name: parsed.eventName,
+              correlationKey: parsed.correlationKey,
+              payload: parsed.payload ?? {},
+              payloadSchemaRef: effectiveSourceSchemaRef
+            }
+          },
+          secretResolver
+        });
+        const flat = resolved ?? {};
+        workflowPayload = expandDottedKeys(flat);
+        mappingApplied = true;
+      } catch (error) {
+        continue;
+      }
+    }
+
+    if (workflowPayloadSchemaRef && schemaRegistry.has(workflowPayloadSchemaRef)) {
+      const validation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(workflowPayload);
       if (!validation.success) {
         continue;
       }
     }
+
     const newRunId = await runtime.startRun(knex, {
       workflowId: workflow.workflow_id,
       version: latest.version,
-      payload: parsed.payload,
+      payload: workflowPayload,
       tenantId: tenant,
-      eventType: parsed.eventName
+      eventType: parsed.eventName,
+      sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+      triggerMappingApplied: mappingApplied
     });
     startedRuns.push(newRunId);
+
+    try {
+      void analytics.capture('workflow.trigger.mapping_applied', {
+        workflowId: workflow.workflow_id,
+        workflowVersion: latest.version,
+        eventType: parsed.eventName,
+        workflowPayloadSchemaRef: workflowPayloadSchemaRef ?? null,
+        sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+        triggerMappingApplied: mappingApplied,
+        triggerMappingProvided: mappingProvided,
+        schemaRefsMatch: refsMatch,
+        startedFrom: 'event_ingestion'
+      }, user.user_id);
+    } catch {
+      // best-effort telemetry
+    }
+
     await runtime.executeRun(knex, newRunId, `event-${Date.now()}`);
   }
 
@@ -1916,6 +2311,8 @@ export async function exportWorkflowEventsAction(input: unknown) {
     'event_id',
     'event_name',
     'correlation_key',
+    'payload_schema_ref',
+    'schema_ref_conflict',
     'status',
     'matched_run_id',
     'matched_wait_id',
@@ -1930,6 +2327,8 @@ export async function exportWorkflowEventsAction(input: unknown) {
     event.event_id,
     event.event_name,
     event.correlation_key ?? '',
+    event.payload_schema_ref ?? '',
+    event.schema_ref_conflict ? JSON.stringify(event.schema_ref_conflict) : '',
     event.status,
     event.matched_run_id ?? '',
     event.matched_wait_id ?? '',

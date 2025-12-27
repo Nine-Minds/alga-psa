@@ -2,205 +2,205 @@
   {
     "id": "F001",
     "description": "Extend workflow event submission to accept optional source payload schemaRef",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F002",
     "description": "Persist workflow runtime event payload_schema_ref (v2) via DB migration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },
   {
     "id": "F003",
     "description": "Expose payload_schema_ref in workflow event list responses for UI",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Observability"]
   },
   {
     "id": "F004",
     "description": "Resolve trigger sourcePayloadSchemaRef via precedence: submission > event catalog > unknown",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F005",
     "description": "Extend WorkflowTrigger type to include optional sourcePayloadSchemaRef override",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
     "id": "F006",
     "description": "Extend WorkflowTrigger type to include optional payloadMapping (evaluates against `event.payload` → workflow payload)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F007",
     "description": "Update workflow definition validation schema (zod) to parse new trigger fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F008",
     "description": "Server validator: error when trigger source schemaRef is unknown for event-triggered workflows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F009",
     "description": "Server validator: treat mismatch between source schemaRef and workflow payloadSchemaRef as mapping-required",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F010",
     "description": "Server validator: allow 'no trigger mapping' as valid when schemaRefs match (identity); mapping remains optional when refs match",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F011",
     "description": "Server validator: deep nested validation that trigger mapping produces required fields for workflow payload schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F012",
     "description": "Server validator: validate trigger mapping expression syntax (trigger mapping uses `event.payload` root) and collect per-path errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F013",
     "description": "Server validator: missing secrets referenced by trigger mapping are errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F014",
     "description": "Persist validation status/details for trigger mapping outcomes (draft save allowed, publish blocked)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F015",
     "description": "Runtime: for event-triggered runs, pass through payload unchanged when schemaRefs match and no mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F016",
     "description": "Runtime: when trigger mapping exists, evaluate it to build workflow payload before starting run (required when schemaRefs differ; optional when they match)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F017",
     "description": "Runtime: validate mapped payload against workflow payloadSchemaRef before starting run",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F018",
     "description": "Runtime: record sourcePayloadSchemaRef and mapping-applied flag on run/snapshot/logs for debugging",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   },
   {
     "id": "F019",
     "description": "Designer: show trigger source schemaRef (from event catalog) alongside workflow payloadSchemaRef",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F020",
     "description": "Designer: when schemaRefs match, show 'Identity mapping' state and treat no mapping as valid",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements/Functional Requirements"]
   },
   {
     "id": "F021",
     "description": "Designer: when schemaRefs differ, require trigger mapping UI and surface validation errors inline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements/Functional Requirements"]
   },
   {
     "id": "F022",
     "description": "Designer: allow optional override of trigger sourcePayloadSchemaRef (advanced) for event triggers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F023",
     "description": "Designer: trigger mapping editor supports field pickers based on `event.payload` source schema and workflow payload schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F024",
     "description": "Run dialog: build test event form from trigger source schemaRef and run through trigger mapping when needed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements/Functional Requirements"]
   },
   {
     "id": "F025",
     "description": "Run dialog: show schema mismatch warning and whether identity vs mapping will be applied",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F026",
     "description": "Workflow events UI: display payload_schema_ref and mapping-applied indicator in event/run views",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   },
   {
     "id": "F027",
     "description": "Telemetry: track schemaRef mismatch, catalog-vs-submission schemaRef conflicts, and trigger mapping application rate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   },
   {
     "id": "F028",
     "description": "Permissions: enforce workflow manage permission for editing trigger mapping and source schema override",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {
     "id": "F029",
     "description": "Docs: update workflow overhaul docs to describe stable payload + trigger mapping behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Requirements"]
   },
   {
     "id": "F030",
     "description": "Migration: ensure system event catalog entries include payload_schema_ref for all system triggers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   },
   {
     "id": "F031",
     "description": "Expression runtime: trigger mapping evaluation context provides `event` (with `event.payload` typed by source schemaRef) and does not provide a `payload` alias",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements", "UX / UI Notes"]
   },
   {
     "id": "F032",
     "description": "Expression editor: trigger mapping context shows autocomplete/hover docs for `event` and `event.payload` based on source schemaRef",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F033",
     "description": "Validation: trigger mapping expressions that reference `payload` root are flagged as errors (must use `event.payload`)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F034",
     "description": "Ingestion: when submission schemaRef differs from event catalog, accept event and persist a warning with both schemaRefs (submission still wins)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements", "Observability"]
   }
 ]
