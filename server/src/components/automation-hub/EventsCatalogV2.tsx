@@ -7,6 +7,7 @@ import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Badge } from 'server/src/components/ui/Badge';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import SearchableSelect from 'server/src/components/ui/SearchableSelect';
@@ -93,6 +94,72 @@ const formatDurationMs = (value: number | null | undefined) => {
   const minutes = Math.floor(seconds / 60);
   const rem = Math.round((seconds % 60) * 10) / 10;
   return `${minutes}m ${rem}s`;
+};
+
+const EventCardSkeleton: React.FC<{ viewMode: ViewMode }> = ({ viewMode }) => {
+  if (viewMode === 'list') {
+    return (
+      <Card className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-56" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-24 rounded-md" />
+            <Skeleton className="h-8 w-24 rounded-md" />
+            <Skeleton className="h-8 w-10 rounded-md" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <div className="min-w-0 space-y-2">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </div>
+      <div className="mt-3 space-y-2">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-16 mx-auto" />
+          <Skeleton className="h-3 w-20 mx-auto" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-16 mx-auto" />
+          <Skeleton className="h-3 w-20 mx-auto" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-16 mx-auto" />
+          <Skeleton className="h-3 w-20 mx-auto" />
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-2">
+        <Skeleton className="h-9 w-28 rounded-md" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+        <Skeleton className="h-9 w-10 rounded-md ml-auto" />
+      </div>
+    </Card>
+  );
 };
 
 const getEventIcon = (entry: WorkflowEventCatalogEntryV2) => {
@@ -890,7 +957,11 @@ export default function EventsCatalogV2() {
       </Card>
 
       {isLoading && (
-        <div className="text-sm text-gray-500">Loading events…</div>
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' : 'space-y-3'}>
+          {Array.from({ length: viewMode === 'grid' ? 9 : 10 }).map((_, idx) => (
+            <EventCardSkeleton key={idx} viewMode={viewMode} />
+          ))}
+        </div>
       )}
 
       {!isLoading && events.length === 0 && (

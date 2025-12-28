@@ -35,6 +35,7 @@ import CustomTabs from '@/components/ui/CustomTabs';
 import { Switch } from '@/components/ui/Switch';
 import { Label } from '@/components/ui/Label';
 import SearchableSelect from 'server/src/components/ui/SearchableSelect';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { analytics } from 'server/src/lib/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
@@ -1257,6 +1258,7 @@ const WorkflowDesigner: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [registryError, setRegistryError] = useState(false);
+  const [registryStatus, setRegistryStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [schemaRefs, setSchemaRefs] = useState<string[]>([]);
   const [schemaMeta, setSchemaMeta] = useState<Map<string, { title: string | null; description: string | null }>>(
     new Map()
@@ -1483,9 +1485,26 @@ const WorkflowDesigner: React.FC = () => {
     [userPermissions, canAdmin]
   );
 
+  const triggerRequiresEventCatalog = useMemo(() => {
+    return Boolean(activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName);
+  }, [activeDefinition?.trigger]);
+
   const triggerSchemaPolicy = useMemo(() => {
     const eventName = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : '';
     if (!eventName) return { ok: true, level: 'none' as const, message: '' };
+
+    // Avoid flashing "missing from catalog" while the catalog is still loading.
+    if (eventCatalogStatus === 'idle' || eventCatalogStatus === 'loading') {
+      return { ok: true, level: 'none' as const, message: '' };
+    }
+
+    if (eventCatalogStatus === 'error') {
+      return {
+        ok: false,
+        level: 'error' as const,
+        message: 'Event catalog failed to load. Publishing and running are disabled until it loads.'
+      };
+    }
 
     const selected = eventCatalogOptions.find((e) => e.event_type === eventName) ?? null;
     if (!selected) {
@@ -1511,7 +1530,7 @@ const WorkflowDesigner: React.FC = () => {
     }
 
     return { ok: true, level: 'none' as const, message: '' };
-  }, [activeDefinition?.trigger, eventCatalogOptions]);
+  }, [activeDefinition?.trigger, eventCatalogOptions, eventCatalogStatus]);
 
   const canPublishPermission = useMemo(
     () => userPermissions.includes('workflow:publish') || canAdmin,
@@ -1521,8 +1540,14 @@ const WorkflowDesigner: React.FC = () => {
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [activeWorkflowRecord?.is_system, canAdmin, canManage]
   );
-  const canPublishEnabled = canPublishPermission && triggerSchemaPolicy.ok;
-  const canRunEnabled = canRunPermission && triggerSchemaPolicy.ok;
+  const canPublishEnabled =
+    canPublishPermission &&
+    triggerSchemaPolicy.ok &&
+    (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
+  const canRunEnabled =
+    canRunPermission &&
+    triggerSchemaPolicy.ok &&
+    (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
@@ -1599,6 +1624,7 @@ const WorkflowDesigner: React.FC = () => {
   }, []);
 
   const loadRegistries = useCallback(async () => {
+    setRegistryStatus('loading');
     try {
       const overrides = getWorkflowPlaywrightOverrides();
       if (overrides?.failRegistries) {
@@ -1622,6 +1648,7 @@ const WorkflowDesigner: React.FC = () => {
           setSchemaMeta(new Map());
         }
         setRegistryError(false);
+        setRegistryStatus('loaded');
         return;
       }
       const [nodes, actions] = await Promise.all([
@@ -1645,12 +1672,14 @@ const WorkflowDesigner: React.FC = () => {
         setSchemaMeta(new Map());
       }
       setRegistryError(false);
+      setRegistryStatus('loaded');
     } catch (error) {
       setNodeRegistry([]);
       setActionRegistry([]);
       setSchemaRefs([]);
       setSchemaMeta(new Map());
       setRegistryError(true);
+      setRegistryStatus('error');
       toast.error('Failed to load workflow registries');
     }
   }, []);
@@ -2412,6 +2441,8 @@ const WorkflowDesigner: React.FC = () => {
     }
   };
 
+  const showInitialDesignerSkeleton = isLoading && !activeDefinition;
+
   const designerContent = (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex flex-col h-full">
@@ -2491,7 +2522,53 @@ const WorkflowDesigner: React.FC = () => {
             <Panel defaultSize={65} minSize={40}>
               <div className="h-full overflow-y-auto p-6">
               <div className="max-w-4xl mx-auto space-y-6">
-                <Card className="p-4 space-y-4">
+                {showInitialDesignerSkeleton ? (
+                  <>
+                    <Card className="p-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-9 w-full" />
+                        </div>
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-16" />
+                          <Skeleton className="h-9 w-full" />
+                        </div>
+                        <div className="col-span-2">
+                          <Skeleton className="h-3 w-48" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-20 w-full" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-28" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-32" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    </Card>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-40" />
+                          <Skeleton className="h-4 w-80" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-8 w-16 rounded-md" />
+                          <Skeleton className="h-8 w-16 rounded-md" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-[650px] w-full rounded border border-gray-200 bg-white" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Card className="p-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       id="workflow-designer-name"
@@ -2536,40 +2613,44 @@ const WorkflowDesigner: React.FC = () => {
                     </div>
 
                     <div className="mt-2">
-                      <SearchableSelect
-                        id="workflow-designer-schema-ref-select"
-                        options={(() => {
-                          const current = activeDefinition?.payloadSchemaRef ?? '';
-                          const base = schemaRefs.map((ref) => {
-                            const meta = schemaMeta.get(ref);
-                            const title = meta?.title ? ` — ${meta.title}` : '';
-                            return { value: ref, label: `${ref}${title}` };
-                          });
-                          if (current && !schemaRefs.includes(current)) {
-                            return [{ value: current, label: `${current} (unknown)` }, ...base];
-                          }
-                          return base;
-                        })()}
-                        value={activeDefinition?.payloadSchemaRef ?? ''}
-                        onChange={(value) => {
-                          if (schemaInferenceEnabled && inferredSchemaRef && value !== inferredSchemaRef) {
-                            setSchemaInferenceEnabled(false);
-                            lastAppliedInferredRef.current = null;
-                          }
-                          analytics.capture('workflow.payload_schema_ref.selected', {
-                            schemaRef: value || null,
-                            workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
-                            inferenceEnabled: schemaInferenceEnabled,
-                            triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null
-                          });
-                          handleDefinitionChange({ payloadSchemaRef: value });
-                        }}
-                        placeholder="Select schema…"
-                        emptyMessage="No schemas found"
-                        disabled={registryError || !canManage}
-                        required
-                        dropdownMode="overlay"
-                      />
+                      {registryStatus === 'loading' ? (
+                        <Skeleton className="h-10 w-full" />
+                      ) : (
+                        <SearchableSelect
+                          id="workflow-designer-schema-ref-select"
+                          options={(() => {
+                            const current = activeDefinition?.payloadSchemaRef ?? '';
+                            const base = schemaRefs.map((ref) => {
+                              const meta = schemaMeta.get(ref);
+                              const title = meta?.title ? ` — ${meta.title}` : '';
+                              return { value: ref, label: `${ref}${title}` };
+                            });
+                            if (current && !schemaRefs.includes(current)) {
+                              return [{ value: current, label: `${current} (unknown)` }, ...base];
+                            }
+                            return base;
+                          })()}
+                          value={activeDefinition?.payloadSchemaRef ?? ''}
+                          onChange={(value) => {
+                            if (schemaInferenceEnabled && inferredSchemaRef && value !== inferredSchemaRef) {
+                              setSchemaInferenceEnabled(false);
+                              lastAppliedInferredRef.current = null;
+                            }
+                            analytics.capture('workflow.payload_schema_ref.selected', {
+                              schemaRef: value || null,
+                              workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                              inferenceEnabled: schemaInferenceEnabled,
+                              triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null
+                            });
+                            handleDefinitionChange({ payloadSchemaRef: value });
+                          }}
+                          placeholder="Select schema…"
+                          emptyMessage="No schemas found"
+                          disabled={registryError || !canManage}
+                          required
+                          dropdownMode="overlay"
+                        />
+                      )}
                     </div>
 
                     {schemaRefAdvanced && (
@@ -2731,34 +2812,48 @@ const WorkflowDesigner: React.FC = () => {
                       options.unshift({ value: selectedEventName, label: `Unknown event (${selectedEventName})` });
                     }
 
-                    return (
-                      <div className="space-y-2">
-                        <SearchableSelect
-                          id="workflow-designer-trigger-event"
-                          value={selectedEventName}
-                          onChange={(value) => {
-                            const next = value.trim();
-                            if (!next) {
-                              handleDefinitionChange({ trigger: undefined });
-                              return;
-                            }
-                            const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
-                            if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
-                              toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
-                              return;
-                            }
-                            const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
-                            handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
-                          }}
-                          placeholder={eventCatalogStatus === 'loading' ? 'Loading events…' : 'Select trigger event'}
-                          dropdownMode="overlay"
-                          options={options}
-                          disabled={!canManage || eventCatalogStatus === 'loading'}
-                        />
-                        {selectedOption && (
-                          <div className="rounded border border-gray-200 bg-white px-3 py-2 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge className={selectedOption.source === 'system' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}>
+	                    return (
+	                      <div className="space-y-2">
+	                        {eventCatalogStatus === 'loading' ? (
+	                          <Skeleton className="h-10 w-full" />
+	                        ) : (
+	                          <SearchableSelect
+	                            id="workflow-designer-trigger-event"
+	                            value={selectedEventName}
+	                            onChange={(value) => {
+	                              const next = value.trim();
+	                              if (!next) {
+	                                handleDefinitionChange({ trigger: undefined });
+	                                return;
+	                              }
+	                              const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
+	                              if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
+	                                toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
+	                                return;
+	                              }
+	                              const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
+	                              handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
+	                            }}
+	                            placeholder="Select trigger event"
+	                            dropdownMode="overlay"
+	                            options={options}
+	                            disabled={!canManage}
+	                          />
+	                        )}
+	                        {eventCatalogStatus === 'loading' && (
+	                          <div className="rounded border border-gray-200 bg-white px-3 py-2 space-y-2">
+	                            <div className="flex flex-wrap items-center gap-2">
+	                              <Skeleton className="h-5 w-16 rounded-full" />
+	                              <Skeleton className="h-5 w-16 rounded-full" />
+	                              <Skeleton className="h-5 w-20 rounded-full" />
+	                            </div>
+	                            <Skeleton className="h-3 w-2/3" />
+	                          </div>
+	                        )}
+	                        {selectedOption && (
+	                          <div className="rounded border border-gray-200 bg-white px-3 py-2 space-y-1">
+	                            <div className="flex flex-wrap items-center gap-2">
+	                              <Badge className={selectedOption.source === 'system' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}>
                                 {selectedOption.source === 'system' ? 'System' : 'Tenant'}
                               </Badge>
                               <Badge className={
@@ -2815,21 +2910,21 @@ const WorkflowDesigner: React.FC = () => {
                                 )}
                               </div>
                             </div>
-                            {selectedOption.payload_schema_ref_status !== 'known' && (
+                            {eventCatalogStatus === 'loaded' && selectedOption.payload_schema_ref_status !== 'known' && (
                               <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                                 This event is missing a valid schema reference. Publishing and running are disabled until it is fixed.
                               </div>
                             )}
                           </div>
                         )}
-                        {!selectedOption && selectedEventName && (
+                        {eventCatalogStatus === 'loaded' && !selectedOption && selectedEventName && (
                           <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                             Trigger event <span className="font-mono">{selectedEventName}</span> is not present in the event catalog. Publishing and running are disabled until it is fixed.
                           </div>
                         )}
                         {eventCatalogStatus === 'error' && (
                           <div className="text-xs text-red-700">
-                            Failed to load the event catalog. You can still publish workflows, but event selection is unavailable until this loads.
+                            Failed to load the event catalog. Publishing and running are disabled for event-triggered workflows until this loads.
                           </div>
                         )}
                       </div>
@@ -3235,11 +3330,13 @@ const WorkflowDesigner: React.FC = () => {
                       onInsertStep={(index) => handleInsertStep('root', index)}
                       onInsertAtPath={handleInsertStep}
                       nodeRegistry={nodeRegistryMap}
-                      errorMap={errorsByStepId}
-                      isRoot={true}
+                        errorMap={errorsByStepId}
+                        isRoot={true}
                     />
                   )}
                 </div>
+                  </>
+                )}
               </div>
             </div>
             </Panel>
@@ -3388,39 +3485,47 @@ const WorkflowDesigner: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-500">{isLoading ? 'Loading workflows...' : `${definitions.length} workflows`}</div>
           <div id="workflow-designer-list" className="flex items-center gap-2 overflow-x-auto">
-            {definitions.map((definition) => (
-              <Button
-                key={definition.workflow_id}
-                id={`workflow-designer-open-${definition.workflow_id}`}
-                variant={definition.workflow_id === activeWorkflowId ? 'default' : 'outline'}
-                onClick={() => handleSelectDefinition(definition)}
-              >
-                <span className="flex items-center gap-2">
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      definition.validation_errors?.length
-                        ? 'bg-red-500'
-                        : definition.validation_warnings?.length
-                          ? 'bg-yellow-500'
-                          : definition.validation_status === 'valid'
-                            ? 'bg-green-500'
-                            : 'bg-gray-400'
-                    }`}
-                  />
-                  {definition.name}
-                  {runStatusByWorkflow.get(definition.workflow_id) && (
-                    <Badge className="bg-gray-100 text-gray-600 text-[10px]">
-                      {runStatusByWorkflow.get(definition.workflow_id)}
-                    </Badge>
-                  )}
-                  {runCountByWorkflow.get(definition.workflow_id) != null && (
-                    <Badge className="bg-blue-50 text-blue-700 text-[10px]">
-                      {runCountByWorkflow.get(definition.workflow_id)} runs
-                    </Badge>
-                  )}
-                </span>
-              </Button>
-            ))}
+            {isLoading && definitions.length === 0 ? (
+              <>
+                <Skeleton className="h-9 w-44 rounded-md" />
+                <Skeleton className="h-9 w-44 rounded-md" />
+                <Skeleton className="h-9 w-44 rounded-md" />
+              </>
+            ) : (
+              definitions.map((definition) => (
+                <Button
+                  key={definition.workflow_id}
+                  id={`workflow-designer-open-${definition.workflow_id}`}
+                  variant={definition.workflow_id === activeWorkflowId ? 'default' : 'outline'}
+                  onClick={() => handleSelectDefinition(definition)}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        definition.validation_errors?.length
+                          ? 'bg-red-500'
+                          : definition.validation_warnings?.length
+                            ? 'bg-yellow-500'
+                            : definition.validation_status === 'valid'
+                              ? 'bg-green-500'
+                              : 'bg-gray-400'
+                      }`}
+                    />
+                    {definition.name}
+                    {runStatusByWorkflow.get(definition.workflow_id) && (
+                      <Badge className="bg-gray-100 text-gray-600 text-[10px]">
+                        {runStatusByWorkflow.get(definition.workflow_id)}
+                      </Badge>
+                    )}
+                    {runCountByWorkflow.get(definition.workflow_id) != null && (
+                      <Badge className="bg-blue-50 text-blue-700 text-[10px]">
+                        {runCountByWorkflow.get(definition.workflow_id)} runs
+                      </Badge>
+                    )}
+                  </span>
+                </Button>
+              ))
+            )}
           </div>
         </div>
       </div>
