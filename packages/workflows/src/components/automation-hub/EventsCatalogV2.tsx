@@ -233,6 +233,54 @@ const setDeepValue = (obj: any, path: Array<string | number>, nextValue: any): a
   return out;
 };
 
+const pathToKey = (path: Array<string | number>) =>
+  path
+    .map((p) => (typeof p === 'number' ? `[${p}]` : p))
+    .join('.')
+    .replace(/\.\[/g, '[');
+
+const JsonEditorField: React.FC<{
+  id: string;
+  label: React.ReactNode;
+  description?: string | null;
+  value: unknown;
+  onChangeParsed: (next: any) => void;
+  minHeight?: number;
+}> = ({ id, label, description, value, onChangeParsed, minHeight = 120 }) => {
+  const [text, setText] = useState<string>(() => JSON.stringify(value ?? null, null, 2));
+  const [parseError, setParseError] = useState<string>('');
+
+  useEffect(() => {
+    setText(JSON.stringify(value ?? null, null, 2));
+    setParseError('');
+  }, [id]); // reset when field identity changes
+
+  return (
+    <div className="rounded border border-gray-200 bg-white p-3">
+      <div className="flex items-center gap-2">{label}</div>
+      {description && <div className="mt-1 text-[11px] text-gray-500">{description}</div>}
+      <TextArea
+        id={id}
+        value={text}
+        onChange={(e) => {
+          const nextText = e.target.value;
+          setText(nextText);
+          try {
+            const parsed = JSON.parse(nextText || 'null');
+            setParseError('');
+            onChangeParsed(parsed);
+          } catch {
+            setParseError('Invalid JSON.');
+          }
+        }}
+        className="font-mono text-xs mt-2"
+        style={{ minHeight }}
+      />
+      {parseError && <div className="mt-1 text-[11px] text-red-700">{parseError}</div>}
+    </div>
+  );
+};
+
 const SchemaForm: React.FC<{
   schema: any;
   value: any;
@@ -256,6 +304,7 @@ const SchemaForm: React.FC<{
     const type = Array.isArray(resolved?.type) ? resolved.type[0] : resolved?.type;
     const description = typeof resolved?.description === 'string' ? resolved.description : null;
     const current = path.reduce((acc, key) => (acc == null ? undefined : acc[key as any]), value);
+    const pathKey = pathToKey(path);
 
     const header = (
       <div className="flex items-center gap-2">
@@ -267,21 +316,14 @@ const SchemaForm: React.FC<{
 
     if (depth >= maxDepth) {
       return (
-        <div className="rounded border border-gray-200 bg-white p-3">
-          {header}
-          <div className="mt-1 text-[11px] text-gray-500">Max depth reached; edit as JSON.</div>
-          <TextArea
-            value={JSON.stringify(current ?? null, null, 2)}
-            onChange={(e) => {
-              try {
-                onChange(setDeepValue(value, path, JSON.parse(e.target.value || 'null')));
-              } catch {
-                // ignore parse errors
-              }
-            }}
-            className="font-mono text-xs min-h-[120px] mt-2"
-          />
-        </div>
+        <JsonEditorField
+          id={`schema-form-${pathKey}`}
+          label={header}
+          description={description || 'Max depth reached; edit as JSON.'}
+          value={current ?? null}
+          onChangeParsed={(next) => onChange(setDeepValue(value, path, next))}
+          minHeight={140}
+        />
       );
     }
 
@@ -301,22 +343,14 @@ const SchemaForm: React.FC<{
 
     if (type === 'array') {
       return (
-        <div className="rounded border border-gray-200 bg-white p-3">
-          {header}
-          {description && <div className="text-[11px] text-gray-500 mt-1">{description}</div>}
-          <TextArea
-            value={JSON.stringify(current ?? [], null, 2)}
-            onChange={(e) => {
-              try {
-                const next = JSON.parse(e.target.value || '[]');
-                onChange(setDeepValue(value, path, next));
-              } catch {
-                // ignore parse errors
-              }
-            }}
-            className="font-mono text-xs min-h-[120px] mt-2"
-          />
-        </div>
+        <JsonEditorField
+          id={`schema-form-${pathKey}`}
+          label={header}
+          description={description}
+          value={current ?? []}
+          onChangeParsed={(next) => onChange(setDeepValue(value, path, next))}
+          minHeight={140}
+        />
       );
     }
 
@@ -746,7 +780,6 @@ export default function EventsCatalogV2() {
           <div className="text-sm text-gray-500">Explore, manage, and design workflows for system events and triggers.</div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-yellow-50 text-yellow-800 border-yellow-200">System Status: Operational</Badge>
           <Button
             id="workflow-event-catalog-define-custom-event"
             onClick={() => setDefineState({ open: true })}
