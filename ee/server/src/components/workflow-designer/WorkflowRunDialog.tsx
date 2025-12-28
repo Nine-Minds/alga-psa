@@ -950,12 +950,33 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             Run Workflow{selectedEventType ? ` · ${selectedEventType}` : ''}
           </DialogTitle>
           <DialogDescription>
-            Provide a synthetic payload for a published workflow version.
+            Provide a synthetic payload to preview (and run) a workflow.
             {selectedEventEntry?.name ? ` Event: ${selectedEventEntry.name}.` : ''}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {!publishedVersion && (
+            <div className="rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900 space-y-2">
+              <div className="font-medium">No published version</div>
+              <div className="text-xs text-yellow-800">
+                You can preview the payload builder, but you must publish the workflow before starting a run.
+              </div>
+              {canPublish && onPublishDraft && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    id="run-dialog-publish-draft"
+                    size="sm"
+                    onClick={() => void onPublishDraft()}
+                    disabled={validationStatus === 'error' || isPaused}
+                    title={validationStatus === 'error' ? 'Fix validation errors before publishing.' : undefined}
+                  >
+                    Publish draft
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input id="run-dialog-workflow" label="Workflow" value={workflowName ?? ''} disabled />
             <CustomSelect
@@ -964,6 +985,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               options={versionOptions.length ? versionOptions : (publishedVersion ? [{ value: String(publishedVersion), label: `v${publishedVersion}` }] : [])}
               value={selectedVersion || (publishedVersion ? String(publishedVersion) : '')}
               onValueChange={(value) => setSelectedVersion(value)}
+              disabled={!publishedVersion}
             />
             <Input id="run-dialog-trigger" label="Trigger" value={triggerLabel ?? 'Manual'} disabled />
             <Input id="run-dialog-status" label="Workflow status" value={isPaused ? 'paused' : 'active'} disabled />

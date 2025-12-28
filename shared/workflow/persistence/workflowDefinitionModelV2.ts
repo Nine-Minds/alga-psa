@@ -5,6 +5,9 @@ export type WorkflowDefinitionRecord = {
   name: string;
   description?: string | null;
   payload_schema_ref: string;
+  payload_schema_mode?: 'inferred' | 'pinned' | string | null;
+  pinned_payload_schema_ref?: string | null;
+  payload_schema_provenance?: string | null;
   trigger?: Record<string, unknown> | null;
   draft_definition: Record<string, unknown>;
   draft_version: number;
@@ -12,6 +15,8 @@ export type WorkflowDefinitionRecord = {
   validation_status?: string | null;
   validation_errors?: Record<string, unknown>[] | null;
   validation_warnings?: Record<string, unknown>[] | null;
+  validation_context_json?: Record<string, unknown> | null;
+  validation_payload_schema_hash?: string | null;
   validated_at?: string | null;
   published_version?: number | null;
   is_system?: boolean;
