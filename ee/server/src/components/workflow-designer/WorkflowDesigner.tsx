@@ -1482,14 +1482,47 @@ const WorkflowDesigner: React.FC = () => {
     () => userPermissions.includes('workflow:manage') || canAdmin,
     [userPermissions, canAdmin]
   );
-  const canPublish = useMemo(
+
+  const triggerSchemaPolicy = useMemo(() => {
+    const eventName = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : '';
+    if (!eventName) return { ok: true, level: 'none' as const, message: '' };
+
+    const selected = eventCatalogOptions.find((e) => e.event_type === eventName) ?? null;
+    if (!selected) {
+      return {
+        ok: false,
+        level: 'error' as const,
+        message: `Trigger event "${eventName}" is not present in the event catalog.`
+      };
+    }
+
+    if (selected.payload_schema_ref_status !== 'known' || !selected.payload_schema_ref) {
+      const sourceLabel = selected.source === 'system' ? 'System event' : 'Tenant event';
+      const schemaLabel =
+        selected.payload_schema_ref_status === 'missing'
+          ? 'is missing a schema ref'
+          : 'has an unknown schema ref';
+
+      return {
+        ok: false,
+        level: 'error' as const,
+        message: `${sourceLabel} "${eventName}" ${schemaLabel}. Fix the event catalog entry to include a valid schema before publishing or running.`
+      };
+    }
+
+    return { ok: true, level: 'none' as const, message: '' };
+  }, [activeDefinition?.trigger, eventCatalogOptions]);
+
+  const canPublishPermission = useMemo(
     () => userPermissions.includes('workflow:publish') || canAdmin,
     [userPermissions, canAdmin]
   );
-  const canRun = useMemo(
+  const canRunPermission = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [activeWorkflowRecord?.is_system, canAdmin, canManage]
   );
+  const canPublishEnabled = canPublishPermission && triggerSchemaPolicy.ok;
+  const canRunEnabled = canRunPermission && triggerSchemaPolicy.ok;
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
@@ -2709,6 +2742,11 @@ const WorkflowDesigner: React.FC = () => {
                               handleDefinitionChange({ trigger: undefined });
                               return;
                             }
+                            const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
+                            if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
+                              toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
+                              return;
+                            }
                             const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
                             handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
                           }}
@@ -2777,6 +2815,16 @@ const WorkflowDesigner: React.FC = () => {
                                 )}
                               </div>
                             </div>
+                            {selectedOption.payload_schema_ref_status !== 'known' && (
+                              <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                                This event is missing a valid schema reference. Publishing and running are disabled until it is fixed.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!selectedOption && selectedEventName && (
+                          <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                            Trigger event <span className="font-mono">{selectedEventName}</span> is not present in the event catalog. Publishing and running are disabled until it is fixed.
                           </div>
                         )}
                         {eventCatalogStatus === 'error' && (
@@ -3454,16 +3502,17 @@ const WorkflowDesigner: React.FC = () => {
                   {isSaving ? 'Saving...' : 'Save Draft'}
                 </Button>
               )}
-              {canPublish && (
+              {(canPublishPermission) && (
                 <Button
                   id="workflow-designer-publish"
                   onClick={handlePublish}
-                  disabled={isPublishing || !activeDefinition}
+                  disabled={isPublishing || !activeDefinition || !canPublishEnabled}
+                  title={!canPublishEnabled && !triggerSchemaPolicy.ok ? triggerSchemaPolicy.message : undefined}
                 >
                   {isPublishing ? 'Publishing...' : 'Publish'}
                 </Button>
               )}
-              {canRun && (
+              {(canRunPermission) && (
                 <Button
                   id="workflow-designer-run"
                   onClick={openRunDialog}
@@ -3472,7 +3521,9 @@ const WorkflowDesigner: React.FC = () => {
                     || !activeWorkflowRecord?.published_version
                     || activeWorkflowRecord?.validation_status === 'error'
                     || activeWorkflowRecord?.is_paused
+                    || !canRunEnabled
                   }
+                  title={!canRunEnabled && !triggerSchemaPolicy.ok ? triggerSchemaPolicy.message : undefined}
                 >
                   Run
                 </Button>
@@ -3499,7 +3550,7 @@ const WorkflowDesigner: React.FC = () => {
         isPaused={activeWorkflowRecord?.is_paused ?? false}
         validationStatus={activeWorkflowRecord?.validation_status ?? null}
         concurrencyLimit={activeWorkflowRecord?.concurrency_limit ?? null}
-        canPublish={canPublish}
+        canPublish={canPublishPermission}
         onPublishDraft={handlePublish}
       />
 
