@@ -5,6 +5,8 @@ export type JsonSchema = Record<string, unknown>;
 
 export class SchemaRegistry {
   private schemas: Map<string, ZodSchema<any>> = new Map();
+  private jsonSchemaCache: Map<string, JsonSchema> = new Map();
+  private refsCache: string[] | null = null;
 
   register(ref: string, schema: ZodSchema<any>): void {
     if (!ref || !schema) {
@@ -14,6 +16,8 @@ export class SchemaRegistry {
       throw new Error(`SchemaRegistry already has schema for ref "${ref}"`);
     }
     this.schemas.set(ref, schema);
+    this.jsonSchemaCache.delete(ref);
+    this.refsCache = null;
   }
 
   get(ref: string): ZodSchema<any> {
@@ -29,14 +33,18 @@ export class SchemaRegistry {
   }
 
   listRefs(): string[] {
-    return Array.from(this.schemas.keys()).sort();
+    if (this.refsCache) return this.refsCache;
+    this.refsCache = Array.from(this.schemas.keys()).sort();
+    return this.refsCache;
   }
 
   toJsonSchema(ref: string): JsonSchema {
+    const cached = this.jsonSchemaCache.get(ref);
+    if (cached) return cached;
     const schema = this.get(ref);
-    return zodToJsonSchema(schema, {
-      name: ref
-    }) as JsonSchema;
+    const json = zodToJsonSchema(schema, { name: ref }) as JsonSchema;
+    this.jsonSchemaCache.set(ref, json);
+    return json;
   }
 }
 

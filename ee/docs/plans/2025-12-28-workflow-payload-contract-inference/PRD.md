@@ -43,7 +43,7 @@ Today, the workflow designer expects a workflow `payloadSchemaRef` to be specifi
    - Start adding steps immediately.
    - Designer shows available fields from `event.payload` and from `vars.*` as steps are added.
 2. **Publish workflow**
-   - System generates/locks the payload contract schema ref if not pinned.
+   - System locks the payload contract schema ref (pinned or inferred from the trigger event).
    - Validator enforces execution requirements (mapping, secrets, schema presence).
 3. **Run workflow (test run)**
    - Run dialog uses trigger schema to build event payload input.
@@ -63,7 +63,7 @@ Today, the workflow designer expects a workflow `payloadSchemaRef` to be specifi
 
 ### Workflow Designer — Workflow Payload Contract
 - Replace the current “Payload schema” requirement with a contract section:
-  - Default: “Contract will be generated on publish.”
+  - Default: “Contract is inferred from the selected trigger event.”
   - Advanced: “Pin payload schema ref” (optional; power users)
 - Schema preview / modal shows:
   - “Effective schema (design time)” when inferred
@@ -87,21 +87,24 @@ Today, the workflow designer expects a workflow `payloadSchemaRef` to be specifi
   - type compatibility checks (where type info exists)
 - Effective payload schema sources:
   1) pinned payload schema ref (advanced)
-  2) inferred payload schema derived from trigger + step outputs
+  2) inferred payload schema derived from the trigger event’s payload schema ref
 - If the trigger is an event, trigger source schema inference must come from:
   - event submission schemaRef (if provided) OR
   - event catalog schemaRef (required for system events; required for tenant events under current policy)
+- If the workflow has no event trigger (manual / future trigger types), inference cannot determine a payload contract.
+  - Draft save is allowed, but publish/run must require a pinned payload schema ref.
 
 ### Publish-Time Behavior (Contract)
 - When publishing, a workflow must end up with a stable `payloadSchemaRef`:
   - if pinned: use pinned ref
-  - if not pinned: **generate and register** a payload schema snapshot and set it as the published `payloadSchemaRef`
+  - if not pinned: infer from the selected trigger event’s schemaRef at publish time
 - Publishing must validate:
   - trigger schema presence policy (system events cannot publish without known schema)
   - mapping requirements (trigger→payload mapping required when schema refs differ)
   - missing secrets referenced by mappings/expressions are errors
   - deep nested required fields for mappings
 - After publish, the workflow payload contract is stable and used for runs.
+  - The published version stores a payload schema JSON snapshot (`payload_schema_json`) for audit/debugging; runtime execution does not depend on the schema registry.
 
 ### Type Compatibility
 - Validator should treat type mismatches as:
@@ -115,9 +118,13 @@ Today, the workflow designer expects a workflow `payloadSchemaRef` to be specifi
     - `pinned` (advanced)
 - Published versions must store:
   - `payload_schema_ref` (contract)
-  - provenance: pinned vs generated
-  - generated schema ref naming convention: `workflow.<workflowId>.payload.v<version>`
-- Schema registry must accept generated payload schemas and expose them via existing schema APIs.
+  - provenance: pinned vs inferred
+  - deterministic payload schema snapshot (`payload_schema_json`) and hash (for drift detection / auditing)
+
+### Admin / Operator Notes
+- There is no dynamic schema generation/registration in the schema registry for workflow contracts.
+- Published workflow versions store the payload contract schema snapshot on `workflow_definition_versions.payload_schema_json`.
+- Runtime execution should not depend on the schema registry being available.
 
 ## Security / Permissions
 - Only users with `workflow:manage` can pin payload schema refs and edit mappings/steps.
@@ -126,7 +133,7 @@ Today, the workflow designer expects a workflow `payloadSchemaRef` to be specifi
 
 ## Observability
 - Emit telemetry/audit for:
-  - publish generated payload schema ref (and version)
+  - publish payload schema ref + mode/provenance (and version)
   - publish blocked due to missing trigger schema/mapping/secrets
   - trigger schema conflicts (submission vs catalog)
   - inferred vs pinned mode
@@ -138,15 +145,15 @@ Today, the workflow designer expects a workflow `payloadSchemaRef` to be specifi
 - Existing published workflows remain unchanged; existing drafts may remain with explicit payloadSchemaRef.
 
 ## Open Questions
-1. Should “pin payload schema ref” be available to all manage users, or restricted behind a governance permission?
-2. Should generated payload schema snapshots include only `payload` (contract) or also embed `event/vars` for debugging?
-3. Should “effective schema” be shown as a schema ref (virtual) or only as a preview (JSON) in the UI?
-4. For tenant-defined events, do we ever allow saving a custom event without schema in a “draft” event state? (Current policy: require schemas; missing schema is error.)
+Resolved:
+1. Pinning payload schema ref is available to all users with `workflow:manage` (no extra governance restriction).
+2. Start with payload contract schemas that only include the `payload` contract (no `event/vars` embedding).
+3. Show inferred/effective schema as JSON preview (no requirement for a virtual schemaRef).
+4. Custom events policy is intentionally left flexible for now (we may remove custom events); avoid extra work tied to custom-event draft states.
 
 ## Acceptance Criteria (Definition of Done)
 - Users can create a workflow from an event and add steps without selecting a workflow payload schema ref.
 - Designer provides a usable field picker/autocomplete experience based on trigger schema + step outputs.
-- Publishing a workflow without a pinned schema generates and stores a stable payload contract schema ref.
+- Publishing a workflow without a pinned schema infers and stores a stable payload contract schema ref from the trigger event.
 - Published workflows remain stable across trigger schema changes; execution uses trigger mapping when needed.
 - Missing trigger schema (system events), missing required mapping, and missing secrets block publish/run with clear validation errors.
-

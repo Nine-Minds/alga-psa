@@ -17,12 +17,16 @@ const optionalNonNegativeInt = z.preprocess(
 ).optional();
 
 export const CreateWorkflowDefinitionInput = z.object({
-  definition: workflowDefinitionSchema
+  definition: workflowDefinitionSchema,
+  payloadSchemaMode: z.enum(['inferred', 'pinned']).optional(),
+  pinnedPayloadSchemaRef: z.string().min(1).optional()
 });
 
 export const UpdateWorkflowDefinitionInput = z.object({
   workflowId: z.string().min(1),
-  definition: workflowDefinitionSchema
+  definition: workflowDefinitionSchema,
+  payloadSchemaMode: z.enum(['inferred', 'pinned']).optional(),
+  pinnedPayloadSchemaRef: z.string().min(1).optional()
 });
 
 export const UpdateWorkflowDefinitionMetadataInput = z.object({

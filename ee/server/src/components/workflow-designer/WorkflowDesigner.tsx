@@ -51,6 +51,7 @@ import { listEventCatalogOptionsV2Action, type WorkflowEventCatalogOptionV2 } fr
 import {
   createWorkflowDefinitionAction,
   getWorkflowSchemaAction,
+  getWorkflowDefinitionVersionAction,
   listWorkflowSchemaRefsAction,
   listWorkflowSchemasMetaAction,
   listWorkflowDefinitionsAction,
@@ -83,6 +84,9 @@ type WorkflowDefinitionRecord = {
   name: string;
   description?: string | null;
   payload_schema_ref: string;
+  payload_schema_mode?: 'inferred' | 'pinned' | string | null;
+  pinned_payload_schema_ref?: string | null;
+  payload_schema_provenance?: string | null;
   trigger?: Record<string, unknown> | null;
   draft_definition: WorkflowDefinition;
   draft_version: number;
@@ -1270,6 +1274,7 @@ const WorkflowDesigner: React.FC = () => {
   const [schemaPreviewExpanded, setSchemaPreviewExpanded] = useState(false);
   const [schemaInferenceEnabled, setSchemaInferenceEnabled] = useState(true);
   const [inferredSchemaRef, setInferredSchemaRef] = useState<string | null>(null);
+  const [inferredSchemaStatus, setInferredSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const lastAppliedInferredRef = useRef<string | null>(null);
   const lastCapturedUnknownSchemaRef = useRef<string | null>(null);
   const [showTriggerMapping, setShowTriggerMapping] = useState(false);
@@ -1280,6 +1285,10 @@ const WorkflowDesigner: React.FC = () => {
   const [triggerSchemaModalSchema, setTriggerSchemaModalSchema] = useState<JsonSchema | null>(null);
   const [triggerSchemaModalStatus, setTriggerSchemaModalStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [triggerSchemaModalTitle, setTriggerSchemaModalTitle] = useState<string>('Trigger schema');
+  const [showPublishedContractModal, setShowPublishedContractModal] = useState(false);
+  const [publishedContractModalStatus, setPublishedContractModalStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [publishedContractModalSchema, setPublishedContractModalSchema] = useState<JsonSchema | null>(null);
+  const [publishedContractModalVersion, setPublishedContractModalVersion] = useState<number | null>(null);
   const [metadataDraft, setMetadataDraft] = useState<{
     isVisible: boolean;
     isPaused: boolean;
@@ -1288,6 +1297,8 @@ const WorkflowDesigner: React.FC = () => {
     failureRateThreshold: string;
     failureRateMinRuns: string;
   } | null>(null);
+  const [payloadSchemaModeDraft, setPayloadSchemaModeDraft] = useState<'inferred' | 'pinned'>('pinned');
+  const [pinnedPayloadSchemaRefDraft, setPinnedPayloadSchemaRefDraft] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
 
@@ -1322,6 +1333,12 @@ const WorkflowDesigner: React.FC = () => {
     if (!payloadSchema) return [] as ActionInputField[];
     return extractActionInputFields(payloadSchema, payloadSchema);
   }, [payloadSchema]);
+
+  const effectivePayloadSchemaRef = useMemo(() => {
+    const current = activeDefinition?.payloadSchemaRef ?? '';
+    if (payloadSchemaModeDraft === 'pinned') return current;
+    return inferredSchemaRef ?? current;
+  }, [activeDefinition?.payloadSchemaRef, inferredSchemaRef, payloadSchemaModeDraft]);
 
   const triggerMappingDataContext = useMemo(() => {
     const globals = {
@@ -1418,6 +1435,16 @@ const WorkflowDesigner: React.FC = () => {
     () => definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null,
     [definitions, activeWorkflowId]
   );
+
+  useEffect(() => {
+    // For unsaved drafts (no workflowId yet), keep the local mode state.
+    if (!activeWorkflowId) return;
+    if (!activeWorkflowRecord) return;
+    const mode = (activeWorkflowRecord.payload_schema_mode === 'inferred' ? 'inferred' : 'pinned') as 'inferred' | 'pinned';
+    setPayloadSchemaModeDraft(mode);
+    setPinnedPayloadSchemaRefDraft(activeWorkflowRecord.pinned_payload_schema_ref ?? activeWorkflowRecord.payload_schema_ref ?? '');
+    setSchemaInferenceEnabled(mode === 'inferred');
+  }, [activeWorkflowId, activeWorkflowRecord?.workflow_id]);
 
   const draftValidationErrors = useMemo(
     () => (Array.isArray(activeWorkflowRecord?.validation_errors) ? activeWorkflowRecord?.validation_errors : []) as PublishError[],
@@ -1532,6 +1559,35 @@ const WorkflowDesigner: React.FC = () => {
     return { ok: true, level: 'none' as const, message: '' };
   }, [activeDefinition?.trigger, eventCatalogOptions, eventCatalogStatus]);
 
+  const payloadSchemaPolicy = useMemo(() => {
+    const ref = effectivePayloadSchemaRef ?? '';
+    if (!ref) return { ok: true, level: 'none' as const, message: '' };
+    // Manual workflows in inferred mode require pinning (explicit contract selection).
+    if (payloadSchemaModeDraft === 'inferred' && !(activeDefinition?.trigger?.type === 'event')) {
+      return {
+        ok: false,
+        level: 'error' as const,
+        message: 'Manual workflows must pin a payload schema before publishing or running.'
+      };
+    }
+    // Don't flash errors while registries are still loading.
+    if (registryStatus === 'idle' || registryStatus === 'loading') return { ok: true, level: 'none' as const, message: '' };
+    if (registryStatus === 'error') {
+      return { ok: false, level: 'error' as const, message: 'Schema registry failed to load. Publishing and running are disabled until it loads.' };
+    }
+    if (payloadSchemaModeDraft === 'inferred' && activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName && !inferredSchemaRef) {
+      return {
+        ok: false,
+        level: 'error' as const,
+        message: `No schema is available for trigger event "${activeDefinition.trigger.eventName}". Publishing and running are disabled until it is fixed.`
+      };
+    }
+    if (schemaRefs.length > 0 && !schemaRefs.includes(ref)) {
+      return { ok: false, level: 'error' as const, message: `Workflow payload schema ref "${ref}" is unknown. Publishing and running are disabled until it is fixed.` };
+    }
+    return { ok: true, level: 'none' as const, message: '' };
+  }, [activeDefinition?.trigger, effectivePayloadSchemaRef, inferredSchemaRef, payloadSchemaModeDraft, registryStatus, schemaRefs]);
+
   const canPublishPermission = useMemo(
     () => userPermissions.includes('workflow:publish') || canAdmin,
     [userPermissions, canAdmin]
@@ -1543,11 +1599,31 @@ const WorkflowDesigner: React.FC = () => {
   const canPublishEnabled =
     canPublishPermission &&
     triggerSchemaPolicy.ok &&
+    payloadSchemaPolicy.ok &&
     (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
   const canRunEnabled =
     canRunPermission &&
     triggerSchemaPolicy.ok &&
+    payloadSchemaPolicy.ok &&
     (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
+
+  const publishDisabledReason = useMemo(() => {
+    if (!canPublishPermission) return '';
+    if (!triggerSchemaPolicy.ok) return triggerSchemaPolicy.message;
+    if (!payloadSchemaPolicy.ok) return payloadSchemaPolicy.message;
+    if (triggerRequiresEventCatalog && eventCatalogStatus !== 'loaded') return 'Event catalog is still loading. Publishing is disabled until it loads.';
+    if (registryStatus !== 'loaded' && schemaRefs.length === 0) return 'Schema registry is still loading. Publishing is disabled until it loads.';
+    return '';
+  }, [canPublishPermission, eventCatalogStatus, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
+
+  const runDisabledReason = useMemo(() => {
+    if (!canRunPermission) return '';
+    if (!triggerSchemaPolicy.ok) return triggerSchemaPolicy.message;
+    if (!payloadSchemaPolicy.ok) return payloadSchemaPolicy.message;
+    if (triggerRequiresEventCatalog && eventCatalogStatus !== 'loaded') return 'Event catalog is still loading. Running is disabled until it loads.';
+    if (registryStatus !== 'loaded' && schemaRefs.length === 0) return 'Schema registry is still loading. Running is disabled until it loads.';
+    return '';
+  }, [canRunPermission, eventCatalogStatus, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
@@ -1622,6 +1698,25 @@ const WorkflowDesigner: React.FC = () => {
       setTriggerSchemaModalStatus('error');
     }
   }, []);
+
+  const openPublishedContractModal = useCallback(async () => {
+    if (!activeWorkflowId) return;
+    const publishedVersion = activeWorkflowRecord?.published_version ?? null;
+    if (!publishedVersion) return;
+    setPublishedContractModalVersion(publishedVersion);
+    setPublishedContractModalSchema(null);
+    setPublishedContractModalStatus('loading');
+    setShowPublishedContractModal(true);
+    try {
+      const record = await getWorkflowDefinitionVersionAction({ workflowId: activeWorkflowId, version: publishedVersion });
+      const schema = ((record as any)?.payload_schema_json ?? null) as JsonSchema | null;
+      setPublishedContractModalSchema(schema);
+      setPublishedContractModalStatus(schema ? 'loaded' : 'error');
+    } catch {
+      setPublishedContractModalSchema(null);
+      setPublishedContractModalStatus('error');
+    }
+  }, [activeWorkflowId, activeWorkflowRecord?.published_version]);
 
   const loadRegistries = useCallback(async () => {
     setRegistryStatus('loading');
@@ -1708,12 +1803,12 @@ const WorkflowDesigner: React.FC = () => {
   }, [payloadSchemaLoadedRef, payloadSchemaStatus]);
 
   const ensurePayloadSchemaLoaded = useCallback(async () => {
-    const schemaRef = activeDefinition?.payloadSchemaRef ?? '';
+    const schemaRef = effectivePayloadSchemaRef ?? '';
     if (!schemaRef) return;
     if (payloadSchemaStatus === 'loading') return;
     if (payloadSchemaLoadedRef === schemaRef && payloadSchemaStatus === 'loaded' && payloadSchema) return;
     await loadPayloadSchema(schemaRef);
-  }, [activeDefinition?.payloadSchemaRef, loadPayloadSchema, payloadSchema, payloadSchemaLoadedRef, payloadSchemaStatus]);
+  }, [effectivePayloadSchemaRef, loadPayloadSchema, payloadSchema, payloadSchemaLoadedRef, payloadSchemaStatus]);
 
   const triggerSourceSchemaRef = useMemo(() => {
     const trigger = activeDefinition?.trigger;
@@ -1813,16 +1908,16 @@ const WorkflowDesigner: React.FC = () => {
   }, [activeWorkflowRecord]);
 
   useEffect(() => {
-    const schemaRef = activeDefinition?.payloadSchemaRef ?? '';
+    const schemaRef = effectivePayloadSchemaRef ?? '';
     setPayloadSchema(null);
     setPayloadSchemaLoadedRef(schemaRef || null);
     setPayloadSchemaStatus(schemaRef ? 'idle' : 'idle');
     setShowSchemaModal(false);
     setSchemaPreviewExpanded(false);
-  }, [activeDefinition?.payloadSchemaRef]);
+  }, [effectivePayloadSchemaRef]);
 
   useEffect(() => {
-    if (!activeDefinition?.payloadSchemaRef) return;
+    if (!effectivePayloadSchemaRef) return;
     const needsSchema =
       schemaPreviewExpanded ||
       showSchemaModal ||
@@ -1833,13 +1928,13 @@ const WorkflowDesigner: React.FC = () => {
         if (trigger?.type !== 'event') return false;
         const mapping = (trigger as any).payloadMapping;
         const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
-        const refsMatch = !!triggerSourceSchemaRef && triggerSourceSchemaRef === activeDefinition.payloadSchemaRef;
+        const refsMatch = !!triggerSourceSchemaRef && triggerSourceSchemaRef === effectivePayloadSchemaRef;
         return showTriggerMapping || mappingProvided || !refsMatch;
       })();
     if (!needsSchema) return;
     ensurePayloadSchemaLoaded();
   }, [
-    activeDefinition?.payloadSchemaRef,
+    effectivePayloadSchemaRef,
     ensurePayloadSchemaLoaded,
     schemaPreviewExpanded,
     selectedPipePath,
@@ -1855,14 +1950,14 @@ const WorkflowDesigner: React.FC = () => {
     const trigger = activeDefinition?.trigger;
     const mapping = trigger?.type === 'event' ? (trigger as any).payloadMapping : null;
     const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
-    const refsMatch = !!activeDefinition?.payloadSchemaRef && triggerSourceSchemaRef === activeDefinition.payloadSchemaRef;
+    const refsMatch = !!effectivePayloadSchemaRef && triggerSourceSchemaRef === effectivePayloadSchemaRef;
     const needsSchema = showTriggerMapping || mappingProvided || !refsMatch;
     if (!needsSchema) return;
     ensureTriggerSourceSchemaLoaded();
-  }, [activeDefinition?.payloadSchemaRef, activeDefinition?.trigger, ensureTriggerSourceSchemaLoaded, showTriggerMapping, triggerSourceSchemaRef]);
+  }, [effectivePayloadSchemaRef, activeDefinition?.trigger, ensureTriggerSourceSchemaLoaded, showTriggerMapping, triggerSourceSchemaRef]);
 
   useEffect(() => {
-    const ref = activeDefinition?.payloadSchemaRef ?? '';
+    const ref = effectivePayloadSchemaRef ?? '';
     if (!ref) return;
     if (schemaRefs.length === 0) return;
     if (!schemaRefs.includes(ref)) {
@@ -1875,7 +1970,7 @@ const WorkflowDesigner: React.FC = () => {
         });
       }
     }
-  }, [activeDefinition?.id, activeDefinition?.payloadSchemaRef, activeWorkflowId, schemaRefs]);
+  }, [activeDefinition?.id, effectivePayloadSchemaRef, activeWorkflowId, schemaRefs]);
 
   useEffect(() => {
     if (!activeDefinition) return;
@@ -1883,21 +1978,29 @@ const WorkflowDesigner: React.FC = () => {
     if (!eventName) {
       setInferredSchemaRef(null);
       lastAppliedInferredRef.current = null;
+      setInferredSchemaStatus('idle');
       return;
     }
     const load = async () => {
       try {
+        setInferredSchemaStatus('loading');
         const user = await getCurrentUser();
-        if (!user?.tenant) return;
+        if (!user?.tenant) {
+          setInferredSchemaRef(null);
+          setInferredSchemaStatus('error');
+          return;
+        }
         const entry = await getEventCatalogEntryByEventType({ eventType: eventName, tenant: user.tenant });
         const ref = (entry as any)?.payload_schema_ref;
-        setInferredSchemaRef(typeof ref === 'string' ? ref : null);
-        if (!schemaInferenceEnabled) return;
-        if (!canManage) return;
+        const normalizedRef = typeof ref === 'string' ? ref : null;
+        setInferredSchemaRef(normalizedRef);
+        setInferredSchemaStatus(normalizedRef ? 'loaded' : 'error');
         if (typeof ref !== 'string' || !ref) return;
+        if (payloadSchemaModeDraft !== 'inferred') return;
+        if (!canManage) return;
         if (lastAppliedInferredRef.current === ref) return;
         const current = activeDefinition.payloadSchemaRef ?? '';
-        if (!current || current === lastAppliedInferredRef.current) {
+        if (current !== ref) {
           lastAppliedInferredRef.current = ref;
           analytics.capture('workflow.payload_schema_ref.inferred_applied', {
             schemaRef: ref,
@@ -1908,10 +2011,11 @@ const WorkflowDesigner: React.FC = () => {
         }
       } catch {
         setInferredSchemaRef(null);
+        setInferredSchemaStatus('error');
       }
     };
     load();
-  }, [activeDefinition?.id, activeDefinition?.trigger, activeWorkflowId, canManage, schemaInferenceEnabled]);
+  }, [activeDefinition?.id, activeDefinition?.trigger, activeWorkflowId, canManage, payloadSchemaModeDraft]);
 
   const handleSelectDefinition = (record: WorkflowDefinitionRecord) => {
     setActiveDefinition(record.draft_definition);
@@ -1936,6 +2040,9 @@ const WorkflowDesigner: React.FC = () => {
     const draft = createDefaultDefinition();
     setActiveDefinition(draft);
     setActiveWorkflowId(null);
+    setPayloadSchemaModeDraft('inferred');
+    setSchemaInferenceEnabled(true);
+    setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
     setSelectedStepId(null);
     setSelectedPipePath('root');
     setPublishErrors([]);
@@ -1957,14 +2064,20 @@ const WorkflowDesigner: React.FC = () => {
         throw new Error('Failed to save workflow');
       }
       if (!activeWorkflowId) {
-        const data = await createWorkflowDefinitionAction({ definition: activeDefinition });
+        const data = await createWorkflowDefinitionAction({
+          definition: activeDefinition,
+          payloadSchemaMode: payloadSchemaModeDraft,
+          pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft ? pinnedPayloadSchemaRefDraft : undefined
+        });
         setActiveWorkflowId(data.workflowId);
         setActiveDefinition({ ...activeDefinition, id: data.workflowId });
         toast.success('Workflow created');
       } else {
         await updateWorkflowDefinitionDraftAction({
           workflowId: activeWorkflowId,
-          definition: activeDefinition
+          definition: activeDefinition,
+          payloadSchemaMode: payloadSchemaModeDraft,
+          pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft ? pinnedPayloadSchemaRefDraft : undefined
         });
         toast.success('Workflow saved');
       }
@@ -2027,9 +2140,28 @@ const WorkflowDesigner: React.FC = () => {
       setPublishErrors(Array.isArray((data as any)?.errors) ? ((data as any).errors as PublishError[]) : []);
       setPublishWarnings(Array.isArray((data as any)?.warnings) ? ((data as any).warnings as PublishError[]) : []);
       if (data.ok === false) {
+        try {
+          const codes = Array.isArray((data as any)?.errors) ? ((data as any).errors as any[]).map((e) => e?.code).filter(Boolean) : [];
+          analytics.capture('workflow.publish.blocked', {
+            workflowId: activeWorkflowId,
+            payloadSchemaMode: payloadSchemaModeDraft,
+            effectivePayloadSchemaRef,
+            triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null,
+            errorCodes: codes
+          });
+        } catch {}
         toast.error('Publish failed - fix validation errors');
         return;
       }
+      try {
+        analytics.capture('workflow.publish.succeeded', {
+          workflowId: activeWorkflowId,
+          payloadSchemaMode: payloadSchemaModeDraft,
+          effectivePayloadSchemaRef,
+          triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null,
+          publishedVersion: (data as any)?.publishedVersion ?? activeDefinition.version
+        });
+      } catch {}
       toast.success('Workflow published');
       await loadDefinitions();
     } catch (error) {
@@ -2598,109 +2730,194 @@ const WorkflowDesigner: React.FC = () => {
                     rows={2}
                   />
                   <div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="workflow-designer-schema-ref-select">Payload schema</Label>
-                      <Button
-                        id="workflow-designer-schema-advanced"
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
-                        onClick={() => setSchemaRefAdvanced((prev) => !prev)}
-                      >
-                        {schemaRefAdvanced ? 'Hide advanced' : 'Advanced'}
-                      </Button>
-                    </div>
-
-                    <div className="mt-2">
-                      {registryStatus === 'loading' ? (
-                        <Skeleton className="h-10 w-full" />
-                      ) : (
-                        <SearchableSelect
-                          id="workflow-designer-schema-ref-select"
-                          options={(() => {
-                            const current = activeDefinition?.payloadSchemaRef ?? '';
-                            const base = schemaRefs.map((ref) => {
-                              const meta = schemaMeta.get(ref);
-                              const title = meta?.title ? ` — ${meta.title}` : '';
-                              return { value: ref, label: `${ref}${title}` };
-                            });
-                            if (current && !schemaRefs.includes(current)) {
-                              return [{ value: current, label: `${current} (unknown)` }, ...base];
-                            }
-                            return base;
-                          })()}
-                          value={activeDefinition?.payloadSchemaRef ?? ''}
-                          onChange={(value) => {
-                            if (schemaInferenceEnabled && inferredSchemaRef && value !== inferredSchemaRef) {
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <Label htmlFor="workflow-designer-contract-mode">Workflow data contract</Label>
+                        <div className="text-xs text-gray-500">
+                          The trigger event defines <span className="font-mono">event.payload</span>. The workflow contract defines the
+                          <span className="font-mono"> payload</span> object that steps read (after trigger mapping, if any).
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-gray-500">Pin schema (advanced)</span>
+                        <Switch
+                          id="workflow-designer-contract-mode"
+                          checked={payloadSchemaModeDraft === 'pinned'}
+                          onCheckedChange={(checked) => {
+                            if (!activeDefinition) return;
+                            if (checked) {
+                              try {
+                                analytics.capture('workflow.payload_contract_mode.changed', {
+                                  workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                                  from: 'inferred',
+                                  to: 'pinned'
+                                });
+                              } catch {}
+                              setPayloadSchemaModeDraft('pinned');
                               setSchemaInferenceEnabled(false);
-                              lastAppliedInferredRef.current = null;
+                              const pinned = pinnedPayloadSchemaRefDraft || activeDefinition.payloadSchemaRef || '';
+                              if (pinned) {
+                                setPinnedPayloadSchemaRefDraft(pinned);
+                                if (activeDefinition.payloadSchemaRef !== pinned) {
+                                  handleDefinitionChange({ payloadSchemaRef: pinned });
+                                }
+                              }
+                              return;
                             }
-                            analytics.capture('workflow.payload_schema_ref.selected', {
-                              schemaRef: value || null,
-                              workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
-                              inferenceEnabled: schemaInferenceEnabled,
-                              triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null
-                            });
-                            handleDefinitionChange({ payloadSchemaRef: value });
-                          }}
-                          placeholder="Select schema…"
-                          emptyMessage="No schemas found"
-                          disabled={registryError || !canManage}
-                          required
-                          dropdownMode="overlay"
-                        />
-                      )}
-                    </div>
-
-                    {schemaRefAdvanced && (
-                      <div className="mt-2">
-                        <Input
-                          id="workflow-designer-schema"
-                          label="Payload schema ref (advanced)"
-                          value={activeDefinition?.payloadSchemaRef ?? ''}
-                          onChange={(event) => {
-                            if (schemaInferenceEnabled) {
-                              setSchemaInferenceEnabled(false);
-                              lastAppliedInferredRef.current = null;
+                            // inferred
+                            try {
+                              analytics.capture('workflow.payload_contract_mode.changed', {
+                                workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                                from: 'pinned',
+                                to: 'inferred'
+                              });
+                            } catch {}
+                            setPayloadSchemaModeDraft('inferred');
+                            setSchemaInferenceEnabled(true);
+                            setSchemaRefAdvanced(false);
+                            setPinnedPayloadSchemaRefDraft(activeDefinition.payloadSchemaRef ?? pinnedPayloadSchemaRefDraft ?? '');
+                            lastAppliedInferredRef.current = null;
+                            if (inferredSchemaRef && activeDefinition.payloadSchemaRef !== inferredSchemaRef) {
+                              handleDefinitionChange({ payloadSchemaRef: inferredSchemaRef });
                             }
-                            handleDefinitionChange({ payloadSchemaRef: event.target.value });
                           }}
                           disabled={!canManage}
                         />
                       </div>
-                    )}
+                    </div>
 
-                    {activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName && (
-                      <div className="mt-2 rounded border border-gray-200 bg-white px-3 py-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs text-gray-700">
-                            {inferredSchemaRef
-                              ? <>Inferred schema for <span className="font-mono text-[11px]">{activeDefinition.trigger.eventName}</span></>
-                              : <>No inferred schema for <span className="font-mono text-[11px]">{activeDefinition.trigger.eventName}</span></>}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-gray-500">Infer</span>
-                            <Switch
-                              id="workflow-designer-schema-infer"
-                              checked={schemaInferenceEnabled}
-                              onCheckedChange={(value) => {
-                                setSchemaInferenceEnabled(Boolean(value));
-                                if (!value) lastAppliedInferredRef.current = null;
+                    {payloadSchemaModeDraft === 'pinned' ? (
+                      <>
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="text-xs text-gray-600">Pinned payload schema</div>
+                          <Button
+                            id="workflow-designer-schema-advanced"
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                            onClick={() => setSchemaRefAdvanced((prev) => !prev)}
+                          >
+                            {schemaRefAdvanced ? 'Hide advanced' : 'Advanced'}
+                          </Button>
+                        </div>
+                        <div className="mt-2">
+                          {registryStatus === 'loading' ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <SearchableSelect
+                              id="workflow-designer-schema-ref-select"
+                              options={(() => {
+                                const current = activeDefinition?.payloadSchemaRef ?? '';
+                                const base = schemaRefs.map((ref) => {
+                                  const meta = schemaMeta.get(ref);
+                                  const title = meta?.title ? ` — ${meta.title}` : '';
+                                  return { value: ref, label: `${ref}${title}` };
+                                });
+                                if (current && !schemaRefs.includes(current)) {
+                                  return [{ value: current, label: `${current} (unknown)` }, ...base];
+                                }
+                                return base;
+                              })()}
+                              value={activeDefinition?.payloadSchemaRef ?? ''}
+                              onChange={(value) => {
+                                setPinnedPayloadSchemaRefDraft(value);
+                                analytics.capture('workflow.payload_schema_ref.selected', {
+                                  schemaRef: value || null,
+                                  workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                                  inferenceEnabled: false,
+                                  triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null
+                                });
+                                handleDefinitionChange({ payloadSchemaRef: value });
+                              }}
+                              placeholder="Select schema…"
+                              emptyMessage="No schemas found"
+                              disabled={registryError || !canManage}
+                              required
+                              dropdownMode="overlay"
+                            />
+                          )}
+                        </div>
+
+                        {schemaRefAdvanced && (
+                          <div className="mt-2">
+                            <Input
+                              id="workflow-designer-schema"
+                              label="Payload schema ref (advanced)"
+                              value={activeDefinition?.payloadSchemaRef ?? ''}
+                              onChange={(event) => {
+                                setPinnedPayloadSchemaRefDraft(event.target.value);
+                                handleDefinitionChange({ payloadSchemaRef: event.target.value });
                               }}
                               disabled={!canManage}
                             />
                           </div>
-                        </div>
-                        {inferredSchemaRef && (
-                          <div className="mt-1 text-[11px] text-gray-500 font-mono break-all">{inferredSchemaRef}</div>
                         )}
+                      </>
+                    ) : (
+                      <div className="mt-2 rounded border border-gray-200 bg-white px-3 py-2">
+                        <div className="text-xs text-gray-700">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <span className="font-semibold text-gray-800">Inferred</span>{' '}
+                              <span className="text-gray-600">from the selected trigger event.</span>
+                            </div>
+                            {effectivePayloadSchemaRef && (
+                              <Badge className="bg-sky-50 text-sky-700 border-sky-200">Effective</Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 text-[11px] text-gray-500 font-mono break-all">
+                            {inferredSchemaStatus === 'loading' ? (
+                              <Skeleton className="h-4 w-56" />
+                            ) : (
+                              (effectivePayloadSchemaRef || 'Select a trigger event to infer a schema.')
+                            )}
+                          </div>
+                          {inferredSchemaStatus === 'error' && activeDefinition?.trigger?.type === 'event' && (
+                            <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                              No schema is available for <span className="font-mono">{activeDefinition.trigger.eventName}</span>. Fix the event catalog entry to include a valid schema.
+                            </div>
+                          )}
+                          {activeWorkflowRecord?.published_version != null &&
+                            activeWorkflowRecord?.payload_schema_ref &&
+                            effectivePayloadSchemaRef &&
+                            activeWorkflowRecord.payload_schema_ref !== effectivePayloadSchemaRef && (
+                            <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-900">
+                              <div className="font-semibold">Draft contract differs from published</div>
+                              <div className="mt-1 text-yellow-800">
+                                Published contract uses <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>. This draft is currently inferred as{' '}
+                                <span className="font-mono">{effectivePayloadSchemaRef}</span>.
+                              </div>
+                              {canManage && (
+                                <div className="mt-2">
+                                  <Button
+                                    id="workflow-designer-pin-to-published-contract"
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
+                                    onClick={() => {
+                                      setPayloadSchemaModeDraft('pinned');
+                                      setSchemaInferenceEnabled(false);
+                                      setSchemaRefAdvanced(false);
+                                      setPinnedPayloadSchemaRefDraft(activeWorkflowRecord.payload_schema_ref ?? '');
+                                      if (activeDefinition?.payloadSchemaRef !== activeWorkflowRecord.payload_schema_ref) {
+                                        handleDefinitionChange({ payloadSchemaRef: activeWorkflowRecord.payload_schema_ref });
+                                      }
+                                    }}
+                                  >
+                                    Pin to published contract
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 
-                    {activeDefinition?.payloadSchemaRef &&
+                    {effectivePayloadSchemaRef &&
                       schemaRefs.length > 0 &&
-                      !schemaRefs.includes(activeDefinition.payloadSchemaRef) && (
+                      !schemaRefs.includes(effectivePayloadSchemaRef) && (
                       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-red-600">
                         <div>
                           Unknown schema ref. Select a valid schema from the dropdown (or update the ref in Advanced).
@@ -2712,7 +2929,12 @@ const WorkflowDesigner: React.FC = () => {
                             size="sm"
                             type="button"
                             className="h-auto px-2 py-1 text-xs text-red-600 hover:text-red-700"
-                            onClick={() => handleDefinitionChange({ payloadSchemaRef: '' })}
+                            onClick={() => {
+                              if (payloadSchemaModeDraft === 'pinned') {
+                                setPinnedPayloadSchemaRefDraft('');
+                                handleDefinitionChange({ payloadSchemaRef: '' });
+                              }
+                            }}
                           >
                             Clear
                           </Button>
@@ -2720,10 +2942,12 @@ const WorkflowDesigner: React.FC = () => {
                       </div>
                     )}
 
-                    {activeDefinition?.payloadSchemaRef && (
+                    {effectivePayloadSchemaRef && (
                       <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs font-semibold text-gray-700">Schema preview</div>
+                          <div className="text-xs font-semibold text-gray-700">
+                            {payloadSchemaModeDraft === 'pinned' ? 'Contract schema preview' : 'Effective schema preview'}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Button
                               id="workflow-designer-schema-preview-toggle"
@@ -2746,13 +2970,25 @@ const WorkflowDesigner: React.FC = () => {
                               }}
                               disabled={
                                 schemaRefs.length > 0 &&
-                                activeDefinition?.payloadSchemaRef
-                                  ? !schemaRefs.includes(activeDefinition.payloadSchemaRef)
+                                effectivePayloadSchemaRef
+                                  ? !schemaRefs.includes(effectivePayloadSchemaRef)
                                   : false
                               }
                             >
                               View full schema
                             </Button>
+                            {activeWorkflowRecord?.published_version != null && (
+                              <Button
+                                id="workflow-designer-schema-view-published"
+                                variant="ghost"
+                                size="sm"
+                                type="button"
+                                className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                onClick={() => void openPublishedContractModal()}
+                              >
+                                View published
+                              </Button>
+                            )}
                           </div>
                         </div>
                         {schemaPreviewExpanded && (
@@ -3172,7 +3408,7 @@ const WorkflowDesigner: React.FC = () => {
                   )}
                 </Card>
 
-                {showSchemaModal && activeDefinition?.payloadSchemaRef && createPortal(
+                {showSchemaModal && effectivePayloadSchemaRef && createPortal(
                   <div
                     className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-6"
                     role="dialog"
@@ -3183,7 +3419,7 @@ const WorkflowDesigner: React.FC = () => {
                   >
                     <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl border border-gray-200 overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                        <div className="text-sm font-semibold text-gray-900">Payload schema</div>
+                        <div className="text-sm font-semibold text-gray-900">Workflow payload contract schema</div>
                         <Button
                           id="workflow-designer-schema-modal-close"
                           variant="ghost"
@@ -3193,6 +3429,15 @@ const WorkflowDesigner: React.FC = () => {
                         >
                           Close
                         </Button>
+                      </div>
+                      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                        <div className="text-[11px] text-gray-600">
+                          <span className="text-gray-500">Schema ref:</span>{' '}
+                          <span className="font-mono break-all">{effectivePayloadSchemaRef}</span>
+                          <span className="text-gray-400"> · </span>
+                          <span className="text-gray-500">Mode:</span>{' '}
+                          <span className="font-semibold">{payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}</span>
+                        </div>
                       </div>
                       <div className="max-h-[70vh] overflow-auto p-4">
                         {payloadSchemaStatus === 'loading' && (
@@ -3262,6 +3507,54 @@ const WorkflowDesigner: React.FC = () => {
                           />
                         )}
                         {triggerSchemaModalStatus === 'idle' && (
+                          <div className="text-xs text-gray-500">Schema not loaded yet.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>,
+                  document.body
+                )}
+
+                {showPublishedContractModal && createPortal(
+                  <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-6"
+                    role="dialog"
+                    aria-modal="true"
+                    onMouseDown={(e) => {
+                      if (e.target === e.currentTarget) setShowPublishedContractModal(false);
+                    }}
+                  >
+                    <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                        <div className="text-sm font-semibold text-gray-900">
+                          Published contract schema{publishedContractModalVersion ? ` (v${publishedContractModalVersion})` : ''}
+                        </div>
+                        <Button
+                          id="workflow-designer-published-contract-modal-close"
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={() => setShowPublishedContractModal(false)}
+                        >
+                          Close
+                        </Button>
+                      </div>
+                      <div className="max-h-[70vh] overflow-auto p-4">
+                        {publishedContractModalStatus === 'loading' && (
+                          <div className="text-xs text-gray-500">Loading schema…</div>
+                        )}
+                        {publishedContractModalStatus === 'error' && (
+                          <div className="text-xs text-red-600">Failed to load published schema.</div>
+                        )}
+                        {publishedContractModalStatus === 'loaded' && publishedContractModalSchema && (
+                          <pre
+                            className="text-[11px] leading-relaxed font-mono whitespace-pre break-words rounded border border-gray-200 bg-gray-50 p-3"
+                            dangerouslySetInnerHTML={{
+                              __html: syntaxHighlightJson(JSON.stringify(publishedContractModalSchema, null, 2))
+                            }}
+                          />
+                        )}
+                        {publishedContractModalStatus === 'idle' && (
                           <div className="text-xs text-gray-500">Schema not loaded yet.</div>
                         )}
                       </div>
@@ -3444,6 +3737,17 @@ const WorkflowDesigner: React.FC = () => {
                   <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-4 w-4" /> Validation Errors
                   </h3>
+                  <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="font-semibold">Contract mode:</span>{' '}
+                        {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
+                      </div>
+                      {effectivePayloadSchemaRef && (
+                        <div className="font-mono break-all">{effectivePayloadSchemaRef}</div>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-3">
                     {currentValidationErrors.map((error, index) => (
                       <Card key={`${error.stepPath}-${index}`} className="p-3 border border-red-200">
@@ -3462,6 +3766,17 @@ const WorkflowDesigner: React.FC = () => {
                   <h3 className="text-sm font-semibold text-yellow-700 flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-4 w-4" /> Validation Warnings
                   </h3>
+                  <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="font-semibold">Contract mode:</span>{' '}
+                        {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
+                      </div>
+                      {effectivePayloadSchemaRef && (
+                        <div className="font-mono break-all">{effectivePayloadSchemaRef}</div>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-3">
                     {currentValidationWarnings.map((warning, index) => (
                       <Card key={`${warning.stepPath}-${index}`} className="p-3 border border-yellow-200">
@@ -3612,7 +3927,7 @@ const WorkflowDesigner: React.FC = () => {
                   id="workflow-designer-publish"
                   onClick={handlePublish}
                   disabled={isPublishing || !activeDefinition || !canPublishEnabled}
-                  title={!canPublishEnabled && !triggerSchemaPolicy.ok ? triggerSchemaPolicy.message : undefined}
+                  title={!canPublishEnabled ? publishDisabledReason || undefined : undefined}
                 >
                   {isPublishing ? 'Publishing...' : 'Publish'}
                 </Button>
@@ -3623,12 +3938,16 @@ const WorkflowDesigner: React.FC = () => {
                   onClick={openRunDialog}
                   disabled={
                     !activeDefinition
-                    || !activeWorkflowRecord?.published_version
+                    || !activeWorkflowId
                     || activeWorkflowRecord?.validation_status === 'error'
                     || activeWorkflowRecord?.is_paused
                     || !canRunEnabled
                   }
-                  title={!canRunEnabled && !triggerSchemaPolicy.ok ? triggerSchemaPolicy.message : undefined}
+                  title={
+                    !canRunEnabled ? runDisabledReason || undefined
+                      : !activeWorkflowRecord?.published_version ? 'Preview only until a version is published.'
+                        : undefined
+                  }
                 >
                   Run
                 </Button>

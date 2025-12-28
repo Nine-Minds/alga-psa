@@ -247,6 +247,19 @@ const listSecretNames = async (knex: Awaited<ReturnType<typeof createTenantKnex>
   return new Set(secrets.map((secret) => secret.name));
 };
 
+const stableJson = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(stableJson);
+  if (!value || typeof value !== 'object') return value;
+  const obj = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(obj).sort()) {
+    out[key] = stableJson(obj[key]);
+  }
+  return out;
+};
+
+const stableStringify = (value: unknown): string => JSON.stringify(stableJson(value));
+
 const computeValidation = async (params: {
   definition: Record<string, unknown>;
   payloadSchemaRef?: string | null;
@@ -263,6 +276,195 @@ const computeValidation = async (params: {
   const errors = [...validation.errors];
   const warnings = [...validation.warnings];
 
+  if (!payloadSchemaRef || !String(payloadSchemaRef).trim()) {
+    errors.push({
+      severity: 'error',
+      stepPath: 'root.payloadSchemaRef',
+      code: 'PAYLOAD_SCHEMA_REF_MISSING',
+      message: 'Workflow payload schema ref is required before publishing or running.'
+    });
+  } else if (!payloadSchemaJson) {
+    errors.push({
+      severity: 'error',
+      stepPath: 'root.payloadSchemaRef',
+      code: 'PAYLOAD_SCHEMA_REF_UNKNOWN',
+      message: `Workflow payload schema ref "${String(payloadSchemaRef)}" is not present in the schema registry.`
+    });
+  }
+
+  const payloadSchemaHash =
+    payloadSchemaJson
+      ? createHash('sha256').update(stableStringify(payloadSchemaJson)).digest('hex')
+      : null;
+  let triggerSourceSchemaRef: string | null = null;
+  let triggerSchemaRefStatus: 'known' | 'missing' | 'unknown' = 'missing';
+
+  const normalizeTypes = (schema: any): Set<string> => {
+    if (!schema || typeof schema !== 'object') return new Set(['unknown']);
+    const typeVal = schema.type;
+    const base = new Set<string>();
+    const add = (t: unknown) => {
+      if (typeof t !== 'string') return;
+      if (t === 'integer') base.add('number');
+      else base.add(t);
+    };
+    if (Array.isArray(typeVal)) typeVal.forEach(add);
+    else add(typeVal);
+    if (schema.anyOf && Array.isArray(schema.anyOf)) {
+      // Prefer the non-null option, but keep null if present.
+      schema.anyOf.forEach((s: any) => {
+        const t = normalizeTypes(s);
+        t.forEach((x) => base.add(x));
+      });
+    }
+    if (base.size === 0) base.add('unknown');
+    return base;
+  };
+
+  const resolveSchemaAtPath = (schema: any, path: string[]): any | null => {
+    if (!schema || typeof schema !== 'object') return null;
+    let current: any = schema;
+    for (const seg of path) {
+      if (!current) return null;
+      // Handle anyOf (nullable)
+      if (current.anyOf && Array.isArray(current.anyOf)) {
+        const nonNull = current.anyOf.find((s: any) => s && s.type !== 'null') ?? current.anyOf[0];
+        current = nonNull;
+      }
+      if (current.$ref && schema.definitions && typeof current.$ref === 'string') {
+        const key = current.$ref.replace('#/definitions/', '');
+        current = schema.definitions[key] ?? current;
+      }
+      if (current.type === 'object' && current.properties && typeof current.properties === 'object') {
+        current = (current.properties as any)[seg] ?? null;
+        continue;
+      }
+      if (current.type === 'array' && current.items) {
+        // Only support `.items.<prop>` lookup if seg is 'items'
+        if (seg === 'items') {
+          current = current.items;
+          continue;
+        }
+        // Unknown array access
+        return null;
+      }
+      return null;
+    }
+    return current;
+  };
+
+  const literalTypes = (value: unknown): Set<string> => {
+    if (value === null) return new Set(['null']);
+    if (Array.isArray(value)) return new Set(['array']);
+    switch (typeof value) {
+      case 'string':
+        return new Set(['string']);
+      case 'number':
+        return new Set(['number']);
+      case 'boolean':
+        return new Set(['boolean']);
+      case 'object':
+        return new Set(['object']);
+      default:
+        return new Set(['unknown']);
+    }
+  };
+
+  const exprPathToSchemaTypes = (expr: string, ctx: { payload?: any | null; eventPayload?: any | null; vars?: Map<string, any> }): Set<string> => {
+    const trimmed = String(expr ?? '').trim();
+    if (!trimmed) return new Set(['unknown']);
+
+    const pathFor = (prefix: string) => trimmed.startsWith(prefix) ? trimmed.slice(prefix.length).split('.').filter(Boolean) : null;
+
+    // event.payload.<...>
+    const eventPath = pathFor('event.payload.');
+    if (eventPath && ctx.eventPayload) {
+      const schema = resolveSchemaAtPath(ctx.eventPayload, eventPath);
+      return schema ? normalizeTypes(schema) : new Set(['unknown']);
+    }
+
+    // payload.<...>
+    const payloadPath = pathFor('payload.');
+    if (payloadPath && ctx.payload) {
+      const schema = resolveSchemaAtPath(ctx.payload, payloadPath);
+      return schema ? normalizeTypes(schema) : new Set(['unknown']);
+    }
+
+    // vars.<saveAs>.<...>
+    if (trimmed.startsWith('vars.')) {
+      const rest = trimmed.slice('vars.'.length);
+      const [saveAs, ...sub] = rest.split('.').filter(Boolean);
+      if (!saveAs) return new Set(['unknown']);
+      const baseSchema = ctx.vars?.get(saveAs) ?? null;
+      if (!baseSchema) return new Set(['unknown']);
+      if (sub.length === 0) return normalizeTypes(baseSchema);
+      const schema = resolveSchemaAtPath(baseSchema, sub);
+      return schema ? normalizeTypes(schema) : new Set(['unknown']);
+    }
+
+    // meta.* and secrets/env are treated as unknown for now.
+    return new Set(['unknown']);
+  };
+
+  const isCompatible = (expected: Set<string>, actual: Set<string>): { ok: boolean; known: boolean } => {
+    const expectedKnown = !(expected.size === 1 && expected.has('unknown'));
+    const actualKnown = !(actual.size === 1 && actual.has('unknown'));
+    const known = expectedKnown && actualKnown;
+    if (!known) return { ok: true, known: false };
+    // Nullability: if expected includes null, allow actual null; otherwise normal check.
+    for (const a of actual) {
+      if (expected.has(a)) return { ok: true, known: true };
+      // allow number into integer already normalized
+    }
+    // expected "object" should accept "array"? no.
+    return { ok: false, known: true };
+  };
+
+  const validateMappingTypesAgainstSchema = (params: {
+    mapping: any;
+    targetSchema: any;
+    options: { stepPath: string; stepId: string; fieldName: string };
+    ctx: { payload?: any | null; eventPayload?: any | null; vars?: Map<string, any> };
+  }): void => {
+    const { mapping, targetSchema, options, ctx } = params;
+    if (!mapping || typeof mapping !== 'object') return;
+    if (!targetSchema || typeof targetSchema !== 'object') return;
+
+    for (const [field, value] of Object.entries(mapping as Record<string, unknown>)) {
+      const targetFieldSchema = resolveSchemaAtPath(targetSchema, [field]);
+      if (!targetFieldSchema) continue;
+      const expected = normalizeTypes(targetFieldSchema);
+
+      let actual: Set<string>;
+      if (value && typeof value === 'object' && '$expr' in (value as any)) {
+        actual = exprPathToSchemaTypes(String((value as any).$expr ?? ''), ctx);
+      } else if (value && typeof value === 'object' && '$secret' in (value as any)) {
+        actual = new Set(['string']);
+      } else {
+        actual = literalTypes(value);
+      }
+
+      const compat = isCompatible(expected, actual);
+      if (!compat.ok && compat.known) {
+        errors.push({
+          severity: 'error',
+          stepPath: options.stepPath,
+          stepId: options.stepId,
+          code: 'MAPPING_TYPE_INCOMPATIBLE',
+          message: `Type "${Array.from(actual).join('|')}" is incompatible with expected "${Array.from(expected).join('|')}" for "${options.fieldName}.${field}".`
+        });
+      } else if (!compat.known && (expected.size === 1 && !expected.has('unknown'))) {
+        warnings.push({
+          severity: 'warning',
+          stepPath: options.stepPath,
+          stepId: options.stepId,
+          code: 'MAPPING_TYPE_UNKNOWN',
+          message: `Could not determine a type for "${options.fieldName}.${field}" to validate against expected "${Array.from(expected).join('|')}".`
+        });
+      }
+    }
+  };
+
   const trigger = (definition as any)?.trigger;
   const isEventTrigger = trigger?.type === 'event' && typeof trigger?.eventName === 'string' && trigger.eventName.length > 0;
   if (isEventTrigger) {
@@ -274,6 +476,10 @@ const computeValidation = async (params: {
     const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
     const catalogRef = typeof (catalog as any)?.payload_schema_ref === 'string' ? String((catalog as any).payload_schema_ref) : null;
     const sourceRef = overrideSource ?? catalogRef;
+    const sourceSchemaJson = sourceRef && schemaRegistry.has(sourceRef) ? (schemaRegistry.toJsonSchema(sourceRef) as any) : null;
+    triggerSourceSchemaRef = sourceRef ?? null;
+    if (!sourceRef) triggerSchemaRefStatus = 'missing';
+    else triggerSchemaRefStatus = schemaRegistry.has(sourceRef) ? 'known' : 'unknown';
 
     if (!sourceRef || !schemaRegistry.has(sourceRef)) {
       errors.push(buildUnknownTriggerSourceSchemaRefError(eventName));
@@ -321,7 +527,79 @@ const computeValidation = async (params: {
           }
         }
       }
+
+      // Type compatibility (best-effort): compare mapping value types to workflow payload schema types.
+      if (payloadSchemaJson && sourceSchemaJson) {
+        validateMappingTypesAgainstSchema({
+          mapping,
+          targetSchema: payloadSchemaJson,
+          options: { stepPath: 'root.trigger.payloadMapping', stepId: 'trigger', fieldName: 'payloadMapping' },
+          ctx: { eventPayload: sourceSchemaJson, payload: payloadSchemaJson, vars: new Map() }
+        });
+      }
     }
+  }
+
+  // Type compatibility for action.call input mappings (best-effort)
+  try {
+    const registry = getActionRegistryV2();
+    const steps = (definition as any)?.steps;
+    if (Array.isArray(steps)) {
+      const varsSchemas = new Map<string, any>();
+
+      const walk = (list: any[]): void => {
+        for (const step of list) {
+          if (!step || typeof step !== 'object') continue;
+          if (step.type === 'control.if') {
+            walk(Array.isArray(step.then) ? step.then : []);
+            if (Array.isArray(step.else)) walk(step.else);
+            continue;
+          }
+          if (step.type === 'control.tryCatch') {
+            walk(Array.isArray(step.try) ? step.try : []);
+            walk(Array.isArray(step.catch) ? step.catch : []);
+            continue;
+          }
+          if (step.type === 'control.forEach') {
+            walk(Array.isArray(step.body) ? step.body : []);
+            continue;
+          }
+
+          const cfg = (step as any).config ?? null;
+          const saveAs = typeof cfg?.saveAs === 'string' ? cfg.saveAs : null;
+          const actionId = step.type === 'action.call' ? (typeof cfg?.actionId === 'string' ? cfg.actionId : null) : null;
+          const actionVersion = typeof cfg?.version === 'number' ? cfg.version : undefined;
+
+          // Validate action.call inputMapping
+          if (step.type === 'action.call' && actionId) {
+            const defn = registry.get(actionId, actionVersion ?? 1);
+            const inputSchemaJson = defn?.inputSchema ? (zodToJsonSchema(defn.inputSchema, { name: `${actionId}@${actionVersion ?? 1}.input` }) as any) : null;
+            const inputMapping = cfg?.inputMapping ?? null;
+            if (inputSchemaJson && inputMapping && typeof inputMapping === 'object') {
+              validateMappingTypesAgainstSchema({
+                mapping: inputMapping,
+                targetSchema: inputSchemaJson,
+                options: { stepPath: `root.steps.${String(step.id)}.config.inputMapping`, stepId: String(step.id), fieldName: 'inputMapping' },
+                ctx: { payload: payloadSchemaJson, vars: varsSchemas, eventPayload: null }
+              });
+            }
+          }
+
+          // Track outputs for vars.* typing
+          if (saveAs) {
+            if (step.type === 'action.call' && actionId) {
+              const defn = registry.get(actionId, actionVersion ?? 1);
+              const out = defn?.outputSchema ? (zodToJsonSchema(defn.outputSchema, { name: `${actionId}@${actionVersion ?? 1}.output` }) as any) : null;
+              if (out) varsSchemas.set(saveAs, out);
+            }
+          }
+        }
+      };
+
+      walk(steps);
+    }
+  } catch {
+    // best-effort; do not break validation
   }
 
   if (!payloadSchemaJson && payloadSchemaRef) {
@@ -347,7 +625,14 @@ const computeValidation = async (params: {
     ...validation,
     errors,
     warnings,
-    status
+    status,
+    payloadSchemaHash,
+    contextJson: {
+      payloadSchemaRef: payloadSchemaRef ?? null,
+      payloadSchemaHash,
+      triggerSourceSchemaRef,
+      triggerSchemaRefStatus
+    } as Record<string, unknown>
   };
 };
 
@@ -633,6 +918,9 @@ export async function createWorkflowDefinitionAction(input: unknown) {
   await requireWorkflowPermission(user, 'manage', knex);
   const workflowId = uuidv4();
   const definition = { ...parsed.definition, id: workflowId };
+  const payloadSchemaMode = parsed.payloadSchemaMode ?? 'pinned';
+  const pinnedPayloadSchemaRef = parsed.pinnedPayloadSchemaRef ?? null;
+  const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
 
   const schemaRegistry = getSchemaRegistry();
   const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
@@ -651,6 +939,9 @@ export async function createWorkflowDefinitionAction(input: unknown) {
     name: definition.name,
     description: definition.description ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
+    payload_schema_mode: payloadSchemaMode,
+    pinned_payload_schema_ref: pinnedPayloadSchemaRef,
+    payload_schema_provenance: payloadSchemaProvenance,
     trigger: definition.trigger ?? null,
     draft_definition: definition,
     draft_version: definition.version,
@@ -658,6 +949,8 @@ export async function createWorkflowDefinitionAction(input: unknown) {
     validation_status: validation.status,
     validation_errors: validation.errors,
     validation_warnings: validation.warnings,
+    validation_context_json: (validation as any).contextJson ?? null,
+    validation_payload_schema_hash: (validation as any).payloadSchemaHash ?? null,
     validated_at: new Date().toISOString(),
     created_by: user.user_id,
     updated_by: user.user_id
@@ -711,6 +1004,9 @@ export async function updateWorkflowDefinitionDraftAction(input: unknown) {
     await requireWorkflowPermission(user, 'admin', knex);
   }
   const definition = { ...parsed.definition, id: parsed.workflowId };
+  const payloadSchemaMode = parsed.payloadSchemaMode ?? (typeof (current as any)?.payload_schema_mode === 'string' ? (current as any).payload_schema_mode : 'pinned');
+  const pinnedPayloadSchemaRef = parsed.pinnedPayloadSchemaRef ?? (typeof (current as any)?.pinned_payload_schema_ref === 'string' ? (current as any).pinned_payload_schema_ref : null);
+  const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
 
   const schemaRegistry = getSchemaRegistry();
   const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
@@ -731,10 +1027,15 @@ export async function updateWorkflowDefinitionDraftAction(input: unknown) {
     name: definition.name,
     description: definition.description ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
+    payload_schema_mode: payloadSchemaMode,
+    pinned_payload_schema_ref: pinnedPayloadSchemaRef,
+    payload_schema_provenance: payloadSchemaProvenance,
     trigger: definition.trigger ?? null,
     validation_status: validation.status,
     validation_errors: validation.errors,
     validation_warnings: validation.warnings,
+    validation_context_json: (validation as any).contextJson ?? null,
+    validation_payload_schema_hash: (validation as any).payloadSchemaHash ?? null,
     validated_at: new Date().toISOString()
   });
 
@@ -895,10 +1196,43 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
     return throwHttpError(400, 'No definition to publish');
   }
 
+  // Publish-time inference: for inferred mode, prefer the trigger event's schemaRef as the workflow payload contract.
   const schemaRegistry = getSchemaRegistry();
-  const payloadSchemaJson = schemaRegistry.has(definition.payloadSchemaRef)
+  const payloadSchemaMode = typeof (workflow as any)?.payload_schema_mode === 'string' ? String((workflow as any).payload_schema_mode) : 'pinned';
+  const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
+  if (payloadSchemaMode === 'inferred') {
+    const trigger = (definition as any)?.trigger;
+    const isEventTrigger = trigger?.type === 'event' && typeof trigger?.eventName === 'string' && trigger.eventName.length > 0;
+    if (!isEventTrigger) {
+      return {
+        ok: false,
+        errors: [{
+          severity: 'error',
+          stepPath: 'root.payloadSchemaRef',
+          code: 'PAYLOAD_SCHEMA_INFERENCE_UNSUPPORTED_TRIGGER',
+          message: 'Workflow payload schema inference is only supported for event-triggered workflows. Pin a payload schema to publish.'
+        }],
+        warnings: []
+      };
+    }
+    if (isEventTrigger) {
+      const eventName = String(trigger.eventName);
+      const overrideSource = typeof trigger?.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()
+        ? String(trigger.sourcePayloadSchemaRef).trim()
+        : null;
+      const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
+      const catalogRef = typeof (catalog as any)?.payload_schema_ref === 'string' ? String((catalog as any).payload_schema_ref) : null;
+      const sourceRef = overrideSource ?? catalogRef;
+      if (sourceRef && typeof sourceRef === 'string' && sourceRef.trim()) {
+        (definition as any).payloadSchemaRef = sourceRef.trim();
+      }
+    }
+  }
+
+  const payloadSchemaJsonRaw = schemaRegistry.has(definition.payloadSchemaRef)
     ? schemaRegistry.toJsonSchema(definition.payloadSchemaRef)
     : null;
+  const payloadSchemaJson = payloadSchemaJsonRaw ? (stableJson(payloadSchemaJsonRaw) as Record<string, unknown>) : null;
   const validation = await computeValidation({
     definition,
     payloadSchemaRef: definition.payloadSchemaRef,
@@ -925,6 +1259,14 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
 
   await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
     status: 'published',
+    payload_schema_ref: definition.payloadSchemaRef,
+    payload_schema_provenance: payloadSchemaProvenance,
+    validation_status: validation.status,
+    validation_errors: validation.errors,
+    validation_warnings: validation.warnings,
+    validation_context_json: (validation as any).contextJson ?? null,
+    validation_payload_schema_hash: (validation as any).payloadSchemaHash ?? null,
+    validated_at: new Date().toISOString(),
     updated_by: user.user_id
   });
 
@@ -938,6 +1280,9 @@ export async function publishWorkflowDefinitionAction(input: unknown) {
     },
     details: {
       definitionHash: hashDefinition(definition as Record<string, unknown>),
+      payloadSchemaRef: definition.payloadSchemaRef,
+      payloadSchemaMode: payloadSchemaMode,
+      payloadSchemaProvenance,
       warnings: validation.warnings?.length ?? 0
     },
     source: 'api'
