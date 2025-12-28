@@ -16,6 +16,15 @@ export class WorkflowDesignerPage {
   readonly triggerInput: Locator;
   readonly paletteSearchInput: Locator;
 
+  // Contract section locators
+  readonly contractSection: Locator;
+  readonly contractModeToggle: Locator;
+  readonly schemaPreviewToggle: Locator;
+  readonly schemaViewButton: Locator;
+  readonly pinToPublishedButton: Locator;
+  readonly schemaClearButton: Locator;
+  readonly triggerMappingJumpToContract: Locator;
+
   constructor(page: Page) {
     this.page = page;
     this.header = page.getByRole('heading', { name: 'Workflow Designer' });
@@ -25,11 +34,22 @@ export class WorkflowDesignerPage {
     this.nameInput = page.locator('#workflow-designer-name');
     this.versionInput = page.locator('#workflow-designer-version');
     this.descriptionInput = page.locator('#workflow-designer-description');
-    this.payloadSchemaSelectButton = page.locator('#workflow-designer-schema-ref-select');
+    // SearchableSelect renders both a div wrapper and a button with same ID - use the button
+    this.payloadSchemaSelectButton = page.locator('#workflow-designer-schema-ref-select[role="combobox"]');
     this.payloadSchemaAdvancedToggle = page.locator('#workflow-designer-schema-advanced');
     this.payloadSchemaInput = page.locator('#workflow-designer-schema');
-    this.triggerInput = page.locator('#workflow-designer-trigger');
+    // Trigger is now a SearchableSelect (combobox), use the button with role="combobox"
+    this.triggerInput = page.locator('#workflow-designer-trigger-event[role="combobox"]');
     this.paletteSearchInput = page.locator('#workflow-designer-search');
+
+    // Contract section locators
+    this.contractSection = page.locator('#workflow-designer-contract-section');
+    this.contractModeToggle = page.locator('#workflow-designer-contract-mode');
+    this.schemaPreviewToggle = page.locator('#workflow-designer-schema-preview-toggle');
+    this.schemaViewButton = page.locator('#workflow-designer-schema-view');
+    this.pinToPublishedButton = page.locator('#workflow-designer-pin-to-published-contract');
+    this.schemaClearButton = page.locator('#workflow-designer-schema-clear');
+    this.triggerMappingJumpToContract = page.locator('#workflow-designer-trigger-mapping-jump-to-contract');
   }
 
   async goto(baseUrl?: string): Promise<void> {
@@ -85,7 +105,15 @@ export class WorkflowDesignerPage {
   }
 
   async selectWorkflowByName(name: string): Promise<void> {
-    await this.page.getByRole('button', { name }).click();
+    // Use id prefix to find workflow buttons, avoiding "New Workflow" create button
+    const workflowButton = this.page.locator(`button[id^="workflow-designer-open-"]`).filter({ hasText: name });
+    await expect(workflowButton.first()).toBeVisible({ timeout: 15_000 });
+    await workflowButton.first().click();
+  }
+
+  async waitForWorkflowInList(name: string): Promise<void> {
+    const workflowButton = this.page.locator(`button[id^="workflow-designer-open-"]`).filter({ hasText: name });
+    await expect(workflowButton.first()).toBeVisible({ timeout: 15_000 });
   }
 
   async selectStepById(stepId: string): Promise<void> {
@@ -112,5 +140,86 @@ export class WorkflowDesignerPage {
 
   dropStepsHereText(): Locator {
     return this.page.getByText('Drop steps here');
+  }
+
+  // Trigger event helpers
+  async selectTriggerEvent(eventName: string): Promise<void> {
+    await this.triggerInput.click();
+    const searchInput = this.page.locator('#workflow-designer-trigger-event-search');
+    if (await searchInput.isVisible()) {
+      await searchInput.fill(eventName);
+    }
+    await this.page.getByRole('option', { name: new RegExp(eventName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }).first().click();
+  }
+
+  async clearTriggerEvent(): Promise<void> {
+    // Select "Manual (no trigger)" option
+    await this.triggerInput.click();
+    await this.page.getByRole('option', { name: /Manual.*no trigger/i }).click();
+  }
+
+  // Contract mode helpers
+  async isContractModeInferred(): Promise<boolean> {
+    const checked = await this.contractModeToggle.getAttribute('aria-checked');
+    return checked !== 'true';
+  }
+
+  async isContractModePinned(): Promise<boolean> {
+    const checked = await this.contractModeToggle.getAttribute('aria-checked');
+    return checked === 'true';
+  }
+
+  async setContractModePinned(): Promise<void> {
+    const isInferred = await this.isContractModeInferred();
+    if (isInferred) {
+      await this.contractModeToggle.click();
+    }
+  }
+
+  async setContractModeInferred(): Promise<void> {
+    const isPinned = await this.isContractModePinned();
+    if (isPinned) {
+      await this.contractModeToggle.click();
+    }
+  }
+
+  async getEffectiveSchemaRef(): Promise<string | null> {
+    const inferredIndicator = this.page.locator('#workflow-designer-contract-section .font-mono');
+    if (await inferredIndicator.count() > 0) {
+      return await inferredIndicator.first().textContent();
+    }
+    return null;
+  }
+
+  contractSectionLabel(): Locator {
+    return this.page.locator('label[for="workflow-designer-contract-mode"]');
+  }
+
+  inferredModeIndicator(): Locator {
+    return this.page.locator('#workflow-designer-contract-section').getByText('Inferred');
+  }
+
+  effectiveBadge(): Locator {
+    return this.page.locator('#workflow-designer-contract-section').getByText('Effective', { exact: true });
+  }
+
+  contractSchemaPreviewLabel(): Locator {
+    return this.page.locator('#workflow-designer-contract-section').getByText(/Contract schema preview|Effective schema preview/);
+  }
+
+  unknownSchemaWarning(): Locator {
+    return this.page.locator('#workflow-designer-contract-section').getByText(/Unknown schema ref/);
+  }
+
+  inferenceErrorMessage(): Locator {
+    return this.page.locator('#workflow-designer-contract-section').getByText(/No schema is available for/);
+  }
+
+  contractDiffersWarning(): Locator {
+    return this.page.locator('#workflow-designer-contract-section').getByText('Draft contract differs from published');
+  }
+
+  contractSectionSkeleton(): Locator {
+    return this.page.locator('#workflow-designer-contract-section .animate-pulse, #workflow-designer-contract-section [class*="skeleton"]');
   }
 }
