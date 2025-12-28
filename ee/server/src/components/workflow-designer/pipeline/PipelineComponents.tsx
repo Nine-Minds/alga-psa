@@ -254,6 +254,7 @@ export const EmptyPipeline: React.FC<{
       </p>
       {onAddStep && !disabled && (
         <Button
+          id="empty-pipeline-add-first-step"
           variant="outline"
           size="sm"
           onClick={onAddStep}

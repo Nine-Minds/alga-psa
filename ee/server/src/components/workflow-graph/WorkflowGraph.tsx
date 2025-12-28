@@ -11,6 +11,7 @@ import ReactFlow, {
   type ReactFlowInstance,
   type Edge,
   type Node,
+  type NodeProps,
   type NodeTypes
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -90,7 +91,7 @@ const statusStyles = (status?: string | null) => {
   }
 };
 
-const StepNode: React.FC<{ data: WorkflowGraphNodeData; selected?: boolean }> = ({ data, selected }) => {
+const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }) => {
   const stepType = data.stepType ?? 'unknown';
   const colors = getStepTypeColor(stepType);
   const icon = getStepTypeIcon(stepType);
@@ -266,7 +267,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
       try {
         const graph = await buildWorkflowGraph(steps as any, {
           getLabel: (step) => getLabelRef.current(step as any),
-          getSubtitle: getSubtitleRef.current ? (step) => getSubtitleRef.current?.(step as any) : undefined,
+          getSubtitle: getSubtitleRef.current ? (step) => (getSubtitleRef.current?.(step as any) ?? null) : undefined,
           includeInsertions: editable,
           getPipePathForRoot: () => rootPipePath
         });

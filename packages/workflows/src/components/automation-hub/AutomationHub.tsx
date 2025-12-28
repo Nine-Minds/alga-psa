@@ -10,7 +10,7 @@ import { LayoutTemplate, Code2, Bell, History } from 'lucide-react';
 // Import tab content components
 import TemplateLibrary from './TemplateLibrary';
 import Workflows from './Workflows';
-import EventsCatalog from './EventsCatalog';
+import EventsCatalogV2 from './EventsCatalogV2';
 import LogsHistory from './LogsHistory';
 import FeatureFlagPageWrapper from '@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper';
 
@@ -57,7 +57,7 @@ export default function AutomationHub() {
     },
     {
       label: 'Events Catalog',
-      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><EventsCatalog /></FeatureFlagPageWrapper>
+      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><EventsCatalogV2 /></FeatureFlagPageWrapper>
     },
     {
       label: 'Logs & History',
