@@ -8,8 +8,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from 'server/src/components/
 import WorkflowList from './WorkflowList';
 import CreateWorkflowDialog, { WorkflowTriggerType } from './CreateWorkflowDialog';
 import { List, PenTool, Play, Zap } from 'lucide-react';
+import EventsCatalogV2 from './EventsCatalogV2';
 
-type TabValue = 'workflows' | 'designer' | 'runs' | 'events';
+type TabValue = 'workflows' | 'designer' | 'runs' | 'events-catalog';
 
 export default function AutomationHub() {
   const [activeTab, setActiveTab] = useState<TabValue>('workflows');
@@ -20,12 +21,12 @@ export default function AutomationHub() {
     triggerType: WorkflowTriggerType;
   } | null>(null);
   const searchParams = useSearchParams();
-  const eventTypeFromQuery = searchParams.get('eventType');
 
   useEffect(() => {
-    const tab = searchParams.get('tab') as TabValue | null;
-    if (tab && ['workflows', 'designer', 'runs', 'events'].includes(tab)) {
-      setActiveTab(tab);
+    const tabRaw = searchParams.get('tab');
+    const tab = tabRaw === 'events' ? 'events-catalog' : tabRaw;
+    if (tab && ['workflows', 'designer', 'runs', 'events-catalog'].includes(tab)) {
+      setActiveTab(tab as TabValue);
     }
   }, [searchParams]);
 
@@ -63,9 +64,9 @@ export default function AutomationHub() {
                 <Play className="w-4 h-4" />
                 Runs
               </TabsTrigger>
-              <TabsTrigger value="events" className="flex items-center gap-2">
+              <TabsTrigger value="events-catalog" className="flex items-center gap-2">
                 <Zap className="w-4 h-4" />
-                Events
+                Events Catalog
               </TabsTrigger>
             </TabsList>
           </div>
@@ -95,23 +96,8 @@ export default function AutomationHub() {
             </div>
           </TabsContent>
 
-          <TabsContent value="events" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="w-16 h-16 rounded-full bg-[rgb(var(--color-border-100))] flex items-center justify-center mb-4">
-                <Zap className="w-8 h-8 text-[rgb(var(--color-text-400))]" />
-              </div>
-              <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
-                Workflow Events
-              </h3>
-              <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md">
-                Monitor events that trigger workflows. This feature is coming soon.
-              </p>
-              {eventTypeFromQuery && (
-                <div className="mt-3 text-xs text-[rgb(var(--color-text-500))]">
-                  Selected event: <span className="font-semibold text-[rgb(var(--color-text-700))]">{eventTypeFromQuery}</span>
-                </div>
-              )}
-            </div>
+          <TabsContent value="events-catalog" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
+            <EventsCatalogV2 />
           </TabsContent>
         </Tabs>
 

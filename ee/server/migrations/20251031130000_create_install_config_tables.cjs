@@ -4,19 +4,24 @@
 exports.up = async function up(knex) {
   const hasConfigTable = await knex.schema.hasTable('tenant_extension_install_config');
   if (!hasConfigTable) {
-    await knex.schema.createTable('tenant_extension_install_config', (t) => {
-      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-      t.uuid('install_id').notNullable().references('id').inTable('tenant_extension_install').onDelete('CASCADE');
-      t.string('tenant_id').notNullable();
-      t.jsonb('config').notNullable().defaultTo('{}');
-      t.jsonb('providers').notNullable().defaultTo('[]');
-      t.string('version').notNullable().defaultTo(knex.raw("gen_random_uuid()::text"));
-      t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-      t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
-      t.unique(['install_id']);
-      t.index(['tenant_id']);
-      t.index(['install_id', 'version']);
-    });
+    try {
+      await knex.schema.createTable('tenant_extension_install_config', (t) => {
+        t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+        t.uuid('install_id').notNullable().references('id').inTable('tenant_extension_install').onDelete('CASCADE');
+        t.string('tenant_id').notNullable();
+        t.jsonb('config').notNullable().defaultTo('{}');
+        t.jsonb('providers').notNullable().defaultTo('[]');
+        t.string('version').notNullable().defaultTo(knex.raw("gen_random_uuid()::text"));
+        t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+        t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+        t.unique(['install_id']);
+        t.index(['tenant_id']);
+        t.index(['install_id', 'version']);
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('already exists')) throw err;
+    }
   } else {
     // Best-effort: ensure expected columns exist for environments where the table was created manually.
     const ensureColumn = async (name, addColumn) => {
@@ -43,22 +48,27 @@ exports.up = async function up(knex) {
 
   const hasSecretsTable = await knex.schema.hasTable('tenant_extension_install_secrets');
   if (!hasSecretsTable) {
-    await knex.schema.createTable('tenant_extension_install_secrets', (t) => {
-      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-      t.uuid('install_id').notNullable().references('id').inTable('tenant_extension_install').onDelete('CASCADE');
-      t.string('tenant_id').notNullable();
-      t.text('ciphertext').notNullable();
-      t.string('algorithm').notNullable().defaultTo('inline/base64');
-      t.string('transit_key').nullable();
-      t.string('transit_mount').nullable();
-      t.string('version').nullable();
-      t.timestamp('expires_at').nullable();
-      t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-      t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
-      t.unique(['install_id']);
-      t.index(['tenant_id']);
-      t.index(['install_id']);
-    });
+    try {
+      await knex.schema.createTable('tenant_extension_install_secrets', (t) => {
+        t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+        t.uuid('install_id').notNullable().references('id').inTable('tenant_extension_install').onDelete('CASCADE');
+        t.string('tenant_id').notNullable();
+        t.text('ciphertext').notNullable();
+        t.string('algorithm').notNullable().defaultTo('inline/base64');
+        t.string('transit_key').nullable();
+        t.string('transit_mount').nullable();
+        t.string('version').nullable();
+        t.timestamp('expires_at').nullable();
+        t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+        t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+        t.unique(['install_id']);
+        t.index(['tenant_id']);
+        t.index(['install_id']);
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('already exists')) throw err;
+    }
   } else {
     const ensureColumn = async (name, addColumn) => {
       const has = await knex.schema.hasColumn('tenant_extension_install_secrets', name);

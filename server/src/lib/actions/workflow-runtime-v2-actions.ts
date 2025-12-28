@@ -2253,7 +2253,7 @@ export async function submitWorkflowEventAction(input: unknown) {
     await runtime.executeRun(knex, newRunId, `event-${Date.now()}`);
   }
 
-  return { status: runId ? 'resumed' : 'no_wait', runId, startedRuns };
+  return { status: runId ? 'resumed' : 'no_wait', runId, startedRuns, eventId: (eventRecord as any)?.event_id ?? null };
 }
 
 export async function listWorkflowEventsAction(input: unknown) {

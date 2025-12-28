@@ -74,7 +74,7 @@ import type {
   InputMapping
 } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type WorkflowDefinitionRecord = {
   workflow_id: string;
@@ -1064,7 +1064,7 @@ const syntaxHighlightJson = (json: string) => {
         const afterQuoteRaw = lastQuote > 0 ? withoutColon.slice(lastQuote + 1) : '';
         return [
           `<span style="color:${COLOR_PUNCT} !important">"</span>`,
-          `<span style="color:${COLOR_KEY} !important;font-weight:600">${escapeHtml(innerRaw)}</span>`,
+          `<span style="color:${COLOR_KEY} !important; font-weight:600">${escapeHtml(innerRaw)}</span>`,
           `<span style="color:${COLOR_PUNCT} !important">"</span>`,
           afterQuoteRaw ? `<span style="color:${COLOR_PUNCT} !important">${escapeHtml(afterQuoteRaw)}</span>` : '',
           `<span style="color:${COLOR_PUNCT} !important">:</span>`,
@@ -1080,7 +1080,7 @@ const syntaxHighlightJson = (json: string) => {
     }
 
     if (match === 'true' || match === 'false') {
-      return `<span style="color:${COLOR_BOOL} !important;font-weight:600">${escapeHtml(match)}</span>`;
+      return `<span style="color:${COLOR_BOOL} !important; font-weight:600">${escapeHtml(match)}</span>`;
     }
     if (match === 'null') {
       return `<span style="color:${COLOR_NULL} !important">${escapeHtml(match)}</span>`;
@@ -1283,6 +1283,9 @@ const WorkflowDesigner: React.FC = () => {
 
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const workflowIdFromQuery = searchParams.get('workflowId');
+  const didApplyWorkflowIdFromQuery = useRef<string | null>(null);
 
   useEffect(() => {
     try {
@@ -1816,6 +1819,16 @@ const WorkflowDesigner: React.FC = () => {
     setSelectedStepId(null);
     setSelectedPipePath('root');
   };
+
+  useEffect(() => {
+    if (!workflowIdFromQuery) return;
+    if (didApplyWorkflowIdFromQuery.current === workflowIdFromQuery) return;
+    const match = definitions.find((d) => d.workflow_id === workflowIdFromQuery);
+    if (!match) return;
+    didApplyWorkflowIdFromQuery.current = workflowIdFromQuery;
+    handleSelectDefinition(match);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflowIdFromQuery, definitions]);
 
   const handleCreateDefinition = () => {
     const draft = createDefaultDefinition();

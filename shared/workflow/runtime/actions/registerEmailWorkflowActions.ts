@@ -261,14 +261,14 @@ export function registerEmailWorkflowActionsV2(): void {
         const token = (input.parsedEmail as any)?.metadata?.parser?.tokens?.conversationToken;
         if (token) {
           const match = await findTicketByReplyToken(String(token), ctx.tenantId ?? '');
-          if (match?.ticketId) {
-            return {
-              success: true,
-              ticket: { ticketId: match.ticketId },
-              source: 'replyToken'
-            };
-          }
-        }
+	          if (match?.ticketId) {
+	            return {
+	              success: true,
+	              ticket: { ticketId: match.ticketId },
+	              source: 'replyToken' as const
+	            };
+	          }
+	        }
 
         const ticket = await findTicketByEmailThread({
           threadId: input.emailData.threadId,
@@ -277,18 +277,18 @@ export function registerEmailWorkflowActionsV2(): void {
           originalMessageId: input.emailData.inReplyTo
         }, ctx.tenantId ?? '');
 
-        if (ticket) {
-          return {
-            success: true,
-            ticket: {
-              ticketId: ticket.ticketId,
-              ticketNumber: ticket.ticketNumber,
-              subject: ticket.subject,
-              status: ticket.status
-            },
-            source: 'threadHeaders'
-          };
-        }
+	        if (ticket) {
+	          return {
+	            success: true,
+	            ticket: {
+	              ticketId: ticket.ticketId,
+	              ticketNumber: ticket.ticketNumber,
+	              subject: ticket.subject,
+	              status: ticket.status
+	            },
+	            source: 'threadHeaders' as const
+	          };
+	        }
 
         return { success: false, ticket: null, source: null };
       } catch (error) {
@@ -499,7 +499,7 @@ export function registerEmailWorkflowActionsV2(): void {
           references: emailData.references,
           providerId: emailData.providerId
         }
-      }, tenant, ctx.userId ?? undefined);
+      }, tenant);
 
       const commentPayload = buildCommentPayload(input.parsedEmail, emailData);
       const commentId = await createCommentFromEmail({
@@ -509,7 +509,7 @@ export function registerEmailWorkflowActionsV2(): void {
         source: 'email',
         author_type: 'internal',
         metadata: commentPayload.metadata
-      }, tenant, ctx.userId ?? undefined);
+      }, tenant);
 
       return {
         ticket_id: ticketResult.ticket_id,
@@ -584,7 +584,7 @@ export function registerEmailWorkflowActionsV2(): void {
         source: input.source ?? 'email',
         author_type: input.author_type ?? 'system',
         metadata: commentPayload.metadata
-      }, tenant, ctx.userId ?? undefined);
+      }, tenant);
       return { comment_id: commentId };
     }
   });
