@@ -1,0 +1,92 @@
+[
+  { "id": "F001", "description": "Navigation: Automation Hub includes 'Events Catalog' item (v2 screen)", "implemented": false },
+  { "id": "F002", "description": "Routing: /msp/automation-hub supports tab=events-catalog (or dedicated route) and query params", "implemented": false },
+  { "id": "F003", "description": "Deep link: accept ?eventType=... to preselect/highlight event", "implemented": false },
+
+  { "id": "F004", "description": "Header: render title/subtitle matching mockup", "implemented": false },
+  { "id": "F005", "description": "Header: system status pill shown (v1 static 'Operational')", "implemented": false },
+  { "id": "F006", "description": "Header: 'Define Custom Event' CTA (tenant-only)", "implemented": false },
+
+  { "id": "F007", "description": "Filters: search input filters by name/description/event_type", "implemented": false },
+  { "id": "F008", "description": "Filters: category dropdown lists categories (system + tenant)", "implemented": false },
+  { "id": "F009", "description": "Filters: status dropdown (Active/Draft/Beta/Deprecated)", "implemented": false },
+  { "id": "F010", "description": "Filters: source toggle (All/System/Tenant)", "implemented": false },
+  { "id": "F011", "description": "Filters: view toggle (Grid/List) persists in localStorage", "implemented": false },
+  { "id": "F012", "description": "Filters: clear filters action resets to defaults", "implemented": false },
+
+  { "id": "F013", "description": "Catalog data: load combined tenant + system event catalog entries", "implemented": false },
+  { "id": "F014", "description": "Catalog data: normalize fields (event_type, name, category, description, payload_schema_ref, tenant/null)", "implemented": false },
+  { "id": "F015", "description": "List/grid: stable sorting (category then name) with optional 'most active' sort", "implemented": false },
+  { "id": "F016", "description": "Pagination: supports page size (grid 24, list 50) and shows result counts", "implemented": false },
+
+  { "id": "F017", "description": "Event card: show icon (category-based mapping with fallback)", "implemented": false },
+  { "id": "F018", "description": "Event card: show event name and event_type", "implemented": false },
+  { "id": "F019", "description": "Event card: show status badge (Active/Beta/Draft/Deprecated)", "implemented": false },
+  { "id": "F020", "description": "Event card: show short description with line clamp", "implemented": false },
+  { "id": "F021", "description": "Event card: show schemaRef badge (known/unknown/missing)", "implemented": false },
+  { "id": "F022", "description": "Event card: show attached workflows count (published v2 triggers)", "implemented": false },
+
+  { "id": "F023", "description": "Quick metrics: compute 'Executions' for last 7 days on each card", "implemented": false },
+  { "id": "F024", "description": "Quick metrics: compute 'Success rate' for last 7 days on each card", "implemented": false },
+  { "id": "F025", "description": "Quick metrics: compute 'Avg latency' for last 7 days on each card", "implemented": false },
+  { "id": "F026", "description": "Quick metrics: handle missing data states (show '-' / '—')", "implemented": false },
+
+  { "id": "F027", "description": "Card actions: 'Simulate' button opens simulate dialog for selected event", "implemented": false },
+  { "id": "F028", "description": "Card actions: 'Metrics' button opens metrics panel for selected event", "implemented": false },
+  { "id": "F029", "description": "Card actions: 'Attach' button opens attach flow (new workflow)", "implemented": false },
+
+  { "id": "F030", "description": "Details drawer: open on card click (or list row click)", "implemented": false },
+  { "id": "F031", "description": "Details drawer: show full event description + metadata (category/source/schemaRef)", "implemented": false },
+  { "id": "F032", "description": "Details drawer: schema preview shows top-level props and required fields", "implemented": false },
+  { "id": "F033", "description": "Details drawer: 'View full schema' modal uses syntax highlighting and copy button", "implemented": false },
+  { "id": "F034", "description": "Details drawer: attached workflows list derived from workflow_definitions.trigger.eventName", "implemented": false },
+  { "id": "F035", "description": "Details drawer: attached workflows row shows name/version/status + system/paused badges", "implemented": false },
+  { "id": "F036", "description": "Details drawer: 'Open in designer' deep-links to workflow designer for the workflow", "implemented": false },
+  { "id": "F037", "description": "Details drawer: 'Detach' button available per attached workflow", "implemented": false },
+
+  { "id": "F038", "description": "Simulate dialog: schema-driven form mode from payload_schema_ref (schema registry)", "implemented": false },
+  { "id": "F039", "description": "Simulate dialog: JSON mode editor with JSON parse errors and schema validation errors", "implemented": false },
+  { "id": "F040", "description": "Simulate dialog: correlationKey input (optional) with helper text", "implemented": false },
+  { "id": "F041", "description": "Simulate dialog: advanced payloadSchemaRef override (defaults to catalog ref)", "implemented": false },
+  { "id": "F042", "description": "Simulate dialog: submit calls submitWorkflowEventAction (v2 ingestion) and returns startedRuns", "implemented": false },
+  { "id": "F043", "description": "Simulate dialog: show success summary (event id, status, matched wait/run, started runs) and links", "implemented": false },
+  { "id": "F044", "description": "Simulate dialog: show failure summary with error_message from ingestion", "implemented": false },
+  { "id": "F045", "description": "Simulate dialog: persist last used correlationKey per event_type (localStorage)", "implemented": false },
+
+  { "id": "F046", "description": "Metrics panel: date range picker (default last 7 days)", "implemented": false },
+  { "id": "F047", "description": "Metrics panel: summary stats (total/matched/unmatched/error)", "implemented": false },
+  { "id": "F048", "description": "Metrics panel: quick run stats (runs started, success rate, avg duration) for range", "implemented": false },
+  { "id": "F049", "description": "Metrics panel: time series chart (daily buckets) for executions", "implemented": false },
+  { "id": "F050", "description": "Metrics panel: recent events table with pagination (last N)", "implemented": false },
+  { "id": "F051", "description": "Metrics panel: deep link to workflow events list filtered by event_name", "implemented": false },
+
+  { "id": "F052", "description": "Attach flow: 'Attach → New workflow' creates draft workflow with trigger.eventName preset", "implemented": false },
+  { "id": "F053", "description": "Attach flow: draft workflow payloadSchemaRef defaults to event payload_schema_ref when present", "implemented": false },
+  { "id": "F054", "description": "Attach flow: draft workflow sets trigger.sourcePayloadSchemaRef from event catalog schemaRef", "implemented": false },
+  { "id": "F055", "description": "Attach flow: navigate to workflow designer selecting the created workflow", "implemented": false },
+
+  { "id": "F056", "description": "Detach flow: confirm dialog shows impact (publishes new version removing trigger)", "implemented": false },
+  { "id": "F057", "description": "Detach flow: detach publishes a new workflow version with trigger removed", "implemented": false },
+  { "id": "F058", "description": "Detach flow: detaching a system workflow requires workflow:admin", "implemented": false },
+  { "id": "F059", "description": "Detach flow: after detach, UI refreshes attached workflows + counts", "implemented": false },
+
+  { "id": "F060", "description": "Custom event: open 'Define Custom Event' dialog", "implemented": false },
+  { "id": "F061", "description": "Custom event: create event_catalog entry with name/event_type/category/description", "implemented": false },
+  { "id": "F062", "description": "Custom event: select payload_schema_ref from schema registry (preferred)", "implemented": false },
+  { "id": "F063", "description": "Custom event: optional advanced inline payload_schema editor (JSON) with validation", "implemented": false },
+  { "id": "F064", "description": "Custom event: enforce event_type uniqueness per tenant", "implemented": false },
+
+  { "id": "F065", "description": "API: listEventCatalogWithMetrics returns paginated events with quick metrics and attach counts", "implemented": false },
+  { "id": "F066", "description": "API: listAttachedWorkflowsByEventType (published) returns workflow summary rows", "implemented": false },
+  { "id": "F067", "description": "API: getEventSchemaByRef resolves payload_schema_ref via schema registry (and returns JSON schema)", "implemented": false },
+  { "id": "F068", "description": "API: getEventMetricsSummary + timeSeries + recentEvents endpoints", "implemented": false },
+  { "id": "F069", "description": "API: createWorkflowFromEvent endpoint wraps createWorkflowDefinitionAction with prefilled trigger/schema", "implemented": false },
+  { "id": "F070", "description": "API: detachWorkflowTriggerFromEvent endpoint publishes new version removing trigger", "implemented": false },
+  { "id": "F071", "description": "API: createCustomEvent endpoint wraps createEventCatalogEntry with validation", "implemented": false },
+
+  { "id": "F072", "description": "Permissions: view requires workflow:read; simulate/attach/detach require workflow:manage; detach system requires workflow:admin", "implemented": false },
+  { "id": "F073", "description": "Audit: simulate/attach/detach emit audit log entries including event_type, workflow_id, workflow_version", "implemented": false },
+  { "id": "F074", "description": "Redaction: recent event payload preview respects workflow event redaction rules", "implemented": false },
+  { "id": "F075", "description": "Performance: catalog loads with parallel queries and avoids N+1 attached-workflows calls", "implemented": false }
+]
+
