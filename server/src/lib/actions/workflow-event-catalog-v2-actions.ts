@@ -98,6 +98,18 @@ export type WorkflowEventCatalogEntryV2 = {
   };
 };
 
+export type WorkflowEventCatalogOptionV2 = {
+  event_id: string;
+  event_type: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  payload_schema_ref?: string | null;
+  payload_schema_ref_status: 'known' | 'unknown' | 'missing';
+  source: 'system' | 'tenant';
+  status: 'active' | 'beta' | 'draft' | 'deprecated';
+};
+
 const STATUS_VALUES = ['active', 'beta', 'draft', 'deprecated'] as const;
 type CatalogStatus = (typeof STATUS_VALUES)[number];
 
@@ -166,6 +178,67 @@ export async function listEventCatalogCategoriesV2Action() {
   });
 
   return { categories: Array.from(set).sort((a, b) => a.localeCompare(b)) };
+}
+
+export async function listEventCatalogOptionsV2Action(input: unknown) {
+  initializeWorkflowRuntimeV2();
+  const user = await requireUser();
+  const parsed = z.object({
+    search: z.string().optional(),
+    source: z.enum(['all', 'system', 'tenant']).optional().default('all'),
+    status: z.enum(['all', ...STATUS_VALUES]).optional().default('all'),
+    limit: z.number().int().min(1).max(2000).optional().default(500)
+  }).parse(input ?? {});
+
+  const { knex, tenant } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) return { events: [] as WorkflowEventCatalogOptionV2[] };
+
+  const all = await EventCatalogModel.getAll(knex, tenant, {});
+  const schemaRegistry = getSchemaRegistry();
+
+  const searchLower = parsed.search?.trim().toLowerCase() ?? '';
+
+  let events = all.map((entry: any) => {
+    const isSystem = !entry.tenant;
+    const schemaRef = typeof entry.payload_schema_ref === 'string' ? entry.payload_schema_ref : null;
+    const payload_schema_ref_status: WorkflowEventCatalogOptionV2['payload_schema_ref_status'] =
+      !schemaRef ? 'missing' : (schemaRegistry.has(schemaRef) ? 'known' : 'unknown');
+
+    return {
+      event_id: String(entry.event_id),
+      event_type: String(entry.event_type),
+      name: String(entry.name),
+      description: entry.description ?? null,
+      category: normalizeCategory(entry.category),
+      payload_schema_ref: schemaRef,
+      payload_schema_ref_status,
+      source: isSystem ? 'system' : 'tenant',
+      status: normalizeStatus(entry)
+    } satisfies WorkflowEventCatalogOptionV2;
+  });
+
+  if (parsed.source !== 'all') {
+    events = events.filter((e) => e.source === parsed.source);
+  }
+  if (parsed.status !== 'all') {
+    events = events.filter((e) => e.status === parsed.status);
+  }
+  if (searchLower) {
+    events = events.filter((e) => {
+      const hay = `${e.name} ${e.event_type} ${e.description ?? ''} ${e.category ?? ''}`.toLowerCase();
+      return hay.includes(searchLower);
+    });
+  }
+
+  events.sort((a, b) => {
+    const ca = (a.category ?? '').toLowerCase();
+    const cb = (b.category ?? '').toLowerCase();
+    if (ca !== cb) return ca.localeCompare(cb);
+    return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+  });
+
+  return { events: events.slice(0, parsed.limit) };
 }
 
 export async function listEventCatalogWithMetricsAction(input: unknown) {
