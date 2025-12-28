@@ -141,7 +141,7 @@ exports.seed = async function(knex) {
                 </table>
                 <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
                   <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Description</div>
-                  <div style="color:#475467;line-height:1.5;">{{ticket.description}}</div>
+                  <div style="color:#475467;line-height:1.5;">{{{ticket.description}}}</div>
                 </div>
                 <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
               </td>
@@ -169,7 +169,7 @@ Category: {{ticket.categoryDetails}}
 Location: {{ticket.locationSummary}}
 
 Description:
-{{ticket.description}}
+{{{ticket.description}}}
 
 View ticket: {{ticket.url}}
       `
@@ -241,7 +241,7 @@ View ticket: {{ticket.url}}
                 </table>
                 <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#fff9e6;border:1px solid #ffe4a3;">
                   <div style="font-weight:600;color:#92400e;margin-bottom:8px;">Changes Made</div>
-                  <div style="color:#475467;line-height:1.5;">{{ticket.changes}}</div>
+                  <div style="color:#475467;line-height:1.5;">{{{ticket.changes}}}</div>
                 </div>
                 <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
               </td>
@@ -269,7 +269,7 @@ Category: {{ticket.categoryDetails}}
 Location: {{ticket.locationSummary}}
 
 Changes Made:
-{{ticket.changes}}
+{{{ticket.changes}}}
 
 View ticket: {{ticket.url}}
       `
@@ -337,7 +337,7 @@ View ticket: {{ticket.url}}
                 </table>
                 <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;">
                   <div style="font-weight:600;color:#047857;margin-bottom:8px;">Resolution</div>
-                  <div style="color:#475467;line-height:1.5;">{{ticket.resolution}}</div>
+                  <div style="color:#475467;line-height:1.5;">{{{ticket.resolution}}}</div>
                 </div>
                 <a href="{{ticket.url}}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
               </td>
@@ -364,7 +364,7 @@ Category: {{ticket.categoryDetails}}
 Location: {{ticket.locationSummary}}
 
 Resolution:
-{{ticket.resolution}}
+{{{ticket.resolution}}}
 
 View ticket: {{ticket.url}}
       `

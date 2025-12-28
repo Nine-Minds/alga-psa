@@ -69,6 +69,17 @@ const SURVEY_TEMPLATE_TRANSLATIONS = [
     fallback: 'Se i pulsanti non funzionano, apri questo link sicuro:',
     thankYou: '{{thank_you_text}}',
   },
+  {
+    language: 'pl',
+    subject: 'Chętnie poznamy Twoją opinię o zgłoszeniu {{ticket_number}}',
+    salutation: 'Cześć {{contact_name}},',
+    summary: 'Zgłoszenie #{{ticket_number}} · {{ticket_subject}}',
+    technicianLine: 'Technik: {{technician_name}}',
+    ratingIntro: '{{prompt_text}}',
+    buttonHelp: 'Wybierz ocenę poniżej, aby dać nam znać, jak nam poszło:',
+    fallback: 'Jeśli przyciski się nie załadują, otwórz ten bezpieczny link do ankiety:',
+    thankYou: '{{thank_you_text}}',
+  },
 ];
 
 function buildSurveyHtmlTemplate(copy) {

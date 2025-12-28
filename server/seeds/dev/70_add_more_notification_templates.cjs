@@ -134,7 +134,7 @@ exports.seed = async function(knex) {
                 </table>
                 <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#f8f5ff;border:1px solid #e6deff;">
                   <div style="font-weight:600;color:#5b38b0;margin-bottom:8px;">Description</div>
-                  <div style="color:#475467;line-height:1.5;">{{ticket.description}}</div>
+                  <div style="color:#475467;line-height:1.5;">{{{ticket.description}}}</div>
                 </div>
                 <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
               </td>
@@ -162,7 +162,7 @@ Category: {{ticket.categoryDetails}}
 Location: {{ticket.locationSummary}}
 
 Description:
-{{ticket.description}}
+{{{ticket.description}}}
 
 View ticket: {{ticket.url}}
         `
@@ -234,7 +234,7 @@ View ticket: {{ticket.url}}
                 </table>
                 <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;">
                   <div style="font-weight:600;color:#1e40af;margin-bottom:8px;">💬 Comment</div>
-                  <div style="color:#475467;line-height:1.5;">{{comment.content}}</div>
+                  <div style="color:#475467;line-height:1.5;">{{{comment.content}}}</div>
                 </div>
                 <a href="{{ticket.url}}" style="display:inline-block;background:#8A4DEA;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">View Ticket</a>
               </td>
@@ -262,7 +262,7 @@ Category: {{ticket.categoryDetails}}
 Location: {{ticket.locationSummary}}
 
 Comment:
-{{comment.content}}
+{{{comment.content}}}
 
 View ticket: {{ticket.url}}
       `

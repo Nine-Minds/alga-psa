@@ -1,0 +1,833 @@
+{
+  "nav": {
+    "dashboard": "Panel",
+    "tickets": "Zgłoszenia",
+    "clients": "Klienci",
+    "projects": "Projekty",
+    "billing": "Rozliczenia",
+    "reports": "Raporty",
+    "settings": "Ustawienia",
+    "profile": "Profil",
+    "logout": "Wyloguj",
+    "help": "Pomoc"
+  },
+  "actions": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "create": "Utwórz",
+    "update": "Aktualizuj",
+    "submit": "Wyślij",
+    "back": "Wstecz",
+    "next": "Dalej",
+    "previous": "Poprzedni",
+    "search": "Szukaj",
+    "filter": "Filtruj",
+    "export": "Eksportuj",
+    "import": "Importuj",
+    "download": "Pobierz",
+    "upload": "Prześlij",
+    "refresh": "Odśwież",
+    "close": "Zamknij",
+    "confirm": "Potwierdź",
+    "add": "Dodaj",
+    "remove": "Usuń",
+    "clear": "Wyczyść",
+    "reset": "Resetuj",
+    "view": "Wyświetl",
+    "copy": "Kopiuj",
+    "duplicate": "Duplikuj",
+    "openMenu": "Otwórz menu",
+    "confirmDeletion": "Potwierdź usunięcie",
+    "saving": "Zapisywanie..."
+  },
+  "status": {
+    "loading": "Ładowanie...",
+    "saving": "Zapisywanie...",
+    "processing": "Przetwarzanie...",
+    "success": "Sukces",
+    "error": "Błąd",
+    "warning": "Ostrzeżenie",
+    "info": "Informacja",
+    "pending": "Oczekujące",
+    "active": "Aktywne",
+    "inactive": "Nieaktywne",
+    "completed": "Zakończone",
+    "cancelled": "Anulowane"
+  },
+  "messages": {
+    "welcome": "Witamy",
+    "confirmDelete": "Czy na pewno chcesz usunąć ten element?",
+    "confirmDeletion": "Potwierdź usunięcie",
+    "saveSuccess": "Zmiany zapisane pomyślnie",
+    "saveError": "Nie udało się zapisać zmian",
+    "loadError": "Nie udało się wczytać danych",
+    "noData": "Brak danych",
+    "required": "To pole jest wymagane",
+    "invalidEmail": "Nieprawidłowy adres e-mail",
+    "invalidPassword": "Nieprawidłowe hasło",
+    "passwordMismatch": "Hasła nie są zgodne"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Nie uwierzytelniono",
+      "accessDenied": "Brak dostępu",
+      "clientPortalOnly": "Brak dostępu: działania w portalu klienta są ograniczone do użytkowników klienta",
+      "insufficientPermissions": "Niewystarczające uprawnienia",
+      "userIdNotFound": "Nie znaleziono identyfikatora użytkownika w sesji",
+      "tenantNotFound": "Nie znaleziono tenanta w sesji. Wyloguj się i zaloguj ponownie.",
+      "userNotFound": "Nie znaleziono użytkownika",
+      "contactNotFound": "Użytkownik nie jest powiązany z kontaktem",
+      "clientNotFound": "Kontakt nie jest powiązany z klientem"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Niewystarczające uprawnienia do przeglądania zgłoszeń",
+        "readDetails": "Niewystarczające uprawnienia do przeglądania szczegółów zgłoszenia",
+        "create": "Niewystarczające uprawnienia do tworzenia zgłoszeń",
+        "update": "Niewystarczające uprawnienia do aktualizacji zgłoszeń",
+        "updateStatus": "Niewystarczające uprawnienia do aktualizacji statusu zgłoszenia",
+        "addComments": "Niewystarczające uprawnienia do dodawania komentarzy",
+        "updateComments": "Niewystarczające uprawnienia do aktualizacji komentarzy",
+        "deleteComments": "Niewystarczające uprawnienia do usuwania komentarzy"
+      }
+    }
+  },
+  "fields": {
+    "notes": "Notatki"
+  },
+  "time": {
+    "today": "Dzisiaj",
+    "yesterday": "Wczoraj",
+    "tomorrow": "Jutro",
+    "thisWeek": "Ten tydzień",
+    "lastWeek": "Ostatni tydzień",
+    "thisMonth": "Ten miesiąc",
+    "lastMonth": "Ostatni miesiąc",
+    "thisYear": "Ten rok",
+    "lastYear": "Ostatni rok",
+    "seconds": "sekundy",
+    "minutes": "minuty",
+    "hours": "godziny",
+    "days": "dni",
+    "weeks": "tygodnie",
+    "months": "miesiące",
+    "years": "lata"
+  },
+  "language": {
+    "selectLanguage": "Wybierz język",
+    "changeLanguage": "Zmień język",
+    "currentLanguage": "Aktualny język",
+    "preference": {
+      "label": "Preferencje językowe",
+      "helper": "Wybierz preferowany język interfejsu i powiadomień e-mail",
+      "placeholder": "Wybierz język",
+      "cleared": "Preferencja językowa wyczyszczona. Używanie języka domyślnego...",
+      "updating": "Aktualizowanie preferencji językowych...",
+      "notSet": "Nie ustawiono",
+      "notSetWithSource": "Nie ustawiono (Używa {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "client": "domyślne klienta",
+        "tenant": "domyślne tenanta",
+        "system": "domyślne systemu"
+      }
+    }
+  },
+  "yes": "Tak",
+  "no": "Nie",
+  "clients": {
+    "locations": {
+      "sectionTitle": "Lokalizacje klienta",
+      "manageButton": "Zarządzaj lokalizacjami",
+      "dialogTitle": "Zarządzaj lokalizacjami - {{client}}",
+      "managerLabel": "Menedżer lokalizacji klienta",
+      "listTitle": "Lokalizacje",
+      "buttons": {
+        "add": "Dodaj lokalizację",
+        "save": "Zapisz lokalizację"
+      },
+      "card": {
+        "unnamed": "Nienazwana lokalizacja",
+        "setDefault": "Ustaw jako domyślną",
+        "edit": "Edytuj lokalizację",
+        "delete": "Usuń lokalizację",
+        "addressLabel": "Adres",
+        "addressHelper": "Pełny adres tej lokalizacji",
+        "phoneLabel": "Telefon",
+        "phoneHelper": "Numer telefonu dla tej lokalizacji",
+        "phoneValue": "Telefon: {{phone}}",
+        "emailLabel": "E-mail",
+        "emailHelper": "Adres e-mail dla tej lokalizacji",
+        "emailValue": "E-mail: {{email}}",
+        "billingTag": "Rozliczenia",
+        "shippingTag": "Wysyłka",
+        "notesLabel": "Notatki",
+        "notesHelper": "Dodatkowe notatki dotyczące tej lokalizacji"
+      },
+      "form": {
+        "locationName": "Nazwa lokalizacji",
+        "locationNameHelper": "Nazwa tej lokalizacji (np. Główne biuro, Magazyn)",
+        "addressLine1": "Adres - linia 1",
+        "addressLine1Helper": "Główna linia adresu (wymagane)",
+        "addressLine2": "Adres - linia 2",
+        "addressLine2Helper": "Dodatkowe informacje adresowe (opcjonalne)",
+        "addressLine3": "Adres - linia 3",
+        "city": "Miasto",
+        "cityHelper": "Nazwa miasta (wymagane)",
+        "stateProvince": "Województwo/region",
+        "stateProvinceHelper": "Nazwa województwa lub regionu",
+        "postalCode": "Kod pocztowy",
+        "postalCodeHelper": "Kod pocztowy",
+        "country": "Kraj",
+        "countryHelper": "Wybierz kraj (wymagane)",
+        "phone": "Telefon",
+        "phoneHelper": "Numer telefonu dla tej lokalizacji",
+        "email": "E-mail",
+        "emailHelper": "Adres e-mail dla tej lokalizacji",
+        "taxRegion": "Region podatkowy",
+        "taxRegionHelper": "Wybierz właściwy region podatkowy",
+        "notes": "Notatki",
+        "notesHelper": "Dodatkowe notatki dotyczące tej lokalizacji",
+        "defaultLocation": "Domyślna lokalizacja",
+        "defaultLocationHelper": "Ustaw tę lokalizację jako domyślną dla klienta",
+        "billingAddress": "Adres rozliczeniowy",
+        "billingAddressHelper": "Użyj tej lokalizacji jako adresu rozliczeniowego",
+        "shippingAddress": "Adres dostawy",
+        "shippingAddressHelper": "Użyj tej lokalizacji jako adresu dostawy",
+        "placeholder": {
+          "locationName": "np. Główne biuro, Magazyn",
+          "addressLine1": "Wprowadź adres *",
+          "city": "Wprowadź miasto *",
+          "country": "Wybierz kraj *",
+          "loadingCountries": "Ładowanie krajów...",
+          "taxRegionOption": "Wybierz region podatkowy...",
+          "taxRegion": "Wybierz region podatkowy..."
+        }
+      },
+      "validation": {
+        "title": "Wypełnij wymagane pola:"
+      },
+      "errors": {
+        "loadTaxRegions": "Nie udało się wczytać regionów podatkowych",
+        "loadCountries": "Nie udało się wczytać krajów",
+        "loadLocations": "Nie udało się wczytać lokalizacji klienta",
+        "save": "Nie udało się zapisać lokalizacji",
+        "delete": "Nie udało się usunąć lokalizacji",
+        "setDefault": "Nie udało się ustawić lokalizacji domyślnej"
+      },
+      "success": {
+        "create": "Lokalizacja utworzona pomyślnie",
+        "update": "Lokalizacja zaktualizowana pomyślnie",
+        "delete": "Lokalizacja usunięta pomyślnie",
+        "setDefault": "Domyślna lokalizacja zaktualizowana"
+      },
+      "dialog": {
+        "addTitle": "Dodaj nową lokalizację",
+        "editTitle": "Edytuj lokalizację",
+        "deleteTitle": "Usuń lokalizację",
+        "deleteMessage": "Czy na pewno chcesz usunąć lokalizację \"{{name}}\"? Tej operacji nie można cofnąć."
+      },
+      "empty": {
+        "title": "Brak dodanych lokalizacji",
+        "description": "Kliknij „Dodaj lokalizację”, aby rozpocząć"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "Poprzednia",
+    "next": "Następna",
+    "pageInfo": "Strona {{current}} z {{total}} ({{count}} łącznie rekordów)",
+    "page": "Strona",
+    "of": "z",
+    "showing": "Wyświetlanie {{from}}–{{to}} z {{total}} wyników",
+    "rowsPerPage": "Wierszy na stronę",
+    "first": "Pierwsza",
+    "last": "Ostatnia",
+    "itemsLabel": "elementy",
+    "itemsPerPageOption": "{{count}} elementów/str.",
+    "itemsPerPagePlaceholder": "Elementów na stronę",
+    "reflectionLabel": "Stronicowanie",
+    "range": "{{from}} - {{to}} z {{total}} {{itemLabel}}",
+    "ariaLabel": "Stronicowanie",
+    "totalItems": "{{count}} {{itemLabel}} łącznie",
+    "totalRecordsInline": "({{count}} łącznie rekordów)",
+    "pageOf": "Strona {{current}} z {{total}}"
+  },
+  "documents": {
+    "title": "Dokumenty",
+    "noDocuments": "Brak dołączonych dokumentów",
+    "upload": "Prześlij dokument",
+    "download": "Pobierz",
+    "remove": "Usuń",
+    "preview": "Podgląd",
+    "linkDocuments": "Powiąż dokumenty",
+    "editDocument": "Edytuj dokument",
+    "viewDocument": "Wyświetl dokument",
+    "downloadToPlay": "Pobierz do odtworzenia",
+    "delete": "Usuń",
+    "previewUnavailable": "Podgląd niedostępny",
+    "newDocument": "Nowy dokument",
+    "uploadFile": "Prześlij plik",
+    "deleteTitle": "Usuń dokument",
+    "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Tej operacji nie można cofnąć.",
+    "deleteVideoTitle": "Usuń wideo",
+    "deleteVideoMessage": "Czy na pewno chcesz usunąć wideo \"{{name}}\"? Tej operacji nie można cofnąć.",
+    "removeTitle": "Usuń dokument",
+    "removeMessage": "Czy na pewno chcesz usunąć \"{{name}}\" z tego elementu? Dokument pozostanie dostępny w bibliotece dokumentów.",
+    "removeVideoTitle": "Usuń wideo",
+    "removeVideoMessage": "Czy na pewno chcesz usunąć wideo \"{{name}}\" z tego elementu? Plik pozostanie dostępny w bibliotece dokumentów.",
+    "downloadFile": "Pobierz plik",
+    "videoUnsupported": "Format wideo ({{mimeType}}) nie jest obsługiwany przez przeglądarkę",
+    "videoTagUnsupported": "Twoja przeglądarka nie obsługuje znacznika video.",
+    "unnamed": "Bez tytułu",
+    "videoDownloadInfo": "Wideo zostanie pobrane i można je odtworzyć w domyślnym odtwarzaczu systemowym",
+    "previewUnavailableNoId": "Podgląd niedostępny (brak identyfikatora)",
+    "previewLoadFailed": "Nie udało się wczytać podglądu",
+    "videoCodecWarning": "Chrome może nie obsługiwać tego kodeka. Spróbuj pobrać lub użyj Safari/Edge.",
+    "messages": {
+      "fetchFailed": "Nie udało się pobrać dokumentów.",
+      "folderCreated": "Folder \"{{name}}\" utworzony pomyślnie",
+      "folderCreateFailed": "Nie udało się utworzyć folderu",
+      "moveDocumentsSuccess_one": "{{count}} dokument przeniesiono do {{destination}}",
+      "moveDocumentsSuccess_other": "{{count}} dokumentów przeniesiono do {{destination}}",
+      "moveDocumentsFailed": "Nie udało się przenieść dokumentów",
+      "deleteSuccess": "Dokument \"{{name}}\" usunięty pomyślnie",
+      "deleteFailed": "Nie udało się usunąć dokumentu",
+      "removeAssociationFailed": "Nie udało się usunąć powiązania dokumentu",
+      "moveDocumentSuccess": "Dokument \"{{name}}\" przeniesiony pomyślnie",
+      "moveDocumentFailed": "Nie udało się przenieść dokumentu",
+      "createFailed": "Nie udało się utworzyć dokumentu",
+      "saveFailed": "Nie udało się zapisać dokumentu",
+      "loadContentFailed": "Nie udało się wczytać treści dokumentu",
+      "downloadFailed": "Nie udało się pobrać dokumentu",
+      "bulkDeleteFailed": "Nie udało się usunąć części dokumentów",
+      "bulkDeleteSuccess_one": "{{count}} dokument usunięty pomyślnie",
+      "bulkDeleteSuccess_other": "{{count}} dokumentów usuniętych pomyślnie"
+    },
+    "empty": {
+      "default": "Nie znaleziono dokumentów",
+      "folder": "Nie znaleziono dokumentów w tym folderze"
+    },
+    "validation": {
+      "nameRequired": "Nazwa dokumentu jest wymagana"
+    },
+    "bulkActions": {
+      "selected_one": "Wybrano {{count}} dokument",
+      "selected_other": "Wybrano {{count}} dokumentów",
+      "moveToFolder": "Przenieś do folderu",
+      "deleteSelected": "Usuń zaznaczone",
+      "clearSelection": "Wyczyść zaznaczenie"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "Czy na pewno chcesz usunąć {{count}} dokument?",
+      "confirmBulkDelete_other": "Czy na pewno chcesz usunąć {{count}} dokumentów?"
+    },
+    "pagination": {
+      "perPage": "{{count}} na stronę"
+    },
+    "folderSelector": {
+      "defaultTitle": "Wybierz folder docelowy",
+      "defaultDescription": "Wybierz, gdzie zapisać ten dokument",
+      "singleDescription": "Gdzie chcesz zapisać „{{fileName}}”?",
+      "multipleDescription": "Gdzie chcesz zapisać te pliki ({{count}})?",
+      "newDocumentTitle": "Wybierz folder dla nowego dokumentu",
+      "newDocumentDescription": "Wybierz, gdzie zapisać ten nowy dokument",
+      "moveTitle": "Przenieś dokument",
+      "moveDescriptionWithName": "Wybierz folder docelowy dla \"{{name}}\"",
+      "moveDescription": "Wybierz folder docelowy",
+      "bulkMoveTitle": "Przenieś zaznaczone dokumenty",
+      "bulkMoveDescription_one": "Wybierz folder docelowy dla {{count}} dokumentu",
+      "bulkMoveDescription_other": "Wybierz folder docelowy dla {{count}} dokumentów",
+      "errors": {
+        "nameRequired": "Wprowadź nazwę folderu",
+        "invalidCharacters": "Nazwa folderu nie może zawierać \"/\"",
+        "createFailed": "Nie udało się utworzyć folderu"
+      },
+      "creating": "Tworzenie...",
+      "createButton": "Utwórz folder",
+      "newFolderButton": "Nowy folder",
+      "parentLabel": "Folder nadrzędny: {{folder}}",
+      "rootLabel": "/ (Katalog główny)",
+      "namePlaceholder": "Wprowadź nazwę folderu",
+      "loading": "Ładowanie folderów...",
+      "rootOption": "Katalog główny (bez folderu)",
+      "empty": "Brak dostępnych folderów. Dokumenty zostaną zapisane w katalogu głównym."
+    },
+    "filters": {
+      "searchLabel": "Szukaj dokumentów",
+      "searchPlaceholder": "Szukaj po nazwie dokumentu...",
+      "typeLabel": "Typ dokumentu",
+      "entityTypeLabel": "Typ powiązanego obiektu",
+      "uploadedByLabel": "Dodany przez",
+      "uploadedByPlaceholder": "Wszyscy użytkownicy",
+      "updatedStartLabel": "Data aktualizacji od",
+      "updatedEndLabel": "Data aktualizacji do",
+      "startDatePlaceholder": "Wybierz datę początkową",
+      "endDatePlaceholder": "Wybierz datę końcową",
+      "sortByLabel": "Sortuj wg",
+      "clear": "Wyczyść filtry",
+      "showAllDocuments": "Pokaż wszystkie dokumenty",
+      "typeOptions": {
+        "all": "Wszystkie typy dokumentów",
+        "pdf": "PDF",
+        "image": "Obrazy",
+        "text": "Dokumenty",
+        "video": "Wideo",
+        "other": "Inne"
+      },
+      "sortOptions": {
+        "updated_at": "Data",
+        "document_name": "Nazwa dokumentu",
+        "file_size": "Rozmiar pliku",
+        "created_by_full_name": "Utworzył"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "Rosnąco",
+          "desc": "Malejąco"
+        },
+        "document_name": {
+          "asc": "A-Z",
+          "desc": "Z-A"
+        },
+        "updated_at": {
+          "asc": "Najstarsze najpierw",
+          "desc": "Najnowsze najpierw"
+        },
+        "file_size": {
+          "asc": "Najmniejsze najpierw",
+          "desc": "Największe najpierw"
+        },
+        "created_by_full_name": {
+          "asc": "A-Z",
+          "desc": "Z-A"
+        }
+      }
+    },
+    "selector": {
+      "title": "Wybierz dokumenty",
+      "reflectionLabel": "Selektor dokumentów",
+      "searchPlaceholder": "Szukaj dokumentów...",
+      "foldersLabel": "Foldery",
+      "folderHint": "w folderze \"{{folder}}\"",
+      "saving": "Zapisywanie...",
+      "selectDocument": "Wybierz dokument",
+      "associateSelected": "Powiąż zaznaczone",
+      "errors": {
+        "configuration": "Błąd konfiguracji: brak informacji o obiekcie",
+        "invalidData": "Otrzymano nieprawidłowe dane dokumentu",
+        "load": "Nie udało się wczytać dokumentów",
+        "save": "Nie udało się zapisać wyboru dokumentów"
+      },
+      "configErrorTitle": "Błąd konfiguracji",
+      "configErrorMessage": "Brak wymaganej konfiguracji. Skontaktuj się z pomocą."
+    },
+    "uploadSection": {
+      "reflectionLabel": "Przesyłanie dokumentów",
+      "dragDrop": "Przeciągnij i upuść pliki tutaj lub",
+      "browse": "Przeglądaj pliki",
+      "uploading": "Przesyłanie...",
+      "uploadingProgress": "Przesyłanie {{current}} z {{total}}",
+      "pending": "Oczekujące",
+      "error": "Nie udało się przesłać dokumentu",
+      "fileError": "Nie udało się przesłać pliku"
+    },
+    "folders": {
+      "root": "Główny",
+      "loadFailed": "Nie udało się wczytać drzewa folderów",
+      "deleteConfirm": "Czy na pewno chcesz usunąć folder \"{{name}}\"? Zadziała to tylko, jeśli folder jest pusty.",
+      "deleteSuccess": "Folder \"{{name}}\" usunięty pomyślnie",
+      "deleteFailed": "Nie udało się usunąć folderu",
+      "deleteAction": "Usuń folder",
+      "loading": "Ładowanie folderów...",
+      "title": "Foldery",
+      "collapse": "Zwiń foldery",
+      "allDocuments": "Wszystkie dokumenty"
+    },
+    "folderManager": {
+      "title": "Utwórz nowy folder",
+      "nameLabel": "Nazwa folderu",
+      "namePlaceholder": "Wprowadź nazwę folderu",
+      "willCreateIn": "Zostanie utworzony w: {{folder}}"
+    },
+    "notifications": {
+      "viewAll": "Zobacz wszystkie powiadomienia",
+      "categories": {
+        "Authentication": "Uwierzytelnianie",
+        "Invoices": "Faktury",
+        "Projects": "Projekty",
+        "Tickets": "Zgłoszenia",
+        "Time Entries": "Wpisy czasu"
+      }
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "Ładowanie..."
+    },
+    "settings": {
+      "tabLabel": "Ankiety",
+      "title": "Ankiety satysfakcji klientów",
+      "subtitle": "Skonfiguruj szablony, wyzwalacze i dostarczanie, aby zbierać opinie po zamknięciu zgłoszeń.",
+      "tabs": {
+        "templates": "Szablony",
+        "triggers": "Wyzwalacze"
+      },
+      "templateList": {
+        "title": "Szablony ankiet",
+        "description": "Zarządzaj treścią zaproszeń i skalami ocen wysyłanymi do klientów.",
+        "createButton": "Nowy szablon",
+        "emptyTitle": "Brak szablonów ankiet",
+        "emptyDescription": "Utwórz pierwszy szablon, aby określić treść ankiety i skalę ocen.",
+        "table": {
+          "name": "Szablon",
+          "rating": "Skala ocen",
+          "status": "Status",
+          "updated": "Zaktualizowano",
+          "actions": "Działania"
+        },
+        "defaultBadge": "Domyślny",
+        "status": {
+          "enabled": "Włączony",
+          "disabled": "Wyłączony"
+        },
+        "toasts": {
+          "created": "Szablon utworzony",
+          "updated": "Szablon zaktualizowany",
+          "deleted": "Szablon usunięty",
+          "setDefault": "Domyślny szablon zaktualizowany",
+          "error": "Nie można zapisać szablonu",
+          "deleteError": "Nie można usunąć szablonu"
+        },
+        "errors": {
+          "load": "Nie udało się wczytać szablonów ankiet."
+        },
+        "deleteConfirm": "Usunąć ten szablon? Wysłane już zaproszenia nie zostaną zmienione."
+      },
+      "templateForm": {
+        "titleCreate": "Utwórz szablon ankiety",
+        "titleEdit": "Edytuj szablon ankiety",
+        "labels": {
+          "name": "Nazwa szablonu",
+          "ratingType": "Typ oceny",
+          "ratingScale": "Skala ocen",
+          "ratingLabels": "Etykiety ocen",
+          "promptText": "Tekst ankiety",
+          "commentPrompt": "Zachęta do komentarza",
+          "thankYouText": "Podziękowanie",
+          "isDefault": "Ustaw jako szablon domyślny",
+          "enabled": "Szablon włączony"
+        },
+        "placeholders": {
+          "ratingLabels": "Przykład:\\n1 = Bardzo niezadowolony\\n2 = Niezadowolony\\n3 = Neutralny\\n4 = Zadowolony\\n5 = Bardzo zadowolony"
+        },
+        "help": {
+          "ratingLabels": "Podaj jedną etykietę na wynik w formacie „wartość = etykieta” w osobnych wierszach."
+        },
+        "ratingTypes": {
+          "stars": "Gwiazdki",
+          "numbers": "Liczby",
+          "emojis": "Emoji"
+        },
+        "actions": {
+          "create": "Utwórz szablon",
+          "save": "Zapisz zmiany",
+          "delete": "Usuń szablon"
+        }
+      },
+      "triggerList": {
+        "title": "Wyzwalacze ankiet",
+        "description": "Automatycznie wysyłaj zaproszenia, gdy zgłoszenia lub projekty zostaną ukończone.",
+        "createButton": "Nowy wyzwalacz",
+        "emptyTitle": "Nie skonfigurowano wyzwalaczy ankiet",
+        "emptyDescription": "Utwórz wyzwalacz, aby wysyłać ankiety po zamknięciu zgłoszeń lub zakończeniu projektów.",
+        "table": {
+          "template": "Szablon",
+          "type": "Wyzwalacz",
+          "conditions": "Warunki",
+          "status": "Status",
+          "updated": "Zaktualizowano",
+          "actions": "Działania"
+        },
+        "conditions": {
+          "boards": "Tablice",
+          "statuses": "Statusy",
+          "priorities": "Priorytety",
+          "any": "Dowolne",
+          "unrestricted": "Dotyczy każdego zgłoszenia i projektu"
+        },
+        "status": {
+          "enabled": "Włączony",
+          "disabled": "Wyłączony"
+        },
+        "toasts": {
+          "created": "Wyzwalacz utworzony",
+          "updated": "Wyzwalacz zaktualizowany",
+          "deleted": "Wyzwalacz usunięty",
+          "error": "Nie można zapisać wyzwalacza",
+          "deleteError": "Nie można usunąć wyzwalacza"
+        },
+        "errors": {
+          "load": "Nie udało się wczytać wyzwalaczy ankiet."
+        },
+        "deleteConfirm": "Usunąć ten wyzwalacz? Zaproszenia już w kolejce zostaną wysłane."
+      },
+      "triggerForm": {
+        "titleCreate": "Utwórz wyzwalacz ankiety",
+        "titleEdit": "Edytuj wyzwalacz ankiety",
+        "labels": {
+          "template": "Szablon ankiety",
+          "triggerType": "Typ wyzwalacza",
+          "boardIds": "Identyfikatory tablic",
+          "statusIds": "Identyfikatory statusów",
+          "priorities": "Priorytety",
+          "enabled": "Wyzwalacz włączony"
+        },
+        "placeholders": {
+          "boardIds": "Wybierz tablicę",
+          "statusIds": "Dodaj status",
+          "priorities": "Dodaj priorytet"
+        },
+        "help": {
+          "conditions": "Pozostaw pole puste, aby dopasować dowolną wartość."
+        },
+        "actions": {
+          "create": "Utwórz wyzwalacz",
+          "save": "Zapisz zmiany",
+          "delete": "Usuń wyzwalacz"
+        },
+        "triggerTypes": {
+          "ticket_closed": "Zgłoszenie zamknięte",
+          "project_completed": "Projekt ukończony"
+        },
+        "errors": {
+          "reference": "Nie udało się wczytać opcji wyzwalacza. Spróbuj ponownie."
+        },
+        "noTemplates": "Utwórz szablon ankiety przed dodaniem wyzwalaczy.",
+        "prioritiesMixed": "Wybrane tablice używają różnych typów priorytetów. Wyświetlamy wszystkie priorytety."
+      }
+    },
+    "response": {
+      "pageTitle": "Ankieta satysfakcji klienta",
+      "invalidTitle": "Ankieta niedostępna",
+      "invalidMessage": "Ten link do opinii jest już nieważny lub został użyty.",
+      "ratingPrompt": "Jak oceniasz swoje doświadczenie?",
+      "ratingAssistive": "Wybierz ocenę od 1 do {{scale}}",
+      "commentLabel": "Dodatkowe uwagi (opcjonalnie)",
+      "submitButton": "Wyślij opinię",
+      "submitting": "Wysyłanie opinii…",
+      "submittedTitle": "Dziękujemy za odpowiedź!",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Spróbuj ponownie",
+      "ratingSubmitted": "Opinie wysłane",
+      "errorMessage": "Nie udało się zapisać opinii. Spróbuj ponownie.",
+      "selectRatingError": "Wybierz ocenę przed wysłaniem.",
+      "supportMessage": "Jeśli masz pytania, skontaktuj się z technikiem."
+    }
+  },
+  "availability": {
+    "settings": {
+      "title": "Ustawienia dostępności",
+      "description": "Skonfiguruj zasady dostępności i harmonogramy wizyt"
+    },
+    "tabs": {
+      "general": "Ustawienia ogólne",
+      "userHours": "Godziny użytkownika",
+      "serviceRules": "Zasady usług",
+      "exceptions": "Wyjątki"
+    },
+    "general": {
+      "advanceBookingDays": "Wyprzedzenie rezerwacji (dni)",
+      "advanceBookingDaysHelper": "Jak długo wcześniej klienci mogą rezerwować wizyty",
+      "minimumNoticeHours": "Minimalne wyprzedzenie (godziny)",
+      "minimumNoticeHoursHelper": "Minimalny czas wymagany przed wizytą",
+      "defaultBufferBefore": "Domyślny bufor przed (minuty)",
+      "defaultBufferAfter": "Domyślny bufor po (minuty)",
+      "bufferHelper": "Bufor czasowy między wizytami"
+    },
+    "userHours": {
+      "selectUser": "Wybierz użytkownika",
+      "dayOfWeek": "Dzień tygodnia",
+      "startTime": "Godzina rozpoczęcia",
+      "endTime": "Godzina zakończenia",
+      "available": "Dostępny",
+      "cloneSettings": "Skopiuj do innych użytkowników",
+      "maxAppointmentsPerDay": "Maks. wizyt dziennie"
+    },
+    "serviceRules": {
+      "selectService": "Wybierz usługę",
+      "allowWithoutContract": "Zezwól bez umowy",
+      "advanceBooking": "Wyprzedzenie rezerwacji (dni)",
+      "maxAppointments": "Maks. wizyt dziennie"
+    },
+    "exceptions": {
+      "addException": "Dodaj wyjątek",
+      "date": "Data",
+      "reason": "Powód",
+      "userSpecific": "Dla użytkownika",
+      "companyWide": "Dla całej firmy"
+    },
+    "messages": {
+      "saveSuccess": "Ustawienia dostępności zapisane pomyślnie",
+      "saveFailed": "Nie udało się zapisać ustawień dostępności",
+      "loadFailed": "Nie udało się wczytać ustawień dostępności"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "Wnioski o wizytę",
+      "viewAll": "Zobacz wszystkie wnioski",
+      "approve": "Zatwierdź i zaplanuj",
+      "decline": "Odrzuć",
+      "assignTech": "Przypisz technika",
+      "internalNotes": "Notatki wewnętrzne",
+      "pendingCount": "{{count}} oczekujących wniosków",
+      "filterByStatus": "Filtruj po statusie",
+      "filterByService": "Filtruj po usłudze",
+      "filterByDate": "Filtruj po dacie"
+    },
+    "panel": {
+      "title": "Wnioski o wizytę",
+      "description": "Przeglądaj i zarządzaj wnioskami klientów o wizytę",
+      "noRequests": "Nie znaleziono wniosków o wizytę",
+      "loadingRequests": "Ładowanie wniosków..."
+    },
+    "card": {
+      "requesterName": "Wnioskodawca",
+      "companyName": "Firma",
+      "service": "Usługa",
+      "requestedDateTime": "Data i godzina",
+      "duration": "Czas trwania",
+      "preferredTechnician": "Preferowany technik",
+      "linkedTicket": "Powiązane zgłoszenie",
+      "actions": "Działania"
+    },
+    "approvalModal": {
+      "title": "Zatwierdź wniosek o wizytę",
+      "confirmDateTime": "Potwierdź datę i godzinę",
+      "modifyDateTime": "Zmień datę i godzinę",
+      "assignedUser": "Przypisany technik",
+      "linkToTicket": "Powiąż ze zgłoszeniem",
+      "internalNotes": "Notatki wewnętrzne",
+      "approve": "Zatwierdź i utwórz wpis w harmonogramie",
+      "approving": "Zatwierdzanie..."
+    },
+    "declineModal": {
+      "title": "Odrzuć wniosek o wizytę",
+      "reason": "Powód odrzucenia",
+      "reasonRequired": "Podaj powód",
+      "reasonPlaceholder": "Wyjaśnij, dlaczego wniosek jest odrzucany...",
+      "decline": "Odrzuć wniosek",
+      "declining": "Odrzucanie..."
+    },
+    "detailsModal": {
+      "title": "Szczegóły wniosku",
+      "requesterInfo": "Informacje o wnioskodawcy",
+      "requestInfo": "Informacje o wniosku",
+      "status": "Status",
+      "createdAt": "Złożono",
+      "approvedAt": "Zatwierdzono",
+      "approvedBy": "Zatwierdził",
+      "declinedReason": "Powód odrzucenia"
+    },
+    "status": {
+      "pending": "Oczekujące",
+      "approved": "Zatwierdzone",
+      "declined": "Odrzucone",
+      "cancelled": "Anulowane"
+    },
+    "messages": {
+      "approveSuccess": "Wniosek o wizytę zatwierdzony",
+      "approveFailed": "Nie udało się zatwierdzić wniosku o wizytę",
+      "declineSuccess": "Wniosek o wizytę odrzucony",
+      "declineFailed": "Nie udało się odrzucić wniosku o wizytę",
+      "loadFailed": "Nie udało się wczytać wniosków o wizytę",
+      "scheduleEntryCreated": "Wpis w harmonogramie utworzony pomyślnie"
+    }
+  },
+  "common": {
+    "loading": "Ładowanie",
+    "move_up": "Przenieś w górę",
+    "move_down": "Przenieś w dół"
+  },
+  "projects": {
+    "settings": {
+    }
+  },
+  "sessionManagement": {
+    "title": "Aktywne sesje",
+    "description": "Zarządzaj aktywnymi sesjami logowania na wszystkich urządzeniach (maks. 5 sesji)",
+    "states": {
+      "loading": "Ładowanie sesji...",
+      "noSessions": "Brak aktywnych sesji"
+    },
+    "labels": {
+      "unknownDevice": "Nieznane urządzenie",
+      "currentSession": "Bieżąca sesja",
+      "yourSession": "Twoja sesja",
+      "lastActive": "Ostatnia aktywność"
+    },
+    "loginMethods": {
+      "password": "Hasło",
+      "googleOAuth": "Google OAuth",
+      "microsoftOAuth": "Microsoft OAuth",
+      "keycloak": "Keycloak"
+    },
+    "userTypes": {
+      "internal": "Wewnętrzny",
+      "client": "Klient"
+    },
+    "actions": {
+      "logout": "Wyloguj",
+      "revoke": "Unieważnij",
+      "revoking": "Unieważnianie...",
+      "loggingOut": "Wylogowywanie...",
+      "logoutFromOther": "Wyloguj z {{count}} innych urządzeń{{count, plural, one {} other {}}}"
+    },
+    "confirmations": {
+      "logoutCurrent": "Spowoduje to wylogowanie z bieżącej sesji. Czy na pewno?",
+      "logoutAllOther": "Spowoduje to wylogowanie ze wszystkich pozostałych urządzeń. Czy na pewno?"
+    },
+    "prompts": {
+      "enter2FA": "Wprowadź kod 2FA:"
+    },
+    "messages": {
+      "loggingOut": "Wylogowywanie...",
+      "sessionRevoked": "Sesja unieważniona pomyślnie"
+    },
+    "warnings": {
+      "oauthLogout": "Wylogujesz się tylko z Alga PSA. Pozostaniesz zalogowany w {{provider}}."
+    },
+    "errors": {
+      "fetchFailed": "Nie udało się pobrać sesji",
+      "loadFailed": "Nie udało się wczytać aktywnych sesji",
+      "revokeFailed": "Nie udało się unieważnić sesji",
+      "revokeAllFailed": "Nie udało się unieważnić sesji",
+      "logoutAllFailed": "Nie udało się wylogować z innych urządzeń",
+      "adminAccessRequired": "Niewystarczające uprawnienia do przeglądania wszystkich sesji"
+    },
+    "admin": {
+      "title": "Sesje wszystkich użytkowników",
+      "description": "{{sessionCount}} aktywnych sesji od {{userCount}} użytkowników",
+      "searchPlaceholder": "Szukaj po nazwie użytkownika, e-mailu, urządzeniu lub adresie IP...",
+      "noResults": "Brak sesji pasujących do wyszukiwania"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "Komentarze",
+        "internal_only": "Tylko wewnętrzne",
+        "placeholder": "Dodaj komentarz... Użyj @, aby oznaczyć współpracowników",
+        "add_comment": "Dodaj komentarz",
+        "no_comments": "Brak komentarzy. Bądź pierwszą osobą komentującą!",
+        "edited": "Edytowano",
+        "error_creating": "Nie udało się utworzyć komentarza. Spróbuj ponownie.",
+        "error_updating": "Nie udało się zaktualizować komentarza. Spróbuj ponownie.",
+        "error_deleting": "Nie udało się usunąć komentarza. Spróbuj ponownie.",
+        "confirm_delete": "Czy na pewno chcesz usunąć ten komentarz?"
+      }
+    }
+  }
+}
