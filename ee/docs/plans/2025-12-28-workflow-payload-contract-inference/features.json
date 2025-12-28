@@ -1,0 +1,122 @@
+[
+  { "id": "F001", "description": "Plan: Document dependency on trigger payload mapping policy (2025-12-27 plan)", "implemented": false, "prdRefs": ["Summary", "Goals"] },
+  { "id": "F002", "description": "DB: Allow drafts to omit workflow payload schema ref (nullable/empty handling)", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)", "Rollout / Migration"] },
+  { "id": "F003", "description": "DB: Add workflow payload schema mode metadata (inferred vs pinned)", "implemented": false, "prdRefs": ["Data Model / API / Integrations"] },
+  { "id": "F004", "description": "DB: Persist payload contract provenance on publish (pinned vs generated + generated ref)", "implemented": false, "prdRefs": ["Data Model / API / Integrations", "Publish-Time Behavior (Contract)"] },
+  { "id": "F005", "description": "Runtime: Add representation for payload schema mode in WorkflowDefinition draft shape", "implemented": false, "prdRefs": ["Data Model / API / Integrations", "Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F006", "description": "Runtime: Ensure published WorkflowDefinition always has a concrete payloadSchemaRef", "implemented": false, "prdRefs": ["Requirements/Publish-Time Behavior (Contract)"] },
+
+  { "id": "F007", "description": "Schema registry: Support registering generated workflow payload contract schemas", "implemented": false, "prdRefs": ["Data Model / API / Integrations", "Publish-Time Behavior (Contract)"] },
+  { "id": "F008", "description": "Schema registry: Reserve naming convention workflow.<workflowId>.payload.v<version>", "implemented": false, "prdRefs": ["Data Model / API / Integrations"] },
+  { "id": "F009", "description": "Schema registry: Expose generated payload schemas via list/get schema APIs", "implemented": false, "prdRefs": ["Data Model / API / Integrations"] },
+
+  { "id": "F010", "description": "Designer: Replace required payload schema picker with 'Workflow data contract' section", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F011", "description": "Designer: Default contract mode is inferred (no selection required)", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract", "Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F012", "description": "Designer: Add advanced toggle to pin payload schema ref", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F013", "description": "Designer: When pinned, show existing schema ref select + advanced input", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F014", "description": "Designer: When inferred, hide/disable payload schema selection controls", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F015", "description": "Designer: Show 'Effective schema (design time)' preview for inferred mode", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F016", "description": "Designer: Show 'Pinned contract schema' preview for pinned mode", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F017", "description": "Designer: Show 'Published contract schema' ref + preview for published version", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+
+  { "id": "F018", "description": "Designer: Compute effective data context from trigger schema + step outputs (vars)", "implemented": false, "prdRefs": ["UX / UI Notes/Field Picker / Mapping / Expressions", "Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F019", "description": "Designer: Include event.payload typed from trigger source schema ref", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F020", "description": "Designer: Include vars.<saveAs> typed from action/node output schemas when known", "implemented": false, "prdRefs": ["UX / UI Notes/Field Picker / Mapping / Expressions"] },
+  { "id": "F021", "description": "Designer: Mark unknown outputs as 'Unknown type' in palette/field picker", "implemented": false, "prdRefs": ["UX / UI Notes/Field Picker / Mapping / Expressions"] },
+  { "id": "F022", "description": "Designer: Update expression editor contexts to prefer effective schema over pinned schema only", "implemented": false, "prdRefs": ["UX / UI Notes/Field Picker / Mapping / Expressions"] },
+  { "id": "F023", "description": "Designer: Update mapping panel targetFields to come from effective payload schema (inferred/pinned)", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+
+  { "id": "F024", "description": "Designer: Clarify trigger schema vs payload contract in labels/modals", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger", "Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F025", "description": "Designer: Trigger section shows schema ref/status and 'View schema' link", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger"] },
+  { "id": "F026", "description": "Designer: Enforce missing/unknown trigger schema errors per policy (disable publish/run)", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger", "Requirements/Publish-Time Behavior (Contract)"] },
+  { "id": "F027", "description": "Designer: System events with missing schema cannot be selected", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger"] },
+  { "id": "F028", "description": "Designer: Tenant events with missing schema show errors and disable publish/run", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger"] },
+
+  { "id": "F029", "description": "Designer: When inferred contract mode, disable/adjust schema inference toggle UX from earlier plan", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F030", "description": "Designer: Persist contract mode changes in draft save payload", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)", "Data Model / API / Integrations"] },
+
+  { "id": "F031", "description": "Runtime: Add helper to compute inferred effective payload schema for a draft definition", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F032", "description": "Runtime: Inference input includes trigger schema + ordered step outputs", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F033", "description": "Runtime: Inference output is a JSON schema object (no schemaRef required)", "implemented": false, "prdRefs": ["Open Questions", "UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F034", "description": "Runtime: Inference merges known outputs into vars namespace (stable names)", "implemented": false, "prdRefs": ["UX / UI Notes/Field Picker / Mapping / Expressions"] },
+
+  { "id": "F035", "description": "Publish: Add server action to generate a payload contract schema snapshot when mode=inferred", "implemented": false, "prdRefs": ["Requirements/Publish-Time Behavior (Contract)"] },
+  { "id": "F036", "description": "Publish: Register generated payload schema snapshot in schema registry", "implemented": false, "prdRefs": ["Schema registry", "Publish-Time Behavior (Contract)"] },
+  { "id": "F037", "description": "Publish: Store generated schema ref on published workflow version and provenance fields", "implemented": false, "prdRefs": ["Data Model / API / Integrations"] },
+  { "id": "F038", "description": "Publish: Optionally copy generated schema ref into draft_definition payloadSchemaRef after publish", "implemented": false, "prdRefs": ["Publish-Time Behavior (Contract)"] },
+  { "id": "F039", "description": "Publish: If mode=pinned, validate schemaRef exists in registry (unknown is error)", "implemented": false, "prdRefs": ["Publish-Time Behavior (Contract)"] },
+
+  { "id": "F040", "description": "Validator: Accept drafts with missing payload schema ref (inferred mode)", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F041", "description": "Validator: Deep nested validation of required mappings using effective payload schema", "implemented": false, "prdRefs": ["Publish-Time Behavior (Contract)", "Type Compatibility"] },
+  { "id": "F042", "description": "Validator: Missing secrets referenced by mappings/expressions are errors", "implemented": false, "prdRefs": ["Publish-Time Behavior (Contract)"] },
+  { "id": "F043", "description": "Validator: Type incompatibility is error when both sides known", "implemented": false, "prdRefs": ["Type Compatibility"] },
+  { "id": "F044", "description": "Validator: Type incompatibility is warning when either side unknown", "implemented": false, "prdRefs": ["Type Compatibility"] },
+  { "id": "F045", "description": "Validator: Persist inferred vs pinned status and effective schema diagnostics in validation details", "implemented": false, "prdRefs": ["Observability", "Data Model / API / Integrations"] },
+
+  { "id": "F046", "description": "Run dialog: Build test-event input from trigger schema (required known)", "implemented": false, "prdRefs": ["Users and Primary Flows/Run workflow (test run)"] },
+  { "id": "F047", "description": "Run dialog: Apply trigger mapping (if present) to produce workflow payload", "implemented": false, "prdRefs": ["Users and Primary Flows/Run workflow (test run)"] },
+  { "id": "F048", "description": "Run dialog: If contract mode=inferred and workflow unpublished, generate ephemeral payload contract for the run preview only", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F049", "description": "Run dialog: Disable run when trigger schema is missing/unknown (policy)", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger"] },
+
+  { "id": "F050", "description": "Execution: Ensure runs use published payloadSchemaRef contract; do not depend on inferred schema at runtime", "implemented": false, "prdRefs": ["Goals", "Publish-Time Behavior (Contract)"] },
+  { "id": "F051", "description": "Execution: Continue honoring trigger mapping semantics from prior plan", "implemented": false, "prdRefs": ["Goals", "Depends on"] },
+
+  { "id": "F052", "description": "Designer: Update schema preview modal to support rendering inferred schema (no ref)", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F053", "description": "Designer: Add indicator when schema shown is inferred vs pinned vs published", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F054", "description": "Designer: Cache inferred schema recomputation and invalidate when steps/trigger change", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+
+  { "id": "F055", "description": "Event catalog: Ensure all system events have schema refs; missing schema is an error state", "implemented": false, "prdRefs": ["Goals", "UX / UI Notes/Workflow Designer — Trigger"] },
+  { "id": "F056", "description": "Event catalog: Surface schema status for events used as triggers in designer", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger"] },
+
+  { "id": "F057", "description": "Telemetry: Emit event when user switches contract mode inferred<->pinned", "implemented": false, "prdRefs": ["Observability"] },
+  { "id": "F058", "description": "Telemetry: Emit event when publish generates payload contract schema", "implemented": false, "prdRefs": ["Observability"] },
+  { "id": "F059", "description": "Telemetry: Emit event when publish blocked by missing trigger schema/mapping/secrets", "implemented": false, "prdRefs": ["Observability"] },
+
+  { "id": "F060", "description": "Permissions: Enforce pinning payload schema requires workflow:manage", "implemented": false, "prdRefs": ["Security / Permissions"] },
+  { "id": "F061", "description": "Permissions: Enforce publish contract requires workflow:publish", "implemented": false, "prdRefs": ["Security / Permissions"] },
+
+  { "id": "F062", "description": "UI: Add skeleton loaders for inferred schema computation sections (avoid blank gaps)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F063", "description": "UI: Add error banners for inferred schema compute failures (fallback to unknown)", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+
+  { "id": "F064", "description": "API: Expose payload schema mode + provenance in workflow definition read endpoints", "implemented": false, "prdRefs": ["Data Model / API / Integrations"] },
+  { "id": "F065", "description": "API: Include generated payload schema ref in audit trail for published versions", "implemented": false, "prdRefs": ["Observability"] },
+
+  { "id": "F066", "description": "Migration: Backfill existing drafts to pinned mode (if they already have payloadSchemaRef)", "implemented": false, "prdRefs": ["Rollout / Migration"] },
+  { "id": "F067", "description": "Migration: Default new drafts to inferred mode", "implemented": false, "prdRefs": ["Rollout / Migration"] },
+
+  { "id": "F068", "description": "Designer: Disable publish/run while event catalog is loading for event-triggered workflows (no error flash)", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Trigger"] },
+  { "id": "F069", "description": "Designer: Disable publish/run while required schemas are still loading (show skeleton)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
+
+  { "id": "F070", "description": "Validation UI: Present inferred/pinned contract context in validation details panel", "implemented": false, "prdRefs": ["Observability", "UX / UI Notes"] },
+  { "id": "F071", "description": "Validation persistence: Store effective schema summary hashes for change detection", "implemented": false, "prdRefs": ["Observability"] },
+
+  { "id": "F072", "description": "Docs: Update workflow designer help text to explain trigger schema vs payload contract", "implemented": false, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F073", "description": "Docs: Add admin/operator notes for generated payload schema refs in registry", "implemented": false, "prdRefs": ["Data Model / API / Integrations"] },
+
+  { "id": "F074", "description": "Edge case: If workflow has no trigger (manual), require pinned schema or block publish", "implemented": false, "prdRefs": ["Open Questions", "Publish-Time Behavior (Contract)"] },
+  { "id": "F075", "description": "Edge case: If workflow trigger is non-event (future), define inference behavior (no event.payload)", "implemented": false, "prdRefs": ["Open Questions"] },
+
+  { "id": "F076", "description": "Quality: Add unit tests for inferred schema construction from registry outputs", "implemented": false, "prdRefs": ["Acceptance Criteria (Definition of Done)"] },
+  { "id": "F077", "description": "Quality: Add integration test for publish generating payload contract schema ref", "implemented": false, "prdRefs": ["Acceptance Criteria (Definition of Done)"] },
+
+  { "id": "F078", "description": "Compat: Ensure existing workflows with explicit payloadSchemaRef continue to behave as pinned mode", "implemented": false, "prdRefs": ["Rollout / Migration"] },
+  { "id": "F079", "description": "Compat: Ensure run/execution continues to use payload.EmailWorkflowPayload.v1 where appropriate", "implemented": false, "prdRefs": ["Goals"] },
+
+  { "id": "F080", "description": "Performance: Avoid recomputing inferred schema on every keystroke; debounce/compute on structural changes", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+  { "id": "F081", "description": "Performance: Cache schema registry lookups for generated schema registration", "implemented": false, "prdRefs": ["Publish-Time Behavior (Contract)"] },
+
+  { "id": "F082", "description": "Security: Ensure tenant is inferred and not user-editable in test event builder flows", "implemented": false, "prdRefs": ["Security / Permissions"] },
+
+  { "id": "F083", "description": "Designer: Provide a 'Generate contract now' button (optional) to preview the publish-time schemaRef", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F084", "description": "Designer: Show warnings when inferred contract differs from current pinned/published contract", "implemented": false, "prdRefs": ["Schema evolution", "Type Compatibility"] },
+
+  { "id": "F085", "description": "Publish: Ensure generated schema snapshot is deterministic (stable ordering, stable refs)", "implemented": false, "prdRefs": ["Requirements/Publish-Time Behavior (Contract)"] },
+  { "id": "F086", "description": "Publish: Include contract generation in validation persistence (validated_at semantics)", "implemented": false, "prdRefs": ["Observability"] },
+
+  { "id": "F087", "description": "Error handling: If schema registry registration fails, publish fails with actionable error", "implemented": false, "prdRefs": ["Publish-Time Behavior (Contract)"] },
+  { "id": "F088", "description": "Error handling: If inference fails, allow draft save but block publish until fixed", "implemented": false, "prdRefs": ["Requirements/Design-Time Behavior (Drafts)"] },
+
+  { "id": "F089", "description": "UI: Ensure designer still supports 'View schema' modals with syntax highlighting for inferred JSON", "implemented": false, "prdRefs": ["UX / UI Notes/Workflow Designer — Workflow Payload Contract"] },
+  { "id": "F090", "description": "Plan maintenance: Keep features/tests synchronized during implementation and flip implemented booleans as shipped", "implemented": false, "prdRefs": ["Ongoing Maintenance Rules"] }
+]
+
