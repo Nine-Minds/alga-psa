@@ -117,6 +117,39 @@ export const emailWorkflowPayloadSchema = z.object({
 export type EmailWorkflowPayload = z.infer<typeof emailWorkflowPayloadSchema>;
 
 // =============================================================================
+// EVENT PAYLOAD SCHEMAS - for use with event catalog + simulation
+// =============================================================================
+
+const emailProviderTypeSchema = z.enum(['microsoft', 'google']).describe('Email provider type');
+
+export const inboundEmailReceivedEventPayloadSchema = z.object({
+  emailData: emailDataSchema.describe('The inbound email data from the event'),
+  providerId: z.string().describe('Email provider ID')
+}).describe('Payload for INBOUND_EMAIL_RECEIVED (tenant inferred from session)');
+
+export type InboundEmailReceivedEventPayload = z.infer<typeof inboundEmailReceivedEventPayloadSchema>;
+
+export const emailProviderConnectedEventPayloadSchema = z.object({
+  providerId: z.string().describe('Email provider configuration ID'),
+  providerType: emailProviderTypeSchema,
+  providerName: z.string().describe('Human-friendly provider name'),
+  mailbox: z.string().email().describe('Mailbox email address being monitored'),
+  connectedAt: z.string().describe('Timestamp when connection was established (ISO 8601)')
+}).describe('Payload for EMAIL_PROVIDER_CONNECTED');
+
+export type EmailProviderConnectedEventPayload = z.infer<typeof emailProviderConnectedEventPayloadSchema>;
+
+export const emailProviderDisconnectedEventPayloadSchema = z.object({
+  providerId: z.string().describe('Email provider configuration ID'),
+  providerType: emailProviderTypeSchema,
+  providerName: z.string().describe('Human-friendly provider name'),
+  disconnectedAt: z.string().describe('Timestamp when disconnection occurred (ISO 8601)'),
+  reason: z.string().optional().describe('Reason for disconnection (manual, error, token_expired, etc.)')
+}).describe('Payload for EMAIL_PROVIDER_DISCONNECTED');
+
+export type EmailProviderDisconnectedEventPayload = z.infer<typeof emailProviderDisconnectedEventPayloadSchema>;
+
+// =============================================================================
 // STEP OUTPUT SCHEMAS - for use with action outputSchema definitions
 // =============================================================================
 
