@@ -2759,6 +2759,7 @@ const WorkflowDesigner: React.FC = () => {
 
 	                    return (
 	                      <div className="space-y-2">
+	                        <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">Event Trigger</label>
 	                        {eventCatalogStatus === 'loading' ? (
 	                          <Skeleton className="h-10 w-full" />
 	                        ) : (
@@ -3047,7 +3048,23 @@ const WorkflowDesigner: React.FC = () => {
 
                             {mappingRequired && !mappingProvided && (
                               <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-                                A trigger mapping is required because the trigger source schema does not match the workflow payload schema.
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div>
+                                    A trigger mapping is required because the trigger source schema does not match the workflow payload schema.
+                                  </div>
+                                  <Button
+                                    id="workflow-designer-trigger-mapping-jump-to-contract"
+                                    variant="ghost"
+                                    size="sm"
+                                    type="button"
+                                    className="h-auto px-2 py-1 text-xs text-red-700 hover:text-red-800"
+                                    onClick={() => {
+                                      document.getElementById('workflow-designer-contract-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }}
+                                  >
+                                    View contract
+                                  </Button>
+                                </div>
                               </div>
                             )}
 
@@ -3116,13 +3133,22 @@ const WorkflowDesigner: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="mt-4">
+                  <div id="workflow-designer-contract-section" className="mt-4">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <Label htmlFor="workflow-designer-contract-mode">Workflow data contract</Label>
                         <div className="text-xs text-gray-500">
-                          The trigger event defines <span className="font-mono">event.payload</span>. The workflow contract defines the
-                          <span className="font-mono"> payload</span> object that steps read (after trigger mapping, if any).
+                          {activeDefinition?.trigger?.type === 'event' ? (
+                            <>
+                              The trigger event defines <span className="font-mono">event.payload</span>. The workflow contract defines the
+                              <span className="font-mono"> payload</span> object that steps read (after trigger mapping, if any).
+                            </>
+                          ) : (
+                            <>
+                              No trigger is selected. The workflow contract defines the <span className="font-mono">payload</span> object that steps read.
+                              Manual workflows must pin a schema before publishing or running.
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
