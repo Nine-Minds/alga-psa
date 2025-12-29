@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugActions';
 import { getAvailableTimeSlots } from '@/lib/services/availabilityService';
-import { getConnection } from '@/lib/db/db';
+import { createTenantKnex } from '@/lib/db';
+import { runWithTenant } from '@/lib/db/tenantContext';
 import logger from '@alga-psa/shared/core/logger';
 import { z } from 'zod';
 
@@ -11,8 +12,35 @@ const TENANT_SLUG_REGEX = /^[a-f0-9]{12}$/i;
 // UUID pattern for validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Get valid IANA timezones for validation
-const validTimezones = new Set(Intl.supportedValuesOf('timeZone'));
+// Get valid IANA timezones for validation (with Node 18 fallback)
+function getValidTimezones(): Set<string> {
+  try {
+    // Node 20+ has Intl.supportedValuesOf
+    if (typeof Intl.supportedValuesOf === 'function') {
+      return new Set(Intl.supportedValuesOf('timeZone'));
+    }
+  } catch {
+    // Fall through to validation fallback
+  }
+  // For Node 18, we'll validate by attempting to construct a DateTimeFormat
+  return null as unknown as Set<string>;
+}
+
+const validTimezones = getValidTimezones();
+
+// Validate timezone by attempting to use it (works on all Node versions)
+function isValidTimezone(tz: string): boolean {
+  if (validTimezones) {
+    return validTimezones.has(tz);
+  }
+  // Fallback: try to construct a DateTimeFormat with the timezone
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Validation schema for query parameters
 const availableSlotsQuerySchema = z.object({
@@ -24,7 +52,7 @@ const availableSlotsQuerySchema = z.object({
     .transform(val => val ? parseInt(val, 10) : undefined)
     .refine(val => val === undefined || Number.isFinite(val), 'Duration must be a valid number'),
   timezone: z.string()
-    .refine(tz => validTimezones.has(tz), 'Invalid IANA timezone')
+    .refine(tz => isValidTimezone(tz), 'Invalid IANA timezone')
     .optional(),
   user_id: z.string().uuid('User ID must be a valid UUID').optional()
 });
@@ -148,101 +176,103 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get database connection for this tenant
-    const knex = await getConnection(tenantId);
+    // Execute database operations within tenant context
+    return await runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
 
-    // Get service-specific default duration
-    const serviceSettings = await knex('availability_settings')
-      .where({
-        tenant: tenantId,
-        setting_type: 'service_rules',
-        service_id: validatedParams.service_id
-      })
-      .first();
-
-    const serviceDuration = serviceSettings?.config_json?.default_duration || 60;
-
-    // Get available time slots
-    const slots = await getAvailableTimeSlots(
-      tenantId,
-      validatedParams.date,
-      validatedParams.service_id,
-      validatedParams.duration || serviceDuration,
-      validatedParams.user_id,
-      validatedParams.timezone
-    );
-
-    // Extract unique user IDs from all slots
-    const userIds = new Set<string>();
-    slots.forEach(slot => {
-      slot.available_users.forEach(userId => userIds.add(userId));
-    });
-
-    let technicians: { user_id: string; full_name: string; duration: number }[] = [];
-
-    if (userIds.size > 0) {
-      // Get user settings for users with slots
-      const allUserSettings = await knex('availability_settings')
+      // Get service-specific default duration
+      const serviceSettings = await knex('availability_settings')
         .where({
           tenant: tenantId,
-          setting_type: 'user_hours'
+          setting_type: 'service_rules',
+          service_id: validatedParams.service_id
         })
-        .whereIn('user_id', Array.from(userIds))
-        .select('user_id', 'config_json');
+        .first();
 
-      // Build map of user-specific durations
-      const userDurations: Record<string, number> = {};
-      allUserSettings.forEach((setting: any) => {
-        if (setting.config_json?.default_duration) {
-          userDurations[setting.user_id] = setting.config_json.default_duration;
-        }
+      const serviceDuration = serviceSettings?.config_json?.default_duration || 60;
+
+      // Get available time slots
+      const slots = await getAvailableTimeSlots(
+        tenantId,
+        validatedParams.date,
+        validatedParams.service_id,
+        validatedParams.duration || serviceDuration,
+        validatedParams.user_id,
+        validatedParams.timezone
+      );
+
+      // Extract unique user IDs from all slots
+      const userIds = new Set<string>();
+      slots.forEach(slot => {
+        slot.available_users.forEach(userId => userIds.add(userId));
       });
 
-      // Get technician details - only those with allow_client_preference enabled
-      const allowedUserIds = allUserSettings
-        .filter((setting: any) => setting.config_json?.allow_client_preference !== false)
-        .map((setting: any) => setting.user_id);
+      let technicians: { user_id: string; full_name: string; duration: number }[] = [];
 
-      if (allowedUserIds.length > 0) {
-        const users = await knex('users')
-          .where({ tenant: tenantId })
-          .whereIn('user_id', allowedUserIds)
-          .select(
-            'user_id',
-            knex.raw("CONCAT(first_name, ' ', last_name) as full_name")
-          );
+      if (userIds.size > 0) {
+        // Get user settings for users with slots
+        const allUserSettings = await knex('availability_settings')
+          .where({
+            tenant: tenantId,
+            setting_type: 'user_hours'
+          })
+          .whereIn('user_id', Array.from(userIds))
+          .select('user_id', 'config_json');
 
-        technicians = users.map((user: any) => ({
-          user_id: user.user_id,
-          full_name: user.full_name,
-          duration: userDurations[user.user_id] || serviceDuration
-        }));
+        // Build map of user-specific durations
+        const userDurations: Record<string, number> = {};
+        allUserSettings.forEach((setting: any) => {
+          if (setting.config_json?.default_duration) {
+            userDurations[setting.user_id] = setting.config_json.default_duration;
+          }
+        });
+
+        // Get technician details - only those with allow_client_preference enabled
+        const allowedUserIds = allUserSettings
+          .filter((setting: any) => setting.config_json?.allow_client_preference !== false)
+          .map((setting: any) => setting.user_id);
+
+        if (allowedUserIds.length > 0) {
+          const users = await knex('users')
+            .where({ tenant: tenantId })
+            .whereIn('user_id', allowedUserIds)
+            .select(
+              'user_id',
+              knex.raw("CONCAT(first_name, ' ', last_name) as full_name")
+            );
+
+          technicians = users.map((user: any) => ({
+            user_id: user.user_id,
+            full_name: user.full_name,
+            duration: userDurations[user.user_id] || serviceDuration
+          }));
+        }
       }
-    }
 
-    logger.info('[available-slots] Retrieved available slots', {
-      tenantId,
-      serviceId: validatedParams.service_id,
-      date: validatedParams.date,
-      duration: validatedParams.duration || serviceDuration,
-      userId: validatedParams.user_id,
-      slotCount: slots.length,
-      technicianCount: technicians.length
-    });
+      logger.info('[available-slots] Retrieved available slots', {
+        tenantId,
+        serviceId: validatedParams.service_id,
+        date: validatedParams.date,
+        duration: validatedParams.duration || serviceDuration,
+        userId: validatedParams.user_id,
+        slotCount: slots.length,
+        technicianCount: technicians.length
+      });
 
-    // Format slots for public API response
-    const formattedSlots = slots.map(slot => ({
-      start_time: slot.start_time,
-      end_time: slot.end_time,
-      available: slot.is_available
-    }));
+      // Format slots for public API response
+      const formattedSlots = slots.map(slot => ({
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        available: slot.is_available
+      }));
 
-    return NextResponse.json({
-      success: true,
-      date: validatedParams.date,
-      service_duration: serviceDuration,
-      slots: formattedSlots,
-      technicians
+      return NextResponse.json({
+        success: true,
+        date: validatedParams.date,
+        service_duration: serviceDuration,
+        slots: formattedSlots,
+        technicians
+      });
     });
 
   } catch (error) {

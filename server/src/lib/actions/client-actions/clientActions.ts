@@ -732,6 +732,50 @@ export async function deleteClient(clientId: string): Promise<{
         console.log(`Deleted ${deletedTaxSettings} client tax settings records`);
       }
 
+      // Delete client tax rate associations to avoid foreign key constraint violations
+      const deletedTaxRates = await trx('client_tax_rates')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedTaxRates > 0) {
+        console.log(`Deleted ${deletedTaxRates} client tax rate records`);
+      }
+
+      // Delete client contracts (empty contracts - clients with invoices are blocked earlier)
+      const deletedContracts = await trx('client_contracts')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedContracts > 0) {
+        console.log(`Deleted ${deletedContracts} client contract records`);
+      }
+
+      // Delete billing-related settings
+      const deletedBillingCycles = await trx('client_billing_cycles')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedBillingCycles > 0) {
+        console.log(`Deleted ${deletedBillingCycles} client billing cycle records`);
+      }
+
+      const deletedBillingSettings = await trx('client_billing_settings')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedBillingSettings > 0) {
+        console.log(`Deleted ${deletedBillingSettings} client billing settings records`);
+      }
+
+      // Delete payment customer records (Stripe/payment provider associations)
+      const deletedPaymentCustomers = await trx('client_payment_customers')
+        .where({ client_id: clientId, tenant })
+        .delete();
+
+      if (deletedPaymentCustomers > 0) {
+        console.log(`Deleted ${deletedPaymentCustomers} client payment customer records`);
+      }
+
       // Clean up client locations (addresses don't block deletion per PSA best practices)
       const deletedLocations = await trx('client_locations')
         .where({ client_id: clientId, tenant })

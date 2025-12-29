@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugActions';
 import { getAvailableDates } from '@/lib/services/availabilityService';
+import { runWithTenant } from '@/lib/db/tenantContext';
 import logger from '@alga-psa/shared/core/logger';
 import { z } from 'zod';
 
@@ -10,8 +11,35 @@ const TENANT_SLUG_REGEX = /^[a-f0-9]{12}$/i;
 // UUID pattern for validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Get valid IANA timezones for validation
-const validTimezones = new Set(Intl.supportedValuesOf('timeZone'));
+// Get valid IANA timezones for validation (with Node 18 fallback)
+function getValidTimezones(): Set<string> | null {
+  try {
+    // Node 20+ has Intl.supportedValuesOf
+    if (typeof Intl.supportedValuesOf === 'function') {
+      return new Set(Intl.supportedValuesOf('timeZone'));
+    }
+  } catch {
+    // Fall through to validation fallback
+  }
+  // For Node 18, we'll validate by attempting to construct a DateTimeFormat
+  return null;
+}
+
+const validTimezones = getValidTimezones();
+
+// Validate timezone by attempting to use it (works on all Node versions)
+function isValidTimezone(tz: string): boolean {
+  if (validTimezones) {
+    return validTimezones.has(tz);
+  }
+  // Fallback: try to construct a DateTimeFormat with the timezone
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Validation schema for query parameters
 const availableDatesQuerySchema = z.object({
@@ -21,7 +49,7 @@ const availableDatesQuerySchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format').optional(),
   user_id: z.string().uuid('User ID must be a valid UUID').optional(),
   timezone: z.string()
-    .refine(tz => validTimezones.has(tz), 'Invalid IANA timezone')
+    .refine(tz => isValidTimezone(tz), 'Invalid IANA timezone')
     .optional()
 });
 
@@ -166,29 +194,32 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get available dates
-    const dates = await getAvailableDates(
-      tenantId,
-      validatedParams.service_id,
-      startDate,
-      endDate,
-      validatedParams.user_id,
-      validatedParams.timezone
-    );
+    // Execute within tenant context for RLS
+    return await runWithTenant(tenantId, async () => {
+      // Get available dates
+      const dates = await getAvailableDates(
+        tenantId,
+        validatedParams.service_id,
+        startDate,
+        endDate,
+        validatedParams.user_id,
+        validatedParams.timezone
+      );
 
-    logger.info('[available-dates] Retrieved available dates', {
-      tenantId,
-      serviceId: validatedParams.service_id,
-      startDate,
-      endDate,
-      userId: validatedParams.user_id,
-      dateCount: dates.length,
-      availableDateCount: dates.filter(d => d.has_availability).length
-    });
+      logger.info('[available-dates] Retrieved available dates', {
+        tenantId,
+        serviceId: validatedParams.service_id,
+        startDate,
+        endDate,
+        userId: validatedParams.user_id,
+        dateCount: dates.length,
+        availableDateCount: dates.filter(d => d.has_availability).length
+      });
 
-    return NextResponse.json({
-      success: true,
-      dates
+      return NextResponse.json({
+        success: true,
+        dates
+      });
     });
 
   } catch (error) {
