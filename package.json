@@ -46,7 +46,7 @@
     "@blocknote/core": "^0.22.0",
     "@blocknote/mantine": "^0.22.0",
     "@blocknote/react": "^0.22.0",
-    "@hello-pangea/dnd": "^16.6.0",
+    "@hello-pangea/dnd": "^18.0.0",
     "@hocuspocus/provider": "^2.13.5",
     "@huggingface/inference": "^2.8.0",
     "@js-temporal/polyfill": "^0.4.4",
