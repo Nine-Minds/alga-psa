@@ -1,5 +1,5 @@
-import ProjectsOverviewPageWithDrawer from 'server/src/components/client-portal/projects/ProjectsOverviewPage';
+import ProjectsOverviewPage from 'server/src/components/client-portal/projects/ProjectsOverviewPage';
 
 export default function ProjectsPage() {
-  return <ProjectsOverviewPageWithDrawer />;
+  return <ProjectsOverviewPage />;
 }

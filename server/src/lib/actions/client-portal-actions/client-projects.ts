@@ -8,6 +8,57 @@ import { IProject } from 'server/src/interfaces/project.interfaces';
 import ProjectModel from 'server/src/lib/models/project';
 
 /**
+ * Fetch a single project by ID for the client portal
+ * Verifies client access and returns project with client_portal_config
+ */
+export async function getClientProjectDetails(projectId: string): Promise<IProject | null> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  // Get current user and verify they are a client
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const clientId = await getUserClientId(user.user_id);
+  if (!clientId) {
+    throw new Error('Client not found');
+  }
+
+  // Fetch project with client access verification
+  const project = await knex('projects')
+    .select([
+      'projects.project_id',
+      'projects.project_name',
+      'projects.project_number',
+      'projects.wbs_code',
+      'projects.description',
+      'projects.start_date',
+      'projects.end_date',
+      'projects.status',
+      'statuses.name as status_name',
+      'statuses.is_closed',
+      'projects.created_at',
+      'projects.updated_at',
+      'projects.client_portal_config'
+    ])
+    .leftJoin('statuses', function() {
+      this.on('projects.status', '=', 'statuses.status_id')
+         .andOn('projects.tenant', '=', 'statuses.tenant');
+    })
+    .where('projects.project_id', projectId)
+    .where('projects.client_id', clientId)
+    .where('projects.tenant', tenant)
+    .where('projects.is_inactive', false)
+    .first();
+
+  return project || null;
+}
+
+/**
  * Fetch all projects for a client client with basic details
  */
 export async function getClientProjects(options: {

@@ -359,6 +359,8 @@
       "noPhasesOrTasks": "Geen fasen of taken om weer te geven",
       "loadError": "Kan projectdetails niet laden"
     },
+    "backToProjects": "Terug naar Projecten",
+    "invalidProjectData": "Ongeldige projectgegevens",
     "viewDetails": "Details bekijken →",
     "details": "Details",
     "startDate": "Startdatum",

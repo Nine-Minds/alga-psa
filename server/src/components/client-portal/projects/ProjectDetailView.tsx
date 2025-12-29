@@ -144,7 +144,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
           </div>
           <div>
             <p className="text-sm text-gray-600">{t('projects.fields.status')}</p>
-            <p className="font-medium">{project.status ? t(`projects.status.${project.status.toLowerCase().replace(/\s+/g, '')}`, project.status) : t('projects.status.active', 'Active')}</p>
+            <p className="font-medium">{project.status_name ? t(`projects.status.${project.status_name.toLowerCase().replace(/\s+/g, '')}`, project.status_name) : t('projects.status.active', 'Active')}</p>
           </div>
         </div>
       </div>

@@ -359,6 +359,8 @@
       "noPhasesOrTasks": "Nessuna fase o attività da visualizzare",
       "loadError": "Impossibile caricare i dettagli del progetto"
     },
+    "backToProjects": "Torna ai Progetti",
+    "invalidProjectData": "Dati del progetto non validi",
     "viewDetails": "Visualizza dettagli →",
     "details": "Dettagli",
     "startDate": "Data di inizio",

@@ -365,6 +365,8 @@
       "noPhasesOrTasks": "No phases or tasks to display",
       "loadError": "Failed to load project details"
     },
+    "backToProjects": "Back to Projects",
+    "invalidProjectData": "Invalid project data",
     "viewDetails": "View Details →",
     "details": "Details",
     "startDate": "Start Date",
