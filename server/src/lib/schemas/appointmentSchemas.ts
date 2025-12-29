@@ -89,6 +89,7 @@ export const createPublicAppointmentRequestSchema = z.object({
   requested_time: timeStringSchema,
   requested_duration: z.number().int().min(15, 'Duration must be at least 15 minutes').max(480, 'Duration cannot exceed 8 hours').optional(),
   message: z.string().max(2000, 'Message cannot exceed 2000 characters').optional().nullable(),
+  preferred_assigned_user_id: z.string().uuid('Preferred technician ID must be a valid UUID').optional().nullable(),
 });
 
 export type CreatePublicAppointmentRequestInput = z.infer<typeof createPublicAppointmentRequestSchema>;
