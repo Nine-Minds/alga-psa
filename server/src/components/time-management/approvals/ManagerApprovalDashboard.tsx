@@ -168,6 +168,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Select',
             dataIndex: 'select',
             width: '10%',
+            sortable: false,
             render: (_, record) => (
               <div className="[&>div]:mb-0" onClick={(e) => e.stopPropagation()}>
                 <Checkbox
@@ -189,7 +190,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           },
           {
             title: 'Period',
-            dataIndex: 'time_period',
+            dataIndex: 'time_period.start_date',
             width: '25%',
             render: (_, record) => (
               <>
@@ -218,6 +219,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             title: 'Actions',
             dataIndex: 'actions',
             width: '10%',
+            sortable: false,
             render: (_, record) => (
               <div className="flex gap-2">
                 <Button
