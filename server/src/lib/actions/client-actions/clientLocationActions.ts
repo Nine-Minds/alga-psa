@@ -78,17 +78,17 @@ export async function createClientLocation(
         });
     } else {
       // If not setting as default, check if we need to auto-set as default
-      const existingDefaultCount = await trx('client_locations')
+      const existingDefault = await trx('client_locations')
         .where({
           client_id: clientId,
           tenant: tenant,
           is_default: true,
           is_active: true
         })
-        .count('* as count');
+        .first();
 
       // If no active default location exists, make this one default
-      if (Number(existingDefaultCount[0].count) === 0) {
+      if (!existingDefault) {
         locationData.is_default = true;
       }
     }
@@ -128,7 +128,8 @@ export async function updateClientLocation(
   const updatedLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // If setting is_default to true, first clear other defaults for this client
     if (locationData.is_default === true) {
-      // Get the location to find its client_id (consistent with setDefaultClientLocation, require is_active)
+      // Get the location to find its client_id
+      // Only active locations can be set as default (consistent with setDefaultClientLocation)
       const existingLocation = await trx('client_locations')
         .where({
           location_id: locationId,
@@ -138,10 +139,10 @@ export async function updateClientLocation(
         .first();
 
       if (!existingLocation) {
-        throw new Error('Location not found');
+        throw new Error('Active location not found');
       }
 
-      // Clear is_default from all other locations for this client
+      // Clear is_default from all other locations for this client (consistent with setDefaultClientLocation)
       await trx('client_locations')
         .where({
           client_id: existingLocation.client_id,
