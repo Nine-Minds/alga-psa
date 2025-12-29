@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ConnectSsoClient from "./ConnectSsoClient";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
@@ -13,6 +13,16 @@ interface ProviderOption {
   configured: boolean;
 }
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === "string") {
+    return err;
+  }
+  return "An unexpected error occurred while loading SSO settings";
+}
+
 export default function ConnectSsoWrapper() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +30,14 @@ export default function ConnectSsoWrapper() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedSsoAccount[]>([]);
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    // Abort any in-flight request from a previous render
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     async function loadSsoData() {
       try {
         setLoading(true);
@@ -32,13 +48,28 @@ export default function ConnectSsoWrapper() {
           getLinkedSsoAccountsAction(),
         ]);
 
+        // Check if component was unmounted during the async operation
+        if (controller.signal.aborted) {
+          return;
+        }
+
         if (!accountsResult.success) {
-          setError(accountsResult.error ?? "Failed to load linked accounts");
+          setError(accountsResult.error ?? "Unable to load your linked SSO accounts. Please try again.");
+          return;
+        }
+
+        // Early return if no providers - skip unnecessary state updates
+        const options = providersResult.options ?? [];
+        if (options.length === 0) {
+          setProviderOptions([]);
+          setLinkedAccounts(accountsResult.accounts ?? []);
+          setEmail(accountsResult.email ?? "");
+          setTwoFactorEnabled(accountsResult.twoFactorEnabled ?? false);
           return;
         }
 
         // Map SsoProviderOption to ProviderOption format
-        const mappedProviders: ProviderOption[] = (providersResult.options ?? []).map((opt) => ({
+        const mappedProviders: ProviderOption[] = options.map((opt) => ({
           id: opt.id,
           name: opt.name,
           description: opt.description ?? "",
@@ -49,14 +80,24 @@ export default function ConnectSsoWrapper() {
         setLinkedAccounts(accountsResult.accounts ?? []);
         setEmail(accountsResult.email ?? "");
         setTwoFactorEnabled(accountsResult.twoFactorEnabled ?? false);
-      } catch (err: any) {
-        setError(err?.message ?? "Failed to load SSO settings");
+      } catch (err: unknown) {
+        // Check if component was unmounted during the async operation
+        if (controller.signal.aborted) {
+          return;
+        }
+        setError(getErrorMessage(err));
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
     loadSsoData();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   if (loading) {

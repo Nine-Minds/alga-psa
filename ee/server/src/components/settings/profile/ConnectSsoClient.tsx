@@ -186,7 +186,7 @@ export default function ConnectSsoClient({
     await signIn(
       providerId,
       {
-        callbackUrl: "/msp/account/sso?linked=1",
+        callbackUrl: "/msp/profile?tab=Single%20Sign-On&linked=1",
       },
       {
         state: encodedState,
