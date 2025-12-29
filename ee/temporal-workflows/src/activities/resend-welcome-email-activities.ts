@@ -79,7 +79,6 @@ export async function updateUserPassword(
     .where({ user_id: userId, tenant: tenantId })
     .update({
       hashed_password: hashedPassword,
-      force_password_change: true,
       updated_at: knex.fn.now(),
     });
 
