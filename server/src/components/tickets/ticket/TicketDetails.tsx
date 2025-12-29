@@ -51,7 +51,7 @@ import ClientDetails from "server/src/components/clients/ClientDetails";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
 import { Button } from "server/src/components/ui/Button";
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Save, X } from 'lucide-react';
 import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import TimeEntryDialog from "server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog";
@@ -195,6 +195,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
+
+    // Track if any changes have been made to the ticket (for Save button feedback)
+    // Store original ticket state for cancel/reset functionality (like ContractDialog pattern)
+    const [originalTicket, setOriginalTicket] = useState<ITicket & { tenant: string | undefined }>(initialTicket);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [isSavingTicket, setIsSavingTicket] = useState(false);
+    const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
@@ -526,6 +534,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleAddAgent = async (userId: string) => {
         try {
+            // Mark that changes have been made
+            setHasUnsavedChanges(true);
+
             const currentUser = await getCurrentUser();
             if (!currentUser) {
                 toast.error('No user session found');
@@ -551,6 +562,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     
     const handleRemoveAgent = async (assignmentId: string) => {
         try {
+            // Mark that changes have been made
+            setHasUnsavedChanges(true);
+
             const currentUser = await getCurrentUser();
             if (!currentUser) {
                 toast.error('No user session found');
@@ -565,62 +579,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
+    // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
+    const handleSelectChange = (field: keyof ITicket, newValue: string | null) => {
         const normalizedValue =
             field === 'assigned_to'
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
-        // Store the previous value before updating
-        const previousValue = ticket[field];
-        
-        // Optimistically update the UI
-        setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
+        // Mark that changes have been made
+        setHasUnsavedChanges(true);
 
-        try {
-            // Use the optimized handler if provided
-            if (onTicketUpdate) {
-                await onTicketUpdate(field, normalizedValue);
-                
-                // If we're changing the assigned_to field, we need to handle additional resources
-                // This will be handled by the container component and passed back in props
-            } else {
-                // Fallback to the original implementation if no optimized handler is provided
-                const user = await getCurrentUser();
-                if (!user) {
-                    console.error('Failed to get user');
-                    // Revert to previous value if we can't get the user
-                    setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
-                    return;
-                }
-                
-                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue }, user);
-                
-                if (result === 'success') {
-                    console.log(`${field} changed to: ${normalizedValue}`);
-                    
-                    // If we're changing the assigned_to field, refresh the additional resources
-                    if (field === 'assigned_to') {
-                        try {
-                            // Refresh the additional resources
-                            const resources = await getTicketResources(ticket.ticket_id!, user);
-                            setAdditionalAgents(resources);
-                            console.log('Additional resources refreshed after assignment change');
-                        } catch (resourceError) {
-                            console.error('Error refreshing additional resources:', resourceError);
-                        }
-                    }
-                } else {
-                    console.error(`Failed to update ticket ${field}`);
-                    // Revert to previous value on failure
-                    setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
-                }
-            }
-        } catch (error) {
-            console.error(`Error updating ticket ${field}:`, error);
-            // Revert to previous value on error
-            setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
-        }
+        // Update local state only - no backend call (consistent with Clients/Contacts)
+        setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
     };
 
     const [editorKey, setEditorKey] = useState(0);
@@ -833,72 +803,24 @@ const handleClose = () => {
         }
     };
 
-    const handleUpdateDescription = async (content: string) => {
-        try {
-            // Use the optimized handler if provided
-            if (onUpdateDescription) {
-                const success = await onUpdateDescription(content);
-                
-                if (success) {
-                    // Update the local ticket state
-                    const currentAttributes = ticket.attributes || {};
-                    const updatedAttributes = {
-                        ...currentAttributes,
-                        description: content
-                    };
-                    
-                    setTicket(prev => ({
-                        ...prev,
-                        attributes: updatedAttributes,
-                        updated_at: new Date().toISOString()
-                    }));
-                }
-                
-                return success;
-            } else {
-                // Fallback to the original implementation
-                const user = await getCurrentUser();
-                if (!user) {
-                    console.error('Failed to get user');
-                    return false;
-                }
+    // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
+    const handleUpdateDescription = async (content: string): Promise<boolean> => {
+        // Mark that changes have been made
+        setHasUnsavedChanges(true);
 
-                if (!ticket.ticket_id) {
-                    console.error('Ticket ID is missing');
-                    return false;
-                }
+        // Update local state only - no backend call
+        const currentAttributes = ticket.attributes || {};
+        const updatedAttributes = {
+            ...currentAttributes,
+            description: content
+        };
 
-                // Update the ticket's attributes.description field
-                const currentAttributes = ticket.attributes || {};
-                const updatedAttributes = {
-                    ...currentAttributes,
-                    description: content
-                };
+        setTicket(prev => ({
+            ...prev,
+            attributes: updatedAttributes
+        }));
 
-                // Update the ticket
-                await updateTicket(ticket.ticket_id, {
-                    attributes: updatedAttributes,
-                    updated_by: user.user_id,
-                    updated_at: new Date().toISOString()
-                }, user);
-
-                // Update the local ticket state
-                setTicket(prev => ({
-                    ...prev,
-                    attributes: updatedAttributes,
-                    updated_by: user.user_id,
-                    updated_at: new Date().toISOString()
-                }));
-
-
-                toast.success('Description updated successfully');
-                return true;
-            }
-        } catch (error) {
-            console.error('Error updating description:', error);
-            toast.error('Failed to update description');
-            return false;
-        }
+        return true;
     };
 
     const handleAddTimeEntry = async () => {
@@ -1020,19 +942,21 @@ const handleClose = () => {
     };
 
     const handleTagsChange = (updatedTags: ITag[]) => {
+        // Mark that changes have been made
+        setHasUnsavedChanges(true);
         setTags(updatedTags);
     };
 
+    // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
     const handleContactChange = async (newContactId: string | null) => {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
+            // Mark that changes have been made
+            setHasUnsavedChanges(true);
 
-            await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId }, user);
-            
+            // Update local state - no backend call
+            setTicket(prevTicket => ({ ...prevTicket, contact_name_id: newContactId }));
+
+            // Fetch contact info for display (but don't save to backend)
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
@@ -1041,123 +965,71 @@ const handleClose = () => {
             }
 
             setIsChangeContactDialogOpen(false);
-            toast.success('Contact updated successfully');
         } catch (error) {
-            console.error('Error updating contact:', error);
-            toast.error('Failed to update contact');
+            console.error('Error fetching contact data:', error);
+            toast.error('Failed to load contact data');
         }
     };
 
-    const handleItilFieldChange = async (field: string, value: any) => {
-        try {
-            // First update local state immediately for UI responsiveness
-            switch (field) {
-                case 'itil_impact':
-                    setItilImpact(value);
-                    break;
-                case 'itil_urgency':
-                    setItilUrgency(value);
-                    break;
-                // NOTE: itil_category and itil_subcategory are now handled by unified CategoryPicker
-            }
+    // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
+    const handleItilFieldChange = (field: string, value: any) => {
+        // Mark that changes have been made
+        setHasUnsavedChanges(true);
 
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
-
-            // Create update object with the specific ITIL field
-            const updateData: any = {};
-            updateData[field] = value;
-
-            // If we're updating impact or urgency, calculate the new ITIL priority
-            if (field === 'itil_impact' || field === 'itil_urgency') {
-                const currentImpact = field === 'itil_impact' ? value : itilImpact;
-                const currentUrgency = field === 'itil_urgency' ? value : itilUrgency;
-
-                // NOTE: Priority mapping is now handled in the backend
-                // The backend will calculate and map ITIL priority to the correct priority_id
-            }
-
-            // NOTE: Category management is now unified through the CategoryPicker
-
-            await updateTicketWithCache(ticket.ticket_id!, updateData, user);
-
-            // Update local ticket state to reflect the change
-            setTicket(prevTicket => ({
-                ...prevTicket,
-                ...updateData
-            }));
-
-            toast.success(`ITIL ${field.replace('itil_', '').replace('_', ' ')} updated successfully`);
-        } catch (error) {
-            console.error('Error updating ITIL field:', error);
-            toast.error(`Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
+        // Update local state only - no backend call (consistent with Clients/Contacts)
+        switch (field) {
+            case 'itil_impact':
+                setItilImpact(value);
+                setTicket(prevTicket => ({ ...prevTicket, itil_impact: value }));
+                break;
+            case 'itil_urgency':
+                setItilUrgency(value);
+                setTicket(prevTicket => ({ ...prevTicket, itil_urgency: value }));
+                break;
         }
     };
 
+    // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
     const handleClientChange = async (newClientId: string) => {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
+            // Mark that changes have been made
+            setHasUnsavedChanges(true);
 
-            await updateTicket(ticket.ticket_id!, { 
-                client_id: newClientId,
-                contact_name_id: null, // Reset contact when client changes
-                location_id: null // Reset location when client changes
-            }, user);
-            
+            // Fetch the new client data and contacts for UI (but don't save to backend)
             const [clientData, contactsData] = await Promise.all([
                 getClientById(newClientId),
                 getContactsByClient(newClientId)
             ]);
-            
+
+            // Update local state only - no backend call
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                client_id: newClientId,
+                contact_name_id: null, // Reset contact when client changes
+                location_id: null // Reset location when client changes
+            }));
+
             setClient(clientData);
             setContacts(contactsData || []);
             setContactInfo(null); // Reset contact info
-            
-            // Update locations for the new client
-            if (newClientId) {
-                // TODO: Fetch locations for the new client
-                // For now, we'll rely on the parent component to provide updated locations
-            }
-
             setIsChangeClientDialogOpen(false);
-            toast.success('Client updated successfully');
         } catch (error) {
-            console.error('Error updating client:', error);
-            toast.error('Failed to update client');
+            console.error('Error fetching client data:', error);
+            toast.error('Failed to load client data');
         }
     };
     
-    const handleLocationChange = async (newLocationId: string | null) => {
-        try {
-            const user = await getCurrentUser();
-            if (!user) {
-                toast.error('No user session found');
-                return;
-            }
+    // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
+    const handleLocationChange = (newLocationId: string | null) => {
+        // Mark that changes have been made
+        setHasUnsavedChanges(true);
 
-            await updateTicket(ticket.ticket_id!, { 
-                location_id: newLocationId
-            }, user);
-            
-            // Update the ticket state with the new location
-            setTicket(prevTicket => ({
-                ...prevTicket,
-                location_id: newLocationId,
-                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined
-            }));
-
-            toast.success('Location updated successfully');
-        } catch (error) {
-            console.error('Error updating location:', error);
-            toast.error('Failed to update location');
-        }
+        // Update local state only - no backend call
+        setTicket(prevTicket => ({
+            ...prevTicket,
+            location_id: newLocationId,
+            location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined
+        }));
     };
 
     const handleDeleteRequest = (conversation: IComment) => {
@@ -1195,6 +1067,118 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id]);
 
+    // Validate ticket before save (like ContractDialog pattern)
+    const validateTicket = useCallback((): string[] => {
+        const errors: string[] = [];
+
+        // Required field validation
+        if (!ticket.title?.trim()) {
+            errors.push('Title is required');
+        }
+
+        if (!ticket.status_id) {
+            errors.push('Status is required');
+        }
+
+        if (!ticket.priority_id) {
+            errors.push('Priority is required');
+        }
+
+        if (!ticket.assigned_to) {
+            errors.push('Assigned agent is required');
+        }
+
+        return errors;
+    }, [ticket.title, ticket.status_id, ticket.priority_id, ticket.assigned_to]);
+
+    // Handle save button click - validates and provides confirmation (ContractDialog pattern)
+    // Save all changes to backend (like Clients/Contacts pattern)
+    const handleSaveTicket = useCallback(async () => {
+        setHasAttemptedSave(true);
+
+        // Validate before saving
+        const errors = validateTicket();
+        setValidationErrors(errors);
+
+        if (errors.length > 0) {
+            toast.error('Please fix validation errors before saving');
+            return;
+        }
+
+        setIsSavingTicket(true);
+        try {
+            const user = await getCurrentUser();
+            if (!user) {
+                toast.error('No user session found');
+                return;
+            }
+
+            if (!ticket.ticket_id) {
+                toast.error('Ticket ID is missing');
+                return;
+            }
+
+            // Build the update object with all changed fields
+            const updateData: Partial<ITicket> = {
+                title: ticket.title,
+                status_id: ticket.status_id,
+                priority_id: ticket.priority_id,
+                assigned_to: ticket.assigned_to,
+                client_id: ticket.client_id,
+                contact_name_id: ticket.contact_name_id,
+                location_id: ticket.location_id,
+                category_id: ticket.category_id,
+                subcategory_id: ticket.subcategory_id,
+                attributes: ticket.attributes,
+                itil_impact: ticket.itil_impact,
+                itil_urgency: ticket.itil_urgency,
+                updated_by: user.user_id,
+                updated_at: new Date().toISOString()
+            };
+
+            // Save to backend
+            const result = await updateTicket(ticket.ticket_id, updateData, user);
+
+            if (result === 'success') {
+                // Update the original ticket state to reflect saved changes
+                setOriginalTicket(ticket);
+                setHasUnsavedChanges(false);
+                setHasAttemptedSave(false);
+                setValidationErrors([]);
+                toast.success('Ticket saved successfully');
+            } else {
+                toast.error('Failed to save ticket');
+            }
+        } catch (error) {
+            console.error('Error saving ticket:', error);
+            toast.error('Failed to save ticket');
+        } finally {
+            setIsSavingTicket(false);
+        }
+    }, [validateTicket, ticket]);
+
+    // Handle cancel button click - resets to original state (ContractDialog pattern)
+    const handleCancelChanges = useCallback(() => {
+        if (!hasUnsavedChanges) {
+            toast('No changes to discard');
+            return;
+        }
+
+        // Reset ticket state to original
+        setTicket(originalTicket);
+
+        // Reset ITIL-specific state
+        setItilImpact(originalTicket.itil_impact || undefined);
+        setItilUrgency(originalTicket.itil_urgency || undefined);
+
+        // Clear tracking states
+        setHasUnsavedChanges(false);
+        setHasAttemptedSave(false);
+        setValidationErrors([]);
+
+        toast.success('Changes discarded');
+    }, [hasUnsavedChanges, originalTicket]);
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
@@ -1208,21 +1192,62 @@ const handleClose = () => {
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
-                    {/* Add popout button only when in drawer */}
-                    {isInDrawer && (
+                    {/* Action buttons - ContractDialog pattern with Cancel/Save */}
+                    <div className="flex items-center gap-2">
+                        {/* Add popout button only when in drawer */}
+                        {isInDrawer && (
+                            <Button
+                                id="ticket-popout-button"
+                                variant="outline"
+                                size="sm"
+                                onClick={openTicketInNewWindow}
+                                className="flex items-center gap-2"
+                                aria-label="Open in new tab"
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                                <span>Open in new tab</span>
+                            </Button>
+                        )}
+                        {/* Cancel button - resets local edits (ContractDialog pattern) */}
+                        {hasUnsavedChanges && (
+                            <Button
+                                id="cancel-ticket-changes-btn"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelChanges}
+                                disabled={isSavingTicket}
+                                className="flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                <span>Cancel</span>
+                            </Button>
+                        )}
+                        {/* Save button - validates and commits (ContractDialog pattern) */}
                         <Button
-                            id="ticket-popout-button"
-                            variant="outline"
+                            id="save-ticket-btn"
+                            variant="default"
                             size="sm"
-                            onClick={openTicketInNewWindow}
-                            className="flex items-center gap-2"
-                            aria-label="Open in new tab"
+                            onClick={handleSaveTicket}
+                            disabled={isSavingTicket}
+                            className={`flex items-center gap-2 ${hasUnsavedChanges ? 'ring-2 ring-primary-300' : ''}`}
                         >
-                            <ExternalLink className="h-4 w-4" />
-                            <span>Open in new tab</span>
+                            <Save className="h-4 w-4" />
+                            <span>{isSavingTicket ? 'Saving...' : 'Save Ticket'}</span>
                         </Button>
-                    )}
+                    </div>
                 </div>
+
+                {/* Validation errors alert - shown after attempted save (ContractDialog pattern) */}
+                {hasAttemptedSave && validationErrors.length > 0 && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-sm font-medium text-red-800 mb-1">Please fix the following errors:</p>
+                        <ul className="list-disc list-inside text-sm text-red-700">
+                            {validationErrors.map((error, index) => (
+                                <li key={index}>{error}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
                     {ticket.entered_at && (
