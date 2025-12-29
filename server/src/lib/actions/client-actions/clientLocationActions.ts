@@ -64,13 +64,15 @@ export async function createClientLocation(
   const locationId = uuidv4();
 
   const newLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // If this is set as default, clear any existing defaults first (consistent with setDefaultClientLocation)
+    // If this is set as default, clear any existing active defaults first
+    // Only clear active locations to preserve historical audit data on inactive rows
     if (locationData.is_default) {
       await trx('client_locations')
         .where({
           client_id: clientId,
           tenant: tenant,
-          is_default: true
+          is_default: true,
+          is_active: true
         })
         .update({
           is_default: false,
@@ -142,12 +144,14 @@ export async function updateClientLocation(
         throw new Error('Active location not found');
       }
 
-      // Clear is_default from all other locations for this client (consistent with setDefaultClientLocation)
+      // Clear is_default from all other active locations for this client
+      // Only clear active locations to preserve historical audit data on inactive rows
       await trx('client_locations')
         .where({
           client_id: existingLocation.client_id,
           tenant: tenant,
-          is_default: true
+          is_default: true,
+          is_active: true
         })
         .whereNot('location_id', locationId)
         .update({
@@ -290,12 +294,14 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
       throw new Error('Location not found');
     }
 
-    // Remove default from all other locations for this client
+    // Remove default from all other active locations for this client
+    // Only clear active locations to preserve historical audit data on inactive rows
     await trx('client_locations')
       .where({
         client_id: location.client_id,
         tenant: tenant,
-        is_default: true
+        is_default: true,
+        is_active: true
       })
       .whereNot('location_id', locationId)
       .update({
