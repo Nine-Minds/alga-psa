@@ -30,13 +30,10 @@ export default function ConnectSsoWrapper() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedSsoAccount[]>([]);
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    // Abort any in-flight request from a previous render
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+    isMountedRef.current = true;
 
     async function loadSsoData() {
       try {
@@ -48,8 +45,8 @@ export default function ConnectSsoWrapper() {
           getLinkedSsoAccountsAction(),
         ]);
 
-        // Check if component was unmounted during the async operation
-        if (controller.signal.aborted) {
+        // Prevent setState on unmounted component
+        if (!isMountedRef.current) {
           return;
         }
 
@@ -58,17 +55,8 @@ export default function ConnectSsoWrapper() {
           return;
         }
 
-        // Early return if no providers - skip unnecessary state updates
-        const options = providersResult.options ?? [];
-        if (options.length === 0) {
-          setProviderOptions([]);
-          setLinkedAccounts(accountsResult.accounts ?? []);
-          setEmail(accountsResult.email ?? "");
-          setTwoFactorEnabled(accountsResult.twoFactorEnabled ?? false);
-          return;
-        }
-
         // Map SsoProviderOption to ProviderOption format
+        const options = providersResult.options ?? [];
         const mappedProviders: ProviderOption[] = options.map((opt) => ({
           id: opt.id,
           name: opt.name,
@@ -81,13 +69,12 @@ export default function ConnectSsoWrapper() {
         setEmail(accountsResult.email ?? "");
         setTwoFactorEnabled(accountsResult.twoFactorEnabled ?? false);
       } catch (err: unknown) {
-        // Check if component was unmounted during the async operation
-        if (controller.signal.aborted) {
+        if (!isMountedRef.current) {
           return;
         }
         setError(getErrorMessage(err));
       } finally {
-        if (!controller.signal.aborted) {
+        if (isMountedRef.current) {
           setLoading(false);
         }
       }
@@ -96,7 +83,7 @@ export default function ConnectSsoWrapper() {
     loadSsoData();
 
     return () => {
-      controller.abort();
+      isMountedRef.current = false;
     };
   }, []);
 
