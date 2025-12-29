@@ -198,6 +198,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Track if any changes have been made to the ticket (for Save button feedback)
     // Store original ticket state for cancel/reset functionality (like ContractDialog pattern)
+    // Note: originalTicket is captured on first render and updated after successful save.
+    // This matches the pattern used in ClientDetails and ContactDetails components.
     const [originalTicket, setOriginalTicket] = useState<ITicket & { tenant: string | undefined }>(initialTicket);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [isSavingTicket, setIsSavingTicket] = useState(false);
@@ -1091,6 +1093,8 @@ const handleClose = () => {
 
     // Handle save button click - validates and provides confirmation (ContractDialog pattern)
     // Save all changes to backend (like Clients/Contacts pattern)
+    // Note: Permission checks (hasPermission(user, 'ticket', 'update')) are handled
+    // server-side in the updateTicket action (ticketActions.ts:309)
     const handleSaveTicket = useCallback(async () => {
         setHasAttemptedSave(true);
 
@@ -1207,6 +1211,7 @@ const handleClose = () => {
                             </Button>
                         )}
                         {/* Cancel button - resets local edits (ContractDialog pattern) */}
+                        {/* Note: Unique ID per UI standards for testing/automation */}
                         {hasUnsavedChanges && (
                             <Button
                                 id="cancel-ticket-changes-btn"
@@ -1221,6 +1226,7 @@ const handleClose = () => {
                             </Button>
                         )}
                         {/* Save button - validates and commits (ContractDialog pattern) */}
+                        {/* Note: Unique ID per UI standards for testing/automation */}
                         <Button
                             id="save-ticket-btn"
                             variant="default"
