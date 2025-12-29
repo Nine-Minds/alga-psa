@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@huggingface/inference": "^3.3.3",
+    "@huggingface/jinja": "^0.5.0",
     "openai": "^4.59.0",
     "@temporalio/client": "^1.12.3",
     "gm": "^1.25.0",
