@@ -64,10 +64,11 @@ interface types {
 
     record user-data {
         tenant-id: string,
-        company-name: string,
+        client-name: string,
         user-id: string,
         user-email: string,
         user-name: string,
+        user-type: string,
     }
 
     enum user-error {

@@ -125,13 +125,28 @@ class HttpRunnerBackend implements RunnerBackend {
 
     let response: Response;
     try {
+      console.log('[runner-backend] Fetching:', endpoint);
       response = await fetch(endpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
         signal: controller.signal,
+        cache: 'no-store',  // Bypass Next.js fetch caching
+      } as RequestInit);
+      console.log('[runner-backend] Fetch succeeded:', response.status);
+    } catch (error: any) {
+      console.error('[runner-backend] Fetch error:', {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code,
+        cause: error?.cause,
+        causeName: error?.cause?.name,
+        causeMessage: error?.cause?.message,
+        causeCode: error?.cause?.code,
+        causeErrno: error?.cause?.errno,
+        causeHostname: error?.cause?.hostname,
+        stack: error?.stack,
       });
-    } catch (error) {
       throw wrapFetchError(error, this.kind);
     } finally {
       clearTimeout(timeout);
