@@ -534,9 +534,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleAddAgent = async (userId: string) => {
         try {
-            // Mark that changes have been made
-            setHasUnsavedChanges(true);
-
+            // Note: Agent changes are saved immediately (separate resource table)
+            // They don't use the batch save pattern like other ticket fields
             const currentUser = await getCurrentUser();
             if (!currentUser) {
                 toast.error('No user session found');
@@ -562,9 +561,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     
     const handleRemoveAgent = async (assignmentId: string) => {
         try {
-            // Mark that changes have been made
-            setHasUnsavedChanges(true);
-
+            // Note: Agent changes are saved immediately (separate resource table)
+            // They don't use the batch save pattern like other ticket fields
             const currentUser = await getCurrentUser();
             if (!currentUser) {
                 toast.error('No user session found');
