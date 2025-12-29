@@ -1,17 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugActions';
 import { getAvailableTimeSlots } from '@/lib/services/availabilityService';
-import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/shared/core/logger';
 import { z } from 'zod';
+
+// Tenant slug pattern: 12-char lowercase hex
+const TENANT_SLUG_REGEX = /^[a-f0-9]{12}$/i;
+
+// UUID pattern for validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Get valid IANA timezones for validation
+const validTimezones = new Set(Intl.supportedValuesOf('timeZone'));
 
 // Validation schema for query parameters
 const availableSlotsQuerySchema = z.object({
   tenant: z.string().min(1, 'Tenant is required'),
   service_id: z.string().uuid('Service ID must be a valid UUID'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
-  duration: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
-  timezone: z.string().optional(),
+  duration: z.string()
+    .optional()
+    .transform(val => val ? parseInt(val, 10) : undefined)
+    .refine(val => val === undefined || Number.isFinite(val), 'Duration must be a valid number'),
+  timezone: z.string()
+    .refine(tz => validTimezones.has(tz), 'Invalid IANA timezone')
+    .optional(),
   user_id: z.string().uuid('User ID must be a valid UUID').optional()
 });
 
@@ -88,7 +102,7 @@ export async function GET(req: NextRequest) {
     let tenantId = validatedParams.tenant;
 
     // If tenant looks like a slug (12-char hex), resolve it to UUID
-    if (/^[a-f0-9]{12}$/i.test(validatedParams.tenant)) {
+    if (TENANT_SLUG_REGEX.test(validatedParams.tenant)) {
       const resolvedTenantId = await getTenantIdBySlug(validatedParams.tenant);
       if (!resolvedTenantId) {
         logger.warn('[available-slots] Invalid tenant slug', {
@@ -104,14 +118,27 @@ export async function GET(req: NextRequest) {
         );
       }
       tenantId = resolvedTenantId;
+    } else if (!UUID_REGEX.test(validatedParams.tenant)) {
+      // If not a slug, must be a valid UUID
+      logger.warn('[available-slots] Invalid tenant format', {
+        tenant: validatedParams.tenant
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Tenant must be a valid slug or UUID'
+        },
+        { status: 400 }
+      );
     }
 
-    // Validate date is not in the past
-    const requestedDate = new Date(validatedParams.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Validate date is not in the past (using UTC)
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const requestedDate = new Date(validatedParams.date + 'T00:00:00Z');
 
-    if (requestedDate < today) {
+    if (requestedDate < todayUTC) {
       return NextResponse.json(
         {
           success: false,
@@ -121,41 +148,39 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get service settings, slots, and technicians
-    const { serviceDuration, slots, technicians } = await runWithTenant(tenantId, async () => {
-      const { knex } = await createTenantKnex();
+    // Get database connection for this tenant
+    const knex = await getConnection(tenantId);
 
-      // Get service-specific default duration
-      const serviceSettings = await knex('availability_settings')
-        .where({
-          tenant: tenantId,
-          setting_type: 'service_rules',
-          service_id: validatedParams.service_id
-        })
-        .first();
+    // Get service-specific default duration
+    const serviceSettings = await knex('availability_settings')
+      .where({
+        tenant: tenantId,
+        setting_type: 'service_rules',
+        service_id: validatedParams.service_id
+      })
+      .first();
 
-      const duration = serviceSettings?.config_json?.default_duration || 60;
+    const serviceDuration = serviceSettings?.config_json?.default_duration || 60;
 
-      // Get available time slots
-      const timeSlots = await getAvailableTimeSlots(
-        tenantId,
-        validatedParams.date,
-        validatedParams.service_id,
-        validatedParams.duration || duration,
-        validatedParams.user_id,
-        validatedParams.timezone
-      );
+    // Get available time slots
+    const slots = await getAvailableTimeSlots(
+      tenantId,
+      validatedParams.date,
+      validatedParams.service_id,
+      validatedParams.duration || serviceDuration,
+      validatedParams.user_id,
+      validatedParams.timezone
+    );
 
-      // Extract unique user IDs from all slots
-      const userIds = new Set<string>();
-      timeSlots.forEach(slot => {
-        slot.available_users.forEach(userId => userIds.add(userId));
-      });
+    // Extract unique user IDs from all slots
+    const userIds = new Set<string>();
+    slots.forEach(slot => {
+      slot.available_users.forEach(userId => userIds.add(userId));
+    });
 
-      if (userIds.size === 0) {
-        return { serviceDuration: duration, slots: timeSlots, technicians: [] };
-      }
+    let technicians: { user_id: string; full_name: string; duration: number }[] = [];
 
+    if (userIds.size > 0) {
       // Get user settings for users with slots
       const allUserSettings = await knex('availability_settings')
         .where({
@@ -178,23 +203,22 @@ export async function GET(req: NextRequest) {
         .filter((setting: any) => setting.config_json?.allow_client_preference !== false)
         .map((setting: any) => setting.user_id);
 
-      const technicianList = allowedUserIds.length > 0
-        ? await knex('users')
-            .where({ tenant: tenantId })
-            .whereIn('user_id', allowedUserIds)
-            .select(
-              'user_id',
-              knex.raw("CONCAT(first_name, ' ', last_name) as full_name")
-            )
-            .then(users => users.map((user: any) => ({
-              user_id: user.user_id,
-              full_name: user.full_name,
-              duration: userDurations[user.user_id] || duration
-            })))
-        : [];
+      if (allowedUserIds.length > 0) {
+        const users = await knex('users')
+          .where({ tenant: tenantId })
+          .whereIn('user_id', allowedUserIds)
+          .select(
+            'user_id',
+            knex.raw("CONCAT(first_name, ' ', last_name) as full_name")
+          );
 
-      return { serviceDuration: duration, slots: timeSlots, technicians: technicianList };
-    });
+        technicians = users.map((user: any) => ({
+          user_id: user.user_id,
+          full_name: user.full_name,
+          duration: userDurations[user.user_id] || serviceDuration
+        }));
+      }
+    }
 
     logger.info('[available-slots] Retrieved available slots', {
       tenantId,
@@ -222,7 +246,11 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('[available-slots] Error retrieving slots', { error });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[available-slots] Error retrieving slots', {
+      message: err.message,
+      stack: err.stack
+    });
 
     return NextResponse.json(
       {

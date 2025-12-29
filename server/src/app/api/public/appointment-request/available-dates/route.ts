@@ -4,6 +4,15 @@ import { getAvailableDates } from '@/lib/services/availabilityService';
 import logger from '@alga-psa/shared/core/logger';
 import { z } from 'zod';
 
+// Tenant slug pattern: 12-char lowercase hex
+const TENANT_SLUG_REGEX = /^[a-f0-9]{12}$/i;
+
+// UUID pattern for validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Get valid IANA timezones for validation
+const validTimezones = new Set(Intl.supportedValuesOf('timeZone'));
+
 // Validation schema for query parameters
 const availableDatesQuerySchema = z.object({
   tenant: z.string().min(1, 'Tenant is required'),
@@ -11,7 +20,9 @@ const availableDatesQuerySchema = z.object({
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format').optional(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format').optional(),
   user_id: z.string().uuid('User ID must be a valid UUID').optional(),
-  timezone: z.string().optional()
+  timezone: z.string()
+    .refine(tz => validTimezones.has(tz), 'Invalid IANA timezone')
+    .optional()
 });
 
 /**
@@ -78,7 +89,7 @@ export async function GET(req: NextRequest) {
     let tenantId = validatedParams.tenant;
 
     // If tenant looks like a slug (12-char hex), resolve it to UUID
-    if (/^[a-f0-9]{12}$/i.test(validatedParams.tenant)) {
+    if (TENANT_SLUG_REGEX.test(validatedParams.tenant)) {
       const resolvedTenantId = await getTenantIdBySlug(validatedParams.tenant);
       if (!resolvedTenantId) {
         logger.warn('[available-dates] Invalid tenant slug', {
@@ -94,21 +105,34 @@ export async function GET(req: NextRequest) {
         );
       }
       tenantId = resolvedTenantId;
+    } else if (!UUID_REGEX.test(validatedParams.tenant)) {
+      // If not a slug, must be a valid UUID
+      logger.warn('[available-dates] Invalid tenant format', {
+        tenant: validatedParams.tenant
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Tenant must be a valid slug or UUID'
+        },
+        { status: 400 }
+      );
     }
 
-    // Calculate default date range (today to 30 days from now)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Calculate default date range using UTC (today to 30 days from now)
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-    const defaultStartDate = today.toISOString().split('T')[0];
-    const defaultEndDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const defaultStartDate = todayUTC.toISOString().split('T')[0];
+    const defaultEndDate = new Date(todayUTC.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const startDate = validatedParams.start_date || defaultStartDate;
     const endDate = validatedParams.end_date || defaultEndDate;
 
-    // Validate start_date is not in the past
-    const requestedStartDate = new Date(startDate);
-    if (requestedStartDate < today) {
+    // Validate start_date is not in the past (using UTC)
+    const requestedStartDate = new Date(startDate + 'T00:00:00Z');
+    if (requestedStartDate < todayUTC) {
       return NextResponse.json(
         {
           success: false,
@@ -119,7 +143,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Validate end_date is after start_date
-    const requestedEndDate = new Date(endDate);
+    const requestedEndDate = new Date(endDate + 'T00:00:00Z');
     if (requestedEndDate < requestedStartDate) {
       return NextResponse.json(
         {
@@ -130,18 +154,24 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Limit date range to 90 days to prevent excessive queries
+    // Reject date range exceeding 90 days instead of silently truncating
     const maxEndDate = new Date(requestedStartDate.getTime() + 90 * 24 * 60 * 60 * 1000);
-    const limitedEndDate = requestedEndDate > maxEndDate
-      ? maxEndDate.toISOString().split('T')[0]
-      : endDate;
+    if (requestedEndDate > maxEndDate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Date range cannot exceed 90 days'
+        },
+        { status: 400 }
+      );
+    }
 
     // Get available dates
     const dates = await getAvailableDates(
       tenantId,
       validatedParams.service_id,
       startDate,
-      limitedEndDate,
+      endDate,
       validatedParams.user_id,
       validatedParams.timezone
     );
@@ -150,7 +180,7 @@ export async function GET(req: NextRequest) {
       tenantId,
       serviceId: validatedParams.service_id,
       startDate,
-      endDate: limitedEndDate,
+      endDate,
       userId: validatedParams.user_id,
       dateCount: dates.length,
       availableDateCount: dates.filter(d => d.has_availability).length
@@ -162,7 +192,11 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('[available-dates] Error retrieving dates', { error });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[available-dates] Error retrieving dates', {
+      message: err.message,
+      stack: err.stack
+    });
 
     return NextResponse.json(
       {
