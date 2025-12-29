@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantIdBySlug } from '@/lib/actions/tenant-actions/tenantSlugActions';
 import { getAvailableTimeSlots } from '@/lib/services/availabilityService';
-import { createTenantKnex } from '@/lib/db';
-import { runWithTenant } from '@/lib/db/tenantContext';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
 import logger from '@alga-psa/shared/core/logger';
 import { z } from 'zod';
 
