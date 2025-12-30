@@ -129,6 +129,7 @@ export async function updateClientLocation(
 
   const updatedLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the existing location first to check current state
+    // Filter by is_active for consistency (we filter by is_active everywhere)
     const existingLocation = await trx('client_locations')
       .where({
         location_id: locationId,
@@ -171,19 +172,36 @@ export async function updateClientLocation(
         .whereNot('location_id', locationId)
         .first();
 
-      if (nextDefault) {
-        await trx('client_locations')
-          .where({
-            location_id: nextDefault.location_id,
-            tenant: tenant
-          })
-          .update({
-            is_default: true,
-            updated_at: trx.fn.now()
-          });
+      if (!nextDefault) {
+        throw new Error('Cannot unset default: no other active location available');
       }
+
+      // Clear current default first, then promote next (avoids unique constraint violation)
+      await trx('client_locations')
+        .where({
+          location_id: locationId,
+          tenant: tenant
+        })
+        .update({
+          is_default: false,
+          updated_at: trx.fn.now()
+        });
+
+      await trx('client_locations')
+        .where({
+          location_id: nextDefault.location_id,
+          tenant: tenant
+        })
+        .update({
+          is_default: true,
+          updated_at: trx.fn.now()
+        });
+
+      // Remove is_default from locationData since we already handled it
+      delete locationData.is_default;
     }
 
+    // Filter by is_active for consistency (we filter by is_active everywhere)
     const [location] = await trx('client_locations')
       .where({
         location_id: locationId,
