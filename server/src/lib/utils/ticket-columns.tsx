@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from 'server/src/components/ui/Button';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { IBoard } from 'server/src/interfaces/board.interface';
 
@@ -18,6 +18,8 @@ interface CreateTicketColumnsOptions {
   boards: IBoard[];
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
+  onEditClick?: (ticketId: string) => void;
+  onQuickViewClick?: (ticketId: string) => void;
   onDeleteClick?: (ticketId: string, ticketName: string) => void;
   ticketTagsRef?: React.MutableRefObject<Record<string, ITag[]>>;
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
@@ -35,6 +37,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     boards: _boards,
     displaySettings,
     onTicketClick,
+    onEditClick,
+    onQuickViewClick,
     onDeleteClick,
     ticketTagsRef,
     onTagsChange,
@@ -335,8 +339,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
-  // Actions
-  if (columnVisibility.actions && showActions && onDeleteClick) {
+  // Actions - show if we have any action handlers (like Contracts pattern)
+  if (columnVisibility.actions && showActions && (onEditClick || onQuickViewClick || onDeleteClick)) {
     columns.push({
       key: 'actions',
       col: {
@@ -345,23 +349,48 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '3%',
         sortable: false,
         render: (_value: string, record: ITicketListItem) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white z-50">
-              <DropdownMenuItem
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
-                onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white z-50">
+                {/* Quick View option - opens ticket in drawer without entering edit mode */}
+                {onQuickViewClick && (
+                  <DropdownMenuItem
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => onQuickViewClick(record.ticket_id as string)}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Quick View
+                  </DropdownMenuItem>
+                )}
+                {/* Edit option - opens ticket in drawer (like Clients/Contacts pattern) */}
+                {onEditClick && (
+                  <DropdownMenuItem
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                    onSelect={() => onEditClick(record.ticket_id as string)}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {/* Delete option */}
+                {onDeleteClick && (
+                  <DropdownMenuItem
+                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
+                    onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ),
       }
     });

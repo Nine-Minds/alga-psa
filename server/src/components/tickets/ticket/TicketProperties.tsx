@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from 'server/src/interfaces'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
@@ -11,12 +11,11 @@ import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
-import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
+import { Clock, Edit2, Play, Pause, StopCircle, X, AlertCircle, Calendar as CalendarIcon, Pencil } from 'lucide-react';
+// formatMinutesAsHoursAndMinutes removed - agent team block moved to TicketInfo
 import styles from './TicketDetails.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import MultiUserPicker from 'server/src/components/ui/MultiUserPicker';
-import UserAvatar from 'server/src/components/ui/UserAvatar';
+// UserAvatar removed - agent team moved to TicketInfo
 import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { toast } from 'react-hot-toast';
@@ -31,7 +30,6 @@ import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actio
 import TicketSurveySummaryCard from 'server/src/components/surveys/TicketSurveySummaryCard';
 import type { SurveyTicketSatisfactionSummary } from 'server/src/interfaces/survey.interface';
 import { getAppointmentRequestsByTicketId } from 'server/src/lib/actions/appointmentRequestManagementActions';
-import TicketMaterialsCard from './TicketMaterialsCard';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -63,9 +61,8 @@ interface TicketPropertiesProps {
   onAddTimeEntry: () => void;
   onClientClick: () => void;
   onContactClick: () => void;
-  onAgentClick: (userId: string) => void;
-  onAddAgent: (userId: string) => Promise<void>;
-  onRemoveAgent: (assignmentId: string) => Promise<void>;
+  // Agent team props removed - moved to TicketInfo
+  onAgentClick: (userId: string) => void; // Keep for potential future use
   onChangeContact: (contactId: string | null) => void;
   onChangeClient: (clientId: string) => void;
   onChangeLocation?: (locationId: string | null) => void;
@@ -76,6 +73,7 @@ interface TicketPropertiesProps {
   onTagsChange?: (tags: ITag[]) => void;
   onItilFieldChange?: (field: string, value: any) => void;
   surveySummary?: SurveyTicketSatisfactionSummary | null;
+  onUpdateContactInfo?: (field: 'phone_number' | 'email', value: string) => Promise<void>;
 }
 
 // Helper function to format location display
@@ -136,8 +134,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onClientClick,
   onContactClick,
   onAgentClick,
-  onAddAgent,
-  onRemoveAgent,
+  // onAddAgent and onRemoveAgent removed - agent team moved to TicketInfo
   onChangeContact,
   onChangeClient,
   onChangeLocation,
@@ -148,20 +145,72 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onTagsChange,
   onItilFieldChange,
   surveySummary = null,
+  onUpdateContactInfo,
 }) => {
+  // showAgentPicker removed - agent team moved to TicketInfo
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-
-  // Ref to prevent race conditions when rapidly adding/removing agents
-  const isProcessingAgentsRef = useRef(false);
   const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+
+  // Contact phone/email editing state
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [tempPhone, setTempPhone] = useState(contactInfo?.phone_number || '');
+  const [tempEmail, setTempEmail] = useState(contactInfo?.email || '');
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+
+  // Sync temp values when contactInfo changes
+  useEffect(() => {
+    setTempPhone(contactInfo?.phone_number || '');
+    setTempEmail(contactInfo?.email || '');
+  }, [contactInfo?.phone_number, contactInfo?.email]);
+
+  // Handlers for saving phone/email
+  const handleSavePhone = async () => {
+    if (!onUpdateContactInfo || !contactInfo) return;
+    setIsSavingPhone(true);
+    try {
+      await onUpdateContactInfo('phone_number', tempPhone);
+      setIsEditingPhone(false);
+    } catch (error) {
+      console.error('Error saving phone:', error);
+      toast.error('Failed to save phone number');
+    } finally {
+      setIsSavingPhone(false);
+    }
+  };
+
+  const handleCancelPhone = () => {
+    setTempPhone(contactInfo?.phone_number || '');
+    setIsEditingPhone(false);
+  };
+
+  const handleSaveEmail = async () => {
+    if (!onUpdateContactInfo || !contactInfo) return;
+    setIsSavingEmail(true);
+    try {
+      await onUpdateContactInfo('email', tempEmail);
+      setIsEditingEmail(false);
+    } catch (error) {
+      console.error('Error saving email:', error);
+      toast.error('Failed to save email');
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const handleCancelEmail = () => {
+    setTempEmail(contactInfo?.email || '');
+    setIsEditingEmail(false);
+  };
+
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
-  const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
-  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  // Agent avatar URLs removed - agent team moved to TicketInfo
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
   const [appointmentRequestsCount, setAppointmentRequestsCount] = useState<number>(0);
@@ -201,38 +250,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     fetchScheduledHours();
   }, [ticket.ticket_id, userId]);
 
-  // Fetch avatar URLs for primary agent, additional agents, and contact
-  useEffect(() => {
-    const fetchAvatarUrls = async () => {
-      if (!tenant) return;
-
-      // Fetch primary agent avatar URL
-      if (ticket.assigned_to) {
-        try {
-          const avatarUrl = await getUserAvatarUrlAction(ticket.assigned_to, tenant);
-          setPrimaryAgentAvatarUrl(avatarUrl);
-        } catch (error) {
-          console.error('Error fetching primary agent avatar URL:', error);
-        }
-      }
-
-      // Fetch additional agents avatar URLs
-      const avatarUrls: Record<string, string | null> = {};
-      for (const agent of additionalAgents) {
-        if (agent.additional_user_id) {
-          try {
-            const avatarUrl = await getUserAvatarUrlAction(agent.additional_user_id, tenant);
-            avatarUrls[agent.additional_user_id] = avatarUrl;
-          } catch (error) {
-            console.error(`Error fetching avatar URL for agent ${agent.additional_user_id}:`, error);
-          }
-        }
-      }
-      setAdditionalAgentAvatarUrls(avatarUrls);
-    };
-
-    fetchAvatarUrls();
-  }, [ticket.assigned_to, additionalAgents, tenant]);
+  // Agent avatar fetching removed - agent team moved to TicketInfo
 
   // Fetch contact avatar URL
   useEffect(() => {
@@ -250,11 +268,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     fetchContactAvatarUrl();
   }, [contactInfo?.contact_name_id, tenant]);
 
-  // Helper function to get scheduled hours for a specific agent
-  const getAgentScheduledHours = (agentId: string): number => {
-    const schedule = agentSchedules.find(s => s.userId === agentId);
-    return schedule ? schedule.minutes : 0;
-  };
+  // getAgentScheduledHours removed - agent team moved to TicketInfo
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -634,25 +648,113 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           )}
           <div>
-            <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Client Phone'}</h5>
-            <p className="text-sm">
-              {contactInfo?.phone_number || client?.phone_no || 'N/A'}
-            </p>
+            <div className="flex items-center gap-2">
+              <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Client Phone'}</h5>
+              {contactInfo && onUpdateContactInfo && !isEditingPhone && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPhone(true)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Edit phone number"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            {isEditingPhone && contactInfo ? (
+              <div className="mt-1">
+                <Input
+                  id="edit-contact-phone"
+                  type="tel"
+                  value={tempPhone}
+                  onChange={(e) => setTempPhone(e.target.value)}
+                  className="text-sm"
+                  placeholder="Enter phone number"
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    id="save-phone-btn"
+                    size="sm"
+                    onClick={handleSavePhone}
+                    disabled={isSavingPhone}
+                  >
+                    {isSavingPhone ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    id="cancel-phone-btn"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelPhone}
+                    disabled={isSavingPhone}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm">
+                {contactInfo?.phone_number || client?.phone_no || 'N/A'}
+              </p>
+            )}
           </div>
           <div>
-            <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Client Email'}</h5>
-            <p className="text-sm">
-              {contactInfo?.email || client?.email || 'N/A'}
-            </p>
+            <div className="flex items-center gap-2">
+              <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Client Email'}</h5>
+              {contactInfo && onUpdateContactInfo && !isEditingEmail && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingEmail(true)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Edit email"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            {isEditingEmail && contactInfo ? (
+              <div className="mt-1">
+                <Input
+                  id="edit-contact-email"
+                  type="email"
+                  value={tempEmail}
+                  onChange={(e) => setTempEmail(e.target.value)}
+                  className="text-sm"
+                  placeholder="Enter email address"
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    id="save-email-btn"
+                    size="sm"
+                    onClick={handleSaveEmail}
+                    disabled={isSavingEmail}
+                  >
+                    {isSavingEmail ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    id="cancel-email-btn"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEmail}
+                    disabled={isSavingEmail}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm">
+                {contactInfo?.email || client?.email || 'N/A'}
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      <div className={`${styles['card']} p-6 space-y-4`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`${styles['panel-header']}`}>Agent team</h2>
-          {/* Appointment Requests Indicator */}
-          {appointmentRequestsCount > 0 && (
+      {/* Appointment Requests - shown if any exist */}
+      {appointmentRequestsCount > 0 && (
+        <div className={`${styles['card']} p-6 space-y-4`}>
+          <div className="flex items-center justify-between">
+            <h2 className={`${styles['panel-header']}`}>Appointment Requests</h2>
             <div
               className="relative"
               onMouseEnter={() => setShowAppointmentTooltip(true)}
@@ -666,7 +768,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 title="View appointment requests on calendar"
               >
                 <CalendarIcon className="h-4 w-4 mr-1" />
-                <span>{appointmentRequestsCount} Appointment Request{appointmentRequestsCount !== 1 ? 's' : ''}</span>
+                <span>{appointmentRequestsCount} Request{appointmentRequestsCount !== 1 ? 's' : ''}</span>
               </a>
 
               {/* Tooltip */}
@@ -725,111 +827,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               )}
             </div>
-          )}
-        </div>
-        <div className="space-y-4">
-          {/* Primary Agent */}
-          <div>
-            <h5 className="font-bold mb-2">Primary Agent</h5>
-            {ticket.assigned_to ? (
-              <div
-                className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                onClick={() => onAgentClick(ticket.assigned_to!)}
-              >
-                <UserAvatar
-                  {...withDataAutomationId({ id: `${id}-primary-agent-avatar` })}
-                  userId={ticket.assigned_to}
-                  userName={`${availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || ''} ${availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || ''}`}
-                  avatarUrl={primaryAgentAvatarUrl}
-                  size="sm"
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm">
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || 'Unknown'}{' '}
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || 'Agent'}
-                  </span>
-                  <div className="flex items-center text-xs text-gray-500 mt-1">
-                    <Clock className="w-3 h-3 mr-1" />
-                    <span>Scheduled: {formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!))}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No primary agent assigned</p>
-            )}
-          </div>
-
-          {/* Team - Commented out for now
-          <div>
-            <h5 className="font-bold mb-2">Team</h5>
-            {team ? (
-              <div className="text-sm">
-                <p>{team.team_name}</p>
-                <p className="text-gray-500">
-                  Manager: {team.members.find(m => m.user_id === team.manager_id)?.first_name || 'Unknown Manager'}
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No team assigned</p>
-            )}
-          </div>
-          */}
-
-          {/* Additional Agents */}
-          <div>
-            <h5 className="font-bold mb-2">Additional Agents</h5>
-            <MultiUserPicker
-              id={`${id}-additional-agents`}
-              values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
-              onValuesChange={async (newUserIds) => {
-                // Prevent race conditions from rapid clicks
-                if (isProcessingAgentsRef.current) {
-                  return;
-                }
-                isProcessingAgentsRef.current = true;
-
-                try {
-                  const currentUserIds = additionalAgents
-                    .filter(a => a.additional_user_id)
-                    .map(a => a.additional_user_id!);
-
-                  // Find added users
-                  const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
-                  // Find removed users
-                  const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
-
-                  // Process all additions sequentially
-                  for (const userId of addedUserIds) {
-                    await onAddAgent(userId);
-                  }
-
-                  // Process all removals sequentially
-                  for (const userId of removedUserIds) {
-                    const agent = additionalAgents.find(a => a.additional_user_id === userId);
-                    if (agent?.assignment_id) {
-                      await onRemoveAgent(agent.assignment_id);
-                    }
-                  }
-                } finally {
-                  isProcessingAgentsRef.current = false;
-                }
-              }}
-              users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
-              size="sm"
-              placeholder="Select additional agents..."
-              onUserClick={onAgentClick}
-            />
           </div>
         </div>
-      </div>
-
-
-      {ticket.ticket_id && ticket.client_id && (
-        <TicketMaterialsCard
-          ticketId={ticket.ticket_id}
-          clientId={ticket.client_id}
-          currencyCode={client?.default_currency_code || 'USD'}
-        />
       )}
 
     </div>

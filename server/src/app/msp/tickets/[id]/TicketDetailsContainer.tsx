@@ -34,6 +34,7 @@ interface TicketDetailsContainerProps {
     clients: any[];
     locations: any[];
     agentSchedules: any[];
+    tags: any[];
   };
   surveySummary?: SurveyTicketSatisfactionSummary | null;
 }
@@ -185,6 +186,7 @@ export default function TicketDetailsContainer({ ticketData, surveySummary = nul
           initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
           initialAgentSchedules={ticketData.agentSchedules}
+          initialTags={ticketData.tags}
           // Pass optimized handlers
           onTicketUpdate={handleTicketUpdate}
           onAddComment={handleAddComment}

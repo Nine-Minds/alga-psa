@@ -114,7 +114,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       throw new Error('Ticket not found');
     }
 
-    // Fetch all related data in parallel
+    // Fetch all related data in parallel (including tags for immediate display)
     const [
       comments,
       documents,
@@ -124,7 +124,8 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       statuses,
       boards,
       priorities,
-      categories
+      categories,
+      tags
     ] = await Promise.all([
       // Comments
       trx('comments')
@@ -194,7 +195,28 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       // Categories
       trx('categories')
         .where({ tenant })
-        .orderBy('category_name', 'asc')
+        .orderBy('category_name', 'asc'),
+
+      // Tags for this ticket (pre-fetched for immediate display)
+      trx('tag_mappings as tm')
+        .select(
+          'td.tag_id',
+          'td.tag_text',
+          'td.tagged_type',
+          'td.background_color',
+          'td.text_color',
+          'tm.mapping_id',
+          'tm.tagged_id'
+        )
+        .join('tag_definitions as td', function() {
+          this.on('tm.tag_id', 'td.tag_id')
+              .andOn('tm.tenant', 'td.tenant')
+        })
+        .where({
+          'tm.tagged_id': ticketId,
+          'tm.tagged_type': 'ticket',
+          'tm.tenant': tenant
+        })
     ]);
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---
@@ -505,7 +527,15 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       categories,
       clients: clientsWithLogos,
       locations,
-      agentSchedules: agentSchedulesList
+      agentSchedules: agentSchedulesList,
+      tags: tags.map((tag: any) => ({
+        tag_id: tag.tag_id,
+        tag_text: tag.tag_text,
+        tagged_id: tag.tagged_id,
+        tagged_type: tag.tagged_type,
+        background_color: tag.background_color,
+        text_color: tag.text_color
+      }))
     };
     } catch (error) {
       console.error('Failed to fetch consolidated ticket data:', error);

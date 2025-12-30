@@ -6,6 +6,7 @@ import TextEditor from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import { ITicket, IComment, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -16,9 +17,10 @@ import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
-import { Pencil, Check, HelpCircle } from 'lucide-react';
+import { Pencil, HelpCircle, X } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 
 
 interface TicketInfoProps {
@@ -43,6 +45,18 @@ interface TicketInfoProps {
   itilUrgency?: number;
   itilCategory?: string;
   itilSubcategory?: string;
+  // Sectional save props (like contracts pattern)
+  onSaveSection?: () => Promise<void>;
+  onCancelSection?: () => void;
+  hasUnsavedChanges?: boolean;
+  isSavingSection?: boolean;
+  // Additional agents props (moved from TicketProperties)
+  additionalAgents?: ITicketResource[];
+  availableAgents?: IUserWithRoles[];
+  onAddAgent?: (userId: string) => Promise<void>;
+  onRemoveAgent?: (assignmentId: string) => Promise<void>;
+  onAgentClick?: (userId: string) => void;
+  agentAvatarUrls?: Record<string, string | null>;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -65,6 +79,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilUrgency,
   itilCategory,
   itilSubcategory,
+  // Sectional save props
+  onSaveSection,
+  onCancelSection,
+  hasUnsavedChanges = false,
+  isSavingSection = false,
+  // Additional agents props
+  additionalAgents = [],
+  availableAgents = [],
+  onAddAgent,
+  onRemoveAgent,
+  onAgentClick,
+  agentAvatarUrls = {},
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -77,6 +103,23 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [titleValue, setTitleValue] = useState(ticket.title);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+
+  // Inline edit states for dropdowns (like description/contact info pattern)
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
+  const [tempStatus, setTempStatus] = useState(ticket.status_id || '');
+  const [isEditingAssignedTo, setIsEditingAssignedTo] = useState(false);
+  const [tempAssignedTo, setTempAssignedTo] = useState(ticket.assigned_to || '');
+  const [isEditingBoard, setIsEditingBoard] = useState(false);
+  const [tempBoard, setTempBoard] = useState(ticket.board_id || '');
+  const [isEditingPriority, setIsEditingPriority] = useState(false);
+  const [tempPriority, setTempPriority] = useState(ticket.priority_id || '');
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [tempCategory, setTempCategory] = useState(ticket.category_id || '');
+  const [tempSubcategory, setTempSubcategory] = useState(ticket.subcategory_id || '');
+  const [isEditingImpact, setIsEditingImpact] = useState(false);
+  const [tempImpact, setTempImpact] = useState(itilImpact?.toString() || '');
+  const [isEditingUrgency, setIsEditingUrgency] = useState(false);
+  const [tempUrgency, setTempUrgency] = useState(itilUrgency?.toString() || '');
 
   // Calculate ITIL priority when impact and urgency are available
   const calculatedItilPriority = React.useMemo(() => {
@@ -206,6 +249,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTitleValue(ticket.title);
   }, [ticket.title]);
 
+  // Sync temp values with ticket props when they change
+  useEffect(() => {
+    setTempStatus(ticket.status_id || '');
+    setTempAssignedTo(ticket.assigned_to || '');
+    setTempBoard(ticket.board_id || '');
+    setTempPriority(ticket.priority_id || '');
+    setTempCategory(ticket.category_id || '');
+    setTempSubcategory(ticket.subcategory_id || '');
+  }, [ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id]);
+
+  useEffect(() => {
+    setTempImpact(itilImpact?.toString() || '');
+    setTempUrgency(itilUrgency?.toString() || '');
+  }, [itilImpact, itilUrgency]);
+
   const handleTitleSubmit = () => {
     if (titleValue.trim() !== '') {
       onSelectChange('title', titleValue.trim());
@@ -213,10 +271,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   };
 
+  const handleTitleCancel = () => {
+    setTitleValue(ticket.title);
+    setIsEditingTitle(false);
+  };
+
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
-      setTitleValue(ticket.title);
-      setIsEditingTitle(false);
+      handleTitleCancel();
     } else if (e.key === 'Enter') {
       e.preventDefault();
       handleTitleSubmit();
@@ -257,6 +319,52 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     return ticket.category_id || '';
   };
 
+  // Temp category handler for Save/Cancel pattern
+  const handleTempCategoryChange = (categoryIds: string[]) => {
+    if (categoryIds.length === 0) {
+      setTempCategory('');
+      setTempSubcategory('');
+      return;
+    }
+
+    const selectedCategoryId = categoryIds[0];
+    const selectedCategory = categories.find(c => c.category_id === selectedCategoryId);
+
+    if (!selectedCategory) {
+      console.error('Selected category not found');
+      return;
+    }
+
+    if (selectedCategory.parent_category) {
+      setTempCategory(selectedCategory.parent_category);
+      setTempSubcategory(selectedCategoryId);
+    } else {
+      setTempCategory(selectedCategoryId);
+      setTempSubcategory('');
+    }
+  };
+
+  const getTempSelectedCategoryId = () => {
+    if (tempSubcategory) {
+      return tempSubcategory;
+    }
+    return tempCategory || '';
+  };
+
+  const hasCategoryChanged = () => {
+    return tempCategory !== (ticket.category_id || '') || tempSubcategory !== (ticket.subcategory_id || '');
+  };
+
+  const saveCategoryChanges = () => {
+    onSelectChange('category_id', tempCategory || null);
+    onSelectChange('subcategory_id', tempSubcategory || null);
+  };
+
+  const cancelCategoryChanges = () => {
+    setTempCategory(ticket.category_id || '');
+    setTempSubcategory(ticket.subcategory_id || '');
+  };
+
   const handleItilFieldChange = (field: string, value: any) => {
     if (onItilFieldChange) {
       onItilFieldChange(field, value);
@@ -290,33 +398,42 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     <ReflectionContainer id={id} label={`Info for ticket ${ticket.ticket_number}`}>
       <div className={`${styles['card']}`}>
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-4 min-w-0">
+          <div className="flex flex-col gap-2 mb-4 min-w-0">
             {isEditingTitle ? (
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex flex-col gap-2 flex-1 min-w-0">
                 <Input
-
                   type="text"
                   value={titleValue}
                   onChange={(e) => setTitleValue(e.target.value)}
                   onKeyDown={handleTitleKeyDown}
                   autoFocus
                   className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  containerClassName="mb-2 flex-1"
+                  containerClassName="flex-1"
                   style={{minWidth: '300px', width: '100%'}}
                 />
-                <button
-
-                  onClick={handleTitleSubmit}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
-                  title="Save title"
-                >
-                  <Check className="w-4 h-4 text-gray-500" />
-                </button>
+                {/* Save/Cancel buttons for title - like description pattern */}
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    id="save-title-button"
+                    onClick={handleTitleSubmit}
+                    disabled={!titleValue.trim()}
+                    size="sm"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    id="cancel-title-button"
+                    variant="outline"
+                    onClick={handleTitleCancel}
+                    size="sm"
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
             ) : (
-              <>
-                <h1 
-
+              <div className="flex items-center gap-2">
+                <h1
                   className="text-2xl font-bold break-words max-w-full min-w-0 flex-1"
                   style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}
                 >
@@ -329,25 +446,51 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />
                 </button>
-              </>
+              </div>
             )}
           </div>
           <div className="grid grid-cols-2 gap-4 mb-4">
+            {/* Status - with Save/Cancel buttons */}
             <div>
               <h5 className="font-bold mb-2">Status</h5>
               <CustomSelect
-                value={ticket.status_id || ''}
+                value={tempStatus}
                 options={statusOptions}
-                onValueChange={(value) => onSelectChange('status_id', value)}
+                onValueChange={setTempStatus}
                 customStyles={customStyles}
                 className="!w-fit"
               />
+              {tempStatus !== (ticket.status_id || '') && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    id="save-status-btn"
+                    size="sm"
+                    onClick={() => {
+                      onSelectChange('status_id', tempStatus);
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    id="cancel-status-btn"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setTempStatus(ticket.status_id || '');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {/* Assigned To - with Save/Cancel buttons */}
             <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
               <UserPicker
-                value={ticket.assigned_to || ''}
-                onValueChange={(value) => onSelectChange('assigned_to', value)}
+                value={tempAssignedTo}
+                onValueChange={setTempAssignedTo}
                 users={usersList}
                 labelStyle="none"
                 buttonWidth="fit"
@@ -355,30 +498,78 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 className="!w-fit"
                 placeholder="Not assigned"
               />
+              {tempAssignedTo !== (ticket.assigned_to || '') && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    id="save-assigned-to-btn"
+                    size="sm"
+                    onClick={() => {
+                      onSelectChange('assigned_to', tempAssignedTo || null);
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    id="cancel-assigned-to-btn"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setTempAssignedTo(ticket.assigned_to || '');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {/* Board - with Save/Cancel buttons */}
             <div>
               <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect
-                value={ticket.board_id || ''}
+                value={tempBoard}
                 options={boardOptions}
-                onValueChange={(value) => {
-                  onSelectChange('board_id', value);
-                  // Clear categories when board changes
-                  onSelectChange('category_id', null);
-                  onSelectChange('subcategory_id', null);
-
-                  // Clear priority fields when board changes
-                  // This ensures that switching between custom and ITIL priority types
-                  // doesn't retain the wrong priority data
-                  onSelectChange('priority_id', null);
-                  if (onItilFieldChange) {
-                    onItilFieldChange('itil_impact', null);
-                    onItilFieldChange('itil_urgency', null);
-                  }
-                }}
+                onValueChange={setTempBoard}
                 customStyles={customStyles}
                 className="!w-fit"
               />
+              {tempBoard !== (ticket.board_id || '') && (
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    id="save-board-btn"
+                    size="sm"
+                    onClick={() => {
+                      onSelectChange('board_id', tempBoard);
+                      // Clear categories when board changes
+                      onSelectChange('category_id', null);
+                      onSelectChange('subcategory_id', null);
+                      setTempCategory('');
+                      setTempSubcategory('');
+                      // Clear priority fields when board changes
+                      onSelectChange('priority_id', null);
+                      setTempPriority('');
+                      if (onItilFieldChange) {
+                        onItilFieldChange('itil_impact', null);
+                        onItilFieldChange('itil_urgency', null);
+                      }
+                      setTempImpact('');
+                      setTempUrgency('');
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    id="cancel-board-btn"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setTempBoard(ticket.board_id || '');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
@@ -416,13 +607,38 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   </div>
                 )
               ) : (
-                <PrioritySelect
-                  value={ticket.priority_id || null}
-                  options={priorityOptions}
-                  onValueChange={(value) => onSelectChange('priority_id', value)}
-                  customStyles={customStyles}
-                  className="!w-fit"
-                />
+                <>
+                  <PrioritySelect
+                    value={tempPriority || null}
+                    options={priorityOptions}
+                    onValueChange={(value) => setTempPriority(value || '')}
+                    customStyles={customStyles}
+                    className="!w-fit"
+                  />
+                  {tempPriority !== (ticket.priority_id || '') && (
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        id="save-priority-btn"
+                        size="sm"
+                        onClick={() => {
+                          onSelectChange('priority_id', tempPriority || null);
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        id="cancel-priority-btn"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setTempPriority(ticket.priority_id || '');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             {boardConfig.category_type && (
@@ -432,11 +648,30 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <CategoryPicker
                     id={`${id}-category-picker`}
                     categories={categories}
-                    selectedCategories={[getSelectedCategoryId()]}
-                    onSelect={handleCategoryChange}
+                    selectedCategories={[getTempSelectedCategoryId()]}
+                    onSelect={handleTempCategoryChange}
                     placeholder={boardConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
                   />
                 </div>
+                {hasCategoryChanged() && (
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      id="save-category-btn"
+                      size="sm"
+                      onClick={saveCategoryChanges}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      id="cancel-category-btn"
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelCategoryChanges}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
             {/* ITIL Fields for ITIL priority boards */}
@@ -453,11 +688,34 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minimal impact)' },
                         { value: '5', label: '5 - Low (No business impact)' }
                       ]}
-                      value={itilImpact?.toString() || null}
-                      onValueChange={(value) => handleItilFieldChange('itil_impact', Number(value))}
+                      value={tempImpact || null}
+                      onValueChange={(value) => setTempImpact(value || '')}
                       placeholder="Select Impact"
                     />
                   </div>
+                  {tempImpact !== (itilImpact?.toString() || '') && (
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        id="save-impact-btn"
+                        size="sm"
+                        onClick={() => {
+                          handleItilFieldChange('itil_impact', Number(tempImpact));
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        id="cancel-impact-btn"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setTempImpact(itilImpact?.toString() || '');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h5 className="font-bold mb-2">Urgency</h5>
@@ -470,11 +728,34 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
                         { value: '5', label: '5 - Low (Work continues normally)' }
                       ]}
-                      value={itilUrgency?.toString() || null}
-                      onValueChange={(value) => handleItilFieldChange('itil_urgency', Number(value))}
+                      value={tempUrgency || null}
+                      onValueChange={(value) => setTempUrgency(value || '')}
                       placeholder="Select Urgency"
                     />
                   </div>
+                  {tempUrgency !== (itilUrgency?.toString() || '') && (
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        id="save-urgency-btn"
+                        size="sm"
+                        onClick={() => {
+                          handleItilFieldChange('itil_urgency', Number(tempUrgency));
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        id="cancel-urgency-btn"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setTempUrgency(itilUrgency?.toString() || '');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -614,7 +895,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             )}
           </div>
           
-          {/* Tags Section */}
+          {/* Tags Section - auto-saves, no manual save button needed */}
           <div className="mt-6">
             <h2 className="text-lg font-semibold mb-2">Tags</h2>
             {onTagsChange && ticket.ticket_id ? (
@@ -629,6 +910,101 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <p className="text-sm text-gray-500">Tags cannot be managed</p>
             )}
           </div>
+
+          {/* Additional Agents Section - badge-style display with horizontal wrap */}
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold mb-2">Additional Agents</h2>
+
+            {/* Additional Agent badges - horizontal wrap like tags (3-4 per line) */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {additionalAgents.map((agent) => {
+                const agentUser = (availableAgents.length > 0 ? availableAgents : users).find(u => u.user_id === agent.additional_user_id);
+                return (
+                  <div
+                    key={agent.assignment_id}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm group"
+                  >
+                    <div
+                      className="flex items-center gap-2 cursor-pointer hover:text-blue-900"
+                      onClick={() => agent.additional_user_id && onAgentClick && onAgentClick(agent.additional_user_id)}
+                    >
+                      <UserAvatar
+                        userId={agent.additional_user_id!}
+                        userName={`${agentUser?.first_name || ''} ${agentUser?.last_name || ''}`}
+                        avatarUrl={agentAvatarUrls[agent.additional_user_id!] || null}
+                        size="xs"
+                      />
+                      <span>
+                        {agentUser?.first_name || 'Unknown'} {agentUser?.last_name || 'Agent'}
+                      </span>
+                    </div>
+                    {onRemoveAgent && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveAgent(agent.assignment_id!);
+                        }}
+                        className="ml-1 p-0.5 rounded-full hover:bg-blue-200 transition-colors"
+                        title="Remove agent"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* No additional agents message */}
+              {additionalAgents.length === 0 && !onAddAgent && (
+                <p className="text-sm text-gray-500">No additional agents assigned</p>
+              )}
+            </div>
+
+            {/* Inline Agent Picker - always visible for adding agents */}
+            {onAddAgent && (
+              <div className="max-w-xs">
+                <UserPicker
+                  label=""
+                  value=""
+                  onValueChange={(userId) => {
+                    onAddAgent(userId);
+                  }}
+                  users={(availableAgents.length > 0 ? availableAgents : users).filter(
+                    agent =>
+                      agent.user_id !== ticket.assigned_to &&
+                      !additionalAgents.some(a => a.additional_user_id === agent.user_id)
+                  )}
+                  placeholder="Add agent..."
+                  size="sm"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Sectional Save Changes button - like contracts pattern */}
+          {onSaveSection && (
+            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-200">
+              {onCancelSection && (
+                <Button
+                  id="cancel-ticket-info-changes"
+                  type="button"
+                  variant="outline"
+                  onClick={onCancelSection}
+                  disabled={isSavingSection}
+                >
+                  Cancel
+                </Button>
+              )}
+              <Button
+                id="save-ticket-info-changes"
+                type="button"
+                onClick={onSaveSection}
+                disabled={isSavingSection}
+              >
+                {isSavingSection ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </ReflectionContainer>
