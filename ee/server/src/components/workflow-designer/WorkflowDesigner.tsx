@@ -11,7 +11,10 @@ import {
   // Dense palette icons
   GitBranch, Repeat, Shield, CornerDownRight, ArrowRight, Clock, User, Settings,
   Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
-  FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical
+  FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical,
+  // Business operations icons
+  Receipt, MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building,
+  Bell, Calendar, SquareCheck, StickyNote
 } from 'lucide-react';
 import {
   getStepTypeColor,
@@ -2593,11 +2596,81 @@ const WorkflowDesigner: React.FC = () => {
   }, [nodeRegistry, actionRegistry, search]);
 
   const groupedPaletteItems = useMemo(() => {
-    return paletteItems.reduce<Record<string, typeof paletteItems>>((acc, item) => {
-      acc[item.category] = acc[item.category] || [];
-      acc[item.category].push(item);
+    // First pass: collect all categories to detect conflicts
+    const allCategories = new Set<string>();
+    paletteItems.forEach(item => {
+      if (item.category !== 'Business Operations') {
+        allCategories.add(item.category);
+      }
+    });
+
+    const grouped = paletteItems.reduce<Record<string, typeof paletteItems>>((acc, item) => {
+      let category = item.category;
+      
+      // Split Business Operations into module-based subcategories
+      if (category === 'Business Operations') {
+        const itemWithAction = item as typeof item & { actionId?: string };
+        if (itemWithAction.actionId) {
+          // Extract module name from actionId (e.g., "tickets.create" -> "Tickets")
+          const moduleName = itemWithAction.actionId.split('.')[0];
+          // Capitalize first letter
+          category = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+          // Handle special case for CRM
+          if (category === 'Crm') category = 'CRM';
+          
+          // Check if this category already exists (e.g., "Email" conflicts with email workflow actions)
+          // If it does, prefix with "Business Operations: " to keep them separate
+          if (allCategories.has(category)) {
+            category = `Business Operations: ${category}`;
+          }
+        }
+      }
+      
+      acc[category] = acc[category] || [];
+      acc[category].push(item);
       return acc;
     }, {});
+
+    // Define category order: Control, Core, Transform, Email, then Business Operations subcategories
+    const categoryOrder = [
+      'Control',
+      'Core',
+      'Transform',
+      'Email',
+      // Business Operations subcategories in logical order
+      'Tickets',
+      'Clients',
+      'Contacts',
+      'Business Operations: Email',
+      'Notifications',
+      'Scheduling',
+      'Projects',
+      'Time',
+      'CRM'
+    ];
+
+    // Sort categories: known categories first in order, then others alphabetically
+    const sortedEntries = Object.entries(grouped).sort(([a], [b]) => {
+      const aIndex = categoryOrder.indexOf(a);
+      const bIndex = categoryOrder.indexOf(b);
+      
+      // If both are in the order list, sort by their position
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      // If only a is in the order list, it comes first
+      if (aIndex !== -1) return -1;
+      // If only b is in the order list, it comes first
+      if (bIndex !== -1) return 1;
+      // For Business Operations subcategories, sort them together
+      const aIsBO = a.startsWith('Business Operations:');
+      const bIsBO = b.startsWith('Business Operations:');
+      if (aIsBO && !bIsBO) return 1; // Business Operations after main categories
+      if (!aIsBO && bIsBO) return -1;
+      if (aIsBO && bIsBO) return a.localeCompare(b); // Sort BO subcategories alphabetically
+      // Otherwise, sort alphabetically
+      return a.localeCompare(b);
+    });
+
+    return Object.fromEntries(sortedEntries);
   }, [paletteItems]);
 
   const handlePipeSelect = (pipePath: string) => {
@@ -2647,6 +2720,42 @@ const WorkflowDesigner: React.FC = () => {
     // If it's an action with a specific actionId, try to match by actionId
     if (itemWithAction.actionId) {
       const actionId = itemWithAction.actionId.toLowerCase();
+      
+      // Business Operations - Tickets
+      if (actionId === 'tickets.create') return <Receipt className={iconClass} />;
+      if (actionId === 'tickets.add_comment') return <MessageSquare className={iconClass} />;
+      if (actionId === 'tickets.update_fields') return <Edit className={iconClass} />;
+      if (actionId === 'tickets.assign') return <UserPlus className={iconClass} />;
+      if (actionId === 'tickets.close') return <CheckCircle className={iconClass} />;
+      if (actionId === 'tickets.link_entities') return <Link className={iconClass} />;
+      if (actionId === 'tickets.add_attachment') return <Paperclip className={iconClass} />;
+      if (actionId === 'tickets.find') return <Search className={iconClass} />;
+      
+      // Business Operations - Clients
+      if (actionId === 'clients.find' || actionId === 'clients.search') return <Building className={iconClass} />;
+      
+      // Business Operations - Contacts
+      if (actionId === 'contacts.find' || actionId === 'contacts.search') return <User className={iconClass} />;
+      
+      // Business Operations - Email
+      if (actionId === 'email.send') return <Send className={iconClass} />;
+      
+      // Business Operations - Notifications
+      if (actionId === 'notifications.send_in_app') return <Bell className={iconClass} />;
+      
+      // Business Operations - Scheduling
+      if (actionId === 'scheduling.assign_user') return <Calendar className={iconClass} />;
+      
+      // Business Operations - Projects
+      if (actionId === 'projects.create_task') return <SquareCheck className={iconClass} />;
+      
+      // Business Operations - Time
+      if (actionId === 'time.create_entry') return <Clock className={iconClass} />;
+      
+      // Business Operations - CRM
+      if (actionId === 'crm.create_activity_note') return <StickyNote className={iconClass} />;
+      
+      // Fallback patterns for other actions
       if (actionId.includes('email') || actionId.includes('mail')) return <Mail className={iconClass} />;
       if (actionId.includes('send')) return <Send className={iconClass} />;
       if (actionId.includes('http') || actionId.includes('api') || actionId.includes('fetch')) return <Globe className={iconClass} />;
