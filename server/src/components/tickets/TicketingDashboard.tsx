@@ -33,8 +33,10 @@ import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
 import ClientDetails from 'server/src/components/clients/ClientDetails';
+import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 import Spinner from 'server/src/components/ui/Spinner';
+import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -145,9 +147,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
 
-  // Quick View state
+  // Client Quick View state
   const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  const [isClientQuickViewOpen, setIsClientQuickViewOpen] = useState(false);
+
+  // Ticket Quick View state
+  const [quickViewTicketId, setQuickViewTicketId] = useState<string | null>(null);
+  const [quickViewTicketData, setQuickViewTicketData] = useState<any>(null);
+  const [isTicketQuickViewOpen, setIsTicketQuickViewOpen] = useState(false);
+  const [isLoadingTicketQuickView, setIsLoadingTicketQuickView] = useState(false);
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
@@ -290,10 +298,32 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (client) {
       setQuickViewClient(client);
       setQuickViewClientId(clientId);
-      setIsQuickViewOpen(true);
+      setIsClientQuickViewOpen(true);
     }
   };
-  
+
+  const onQuickViewTicket = async (ticketId: string) => {
+    if (!currentUser) {
+      toast.error('Please wait while user is loading');
+      return;
+    }
+
+    setQuickViewTicketId(ticketId);
+    setIsLoadingTicketQuickView(true);
+    setIsTicketQuickViewOpen(true);
+
+    try {
+      const data = await getConsolidatedTicketData(ticketId, currentUser);
+      setQuickViewTicketData(data);
+    } catch (error) {
+      console.error('Error fetching ticket data for quick view:', error);
+      toast.error('Failed to load ticket details');
+      setIsTicketQuickViewOpen(false);
+    } finally {
+      setIsLoadingTicketQuickView(false);
+    }
+  };
+
   // Initialize currentUser state from props if available
   useEffect(() => {
     // Only fetch user if not already provided in props
@@ -540,7 +570,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
-      onEditClick: handleTicketClick, // Edit opens ticket in drawer (like Clients/Contacts pattern)
+      onEditClick: handleTicketClick, // Edit opens ticket in full page (like Clients/Contacts pattern)
+      onQuickViewClick: onQuickViewTicket, // Quick View opens ticket in drawer preview
       onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
@@ -1082,9 +1113,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       
       {/* Client Quick View Drawer */}
       <Drawer
-        isOpen={isQuickViewOpen}
+        isOpen={isClientQuickViewOpen}
         onClose={() => {
-          setIsQuickViewOpen(false);
+          setIsClientQuickViewOpen(false);
           setQuickViewClientId(null);
           setQuickViewClient(null);
         }}
@@ -1094,6 +1125,48 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             client={quickViewClient}
             isInDrawer={true}
             quickView={true}
+          />
+        )}
+      </Drawer>
+
+      {/* Ticket Quick View Drawer */}
+      <Drawer
+        isOpen={isTicketQuickViewOpen}
+        onClose={() => {
+          setIsTicketQuickViewOpen(false);
+          setQuickViewTicketId(null);
+          setQuickViewTicketData(null);
+        }}
+      >
+        {isLoadingTicketQuickView ? (
+          <div className="flex items-center justify-center h-64">
+            <Spinner />
+          </div>
+        ) : quickViewTicketData && (
+          <TicketDetails
+            id="ticket-quick-view"
+            initialTicket={quickViewTicketData.ticket}
+            isInDrawer={true}
+            initialComments={quickViewTicketData.comments}
+            initialDocuments={quickViewTicketData.documents}
+            initialClient={quickViewTicketData.client}
+            initialContacts={quickViewTicketData.contacts}
+            initialContactInfo={quickViewTicketData.contactInfo}
+            initialCreatedByUser={quickViewTicketData.createdByUser}
+            initialBoard={quickViewTicketData.board}
+            initialAdditionalAgents={quickViewTicketData.additionalAgents}
+            initialAvailableAgents={quickViewTicketData.availableAgents}
+            initialUserMap={quickViewTicketData.userMap}
+            statusOptions={quickViewTicketData.options.status}
+            agentOptions={quickViewTicketData.options.agent}
+            boardOptions={quickViewTicketData.options.board}
+            priorityOptions={quickViewTicketData.options.priority}
+            initialCategories={quickViewTicketData.categories}
+            initialClients={quickViewTicketData.clients}
+            initialLocations={quickViewTicketData.locations}
+            initialAgentSchedules={quickViewTicketData.agentSchedules}
+            initialTags={quickViewTicketData.tags}
+            currentUser={currentUser}
           />
         )}
       </Drawer>

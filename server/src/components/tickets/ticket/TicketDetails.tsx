@@ -38,7 +38,7 @@ import { findUserById, getCurrentUser } from "server/src/lib/actions/user-action
 import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
-import { getContactByContactNameId, getContactsByClient } from "server/src/lib/actions/contact-actions/contactActions";
+import { getContactByContactNameId, getContactsByClient, updateContact } from "server/src/lib/actions/contact-actions/contactActions";
 import { getClientById, getAllClients } from "server/src/lib/actions/client-actions/clientActions";
 import { updateTicketWithCache } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
 import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
@@ -49,9 +49,11 @@ import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions"
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
 import ClientDetails from "server/src/components/clients/ClientDetails";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
+import { getUserAvatarUrlAction } from "server/src/lib/actions/avatar-actions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
 import { Button } from "server/src/components/ui/Button";
-import { ExternalLink, Save, X } from 'lucide-react';
+import { ExternalLink, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import TimeEntryDialog from "server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog";
@@ -88,6 +90,7 @@ interface TicketDetailsProps {
     initialClients?: IClient[];
     initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
+    initialTags?: ITag[];
 
     // Current user (for drawer usage)
     currentUser?: IUser | null;
@@ -124,6 +127,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialClients = [],
     initialLocations = [],
     initialAgentSchedules = [],
+    initialTags = [],
     // Current user (for drawer usage)
     currentUser,
     // Optimized handlers
@@ -161,6 +165,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
 
+    // Agent avatar URLs (for TicketInfo badge display)
+    const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+
     const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
         type: "paragraph",
         props: {
@@ -181,7 +188,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
-    const [tags, setTags] = useState<ITag[]>([]);
+    const [tags, setTags] = useState<ITag[]>(initialTags);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
@@ -205,6 +212,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isSavingTicket, setIsSavingTicket] = useState(false);
     const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    // Navigation away confirmation dialog state
+    const [showNavigateAwayDialog, setShowNavigateAwayDialog] = useState(false);
+    const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
 
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
@@ -215,6 +225,43 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
+
+    // Warn before leaving page with unsaved changes (browser navigation)
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = ''; // Required for Chrome
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [hasUnsavedChanges]);
+
+    // Intercept internal navigation (clicking links) when there are unsaved changes
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (!hasUnsavedChanges) return;
+
+            const target = e.target as HTMLElement;
+            const link = target.closest('a[href]') as HTMLAnchorElement;
+
+            if (link && link.href) {
+                const url = new URL(link.href);
+                // Only intercept internal navigation
+                if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setPendingNavigationUrl(link.href);
+                    setShowNavigateAwayDialog(true);
+                }
+            }
+        };
+
+        document.addEventListener('click', handleClick, true);
+        return () => document.removeEventListener('click', handleClick, true);
+    }, [hasUnsavedChanges]);
 
     // Timer logic
     const tick = useCallback(() => {
@@ -277,11 +324,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [ticket.entered_at, ticket.updated_at, dateTimeFormat]);
 
-    // Fetch tags when component mounts
+    // Fetch tags when component mounts (only if not pre-fetched)
     useEffect(() => {
         const fetchTags = async () => {
-            if (!ticket.ticket_id) return;
-            
+            // Skip if tags already pre-fetched or no ticket_id
+            if (initialTags.length > 0 || !ticket.ticket_id) return;
+
             try {
                 const ticketTags = await findTagsByEntityId(ticket.ticket_id, 'ticket');
                 setTags(ticketTags);
@@ -290,9 +338,32 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
         fetchTags();
-    }, [ticket.ticket_id]);
-    
-    
+    }, [ticket.ticket_id, initialTags.length]);
+
+    // Fetch avatar URLs for additional agents (for badge display in TicketInfo)
+    useEffect(() => {
+        const fetchAvatarUrls = async () => {
+            if (!tenant) return;
+
+            // Fetch additional agents avatar URLs
+            const avatarUrls: Record<string, string | null> = {};
+            for (const agent of additionalAgents) {
+                if (agent.additional_user_id) {
+                    try {
+                        const avatarUrl = await getUserAvatarUrlAction(agent.additional_user_id, tenant);
+                        avatarUrls[agent.additional_user_id] = avatarUrl;
+                    } catch (error) {
+                        console.error(`Error fetching avatar URL for agent ${agent.additional_user_id}:`, error);
+                    }
+                }
+            }
+            setAdditionalAgentAvatarUrls(avatarUrls);
+        };
+
+        fetchAvatarUrls();
+    }, [additionalAgents, tenant]);
+
+
     // Add automatic interval tracking using the custom hook
     // Unique holder ID per tab for lock ownership
     const [holderId] = useState<string>(() => {
@@ -536,6 +607,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleAddAgent = async (userId: string) => {
         try {
+            // Prevent adding the primary agent as an additional agent
+            if (userId === ticket.assigned_to) {
+                toast.error('This user is already the primary agent. Remove them as primary agent first.');
+                return;
+            }
+
+            // Prevent adding duplicate additional agents
+            if (additionalAgents.some(agent => agent.additional_user_id === userId)) {
+                toast.error('This user is already an additional agent.');
+                return;
+            }
+
             // Note: Agent changes are saved immediately (separate resource table)
             // They don't use the batch save pattern like other ticket fields
             const currentUser = await getCurrentUser();
@@ -585,6 +668,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             field === 'assigned_to'
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
+
+        // Prevent setting a user as primary agent if they're already an additional agent
+        if (field === 'assigned_to' && normalizedValue) {
+            const isAlreadyAdditionalAgent = additionalAgents.some(
+                agent => agent.additional_user_id === normalizedValue
+            );
+            if (isAlreadyAdditionalAgent) {
+                toast.error('This user is already an additional agent. Remove them from additional agents first.');
+                return;
+            }
+        }
 
         // Mark that changes have been made
         setHasUnsavedChanges(true);
@@ -971,6 +1065,28 @@ const handleClose = () => {
         }
     };
 
+    // Handler for updating contact phone/email
+    const handleUpdateContactInfo = async (field: 'phone_number' | 'email', value: string) => {
+        if (!contactInfo?.contact_name_id) {
+            toast.error('No contact selected');
+            return;
+        }
+
+        try {
+            const updatedContact = await updateContact({
+                contact_name_id: contactInfo.contact_name_id,
+                [field]: value
+            });
+
+            // Update local state with new contact info
+            setContactInfo(updatedContact);
+            toast.success(`Contact ${field === 'phone_number' ? 'phone' : 'email'} updated successfully`);
+        } catch (error) {
+            console.error('Error updating contact info:', error);
+            throw error; // Re-throw so TicketProperties can handle it
+        }
+    };
+
     // Update local state only - save happens when Save button is clicked (like Clients/Contacts pattern)
     const handleItilFieldChange = (field: string, value: any) => {
         // Mark that changes have been made
@@ -1181,6 +1297,21 @@ const handleClose = () => {
         toast.success('Changes discarded');
     }, [hasUnsavedChanges, originalTicket]);
 
+    // Handle navigation away confirmation (for internal links when unsaved changes exist)
+    const handleNavigateAwayConfirm = useCallback(() => {
+        setShowNavigateAwayDialog(false);
+        if (pendingNavigationUrl) {
+            // Reset unsaved changes flag before navigating to prevent re-trigger
+            setHasUnsavedChanges(false);
+            router.push(pendingNavigationUrl);
+        }
+    }, [pendingNavigationUrl, router]);
+
+    const handleNavigateAwayDismiss = useCallback(() => {
+        setShowNavigateAwayDialog(false);
+        setPendingNavigationUrl(null);
+    }, []);
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
@@ -1194,7 +1325,7 @@ const handleClose = () => {
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
-                    {/* Action buttons - ContractDialog pattern with Cancel/Save */}
+                    {/* Action buttons - popout only, save buttons moved to sections */}
                     <div className="flex items-center gap-2">
                         {/* Add popout button only when in drawer */}
                         {isInDrawer && (
@@ -1210,34 +1341,6 @@ const handleClose = () => {
                                 <span>Open in new tab</span>
                             </Button>
                         )}
-                        {/* Cancel button - resets local edits (ContractDialog pattern) */}
-                        {/* Note: Unique ID per UI standards for testing/automation */}
-                        {hasUnsavedChanges && (
-                            <Button
-                                id="cancel-ticket-changes-btn"
-                                variant="outline"
-                                size="sm"
-                                onClick={handleCancelChanges}
-                                disabled={isSavingTicket}
-                                className="flex items-center gap-2"
-                            >
-                                <X className="h-4 w-4" />
-                                <span>Cancel</span>
-                            </Button>
-                        )}
-                        {/* Save button - validates and commits (ContractDialog pattern) */}
-                        {/* Note: Unique ID per UI standards for testing/automation */}
-                        <Button
-                            id="save-ticket-btn"
-                            variant="default"
-                            size="sm"
-                            onClick={handleSaveTicket}
-                            disabled={isSavingTicket}
-                            className={`flex items-center gap-2 ${hasUnsavedChanges ? 'ring-2 ring-primary-300' : ''}`}
-                        >
-                            <Save className="h-4 w-4" />
-                            <span>{isSavingTicket ? 'Saving...' : 'Save Ticket'}</span>
-                        </Button>
                     </div>
                 </div>
 
@@ -1251,6 +1354,16 @@ const handleClose = () => {
                             ))}
                         </ul>
                     </div>
+                )}
+
+                {/* Unsaved changes warning banner */}
+                {hasUnsavedChanges && (
+                    <Alert variant="warning" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                            You have unsaved changes. Click "Save Changes" to keep your changes, or "Cancel" to discard them.
+                        </AlertDescription>
+                    </Alert>
                 )}
 
                 <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
@@ -1314,6 +1427,18 @@ const handleClose = () => {
                     cancelLabel="Cancel"
                 />
 
+                {/* Navigation away confirmation dialog */}
+                <ConfirmationDialog
+                    id={`${id}-navigate-away-dialog`}
+                    isOpen={showNavigateAwayDialog}
+                    onClose={handleNavigateAwayDismiss}
+                    onConfirm={handleNavigateAwayConfirm}
+                    title="Unsaved Changes"
+                    message="You have unsaved changes. Are you sure you want to leave? Your changes will be lost."
+                    confirmLabel="Leave Without Saving"
+                    cancelLabel="Stay on Page"
+                />
+
                 <div className="flex gap-6 min-w-0">
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
@@ -1337,6 +1462,18 @@ const handleClose = () => {
                                     onItilFieldChange={handleItilFieldChange}
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
+                                    // Sectional save props
+                                    onSaveSection={handleSaveTicket}
+                                    onCancelSection={handleCancelChanges}
+                                    hasUnsavedChanges={hasUnsavedChanges}
+                                    isSavingSection={isSavingTicket}
+                                    // Additional agents props (badge display in TicketInfo)
+                                    additionalAgents={additionalAgents}
+                                    availableAgents={availableAgents}
+                                    onAddAgent={handleAddAgent}
+                                    onRemoveAgent={handleRemoveAgent}
+                                    onAgentClick={handleAgentClick}
+                                    agentAvatarUrls={additionalAgentAvatarUrls}
                                 />
                             </div>
                         </Suspense>
@@ -1428,6 +1565,7 @@ const handleClose = () => {
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
                                 surveySummary={surveySummary}
+                                onUpdateContactInfo={handleUpdateContactInfo}
                             />
                         </Suspense>
                         

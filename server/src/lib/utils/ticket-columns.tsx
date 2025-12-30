@@ -7,7 +7,7 @@ import { TagManager } from 'server/src/components/tags';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { IBoard } from 'server/src/interfaces/board.interface';
 
@@ -17,6 +17,7 @@ interface CreateTicketColumnsOptions {
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
   onEditClick?: (ticketId: string) => void;
+  onQuickViewClick?: (ticketId: string) => void;
   onDeleteClick?: (ticketId: string, ticketName: string) => void;
   ticketTagsRef?: React.MutableRefObject<Record<string, ITag[]>>;
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
@@ -33,6 +34,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     displaySettings,
     onTicketClick,
     onEditClick,
+    onQuickViewClick,
     onDeleteClick,
     ticketTagsRef,
     onTagsChange,
@@ -280,8 +282,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
-  // Actions - show if we have either edit or delete handlers (like Contracts pattern)
-  if (columnVisibility.actions && showActions && (onEditClick || onDeleteClick)) {
+  // Actions - show if we have any action handlers (like Contracts pattern)
+  if (columnVisibility.actions && showActions && (onEditClick || onQuickViewClick || onDeleteClick)) {
     columns.push({
       key: 'actions',
       col: {
@@ -298,6 +300,16 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-white z-50">
+              {/* Quick View option - opens ticket in drawer without entering edit mode */}
+              {onQuickViewClick && (
+                <DropdownMenuItem
+                  className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                  onSelect={() => onQuickViewClick(record.ticket_id as string)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Quick View
+                </DropdownMenuItem>
+              )}
               {/* Edit option - opens ticket in drawer (like Clients/Contacts pattern) */}
               {onEditClick && (
                 <DropdownMenuItem
