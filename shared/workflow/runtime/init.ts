@@ -1,6 +1,7 @@
 import { getSchemaRegistry } from './registries/schemaRegistry';
 import { registerDefaultNodes } from './nodes/registerDefaultNodes';
 import { registerEmailWorkflowActionsV2 } from './actions/registerEmailWorkflowActions';
+import { registerBusinessOperationsActionsV2 } from './actions/registerBusinessOperationsActions';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -29,6 +30,7 @@ export function initializeWorkflowRuntimeV2(): void {
 
   registerDefaultNodes();
   registerEmailWorkflowActionsV2();
+  registerBusinessOperationsActionsV2();
 
   initialized = true;
 }

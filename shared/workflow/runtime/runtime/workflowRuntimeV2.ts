@@ -32,6 +32,7 @@ import WorkflowRunWaitModelV2 from '../../persistence/workflowRunWaitModelV2';
 import WorkflowActionInvocationModelV2 from '../../persistence/workflowActionInvocationModelV2';
 import WorkflowRunSnapshotModelV2 from '../../persistence/workflowRunSnapshotModelV2';
 import WorkflowRunLogModelV2 from '../../persistence/workflowRunLogModelV2';
+import { ZodError } from 'zod';
 
 const SNAPSHOT_MAX_BYTES = 256 * 1024;
 const DEFAULT_SNAPSHOT_RETENTION_DAYS = 30;
@@ -858,7 +859,7 @@ export class WorkflowRuntimeV2 {
         source: 'runtime',
         redactions
       });
-      throw createRuntimeError('ActionError', error instanceof Error ? error.message : String(error), stepPath);
+      throw toRuntimeError(error, stepPath);
     }
   }
 
@@ -1096,6 +1097,16 @@ function createRuntimeError(category: WorkflowErrorCategory, message: string, no
 }
 
 function toRuntimeError(error: unknown, nodePath: string): RuntimeError {
+  if (error instanceof ZodError) {
+    return {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Validation failed',
+      nodePath,
+      at: new Date().toISOString(),
+      issues: error.issues
+    } as RuntimeError;
+  }
   if (typeof error === 'object' && error && 'category' in error) {
     return error as RuntimeError;
   }
