@@ -17,7 +17,7 @@ import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
-import { Pencil, HelpCircle, X } from 'lucide-react';
+import { Pencil, HelpCircle, X, Save } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
@@ -104,22 +104,20 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
 
-  // Inline edit states for dropdowns (like description/contact info pattern)
-  const [isEditingStatus, setIsEditingStatus] = useState(false);
+  // Temp states for dropdown fields - holds UI value before saving
   const [tempStatus, setTempStatus] = useState(ticket.status_id || '');
-  const [isEditingAssignedTo, setIsEditingAssignedTo] = useState(false);
   const [tempAssignedTo, setTempAssignedTo] = useState(ticket.assigned_to || '');
-  const [isEditingBoard, setIsEditingBoard] = useState(false);
   const [tempBoard, setTempBoard] = useState(ticket.board_id || '');
-  const [isEditingPriority, setIsEditingPriority] = useState(false);
   const [tempPriority, setTempPriority] = useState(ticket.priority_id || '');
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [tempCategory, setTempCategory] = useState(ticket.category_id || '');
   const [tempSubcategory, setTempSubcategory] = useState(ticket.subcategory_id || '');
-  const [isEditingImpact, setIsEditingImpact] = useState(false);
   const [tempImpact, setTempImpact] = useState(itilImpact?.toString() || '');
-  const [isEditingUrgency, setIsEditingUrgency] = useState(false);
   const [tempUrgency, setTempUrgency] = useState(itilUrgency?.toString() || '');
+
+  // Track which field is currently being edited (for blur confirmation)
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [showFieldConfirmDialog, setShowFieldConfirmDialog] = useState(false);
+  const [pendingFieldAction, setPendingFieldAction] = useState<(() => void) | null>(null);
 
   // Calculate ITIL priority when impact and urgency are available
   const calculatedItilPriority = React.useMemo(() => {
@@ -249,20 +247,88 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTitleValue(ticket.title);
   }, [ticket.title]);
 
-  // Sync temp values with ticket props when they change
+  // Sync temp values with ticket values when save is complete (hasUnsavedChanges becomes false)
+  // This makes Save/Cancel buttons disappear after successful save
   useEffect(() => {
+    if (!hasUnsavedChanges) {
+      setTempStatus(ticket.status_id || '');
+      setTempAssignedTo(ticket.assigned_to || '');
+      setTempBoard(ticket.board_id || '');
+      setTempPriority(ticket.priority_id || '');
+      setTempCategory(ticket.category_id || '');
+      setTempSubcategory(ticket.subcategory_id || '');
+      setTempImpact(itilImpact?.toString() || '');
+      setTempUrgency(itilUrgency?.toString() || '');
+    }
+  }, [hasUnsavedChanges, ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id, itilImpact, itilUrgency]);
+
+  // Check if any field has unsaved temp changes
+  const hasUnsavedTempChanges = () => {
+    return tempStatus !== (ticket.status_id || '') ||
+           tempAssignedTo !== (ticket.assigned_to || '') ||
+           tempBoard !== (ticket.board_id || '') ||
+           tempPriority !== (ticket.priority_id || '') ||
+           tempCategory !== (ticket.category_id || '') ||
+           tempSubcategory !== (ticket.subcategory_id || '') ||
+           tempImpact !== (itilImpact?.toString() || '') ||
+           tempUrgency !== (itilUrgency?.toString() || '');
+  };
+
+  // Handle confirmation dialog actions
+  const handleFieldConfirmSave = () => {
+    // Save all pending temp changes
+    if (tempStatus !== (ticket.status_id || '')) {
+      onSelectChange('status_id', tempStatus || null);
+    }
+    if (tempAssignedTo !== (ticket.assigned_to || '')) {
+      onSelectChange('assigned_to', tempAssignedTo || null);
+    }
+    if (tempBoard !== (ticket.board_id || '')) {
+      onSelectChange('board_id', tempBoard || null);
+    }
+    if (tempPriority !== (ticket.priority_id || '')) {
+      onSelectChange('priority_id', tempPriority || null);
+    }
+    if (tempCategory !== (ticket.category_id || '') || tempSubcategory !== (ticket.subcategory_id || '')) {
+      onSelectChange('category_id', tempCategory || null);
+      onSelectChange('subcategory_id', tempSubcategory || null);
+    }
+    if (tempImpact !== (itilImpact?.toString() || '') && onItilFieldChange) {
+      onItilFieldChange('itil_impact', tempImpact ? Number(tempImpact) : null);
+    }
+    if (tempUrgency !== (itilUrgency?.toString() || '') && onItilFieldChange) {
+      onItilFieldChange('itil_urgency', tempUrgency ? Number(tempUrgency) : null);
+    }
+    setShowFieldConfirmDialog(false);
+    setEditingField(null);
+    if (pendingFieldAction) {
+      pendingFieldAction();
+      setPendingFieldAction(null);
+    }
+  };
+
+  const handleFieldConfirmDiscard = () => {
+    // Reset all temp values to ticket values
     setTempStatus(ticket.status_id || '');
     setTempAssignedTo(ticket.assigned_to || '');
     setTempBoard(ticket.board_id || '');
     setTempPriority(ticket.priority_id || '');
     setTempCategory(ticket.category_id || '');
     setTempSubcategory(ticket.subcategory_id || '');
-  }, [ticket.status_id, ticket.assigned_to, ticket.board_id, ticket.priority_id, ticket.category_id, ticket.subcategory_id]);
-
-  useEffect(() => {
     setTempImpact(itilImpact?.toString() || '');
     setTempUrgency(itilUrgency?.toString() || '');
-  }, [itilImpact, itilUrgency]);
+    setShowFieldConfirmDialog(false);
+    setEditingField(null);
+    if (pendingFieldAction) {
+      pendingFieldAction();
+      setPendingFieldAction(null);
+    }
+  };
+
+  const handleFieldConfirmCancel = () => {
+    setShowFieldConfirmDialog(false);
+    setPendingFieldAction(null);
+  };
 
   const handleTitleSubmit = () => {
     if (titleValue.trim() !== '') {
@@ -351,15 +417,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     return tempCategory || '';
   };
 
+  // Check if category has changed from ticket value
   const hasCategoryChanged = () => {
-    return tempCategory !== (ticket.category_id || '') || tempSubcategory !== (ticket.subcategory_id || '');
+    return tempCategory !== (ticket.category_id || '') ||
+           tempSubcategory !== (ticket.subcategory_id || '');
   };
 
+  // Save category changes
   const saveCategoryChanges = () => {
     onSelectChange('category_id', tempCategory || null);
     onSelectChange('subcategory_id', tempSubcategory || null);
   };
 
+  // Cancel category changes - reset to ticket values
   const cancelCategoryChanges = () => {
     setTempCategory(ticket.category_id || '');
     setTempSubcategory(ticket.subcategory_id || '');
@@ -466,7 +536,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     id="save-status-btn"
                     size="sm"
                     onClick={() => {
-                      onSelectChange('status_id', tempStatus);
+                      onSelectChange('status_id', tempStatus || null);
                     }}
                   >
                     Save
@@ -529,7 +599,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <CustomSelect
                 value={tempBoard}
                 options={boardOptions}
-                onValueChange={setTempBoard}
+                onValueChange={(value) => {
+                  setTempBoard(value);
+                  // Clear temp categories and priority when board changes
+                  setTempCategory('');
+                  setTempSubcategory('');
+                  setTempPriority('');
+                  setTempImpact('');
+                  setTempUrgency('');
+                }}
                 customStyles={customStyles}
                 className="!w-fit"
               />
@@ -539,21 +617,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     id="save-board-btn"
                     size="sm"
                     onClick={() => {
-                      onSelectChange('board_id', tempBoard);
+                      onSelectChange('board_id', tempBoard || null);
                       // Clear categories when board changes
                       onSelectChange('category_id', null);
                       onSelectChange('subcategory_id', null);
-                      setTempCategory('');
-                      setTempSubcategory('');
                       // Clear priority fields when board changes
                       onSelectChange('priority_id', null);
-                      setTempPriority('');
                       if (onItilFieldChange) {
                         onItilFieldChange('itil_impact', null);
                         onItilFieldChange('itil_urgency', null);
                       }
-                      setTempImpact('');
-                      setTempUrgency('');
                     }}
                   >
                     Save
@@ -564,6 +637,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     variant="outline"
                     onClick={() => {
                       setTempBoard(ticket.board_id || '');
+                      // Also restore temp category and priority when canceling board change
+                      setTempCategory(ticket.category_id || '');
+                      setTempSubcategory(ticket.subcategory_id || '');
+                      setTempPriority(ticket.priority_id || '');
+                      setTempImpact(itilImpact?.toString() || '');
+                      setTempUrgency(itilUrgency?.toString() || '');
                     }}
                   >
                     Cancel
@@ -688,28 +767,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minimal impact)' },
                         { value: '5', label: '5 - Low (No business impact)' }
                       ]}
-                      value={tempImpact || null}
-                      onValueChange={(value) => setTempImpact(value || '')}
+                      value={itilImpact?.toString() || null}
+                      onValueChange={(value) => handleItilFieldChange('itil_impact', value ? Number(value) : null)}
                       placeholder="Select Impact"
                     />
                   </div>
-                  {tempImpact !== (itilImpact?.toString() || '') && (
+                  {(itilImpact?.toString() || '') !== originalImpact && (
                     <div className="flex gap-2 mt-2">
-                      <Button
-                        id="save-impact-btn"
-                        size="sm"
-                        onClick={() => {
-                          handleItilFieldChange('itil_impact', Number(tempImpact));
-                        }}
-                      >
-                        Save
-                      </Button>
                       <Button
                         id="cancel-impact-btn"
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          setTempImpact(itilImpact?.toString() || '');
+                          handleItilFieldChange('itil_impact', originalImpact ? Number(originalImpact) : null);
                         }}
                       >
                         Cancel
@@ -728,28 +798,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
                         { value: '5', label: '5 - Low (Work continues normally)' }
                       ]}
-                      value={tempUrgency || null}
-                      onValueChange={(value) => setTempUrgency(value || '')}
+                      value={itilUrgency?.toString() || null}
+                      onValueChange={(value) => handleItilFieldChange('itil_urgency', value ? Number(value) : null)}
                       placeholder="Select Urgency"
                     />
                   </div>
-                  {tempUrgency !== (itilUrgency?.toString() || '') && (
+                  {(itilUrgency?.toString() || '') !== originalUrgency && (
                     <div className="flex gap-2 mt-2">
-                      <Button
-                        id="save-urgency-btn"
-                        size="sm"
-                        onClick={() => {
-                          handleItilFieldChange('itil_urgency', Number(tempUrgency));
-                        }}
-                      >
-                        Save
-                      </Button>
                       <Button
                         id="cancel-urgency-btn"
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          setTempUrgency(itilUrgency?.toString() || '');
+                          handleItilFieldChange('itil_urgency', originalUrgency ? Number(originalUrgency) : null);
                         }}
                       >
                         Cancel
@@ -1001,7 +1062,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 onClick={onSaveSection}
                 disabled={isSavingSection}
               >
-                {isSavingSection ? 'Saving...' : 'Save Changes'}
+                <span className={hasUnsavedChanges ? 'font-bold' : ''}>
+                  {isSavingSection ? 'Saving...' : hasUnsavedChanges ? 'Save Changes *' : 'Save Changes'}
+                </span>
+                {!isSavingSection && <Save className="ml-2 h-4 w-4" />}
               </Button>
             </div>
           )}
