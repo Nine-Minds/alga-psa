@@ -276,6 +276,7 @@ export class UserSession {
    */
   private static revocationCache = new Map<string, { revoked: boolean; timestamp: number }>();
   private static readonly CACHE_TTL_MS = 30000; // 30 seconds
+  private static revocationInFlight = new Map<string, Promise<boolean>>();
 
   /**
    * Check if a session is revoked (with caching)
@@ -295,27 +296,41 @@ export class UserSession {
       return cached.revoked;
     }
 
-    // Cache miss or expired - check database
-    const knex = await getConnection(tenant);
-
-    const session = await knex('sessions')
-      .where({ tenant, session_id: sessionId })
-      .select('revoked_at')
-      .first();
-
-    const isRevoked = session ? session.revoked_at !== null : true;
-
-    // Update cache
-    this.revocationCache.set(cacheKey, { revoked: isRevoked, timestamp: now });
-
-    // Clean up old cache entries (simple LRU: remove if > 1000 entries)
-    if (this.revocationCache.size > 1000) {
-      const entries = Array.from(this.revocationCache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      entries.slice(0, 500).forEach(([key]) => this.revocationCache.delete(key));
+    // Prevent cache stampede: if many parallel requests check the same session,
+    // share a single DB query/promise.
+    const inFlight = this.revocationInFlight.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
     }
 
-    return isRevoked;
+    const task = (async () => {
+      const knex = await getConnection(tenant);
+      const session = await knex('sessions')
+        .where({ tenant, session_id: sessionId })
+        .select('revoked_at')
+        .first();
+
+      const isRevoked = session ? session.revoked_at !== null : true;
+
+      // Update cache
+      this.revocationCache.set(cacheKey, { revoked: isRevoked, timestamp: Date.now() });
+
+      // Clean up old cache entries (simple LRU: remove if > 1000 entries)
+      if (this.revocationCache.size > 1000) {
+        const entries = Array.from(this.revocationCache.entries());
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        entries.slice(0, 500).forEach(([key]) => this.revocationCache.delete(key));
+      }
+
+      return isRevoked;
+    })();
+
+    this.revocationInFlight.set(cacheKey, task);
+    try {
+      return await task;
+    } finally {
+      this.revocationInFlight.delete(cacheKey);
+    }
   }
 
   /**

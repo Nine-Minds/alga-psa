@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import {
-  Plus, GripVertical, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle,
+  Plus, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle,
   FileJson, Code, Check, Eye, EyeOff, Play, Trash2,
   // Dense palette icons
   GitBranch, Repeat, Shield, CornerDownRight, ArrowRight, Clock, User, Settings,
   Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
-  FileText, Layers, Box, Cog, Terminal, Globe, Search
+  FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical
 } from 'lucide-react';
 import {
   getStepTypeColor,
@@ -1289,6 +1288,8 @@ const WorkflowDesigner: React.FC = () => {
   const [publishedContractModalStatus, setPublishedContractModalStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [publishedContractModalSchema, setPublishedContractModalSchema] = useState<JsonSchema | null>(null);
   const [publishedContractModalVersion, setPublishedContractModalVersion] = useState<number | null>(null);
+  const [publishedContractModalError, setPublishedContractModalError] = useState<string | null>(null);
+  const [publishedContractModalSource, setPublishedContractModalSource] = useState<'snapshot' | 'registry' | null>(null);
   const [metadataDraft, setMetadataDraft] = useState<{
     isVisible: boolean;
     isPaused: boolean;
@@ -1301,6 +1302,19 @@ const WorkflowDesigner: React.FC = () => {
   const [pinnedPayloadSchemaRefDraft, setPinnedPayloadSchemaRefDraft] = useState<string>('');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
+  const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
+  const designerFloatAnchorRectRef = useRef<{
+    top: number;
+    left: number;
+    right: number;
+    bottom: number;
+  } | null>(null);
+  const [designerFloatAnchorRect, setDesignerFloatAnchorRect] = useState<{
+    top: number;
+    left: number;
+    right: number;
+    bottom: number;
+  } | null>(null);
 
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
   const router = useRouter();
@@ -1322,6 +1336,52 @@ const WorkflowDesigner: React.FC = () => {
       window.localStorage.setItem('workflow-designer:steps-view', stepsViewMode);
     } catch {}
   }, [stepsViewMode]);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (activeTab !== 'Designer') {
+      designerFloatAnchorRectRef.current = null;
+      setDesignerFloatAnchorRect(null);
+      return;
+    }
+
+    let rafId: number | null = null;
+    const update = () => {
+      if (rafId != null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        const el = designerFloatAnchorRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const nextRect = {
+          top: rect.top,
+          left: rect.left,
+          right: rect.right,
+          bottom: rect.bottom
+        };
+        const prevRect = designerFloatAnchorRectRef.current;
+        if (
+          !prevRect
+          || prevRect.top !== nextRect.top
+          || prevRect.left !== nextRect.left
+          || prevRect.right !== nextRect.right
+          || prevRect.bottom !== nextRect.bottom
+        ) {
+          designerFloatAnchorRectRef.current = nextRect;
+          setDesignerFloatAnchorRect(nextRect);
+        }
+      });
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      if (rafId != null) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [activeTab]);
 
   const stepPathMap = useMemo(() => {
     return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
@@ -1705,15 +1765,54 @@ const WorkflowDesigner: React.FC = () => {
     if (!publishedVersion) return;
     setPublishedContractModalVersion(publishedVersion);
     setPublishedContractModalSchema(null);
+    setPublishedContractModalError(null);
+    setPublishedContractModalSource(null);
     setPublishedContractModalStatus('loading');
     setShowPublishedContractModal(true);
     try {
       const record = await getWorkflowDefinitionVersionAction({ workflowId: activeWorkflowId, version: publishedVersion });
-      const schema = ((record as any)?.payload_schema_json ?? null) as JsonSchema | null;
+      let schema = ((record as any)?.payload_schema_json ?? null) as JsonSchema | null;
+      let source: 'snapshot' | 'registry' | null = schema ? 'snapshot' : null;
+
+      // Fallback: older published records might not have stored payload_schema_json.
+      // In that case, try to resolve the schema from the current registry using the published definition's payloadSchemaRef.
+      if (!schema) {
+        const payloadSchemaRef =
+          typeof (record as any)?.definition_json?.payloadSchemaRef === 'string'
+            ? String((record as any).definition_json.payloadSchemaRef).trim()
+            : '';
+        if (payloadSchemaRef) {
+          try {
+            const result = await getWorkflowSchemaAction({ schemaRef: payloadSchemaRef });
+            schema = ((result as any)?.schema ?? null) as JsonSchema | null;
+            if (schema) {
+              source = 'registry';
+            }
+          } catch {
+            // ignore: we'll show a helpful error below
+          }
+        }
+      }
+
       setPublishedContractModalSchema(schema);
-      setPublishedContractModalStatus(schema ? 'loaded' : 'error');
+      setPublishedContractModalSource(source);
+      if (schema) {
+        setPublishedContractModalStatus('loaded');
+      } else {
+        const payloadSchemaRef =
+          typeof (record as any)?.definition_json?.payloadSchemaRef === 'string'
+            ? String((record as any).definition_json.payloadSchemaRef).trim()
+            : '';
+        setPublishedContractModalError(
+          payloadSchemaRef
+            ? `No published schema snapshot is stored for version ${publishedVersion}. (payloadSchemaRef: ${payloadSchemaRef})`
+            : `No published schema snapshot is stored for version ${publishedVersion}.`
+        );
+        setPublishedContractModalStatus('error');
+      }
     } catch {
       setPublishedContractModalSchema(null);
+      setPublishedContractModalError('Failed to load published schema.');
       setPublishedContractModalStatus('error');
     }
   }, [activeWorkflowId, activeWorkflowRecord?.published_version]);
@@ -2577,83 +2676,253 @@ const WorkflowDesigner: React.FC = () => {
 
   const designerContent = (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-    <div className="flex flex-col h-full">
-      <div className="flex flex-1 overflow-hidden">
-        {/* Dense Icon-Grid Palette */}
-        <aside className="w-56 border-r bg-white flex flex-col">
-          <div className="p-3 border-b">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                id="workflow-designer-search"
-                type="text"
-                placeholder="Search"
-                value={search}
-                disabled={registryError}
-                onChange={(event) => setSearch(event.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-              />
+    <div className="flex flex-col h-full min-h-0">
+	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50">
+        <div className="sticky top-4 z-20 h-0 pointer-events-none">
+          {/* Floating Icon-Grid Palette (left) */}
+          <aside
+            className={`pointer-events-auto w-56 max-h-[calc(100vh-220px)] bg-white/95 backdrop-blur border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col min-h-0 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            style={designerFloatAnchorRect ? {
+              position: 'fixed',
+              top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
+              left: Math.min(Math.max(8, designerFloatAnchorRect.left + 16), window.innerWidth - 8 - 224),
+              maxHeight: Math.max(160, window.innerHeight - (designerFloatAnchorRect.top + 32))
+            } : undefined}
+          >
+            <div className="p-3 border-b">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="workflow-designer-search"
+                  type="text"
+                  placeholder="Search"
+                  value={search}
+                  disabled={registryError}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
             </div>
-          </div>
-          {draggingFromPalette && (
-            <div className="px-3 py-1.5 bg-primary-50 border-b text-xs text-primary-700">
-              Drop on pipeline to add
-            </div>
-          )}
-          <Droppable droppableId="palette" isDropDisabled={true}>
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="flex-1 overflow-y-auto p-3 space-y-4"
-              >
-                {Object.entries(groupedPaletteItems).map(([category, items]) => (
-                  <div key={category}>
-                    <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">{category}</div>
-                    <div className="grid grid-cols-4 gap-1">
-                      {items.map((item, itemIndex) => (
-                        <Draggable
-                          key={item.id}
-                          draggableId={getPaletteDraggableId(item)}
-                          index={itemIndex}
-                        >
-                          {(dragProvided, snapshot) => {
-                            const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
-                            return (
-                              <PaletteItemWithTooltip
-                                item={itemWithAction}
-                                icon={getPaletteIcon(item)}
-                                isDragging={snapshot.isDragging}
-                                provided={dragProvided}
-                                onClick={() => {
-                                  if (itemWithAction.actionId) {
-                                    handleAddStep('action.call', {
-                                      actionId: itemWithAction.actionId,
-                                      version: itemWithAction.actionVersion
-                                    });
-                                  } else {
-                                    handleAddStep(item.type as Step['type']);
-                                  }
-                                }}
-                              />
-                            );
-                          }}
-                        </Draggable>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {provided.placeholder}
+            {draggingFromPalette && (
+              <div className="px-3 py-1.5 bg-primary-50 border-b text-xs text-primary-700">
+                Drop on pipeline to add
               </div>
             )}
-          </Droppable>
-        </aside>
+            <Droppable droppableId="palette" isDropDisabled={true}>
+              {(provided) => (
+                <div
+                  id="workflow-designer-palette-scroll"
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4"
+                >
+                  {Object.entries(groupedPaletteItems).map(([category, items]) => (
+                    <div key={category}>
+                      <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">{category}</div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {items.map((item, itemIndex) => (
+                          <Draggable
+                            key={item.id}
+                            draggableId={getPaletteDraggableId(item)}
+                            index={itemIndex}
+                          >
+                            {(dragProvided, snapshot) => {
+                              const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+                              return (
+                                <PaletteItemWithTooltip
+                                  item={itemWithAction}
+                                  icon={getPaletteIcon(item)}
+                                  isDragging={snapshot.isDragging}
+                                  provided={dragProvided}
+                                  onClick={() => {
+                                    if (itemWithAction.actionId) {
+                                      handleAddStep('action.call', {
+                                        actionId: itemWithAction.actionId,
+                                        version: itemWithAction.actionVersion
+                                      });
+                                    } else {
+                                      handleAddStep(item.type as Step['type']);
+                                    }
+                                  }}
+                                />
+                              );
+                            }}
+                          </Draggable>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </aside>
 
-        <main className="flex-1 overflow-hidden bg-gray-50">
-          <PanelGroup direction="horizontal" className="h-full">
-            <Panel defaultSize={65} minSize={40}>
-              <div className="h-full overflow-y-auto p-6">
-              <div className="max-w-4xl mx-auto space-y-6">
+          {/* Floating Properties (right) */}
+          <aside
+            id="workflow-designer-sidebar-scroll"
+            className={`pointer-events-auto w-[420px] max-h-[calc(100vh-220px)] bg-white/95 backdrop-blur border border-gray-200 rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            style={designerFloatAnchorRect ? {
+              position: 'fixed',
+              top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
+              left: Math.min(Math.max(8, designerFloatAnchorRect.right - 16 - 420), window.innerWidth - 8 - 420),
+              maxHeight: Math.max(160, window.innerHeight - (designerFloatAnchorRect.top + 32))
+            } : undefined}
+          >
+            {activeWorkflowRecord && metadataDraft && canEditMetadata && (
+              <Card className="p-3 space-y-3">
+                <div>
+                  <div className="text-sm font-semibold text-gray-800">Workflow Settings</div>
+                  <div className="text-xs text-gray-500">Visibility, pausing, and safety controls.</div>
+                </div>
+                <Switch
+                  id="workflow-settings-visible"
+                  checked={metadataDraft.isVisible}
+                  onCheckedChange={(value) =>
+                    setMetadataDraft((prev) => (prev ? { ...prev, isVisible: Boolean(value) } : prev))
+                  }
+                  label="Visible to users"
+                />
+                <Switch
+                  id="workflow-settings-paused"
+                  checked={metadataDraft.isPaused}
+                  onCheckedChange={(value) =>
+                    setMetadataDraft((prev) => (prev ? { ...prev, isPaused: Boolean(value) } : prev))
+                  }
+                  label="Paused (stop new runs)"
+                />
+                <Input
+                  id="workflow-settings-concurrency"
+                  label="Concurrency limit"
+                  type="number"
+                  value={metadataDraft.concurrencyLimit}
+                  onChange={(event) =>
+                    setMetadataDraft((prev) => (prev ? { ...prev, concurrencyLimit: event.target.value } : prev))
+                  }
+                  placeholder="Unlimited"
+                />
+                <Switch
+                  id="workflow-settings-auto-pause"
+                  checked={metadataDraft.autoPauseOnFailure}
+                  onCheckedChange={(value) =>
+                    setMetadataDraft((prev) => (prev ? { ...prev, autoPauseOnFailure: Boolean(value) } : prev))
+                  }
+                  label="Auto-pause on failure rate"
+                />
+                <Input
+                  id="workflow-settings-failure-threshold"
+                  label="Failure rate threshold"
+                  type="number"
+                  value={metadataDraft.failureRateThreshold}
+                  disabled={!metadataDraft.autoPauseOnFailure}
+                  onChange={(event) =>
+                    setMetadataDraft((prev) => (prev ? { ...prev, failureRateThreshold: event.target.value } : prev))
+                  }
+                  placeholder="0.5"
+                />
+                <Input
+                  id="workflow-settings-failure-min"
+                  label="Min runs before auto-pause"
+                  type="number"
+                  value={metadataDraft.failureRateMinRuns}
+                  disabled={!metadataDraft.autoPauseOnFailure}
+                  onChange={(event) =>
+                    setMetadataDraft((prev) => (prev ? { ...prev, failureRateMinRuns: event.target.value } : prev))
+                  }
+                  placeholder="10"
+                />
+                <Button
+                  id="workflow-settings-save"
+                  onClick={handleSaveMetadata}
+                  disabled={isSavingMetadata || !activeWorkflowId}
+                >
+                  {isSavingMetadata ? 'Saving...' : 'Save Settings'}
+                </Button>
+              </Card>
+            )}
+            {selectedStep && activeDefinition ? (
+              canManage ? (
+                <StepConfigPanel
+                  step={selectedStep}
+                  stepPath={stepPathMap[selectedStep.id]}
+                  errors={errorsByStepId.get(selectedStep.id) ?? []}
+                  nodeRegistry={nodeRegistryMap}
+                  actionRegistry={actionRegistry}
+                  fieldOptions={fieldOptions}
+                  payloadSchema={payloadSchema}
+                  definition={activeDefinition}
+                  onChange={(updatedStep) => handleStepUpdate(selectedStep.id, () => updatedStep)}
+                />
+              ) : (
+                <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
+              )
+            ) : (
+              <div className="text-sm text-gray-500">Select a step to edit its configuration.</div>
+            )}
+
+            {currentValidationErrors.length > 0 && activeDefinition && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4" /> Validation Errors
+                </h3>
+                <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <span className="font-semibold">Contract mode:</span>{' '}
+                      {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
+                    </div>
+                    {effectivePayloadSchemaRef && (
+                      <div className="font-mono break-all">{effectivePayloadSchemaRef}</div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {currentValidationErrors.map((error, index) => (
+                    <Card key={`${error.stepPath}-${index}`} className="p-3 border border-red-200">
+                      <div className="text-xs font-semibold text-red-700">{error.code}</div>
+                      <div className="text-sm text-gray-800">{error.message}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {buildPathBreadcrumbs(activeDefinition.steps as Step[], error.stepPath).join(' > ') || error.stepPath}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            {currentValidationWarnings.length > 0 && activeDefinition && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-yellow-700 flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4" /> Validation Warnings
+                </h3>
+                <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <span className="font-semibold">Contract mode:</span>{' '}
+                      {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
+                    </div>
+                    {effectivePayloadSchemaRef && (
+                      <div className="font-mono break-all">{effectivePayloadSchemaRef}</div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {currentValidationWarnings.map((warning, index) => (
+                    <Card key={`${warning.stepPath}-${index}`} className="p-3 border border-yellow-200">
+                      <div className="text-xs font-semibold text-yellow-700">{warning.code}</div>
+                      <div className="text-sm text-gray-800">{warning.message}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {buildPathBreadcrumbs(activeDefinition.steps as Step[], warning.stepPath).join(' > ') || warning.stepPath}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
+        </div>
+
+	        <div id="workflow-designer-center-scroll" className="flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]">
+          <div className="max-w-4xl mx-auto space-y-6">
                 {showInitialDesignerSkeleton ? (
                   <>
                     <Card className="p-4 space-y-4">
@@ -3405,7 +3674,7 @@ const WorkflowDesigner: React.FC = () => {
                           </div>
                         </div>
                         {schemaPreviewExpanded && (
-                          <div className="mt-2 text-xs text-gray-600">
+                          <div id="workflow-designer-schema-preview-content" className="mt-2 text-xs text-gray-600">
                             {payloadSchemaStatus === 'loading' && 'Loading schema…'}
                             {payloadSchemaStatus === 'error' && 'Failed to load schema preview.'}
                             {payloadSchemaStatus === 'idle' && 'Schema preview is available once loaded.'}
@@ -3571,15 +3840,24 @@ const WorkflowDesigner: React.FC = () => {
                           <div className="text-xs text-gray-500">Loading schema…</div>
                         )}
                         {publishedContractModalStatus === 'error' && (
-                          <div className="text-xs text-red-600">Failed to load published schema.</div>
+                          <div className="text-xs text-red-600">
+                            {publishedContractModalError ?? 'Failed to load published schema.'}
+                          </div>
                         )}
                         {publishedContractModalStatus === 'loaded' && publishedContractModalSchema && (
-                          <pre
-                            className="text-[11px] leading-relaxed font-mono whitespace-pre break-words rounded border border-gray-200 bg-gray-50 p-3"
-                            dangerouslySetInnerHTML={{
-                              __html: syntaxHighlightJson(JSON.stringify(publishedContractModalSchema, null, 2))
-                            }}
-                          />
+                          <>
+                            <div className="mb-3 text-[11px] text-gray-500">
+                              {publishedContractModalSource === 'registry'
+                                ? 'Published schema snapshot missing; showing current schema registry output.'
+                                : 'Published schema snapshot.'}
+                            </div>
+                            <pre
+                              className="text-[11px] leading-relaxed font-mono whitespace-pre break-words rounded border border-gray-200 bg-gray-50 p-3"
+                              dangerouslySetInnerHTML={{
+                                __html: syntaxHighlightJson(JSON.stringify(publishedContractModalSchema, null, 2))
+                              }}
+                            />
+                          </>
                         )}
                         {publishedContractModalStatus === 'idle' && (
                           <div className="text-xs text-gray-500">Schema not loaded yet.</div>
@@ -3659,168 +3937,6 @@ const WorkflowDesigner: React.FC = () => {
                 )}
               </div>
             </div>
-            </Panel>
-
-            <PanelResizeHandle className="w-2 hover:bg-[rgb(var(--color-primary-50))] transition-colors relative flex items-center justify-center group">
-              <div className="absolute inset-y-0 w-1 bg-[rgb(var(--color-border-200))] group-hover:bg-[rgb(var(--color-primary-400))] transition-colors"></div>
-              <GripVertical className="h-4 w-4 text-[rgb(var(--color-text-400))] group-hover:text-[rgb(var(--color-primary-600))] relative z-10" />
-            </PanelResizeHandle>
-
-            <Panel defaultSize={35} minSize={20} maxSize={50}>
-              <aside className="h-full bg-white overflow-y-auto p-4 space-y-4">
-              {activeWorkflowRecord && metadataDraft && canEditMetadata && (
-                <Card className="p-3 space-y-3">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-800">Workflow Settings</div>
-                    <div className="text-xs text-gray-500">Visibility, pausing, and safety controls.</div>
-                  </div>
-                  <Switch
-                    id="workflow-settings-visible"
-                    checked={metadataDraft.isVisible}
-                    onCheckedChange={(value) =>
-                      setMetadataDraft((prev) => (prev ? { ...prev, isVisible: Boolean(value) } : prev))
-                    }
-                    label="Visible to users"
-                  />
-                  <Switch
-                    id="workflow-settings-paused"
-                    checked={metadataDraft.isPaused}
-                    onCheckedChange={(value) =>
-                      setMetadataDraft((prev) => (prev ? { ...prev, isPaused: Boolean(value) } : prev))
-                    }
-                    label="Paused (stop new runs)"
-                  />
-                  <Input
-                    id="workflow-settings-concurrency"
-                    label="Concurrency limit"
-                    type="number"
-                    value={metadataDraft.concurrencyLimit}
-                    onChange={(event) =>
-                      setMetadataDraft((prev) => (prev ? { ...prev, concurrencyLimit: event.target.value } : prev))
-                    }
-                    placeholder="Unlimited"
-                  />
-                  <Switch
-                    id="workflow-settings-auto-pause"
-                    checked={metadataDraft.autoPauseOnFailure}
-                    onCheckedChange={(value) =>
-                      setMetadataDraft((prev) => (prev ? { ...prev, autoPauseOnFailure: Boolean(value) } : prev))
-                    }
-                    label="Auto-pause on failure rate"
-                  />
-                  <Input
-                    id="workflow-settings-failure-threshold"
-                    label="Failure rate threshold"
-                    type="number"
-                    value={metadataDraft.failureRateThreshold}
-                    disabled={!metadataDraft.autoPauseOnFailure}
-                    onChange={(event) =>
-                      setMetadataDraft((prev) => (prev ? { ...prev, failureRateThreshold: event.target.value } : prev))
-                    }
-                    placeholder="0.5"
-                  />
-                  <Input
-                    id="workflow-settings-failure-min"
-                    label="Min runs before auto-pause"
-                    type="number"
-                    value={metadataDraft.failureRateMinRuns}
-                    disabled={!metadataDraft.autoPauseOnFailure}
-                    onChange={(event) =>
-                      setMetadataDraft((prev) => (prev ? { ...prev, failureRateMinRuns: event.target.value } : prev))
-                    }
-                    placeholder="10"
-                  />
-                  <Button
-                    id="workflow-settings-save"
-                    onClick={handleSaveMetadata}
-                    disabled={isSavingMetadata || !activeWorkflowId}
-                  >
-                    {isSavingMetadata ? 'Saving...' : 'Save Settings'}
-                  </Button>
-                </Card>
-              )}
-              {selectedStep && activeDefinition ? (
-                canManage ? (
-                  <StepConfigPanel
-                    step={selectedStep}
-                    stepPath={stepPathMap[selectedStep.id]}
-                    errors={errorsByStepId.get(selectedStep.id) ?? []}
-                    nodeRegistry={nodeRegistryMap}
-                    actionRegistry={actionRegistry}
-                    fieldOptions={fieldOptions}
-                    payloadSchema={payloadSchema}
-                    definition={activeDefinition}
-                    onChange={(updatedStep) => handleStepUpdate(selectedStep.id, () => updatedStep)}
-                  />
-                ) : (
-                  <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
-                )
-              ) : (
-                <div className="text-sm text-gray-500">Select a step to edit its configuration.</div>
-              )}
-
-              {currentValidationErrors.length > 0 && activeDefinition && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4" /> Validation Errors
-                  </h3>
-                  <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <span className="font-semibold">Contract mode:</span>{' '}
-                        {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
-                      </div>
-                      {effectivePayloadSchemaRef && (
-                        <div className="font-mono break-all">{effectivePayloadSchemaRef}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {currentValidationErrors.map((error, index) => (
-                      <Card key={`${error.stepPath}-${index}`} className="p-3 border border-red-200">
-                        <div className="text-xs font-semibold text-red-700">{error.code}</div>
-                        <div className="text-sm text-gray-800">{error.message}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {buildPathBreadcrumbs(activeDefinition.steps as Step[], error.stepPath).join(' > ') || error.stepPath}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {currentValidationWarnings.length > 0 && activeDefinition && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-yellow-700 flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4" /> Validation Warnings
-                  </h3>
-                  <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <span className="font-semibold">Contract mode:</span>{' '}
-                        {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
-                      </div>
-                      {effectivePayloadSchemaRef && (
-                        <div className="font-mono break-all">{effectivePayloadSchemaRef}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {currentValidationWarnings.map((warning, index) => (
-                      <Card key={`${warning.stepPath}-${index}`} className="p-3 border border-yellow-200">
-                        <div className="text-xs font-semibold text-yellow-700">{warning.code}</div>
-                        <div className="text-sm text-gray-800">{warning.message}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {buildPathBreadcrumbs(activeDefinition.steps as Step[], warning.stepPath).join(' > ') || warning.stepPath}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </aside>
-            </Panel>
-          </PanelGroup>
-        </main>
       </div>
 
       <div className="border-t bg-white px-6 py-3">
@@ -3917,7 +4033,7 @@ const WorkflowDesigner: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <div className="border-b bg-white px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
@@ -4005,7 +4121,7 @@ const WorkflowDesigner: React.FC = () => {
         onPublishDraft={handlePublish}
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <CustomTabs
           idPrefix="workflow-designer-tabs"
           value={activeTab}
@@ -4018,8 +4134,8 @@ const WorkflowDesigner: React.FC = () => {
             ...(canAdmin ? [{ label: 'Audit', content: auditContent }] : [])
           ]}
           tabStyles={{
-            root: 'h-full flex flex-col',
-            content: 'flex-1 overflow-hidden',
+            root: 'h-full min-h-0 flex flex-col',
+            content: 'flex-1 min-h-0 overflow-hidden',
             list: 'px-6 bg-white border-b border-gray-200 mb-0'
           }}
         />

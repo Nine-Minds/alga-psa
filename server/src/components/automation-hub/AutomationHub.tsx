@@ -47,9 +47,9 @@ export default function AutomationHub() {
   }, []);
 
   return (
-    <ReflectionContainer id="automation-hub-container" label="Automation Hub">
+    <ReflectionContainer id="automation-hub-container" label="Automation Hub" className="h-full min-h-0">
       <div className="flex flex-col h-full">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="flex flex-col h-full min-h-0">
           <div className="border-b border-[rgb(var(--color-border-200))] bg-white px-6">
             <TabsList className="gap-1 -mb-px">
               <TabsTrigger value="workflows" className="flex items-center gap-2">
@@ -71,18 +71,18 @@ export default function AutomationHub() {
             </TabsList>
           </div>
 
-          <TabsContent value="workflows" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
+          <TabsContent value="workflows" className="flex-1 min-h-0 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
             <WorkflowList
               onSelectWorkflow={handleSelectWorkflow}
               onCreateNew={handleCreateNew}
             />
           </TabsContent>
 
-          <TabsContent value="designer" className="flex-1 overflow-hidden">
+          <TabsContent value="designer" className="flex-1 min-h-0 overflow-hidden">
             <WorkflowDesigner />
           </TabsContent>
 
-          <TabsContent value="runs" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
+          <TabsContent value="runs" className="flex-1 min-h-0 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 rounded-full bg-[rgb(var(--color-border-100))] flex items-center justify-center mb-4">
                 <Play className="w-8 h-8 text-[rgb(var(--color-text-400))]" />
@@ -96,7 +96,7 @@ export default function AutomationHub() {
             </div>
           </TabsContent>
 
-          <TabsContent value="events-catalog" className="flex-1 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
+          <TabsContent value="events-catalog" className="flex-1 min-h-0 p-6 overflow-auto bg-[rgb(var(--color-border-50))]">
             <EventsCatalogV2 />
           </TabsContent>
         </Tabs>

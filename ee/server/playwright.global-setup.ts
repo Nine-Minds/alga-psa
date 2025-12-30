@@ -6,6 +6,26 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { execSync } from 'child_process';
 import { applyPlaywrightDatabaseEnv, PLAYWRIGHT_DB_CONFIG } from './src/__tests__/integration/utils/playwrightDatabaseConfig';
+import fs from 'node:fs';
+import os from 'node:os';
+
+async function waitForHttpOk(url: string, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(url, { method: 'GET' });
+      if (response.ok) return;
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  throw new Error(`Timed out waiting for ${url}: ${String((lastError as any)?.message ?? lastError ?? 'unknown error')}`);
+}
 
 async function globalSetup() {
   console.log('🚀 Starting Playwright global setup...');
@@ -42,15 +62,34 @@ async function globalSetup() {
       stdio: 'inherit',
     });
 
-    // Wait for MinIO to be ready
+    // Wait for MinIO to be ready (host-published port 9002)
     console.log('⏳ Waiting for MinIO to be ready...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await waitForHttpOk('http://localhost:9002/minio/health/ready', 60_000);
 
     // Create test bucket
+    // Use the dedicated mc image (minio/minio does not reliably ship mc).
+    // Note: minio/mc does not include a shell; its entrypoint is `mc`.
+    // Also: alias config does not persist across containers unless we share the config dir.
+    const mcConfigDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-playwright-mc-'));
     execSync(
-      'docker exec alga-psa-minio-test mc alias set local http://localhost:9000 minioadmin minioadmin && ' +
-      'docker exec alga-psa-minio-test mc mb local/alga-test --ignore-existing',
-      { stdio: 'inherit' }
+      [
+        'docker run --rm',
+        '--network alga-psa-playwright-test',
+        `-v "${mcConfigDir}:/root/.mc"`,
+        'minio/mc:latest',
+        'alias set local http://minio-test:9000 minioadmin minioadmin',
+      ].join(' '),
+      { cwd: projectRoot, stdio: 'inherit' }
+    );
+    execSync(
+      [
+        'docker run --rm',
+        '--network alga-psa-playwright-test',
+        `-v "${mcConfigDir}:/root/.mc"`,
+        'minio/mc:latest',
+        'mb local/alga-test --ignore-existing',
+      ].join(' '),
+      { cwd: projectRoot, stdio: 'inherit' }
     );
 
     console.log('✅ MinIO test container ready on port 9002');

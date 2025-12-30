@@ -1514,7 +1514,10 @@ export async function getWorkflowRunAction(input: unknown) {
 }
 
 export async function listWorkflowRunsAction(input: unknown) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) {
+    return { runs: [], nextCursor: null };
+  }
   const parsed = ListWorkflowRunsInput.parse(input);
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);

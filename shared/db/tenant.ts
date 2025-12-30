@@ -6,10 +6,20 @@ type PoolConfig = KnexType.PoolConfig & {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
 };
 
+type GlobalKnexCache = {
+  __algaTenantKnex?: KnexType | null;
+};
+
+const globalKnexCache = globalThis as typeof globalThis & GlobalKnexCache;
+
 let sharedKnexInstance: KnexType | null = null;
 
 export async function getConnection(tenantId?: string | null): Promise<KnexType> {
-  if (sharedKnexInstance) {
+  // In dev with HMR, this module can be re-evaluated and leak pools unless the
+  // instance is cached on globalThis.
+  if (sharedKnexInstance) return sharedKnexInstance;
+  if (globalKnexCache.__algaTenantKnex) {
+    sharedKnexInstance = globalKnexCache.__algaTenantKnex;
     return sharedKnexInstance;
   }
 
@@ -29,13 +39,16 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
 
   const poolConfig: PoolConfig = {
     ...(baseConfig.pool as PoolConfig),
-    min: 0,
-    max: 50,
-    idleTimeoutMillis: 30000,
-    reapIntervalMillis: 1000,
-    createTimeoutMillis: 3000, // REDUCED from 30s to 3s - fail fast instead of hanging
-    acquireTimeoutMillis: 5000, // Max 5s to acquire connection from pool
-    destroyTimeoutMillis: 5000,
+    // Keep defaults from knexfile (dev: max 20) to avoid over-connecting local Postgres.
+    // In dev, HMR re-evaluation can still create multiple pools if not cached globally.
+    // These values can be overridden via knexfile env if needed.
+    min: (baseConfig.pool as PoolConfig | undefined)?.min ?? 0,
+    max: (baseConfig.pool as PoolConfig | undefined)?.max ?? 20,
+    idleTimeoutMillis: (baseConfig.pool as PoolConfig | undefined)?.idleTimeoutMillis ?? 30000,
+    reapIntervalMillis: (baseConfig.pool as PoolConfig | undefined)?.reapIntervalMillis ?? 1000,
+    createTimeoutMillis: (baseConfig.pool as PoolConfig | undefined)?.createTimeoutMillis ?? 3000,
+    acquireTimeoutMillis: (baseConfig.pool as KnexType.PoolConfig | undefined)?.acquireTimeoutMillis ?? 5000,
+    destroyTimeoutMillis: (baseConfig.pool as PoolConfig | undefined)?.destroyTimeoutMillis ?? 5000,
     afterCreate: (conn, done) => {
       conn.on('error', (err: Error) => {
         logger.error('[shared/db/tenant] DB Connection Error:', err);
@@ -48,6 +61,7 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
     ...baseConfig,
     pool: poolConfig,
   });
+  globalKnexCache.__algaTenantKnex = sharedKnexInstance;
 
   return sharedKnexInstance;
 }
@@ -66,6 +80,7 @@ async function destroySharedPool() {
     await sharedKnexInstance.destroy();
     sharedKnexInstance = null;
   }
+  globalKnexCache.__algaTenantKnex = null;
 }
 
 export async function resetTenantConnectionPool(): Promise<void> {

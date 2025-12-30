@@ -12,6 +12,8 @@ export default function Body({
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
   const [prevPathname, setPrevPathname] = useState('');
+  const lockBodyScroll = (pathname?.startsWith('/msp/workflows') ?? false)
+    || (pathname?.startsWith('/msp/automation-hub') ?? false);
 
   // Handle navigation transitions
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function Body({
   }, [pathname, prevPathname]);
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-100 h-full overflow-y-auto scrollbar-hide">
+    <div className={`flex-1 flex flex-col bg-gray-100 h-full ${lockBodyScroll ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide'}`}>
       {children}
     </div>
   );
