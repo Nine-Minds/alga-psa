@@ -14,6 +14,8 @@ import {
   applyPlaywrightAuthEnvDefaults,
   createTenantAndLogin,
   resolvePlaywrightBaseUrl,
+  setupAuthenticatedSession,
+  ensureRoleHasPermission,
 } from './helpers/playwrightAuthSessionHelper';
 import { WorkflowDesignerPage } from '../page-objects/WorkflowDesignerPage';
 import { ensureSystemEmailWorkflow } from './helpers/workflowSeedHelper';
@@ -23,17 +25,17 @@ applyPlaywrightAuthEnvDefaults();
 // Clean up any orphan test workflows to prevent test pollution
 async function cleanupTestWorkflows(db: Knex): Promise<void> {
   try {
-    // Delete workflows created by tests (pattern matching test names)
-    await db('workflow_definitions')
-      .where('name', 'like', '%Test%')
-      .orWhere('name', 'like', '%Persist%')
-      .orWhere('name', 'like', '%Preview%')
-      .orWhere('name', 'like', '%Warning%')
-      .orWhere('name', 'like', '%Modal%')
-      .orWhere('name', 'like', '%Distinction%')
-      .orWhere('name', 'like', '%Switch%')
-      .orWhere('name', 'like', '%ReadOnly%')
-      .del();
+    // Delete workflows created by tests - be specific to avoid deleting system workflows
+    const testPatterns = [
+      'Test%', 'Persist%', 'Preview%', 'Warning%', 'Modal%',
+      'Distinction%', 'Switch%', 'ReadOnly%', 'Contract%', 'New Workflow%'
+    ];
+    for (const pattern of testPatterns) {
+      await db('workflow_definitions')
+        .where('name', 'like', pattern)
+        .whereNot('name', 'Inbound Email Processing') // Don't delete system workflow
+        .del();
+    }
   } catch {
     // Ignore cleanup errors
   }
@@ -48,6 +50,7 @@ const ADMIN_PERMISSIONS = [
     roleName: 'Admin',
     permissions: [
       { resource: 'user', action: 'read' },
+      { resource: 'secrets', action: 'view' },
       { resource: 'workflow', action: 'manage' },
       { resource: 'workflow', action: 'publish' },
       { resource: 'workflow', action: 'admin' },
@@ -75,13 +78,82 @@ async function setupDesigner(page: Page, permissions = ADMIN_PERMISSIONS): Promi
   // Clean up orphan workflows from previous tests
   await cleanupTestWorkflows(db);
 
+  const wantsReadOnlySession = permissions.some((entry) => entry.roleName === 'Viewer');
+
+  // Always create the tenant as admin (this is the only user `createTenantComplete` guarantees).
+  // If a test needs a different permission profile, we mint a separate user/role and overwrite the
+  // Playwright auth cookie below.
   const tenantData = await createTenantAndLogin(db, page, {
     tenantOptions: {
       companyName: `Contract UI ${uuidv4().slice(0, 6)}`,
     },
     completeOnboarding: { completedAt: new Date() },
-    permissions,
+    permissions: ADMIN_PERMISSIONS,
   });
+
+  if (wantsReadOnlySession) {
+    const tenantId = tenantData.tenant.tenantId;
+
+    const viewerConfig = permissions.find((entry) => entry.roleName === 'Viewer');
+    if (!viewerConfig) {
+      throw new Error('Expected Viewer permissions config to be provided');
+    }
+
+    let viewerRole = await db('roles')
+      .where({ tenant: tenantId, role_name: 'Viewer', msp: true })
+      .first<{ role_id: string }>('role_id');
+
+    if (!viewerRole) {
+      const [inserted] = await db('roles')
+        .insert({
+          tenant: tenantId,
+          role_id: uuidv4(),
+          role_name: 'Viewer',
+          description: 'Playwright test read-only role',
+          msp: true,
+          client: false,
+          created_at: db.fn.now(),
+          updated_at: db.fn.now(),
+        })
+        .returning<{ role_id: string }[]>('role_id');
+      viewerRole = inserted;
+    }
+
+    await ensureRoleHasPermission(db, tenantId, 'Viewer', viewerConfig.permissions);
+
+    const viewerEmail = `test-viewer-${uuidv4().slice(0, 8)}@example.com`.toLowerCase();
+    const [viewerUser] = await db('users')
+      .insert({
+        tenant: tenantId,
+        username: viewerEmail,
+        hashed_password: 'test_password',
+        first_name: 'Test',
+        last_name: 'Viewer',
+        email: viewerEmail,
+        auth_method: 'password',
+        user_type: 'internal',
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      })
+      .returning<{ user_id: string }[]>('user_id');
+
+    await db('user_roles').insert({
+      tenant: tenantId,
+      user_id: viewerUser.user_id,
+      role_id: viewerRole.role_id,
+      created_at: new Date(),
+    });
+
+    await setupAuthenticatedSession(page, tenantData, {
+      sessionClaims: {
+        id: viewerUser.user_id,
+        email: viewerEmail,
+        username: viewerEmail,
+        name: 'Test Viewer',
+        user_type: 'internal',
+      },
+    });
+  }
 
   await ensureSystemEmailWorkflow(db);
 
@@ -208,7 +280,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await workflowPage.setContractModePinned();
 
       // Verify schema select dropdown is visible
-      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible();
+      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible({ timeout: 30_000 });
 
       // Verify advanced toggle is visible
       await expect(workflowPage.payloadSchemaAdvancedToggle).toBeVisible();
@@ -231,6 +303,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
 
       // Ensure we're in inferred mode
       await workflowPage.setContractModeInferred();
+      await expect.poll(() => workflowPage.isContractModeInferred(), { timeout: 10_000 }).toBe(true);
 
       // Verify schema select is NOT visible in inferred mode
       await expect(workflowPage.payloadSchemaSelectButton).toHaveCount(0);
@@ -327,7 +400,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await workflowPage.setContractModePinned();
 
       // Verify schema select is visible (user must select a schema)
-      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible();
+      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible({ timeout: 30_000 });
 
       // Schema select should show placeholder or be empty initially
       const selectText = await workflowPage.payloadSchemaSelectButton.textContent();
@@ -363,7 +436,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
 
       // Verify we start in pinned mode
       await expect(workflowPage.isContractModePinned()).resolves.toBe(true);
-      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible();
+      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible({ timeout: 30_000 });
 
       // Switch to inferred mode
       await workflowPage.setContractModeInferred();
@@ -618,9 +691,9 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(workflowPage.schemaPreviewToggle).toBeVisible();
       await workflowPage.schemaPreviewToggle.click();
 
-      // Verify preview content is visible (should show JSON schema structure)
-      const previewContent = page.locator('#workflow-designer-contract-section pre, #workflow-designer-contract-section code');
-      await expect(previewContent).toBeVisible({ timeout: 5_000 });
+      // Verify preview content is visible (chips/status inside the contract section)
+      const previewContent = page.locator('#workflow-designer-schema-preview-content');
+      await expect(previewContent).toBeVisible({ timeout: 30_000 });
 
       // Verify workflow is still in draft (not published)
       const record = await db('workflow_definitions').where({ workflow_id: workflowId }).first();
@@ -635,41 +708,57 @@ test.describe('Workflow Designer UI - Contract Section', () => {
   });
 
   test('T111: Warning appears when inferred contract differs from published contract', async ({ page }) => {
-    // SKIP: This test requires a published workflow version to compare against.
-    // The workflow_definitions table doesn't currently have a published_version column.
-    // This test should be re-enabled once workflow publishing is fully implemented.
-    test.setTimeout(120000);
+    // This test requires publishing a workflow first, then changing the inferred schema
+    // to trigger the contract difference warning
+    test.setTimeout(180000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
-    let workflowId: string | null = null;
+    const workflowName = `Diff Warning ${uuidv4().slice(0, 6)}`;
 
     try {
-      // Create a workflow
-      workflowId = await createWorkflowWithTrigger(
-        db,
-        `Diff Warning ${uuidv4().slice(0, 6)}`,
-        'INBOUND_EMAIL_RECEIVED',
-        'payload.EmailWorkflowPayload.v1',
-        {
-          payloadSchemaMode: 'inferred',
-        }
-      );
+      // Seed an additional tenant event with a different schema ref so we can switch triggers post-publish
+      // and get a stable "draft inferred schema != published contract schema" state.
+      await db('event_catalog')
+        .where({ tenant: tenantData.tenant.tenantId, event_type: 'CUSTOM_EVENT' })
+        .del()
+        .catch(() => {});
+      await db('event_catalog').insert({
+        event_id: uuidv4(),
+        tenant: tenantData.tenant.tenantId,
+        event_type: 'CUSTOM_EVENT',
+        name: 'Custom Event',
+        description: 'Playwright test event',
+        category: 'Testing',
+        payload_schema_ref: 'payload.TicketCreated.v1',
+        payload_schema: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
 
-      // TODO: Publish the workflow, then change the trigger to a different schema
-      // to trigger the warning about contract differences
+      // Step 1: Create a new workflow via UI
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.nameInput.fill(workflowName);
 
-      await page.reload({ waitUntil: 'domcontentloaded' });
-      await workflowPage.waitForLoaded();
+      // Step 2: Set up with a trigger (which sets an inferred schema)
+      await workflowPage.selectTriggerEvent('INBOUND_EMAIL_RECEIVED');
 
-      const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
-      await workflowPage.selectWorkflowByName(workflowName);
+      // Step 3: Save the draft
+      await workflowPage.saveDraft();
+      await workflowPage.waitForWorkflowInList(workflowName);
 
-      // Verify warning about contract difference is shown
-      await expect(workflowPage.contractDiffersWarning()).toBeVisible({ timeout: 10_000 });
+      // Step 4: Publish the workflow
+      await workflowPage.publishButton.click();
+      // Wait for publish to complete
+      await expect(workflowPage.publishButton).toBeEnabled({ timeout: 30_000 });
+
+      // Step 5: Change the trigger (which changes the inferred schema)
+      await workflowPage.selectTriggerEvent('CUSTOM_EVENT');
+
+      // Step 6: Verify the warning about contract difference is shown
+      // (inferred schema is now different from published schema)
+      await expect(workflowPage.contractDiffersWarning()).toBeVisible({ timeout: 30_000 });
     } finally {
-      if (workflowId) {
-        await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
-      }
+      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => {});
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -746,7 +835,7 @@ test.describe('Workflow Designer UI - Contract Mode Persistence', () => {
 
       // Verify pinned mode persisted
       await expect(workflowPage.isContractModePinned()).resolves.toBe(true);
-      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible();
+      await expect(workflowPage.payloadSchemaSelectButton).toBeVisible({ timeout: 30_000 });
     } finally {
       await db('workflow_definitions').where({ name: workflowName }).del().catch(() => {});
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});

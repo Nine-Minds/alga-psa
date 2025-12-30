@@ -88,6 +88,13 @@ tryPort(start, attempts);
   return { success: false, error: error || 'port-probe-failed' };
 }
 
+function isPortProbePermissionError(error?: string): boolean {
+  if (!error) return false;
+  const normalized = error.trim().toUpperCase();
+  // Some sandboxed environments forbid binding/listening, causing EPERM/EACCES.
+  return normalized.includes('EPERM') || normalized.includes('EACCES');
+}
+
 function resolveWebPortSync(): number {
   const preferred = Number(process.env.PLAYWRIGHT_APP_PORT || process.env.APP_PORT || 3300);
   if (process.env.PLAYWRIGHT_APP_PORT_LOCKED === 'true' && process.env.PLAYWRIGHT_APP_PORT) {
@@ -102,6 +109,10 @@ function resolveWebPortSync(): number {
     }
     const check = runPortProbe(preferred, 0, true);
     if (!check.success || typeof check.port !== 'number') {
+      if (isPortProbePermissionError(check.error)) {
+        console.warn(`[Playwright] Port probe blocked (${check.error}); using PLAYWRIGHT_APP_PORT=${preferred} without validation.`);
+        return preferred;
+      }
       // Even if a preferred port is provided, fall back to scanning for a nearby
       // available port to avoid spurious failures when developers have multiple
       // environments running locally.
@@ -116,6 +127,10 @@ function resolveWebPortSync(): number {
 
   const probe = runPortProbe(preferred, 25, false);
   if (!probe.success || typeof probe.port !== 'number') {
+    if (isPortProbePermissionError(probe.error)) {
+      console.warn(`[Playwright] Port probe blocked (${probe.error}); defaulting to port ${preferred}.`);
+      return preferred;
+    }
     throw new Error(`Unable to find an available port for the Playwright dev server (${probe.error || 'probe failed'}).`);
   }
   return probe.port;
@@ -143,9 +158,17 @@ const resolvedWebPort = getCachedWebPort();
 const webHost = process.env.PLAYWRIGHT_APP_HOST || 'localhost';
 const resolvedBaseUrl = process.env.PLAYWRIGHT_BASE_URL || `http://${webHost}:${resolvedWebPort}`;
 
+const resolvedHostForEnv = (() => {
+  try {
+    return new URL(resolvedBaseUrl).host;
+  } catch {
+    return `${webHost}:${resolvedWebPort}`;
+  }
+})();
+
 process.env.PLAYWRIGHT_APP_PORT = String(resolvedWebPort);
 process.env.PLAYWRIGHT_APP_PORT_LOCKED = 'true';
-process.env.HOST = process.env.HOST || resolvedBaseUrl;
+process.env.HOST = process.env.HOST || resolvedHostForEnv;
 process.env.APP_PORT = process.env.APP_PORT || String(resolvedWebPort);
 process.env.EXPOSE_SERVER_PORT = process.env.EXPOSE_SERVER_PORT || String(resolvedWebPort);
 process.env.PORT = process.env.PORT || String(resolvedWebPort);
@@ -298,7 +321,8 @@ export default defineConfig({
       E2E_AUTH_BYPASS: 'true',
       EE_BASE_URL: resolvedBaseUrl,
       NEXTAUTH_URL: resolvedBaseUrl,
-      HOST: resolvedBaseUrl,
+      HOST: resolvedHostForEnv,
+      HOSTNAME: webHost,
       PORT: String(resolvedWebPort),
       APP_PORT: String(resolvedWebPort),
       EXPOSE_SERVER_PORT: String(resolvedWebPort),
@@ -327,6 +351,9 @@ export default defineConfig({
       STORAGE_S3_BUCKET: process.env.STORAGE_S3_BUCKET || 'alga-test',
       STORAGE_S3_REGION: process.env.STORAGE_S3_REGION || 'us-east-1',
       STORAGE_S3_FORCE_PATH_STYLE: process.env.STORAGE_S3_FORCE_PATH_STYLE || 'true',
+      // Redis is required for the event bus; prefer a local instance for Playwright.
+      REDIS_HOST: process.env.REDIS_HOST || 'localhost',
+      REDIS_PORT: process.env.REDIS_PORT || '6379',
     }
   } : undefined,
 

@@ -86,8 +86,11 @@ export class WorkflowDesignerPage {
 
   async selectPayloadSchemaRef(schemaRef: string): Promise<void> {
     await this.payloadSchemaSelectButton.click();
-    const searchInput = this.page.locator('#workflow-designer-schema-ref-select-search');
-    await expect(searchInput).toBeVisible({ timeout: 10_000 });
+    const searchInput = this.page
+      .locator('#workflow-designer-schema-ref-select-search')
+      .or(this.page.getByPlaceholder(/search select schema/i));
+    // SearchableSelect uses `id="<select-id>-search"`; in overlay mode, the input is portalled.
+    await expect(searchInput.first()).toBeVisible({ timeout: 30_000 });
     await searchInput.fill(schemaRef);
     await this.page.getByRole('option', { name: new RegExp(schemaRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first().click();
   }
@@ -173,6 +176,7 @@ export class WorkflowDesignerPage {
     const isInferred = await this.isContractModeInferred();
     if (isInferred) {
       await this.contractModeToggle.click();
+      await expect(this.contractModeToggle).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
     }
   }
 
@@ -180,6 +184,7 @@ export class WorkflowDesignerPage {
     const isPinned = await this.isContractModePinned();
     if (isPinned) {
       await this.contractModeToggle.click();
+      await expect(this.contractModeToggle).toHaveAttribute('aria-checked', 'false', { timeout: 10_000 });
     }
   }
 

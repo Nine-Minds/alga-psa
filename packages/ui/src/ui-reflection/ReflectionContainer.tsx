@@ -9,6 +9,7 @@ import { withUIReflectionId } from './withDataAutomationId';
 interface ReflectionContainerProps extends PropsWithChildren {
   id: string;
   label?: string;
+  className?: string;
   'data-automation-type'?: string;
 }
 
@@ -21,6 +22,7 @@ interface ReflectionContainerProps extends PropsWithChildren {
 function ReflectionContainerBase({ 
   id, 
   label, 
+  className,
   children,
   'data-automation-type': dataAutomationType 
 }: ReflectionContainerProps) {
@@ -45,6 +47,7 @@ function ReflectionContainerBase({
       <div 
         data-automation-id={id}
         data-automation-type={dataAutomationType}
+        className={className}
       >
         {children}
       </div>

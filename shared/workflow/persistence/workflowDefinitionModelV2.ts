@@ -33,11 +33,33 @@ export type WorkflowDefinitionRecord = {
   updated_at: string;
 };
 
+const serializeJsonArrayForPgJsonColumn = (value: unknown): unknown => {
+  // node-postgres treats JS arrays as Postgres arrays, not JSON, which breaks inserts into `json/jsonb` columns.
+  // Serialize explicitly so Postgres receives valid JSON text (e.g. `[{"...": "..."}]`).
+  return Array.isArray(value) ? JSON.stringify(value) : value;
+};
+
+const normalizeWorkflowDefinitionWrite = (
+  data: Partial<WorkflowDefinitionRecord>
+): Partial<WorkflowDefinitionRecord> => {
+  const out: Partial<WorkflowDefinitionRecord> = { ...data };
+
+  if ('validation_errors' in out) {
+    out.validation_errors = serializeJsonArrayForPgJsonColumn(out.validation_errors) as any;
+  }
+  if ('validation_warnings' in out) {
+    out.validation_warnings = serializeJsonArrayForPgJsonColumn(out.validation_warnings) as any;
+  }
+
+  return out;
+};
+
 const WorkflowDefinitionModelV2 = {
   create: async (knex: Knex, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+    const normalized = normalizeWorkflowDefinitionWrite(data);
     const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
       .insert({
-        ...data,
+        ...normalized,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -46,10 +68,11 @@ const WorkflowDefinitionModelV2 = {
   },
 
   update: async (knex: Knex, workflowId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+    const normalized = normalizeWorkflowDefinitionWrite(data);
     const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
       .where({ workflow_id: workflowId })
       .update({
-        ...data,
+        ...normalized,
         updated_at: new Date().toISOString()
       })
       .returning('*');

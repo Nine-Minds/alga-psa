@@ -31,19 +31,16 @@ If you need to manually manage the test MinIO:
 
 ```bash
 # Start test MinIO
-./scripts/minio-test.sh start
+docker compose -f docker-compose.playwright.yml up -d
 
 # Stop and cleanup test MinIO
-./scripts/minio-test.sh stop
+docker compose -f docker-compose.playwright.yml down -v
 
 # Restart test MinIO
-./scripts/minio-test.sh restart
-
-# Check status
-./scripts/minio-test.sh status
+docker compose -f docker-compose.playwright.yml down -v && docker compose -f docker-compose.playwright.yml up -d
 
 # View logs
-./scripts/minio-test.sh logs
+docker logs -f alga-psa-minio-test
 ```
 
 ### Architecture

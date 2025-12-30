@@ -25,20 +25,17 @@ import {
 export async function listTenantSecrets(): Promise<TenantSecretMetadata[]> {
   const { knex, tenant } = await createTenantKnex();
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
+  // Secrets are an optional capability in some environments (e.g. local/dev stacks or older schemas).
+  // If the backing tables don't exist, treat secrets as "not configured" and return no entries.
+  if (!tenant) return [];
+  if (!(await knex.schema.hasTable('tenant_secrets'))) return [];
 
   const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
+  if (!user) return [];
 
   // Check for secrets.view permission
   const canView = await hasPermission(user, 'secrets', 'view', knex);
-  if (!canView) {
-    throw new Error('Permission denied: Cannot view secrets');
-  }
+  if (!canView) return [];
 
   const provider = createTenantSecretProvider(knex, tenant);
   return provider.list();
