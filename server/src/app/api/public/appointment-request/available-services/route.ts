@@ -20,7 +20,8 @@ import logger from '@alga-psa/shared/core/logger';
  *       "service_name": "Initial Consultation",
  *       "service_description": "30-minute consultation",
  *       "service_type": "consultation",
- *       "default_rate": 150.00
+ *       "default_rate": 150.00,
+ *       "duration": 60
  *     }
  *   ]
  * }
@@ -77,7 +78,8 @@ export async function GET(req: NextRequest) {
         service_name: service.service_name,
         service_description: service.service_description,
         service_type: service.service_type,
-        default_rate: service.default_rate
+        default_rate: service.default_rate,
+        duration: service.config_json?.default_duration || null
       }))
     });
 

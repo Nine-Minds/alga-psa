@@ -702,7 +702,8 @@ export async function getServicesForPublicBooking(
         'sc.service_name',
         'sc.description as service_description',
         'sc.billing_method as service_type',
-        'sc.default_rate'
+        'sc.default_rate',
+        'avs.config_json'
       )
       .distinct();
 
