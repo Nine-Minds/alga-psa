@@ -2686,7 +2686,7 @@ const WorkflowDesigner: React.FC = () => {
               position: 'fixed',
               top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
               left: Math.min(Math.max(8, designerFloatAnchorRect.left + 16), window.innerWidth - 8 - 224),
-              maxHeight: Math.max(160, window.innerHeight - (designerFloatAnchorRect.top + 32))
+              maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
             } : undefined}
           >
             <div className="p-3 border-b">
@@ -2766,7 +2766,7 @@ const WorkflowDesigner: React.FC = () => {
               position: 'fixed',
               top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
               left: Math.min(Math.max(8, designerFloatAnchorRect.right - 16 - 420), window.innerWidth - 8 - 420),
-              maxHeight: Math.max(160, window.innerHeight - (designerFloatAnchorRect.top + 32))
+              maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
             } : undefined}
           >
             {activeWorkflowRecord && metadataDraft && canEditMetadata && (
