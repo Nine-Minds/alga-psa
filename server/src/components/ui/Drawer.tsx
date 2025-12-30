@@ -37,7 +37,7 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
   // Determine width classes and styles based on width prop or default behavior
   const widthClasses = width 
     ? '' // Use inline style when width is specified
-    : `w-[90vw] sm:w-[520px] lg:w-[560px] max-w-[90vw] sm:max-w-[60vw]`;
+    : `w-fit max-w-[60vw]`;
   
   const widthStyle = width 
     ? { width: width, maxWidth: width }
