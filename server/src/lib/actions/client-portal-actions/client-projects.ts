@@ -4,7 +4,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getCurrentUser, getUserClientId } from 'server/src/lib/actions/user-actions/userActions';
-import { IProject } from 'server/src/interfaces/project.interfaces';
+import { IProject, DEFAULT_CLIENT_PORTAL_CONFIG } from 'server/src/interfaces/project.interfaces';
 import ProjectModel from 'server/src/lib/models/project';
 
 /**
@@ -191,40 +191,47 @@ export async function getClientProjects(options: {
 
 /**
  * Calculate project progress without exposing internal details
+ * Respects client_portal_config.show_tasks visibility setting
  */
 export async function getProjectProgress(projectId: string): Promise<{
   completionPercentage: number;
   timelineStatus: 'on_track' | 'delayed' | 'at_risk';
   daysRemaining: number;
-}> {
+} | null> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
-  
+
   // Get current user and client
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
   }
-  
-  // Get project to verify access
+
+  // Get project to verify access and check visibility config
   const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('projects')
-      .select('client_id', 'start_date', 'end_date')
+      .select('client_id', 'start_date', 'end_date', 'client_portal_config')
       .where('project_id', projectId)
       .where('tenant', tenant)
       .first();
   });
-  
+
   if (!project) {
     throw new Error('Project not found');
   }
-  
+
   // Verify user has access to this project's client
   const userClientId = await getUserClientId(user.user_id);
   if (userClientId !== project.client_id) {
     throw new Error('Access denied');
+  }
+
+  // Check visibility config - progress is task-based, so respect show_tasks
+  const config = project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
+  if (!config.show_tasks) {
+    return null;
   }
   
   // Calculate completion percentage based on tasks with closed status

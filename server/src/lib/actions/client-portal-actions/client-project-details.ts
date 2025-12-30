@@ -104,6 +104,8 @@ export async function getClientProjectTasks(projectId: string) {
       this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
     })
     .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
+    // Only show tasks with visible status mappings
+    .where('psm.is_visible', true)
     .select(selectColumns);
 
   // Add status info to select if requested
@@ -264,6 +266,8 @@ export async function getClientProjectTasksForKanban(projectId: string, phaseId?
       this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
     })
     .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
+    // Only show tasks with visible status mappings
+    .where('psm.is_visible', true)
     .select(selectColumns);
 
   // Filter by phase if specified
