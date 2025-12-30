@@ -55,6 +55,8 @@ interface Task {
   estimated_hours?: number | null;
   actual_hours?: number | null;
   is_closed?: boolean;
+  checklist_total?: number;
+  checklist_completed?: number;
 }
 
 const VIEW_MODE_STORAGE_KEY = 'client-portal-project-view-mode';
@@ -95,6 +97,10 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const config = project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
   const showPhases = config.show_phases ?? false;
   const showTasks = config.show_tasks ?? false;
+
+  // Determine effective view mode - kanban only makes sense when tasks are shown
+  // When only phases are enabled (no tasks), force list view
+  const effectiveViewMode = showTasks ? viewMode : 'list';
 
   // Load project metrics
   useEffect(() => {
@@ -151,11 +157,15 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   // Load tasks based on view mode
   useEffect(() => {
     const fetchTasks = async () => {
-      if (!showTasks) return;
+      // Skip if tasks are not shown - phases are fetched by the first useEffect
+      if (!showTasks) {
+        setDataLoading(false);
+        return;
+      }
 
       setDataLoading(true);
       try {
-        if (viewMode === 'kanban') {
+        if (effectiveViewMode === 'kanban') {
           // Kanban view: filter by selected phase
           const result = await getClientProjectTasksForKanban(project.project_id, selectedPhaseId || undefined);
           if (result?.tasks) {
@@ -185,7 +195,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
     };
 
     fetchTasks();
-  }, [project.project_id, showTasks, viewMode, selectedPhaseId]);
+  }, [project.project_id, showTasks, effectiveViewMode, selectedPhaseId]);
 
   // View switcher options
   const viewOptions = useMemo(() => [
@@ -325,7 +335,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 </h3>
 
                 {/* Task count for Kanban */}
-                {showTasks && viewMode === 'kanban' && (
+                {showTasks && effectiveViewMode === 'kanban' && (
                   <span className="text-sm text-gray-500">
                     {kanbanStats.completed} / {kanbanStats.total} {t('projects.tasks.title', 'Tasks').toLowerCase()}
                   </span>
@@ -345,7 +355,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
           {/* Content */}
           <div className="p-4">
-            {viewMode === 'kanban' ? (
+            {effectiveViewMode === 'kanban' ? (
               <ClientKanbanBoard
                 phases={phases}
                 statuses={statuses}

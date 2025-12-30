@@ -5,8 +5,9 @@ import { useTranslation } from 'server/src/lib/i18n/client';
 import { format, Locale } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { IClientPortalConfig } from 'server/src/interfaces/project.interfaces';
-import { Calendar, Clock, User, Loader2, FolderOpen } from 'lucide-react';
+import { Calendar, Clock, User, FolderOpen, CheckSquare } from 'lucide-react';
 import TaskDocumentUpload from './TaskDocumentUpload';
+import Spinner from 'server/src/components/ui/Spinner';
 
 interface Phase {
   phase_id: string;
@@ -39,6 +40,8 @@ interface Task {
   actual_hours?: number | null;
   is_closed?: boolean;
   additional_agents?: Array<{ user_id: string; user_name: string; role: string | null }>;
+  checklist_total?: number;
+  checklist_completed?: number;
 }
 
 interface ClientKanbanBoardProps {
@@ -119,11 +122,27 @@ function TaskCard({
           </div>
         )}
 
-        {/* Hours */}
+        {/* Estimated Hours */}
         {visibleFields.includes('estimated_hours') && task.estimated_hours != null && (
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 text-gray-400" />
             <span>{t('projects.tasks.estimatedHours', 'Est')}: {(task.estimated_hours / 60).toFixed(1)}h</span>
+          </div>
+        )}
+
+        {/* Actual Hours (Hours Logged) */}
+        {visibleFields.includes('actual_hours') && task.actual_hours != null && (
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3 h-3 text-gray-400" />
+            <span>{t('projects.fields.hoursLogged', 'Logged')}: {(task.actual_hours / 60).toFixed(1)}h</span>
+          </div>
+        )}
+
+        {/* Checklist Progress */}
+        {visibleFields.includes('checklist_progress') && task.checklist_total != null && task.checklist_total > 0 && (
+          <div className="flex items-center gap-1.5">
+            <CheckSquare className="w-3 h-3 text-gray-400" />
+            <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
           </div>
         )}
       </div>
@@ -241,7 +260,7 @@ export default function ClientKanbanBoard({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Spinner size="xs" />
       </div>
     );
   }

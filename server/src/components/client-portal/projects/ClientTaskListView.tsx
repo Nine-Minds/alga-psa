@@ -10,9 +10,10 @@ import {
   User,
   ChevronDown,
   ChevronRight,
-  Loader2
+  CheckSquare
 } from 'lucide-react';
 import TaskDocumentUpload from './TaskDocumentUpload';
+import Spinner from 'server/src/components/ui/Spinner';
 
 interface Phase {
   phase_id: string;
@@ -35,6 +36,8 @@ interface Task {
   estimated_hours?: number | null;
   actual_hours?: number | null;
   additional_agents?: Array<{ user_id: string; user_name: string; role: string | null }>;
+  checklist_total?: number;
+  checklist_completed?: number;
 }
 
 interface ClientTaskListViewProps {
@@ -93,6 +96,7 @@ export default function ClientTaskListView({
   );
 
   const showPhases = config.show_phases ?? false;
+  const showTasks = config.show_tasks ?? false;
   const showPhaseCompletion = config.show_phase_completion ?? false;
   const allowUploads = config.allow_document_uploads ?? false;
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
@@ -121,7 +125,7 @@ export default function ClientTaskListView({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Spinner size="xs" />
       </div>
     );
   }
@@ -129,7 +133,9 @@ export default function ClientTaskListView({
   if (phases.length === 0 && tasks.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        {t('projects.tasks.noTasks', 'No tasks to display')}
+        {showTasks
+          ? t('projects.tasks.noTasks', 'No tasks to display')
+          : t('projects.phases.noPhases', 'No phases to display')}
       </div>
     );
   }
@@ -142,17 +148,20 @@ export default function ClientTaskListView({
   if (visibleFields.includes('due_date')) columns.push({ key: 'due_date', label: t('projects.tasks.dueDate', 'Due Date'), width: 'w-32' });
   if (visibleFields.includes('estimated_hours')) columns.push({ key: 'estimated_hours', label: t('projects.tasks.estimatedHours', 'Est. Hours'), width: 'w-24' });
   if (visibleFields.includes('actual_hours')) columns.push({ key: 'actual_hours', label: t('projects.fields.hoursLogged', 'Logged'), width: 'w-24' });
+  if (visibleFields.includes('checklist_progress')) columns.push({ key: 'checklist_progress', label: t('projects.tasks.checklist', 'Checklist'), width: 'w-24' });
 
   return (
     <div className="space-y-4">
-      {/* Table Header */}
-      <div className="hidden md:flex items-center gap-4 px-4 py-2 bg-gray-100 rounded-lg text-xs font-medium text-gray-600 uppercase tracking-wider">
-        <div className="w-6" /> {/* Expand icon space */}
-        {columns.map(col => (
-          <div key={col.key} className={col.width}>{col.label}</div>
-        ))}
-        {allowUploads && <div className="w-20">{t('projects.documents.title', 'Docs')}</div>}
-      </div>
+      {/* Table Header - only show when tasks are enabled */}
+      {showTasks && (
+        <div className="hidden md:flex items-center gap-4 px-4 py-2 bg-gray-100 rounded-lg text-xs font-medium text-gray-600 uppercase tracking-wider">
+          <div className="w-6" /> {/* Expand icon space */}
+          {columns.map(col => (
+            <div key={col.key} className={col.width}>{col.label}</div>
+          ))}
+          {allowUploads && <div className="w-44">{t('projects.documents.title', 'Docs')}</div>}
+        </div>
+      )}
 
       {/* Phase Groups */}
       <div className="space-y-3">
@@ -167,25 +176,31 @@ export default function ClientTaskListView({
             >
               {/* Phase Header */}
               <div
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => togglePhase(phase.phase_id)}
+                className={showTasks ? "cursor-pointer hover:bg-gray-50 transition-colors" : ""}
+                onClick={showTasks ? () => togglePhase(phase.phase_id) : undefined}
               >
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="text-gray-400">
-                        {isExpanded ? (
-                          <ChevronDown className="w-5 h-5" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5" />
-                        )}
-                      </div>
+                      {/* Only show expand/collapse chevron when tasks are enabled */}
+                      {showTasks && (
+                        <div className="text-gray-400">
+                          {isExpanded ? (
+                            <ChevronDown className="w-5 h-5" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5" />
+                          )}
+                        </div>
+                      )}
                       <div>
                         <div className="flex items-center gap-3">
                           <h4 className="font-semibold text-gray-900">{phase.phase_name}</h4>
-                          <span className="text-sm text-gray-500">
-                            ({phaseTasks.length} {phaseTasks.length === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()})
-                          </span>
+                          {/* Only show task count when tasks are enabled */}
+                          {showTasks && (
+                            <span className="text-sm text-gray-500">
+                              ({phaseTasks.length} {phaseTasks.length === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()})
+                            </span>
+                          )}
                         </div>
 
                         {/* Phase Description - only if phases are shown */}
@@ -235,8 +250,8 @@ export default function ClientTaskListView({
                 </div>
               </div>
 
-              {/* Tasks Table */}
-              {isExpanded && phaseTasks.length > 0 && (
+              {/* Tasks Table - only show when tasks are enabled */}
+              {showTasks && isExpanded && phaseTasks.length > 0 && (
                 <div className="border-t border-gray-200">
                   {phaseTasks.map((task, index) => (
                     <div
@@ -303,13 +318,25 @@ export default function ClientTaskListView({
                       {/* Actual Hours */}
                       {visibleFields.includes('actual_hours') && (
                         <div className="w-24 flex-shrink-0 text-sm text-gray-600">
-                          {task.actual_hours != null && `${task.actual_hours}h`}
+                          {task.actual_hours != null && `${(task.actual_hours / 60).toFixed(1)}h`}
+                        </div>
+                      )}
+
+                      {/* Checklist Progress */}
+                      {visibleFields.includes('checklist_progress') && (
+                        <div className="w-24 flex-shrink-0 text-sm text-gray-600">
+                          {task.checklist_total != null && task.checklist_total > 0 && (
+                            <span className="flex items-center gap-1">
+                              <CheckSquare className="w-3.5 h-3.5 text-gray-400 md:hidden" />
+                              {task.checklist_completed ?? 0}/{task.checklist_total}
+                            </span>
+                          )}
                         </div>
                       )}
 
                       {/* Document Upload */}
                       {allowUploads && (
-                        <div className="w-20 flex-shrink-0">
+                        <div className="w-44 flex-shrink-0">
                           <TaskDocumentUpload taskId={task.task_id} compact />
                         </div>
                       )}
@@ -318,8 +345,8 @@ export default function ClientTaskListView({
                 </div>
               )}
 
-              {/* Empty state for phase */}
-              {isExpanded && phaseTasks.length === 0 && (
+              {/* Empty state for phase - only show when tasks are enabled */}
+              {showTasks && isExpanded && phaseTasks.length === 0 && (
                 <div className="border-t border-gray-200 p-4 text-center text-sm text-gray-400">
                   {t('projects.tasks.noTasks', 'No tasks in this phase')}
                 </div>

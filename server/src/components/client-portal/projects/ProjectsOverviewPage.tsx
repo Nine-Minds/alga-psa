@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getClientProjects } from 'server/src/lib/actions/client-portal-actions/client-projects';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Input } from 'server/src/components/ui/Input';
@@ -30,17 +31,13 @@ export default function ProjectsOverviewPage() {
       dataIndex: 'project_number',
       width: '10%',
       render: (value, record) => (
-        <div
-          className="font-mono text-sm cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (record.project_id) {
-              router.push(`/client-portal/projects/${record.project_id}`);
-            }
-          }}
+        <Link
+          href={`/client-portal/projects/${record.project_id}`}
+          className="font-mono text-sm hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
         >
           {value || '-'}
-        </div>
+        </Link>
       )
     },
     {
@@ -48,17 +45,13 @@ export default function ProjectsOverviewPage() {
       dataIndex: 'project_name',
       width: '35%',
       render: (value, record) => (
-        <div
-          className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (record.project_id) {
-              router.push(`/client-portal/projects/${record.project_id}`);
-            }
-          }}
+        <Link
+          href={`/client-portal/projects/${record.project_id}`}
+          className="font-medium hover:text-[rgb(var(--color-secondary-600))]"
+          onClick={(e) => e.stopPropagation()}
         >
           {value}
-        </div>
+        </Link>
       )
     },
     {
@@ -89,17 +82,14 @@ export default function ProjectsOverviewPage() {
       width: '10%',
       render: (_, record) => {
         return (
-          <Button 
+          <Link
             id={`view-project-${record.project_id}`}
-            variant="ghost" 
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewProject(record);
-            }}
+            href={`/client-portal/projects/${record.project_id}`}
+            className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100"
+            onClick={(e) => e.stopPropagation()}
           >
             <ExternalLink className="h-4 w-4" />
-          </Button>
+          </Link>
         );
       }
     }

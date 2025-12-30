@@ -23,10 +23,10 @@ import {
   Paperclip,
   ChevronDown,
   ChevronUp,
-  Loader2,
   Eye,
   X
 } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
 
 interface Document {
   document_id: string;
@@ -338,17 +338,18 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
       <>
         <div className="space-y-2">
           {/* Header row with upload and toggle */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => documents.length > 0 && setExpanded(!expanded)}
               disabled={loading || documents.length === 0}
-              className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1.5 disabled:cursor-default disabled:hover:text-gray-600"
+              className="text-gray-500 hover:text-gray-700 flex items-center gap-1 disabled:cursor-default disabled:hover:text-gray-500 p-1 rounded hover:bg-gray-100 transition-colors"
+              title={loading ? '' : `${documents.length} ${documents.length === 1 ? t('projects.documents.file', 'file') : t('projects.documents.files', 'files')}`}
             >
-              <Paperclip className="w-3.5 h-3.5" />
-              <span className="font-medium">
-                {loading ? '...' : `${documents.length} ${documents.length === 1 ? t('projects.documents.file', 'file') : t('projects.documents.files', 'files')}`}
-              </span>
+              <Paperclip className="w-4 h-4" />
+              {!loading && documents.length > 0 && (
+                <span className="text-xs font-medium min-w-[1rem] text-center">{documents.length}</span>
+              )}
               {!loading && documents.length > 0 && (
                 expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
               )}
@@ -366,15 +367,14 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 font-medium"
-              title={t('projects.documents.upload', 'Upload')}
+              className="text-purple-600 hover:text-purple-700 p-1 rounded hover:bg-purple-50 transition-colors"
+              title={uploading ? t('common.uploading', 'Uploading...') : t('projects.documents.upload', 'Upload')}
             >
               {uploading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Spinner size="xs" />
               ) : (
-                <Upload className="w-3.5 h-3.5" />
+                <Upload className="w-4 h-4" />
               )}
-              <span>{uploading ? t('common.uploading', 'Uploading...') : t('projects.documents.upload', 'Upload')}</span>
             </button>
           </div>
 
@@ -385,10 +385,64 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
 
           {/* Expanded document list */}
           {expanded && documents.length > 0 && (
-            <div className="space-y-2 pt-1">
-              {documents.map((doc) => (
-                <DocumentCard key={doc.document_id} doc={doc} showFullDetails={false} />
-              ))}
+            <div className="space-y-1.5 pt-1">
+              {documents.map((doc) => {
+                const FileIcon = getFileIcon(doc.mime_type);
+                const fileExt = getFileExtension(doc.document_name, doc.mime_type);
+                const canView = isViewableType(doc.mime_type);
+                const isImage = doc.mime_type?.startsWith('image/');
+
+                return (
+                  <div
+                    key={doc.document_id}
+                    className={`flex items-center gap-2 p-2 bg-white rounded border border-gray-200 hover:border-gray-300 transition-colors ${canView ? 'cursor-pointer' : ''}`}
+                    onClick={() => canView && handleDocumentClick(doc)}
+                  >
+                    {/* Small thumbnail/icon */}
+                    <div className="relative flex-shrink-0">
+                      {isImage && doc.file_id ? (
+                        <div className="w-8 h-8 bg-gray-100 rounded overflow-hidden">
+                          <img
+                            src={`/api/documents/view/${doc.file_id}`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                          <FileIcon className="w-4 h-4 text-gray-500" />
+                        </div>
+                      )}
+                      <span className="absolute -bottom-0.5 -right-0.5 text-[7px] font-bold bg-purple-100 text-purple-700 px-0.5 rounded">
+                        {fileExt}
+                      </span>
+                    </div>
+
+                    {/* File name - truncated */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-900 truncate" title={doc.document_name}>
+                        {doc.document_name}
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {formatFileSize(doc.file_size)}
+                      </p>
+                    </div>
+
+                    {/* Download button only */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDownload(doc, e)}
+                      className="p-1 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors flex-shrink-0"
+                      title={t('projects.documents.download', 'Download')}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -432,7 +486,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
             >
               {uploading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  <Spinner size="xs" className="mr-1" />
                   {t('common.uploading', 'Uploading...')}
                 </>
               ) : (

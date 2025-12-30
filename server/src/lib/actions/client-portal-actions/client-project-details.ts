@@ -294,6 +294,23 @@ export async function getClientProjectTasksForKanban(projectId: string, phaseId?
       .select(knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"));
   }
 
+  // Join for checklist_progress if requested
+  if (visibleFields.includes('checklist_progress')) {
+    query = query
+      .select(
+        knex.raw(`(
+          SELECT COUNT(*)::int
+          FROM task_checklist_items
+          WHERE task_id = pt.task_id AND tenant = pt.tenant
+        ) as checklist_total`),
+        knex.raw(`(
+          SELECT COUNT(*)::int
+          FROM task_checklist_items
+          WHERE task_id = pt.task_id AND tenant = pt.tenant AND completed = true
+        ) as checklist_completed`)
+      );
+  }
+
   // Order by status display_order, then task order
   const tasks = await query
     .orderByRaw('COALESCE(psm.display_order, 999)')
