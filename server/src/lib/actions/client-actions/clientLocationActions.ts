@@ -128,22 +128,21 @@ export async function updateClientLocation(
   }
 
   const updatedLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Get the existing location first to check current state
+    const existingLocation = await trx('client_locations')
+      .where({
+        location_id: locationId,
+        tenant: tenant,
+        is_active: true
+      })
+      .first();
+
+    if (!existingLocation) {
+      throw new Error('Active location not found');
+    }
+
     // If setting is_default to true, first clear other defaults for this client
     if (locationData.is_default === true) {
-      // Get the location to find its client_id
-      // Only active locations can be set as default (consistent with setDefaultClientLocation)
-      const existingLocation = await trx('client_locations')
-        .where({
-          location_id: locationId,
-          tenant: tenant,
-          is_active: true
-        })
-        .first();
-
-      if (!existingLocation) {
-        throw new Error('Active location not found');
-      }
-
       // Clear is_default from all other active locations for this client
       // Only clear active locations to preserve historical audit data on inactive rows
       await trx('client_locations')
@@ -160,10 +159,36 @@ export async function updateClientLocation(
         });
     }
 
+    // If unsetting is_default on the current default, reassign to another active location
+    // (same logic as deleteClientLocation to ensure there's always one default)
+    if (locationData.is_default === false && existingLocation.is_default) {
+      const nextDefault = await trx('client_locations')
+        .where({
+          client_id: existingLocation.client_id,
+          tenant: tenant,
+          is_active: true
+        })
+        .whereNot('location_id', locationId)
+        .first();
+
+      if (nextDefault) {
+        await trx('client_locations')
+          .where({
+            location_id: nextDefault.location_id,
+            tenant: tenant
+          })
+          .update({
+            is_default: true,
+            updated_at: trx.fn.now()
+          });
+      }
+    }
+
     const [location] = await trx('client_locations')
       .where({
         location_id: locationId,
-        tenant: tenant
+        tenant: tenant,
+        is_active: true
       })
       .update({
         ...locationData,
@@ -282,6 +307,7 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
 
   const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get the location to find its client_id
+    // Only active locations can be set as default
     const location = await trx('client_locations')
       .where({
         location_id: locationId,
@@ -291,7 +317,7 @@ export async function setDefaultClientLocation(locationId: string): Promise<void
       .first();
 
     if (!location) {
-      throw new Error('Location not found');
+      throw new Error('Active location not found');
     }
 
     // Remove default from all other active locations for this client
