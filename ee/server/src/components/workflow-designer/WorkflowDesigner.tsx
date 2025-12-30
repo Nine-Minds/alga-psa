@@ -13,8 +13,8 @@ import {
   Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
   FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical,
   // Business operations icons
-  Receipt, MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building,
-  Bell, Calendar, SquareCheck, StickyNote
+  MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building,
+  Bell, Calendar, SquareCheck, StickyNote, ClipboardList
 } from 'lucide-react';
 import {
   getStepTypeColor,
@@ -2722,7 +2722,7 @@ const WorkflowDesigner: React.FC = () => {
       const actionId = itemWithAction.actionId.toLowerCase();
       
       // Business Operations - Tickets
-      if (actionId === 'tickets.create') return <Receipt className={iconClass} />;
+      if (actionId === 'tickets.create') return <ClipboardList className={iconClass} />;
       if (actionId === 'tickets.add_comment') return <MessageSquare className={iconClass} />;
       if (actionId === 'tickets.update_fields') return <Edit className={iconClass} />;
       if (actionId === 'tickets.assign') return <UserPlus className={iconClass} />;
