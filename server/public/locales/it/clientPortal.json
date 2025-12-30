@@ -304,6 +304,8 @@
     "timeline": "Cronologia",
     "milestones": "Milestone",
     "phasesAndTasks": "Fasi e Attività",
+    "kanbanView": "Kanban",
+    "listView": "Elenco",
     "task": "attività",
     "tasks": {
       "title": "Attività",

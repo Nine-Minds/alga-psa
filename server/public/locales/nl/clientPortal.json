@@ -304,6 +304,8 @@
     "timeline": "Tijdlijn",
     "milestones": "Mijlpalen",
     "phasesAndTasks": "Fasen & Taken",
+    "kanbanView": "Kanban",
+    "listView": "Lijst",
     "task": "taak",
     "tasks": {
       "title": "Taken",

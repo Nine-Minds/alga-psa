@@ -310,6 +310,8 @@
     "timeline": "Timeline",
     "milestones": "Milestones",
     "phasesAndTasks": "Phases & Tasks",
+    "kanbanView": "Kanban",
+    "listView": "List",
     "task": "task",
     "tasks": {
       "title": "Tasks",
@@ -327,13 +329,19 @@
       "noPhases": "No phases to display"
     },
     "documents": {
-      "title": "Documents",
-      "upload": "Upload Document",
+      "title": "Attachments",
+      "upload": "Upload",
       "noDocuments": "No documents attached",
       "uploadSuccess": "Document uploaded successfully",
       "uploadError": "Failed to upload document",
+      "downloadError": "Failed to download document",
       "dragDrop": "Drag and drop a file here, or click to select",
-      "maxSize": "Maximum file size: {{size}}MB"
+      "maxSize": "Maximum file size: {{size}}MB",
+      "file": "file",
+      "files": "files",
+      "uploadHint": "Upload files to share with this task",
+      "download": "Download",
+      "view": "View"
     },
     "team": "Team Members",
     "budget": "Budget",
@@ -867,6 +875,7 @@
     "active": "Active",
     "inactive": "Inactive",
     "loading": "Loading...",
+    "uploading": "Uploading...",
     "error": "An error occurred",
     "save": "Save",
     "cancel": "Cancel",

@@ -433,7 +433,7 @@ export default function TaskListView({
                             <span className="text-base font-semibold text-gray-900">
                               {phaseGroup.phase.phase_name}
                             </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
                               {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
                             </span>
                             {/* Phase dates */}
@@ -632,7 +632,7 @@ export default function TaskListView({
                                 {/* Est. Hours */}
                                 <td className="py-2 px-3">
                                   <span className="text-sm text-gray-700">
-                                    {task.estimated_hours ?? '-'}
+                                    {task.estimated_hours != null ? (task.estimated_hours / 60).toFixed(1) : '-'}
                                   </span>
                                 </td>
 

@@ -304,6 +304,8 @@
     "timeline": "Zeitplan",
     "milestones": "Meilensteine",
     "phasesAndTasks": "Phasen & Aufgaben",
+    "kanbanView": "Kanban",
+    "listView": "Liste",
     "task": "Aufgabe",
     "tasks": {
       "title": "Aufgaben",
