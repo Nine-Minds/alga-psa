@@ -152,6 +152,15 @@ export class StripeService {
   }
 
   /**
+   * Get the initialized Stripe client
+   * Use this instead of directly accessing this.stripe to ensure initialization is complete
+   */
+  async getStripeClient(): Promise<Stripe> {
+    await this.ensureInitialized();
+    return this.stripe;
+  }
+
+  /**
    * Get or import a Stripe customer for a tenant
    *
    * Strategy:

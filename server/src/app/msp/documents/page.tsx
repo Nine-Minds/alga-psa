@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { DocumentFilters as DocumentFilterType } from 'server/src/interfaces/document.interface';
 import Documents from 'server/src/components/documents/Documents';
 import { Card } from 'server/src/components/ui/Card';
@@ -11,7 +11,6 @@ import { IUser } from '@shared/interfaces/user.interfaces';
 import { toast } from 'react-hot-toast';
 import DocumentFilters from 'server/src/components/documents/DocumentFilters';
 import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
-import { useDocuments } from 'server/src/hooks/useDocuments';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUserPreference } from 'server/src/hooks/useUserPreference';
@@ -42,6 +41,9 @@ export default function DocumentsPage() {
   const [entityTypeOptions, setEntityTypeOptions] = useState<SelectOption[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Use a ref to track if this is the first render to avoid unnecessary filter updates
+  const isFirstRender = useRef(true);
+
   const [filterInputs, setFilterInputs] = useState<DocumentFilterType>({
     entityType: '',
     searchTerm: '',
@@ -54,17 +56,8 @@ export default function DocumentsPage() {
     folder_path: currentFolder || undefined
   });
 
-  const {
-    documents,
-    totalCount,
-    isLoading,
-    error: documentsError,
-    refetch: refetchDocuments
-  } = useDocuments(
-    initialized ? filterInputs : {},
-    1,  // Page 1 - Documents component handles its own pagination
-    9   // Default page size for grid view - Documents component handles page size changes
-  );
+  // Documents.tsx handles its own fetching in folder mode - no need for useDocuments here
+  // This avoids duplicate fetching since Documents.tsx calls getDocumentsByFolder internally
 
   const capitalizeFirstLetter = (string: string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -89,9 +82,7 @@ export default function DocumentsPage() {
     setFilterInputs(clearedFilters);
   };
 
-  const handleDocumentUpdate = async () => {
-    await refetchDocuments();
-  };
+  // Documents.tsx handles refresh internally via its own refreshDocuments callback
 
   const handleFolderNavigate = (folderPath: string | null, clearShowAll: boolean = true) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -130,12 +121,25 @@ export default function DocumentsPage() {
 
 
   // Update folder_path and clear showAllDocuments flag when folder changes
+  // Skip the first render since initial state already has the correct folder_path
   useEffect(() => {
-    setFilterInputs(prev => ({
-      ...prev,
-      folder_path: currentFolder || undefined,
-      showAllDocuments: currentFolder ? false : prev.showAllDocuments
-    }));
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    setFilterInputs(prev => {
+      // Only update if folder actually changed to avoid unnecessary re-renders
+      const newFolderPath = currentFolder || undefined;
+      if (prev.folder_path === newFolderPath) {
+        return prev;
+      }
+      return {
+        ...prev,
+        folder_path: newFolderPath,
+        showAllDocuments: currentFolder ? false : prev.showAllDocuments
+      };
+    });
   }, [currentFolder]);
 
   useEffect(() => {
@@ -205,7 +209,8 @@ export default function DocumentsPage() {
     return <DocumentsPageSkeleton />;
   }
 
-  const displayError = error || documentsError;
+  // Only use local error state - Documents.tsx handles its own error display in folder mode
+  const displayError = error;
 
   return (
     <div className="p-6">
@@ -287,11 +292,9 @@ export default function DocumentsPage() {
             ) : (
               <Documents
                 id='documents'
-                documents={documents}
+                documents={[]}
                 gridColumns={3}
                 userId={currentUserId}
-                isLoading={isLoading}
-                onDocumentCreated={handleDocumentUpdate}
                 searchTermFromParent={filterInputs.searchTerm}
                 filters={filterInputs}
               />

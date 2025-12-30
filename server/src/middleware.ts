@@ -121,6 +121,11 @@ const _middleware = auth((request) => {
       return applyCorsHeaders(response, origin);
     }
 
+    // Document thumbnail/preview routes use session auth (path: /api/documents/[id]/thumbnail or /preview)
+    if (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview'))) {
+      return applyCorsHeaders(response, origin);
+    }
+
     // For API routes that need authentication, check for API key presence only;
     // full validation happens in API route handlers (Node runtime)
     if (!apiKey) {
