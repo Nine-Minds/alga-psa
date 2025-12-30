@@ -1312,6 +1312,17 @@ const handleClose = () => {
         setPendingNavigationUrl(null);
     }, []);
 
+    // Callback for BackNav to check unsaved changes before navigation
+    const handleBeforeNavigate = useCallback(() => {
+        if (hasUnsavedChanges) {
+            // Set pending URL and show dialog
+            setPendingNavigationUrl('/msp/tickets');
+            setShowNavigateAwayDialog(true);
+            return false; // Prevent immediate navigation
+        }
+        return true; // Allow navigation
+    }, [hasUnsavedChanges]);
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
@@ -1319,7 +1330,7 @@ const handleClose = () => {
                     <div className="flex items-center space-x-5 min-w-0 flex-1">
                         {/* Only show the Back button if NOT in a drawer, using BackNav */}
                         {!isInDrawer && (
-                            <BackNav href="/msp/tickets">← Back to Tickets</BackNav>
+                            <BackNav href="/msp/tickets" onBeforeNavigate={handleBeforeNavigate}>← Back to Tickets</BackNav>
                         )}
                         <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
