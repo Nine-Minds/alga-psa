@@ -1,6 +1,13 @@
 import axios, { AxiosInstance } from 'axios';
+import { randomUUID } from 'crypto';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
+import type {
+  Microsoft365DiagnosticsOptions,
+  Microsoft365DiagnosticsReport,
+  Microsoft365DiagnosticsStep,
+  DiagnosticsStepStatus,
+} from '../../../interfaces/microsoft365-diagnostics.interfaces';
 import { getSecretProviderInstance } from '../../../core';
 import { getAdminConnection } from '../../../db/admin';
 
@@ -84,8 +91,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private async buildFolderResourcePath(desiredFolder: string): Promise<{ resource: string; resolvedFolder: string }> {
     const mailboxBase = this.getMailboxBasePath();
     const fallbackResult = {
-      resource: `${mailboxBase}/mailFolders('Inbox')/messages`,
-      resolvedFolder: 'Inbox',
+      resource: `${mailboxBase}/mailFolders/inbox/messages`,
+      resolvedFolder: 'Inbox (well-known)',
     };
 
     const requested = (desiredFolder || 'Inbox').trim();
@@ -93,27 +100,29 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       return fallbackResult;
     }
 
+    // Prefer Graph "well-known folder names" (path segment) over display names.
+    // This avoids issues where default folders are localized or not resolved by display name.
     const wellKnownMap: Record<string, string> = {
-      inbox: 'Inbox',
-      archive: 'Archive',
-      drafts: 'Drafts',
-      deleteditems: 'DeletedItems',
-      junkemail: 'JunkEmail',
-      sentitems: 'SentItems',
-      outbox: 'Outbox',
-      conversationhistory: 'ConversationHistory',
-      clutter: 'Clutter',
-      conflicts: 'Conflicts',
-      localfailures: 'LocalFailures',
-      serverfailures: 'ServerFailures',
-      syncissues: 'SyncIssues',
+      inbox: 'inbox',
+      archive: 'archive',
+      drafts: 'drafts',
+      deleteditems: 'deleteditems',
+      junkemail: 'junkemail',
+      sentitems: 'sentitems',
+      outbox: 'outbox',
+      conversationhistory: 'conversationhistory',
+      clutter: 'clutter',
+      conflicts: 'conflicts',
+      localfailures: 'localfailures',
+      serverfailures: 'serverfailures',
+      syncissues: 'syncissues',
     };
 
     const normalizedKey = requested.toLowerCase().replace(/\s+/g, '');
     if (wellKnownMap[normalizedKey]) {
       return {
-        resource: `${mailboxBase}/mailFolders('${wellKnownMap[normalizedKey]}')/messages`,
-        resolvedFolder: requested,
+        resource: `${mailboxBase}/mailFolders/${wellKnownMap[normalizedKey]}/messages`,
+        resolvedFolder: `${requested} (well-known)`,
       };
     }
 
@@ -125,9 +134,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         (f: any) => (f.displayName || '').toLowerCase() === requested.toLowerCase()
       );
       if (match?.id) {
-        const folderId = String(match.id).replace(/'/g, "''");
         return {
-          resource: `${mailboxBase}/mailFolders('${folderId}')/messages`,
+          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(String(match.id))}/messages`,
           resolvedFolder: match.displayName || requested,
         };
       }
@@ -263,7 +271,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
         grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/Mail.Read offline_access',
+        scope: 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Read.Shared offline_access',
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -553,6 +561,582 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     } catch (error: any) {
       return { success: false, error: error.message || 'Connection test failed' };
     }
+  }
+
+  private buildTokenFingerprint(token?: string): string | undefined {
+    if (!token) return undefined;
+    return `${token.slice(0, 4)}...(${token.length})`;
+  }
+
+  private decodeJwtPayload(token: string): Record<string, any> | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+      const payload = parts[1];
+      const padded = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
+      const json = Buffer.from(padded, 'base64').toString('utf8');
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  private extractGraphIds(headers: any): { requestId?: string; clientRequestId?: string } {
+    const lower = (k: string) => (headers?.[k] ?? headers?.[k.toLowerCase()]);
+    return {
+      requestId: lower('request-id'),
+      clientRequestId: lower('client-request-id'),
+    };
+  }
+
+  private classifyGraphFailure(error: any): {
+    status?: number;
+    code?: string;
+    message: string;
+    requestId?: string;
+    clientRequestId?: string;
+    responseBody?: unknown;
+  } {
+    const res = error?.response;
+    const status = res?.status;
+    const graphErr = res?.data?.error || res?.data;
+    const message =
+      graphErr?.message ||
+      error?.message ||
+      (typeof error === 'string' ? error : 'Unknown error');
+    const code = graphErr?.code || (status ? String(status) : undefined);
+    const ids = this.extractGraphIds(res?.headers);
+    return {
+      status,
+      code,
+      message,
+      requestId: ids.requestId,
+      clientRequestId: ids.clientRequestId,
+      responseBody: res?.data,
+    };
+  }
+
+  private mapRecommendations(args: {
+    status?: number;
+    code?: string;
+    message: string;
+    missingScopes?: string[];
+  }): string[] {
+    const recs: string[] = [];
+
+    if (args.missingScopes?.length) {
+      recs.push(
+        `Missing delegated scopes in the access token: ${args.missingScopes.join(', ')}. Re-authorize with Mail.Read and Mail.Read.Shared (and ensure admin consent if required).`
+      );
+    }
+
+    if (args.status === 401) {
+      recs.push('Microsoft authorization appears invalid/expired. Re-authorize the Microsoft provider to refresh consent and tokens.');
+    }
+
+    if (args.status === 403) {
+      recs.push(
+        'Microsoft Graph returned 403 (Forbidden). Verify the user has delegated access to the target mailbox/folder and that Mail.Read/Mail.Read.Shared consent was granted.'
+      );
+    }
+
+    if (args.status === 404) {
+      const msg = (args.message || '').toLowerCase();
+      if (msg.includes('default folder inbox not found') || msg.includes('specified object was not found in the store')) {
+        recs.push(
+          'Graph reports the mailbox store/folder is missing. Confirm the address is a real user/shared mailbox (not a group/contact) and that the mailbox is provisioned (can be opened in Outlook/OWA).'
+        );
+      } else {
+        recs.push('Graph returned 404 (Not Found). Verify the mailbox address is correct for this tenant, and the folder exists and is accessible.');
+      }
+    }
+
+    if (args.status === 429) {
+      recs.push('Microsoft Graph throttled the request (429). Wait and retry; consider reducing repeated diagnostics runs.');
+    }
+
+    return recs;
+  }
+
+  private computeOverallStatus(steps: Microsoft365DiagnosticsStep[]): DiagnosticsStepStatus {
+    if (steps.some((s) => s.status === 'fail')) return 'fail';
+    if (steps.some((s) => s.status === 'warn')) return 'warn';
+    return 'pass';
+  }
+
+  /**
+   * Run a structured Microsoft 365 diagnostics checklist for this provider.
+   *
+   * NOTE: This is intended for admin self-serve troubleshooting. It always redacts secrets,
+   * and (optionally) performs a live create+delete subscription test.
+   */
+  async runMicrosoft365Diagnostics(options: Microsoft365DiagnosticsOptions = {}): Promise<Microsoft365DiagnosticsReport> {
+    const startedAt = new Date().toISOString();
+    const steps: Microsoft365DiagnosticsStep[] = [];
+    const recommendations = new Set<string>();
+
+    const requiredScopes = options.requiredScopes?.length
+      ? options.requiredScopes
+      : ['Mail.Read', 'Mail.Read.Shared'];
+
+    const folderListTop = Math.max(1, Math.min(options.folderListTop ?? 100, 250));
+
+    const addStep = (step: Microsoft365DiagnosticsStep) => steps.push(step);
+
+    const runStep = async (id: string, title: string, fn: () => Promise<Omit<Microsoft365DiagnosticsStep, 'id' | 'title' | 'startedAt' | 'durationMs'>>): Promise<void> => {
+      const stepStarted = Date.now();
+      const stepIso = new Date().toISOString();
+      try {
+        const partial = await fn();
+        addStep({
+          id,
+          title,
+          startedAt: stepIso,
+          durationMs: Date.now() - stepStarted,
+          status: partial.status,
+          http: partial.http,
+          data: partial.data,
+          error: partial.error,
+        });
+      } catch (e: any) {
+        const classified = this.classifyGraphFailure(e);
+        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) => recommendations.add(r));
+        addStep({
+          id,
+          title,
+          startedAt: stepIso,
+          durationMs: Date.now() - stepStarted,
+          status: 'fail',
+          error: {
+            message: classified.message,
+            status: classified.status,
+            code: classified.code,
+            requestId: classified.requestId,
+            clientRequestId: classified.clientRequestId,
+            responseBody: classified.responseBody,
+          },
+        });
+      }
+    };
+
+    // Step: load credentials (tokens present)
+    await runStep('tokens_present', 'Load stored OAuth tokens', async () => {
+      try {
+        await this.loadCredentials();
+        return {
+          status: 'pass' as const,
+          data: {
+            accessToken: this.buildTokenFingerprint(this.accessToken),
+            refreshToken: this.buildTokenFingerprint(this.refreshToken),
+            tokenExpiresAt: this.tokenExpiresAt?.toISOString(),
+          },
+        };
+      } catch (e: any) {
+        const msg = e?.message || 'Microsoft OAuth tokens not found. Please complete authorization.';
+        recommendations.add('No Microsoft OAuth tokens are available for this provider. Re-authorize the Microsoft provider to generate tokens.');
+        return {
+          status: 'fail' as const,
+          error: { message: msg },
+        };
+      }
+    });
+
+    // If tokens didn't load, we can't proceed.
+    if (!this.accessToken) {
+      const report: Microsoft365DiagnosticsReport = {
+        createdAt: startedAt,
+        summary: {
+          providerId: this.config.id,
+          tenantId: this.config.tenant,
+          providerType: 'microsoft',
+          mailbox: this.config.mailbox,
+          folder: (this.config.folder_to_monitor || 'Inbox').trim() || 'Inbox',
+          mailboxBasePath: this.getMailboxBasePath(),
+          notificationUrl: this.config.webhook_notification_url,
+          targetResource: undefined,
+          authenticatedUserEmail: undefined,
+          tokenExpiresAt: this.tokenExpiresAt?.toISOString(),
+          overallStatus: this.computeOverallStatus(steps),
+        },
+        steps,
+        recommendations: Array.from(recommendations),
+        supportBundle: {
+          createdAt: startedAt,
+          providerId: this.config.id,
+          tenantId: this.config.tenant,
+          providerType: 'microsoft',
+          tokens: { accessToken: this.buildTokenFingerprint(this.accessToken), refreshToken: this.buildTokenFingerprint(this.refreshToken) },
+          steps,
+          recommendations: Array.from(recommendations),
+        },
+      };
+      return report;
+    }
+
+    // Step: decode token claims + scope check
+    let decodedScopes: string[] = [];
+    await runStep('token_claims', 'Decode access token claims and scopes', async () => {
+      const payload = this.decodeJwtPayload(this.accessToken!);
+      const scp = typeof payload?.scp === 'string' ? payload!.scp : '';
+      decodedScopes = scp ? scp.split(' ').filter(Boolean) : [];
+
+      const missing = requiredScopes.filter((s) => !decodedScopes.includes(s));
+      this.mapRecommendations({ status: undefined, code: undefined, message: '', missingScopes: missing }).forEach((r) => recommendations.add(r));
+
+      return {
+        status: missing.length ? ('warn' as const) : ('pass' as const),
+        data: {
+          tid: payload?.tid,
+          aud: payload?.aud,
+          iss: payload?.iss,
+          appid: payload?.appid,
+          upn: payload?.upn,
+          preferred_username: payload?.preferred_username,
+          scp: decodedScopes,
+        },
+      };
+    });
+
+    // Step: /me baseline
+    await runStep('graph_me', 'Microsoft Graph /me baseline check', async () => {
+      const clientRequestId = randomUUID();
+      const res = await this.httpClient.get('/me', {
+        params: { $select: 'id,userPrincipalName,mail' },
+        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+      });
+      const ids = this.extractGraphIds(res.headers);
+      this.authenticatedUserEmail = res.data?.userPrincipalName || res.data?.mail;
+      return {
+        status: 'pass' as const,
+        http: {
+          method: 'GET',
+          path: '/me?$select=id,userPrincipalName,mail',
+          status: res.status,
+          requestId: ids.requestId,
+          clientRequestId: ids.clientRequestId || clientRequestId,
+        },
+        data: {
+          id: res.data?.id,
+          userPrincipalName: res.data?.userPrincipalName,
+          mail: res.data?.mail,
+        },
+      };
+    });
+
+    const mailboxBase = this.getMailboxBasePath();
+    await runStep('mailbox_base_path', 'Compute mailbox base path decision', async () => {
+      const configured = (this.config.mailbox || '').trim();
+      const authenticated = (this.authenticatedUserEmail || '').trim();
+      const decision = mailboxBase;
+      const rationale =
+        !configured
+          ? 'No mailbox configured; defaulting to /me'
+          : authenticated && configured.toLowerCase() === authenticated.toLowerCase()
+            ? 'Configured mailbox matches authenticated user; using /me'
+            : 'Configured mailbox differs from authenticated user; using /users/{mailbox}';
+
+      return {
+        status: 'pass' as const,
+        data: {
+          configuredMailbox: configured,
+          authenticatedUserEmail: authenticated || undefined,
+          mailboxBasePath: decision,
+          rationale,
+        },
+      };
+    });
+
+    // Step: /users/{mailbox} directory existence (only when using /users)
+    await runStep('mailbox_directory', 'Validate mailbox directory object (only for shared/delegated)', async () => {
+      if (mailboxBase === '/me') {
+        return { status: 'skip' as const, data: { reason: 'Using /me; no /users lookup required.' } };
+      }
+
+      const clientRequestId = randomUUID();
+      const res = await this.httpClient.get(mailboxBase, {
+        params: { $select: 'id,userPrincipalName,mail' },
+        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+      });
+      const ids = this.extractGraphIds(res.headers);
+      return {
+        status: 'pass' as const,
+        http: {
+          method: 'GET',
+          path: `${mailboxBase}?$select=id,userPrincipalName,mail`,
+          status: res.status,
+          requestId: ids.requestId,
+          clientRequestId: ids.clientRequestId || clientRequestId,
+        },
+        data: {
+          id: res.data?.id,
+          userPrincipalName: res.data?.userPrincipalName,
+          mail: res.data?.mail,
+        },
+      };
+    });
+
+    // Step: inbox well-known folder check
+    await runStep('inbox_well_known', 'Validate well-known Inbox folder exists', async () => {
+      const clientRequestId = randomUUID();
+      const path = `${mailboxBase}/mailFolders/inbox`;
+      const res = await this.httpClient.get(path, {
+        params: { $select: 'id,displayName' },
+        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+      });
+      const ids = this.extractGraphIds(res.headers);
+      return {
+        status: 'pass' as const,
+        http: {
+          method: 'GET',
+          path: `${path}?$select=id,displayName`,
+          status: res.status,
+          requestId: ids.requestId,
+          clientRequestId: ids.clientRequestId || clientRequestId,
+        },
+        data: {
+          id: res.data?.id,
+          displayName: res.data?.displayName,
+        },
+      };
+    });
+
+    // Step: folder enumeration (used for troubleshooting and custom folder resolution)
+    let folders: Array<{ id: string; displayName?: string }> = [];
+    await runStep('folder_list', 'List top-level mail folders', async () => {
+      const clientRequestId = randomUUID();
+      const path = `${mailboxBase}/mailFolders`;
+      const res = await this.httpClient.get(path, {
+        params: { $select: 'id,displayName', $top: folderListTop },
+        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+      });
+      const ids = this.extractGraphIds(res.headers);
+      folders = (res.data?.value || []).map((f: any) => ({ id: String(f.id), displayName: f.displayName }));
+      return {
+        status: 'pass' as const,
+        http: {
+          method: 'GET',
+          path: `${path}?$select=id,displayName&$top=${folderListTop}`,
+          status: res.status,
+          requestId: ids.requestId,
+          clientRequestId: ids.clientRequestId || clientRequestId,
+        },
+        data: {
+          count: folders.length,
+          truncated: folders.length >= folderListTop,
+          sample: folders.slice(0, 25),
+        },
+      };
+    });
+
+    // Step: resolve configured folder to a resource
+    const configuredFolder = (this.config.folder_to_monitor || 'Inbox').trim() || 'Inbox';
+    let targetResource: string | undefined;
+    await runStep('folder_resolve', 'Resolve configured folder to a Graph resource', async () => {
+      const { resource, resolvedFolder } = await this.buildFolderResourcePath(configuredFolder);
+      targetResource = resource;
+
+      // If the configured folder is not Inbox and we couldn't find it in the folder list, warn.
+      const normalized = configuredFolder.toLowerCase();
+      const hasMatch =
+        normalized === 'inbox' ||
+        folders.some((f) => (f.displayName || '').toLowerCase() === normalized);
+
+      if (!hasMatch && normalized !== 'inbox') {
+        recommendations.add(`Configured folder '${configuredFolder}' was not found in the top-level folder list. Consider choosing a valid folder name.`);
+      }
+
+      return {
+        status: 'pass' as const,
+        data: {
+          configuredFolder,
+          resolvedFolder,
+          targetResource: resource,
+        },
+      };
+    });
+
+    // Step: preflight read from the exact resource we will subscribe to
+    await runStep('messages_preflight', 'Preflight message read for target resource', async () => {
+      if (!targetResource) {
+        return { status: 'fail' as const, error: { message: 'Target resource was not resolved' } };
+      }
+      const clientRequestId = randomUUID();
+      const res = await this.httpClient.get(`${targetResource}`, {
+        params: { $top: 1, $select: 'id,receivedDateTime,subject' },
+        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+      });
+      const ids = this.extractGraphIds(res.headers);
+      return {
+        status: 'pass' as const,
+        http: {
+          method: 'GET',
+          path: `${targetResource}?$top=1&$select=id,receivedDateTime,subject`,
+          status: res.status,
+          requestId: ids.requestId,
+          clientRequestId: ids.clientRequestId || clientRequestId,
+          resource: targetResource,
+        },
+        data: {
+          messagesReadable: true,
+          sampleCount: Array.isArray(res.data?.value) ? res.data.value.length : undefined,
+        },
+      };
+    });
+
+    // Step: live subscription create+delete test (optional, default enabled for admin diagnostics)
+    await runStep('subscription_live_test', 'Live subscription create+delete test', async () => {
+      if (!options.liveSubscriptionTest) {
+        return { status: 'skip' as const, data: { reason: 'Disabled by options' } };
+      }
+
+      const webhookUrl = this.config.webhook_notification_url;
+      if (!webhookUrl) {
+        recommendations.add('Webhook notification URL is not configured. Save provider settings and ensure a public base URL is configured.');
+        return { status: 'fail' as const, error: { message: 'Webhook notification URL not configured' } };
+      }
+      if (!targetResource) {
+        return { status: 'fail' as const, error: { message: 'Target resource was not resolved' } };
+      }
+
+      const createClientRequestId = randomUUID();
+      const subscriptionClientState = `diag-${randomUUID()}`;
+      const createPayload = {
+        changeType: 'created',
+        notificationUrl: webhookUrl,
+        resource: targetResource,
+        expirationDateTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        clientState: subscriptionClientState,
+        latestSupportedTlsVersion: 'v1_2',
+      };
+
+      let subscriptionId: string | undefined;
+      try {
+        const createRes = await this.httpClient.post('/subscriptions', createPayload, {
+          headers: { 'client-request-id': createClientRequestId, 'return-client-request-id': 'true' },
+        });
+        const ids = this.extractGraphIds(createRes.headers);
+        subscriptionId = createRes.data?.id;
+
+        // Best-effort delete to avoid leaving residual subscriptions
+        const deleteClientRequestId = randomUUID();
+        try {
+          const delRes = await this.httpClient.delete(`/subscriptions/${encodeURIComponent(String(subscriptionId))}`, {
+            headers: { 'client-request-id': deleteClientRequestId, 'return-client-request-id': 'true' },
+          });
+          const delIds = this.extractGraphIds(delRes.headers);
+          return {
+            status: 'pass' as const,
+            http: {
+              method: 'POST',
+              path: '/subscriptions',
+              status: createRes.status,
+              requestId: ids.requestId,
+              clientRequestId: ids.clientRequestId || createClientRequestId,
+              resource: targetResource,
+            },
+            data: {
+              createdSubscriptionId: subscriptionId,
+              deletedSubscriptionId: subscriptionId,
+              deleteRequestId: delIds.requestId,
+              deleteClientRequestId: delIds.clientRequestId || deleteClientRequestId,
+            },
+          };
+        } catch (deleteErr: any) {
+          const classified = this.classifyGraphFailure(deleteErr);
+          recommendations.add(
+            `Subscription created (${subscriptionId}) but deletion failed. You may need to manually clean up the subscription in Microsoft 365; Graph request-id: ${classified.requestId || 'unknown'}.`
+          );
+          return {
+            status: 'warn' as const,
+            http: {
+              method: 'POST',
+              path: '/subscriptions',
+              status: createRes.status,
+              requestId: ids.requestId,
+              clientRequestId: ids.clientRequestId || createClientRequestId,
+              resource: targetResource,
+            },
+            data: {
+              createdSubscriptionId: subscriptionId,
+              deleteFailed: true,
+            },
+            error: {
+              message: classified.message,
+              status: classified.status,
+              code: classified.code,
+              requestId: classified.requestId,
+              clientRequestId: classified.clientRequestId,
+              responseBody: classified.responseBody,
+            },
+          };
+        }
+      } catch (createErr: any) {
+        const classified = this.classifyGraphFailure(createErr);
+        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) => recommendations.add(r));
+        return {
+          status: 'fail' as const,
+          http: {
+            method: 'POST',
+            path: '/subscriptions',
+            clientRequestId: createClientRequestId,
+            resource: targetResource,
+          },
+          error: {
+            message: classified.message,
+            status: classified.status,
+            code: classified.code,
+            requestId: classified.requestId,
+            clientRequestId: classified.clientRequestId || createClientRequestId,
+            responseBody: classified.responseBody,
+          },
+        };
+      }
+    });
+
+    // Build final report
+    const summaryMailbox = options.includeIdentifiers ? this.config.mailbox : 'redacted';
+    const summaryNotificationUrl = options.includeIdentifiers ? this.config.webhook_notification_url : undefined;
+    const summaryTargetResource = options.includeIdentifiers ? targetResource : undefined;
+
+    const report: Microsoft365DiagnosticsReport = {
+      createdAt: startedAt,
+      summary: {
+        providerId: this.config.id,
+        tenantId: this.config.tenant,
+        providerType: 'microsoft',
+        mailbox: summaryMailbox,
+        folder: configuredFolder,
+        mailboxBasePath: mailboxBase,
+        notificationUrl: summaryNotificationUrl,
+        targetResource: summaryTargetResource,
+        authenticatedUserEmail: options.includeIdentifiers ? this.authenticatedUserEmail : undefined,
+        tokenExpiresAt: this.tokenExpiresAt?.toISOString(),
+        overallStatus: this.computeOverallStatus(steps),
+      },
+      steps,
+      recommendations: Array.from(recommendations),
+      supportBundle: {
+        createdAt: startedAt,
+        providerId: this.config.id,
+        tenantId: this.config.tenant,
+        mailbox: summaryMailbox,
+        folder: configuredFolder,
+        mailboxBasePath: mailboxBase,
+        notificationUrl: summaryNotificationUrl,
+        targetResource: summaryTargetResource,
+        authenticatedUserEmail: options.includeIdentifiers ? this.authenticatedUserEmail : undefined,
+        token: {
+          accessToken: this.buildTokenFingerprint(this.accessToken),
+          refreshToken: this.buildTokenFingerprint(this.refreshToken),
+          tokenExpiresAt: this.tokenExpiresAt?.toISOString(),
+          decodedScopes,
+        },
+        steps,
+        recommendations: Array.from(recommendations),
+      },
+    };
+
+    return report;
   }
 
   /**

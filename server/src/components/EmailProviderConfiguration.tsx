@@ -14,6 +14,7 @@ import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-provide
 import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
+import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
 import LoadingIndicator from './ui/LoadingIndicator';
 import {
@@ -101,6 +102,8 @@ function EmailProviderConfigurationContent({
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
   const [tenant, setTenant] = useState<string>('');
   const [activeSection, setActiveSection] = useState<'providers' | 'defaults'>('providers');
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
 
   // Load existing providers on component mount
@@ -224,6 +227,11 @@ function EmailProviderConfigurationContent({
     }
   };
 
+  const handleRunDiagnostics = (provider: EmailProvider) => {
+    setDiagnosticsProvider(provider);
+    setDiagnosticsOpen(true);
+  };
+
   // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
@@ -305,6 +313,7 @@ function EmailProviderConfigurationContent({
           onRefresh={loadProviders}
           onRefreshWatchSubscription={handleRefreshWatchSubscription}
           onRetryRenewal={handleRetryRenewal}
+          onRunDiagnostics={handleRunDiagnostics}
           onAddClick={() => setWizardOpen(true)}
         />
 
@@ -391,6 +400,11 @@ function EmailProviderConfigurationContent({
               onClose={() => setWizardOpen(false)}
               onComplete={async (provider) => { onProviderAdded?.(provider); setWizardOpen(false); await loadProviders(); }}
               tenant={tenant}
+            />
+            <Microsoft365DiagnosticsDialog
+              isOpen={diagnosticsOpen}
+              onClose={() => setDiagnosticsOpen(false)}
+              provider={diagnosticsProvider}
             />
           </>
         ) : (

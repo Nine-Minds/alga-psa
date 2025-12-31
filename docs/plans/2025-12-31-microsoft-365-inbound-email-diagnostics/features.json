@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a Microsoft-only “Run Diagnostics” action in the admin inbound email provider UI.",
+    "implemented": true,
+    "prdRefs": ["PRD#Users and Primary Flows", "PRD#UX / UI Notes"]
+  },
+  {
+    "id": "F002",
+    "description": "Render diagnostics as an ordered checklist with per-step status (pass/warn/fail), duration, and expandable details.",
+    "implemented": true,
+    "prdRefs": ["PRD#UX / UI Notes", "PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Provide a “Copy support bundle” export (text + JSON) with redaction applied.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements", "PRD#Security / Permissions"]
+  },
+  {
+    "id": "F004",
+    "description": "Add an admin-only server entrypoint `runMicrosoft365Diagnostics(providerId, options)` returning a structured report.",
+    "implemented": true,
+    "prdRefs": ["PRD#Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Define a stable `DiagnosticsReport` + `DiagnosticsStepResult` schema for Microsoft diagnostics responses.",
+    "implemented": true,
+    "prdRefs": ["PRD#Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Gate diagnostics execution and visibility to tenant admins (or equivalent privileged role).",
+    "implemented": true,
+    "prdRefs": ["PRD#Security / Permissions"]
+  },
+  {
+    "id": "F007",
+    "description": "Implement redaction helpers for secrets and identifiers (tokens, client secrets; optional email redaction for exports).",
+    "implemented": false,
+    "prdRefs": ["PRD#Security / Permissions"]
+  },
+  {
+    "id": "F008",
+    "description": "Add a diagnostics runner method to `shared/services/email/providers/MicrosoftGraphAdapter.ts` that reuses existing auth + Graph client.",
+    "implemented": true,
+    "prdRefs": ["PRD#Adapter integration"]
+  },
+  {
+    "id": "F009",
+    "description": "Ensure each diagnostic Graph request includes a `client-request-id` and capture the Graph `request-id` from headers/errors.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements", "PRD#Observability"]
+  },
+  {
+    "id": "F010",
+    "description": "Diagnostics step: validate stored OAuth tokens exist and report token expiry state (valid/expired/unknown) without exposing tokens.",
+    "implemented": false,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Diagnostics step: decode access token claims and display key fields (tenant id, delegated scopes, audience, issuer, subject) in a sanitized form.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements", "PRD#Security / Permissions"]
+  },
+  {
+    "id": "F012",
+    "description": "Diagnostics step: call `GET /me` and report the authenticated user principal (used for `/me` vs `/users/{mailbox}` decision).",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Diagnostics step: compute and display mailbox base path decision (`/me` vs `/users/{mailbox}`) and the rationale.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Diagnostics step: validate mailbox directory object existence (e.g., `GET /users/{mailbox}`) and classify failures (404 vs 403).",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Diagnostics step: validate mailbox store/folder access using the well-known Inbox endpoint (`.../mailFolders/inbox`) before any subscription attempt.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "Diagnostics step: enumerate top-level mail folders (`.../mailFolders?$select=id,displayName&$top=N`) when Inbox or configured folder access fails.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Diagnostics step: attempt to resolve the configured folder to a concrete folder id (match by well-known name and/or displayName).",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Diagnostics step: preflight the exact target messages resource with a read-only call (e.g., `.../messages?$top=1`) to predict subscription success.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "Add error classification and recommendation mapping for common Graph failures (401/invalid_grant, 403, 404 mailbox, 404 Inbox/store, 429 throttling).",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F020",
+    "description": "Surface tailored remediation steps in the UI (missing scopes, admin consent required, shared mailbox delegation, folder selection guidance, provisioning hints).",
+    "implemented": true,
+    "prdRefs": ["PRD#Problem", "PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F021",
+    "description": "Add a concurrency/rate limit guard so diagnostics runs are serialized per provider and capped per tenant.",
+    "implemented": false,
+    "prdRefs": ["PRD#Requirements/Non-functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Record structured logs for each step outcome (including correlation IDs) and ensure the UI displays Graph `request-id` on failures.",
+    "implemented": false,
+    "prdRefs": ["PRD#Observability"]
+  },
+  {
+    "id": "F023",
+    "description": "Expose an optional export toggle to include or redact mailbox identifiers in the support bundle.",
+    "implemented": false,
+    "prdRefs": ["PRD#Security / Permissions", "PRD#Open Questions"]
+  },
+  {
+    "id": "F024",
+    "description": "Add a read-only “/me baseline” check to distinguish ‘Graph works for me’ from ‘shared mailbox access fails’ when applicable.",
+    "implemented": true,
+    "prdRefs": ["PRD#Problem", "PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F025",
+    "description": "Add UI affordance to copy the exact mailbox + folder + resource string the system is trying to subscribe to.",
+    "implemented": false,
+    "prdRefs": ["PRD#UX / UI Notes", "PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F026",
+    "description": "Add an advanced, explicitly-confirmed ‘live subscription test’ option (create and immediately delete a short-lived subscription) if approved.",
+    "implemented": false,
+    "prdRefs": ["PRD#Open Questions", "PRD#Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F027",
+    "description": "Ensure diagnostics output clearly indicates which provider config values were used (mailbox, folder, notification URL), with secrets redacted.",
+    "implemented": true,
+    "prdRefs": ["PRD#Requirements/Functional Requirements", "PRD#Security / Permissions"]
+  },
+  {
+    "id": "F028",
+    "description": "Add a short help panel linking to Microsoft 365 prerequisites (mailbox type, shared mailbox permissions, admin consent) and common fixes.",
+    "implemented": false,
+    "prdRefs": ["PRD#Problem", "PRD#UX / UI Notes"]
+  }
+]
