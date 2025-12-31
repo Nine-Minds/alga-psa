@@ -2,12 +2,12 @@
 # Test-specific environment variables
 x-test-environment: &test-environment
   # ---- APP -------
-  VERSION: ${VERSION}
+  VERSION: ${APP_VERSION:-0.0.0}
   APP_NAME: ${APP_NAME:-sebastian}
   APP_ENV: test
   NODE_ENV: test
-  HOST: ${HOST}
-  VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
+  HOST: ${APP_HOST:-localhost:3000}
+  VERIFY_EMAIL_ENABLED: ${APP_VERIFY_EMAIL:-false}
   EDITION: ${EDITION:-community}
 
   # ---- REDIS ----
@@ -52,13 +52,13 @@ x-test-environment: &test-environment
   EMAIL_USERNAME: test@example.com
 
   # ---- CRYPTO ----
-  CRYPTO_SALT_BYTES: ${SALT_BYTES}
-  CRYPTO_ITERATION: ${ITERATION}
-  CRYPTO_KEY_LENGTH: ${KEY_LENGTH}
-  CRYPTO_ALGORITHM: ${ALGORITHM}
+  SALT_BYTES: ${CRYPTO_SALT_BYTES:-16}
+  ITERATIONS: ${CRYPTO_ITERATION:-100000}
+  KEY_LENGTH: ${CRYPTO_KEY_LENGTH:-64}
+  ALGORITHM: ${CRYPTO_ALGORITHM:-aes-256-gcm}
 
   # ---- TOKEN ----
-  TOKEN_EXPIRES: ${TOKEN_EXPIRES}
+  TOKEN_EXPIRES: ${TOKEN_EXPIRES:-1h}
 
   # ---- AUTH ----
   NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}

@@ -13,11 +13,11 @@ services:
       DB_USER_SERVER: ${DB_USER_SERVER:-app_user}
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       PGBOSS_DATABASE: ${PGBOSS_DATABASE:-server}
-      VERSION: ${VERSION}
+      VERSION: ${APP_VERSION:-0.0.0}
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV:-development}
       NODE_ENV: ${APP_ENV:-development}
-      HOST: ${HOST}
+      HOST: ${APP_HOST:-localhost:3000}
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
