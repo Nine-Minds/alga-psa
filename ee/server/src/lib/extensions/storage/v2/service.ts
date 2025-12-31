@@ -20,6 +20,7 @@ import {
   StorageServiceError,
   StorageValidationError,
 } from './errors';
+import { encodeJsonb } from './json';
 
 type NamespaceRecord = {
   tenant: string;
@@ -157,6 +158,7 @@ export class ExtensionStorageServiceV2 {
     return this.knex.transaction(async (trx) => {
       const ttlExpiresAt = computeTtl(request.ttlSeconds);
       const valueSize = byteLength(request.value);
+      const valueJson = encodeJsonb(request.value);
       const metadataValue = request.metadata ?? {};
       const metadataSize = byteLength(metadataValue);
 
@@ -224,7 +226,7 @@ export class ExtensionStorageServiceV2 {
         namespace: request.namespace,
         key: request.key,
         revision,
-        value: request.value,
+        value: valueJson,
         metadata: metadataValue,
         ttl_expires_at: ttlExpiresAt,
         created_at: existing ? existing.created_at : now,
@@ -238,7 +240,7 @@ export class ExtensionStorageServiceV2 {
         .onConflict(['tenant', 'extension_install_id', 'namespace', 'key'])
         .merge({
           revision,
-          value: request.value,
+          value: valueJson,
           metadata: metadataValue,
           ttl_expires_at: ttlExpiresAt,
           updated_at: now,
@@ -379,7 +381,7 @@ export class ExtensionStorageServiceV2 {
           namespace: request.namespace,
           key: item.key,
           revision: existing ? Number(existing.revision) + 1 : 1,
-          value: item.value,
+          value: encodeJsonb(item.value),
           metadata: item.metadata ?? {},
           ttl_expires_at: ttlExpiresAt,
           created_at: existing ? existing.created_at : now,
