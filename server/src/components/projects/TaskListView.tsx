@@ -4,11 +4,23 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskChecklistItem, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { ITaskResource } from 'server/src/interfaces/taskResource.interfaces';
-import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, ArrowRight, Ban, GitBranch, Calendar, GripVertical, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { Button } from 'server/src/components/ui/Button';
 import { format } from 'date-fns';
 import { TagList } from 'server/src/components/tags';
+
+// Progress bar component
+function ProgressBar({ percentage }: { percentage: number }) {
+  return (
+    <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+      <div
+        className="bg-purple-600 h-1.5 rounded-full transition-all duration-300"
+        style={{ width: `${Math.min(percentage, 100)}%` }}
+      />
+    </div>
+  );
+}
 
 interface TaskListViewProps {
   projectId: string;
@@ -37,6 +49,8 @@ interface PhaseGroup {
   phase: IProjectPhase;
   statusGroups: { status: ProjectStatus; tasks: IProjectTask[] }[];
   totalTasks: number;
+  completedTasks: number;
+  completionPercentage: number;
 }
 
 export default function TaskListView({
@@ -99,6 +113,11 @@ export default function TaskListView({
   const phaseGroups = useMemo((): PhaseGroup[] => {
     const groups: PhaseGroup[] = [];
 
+    // Create a set of closed status IDs for quick lookup
+    const closedStatusIds = new Set(
+      statuses.filter(s => s.is_closed).map(s => s.project_status_mapping_id)
+    );
+
     phases.forEach(phase => {
       const phaseTasks = filteredTasks.filter(task => task.phase_id === phase.phase_id);
 
@@ -111,10 +130,20 @@ export default function TaskListView({
         return { status, tasks: statusTasks };
       });
 
+      // Calculate completion stats
+      const completedTasks = phaseTasks.filter(task =>
+        closedStatusIds.has(task.project_status_mapping_id)
+      ).length;
+      const completionPercentage = phaseTasks.length > 0
+        ? Math.round((completedTasks / phaseTasks.length) * 100)
+        : 0;
+
       groups.push({
         phase,
         statusGroups,
-        totalTasks: phaseTasks.length
+        totalTasks: phaseTasks.length,
+        completedTasks,
+        completionPercentage
       });
     });
 
@@ -346,9 +375,9 @@ export default function TaskListView({
   }, [draggedTask, onTaskMove]);
 
   return (
-    <div className="flex flex-col bg-white border border-gray-200 rounded-lg shadow-md h-[calc(100vh-220px)] min-h-[400px]">
+    <div className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-[calc(100vh-220px)] min-h-[400px]">
       {/* Column headers - sticky */}
-      <div className="bg-gray-50 border-b border-gray-200 flex-shrink-0 rounded-t-lg">
+      <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <table className="w-full table-fixed">
           <colgroup>
             <col style={{ width: '40px' }} />
@@ -363,29 +392,29 @@ export default function TaskListView({
           </colgroup>
           <thead>
             <tr>
-              <th className="w-10" />
-              <th className="py-2 pr-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+              <th className="w-10 px-3 py-3" />
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Task Name
               </th>
-              <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Deps
               </th>
-              <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tags
               </th>
-              <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Assignee
               </th>
-              <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Due Date
               </th>
-              <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Est. Hours
               </th>
-              <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actual Hours
               </th>
-              <th className="py-2 px-3 text-right text-xs font-medium text-gray-500 tracking-wider">
+              <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -416,57 +445,88 @@ export default function TaskListView({
                 {/* Phase header row */}
                 <thead>
                   <tr
-                    className="bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                    className="bg-white hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => togglePhase(phaseGroup.phase.phase_id)}
                   >
-                    <td className="py-2" colSpan={9}>
-                      <div className="flex items-start gap-2 pl-3">
-                        <div className="pt-0.5">
+                    <td className="py-3" colSpan={9}>
+                      <div className="flex items-start gap-2 px-3">
+                        <div className="pt-1 text-gray-400">
                           {isPhaseExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                            <ChevronDown className="h-5 w-5" />
                           ) : (
-                            <ChevronRight className="h-4 w-4 text-gray-400" />
+                            <ChevronRight className="h-5 w-5" />
                           )}
                         </div>
-                        <div className="flex flex-col gap-1 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-base font-semibold text-gray-900">
-                              {phaseGroup.phase.phase_name}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                              {phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'}
-                            </span>
-                            {/* Phase dates */}
-                            {(phaseGroup.phase.start_date || phaseGroup.phase.end_date) && (
-                              <span className="flex items-center gap-1 text-xs text-gray-500 ml-2">
-                                <Calendar className="h-3 w-3" />
-                                {phaseGroup.phase.start_date && format(new Date(phaseGroup.phase.start_date), 'MMM d')}
-                                {phaseGroup.phase.start_date && phaseGroup.phase.end_date && ' - '}
-                                {phaseGroup.phase.end_date && format(new Date(phaseGroup.phase.end_date), 'MMM d, yyyy')}
-                              </span>
-                            )}
-                            {/* Add Task button */}
-                            {onAddTask && (
-                              <Button
-                                id={`add-task-${phaseGroup.phase.phase_id}`}
-                                variant="ghost"
-                                size="sm"
-                                className="ml-auto mr-4"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onAddTask(phaseGroup.phase.phase_id);
-                                }}
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Add Task
-                              </Button>
-                            )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-3">
+                                <h4 className="font-semibold text-gray-900">{phaseGroup.phase.phase_name}</h4>
+                                <span className="text-sm text-gray-500">
+                                  ({phaseGroup.totalTasks} {phaseGroup.totalTasks === 1 ? 'task' : 'tasks'})
+                                </span>
+                              </div>
+
+                              {/* Phase description */}
+                              {phaseGroup.phase.description && (
+                                <p className="text-sm text-gray-600 mt-1">{phaseGroup.phase.description}</p>
+                              )}
+
+                              {/* Phase dates */}
+                              {(phaseGroup.phase.start_date || phaseGroup.phase.end_date) && (
+                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                                  {phaseGroup.phase.start_date && (
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3.5 h-3.5" />
+                                      Start: {format(new Date(phaseGroup.phase.start_date), 'PP')}
+                                    </span>
+                                  )}
+                                  {phaseGroup.phase.end_date && (
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3.5 h-3.5" />
+                                      End: {format(new Date(phaseGroup.phase.end_date), 'PP')}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-4 ml-4">
+                              {/* Completion percentage */}
+                              {phaseGroup.totalTasks > 0 && (
+                                <div className="text-right min-w-[80px]">
+                                  <div className="text-lg font-bold text-purple-600">
+                                    {phaseGroup.completionPercentage}%
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    Complete
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Add Task button */}
+                              {onAddTask && (
+                                <Button
+                                  id={`add-task-${phaseGroup.phase.phase_id}`}
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddTask(phaseGroup.phase.phase_id);
+                                  }}
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Add Task
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          {/* Phase description */}
-                          {phaseGroup.phase.description && (
-                            <span className="text-sm text-gray-500">
-                              {phaseGroup.phase.description}
-                            </span>
+
+                          {/* Progress bar */}
+                          {phaseGroup.totalTasks > 0 && (
+                            <div className="mt-3">
+                              <ProgressBar percentage={phaseGroup.completionPercentage} />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -488,7 +548,7 @@ export default function TaskListView({
                         <React.Fragment key={statusKey}>
                           {/* Status header row - also serves as drop zone for empty statuses */}
                           <tr
-                            className={`bg-gray-50/50 hover:bg-gray-100/50 cursor-pointer transition-colors ${
+                            className={`bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors ${
                               isDropTarget && statusGroup.tasks.length === 0 ? 'ring-2 ring-primary-400 ring-inset bg-primary-50' : ''
                             }`}
                             onClick={() => toggleStatus(phaseGroup.phase.phase_id, statusGroup.status.project_status_mapping_id)}
@@ -553,7 +613,7 @@ export default function TaskListView({
                                   </tr>
                                 )}
                                 <tr
-                                className={`bg-white hover:bg-gray-50 group transition-all ${
+                                className={`${taskIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 group transition-colors ${
                                   isDragging ? 'opacity-50' : ''
                                 } ${showDropIndicator ? 'bg-primary-50' : ''}`}
                                 draggable={!!onTaskMove}
@@ -564,26 +624,33 @@ export default function TaskListView({
                                 onDrop={(e) => handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, statusGroup.tasks, taskIndex)}
                               >
                                 {/* Drag handle and indent spacer */}
-                                <td className="py-2 pl-3 w-10">
+                                <td className="py-3 px-3 w-10">
                                   {onTaskMove && (
                                     <GripVertical className="h-4 w-4 text-gray-400 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
                                   )}
                                 </td>
 
                                 {/* Task Name */}
-                                <td className="py-2 pr-3">
-                                  <button
-                                    type="button"
-                                    className="text-sm text-gray-900 hover:text-primary-600 hover:underline cursor-pointer truncate text-left max-w-full"
-                                    onClick={() => onTaskClick(task)}
-                                    title={task.task_name}
-                                  >
-                                    {task.task_name}
-                                  </button>
+                                <td className="py-3 px-6">
+                                  <div className="min-w-0">
+                                    <button
+                                      type="button"
+                                      className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline cursor-pointer truncate text-left max-w-full block"
+                                      onClick={() => onTaskClick(task)}
+                                      title={task.task_name}
+                                    >
+                                      {task.task_name}
+                                    </button>
+                                    {task.description && (
+                                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1" title={task.description}>
+                                        {task.description}
+                                      </p>
+                                    )}
+                                  </div>
                                 </td>
 
                                 {/* Dependencies */}
-                                <td className="py-2 px-3">
+                                <td className="py-3 px-3">
                                   {hasDependencies && dependencyTooltipContent && (
                                     <Tooltip content={dependencyTooltipContent}>
                                       <div className="flex items-center gap-1 cursor-help">
@@ -597,7 +664,7 @@ export default function TaskListView({
                                 </td>
 
                                 {/* Tags */}
-                                <td className="py-2 px-3">
+                                <td className="py-3 px-3">
                                   {tags.length > 0 && (
                                     <TagList
                                       tags={tags}
@@ -607,7 +674,7 @@ export default function TaskListView({
                                 </td>
 
                                 {/* Assignee */}
-                                <td className="py-2 px-3">
+                                <td className="py-3 px-3">
                                   <div className="flex items-center gap-1">
                                     <span className="text-sm text-gray-700 truncate">
                                       {getAssigneeName(task.assigned_to)}
@@ -621,7 +688,7 @@ export default function TaskListView({
                                 </td>
 
                                 {/* Due Date */}
-                                <td className="py-2 px-3">
+                                <td className="py-3 px-3">
                                   {task.due_date && (
                                     <span className="text-sm text-gray-700">
                                       {format(new Date(task.due_date), 'MMM d, yyyy')}
@@ -630,16 +697,16 @@ export default function TaskListView({
                                 </td>
 
                                 {/* Est. Hours */}
-                                <td className="py-2 px-3">
+                                <td className="py-3 px-3">
                                   <span className="text-sm text-gray-700">
                                     {task.estimated_hours != null ? (task.estimated_hours / 60).toFixed(1) : '-'}
                                   </span>
                                 </td>
 
                                 {/* Actual Hours */}
-                                <td className="py-2 px-3">
+                                <td className="py-3 px-3">
                                   <span className="text-sm text-gray-700">
-                                    {task.actual_hours ?? '-'}
+                                    {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
                                   </span>
                                 </td>
 

@@ -323,13 +323,19 @@
       "noPhases": "Geen fasen om weer te geven"
     },
     "documents": {
-      "title": "Documenten",
-      "upload": "Document uploaden",
+      "title": "Bijlagen",
+      "upload": "Uploaden",
       "noDocuments": "Geen documenten bijgevoegd",
       "uploadSuccess": "Document succesvol geüpload",
       "uploadError": "Kan document niet uploaden",
+      "downloadError": "Kan document niet downloaden",
       "dragDrop": "Sleep een bestand hierheen of klik om te selecteren",
-      "maxSize": "Maximale bestandsgrootte: {{size}}MB"
+      "maxSize": "Maximale bestandsgrootte: {{size}}MB",
+      "file": "bestand",
+      "files": "bestanden",
+      "uploadHint": "Upload bestanden om te delen met deze taak",
+      "download": "Downloaden",
+      "view": "Bekijken"
     },
     "team": "Teamleden",
     "budget": "Budget",

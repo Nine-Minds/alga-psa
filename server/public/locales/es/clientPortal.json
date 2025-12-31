@@ -323,13 +323,19 @@
       "noPhases": "No hay fases para mostrar"
     },
     "documents": {
-      "title": "Documentos",
-      "upload": "Subir documento",
+      "title": "Anexos",
+      "upload": "Subir",
       "noDocuments": "No hay documentos adjuntos",
       "uploadSuccess": "Documento subido correctamente",
       "uploadError": "Error al subir el documento",
+      "downloadError": "Error al descargar el documento",
       "dragDrop": "Arrastra y suelta un archivo aquí, o haz clic para seleccionar",
-      "maxSize": "Tamaño máximo de archivo: {{size}}MB"
+      "maxSize": "Tamaño máximo de archivo: {{size}}MB",
+      "file": "archivo",
+      "files": "archivos",
+      "uploadHint": "Sube archivos para compartir con esta tarea",
+      "download": "Descargar",
+      "view": "Ver"
     },
     "team": "Miembros del equipo",
     "budget": "Presupuesto",

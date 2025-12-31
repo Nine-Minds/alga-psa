@@ -323,13 +323,19 @@
       "noPhases": "Aucune phase à afficher"
     },
     "documents": {
-      "title": "Documents",
-      "upload": "Télécharger un document",
+      "title": "Pièces jointes",
+      "upload": "Téléverser",
       "noDocuments": "Aucun document joint",
       "uploadSuccess": "Document téléchargé avec succès",
       "uploadError": "Échec du téléchargement du document",
+      "downloadError": "Échec du téléchargement du document",
       "dragDrop": "Glissez et déposez un fichier ici, ou cliquez pour sélectionner",
-      "maxSize": "Taille maximale du fichier: {{size}}MB"
+      "maxSize": "Taille maximale du fichier: {{size}}MB",
+      "file": "fichier",
+      "files": "fichiers",
+      "uploadHint": "Téléversez des fichiers à partager avec cette tâche",
+      "download": "Télécharger",
+      "view": "Voir"
     },
     "team": "Membres de l'équipe",
     "budget": "Budget",

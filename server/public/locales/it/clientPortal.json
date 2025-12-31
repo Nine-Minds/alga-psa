@@ -323,13 +323,19 @@
       "noPhases": "Nessuna fase da visualizzare"
     },
     "documents": {
-      "title": "Documenti",
-      "upload": "Carica documento",
+      "title": "Allegati",
+      "upload": "Carica",
       "noDocuments": "Nessun documento allegato",
       "uploadSuccess": "Documento caricato con successo",
       "uploadError": "Impossibile caricare il documento",
+      "downloadError": "Impossibile scaricare il documento",
       "dragDrop": "Trascina e rilascia un file qui, o fai clic per selezionare",
-      "maxSize": "Dimensione massima del file: {{size}}MB"
+      "maxSize": "Dimensione massima del file: {{size}}MB",
+      "file": "file",
+      "files": "file",
+      "uploadHint": "Carica file da condividere con questa attività",
+      "download": "Scarica",
+      "view": "Visualizza"
     },
     "team": "Membri del team",
     "budget": "Budget",

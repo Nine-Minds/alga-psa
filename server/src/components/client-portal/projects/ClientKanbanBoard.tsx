@@ -126,7 +126,7 @@ function TaskCard({
         {visibleFields.includes('estimated_hours') && task.estimated_hours != null && (
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 text-gray-400" />
-            <span>{t('projects.tasks.estimatedHours', 'Est')}: {(task.estimated_hours / 60).toFixed(1)}h</span>
+            <span>{t('projects.tasks.estimatedHours', 'Est')}: {(task.estimated_hours / 60).toFixed(1)}</span>
           </div>
         )}
 
@@ -134,7 +134,7 @@ function TaskCard({
         {visibleFields.includes('actual_hours') && task.actual_hours != null && (
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 text-gray-400" />
-            <span>{t('projects.fields.hoursLogged', 'Logged')}: {(task.actual_hours / 60).toFixed(1)}h</span>
+            <span>{t('projects.fields.hoursLogged', 'Logged')}: {(task.actual_hours / 60).toFixed(1)}</span>
           </div>
         )}
 
@@ -317,7 +317,7 @@ export default function ClientKanbanBoard({
               <div className="p-3">
                 <div className="flex items-center justify-between">
                   <div
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border-2"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-2xl border-2"
                     style={{
                       backgroundColor: lightenColor(statusColor, 0.75),
                       borderColor: lightenColor(statusColor, 0.50)

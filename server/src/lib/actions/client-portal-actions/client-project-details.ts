@@ -192,7 +192,7 @@ export async function getClientProjectTasks(projectId: string) {
   }
 
   const phases = await knex('project_phases')
-    .select('phase_id', 'phase_name')
+    .select('phase_id', 'phase_name', 'description', 'start_date', 'end_date')
     .where({ project_id: projectId, tenant })
     .orderBy('order_key');
 

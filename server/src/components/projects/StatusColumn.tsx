@@ -285,16 +285,19 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   return (
     <div
       className={`${styles.kanbanColumn} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid transition-all duration-200 ${
-        isDraggedOver ? 'border-purple-500 ' + styles.dragOver : 'border-gray-200'
+        isDraggedOver ? 'border-purple-500 ' + styles.dragOver : (configuredColor ? '' : borderColor)
       }`}
-      style={configuredColor ? { backgroundColor: lightenColor(configuredColor, 0.85) } : undefined}
+      style={configuredColor ? {
+        backgroundColor: lightenColor(configuredColor, 0.85),
+        borderColor: isDraggedOver ? undefined : lightenColor(configuredColor, 0.70)
+      } : undefined}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
       <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
         <div
-          className={`flex ${configuredColor ? '' : darkBackgroundColor} rounded-[20px] border-2 ${configuredColor ? '' : borderColor} shadow-sm items-center ps-3 py-3 pe-4`}
+          className={`flex ${configuredColor ? '' : darkBackgroundColor} rounded-2xl border-2 ${configuredColor ? '' : borderColor} shadow-sm items-center ps-3 py-3 pe-4`}
           style={configuredColor ? {
             backgroundColor: lightenColor(configuredColor, 0.70),
             borderColor: lightenColor(configuredColor, 0.40)
@@ -317,9 +320,15 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
           >
             <Plus className="w-4 h-4 text-white" />
           </Button>
-          <div className={styles.taskCount}>
+          <span
+            className="text-xs font-medium px-2 py-0.5 rounded-full"
+            style={configuredColor ? {
+              backgroundColor: lightenColor(configuredColor, 0.70),
+              color: configuredColor
+            } : undefined}
+          >
             {displayTasks.length}
-          </div>
+          </span>
         </div>
       </div>
       <div className={`${styles.kanbanTasks} ${styles.taskList}`} ref={tasksRef}>

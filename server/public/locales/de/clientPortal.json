@@ -323,13 +323,19 @@
       "noPhases": "Keine Phasen anzuzeigen"
     },
     "documents": {
-      "title": "Dokumente",
-      "upload": "Dokument hochladen",
+      "title": "Anhänge",
+      "upload": "Hochladen",
       "noDocuments": "Keine Dokumente angehängt",
       "uploadSuccess": "Dokument erfolgreich hochgeladen",
       "uploadError": "Fehler beim Hochladen des Dokuments",
+      "downloadError": "Fehler beim Herunterladen des Dokuments",
       "dragDrop": "Datei hier ablegen oder klicken zum Auswählen",
-      "maxSize": "Maximale Dateigröße: {{size}}MB"
+      "maxSize": "Maximale Dateigröße: {{size}}MB",
+      "file": "Datei",
+      "files": "Dateien",
+      "uploadHint": "Dateien hochladen, um sie mit dieser Aufgabe zu teilen",
+      "download": "Herunterladen",
+      "view": "Anzeigen"
     },
     "team": "Teammitglieder",
     "budget": "Budget",

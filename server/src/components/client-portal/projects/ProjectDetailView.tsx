@@ -178,12 +178,12 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
             setTasks(result.tasks);
           }
           if (result?.phases && phases.length === 0) {
-            setPhases(result.phases.map((p: { phase_id: string; phase_name: string }) => ({
+            setPhases(result.phases.map((p: { phase_id: string; phase_name: string; description?: string | null; start_date?: Date | null; end_date?: Date | null }) => ({
               phase_id: p.phase_id,
               phase_name: p.phase_name,
-              description: null,
-              start_date: null,
-              end_date: null
+              description: p.description ?? null,
+              start_date: p.start_date ?? null,
+              end_date: p.end_date ?? null
             })));
           }
         }
