@@ -218,7 +218,7 @@ export class ExtensionStorageServiceV2 {
         });
       }
 
-      const now = trx.fn.now();
+      const now = new Date();
       const revision = existing ? Number(existing.revision) + 1 : 1;
       const insertRow = {
         tenant: this.tenantId,
@@ -371,7 +371,7 @@ export class ExtensionStorageServiceV2 {
         });
       }
 
-      const now = trx.fn.now();
+      const now = new Date();
       const rows = request.items.map((item) => {
         const existing = existingMap.get(item.key);
         const ttlExpiresAt = computeTtl(item.ttlSeconds);
