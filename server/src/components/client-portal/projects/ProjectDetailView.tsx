@@ -12,8 +12,7 @@ import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import {
   getClientProjectPhases,
   getClientProjectTasks,
-  getClientProjectStatuses,
-  getClientProjectTasksForKanban
+  getClientProjectStatuses
 } from 'server/src/lib/actions/client-portal-actions/client-project-details';
 import ClientKanbanBoard from './ClientKanbanBoard';
 import ClientTaskListView from './ClientTaskListView';
@@ -59,6 +58,15 @@ interface Task {
   checklist_completed?: number;
 }
 
+interface TaskDependency {
+  dependency_id: string;
+  predecessor_task_id: string;
+  successor_task_id: string;
+  dependency_type: 'blocks' | 'blocked_by' | 'related_to';
+  predecessor_task?: { task_name: string };
+  successor_task?: { task_name: string };
+}
+
 const VIEW_MODE_STORAGE_KEY = 'client-portal-project-view-mode';
 
 export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
@@ -82,6 +90,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const [phases, setPhases] = useState<Phase[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskDependencies, setTaskDependencies] = useState<{ [taskId: string]: { predecessors: TaskDependency[]; successors: TaskDependency[] } }>({});
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -154,7 +163,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
     fetchData();
   }, [project.project_id, showPhases, showTasks]);
 
-  // Load tasks based on view mode
+  // Load tasks - single function handles both views
   useEffect(() => {
     const fetchTasks = async () => {
       // Skip if tasks are not shown - phases are fetched by the first useEffect
@@ -165,27 +174,30 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
       setDataLoading(true);
       try {
-        if (effectiveViewMode === 'kanban') {
-          // Kanban view: filter by selected phase
-          const result = await getClientProjectTasksForKanban(project.project_id, selectedPhaseId || undefined);
-          if (result?.tasks) {
-            setTasks(result.tasks);
-          }
+        // Single function for both views - kanban passes phaseId filter, list doesn't
+        const options = effectiveViewMode === 'kanban' && selectedPhaseId
+          ? { phaseId: selectedPhaseId }
+          : undefined;
+
+        const result = await getClientProjectTasks(project.project_id, options);
+
+        if (result?.tasks) {
+          setTasks(result.tasks);
+        }
+        if (result?.taskDependencies) {
+          setTaskDependencies(result.taskDependencies);
         } else {
-          // List view: get all tasks
-          const result = await getClientProjectTasks(project.project_id);
-          if (result?.tasks) {
-            setTasks(result.tasks);
-          }
-          if (result?.phases && phases.length === 0) {
-            setPhases(result.phases.map((p: { phase_id: string; phase_name: string; description?: string | null; start_date?: Date | null; end_date?: Date | null }) => ({
-              phase_id: p.phase_id,
-              phase_name: p.phase_name,
-              description: p.description ?? null,
-              start_date: p.start_date ?? null,
-              end_date: p.end_date ?? null
-            })));
-          }
+          setTaskDependencies({});
+        }
+        // Use phases from result if we don't have them yet (e.g., phases not separately enabled)
+        if (result?.phases && phases.length === 0) {
+          setPhases(result.phases.map((p: { phase_id: string; phase_name: string; description?: string | null; start_date?: Date | null; end_date?: Date | null }) => ({
+            phase_id: p.phase_id,
+            phase_name: p.phase_name,
+            description: p.description ?? null,
+            start_date: p.start_date ?? null,
+            end_date: p.end_date ?? null
+          })));
         }
       } catch (error) {
         console.error('Error fetching tasks:', error);
@@ -364,6 +376,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 selectedPhaseId={selectedPhaseId}
                 onPhaseSelect={setSelectedPhaseId}
                 loading={dataLoading}
+                taskDependencies={taskDependencies}
               />
             ) : (
               <ClientTaskListView
@@ -371,6 +384,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 tasks={tasks}
                 config={config}
                 loading={dataLoading}
+                taskDependencies={taskDependencies}
               />
             )}
           </div>

@@ -5,7 +5,8 @@ import { useTranslation } from 'server/src/lib/i18n/client';
 import { format, Locale } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { IClientPortalConfig } from 'server/src/interfaces/project.interfaces';
-import { Calendar, Clock, User, FolderOpen, CheckSquare } from 'lucide-react';
+import { Calendar, Clock, User, FolderOpen, CheckSquare, Ban, GitBranch } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from 'server/src/components/ui/Spinner';
 
@@ -24,6 +25,15 @@ interface Status {
   display_order: number;
   is_closed: boolean;
   color: string | null;
+}
+
+interface TaskDependency {
+  dependency_id: string;
+  predecessor_task_id: string;
+  successor_task_id: string;
+  dependency_type: 'blocks' | 'blocked_by' | 'related_to';
+  predecessor_task?: { task_name: string };
+  successor_task?: { task_name: string };
 }
 
 interface Task {
@@ -52,6 +62,7 @@ interface ClientKanbanBoardProps {
   selectedPhaseId: string | null;
   onPhaseSelect: (phaseId: string) => void;
   loading?: boolean;
+  taskDependencies?: { [taskId: string]: { predecessors: TaskDependency[]; successors: TaskDependency[] } };
 }
 
 // Lighten a hex color by a given amount (0-1)
@@ -77,15 +88,24 @@ function lightenColor(hex: string, amount: number): string {
 function TaskCard({
   task,
   config,
-  dateLocale
+  dateLocale,
+  dependencies
 }: {
   task: Task;
   config: IClientPortalConfig;
   dateLocale: Locale;
+  dependencies?: { predecessors: TaskDependency[]; successors: TaskDependency[] };
 }) {
   const { t } = useTranslation('clientPortal');
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
-  const allowUploads = config.allow_document_uploads ?? false;
+  const allowUploads = visibleFields.includes('document_uploads');
+  const showDependencies = visibleFields.includes('dependencies');
+
+  const hasDependencies = dependencies && (dependencies.predecessors.length > 0 || dependencies.successors.length > 0);
+  const hasBlockingDeps = dependencies && (
+    dependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+    dependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+  );
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
@@ -101,11 +121,80 @@ function TaskCard({
 
       {/* Task Details */}
       <div className="space-y-1.5 text-xs text-gray-600">
-        {/* Due Date */}
-        {visibleFields.includes('due_date') && task.due_date && (
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-3 h-3 text-gray-400" />
-            <span>{format(new Date(task.due_date), 'PP', { locale: dateLocale })}</span>
+        {/* Due Date row with badges inline */}
+        {(visibleFields.includes('due_date') || visibleFields.includes('checklist_progress') || showDependencies) && (
+          <div className="flex items-center justify-between gap-2">
+            {/* Left side: Due Date */}
+            {visibleFields.includes('due_date') && task.due_date ? (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3 h-3 text-gray-400" />
+                <span>{format(new Date(task.due_date), 'PP', { locale: dateLocale })}</span>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            {/* Right side: Badges */}
+            <div className="flex items-center gap-1.5">
+              {/* Checklist Progress Badge */}
+              {visibleFields.includes('checklist_progress') && task.checklist_total != null && task.checklist_total > 0 && (
+                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                  (task.checklist_completed ?? 0) === task.checklist_total ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'
+                }`}>
+                  <CheckSquare className="w-3 h-3" />
+                  <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
+                </div>
+              )}
+
+              {/* Dependencies Badge */}
+              {showDependencies && hasDependencies && (
+                <Tooltip
+                  content={
+                    <div className="text-xs space-y-2">
+                      {dependencies!.predecessors.length > 0 && (
+                        <div>
+                          <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.dependsOn', 'Depends on')}:</div>
+                          {dependencies!.predecessors.map((d, i) => {
+                            const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                            return (
+                              <div key={i} className="flex items-center gap-1.5 ml-2">
+                                <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
+                                  {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                                </span>
+                                <span>{d.predecessor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {dependencies!.successors.length > 0 && (
+                        <div>
+                          <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.blocks', 'Blocks')}:</div>
+                          {dependencies!.successors.map((d, i) => {
+                            const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                            return (
+                              <div key={i} className="flex items-center gap-1.5 ml-2">
+                                <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
+                                  {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                                </span>
+                                <span>{d.successor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  }
+                >
+                  <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                    hasBlockingDeps ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
+                  }`}>
+                    {hasBlockingDeps ? <Ban className="w-3 h-3" /> : <GitBranch className="w-3 h-3" />}
+                    <span>{dependencies!.predecessors.length + dependencies!.successors.length}</span>
+                  </div>
+                </Tooltip>
+              )}
+            </div>
           </div>
         )}
 
@@ -135,14 +224,6 @@ function TaskCard({
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 text-gray-400" />
             <span>{t('projects.fields.hoursLogged', 'Logged')}: {(task.actual_hours / 60).toFixed(1)}</span>
-          </div>
-        )}
-
-        {/* Checklist Progress */}
-        {visibleFields.includes('checklist_progress') && task.checklist_total != null && task.checklist_total > 0 && (
-          <div className="flex items-center gap-1.5">
-            <CheckSquare className="w-3 h-3 text-gray-400" />
-            <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
           </div>
         )}
       </div>
@@ -228,7 +309,8 @@ export default function ClientKanbanBoard({
   config,
   selectedPhaseId,
   onPhaseSelect,
-  loading = false
+  loading = false,
+  taskDependencies
 }: ClientKanbanBoardProps) {
   const { t, i18n } = useTranslation('clientPortal');
   const dateLocale = getDateFnsLocale(i18n.language);
@@ -260,7 +342,7 @@ export default function ClientKanbanBoard({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Spinner size="xs" />
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -354,6 +436,7 @@ export default function ClientKanbanBoard({
                       task={task}
                       config={config}
                       dateLocale={dateLocale}
+                      dependencies={taskDependencies?.[task.task_id]}
                     />
                   ))
                 )}

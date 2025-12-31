@@ -1,6 +1,6 @@
 'use client';
 
-import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Circle, Plus } from 'lucide-react';
@@ -17,6 +17,7 @@ interface StatusColumnProps {
   taskTypes: ITaskType[];
   ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
   taskResources: { [taskId: string]: any[] };
+  taskDependencies?: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
   taskTags?: Record<string, ITag[]>;
   taskDocumentCounts?: Record<string, number>;
   allTaskTagTexts?: string[];
@@ -51,6 +52,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   users,
   ticketLinks,
   taskResources,
+  taskDependencies = {},
   taskTags = {},
   taskDocumentCounts = {},
   allTaskTagTexts = [],
@@ -346,6 +348,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               users={users}
               ticketLinks={ticketLinks[task.task_id]}
               taskResources={taskResources[task.task_id]}
+              taskDependencies={taskDependencies[task.task_id]}
               taskTags={taskTags[task.task_id] || []}
               documentCount={taskDocumentCounts[task.task_id]}
               isAnimating={animatingTasks.has(task.task_id)}

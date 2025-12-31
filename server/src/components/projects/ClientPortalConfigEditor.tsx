@@ -60,9 +60,7 @@ export default function ClientPortalConfigEditor({
                   show_phases: checked,
                   // Auto-disable dependent options when parent is disabled
                   show_phase_completion: checked ? config.show_phase_completion : false,
-                  show_tasks: checked ? config.show_tasks : false,
-                  show_task_services: checked && config.show_tasks ? config.show_task_services : false,
-                  allow_document_uploads: checked && config.show_tasks ? config.allow_document_uploads : false
+                  show_tasks: checked ? config.show_tasks : false
                 });
               }}
               disabled={disabled}
@@ -106,81 +104,36 @@ export default function ClientPortalConfigEditor({
             <Switch
               id="show-tasks"
               checked={config.show_tasks}
-              onCheckedChange={(checked) => {
-                updateConfig({
-                  show_tasks: checked,
-                  // Auto-disable dependent options when parent is disabled
-                  show_task_services: checked ? config.show_task_services : false,
-                  allow_document_uploads: checked ? config.allow_document_uploads : false
-                });
-              }}
+              onCheckedChange={(checked) => updateConfig({ show_tasks: checked })}
               disabled={disabled || !config.show_phases}
             />
           </div>
 
           {/* Task Fields Selection (nested under Show Tasks) */}
           {config.show_tasks && config.show_phases && (
-            <div className="ml-6 border-l-2 border-gray-200 pl-4 space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Visible Task Fields
-                </label>
-                <div className="space-y-2">
-                  {CONFIGURABLE_TASK_FIELDS.map(field => (
-                    <div key={field.key} className="flex items-center">
-                      <Checkbox
-                        id={`field-${field.key}`}
-                        checked={(config.visible_task_fields ?? []).includes(field.key)}
-                        onChange={() => toggleTaskField(field.key)}
-                        disabled={disabled || field.required}
-                        containerClassName=""
-                      />
-                      <label
-                        htmlFor={`field-${field.key}`}
-                        className={`ml-2 text-sm ${field.required ? 'text-gray-500' : 'text-gray-700'}`}
-                      >
-                        {field.label}
-                        {field.required && <span className="text-xs ml-1">(required)</span>}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Show Services (nested under Show Tasks) */}
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <label htmlFor="show-services" className="text-sm font-medium text-gray-700">
-                    Show Services
-                  </label>
-                  <p className="text-xs text-gray-500">
-                    Display associated services on tasks for billing transparency
-                  </p>
-                </div>
-                <Switch
-                  id="show-services"
-                  checked={config.show_task_services}
-                  onCheckedChange={(checked) => updateConfig({ show_task_services: checked })}
-                  disabled={disabled || !config.show_tasks}
-                />
-              </div>
-
-              {/* Allow Document Uploads (nested under Show Tasks) */}
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <label htmlFor="allow-uploads" className="text-sm font-medium text-gray-700">
-                    Allow Document Uploads
-                  </label>
-                  <p className="text-xs text-gray-500">
-                    Let clients attach documents to tasks
-                  </p>
-                </div>
-                <Switch
-                  id="allow-uploads"
-                  checked={config.allow_document_uploads}
-                  onCheckedChange={(checked) => updateConfig({ allow_document_uploads: checked })}
-                  disabled={disabled || !config.show_tasks}
-                />
+            <div className="ml-6 border-l-2 border-gray-200 pl-4">
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                Visible Task Fields
+              </label>
+              <div className="space-y-2">
+                {CONFIGURABLE_TASK_FIELDS.map(field => (
+                  <div key={field.key} className="flex items-center">
+                    <Checkbox
+                      id={`field-${field.key}`}
+                      checked={(config.visible_task_fields ?? []).includes(field.key)}
+                      onChange={() => toggleTaskField(field.key)}
+                      disabled={disabled || field.required}
+                      containerClassName=""
+                    />
+                    <label
+                      htmlFor={`field-${field.key}`}
+                      className={`ml-2 text-sm ${field.required ? 'text-gray-500' : 'text-gray-700'}`}
+                    >
+                      {field.label}
+                      {field.required && <span className="text-xs ml-1">(required)</span>}
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -109,9 +109,9 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
   const showPhases = config.show_phases ?? false;
   const showTasks = config.show_tasks ?? false;
   const showPhaseCompletion = config.show_phase_completion ?? false;
-  const showServices = config.show_task_services ?? false;
-  const allowUploads = config.allow_document_uploads ?? false;
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
+  const showServices = visibleFields.includes('services');
+  const allowUploads = visibleFields.includes('document_uploads');
 
   useEffect(() => {
     const fetchData = async () => {

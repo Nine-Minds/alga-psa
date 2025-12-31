@@ -9,7 +9,10 @@ import {
   Calendar,
   ChevronDown,
   ChevronRight,
+  Ban,
+  GitBranch,
 } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from 'server/src/components/ui/Spinner';
 
@@ -44,11 +47,21 @@ interface StatusGroup {
   tasks: Task[];
 }
 
+interface TaskDependency {
+  dependency_id: string;
+  predecessor_task_id: string;
+  successor_task_id: string;
+  dependency_type: 'blocks' | 'blocked_by' | 'related_to';
+  predecessor_task?: { task_name: string };
+  successor_task?: { task_name: string };
+}
+
 interface ClientTaskListViewProps {
   phases: Phase[];
   tasks: Task[];
   config: IClientPortalConfig;
   loading?: boolean;
+  taskDependencies?: { [taskId: string]: { predecessors: TaskDependency[]; successors: TaskDependency[] } };
 }
 
 // Progress bar component
@@ -67,7 +80,8 @@ export default function ClientTaskListView({
   phases,
   tasks,
   config,
-  loading = false
+  loading = false,
+  taskDependencies
 }: ClientTaskListViewProps) {
   const { t, i18n } = useTranslation('clientPortal');
   const dateLocale = getDateFnsLocale(i18n.language);
@@ -79,8 +93,9 @@ export default function ClientTaskListView({
   const showPhases = config.show_phases ?? false;
   const showTasks = config.show_tasks ?? false;
   const showPhaseCompletion = config.show_phase_completion ?? false;
-  const allowUploads = config.allow_document_uploads ?? false;
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
+  const allowUploads = visibleFields.includes('document_uploads');
+  const showDependencies = visibleFields.includes('dependencies');
 
   // Group tasks by phase and status
   const phaseGroups = useMemo(() => {
@@ -152,7 +167,7 @@ export default function ClientTaskListView({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Spinner size="xs" />
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -174,7 +189,8 @@ export default function ClientTaskListView({
         <table className="min-w-full">
           <thead className="bg-white border-b border-gray-200">
             <tr>
-              <th className="w-10 px-3 py-3" /> {/* Expand icon space */}
+              {/* Expand icon space */}
+              <th className="w-10 px-3 py-3" />
               {visibleFields.includes('task_name') && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Task Name
@@ -203,6 +219,11 @@ export default function ClientTaskListView({
               {visibleFields.includes('checklist_progress') && (
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                   Checklist
+                </th>
+              )}
+              {showDependencies && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  Deps
                 </th>
               )}
               {allowUploads && (
@@ -399,6 +420,66 @@ export default function ClientTaskListView({
                                       {task.checklist_total != null && task.checklist_total > 0 && (
                                         <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
                                       )}
+                                    </td>
+                                  )}
+
+                                  {/* Dependencies */}
+                                  {showDependencies && (
+                                    <td className="px-6 py-3 text-sm text-gray-700 w-20">
+                                      {(() => {
+                                        const deps = taskDependencies?.[task.task_id];
+                                        if (!deps || (deps.predecessors.length === 0 && deps.successors.length === 0)) {
+                                          return null;
+                                        }
+                                        const hasBlockingDeps = deps.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                                                               deps.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by');
+                                        const count = deps.predecessors.length + deps.successors.length;
+                                        return (
+                                          <Tooltip
+                                            content={
+                                              <div className="text-xs space-y-2">
+                                                {deps.predecessors.length > 0 && (
+                                                  <div>
+                                                    <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.dependsOn', 'Depends on')}:</div>
+                                                    {deps.predecessors.map((d, i) => {
+                                                      const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                                                      return (
+                                                        <div key={i} className="flex items-center gap-1.5 ml-2">
+                                                          <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
+                                                            {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                                                          </span>
+                                                          <span>{d.predecessor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                )}
+                                                {deps.successors.length > 0 && (
+                                                  <div>
+                                                    <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.blocks', 'Blocks')}:</div>
+                                                    {deps.successors.map((d, i) => {
+                                                      const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                                                      return (
+                                                        <div key={i} className="flex items-center gap-1.5 ml-2">
+                                                          <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
+                                                            {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                                                          </span>
+                                                          <span>{d.successor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            }
+                                          >
+                                            <div className={`flex items-center gap-1 ${hasBlockingDeps ? 'text-red-500' : 'text-blue-500'}`}>
+                                              {hasBlockingDeps ? <Ban className="w-3.5 h-3.5" /> : <GitBranch className="w-3.5 h-3.5" />}
+                                              <span>{count}</span>
+                                            </div>
+                                          </Tooltip>
+                                        );
+                                      })()}
                                     </td>
                                   )}
 

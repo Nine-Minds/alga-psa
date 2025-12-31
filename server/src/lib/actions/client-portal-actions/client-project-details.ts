@@ -74,8 +74,15 @@ export async function getClientProjectPhases(projectId: string) {
 
 /**
  * Get tasks with filtered fields (if config.show_tasks is true)
+ *
+ * @param projectId - The project ID
+ * @param options - Optional parameters
+ * @param options.phaseId - Filter tasks by phase (used by kanban view)
  */
-export async function getClientProjectTasks(projectId: string) {
+export async function getClientProjectTasks(
+  projectId: string,
+  options?: { phaseId?: string }
+) {
   const result = await getProjectWithConfig(projectId);
   if (!result?.config.show_tasks) return null;
 
@@ -83,7 +90,8 @@ export async function getClientProjectTasks(projectId: string) {
   const visibleFields = result.config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
 
   // Build SELECT based on visible_task_fields
-  const selectColumns: string[] = ['pt.task_id', 'pt.phase_id'];
+  // Always include project_status_mapping_id for kanban grouping
+  const selectColumns: string[] = ['pt.task_id', 'pt.phase_id', 'pt.project_status_mapping_id'];
   if (visibleFields.includes('task_name')) selectColumns.push('pt.task_name');
   if (visibleFields.includes('description')) selectColumns.push('pt.description');
   if (visibleFields.includes('due_date')) selectColumns.push('pt.due_date');
@@ -95,7 +103,7 @@ export async function getClientProjectTasks(projectId: string) {
     .join('project_phases as pp', function() {
       this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
     })
-    // Always join status mappings for ordering (has display_order)
+    // Always join status mappings for ordering and kanban display
     .leftJoin('project_status_mappings as psm', function() {
       this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
           .andOn('pt.tenant', 'psm.tenant');
@@ -108,10 +116,19 @@ export async function getClientProjectTasks(projectId: string) {
     .where('psm.is_visible', true)
     .select(selectColumns);
 
-  // Add status info to select if requested
-  if (visibleFields.includes('status')) {
-    query = query.select('s.name as status_name', 's.color as status_color');
+  // Filter by phase if specified (for kanban view)
+  if (options?.phaseId) {
+    query = query.where('pt.phase_id', options.phaseId);
   }
+
+  // Always add status info for kanban grouping and display
+  query = query.select(
+    'psm.custom_name',
+    'psm.display_order',
+    's.name as status_name',
+    's.is_closed',
+    's.color as status_color'
+  );
 
   // Join assigned_to if requested
   if (visibleFields.includes('assigned_to')) {
@@ -122,8 +139,8 @@ export async function getClientProjectTasks(projectId: string) {
       .select(knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"));
   }
 
-  // Join service_catalog if show_task_services
-  if (result.config.show_task_services) {
+  // Join service_catalog if services field is visible
+  if (visibleFields.includes('services')) {
     query = query
       .leftJoin('service_catalog as sc', function() {
         this.on('pt.service_id', 'sc.service_id').andOn('pt.tenant', 'sc.tenant');
@@ -148,7 +165,7 @@ export async function getClientProjectTasks(projectId: string) {
       );
   }
 
-  // Order by phase, then by status display_order (same as MSP side), then by task order
+  // Order by phase (for list view grouping), then by status display_order, then by task order
   const tasks = await query
     .orderBy('pp.order_key')
     .orderByRaw('COALESCE(psm.display_order, 999)')
@@ -191,12 +208,80 @@ export async function getClientProjectTasks(projectId: string) {
     }));
   }
 
+  // Always fetch phases (needed for both list grouping and kanban phase selector)
   const phases = await knex('project_phases')
     .select('phase_id', 'phase_name', 'description', 'start_date', 'end_date')
     .where({ project_id: projectId, tenant })
     .orderBy('order_key');
 
-  return { tasks: tasksWithResources, phases, config: result.config };
+  // Fetch dependencies if dependencies field is visible
+  let taskDependencies: { [taskId: string]: { predecessors: any[]; successors: any[] } } = {};
+  if (visibleFields.includes('dependencies') && tasks.length > 0) {
+    const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
+
+    // Fetch dependencies where task is the successor (predecessors of task)
+    const predecessorsArray = await knex('project_task_dependencies as ptd')
+      .whereIn('ptd.successor_task_id', taskIds)
+      .andWhere('ptd.tenant', tenant)
+      .leftJoin('project_tasks as pt', function() {
+        this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
+            .andOn('ptd.tenant', '=', 'pt.tenant');
+      })
+      .select(
+        'ptd.dependency_id',
+        'ptd.predecessor_task_id',
+        'ptd.successor_task_id',
+        'ptd.dependency_type',
+        'pt.task_name as predecessor_task_name'
+      );
+
+    // Fetch dependencies where task is the predecessor (successors of task)
+    const successorsArray = await knex('project_task_dependencies as ptd')
+      .whereIn('ptd.predecessor_task_id', taskIds)
+      .andWhere('ptd.tenant', tenant)
+      .leftJoin('project_tasks as pt', function() {
+        this.on('ptd.successor_task_id', '=', 'pt.task_id')
+            .andOn('ptd.tenant', '=', 'pt.tenant');
+      })
+      .select(
+        'ptd.dependency_id',
+        'ptd.predecessor_task_id',
+        'ptd.successor_task_id',
+        'ptd.dependency_type',
+        'pt.task_name as successor_task_name'
+      );
+
+    // Group by task
+    for (const dep of predecessorsArray) {
+      const taskId = dep.successor_task_id;
+      if (!taskDependencies[taskId]) {
+        taskDependencies[taskId] = { predecessors: [], successors: [] };
+      }
+      taskDependencies[taskId].predecessors.push({
+        dependency_id: dep.dependency_id,
+        predecessor_task_id: dep.predecessor_task_id,
+        successor_task_id: dep.successor_task_id,
+        dependency_type: dep.dependency_type,
+        predecessor_task: { task_name: dep.predecessor_task_name }
+      });
+    }
+
+    for (const dep of successorsArray) {
+      const taskId = dep.predecessor_task_id;
+      if (!taskDependencies[taskId]) {
+        taskDependencies[taskId] = { predecessors: [], successors: [] };
+      }
+      taskDependencies[taskId].successors.push({
+        dependency_id: dep.dependency_id,
+        predecessor_task_id: dep.predecessor_task_id,
+        successor_task_id: dep.successor_task_id,
+        dependency_type: dep.dependency_type,
+        successor_task: { task_name: dep.successor_task_name }
+      });
+    }
+  }
+
+  return { tasks: tasksWithResources, phases, config: result.config, taskDependencies };
 }
 
 /**
@@ -233,127 +318,6 @@ export async function getClientProjectStatuses(projectId: string) {
       color: s.color
     }))
   };
-}
-
-/**
- * Get tasks grouped by status for kanban view (respects visibility settings)
- */
-export async function getClientProjectTasksForKanban(projectId: string, phaseId?: string) {
-  const result = await getProjectWithConfig(projectId);
-  if (!result?.config.show_tasks) return null;
-
-  const { knex, tenant } = await createTenantKnex();
-  const visibleFields = result.config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
-
-  // Build SELECT based on visible_task_fields
-  const selectColumns: string[] = ['pt.task_id', 'pt.phase_id', 'pt.project_status_mapping_id'];
-  if (visibleFields.includes('task_name')) selectColumns.push('pt.task_name');
-  if (visibleFields.includes('description')) selectColumns.push('pt.description');
-  if (visibleFields.includes('due_date')) selectColumns.push('pt.due_date');
-  if (visibleFields.includes('estimated_hours')) selectColumns.push('pt.estimated_hours');
-  if (visibleFields.includes('actual_hours')) selectColumns.push('pt.actual_hours');
-  if (visibleFields.includes('priority')) selectColumns.push('pt.priority_id');
-
-  let query = knex('project_tasks as pt')
-    .join('project_phases as pp', function() {
-      this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-    })
-    .leftJoin('project_status_mappings as psm', function() {
-      this.on('pt.project_status_mapping_id', 'psm.project_status_mapping_id')
-          .andOn('pt.tenant', 'psm.tenant');
-    })
-    .leftJoin('statuses as s', function() {
-      this.on('psm.status_id', 's.status_id').andOn('psm.tenant', 's.tenant');
-    })
-    .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
-    // Only show tasks with visible status mappings
-    .where('psm.is_visible', true)
-    .select(selectColumns);
-
-  // Filter by phase if specified
-  if (phaseId) {
-    query = query.where('pt.phase_id', phaseId);
-  }
-
-  // Add status info
-  query = query.select(
-    'psm.project_status_mapping_id',
-    'psm.custom_name',
-    'psm.display_order',
-    's.name as status_name',
-    's.is_closed',
-    's.color as status_color'
-  );
-
-  // Join assigned_to if requested
-  if (visibleFields.includes('assigned_to')) {
-    query = query
-      .leftJoin('users as u', function() {
-        this.on('pt.assigned_to', 'u.user_id').andOn('pt.tenant', 'u.tenant');
-      })
-      .select(knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"));
-  }
-
-  // Join for checklist_progress if requested
-  if (visibleFields.includes('checklist_progress')) {
-    query = query
-      .select(
-        knex.raw(`(
-          SELECT COUNT(*)::int
-          FROM task_checklist_items
-          WHERE task_id = pt.task_id AND tenant = pt.tenant
-        ) as checklist_total`),
-        knex.raw(`(
-          SELECT COUNT(*)::int
-          FROM task_checklist_items
-          WHERE task_id = pt.task_id AND tenant = pt.tenant AND completed = true
-        ) as checklist_completed`)
-      );
-  }
-
-  // Order by status display_order, then task order
-  const tasks = await query
-    .orderByRaw('COALESCE(psm.display_order, 999)')
-    .orderBy('pt.order_key');
-
-  // Fetch additional agents if assigned_to is visible
-  let tasksWithResources = tasks;
-  if (visibleFields.includes('assigned_to') && tasks.length > 0) {
-    const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
-
-    // Get all additional resources for these tasks
-    const additionalResources = await knex('task_resources as tr')
-      .join('users as u', function() {
-        this.on('tr.additional_user_id', 'u.user_id').andOn('tr.tenant', 'u.tenant');
-      })
-      .whereIn('tr.task_id', taskIds)
-      .where('tr.tenant', tenant)
-      .select(
-        'tr.task_id',
-        'tr.additional_user_id',
-        'tr.role',
-        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as user_name")
-      );
-
-    // Group resources by task_id
-    const resourcesByTask = additionalResources.reduce((acc: Record<string, Array<{ user_id: string; user_name: string; role: string | null }>>, r: { task_id: string; additional_user_id: string; user_name: string; role: string | null }) => {
-      if (!acc[r.task_id]) acc[r.task_id] = [];
-      acc[r.task_id].push({
-        user_id: r.additional_user_id,
-        user_name: r.user_name,
-        role: r.role
-      });
-      return acc;
-    }, {});
-
-    // Attach to tasks
-    tasksWithResources = tasks.map((task: { task_id: string }) => ({
-      ...task,
-      additional_agents: resourcesByTask[task.task_id] || []
-    }));
-  }
-
-  return { tasks: tasksWithResources, config: result.config };
 }
 
 /**
@@ -398,7 +362,8 @@ export async function uploadClientTaskDocument(taskId: string, formData: FormDat
   }
 
   const config = task.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
-  if (!config.show_tasks || !config.allow_document_uploads) {
+  const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
+  if (!config.show_tasks || !visibleFields.includes('document_uploads')) {
     return { success: false, error: 'Document uploads not allowed' };
   }
 

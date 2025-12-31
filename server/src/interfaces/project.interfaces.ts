@@ -9,17 +9,13 @@ export interface IClientPortalConfig {
   show_phases?: boolean;                // Show phase breakdown
   show_phase_completion?: boolean;      // Show task completion % per phase
   show_tasks?: boolean;                 // Show individual tasks
-  show_task_services?: boolean;         // Show services on tasks (for billing)
-  allow_document_uploads?: boolean;     // Let clients attach documents to tasks
-  visible_task_fields?: string[];       // Which task fields to show
+  visible_task_fields?: string[];       // Which task fields/features to show
 }
 
 export const DEFAULT_CLIENT_PORTAL_CONFIG: IClientPortalConfig = {
   show_phases: false,
   show_phase_completion: false,
   show_tasks: false,
-  show_task_services: false,
-  allow_document_uploads: false,
   visible_task_fields: ['task_name', 'due_date', 'status']
 };
 
@@ -32,7 +28,10 @@ export const CONFIGURABLE_TASK_FIELDS = [
   { key: 'estimated_hours', label: 'Estimated Hours', required: false },
   { key: 'actual_hours', label: 'Actual Hours', required: false },
   { key: 'priority', label: 'Priority', required: false },
-  { key: 'checklist_progress', label: 'Checklist Progress', required: false }
+  { key: 'checklist_progress', label: 'Checklist Progress', required: false },
+  { key: 'services', label: 'Services', required: false },
+  { key: 'dependencies', label: 'Dependencies', required: false },
+  { key: 'document_uploads', label: 'Document Uploads', required: false }
 ];
 
 export interface IProjectStatusMapping extends TenantEntity {

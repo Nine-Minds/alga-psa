@@ -103,6 +103,7 @@ export default function ProjectDetail({
   const [projectTasks, setProjectTasks] = useState<IProjectTask[]>([]);
   const [phaseTicketLinks, setPhaseTicketLinks] = useState<{ [taskId: string]: IProjectTicketLinkWithDetails[] }>({});
   const [phaseTaskResources, setPhaseTaskResources] = useState<{ [taskId: string]: any[] }>({});
+  const [phaseTaskDependencies, setPhaseTaskDependencies] = useState<{ [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } }>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -446,12 +447,13 @@ export default function ProjectDetail({
         setProjectTasks([]);
         setPhaseTicketLinks({});
         setPhaseTaskResources({});
+        setPhaseTaskDependencies({});
         return;
       }
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources } = await getTasksForPhase(selectedPhase.phase_id);
+        const { tasks, ticketLinks, taskResources, taskDependencies } = await getTasksForPhase(selectedPhase.phase_id);
 
         // Add checklist items to tasks
         const tasksWithChecklists = await Promise.all(
@@ -464,6 +466,7 @@ export default function ProjectDetail({
         setProjectTasks(tasksWithChecklists);
         setPhaseTicketLinks(ticketLinks);
         setPhaseTaskResources(taskResources);
+        setPhaseTaskDependencies(taskDependencies);
       } catch (error) {
         console.error('Error fetching phase tasks:', error);
         toast.error('Failed to load tasks for the selected phase');
@@ -1434,6 +1437,7 @@ export default function ProjectDetail({
               selectedPhase={!!selectedPhase}
               ticketLinks={phaseTicketLinks}
               taskResources={phaseTaskResources}
+              taskDependencies={phaseTaskDependencies}
               taskTags={taskTags}
               taskDocumentCounts={taskDocumentCounts}
               allTaskTags={allTaskTags}

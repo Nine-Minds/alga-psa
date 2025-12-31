@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDependency } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IPriority, IStandardPriority } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip } from 'lucide-react';
+import { CheckSquare, Square, Ticket, Users, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2 } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { findPriorityById } from 'server/src/lib/actions/priorityActions';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
@@ -26,6 +27,7 @@ interface TaskCardProps {
   hasCriticalPath?: boolean;
   ticketLinks?: IProjectTicketLinkWithDetails[];
   taskResources?: any[];
+  taskDependencies?: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] };
   taskTags?: ITag[];
   documentCount?: number;
   isAnimating?: boolean;
@@ -57,6 +59,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   hasCriticalPath = false,
   ticketLinks,
   taskResources: providedTaskResources,
+  taskDependencies,
   taskTags: providedTaskTags = [],
   documentCount: providedDocumentCount,
   isAnimating = false,
@@ -347,6 +350,61 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <Paperclip className="w-3 h-3" />
               <span>{documentCount}</span>
             </div>
+          )}
+          {/* Dependencies indicator */}
+          {taskDependencies && (taskDependencies.predecessors.length > 0 || taskDependencies.successors.length > 0) && (
+            <Tooltip
+              content={
+                <div className="text-xs space-y-2">
+                  {taskDependencies.predecessors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+                      {taskDependencies.predecessors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{d.predecessor_task?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {taskDependencies.successors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+                      {taskDependencies.successors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{d.successor_task?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+                taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? 'bg-red-50 text-red-500'
+                  : 'bg-blue-50 text-blue-500'
+              }`}>
+                {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? <Ban className="w-3 h-3" />
+                  : <GitBranch className="w-3 h-3" />
+                }
+                <span>{taskDependencies.predecessors.length + taskDependencies.successors.length}</span>
+              </div>
+            </Tooltip>
           )}
         </div>
       </div>

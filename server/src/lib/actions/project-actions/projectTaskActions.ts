@@ -426,39 +426,63 @@ export async function getTasksForPhase(phaseId: string): Promise<{
     tasks: IProjectTask[];
     ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
     taskResources: { [taskId: string]: any[] };
+    taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
 }> {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error("user not found");
         }
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'read', trx);
-            
+
             // Get phase to get its WBS code
             const phase = await trx('project_phases')
                 .where({ phase_id: phaseId })
                 .first();
-                
+
             if (!phase) {
                 throw new Error('Phase not found');
             }
-            
+
             // Get all tasks for this phase
             const tasks = await ProjectTaskModel.getTasksByPhase(trx, phaseId);
-            
+
             // Get all related data in parallel
             const taskIds = tasks.map(t => t.task_id);
-            const [ticketLinksArray, taskResourcesArray] = await Promise.all([
+            const [ticketLinksArray, taskResourcesArray, predecessorsArray, successorsArray] = await Promise.all([
                 taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, taskIds) : [],
-                taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, taskIds) : []
+                taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, taskIds) : [],
+                // Fetch dependencies where task is the successor (predecessors of task)
+                taskIds.length > 0
+                    ? trx('project_task_dependencies as ptd')
+                        .whereIn('ptd.successor_task_id', taskIds)
+                        .andWhere('ptd.tenant', tenant)
+                        .leftJoin('project_tasks as pt', function() {
+                            this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
+                                .andOn('ptd.tenant', '=', 'pt.tenant');
+                        })
+                        .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code', 'pt.task_type_key as predecessor_task_type_key')
+                    : [],
+                // Fetch dependencies where task is the predecessor (successors of task)
+                taskIds.length > 0
+                    ? trx('project_task_dependencies as ptd')
+                        .whereIn('ptd.predecessor_task_id', taskIds)
+                        .andWhere('ptd.tenant', tenant)
+                        .leftJoin('project_tasks as pt', function() {
+                            this.on('ptd.successor_task_id', '=', 'pt.task_id')
+                                .andOn('ptd.tenant', '=', 'pt.tenant');
+                        })
+                        .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code', 'pt.task_type_key as successor_task_type_key')
+                    : []
             ]);
-            
+
             // Convert arrays to maps
             const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
             const taskResources: { [taskId: string]: any[] } = {};
-            
+            const taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } } = {};
+
             for (const link of ticketLinksArray) {
                 if (link.task_id) {
                     if (!ticketLinks[link.task_id]) {
@@ -467,7 +491,7 @@ export async function getTasksForPhase(phaseId: string): Promise<{
                     ticketLinks[link.task_id].push(link);
                 }
             }
-            
+
             for (const resource of taskResourcesArray) {
                 if (resource.task_id) {
                     if (!taskResources[resource.task_id]) {
@@ -476,8 +500,42 @@ export async function getTasksForPhase(phaseId: string): Promise<{
                     taskResources[resource.task_id].push(resource);
                 }
             }
-            
-            return { tasks, ticketLinks, taskResources };
+
+            // Process predecessors (dependencies where task is the successor)
+            for (const dep of predecessorsArray) {
+                const taskId = dep.successor_task_id;
+                if (!taskDependencies[taskId]) {
+                    taskDependencies[taskId] = { predecessors: [], successors: [] };
+                }
+                taskDependencies[taskId].predecessors.push({
+                    ...dep,
+                    predecessor_task: {
+                        task_id: dep.predecessor_task_id,
+                        task_name: dep.predecessor_task_name,
+                        wbs_code: dep.predecessor_wbs_code,
+                        task_type_key: dep.predecessor_task_type_key
+                    }
+                });
+            }
+
+            // Process successors (dependencies where task is the predecessor)
+            for (const dep of successorsArray) {
+                const taskId = dep.predecessor_task_id;
+                if (!taskDependencies[taskId]) {
+                    taskDependencies[taskId] = { predecessors: [], successors: [] };
+                }
+                taskDependencies[taskId].successors.push({
+                    ...dep,
+                    successor_task: {
+                        task_id: dep.successor_task_id,
+                        task_name: dep.successor_task_name,
+                        wbs_code: dep.successor_wbs_code,
+                        task_type_key: dep.successor_task_type_key
+                    }
+                });
+            }
+
+            return { tasks, ticketLinks, taskResources, taskDependencies };
         });
     } catch (error) {
         console.error('Error getting tasks for phase:', error);

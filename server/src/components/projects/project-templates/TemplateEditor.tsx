@@ -28,7 +28,10 @@ import {
   Users,
   MoreVertical,
   Clock,
+  Ban,
+  GitBranch,
 } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import {
   IProjectTemplateWithDetails,
   IProjectTemplateTask,
@@ -989,6 +992,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                               taskAssignments={taskAssignments}
                               taskTypes={taskTypes}
                               checklistItems={checklistItems}
+                              dependencies={dependencies}
+                              allTasks={tasks}
                             />
                           );
                         })}
@@ -1033,6 +1038,8 @@ interface StatusColumnProps {
   taskAssignments: IProjectTemplateTaskAssignment[];
   taskTypes: ITaskType[];
   checklistItems: IProjectTemplateChecklistItem[];
+  dependencies: IProjectTemplateDependency[];
+  allTasks: IProjectTemplateTask[];
 }
 
 function StatusColumn({
@@ -1054,6 +1061,8 @@ function StatusColumn({
   taskAssignments,
   taskTypes,
   checklistItems,
+  dependencies,
+  allTasks,
 }: StatusColumnProps) {
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
@@ -1182,6 +1191,11 @@ function StatusColumn({
                 checklistItemsCount={checklistItems.filter(
                   (c) => c.template_task_id === task.template_task_id
                 ).length}
+                taskDependencies={{
+                  predecessors: dependencies.filter(d => d.successor_task_id === task.template_task_id),
+                  successors: dependencies.filter(d => d.predecessor_task_id === task.template_task_id)
+                }}
+                allTasks={allTasks}
               />
             </div>
           ))}
@@ -1214,6 +1228,8 @@ interface TaskCardProps {
   taskAssignments: IProjectTemplateTaskAssignment[];
   taskType?: ITaskType;
   checklistItemsCount: number;
+  taskDependencies?: { predecessors: IProjectTemplateDependency[]; successors: IProjectTemplateDependency[] };
+  allTasks: IProjectTemplateTask[]; // To get task names for dependencies
 }
 
 function TaskCard({
@@ -1229,6 +1245,8 @@ function TaskCard({
   taskAssignments,
   taskType,
   checklistItemsCount,
+  taskDependencies,
+  allTasks,
 }: TaskCardProps) {
   const handleDragStart = (e: React.DragEvent) => {
     document.body.classList.add('dragging-task');
@@ -1337,7 +1355,7 @@ function TaskCard({
         )}
       </div>
 
-      {/* Bottom row: estimated hours, duration, checklist */}
+      {/* Bottom row: estimated hours, duration, checklist, dependencies */}
       <div className="flex items-center justify-between text-xs text-gray-500 px-1 mt-1">
         <div className="flex items-center gap-2">
           {task.estimated_hours && (
@@ -1357,6 +1375,63 @@ function TaskCard({
               <CheckSquare className="w-3 h-3" />
               {checklistItemsCount}
             </span>
+          )}
+          {/* Dependencies indicator */}
+          {taskDependencies && (taskDependencies.predecessors.length > 0 || taskDependencies.successors.length > 0) && (
+            <Tooltip
+              content={
+                <div className="text-xs space-y-2">
+                  {taskDependencies.predecessors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Depends on:</div>
+                      {taskDependencies.predecessors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        const predecessorTask = allTasks.find(t => t.template_task_id === d.predecessor_task_id);
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{predecessorTask?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {taskDependencies.successors.length > 0 && (
+                    <div>
+                      <div className="font-medium text-gray-300 mb-1">Blocks:</div>
+                      {taskDependencies.successors.map((d, i) => {
+                        const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
+                        const successorTask = allTasks.find(t => t.template_task_id === d.successor_task_id);
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 ml-2">
+                            <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
+                              {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
+                            </span>
+                            <span>{successorTask?.task_name || 'Unknown task'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? 'bg-red-50 text-red-500'
+                  : 'bg-blue-50 text-blue-500'
+              }`}>
+                {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
+                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
+                  ? <Ban className="w-3 h-3" />
+                  : <GitBranch className="w-3 h-3" />
+                }
+                <span>{taskDependencies.predecessors.length + taskDependencies.successors.length}</span>
+              </span>
+            </Tooltip>
           )}
         </div>
       </div>
