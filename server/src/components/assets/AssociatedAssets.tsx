@@ -390,13 +390,15 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 min-w-0">
                                         {association.asset ? (
-                                            <button
-                                                type="button"
+                                            <Button
+                                                id={`asset-name-${association.asset_id}`}
+                                                variant="link"
+                                                size="sm"
                                                 onClick={() => openDrawerForAsset(association.asset!)}
-                                                className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline truncate transition-colors text-left"
+                                                className="h-auto p-0 text-sm font-medium truncate text-left justify-start"
                                             >
                                                 {association.asset.name}
-                                            </button>
+                                            </Button>
                                         ) : (
                                             <span className="text-sm font-medium text-gray-900 truncate">
                                                 Unknown Asset
@@ -451,9 +453,11 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
                         {/* Expandable section for additional assets */}
                         {hiddenCount > 0 && (
-                            <button
+                            <Button
+                                id="expand-assets-button"
+                                variant="outline"
                                 onClick={() => setIsExpanded(!isExpanded)}
-                                className="flex items-center gap-1 px-4 py-3 w-full text-left text-primary-600 hover:text-primary-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="flex items-center gap-1 px-4 py-3 w-full text-left text-primary-600 hover:text-primary-700 justify-start"
                             >
                                 <span className="text-lg">+</span>
                                 <span className="underline">
@@ -467,7 +471,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                 >
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
-                            </button>
+                            </Button>
                         )}
                     </div>
                 )}
