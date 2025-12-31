@@ -584,6 +584,7 @@ export class ExtensionStorageServiceV2 {
     const bytesUsed = Number(row?.bytes_used ?? 0);
     const keysCount = Number(row?.keys_count ?? 0);
     const namespacesCount = Number(row?.namespaces_count ?? 0);
+    const now = new Date();
 
     await trx('ext_storage_usage')
       .insert({
@@ -592,19 +593,20 @@ export class ExtensionStorageServiceV2 {
         bytes_used: bytesUsed,
         keys_count: keysCount,
         namespaces_count: namespacesCount,
-        updated_at: trx.fn.now(),
+        updated_at: now,
       })
       .onConflict(['tenant', 'extension_install_id'])
       .merge({
         bytes_used: bytesUsed,
         keys_count: keysCount,
         namespaces_count: namespacesCount,
-        updated_at: trx.fn.now(),
+        updated_at: now,
       });
   }
 
   private async getUsageForUpdate(trx: Knex.Transaction) {
     // Ensure a usage row exists, then lock it
+    const now = new Date();
     await trx('ext_storage_usage')
       .insert({
         tenant: this.tenantId,
@@ -612,7 +614,7 @@ export class ExtensionStorageServiceV2 {
         bytes_used: 0,
         keys_count: 0,
         namespaces_count: 0,
-        updated_at: trx.fn.now(),
+        updated_at: now,
       })
       .onConflict(['tenant', 'extension_install_id'])
       .ignore();
