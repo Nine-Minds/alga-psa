@@ -1323,7 +1323,9 @@ const WorkflowDesigner: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workflowIdFromQuery = searchParams.get('workflowId');
+  const newWorkflowFromQuery = searchParams.get('new') === '1';
   const didApplyWorkflowIdFromQuery = useRef<string | null>(null);
+  const didApplyNewWorkflowFromQuery = useRef<boolean>(false);
 
   useEffect(() => {
     try {
@@ -1698,17 +1700,17 @@ const WorkflowDesigner: React.FC = () => {
 	      const data = await listWorkflowDefinitionsAction();
 	      const nextDefinitions = (data ?? []) as unknown as WorkflowDefinitionRecord[];
 	      setDefinitions(nextDefinitions);
-	      if (nextDefinitions.length > 0) {
-	        const record = nextDefinitions[0];
-	        setActiveDefinition((current) => current ?? record.draft_definition);
-	        setActiveWorkflowId((current) => current ?? record.workflow_id);
-	      }
+	      if (!newWorkflowFromQuery && !workflowIdFromQuery && nextDefinitions.length > 0 && !activeDefinition && !activeWorkflowId) {
+          const record = nextDefinitions[0];
+          setActiveDefinition(record.draft_definition);
+          setActiveWorkflowId(record.workflow_id);
+        }
 	    } catch (error) {
 	      toast.error(error instanceof Error ? error.message : 'Failed to load workflows');
 	    } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activeDefinition, activeWorkflowId, newWorkflowFromQuery, workflowIdFromQuery]);
 
   const loadRunSummary = useCallback(async () => {
     try {
@@ -2120,8 +2122,24 @@ const WorkflowDesigner: React.FC = () => {
   }, [activeDefinition?.id, activeDefinition?.trigger, activeWorkflowId, canManage, payloadSchemaModeDraft]);
 
   const handleSelectDefinition = (record: WorkflowDefinitionRecord) => {
+    const isDifferentWorkflow = activeWorkflowId !== record.workflow_id;
+    
+    // Clear previous workflow immediately to avoid showing stale data during transition
+    if (isDifferentWorkflow) {
+      setActiveDefinition(null);
+      setActiveWorkflowId(null);
+      setSelectedStepId(null);
+      setSelectedPipePath('root');
+      setPublishErrors([]);
+      setPublishWarnings([]);
+    }
+    
+    // Set new workflow - React will batch updates, but clearing first ensures
+    // we don't show stale data if there's any delay
     setActiveDefinition(record.draft_definition);
     setActiveWorkflowId(record.workflow_id);
+    
+    // Always reset these when selecting a workflow
     setPublishErrors([]);
     setPublishWarnings([]);
     setSelectedStepId(null);
@@ -2129,8 +2147,26 @@ const WorkflowDesigner: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!workflowIdFromQuery) return;
+    if (!workflowIdFromQuery) {
+      // Reset ref when workflowId is cleared
+      didApplyWorkflowIdFromQuery.current = null;
+      // Clear active definition if workflowId is cleared
+      if (activeWorkflowId) {
+        setActiveDefinition(null);
+        setActiveWorkflowId(null);
+      }
+      return;
+    }
     if (didApplyWorkflowIdFromQuery.current === workflowIdFromQuery) return;
+    
+    // Clear previous workflow immediately when a new one is selected
+    if (activeWorkflowId !== workflowIdFromQuery) {
+      setActiveDefinition(null);
+      setActiveWorkflowId(null);
+      setSelectedStepId(null);
+      setSelectedPipePath('root');
+    }
+    
     const match = definitions.find((d) => d.workflow_id === workflowIdFromQuery);
     if (!match) return;
     didApplyWorkflowIdFromQuery.current = workflowIdFromQuery;
@@ -2150,6 +2186,21 @@ const WorkflowDesigner: React.FC = () => {
     setPublishErrors([]);
     setPublishWarnings([]);
   };
+
+  useEffect(() => {
+    if (!newWorkflowFromQuery) {
+      didApplyNewWorkflowFromQuery.current = false;
+      return;
+    }
+    if (didApplyNewWorkflowFromQuery.current) return;
+    didApplyNewWorkflowFromQuery.current = true;
+    handleCreateDefinition();
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('new');
+    router.replace(`?${nextParams.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newWorkflowFromQuery]);
 
   const handleDefinitionChange = (changes: Partial<WorkflowDefinition>) => {
     if (!activeDefinition) return;
@@ -4048,54 +4099,6 @@ const WorkflowDesigner: React.FC = () => {
             </div>
       </div>
 
-      <div className="border-t bg-white px-6 py-3">
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-500">{isLoading ? 'Loading workflows...' : `${definitions.length} workflows`}</div>
-          <div id="workflow-designer-list" className="flex items-center gap-2 overflow-x-auto">
-            {isLoading && definitions.length === 0 ? (
-              <>
-                <Skeleton className="h-9 w-44 rounded-md" />
-                <Skeleton className="h-9 w-44 rounded-md" />
-                <Skeleton className="h-9 w-44 rounded-md" />
-              </>
-            ) : (
-              definitions.map((definition) => (
-                <Button
-                  key={definition.workflow_id}
-                  id={`workflow-designer-open-${definition.workflow_id}`}
-                  variant={definition.workflow_id === activeWorkflowId ? 'default' : 'outline'}
-                  onClick={() => handleSelectDefinition(definition)}
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        definition.validation_errors?.length
-                          ? 'bg-red-500'
-                          : definition.validation_warnings?.length
-                            ? 'bg-yellow-500'
-                            : definition.validation_status === 'valid'
-                              ? 'bg-green-500'
-                              : 'bg-gray-400'
-                      }`}
-                    />
-                    {definition.name}
-                    {runStatusByWorkflow.get(definition.workflow_id) && (
-                      <Badge className="bg-gray-100 text-gray-600 text-[10px]">
-                        {runStatusByWorkflow.get(definition.workflow_id)}
-                      </Badge>
-                    )}
-                    {runCountByWorkflow.get(definition.workflow_id) != null && (
-                      <Badge className="bg-blue-50 text-blue-700 text-[10px]">
-                        {runCountByWorkflow.get(definition.workflow_id)} runs
-                      </Badge>
-                    )}
-                  </span>
-                </Button>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
     </div>
     </DragDropContext>
   );
@@ -4113,6 +4116,8 @@ const WorkflowDesigner: React.FC = () => {
         concurrency_limit: definition.concurrency_limit ?? null,
         is_system: definition.is_system ?? false
       }))}
+      workflowStatusById={runStatusByWorkflow}
+      workflowRunCountById={runCountByWorkflow}
       isActive={activeTab === 'Runs'}
       canAdmin={canAdmin}
       canManage={canManage}

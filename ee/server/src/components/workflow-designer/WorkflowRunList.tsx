@@ -133,12 +133,21 @@ const buildWorkflowOptions = (definitions: WorkflowDefinitionSummary[]): SelectO
 
 interface WorkflowRunListProps {
   definitions: WorkflowDefinitionSummary[];
+  workflowStatusById?: Map<string, string>;
+  workflowRunCountById?: Map<string, number>;
   isActive: boolean;
   canAdmin?: boolean;
   canManage?: boolean;
 }
 
-const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive, canAdmin = false, canManage = false }) => {
+const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
+  definitions,
+  workflowStatusById,
+  workflowRunCountById,
+  isActive,
+  canAdmin = false,
+  canManage = false
+}) => {
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
   const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
@@ -239,6 +248,29 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
     [filters]
   );
 
+  const runningWorkflowButtons = useMemo(() => {
+    if (!workflowStatusById) return [];
+    const isActiveStatus = (status: string | undefined) => status === 'RUNNING' || status === 'WAITING';
+    return definitions
+      .map((definition) => {
+        const status = workflowStatusById.get(definition.workflow_id) ?? undefined;
+        if (!isActiveStatus(status)) return null;
+        return {
+          workflowId: definition.workflow_id,
+          name: definition.name,
+          status,
+          runCount: workflowRunCountById?.get(definition.workflow_id) ?? null
+        };
+      })
+      .filter((value): value is NonNullable<typeof value> => value !== null)
+      .sort((a, b) => {
+        const aSort = a.status === 'RUNNING' ? 0 : 1;
+        const bSort = b.status === 'RUNNING' ? 0 : 1;
+        if (aSort !== bSort) return aSort - bSort;
+        return a.name.localeCompare(b.name);
+      });
+  }, [definitions, workflowRunCountById, workflowStatusById]);
+
   useEffect(() => {
     if (isActive) {
       fetchRuns(0, false);
@@ -291,6 +323,17 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
     setFilters(DEFAULT_FILTERS);
     fetchRuns(0, false, DEFAULT_FILTERS);
     fetchSummary(DEFAULT_FILTERS);
+  };
+
+  const applyWorkflowFilter = (workflowId: string) => {
+    const nextFilters: WorkflowRunFilters = {
+      ...filters,
+      workflowId,
+      workflowVersion: ''
+    };
+    setFilters(nextFilters);
+    fetchRuns(0, false, nextFilters);
+    fetchSummary(nextFilters);
   };
 
   const handleExport = async () => {
@@ -435,6 +478,42 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({ definitions, isActive
               </div>
             )}
           </div>
+
+          {isActive && runningWorkflowButtons.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <span className="text-xs text-gray-500 shrink-0">Active workflows</span>
+              <Button
+                id="workflow-runs-active-all"
+                variant={filters.workflowId === '' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => applyWorkflowFilter('')}
+              >
+                All
+              </Button>
+              {runningWorkflowButtons.map((workflow) => (
+                <Button
+                  key={workflow.workflowId}
+                  id={`workflow-runs-active-${workflow.workflowId}`}
+                  variant={filters.workflowId === workflow.workflowId ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => applyWorkflowFilter(workflow.workflowId)}
+                  className="whitespace-nowrap"
+                >
+                  <span className="flex items-center gap-2">
+                    <Badge className={STATUS_STYLES[workflow.status] ?? 'bg-gray-100 text-gray-600'}>
+                      {workflow.status}
+                    </Badge>
+                    <span>{workflow.name}</span>
+                    {workflow.runCount != null && (
+                      <Badge className="bg-blue-50 text-blue-700">
+                        {workflow.runCount} runs
+                      </Badge>
+                    )}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
               id="workflow-runs-search"

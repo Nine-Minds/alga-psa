@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { Button } from 'server/src/components/ui/Button';
@@ -169,6 +169,7 @@ const getTriggerLabel = (trigger?: Record<string, unknown> | null): string => {
 export default function WorkflowList({ onSelectWorkflow, onCreateNew }: WorkflowListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const didUnmount = useRef(false);
 
   // Initialize state from URL params
   const [workflows, setWorkflows] = useState<WorkflowDefinitionListItem[]>([]);
@@ -227,17 +228,31 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     setError(null);
     try {
       const data = await listWorkflowDefinitionsAction();
-      setWorkflows(data as WorkflowDefinitionListItem[]);
+      if (!didUnmount.current) {
+        if (!Array.isArray(data)) {
+          setError('Failed to fetch workflows');
+        } else {
+          setWorkflows(data as WorkflowDefinitionListItem[]);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch workflows:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch workflows');
+      if (!didUnmount.current) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch workflows');
+      }
     } finally {
-      setIsLoading(false);
+      if (!didUnmount.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    didUnmount.current = false;
     fetchWorkflows();
+    return () => {
+      didUnmount.current = true;
+    };
   }, []);
 
   // Debounced URL update for search
@@ -630,6 +645,33 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
     );
   }
 
+  if (error) {
+    return (
+      <ReflectionContainer id="workflow-list-error" label="Workflow List Error State">
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+            <FileText className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
+            Failed to load workflows
+          </h3>
+          <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md mb-6">
+            {error}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button id="workflow-list-retry-btn" variant="outline" onClick={fetchWorkflows}>
+              Retry
+            </Button>
+            <Button id="workflow-list-create-btn" onClick={onCreateNew}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Workflow
+            </Button>
+          </div>
+        </div>
+      </ReflectionContainer>
+    );
+  }
+
   // Empty state
   if (workflows.length === 0) {
     return (
@@ -765,13 +807,6 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew }: Workflow
                 Clear selection
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            {error}
           </div>
         )}
 
